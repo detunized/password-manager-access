@@ -1,3 +1,5 @@
 lastpass-sharp.suo
 src/bin/
 src/obj/
+test/bin/
+test/obj/
