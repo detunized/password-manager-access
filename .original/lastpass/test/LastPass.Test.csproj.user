@@ -3,11 +3,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <StartAction>Program</StartAction>
     <StartProgram>$(SolutionDir)packages\NUnit.Runners.2.6.2\tools\nunit-console.exe</StartProgram>
-    <StartArguments>/nologo LastPass.Test.dll</StartArguments>
+    <StartArguments>/nologo /framework=net-2.0 LastPass.Test.dll</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <StartAction>Program</StartAction>
     <StartProgram>$(SolutionDir)packages\NUnit.Runners.2.6.2\tools\nunit-console.exe</StartProgram>
-    <StartArguments>/nologo LastPass.Test.dll</StartArguments>
+    <StartArguments>/nologo /framework=net-2.0 LastPass.Test.dll</StartArguments>
   </PropertyGroup>
 </Project>
