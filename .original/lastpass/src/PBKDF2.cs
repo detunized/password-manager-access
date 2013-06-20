@@ -1,6 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Diagnostics;
 
 namespace LastPass
 {
@@ -16,7 +17,18 @@ namespace LastPass
 
         public override byte[] GetBytes(int byteCount)
         {
-            return new byte[0];
+            var bytes = new byte[byteCount];
+            var hashSize = HashFunction.HashSize / 8;
+            var blockCount = (byteCount + hashSize - 1) / hashSize;
+            for (int i = 0; i < blockCount; ++i)
+            {
+                var block = CalculateBlock();
+                var offset = i * hashSize;
+                var size = Math.Min(hashSize, byteCount - offset);
+                Buffer.BlockCopy(block, 0, bytes, offset, size);
+            }
+
+            return bytes;
         }
 
         public override void Reset()
@@ -27,5 +39,10 @@ namespace LastPass
         public byte[] Password { get; private set; }
         public byte[] Salt { get; private set; }
         public int IterationCount { get; private set; }
+
+        private byte[] CalculateBlock()
+        {
+            return new byte[HashFunction.HashSize / 8];
+        }
     }
 }
