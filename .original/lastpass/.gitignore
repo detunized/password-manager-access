@@ -1,3 +1,4 @@
+.nuget/NuGet.exe
 packages/
 src/bin/
 src/obj/
