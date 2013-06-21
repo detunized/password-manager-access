@@ -54,7 +54,18 @@ namespace LastPass
             }
             indexBytes.CopyTo(hashInput, Salt.Length);
 
-            return HashFunction.ComputeHash(hashInput);
+            var hashed = HashFunction.ComputeHash(hashInput);
+            var result = hashed;
+            for (int i = 1; i < IterationCount; ++i)
+            {
+                hashed = HashFunction.ComputeHash(hashed);
+                for (int j = 0; j < hashed.Length; ++j)
+                {
+                    result[j] ^= hashed[j];
+                }
+            }
+
+            return result;
         }
     }
 }
