@@ -18,7 +18,8 @@ namespace LastPass.Test
             public byte[] expected;
         };
 
-        private TestData[] testData = new TestData[]
+        // Test data for PBKDF2 HMAC-SHA1 is from http://tools.ietf.org/html/rfc6070
+        private TestData[] testDataSHA1 = new TestData[]
         {
             new TestData
             {
@@ -53,6 +54,42 @@ namespace LastPass.Test
             },
         };
 
+        // Test data for PBKDF2 HMAC-SHA256 is from http://stackoverflow.com/a/5136918/362938
+        private TestData[] testDataSHA256 = new TestData[]
+        {
+            new TestData
+            {
+                password = "password",
+                salt = "salt",
+                iterationCount = 1,
+                expected = new byte[] {0x12, 0x0f, 0xb6, 0xcf, 0xfc, 0xf8, 0xb3, 0x2c, 0x43, 0xe7, 0x22, 0x52, 0x56, 0xc4, 0xf8, 0x37, 0xa8, 0x65, 0x48, 0xc9, 0x2c, 0xcc, 0x35, 0x48, 0x08, 0x05, 0x98, 0x7c, 0xb7, 0x0b, 0xe1, 0x7b}
+            },
+
+            new TestData
+            {
+                password = "password",
+                salt = "salt",
+                iterationCount = 2,
+                expected = new byte[] {0xae, 0x4d, 0x0c, 0x95, 0xaf, 0x6b, 0x46, 0xd3, 0x2d, 0x0a, 0xdf, 0xf9, 0x28, 0xf0, 0x6d, 0xd0, 0x2a, 0x30, 0x3f, 0x8e, 0xf3, 0xc2, 0x51, 0xdf, 0xd6, 0xe2, 0xd8, 0x5a, 0x95, 0x47, 0x4c, 0x43}
+            },
+
+            new TestData
+            {
+                password = "password",
+                salt = "salt",
+                iterationCount = 4096,
+                expected = new byte[] {0xc5, 0xe4, 0x78, 0xd5, 0x92, 0x88, 0xc8, 0x41, 0xaa, 0x53, 0x0d, 0xb6, 0x84, 0x5c, 0x4c, 0x8d, 0x96, 0x28, 0x93, 0xa0, 0x01, 0xce, 0x4e, 0x11, 0xa4, 0x96, 0x38, 0x73, 0xaa, 0x98, 0x13, 0x4a}
+            },
+
+            new TestData
+            {
+                password = "passwordPASSWORDpassword",
+                salt = "saltSALTsaltSALTsaltSALTsaltSALTsalt",
+                iterationCount = 4096,
+                expected = new byte[] {0x34, 0x8c, 0x89, 0xdb, 0xcb, 0xd3, 0x2b, 0x2f, 0x32, 0xd8, 0x14, 0xb8, 0x11, 0x6e, 0x84, 0xcf, 0x2b, 0x17, 0x34, 0x7e, 0xbc, 0x18, 0x00, 0x18, 0x1c, 0x4e, 0x2a, 0x1f, 0xb8, 0xdd, 0x53, 0xe1, 0xc6, 0x35, 0x51, 0x8c, 0x7d, 0xac, 0x47, 0xe9}
+            },
+        };
+
         [Test]
         public void PropertiesAreSet()
         {
@@ -72,11 +109,23 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void GetBytes()
+        public void GetBytesSHA1()
         {
-            foreach (var i in testData)
+            foreach (var i in testDataSHA1)
             {
                 var generator = new PBKDF2(new HMACSHA1(), i.password, i.salt, i.iterationCount);
+                var bytes = generator.GetBytes(i.expected.Length);
+
+                Assert.AreEqual(bytes, i.expected);
+            }
+        }
+
+        [Test]
+        public void GetBytesSHA256()
+        {
+            foreach (var i in testDataSHA256)
+            {
+                var generator = new PBKDF2(new HMACSHA256(), i.password, i.salt, i.iterationCount);
                 var bytes = generator.GetBytes(i.expected.Length);
 
                 Assert.AreEqual(bytes, i.expected);
