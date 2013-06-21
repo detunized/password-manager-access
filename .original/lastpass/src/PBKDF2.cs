@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace LastPass
 {
-    public class PBKDF2: DeriveBytes
+    class PBKDF2: DeriveBytes
     {
         public PBKDF2(HMAC hashFunction, string password, string salt, int iterationCount)
         {
