@@ -6,6 +6,7 @@ namespace LastPass
 {
     class PBKDF2
     {
+        // TODO: Don't really need this Microsoft interface, just make it a static function
         public PBKDF2(HMAC hashFunction, string password, string salt, int iterationCount)
         {
             HashFunction = hashFunction;
@@ -23,6 +24,7 @@ namespace LastPass
             var blockCount = (byteCount + hashSize - 1) / hashSize;
             for (int i = 0; i < blockCount; ++i)
             {
+                // TODO: Calculate the value in-place
                 var block = CalculateBlock(i + 1);
                 var offset = i * hashSize;
                 var size = Math.Min(hashSize, byteCount - offset);
@@ -39,9 +41,11 @@ namespace LastPass
 
         private byte[] CalculateBlock(int blockIndex)
         {
+            // TODO: Get rid if the temporary
             var hashInput = new byte[Salt.Length + 4];
             Salt.CopyTo(hashInput, 0);
 
+            // TODO: Get rid if the temporary
             var indexBytes = BitConverter.GetBytes(blockIndex);
             if (BitConverter.IsLittleEndian)
             {
