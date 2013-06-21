@@ -1,11 +1,10 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
-using System.Diagnostics;
 
 namespace LastPass
 {
-    class PBKDF2: DeriveBytes
+    class PBKDF2
     {
         public PBKDF2(HMAC hashFunction, string password, string salt, int iterationCount)
         {
@@ -17,7 +16,7 @@ namespace LastPass
             HashFunction.Key = Password;
         }
 
-        public override byte[] GetBytes(int byteCount)
+        public byte[] GetBytes(int byteCount)
         {
             var bytes = new byte[byteCount];
             var hashSize = HashFunction.HashSize / 8;
@@ -31,10 +30,6 @@ namespace LastPass
             }
 
             return bytes;
-        }
-
-        public override void Reset()
-        {
         }
 
         public HMAC HashFunction { get; private set; }
