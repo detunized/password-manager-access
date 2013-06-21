@@ -13,6 +13,8 @@ namespace LastPass
             Password = UTF8Encoding.UTF8.GetBytes(password);
             Salt = UTF8Encoding.UTF8.GetBytes(salt);
             IterationCount = iterationCount;
+
+            HashFunction.Key = Password;
         }
 
         public override byte[] GetBytes(int byteCount)
@@ -22,10 +24,10 @@ namespace LastPass
             var blockCount = (byteCount + hashSize - 1) / hashSize;
             for (int i = 0; i < blockCount; ++i)
             {
-                var block = CalculateBlock();
+                var block = CalculateBlock(i + 1);
                 var offset = i * hashSize;
                 var size = Math.Min(hashSize, byteCount - offset);
-                Buffer.BlockCopy(block, 0, bytes, offset, size);
+                Array.Copy(block, 0, bytes, offset, size);
             }
 
             return bytes;
@@ -40,9 +42,19 @@ namespace LastPass
         public byte[] Salt { get; private set; }
         public int IterationCount { get; private set; }
 
-        private byte[] CalculateBlock()
+        private byte[] CalculateBlock(int blockIndex)
         {
-            return new byte[HashFunction.HashSize / 8];
+            var hashInput = new byte[Salt.Length + 4];
+            Salt.CopyTo(hashInput, 0);
+
+            var indexBytes = BitConverter.GetBytes(blockIndex);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(indexBytes);
+            }
+            indexBytes.CopyTo(hashInput, Salt.Length);
+
+            return HashFunction.ComputeHash(hashInput);
         }
     }
 }

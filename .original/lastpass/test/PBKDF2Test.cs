@@ -36,13 +36,13 @@ namespace LastPass.Test
             var passwordBytes = UTF8Encoding.UTF8.GetBytes(password);
             var salt = "salt";
             var saltBytes = UTF8Encoding.UTF8.GetBytes(salt);
-            var iterationCount = 1000;
-            var byteCount = 97; // Use a prime number to make sure it's not a multiple of anything
+            var iterationCount = 1;
+            var expected = new byte[] { 0x0c, 0x60, 0xc8, 0x0f, 0x96, 0x1f, 0x0e, 0x71, 0xf3, 0xa9, 0xb5, 0x24, 0xaf, 0x60, 0x12, 0x06, 0x2f, 0xe0, 0x37, 0xa6 };
 
             var generator = new PBKDF2(hashFunction, password, salt, iterationCount);
-            var bytes = generator.GetBytes(byteCount);
+            var bytes = generator.GetBytes(expected.Length);
 
-            Assert.AreEqual(byteCount, bytes.Length);
+            Assert.AreEqual(bytes, expected);
         }
     }
 }
