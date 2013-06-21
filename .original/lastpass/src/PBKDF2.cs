@@ -9,6 +9,7 @@ namespace LastPass
         // TODO: Don't really need this Microsoft interface, just make it a static function
         public PBKDF2(HMAC hashFunction, string password, string salt, int iterationCount)
         {
+            // TODO: Check arguments and throw exceptions
             HashFunction = hashFunction;
             Password = UTF8Encoding.UTF8.GetBytes(password);
             Salt = UTF8Encoding.UTF8.GetBytes(salt);
@@ -19,6 +20,7 @@ namespace LastPass
 
         public byte[] GetBytes(int byteCount)
         {
+            // TODO: Check for byteCount being too big
             var bytes = new byte[byteCount];
             var hashSize = HashFunction.HashSize / 8;
             var blockCount = (byteCount + hashSize - 1) / hashSize;
