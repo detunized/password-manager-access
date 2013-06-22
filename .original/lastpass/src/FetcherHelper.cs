@@ -38,8 +38,13 @@ namespace LastPass
                     return ToHexString(sha.ComputeHash(UTF8Encoding.UTF8.GetBytes(ToHexString(key) + password)));
                 }
             }
-
-            throw new NotImplementedException();
+            else
+            {
+                using (var hmac = new HMACSHA256())
+                {
+                    return ToHexString(new PBKDF2(hmac, key, password, 1).GetBytes(32));
+                }
+            }
         }
 
         public static string ToHexString(byte[] bytes)

@@ -37,6 +37,12 @@ namespace LastPass.Test
             var testCases = new Dictionary<int, string>
             {
                 {1, "a1943cfbb75e37b129bbf78b9baeab4ae6dd08225776397f66b8e0c7a913a055"},
+                {5, "a95849e029a7791cfc4503eed9ec96ab8675c4a7c4e82b00553ddd179b3d8445"},
+                {10, "0da0b44f5e6b7306f14e92de6d629446370d05afeb1dc07cfcbe25f169170c16"},
+                {50, "1d5bc0d636da4ad469cefe56c42c2ff71589facb9c83f08fcf7711a7891cc159"},
+                {100, "82fc12024acb618878ba231a9948c49c6f46e30b5a09c11d87f6d3338babacb5"},
+                {500, "3139861ae962801b59fc41ff7eeb11f84ca56d810ab490f0d8c89d9d9ab07aa6"},
+                {1000, "03161354566c396fcd624a424164160e890e96b4b5fa6d942fc6377ab613513b"},
             };
 
             var username = "postlass@gmail.com";
@@ -59,7 +65,7 @@ namespace LastPass.Test
                 {"00ff", new byte[] {0, 255}},
                 {"00010203040506070809", new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
                 {"000102030405060708090a0b0c0d0e0f", new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
-                {"8af633933e96a3c3550c2734bd814195", new byte[] {0x8a f6 33 93 3e 96 a3 c3 55 0c 27 34 bd 81 41 95}},
+                {"8af633933e96a3c3550c2734bd814195", new byte[] {0x8a, 0xf6, 0x33, 0x93, 0x3e, 0x96, 0xa3, 0xc3, 0x55, 0x0c, 0x27, 0x34, 0xbd, 0x81, 0x41, 0x95}},
             };
 
             foreach (var i in testCases)
