@@ -8,6 +8,8 @@ namespace LastPass
     {
         public static byte[] MakeKey(string username, string password, int iterationCount)
         {
+            // TODO: Check for invalid interationCount
+
             if (iterationCount == 1)
             {
                 using (var sha = SHA256.Create())
@@ -15,8 +17,13 @@ namespace LastPass
                     return sha.ComputeHash(UTF8Encoding.UTF8.GetBytes(username + password));
                 }
             }
-
-            throw new NotImplementedException();
+            else
+            {
+                using (var hmac = new HMACSHA256())
+                {
+                    return new PBKDF2(hmac, password, username, iterationCount).GetBytes(32);
+                }
+            }
         }
     }
 }
