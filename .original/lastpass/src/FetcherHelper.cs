@@ -25,5 +25,26 @@ namespace LastPass
                 }
             }
         }
+
+        public static string MakeHash(string username, string password, int iterationCount)
+        {
+            // TODO: Check for invalid interationCount
+
+            var key = MakeKey(username, password, iterationCount);
+            if (iterationCount == 1)
+            {
+                using (var sha = SHA256.Create())
+                {
+                    return ToHexString(sha.ComputeHash(UTF8Encoding.UTF8.GetBytes(ToHexString(key) + password)));
+                }
+            }
+
+            throw new NotImplementedException();
+        }
+
+        public static string ToHexString(byte[] bytes)
+        {
+            return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLower();
+        }
     }
 }
