@@ -7,12 +7,28 @@ namespace LastPass
     class PBKDF2
     {
         // TODO: Don't really need this Microsoft interface, just make it a static function
+
         public PBKDF2(HMAC hashFunction, string password, string salt, int iterationCount)
+            : this(hashFunction, UTF8Encoding.UTF8.GetBytes(password), UTF8Encoding.UTF8.GetBytes(salt), iterationCount)
+        {
+        }
+
+        public PBKDF2(HMAC hashFunction, byte[] password, string salt, int iterationCount)
+            : this(hashFunction, password, UTF8Encoding.UTF8.GetBytes(salt), iterationCount)
+        {
+        }
+
+        public PBKDF2(HMAC hashFunction, string password, byte[] salt, int iterationCount)
+            : this(hashFunction, UTF8Encoding.UTF8.GetBytes(password), salt, iterationCount)
+        {
+        }
+
+        public PBKDF2(HMAC hashFunction, byte[] password, byte[] salt, int iterationCount)
         {
             // TODO: Check arguments and throw exceptions
             HashFunction = hashFunction;
-            Password = UTF8Encoding.UTF8.GetBytes(password);
-            Salt = UTF8Encoding.UTF8.GetBytes(salt);
+            Password = password;
+            Salt = salt;
             IterationCount = iterationCount;
 
             HashFunction.Key = Password;

@@ -127,24 +127,46 @@ namespace LastPass.Test
         [Test]
         public void GetBytesSHA1()
         {
-            foreach (var i in testDataSHA1)
+            using (var hmac = new HMACSHA1())
             {
-                var generator = new PBKDF2(new HMACSHA1(), i.password, i.salt, i.iterationCount);
-                var bytes = generator.GetBytes(i.expected.Length);
+                foreach (var i in testDataSHA1)
+                {
+                    byte[][] results =
+                    {
+                        new PBKDF2(hmac, i.password, i.salt, i.iterationCount).GetBytes(i.expected.Length),
+                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.password), i.salt, i.iterationCount).GetBytes(i.expected.Length),
+                        new PBKDF2(hmac, i.password, UTF8Encoding.UTF8.GetBytes(i.salt), i.iterationCount).GetBytes(i.expected.Length),
+                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.password), UTF8Encoding.UTF8.GetBytes(i.salt), i.iterationCount).GetBytes(i.expected.Length),
+                    };
 
-                Assert.AreEqual(bytes, i.expected);
+                    foreach (var j in results)
+                    {
+                        Assert.AreEqual(j, i.expected);
+                    }
+                }
             }
         }
 
         [Test]
         public void GetBytesSHA256()
         {
-            foreach (var i in testDataSHA256)
+            using (var hmac = new HMACSHA256())
             {
-                var generator = new PBKDF2(new HMACSHA256(), i.password, i.salt, i.iterationCount);
-                var bytes = generator.GetBytes(i.expected.Length);
+                foreach (var i in testDataSHA256)
+                {
+                    byte[][] results =
+                    {
+                        new PBKDF2(hmac, i.password, i.salt, i.iterationCount).GetBytes(i.expected.Length),
+                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.password), i.salt, i.iterationCount).GetBytes(i.expected.Length),
+                        new PBKDF2(hmac, i.password, UTF8Encoding.UTF8.GetBytes(i.salt), i.iterationCount).GetBytes(i.expected.Length),
+                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.password), UTF8Encoding.UTF8.GetBytes(i.salt), i.iterationCount).GetBytes(i.expected.Length),
+                    };
 
-                Assert.AreEqual(bytes, i.expected);
+                    foreach (var j in results)
+                    {
+                        Assert.AreEqual(j, i.expected);
+                    }
+                }
             }
         }
     }
