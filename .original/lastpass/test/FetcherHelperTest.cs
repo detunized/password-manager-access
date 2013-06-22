@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace LastPass.Test
@@ -9,13 +10,19 @@ namespace LastPass.Test
         [Test]
         public void MakeKey()
         {
-            var expected = Convert.FromBase64String("C/Bh2SGWxI8JDu54DbbpV8J9wa6pKbesIb9MAXkeF3Y=");
+            var testCases = new Dictionary<int, string>
+            {
+                {1, "C/Bh2SGWxI8JDu54DbbpV8J9wa6pKbesIb9MAXkeF3Y="}
+            };
+
             var username = "postlass@gmail.com";
             var password = "pl1234567890";
-            var iterationCount = 1;
-            var result = FetcherHelper.MakeKey(username, password, iterationCount);
 
-            Assert.AreEqual(expected, result);
+            foreach (var i in testCases)
+            {
+                var result = FetcherHelper.MakeKey(username, password, i.Key);
+                Assert.AreEqual(Convert.FromBase64String(i.Value), result);
+            }
         }
     }
 }
