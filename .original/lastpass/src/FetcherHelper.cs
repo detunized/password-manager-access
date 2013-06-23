@@ -14,15 +14,13 @@ namespace LastPass
             {
                 using (var sha = SHA256.Create())
                 {
-                    return sha.ComputeHash(UTF8Encoding.UTF8.GetBytes(username + password));
+                    return sha.ComputeHash(Encoding.UTF8.GetBytes(username + password));
                 }
             }
-            else
+
+            using (var hmac = new HMACSHA256())
             {
-                using (var hmac = new HMACSHA256())
-                {
-                    return new PBKDF2(hmac, password, username, iterationCount).GetBytes(32);
-                }
+                return new PBKDF2(hmac, password, username, iterationCount).GetBytes(32);
             }
         }
 
@@ -35,15 +33,13 @@ namespace LastPass
             {
                 using (var sha = SHA256.Create())
                 {
-                    return ToHexString(sha.ComputeHash(UTF8Encoding.UTF8.GetBytes(ToHexString(key) + password)));
+                    return ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(ToHexString(key) + password)));
                 }
             }
-            else
+
+            using (var hmac = new HMACSHA256())
             {
-                using (var hmac = new HMACSHA256())
-                {
-                    return ToHexString(new PBKDF2(hmac, key, password, 1).GetBytes(32));
-                }
+                return ToHexString(new PBKDF2(hmac, key, password, 1).GetBytes(32));
             }
         }
 

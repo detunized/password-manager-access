@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Globalization;
 
 namespace LastPass
 {
@@ -21,14 +22,14 @@ namespace LastPass
 
         public void Login(IWebClient webClient)
         {
-            var response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection()
+            webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
                 {
                     {"method", "mobile"},
                     {"web", "1"},
                     {"xml", "1"},
                     {"username", _username},
                     {"hash", FetcherHelper.MakeHash(_username, _password, _iterationCount)},
-                    {"iterations", _iterationCount.ToString()}
+                    {"iterations", _iterationCount.ToString(CultureInfo.InvariantCulture)}
                 });
         }
 

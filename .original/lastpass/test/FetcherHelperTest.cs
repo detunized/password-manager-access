@@ -21,8 +21,8 @@ namespace LastPass.Test
                 {1000, "z7CdwlIkbu0XvcB7oQIpnlqwNGemdrGTBmDKnL9taPg="},
             };
 
-            var username = "postlass@gmail.com";
-            var password = "pl1234567890";
+            const string username = "postlass@gmail.com";
+            const string password = "pl1234567890";
 
             foreach (var i in testCases)
             {
@@ -45,8 +45,8 @@ namespace LastPass.Test
                 {1000, "03161354566c396fcd624a424164160e890e96b4b5fa6d942fc6377ab613513b"},
             };
 
-            var username = "postlass@gmail.com";
-            var password = "pl1234567890";
+            const string username = "postlass@gmail.com";
+            const string password = "pl1234567890";
 
             foreach (var i in testCases)
             {

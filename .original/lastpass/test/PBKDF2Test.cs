@@ -1,7 +1,6 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
-using LastPass;
 using NUnit.Framework;
 
 namespace LastPass.Test
@@ -26,34 +25,34 @@ namespace LastPass.Test
         };
 
         // Test data for PBKDF2 HMAC-SHA1 is from http://tools.ietf.org/html/rfc6070
-        private TestData[] testDataSHA1 =
+        private readonly TestData[] _testDataSha1 =
         {
             new TestData("password", "salt", 1, "DGDID5YfDnHzqbUkr2ASBi/gN6Y="),
             new TestData("password", "salt", 2, "6mwBTcctb4zNHtkqzh1B8NjeiVc="),
             new TestData("password", "salt", 4096, "SwB5AbdlSJq+rUnZJvch0GWkKcE="),
             new TestData("passwordPASSWORDpassword", "saltSALTsaltSALTsaltSALTsaltSALTsalt", 4096, "PS7sT+QchJuAyNg2YsDkSospGpZM8vBwOA=="),
-            new TestData("pass\0word", "sa\0lt", 4096, "Vvpqp1VICZ3MN9fwNCXgww=="),
+            new TestData("pass\0word", "sa\0lt", 4096, "Vvpqp1VICZ3MN9fwNCXgww==")
         };
 
         // Test data for PBKDF2 HMAC-SHA256 is from http://stackoverflow.com/a/5136918/362938
-        private TestData[] testDataSHA256 =
+        private readonly TestData[] _testDataSha256 =
         {
             new TestData("password", "salt", 1, "Eg+2z/z4syxD5yJSVsT4N6hlSMkszDVICAWYfLcL4Xs="),
             new TestData("password", "salt", 2, "rk0Mla9rRtMtCt/5KPBt0CowP47zwlHf1uLYWpVHTEM="),
             new TestData("password", "salt", 4096, "xeR41ZKIyEGqUw22hFxMjZYok6ABzk4RpJY4c6qYE0o="),
             new TestData("passwordPASSWORDpassword", "saltSALTsaltSALTsaltSALTsaltSALTsalt", 4096, "NIyJ28vTKy8y2BS4EW6EzysXNH68GAAYHE4qH7jdU+HGNVGMfaxH6Q=="),
-            new TestData("pass\0word", "sa\0lt", 4096, "ibadBRb4KYk8aWImZQqGhw=="),
+            new TestData("pass\0word", "sa\0lt", 4096, "ibadBRb4KYk8aWImZQqGhw==")
         };
 
         [Test]
         public void PropertiesAreSet()
         {
             var hashFunction = new HMACSHA1();
-            var password = "password";
-            var passwordBytes = UTF8Encoding.UTF8.GetBytes(password);
-            var salt = "salt";
-            var saltBytes = UTF8Encoding.UTF8.GetBytes(salt);
-            var iterationCount = 1000;
+            const string password = "password";
+            var passwordBytes = Encoding.UTF8.GetBytes(password);
+            const string salt = "salt";
+            var saltBytes = Encoding.UTF8.GetBytes(salt);
+            const int iterationCount = 1000;
 
             var generator = new PBKDF2(hashFunction, password, salt, iterationCount);
 
@@ -64,19 +63,19 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void GetBytesSHA1()
+        public void GetBytesSha1()
         {
             using (var hmac = new HMACSHA1())
             {
-                foreach (var i in testDataSHA1)
+                foreach (var i in _testDataSha1)
                 {
                     var expected = Convert.FromBase64String(i.Expected);
                     byte[][] results =
                     {
                         new PBKDF2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, i.Password, UTF8Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.Password), UTF8Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
+                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new PBKDF2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
+                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
                     };
 
                     foreach (var j in results)
@@ -88,19 +87,19 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void GetBytesSHA256()
+        public void GetBytesSha256()
         {
             using (var hmac = new HMACSHA256())
             {
-                foreach (var i in testDataSHA256)
+                foreach (var i in _testDataSha256)
                 {
                     var expected = Convert.FromBase64String(i.Expected);
                     byte[][] results =
                     {
                         new PBKDF2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, i.Password, UTF8Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, UTF8Encoding.UTF8.GetBytes(i.Password), UTF8Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
+                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new PBKDF2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
+                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
                     };
 
                     foreach (var j in results)

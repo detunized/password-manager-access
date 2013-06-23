@@ -1,24 +1,13 @@
 using System.Collections.Specialized;
-using System.Net;
 using System.Text;
-using NUnit.Framework;
 using Moq;
+using NUnit.Framework;
 
 namespace LastPass.Test
 {
     [TestFixture]
     class FetcherTest
     {
-        class WebClient: IWebClient
-        {
-            public byte[] UploadValues(string address, NameValueCollection data)
-            {
-                throw new System.NotImplementedException();
-            }
-
-            public WebHeaderCollection ResponseHeaders { get; private set; }
-        }
-
         [Test]
         public void Login()
         {
