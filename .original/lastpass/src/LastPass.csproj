@@ -37,7 +37,9 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Fetcher.cs" />
     <Compile Include="FetcherHelper.cs" />
+    <Compile Include="IWebClient.cs" />
     <Compile Include="PBKDF2.cs" />
+    <Compile Include="WebClient.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

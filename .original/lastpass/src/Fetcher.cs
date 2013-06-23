@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Specialized;
-using System.Net;
-using System.Text;
 
 namespace LastPass
 {
@@ -16,20 +13,23 @@ namespace LastPass
 
         public void Login()
         {
-            using (var web = new WebClient())
+            using (var webClient = new WebClient())
             {
-                var r = web.UploadValues("https://lastpass.com/login.php", new NameValueCollection()
-                    {
-                        {"method", "mobile"},
-                        {"web", "1"},
-                        {"xml", "1"},
-                        {"username", _username},
-                        {"hash", FetcherHelper.MakeHash(_username, _password, _iterationCount)},
-                        {"iterations", _iterationCount.ToString()}
-                    });
-
-                Console.WriteLine("===\npost: {0} {1}\n===", Encoding.UTF8.GetString(r), web.ResponseHeaders);
+                Login(webClient);
             }
+        }
+
+        public void Login(IWebClient webClient)
+        {
+            var response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection()
+                {
+                    {"method", "mobile"},
+                    {"web", "1"},
+                    {"xml", "1"},
+                    {"username", _username},
+                    {"hash", FetcherHelper.MakeHash(_username, _password, _iterationCount)},
+                    {"iterations", _iterationCount.ToString()}
+                });
         }
 
         private readonly string _username;
