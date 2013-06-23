@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Net;
 using System.Text;
 
@@ -10,9 +9,9 @@ namespace LastPass
     {
         public Fetcher(string username, string password, int iterationCount = 1)
         {
-            this.username = username;
-            this.password = password;
-            this.iterationCount = iterationCount;
+            _username = username;
+            _password = password;
+            _iterationCount = iterationCount;
         }
 
         public void Login()
@@ -24,17 +23,17 @@ namespace LastPass
                         {"method", "mobile"},
                         {"web", "1"},
                         {"xml", "1"},
-                        {"username", username},
-                        {"hash", FetcherHelper.MakeHash(username, password, iterationCount)},
-                        {"iterations", iterationCount.ToString()}
+                        {"username", _username},
+                        {"hash", FetcherHelper.MakeHash(_username, _password, _iterationCount)},
+                        {"iterations", _iterationCount.ToString()}
                     });
 
                 Console.WriteLine("===\npost: {0} {1}\n===", Encoding.UTF8.GetString(r), web.ResponseHeaders);
             }
         }
 
-        private readonly string username;
-        private readonly string password;
-        private int iterationCount;
+        private readonly string _username;
+        private readonly string _password;
+        private readonly int _iterationCount;
     }
 }
