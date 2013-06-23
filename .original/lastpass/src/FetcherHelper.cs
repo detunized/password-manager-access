@@ -20,7 +20,7 @@ namespace LastPass
 
             using (var hmac = new HMACSHA256())
             {
-                return new PBKDF2(hmac, password, username, iterationCount).GetBytes(32);
+                return new Pbkdf2(hmac, password, username, iterationCount).GetBytes(32);
             }
         }
 
@@ -39,7 +39,7 @@ namespace LastPass
 
             using (var hmac = new HMACSHA256())
             {
-                return ToHexString(new PBKDF2(hmac, key, password, 1).GetBytes(32));
+                return ToHexString(new Pbkdf2(hmac, key, password, 1).GetBytes(32));
             }
         }
 

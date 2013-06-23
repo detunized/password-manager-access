@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace LastPass.Test
 {
     [TestFixture]
-    class PBKDF2Test
+    class Pbkdf2Test
     {
         private struct TestData
         {
@@ -54,7 +54,7 @@ namespace LastPass.Test
             var saltBytes = Encoding.UTF8.GetBytes(salt);
             const int iterationCount = 1000;
 
-            var generator = new PBKDF2(hashFunction, password, salt, iterationCount);
+            var generator = new Pbkdf2(hashFunction, password, salt, iterationCount);
 
             Assert.AreEqual(hashFunction, generator.HashFunction);
             Assert.AreEqual(passwordBytes, generator.Password);
@@ -72,10 +72,10 @@ namespace LastPass.Test
                     var expected = Convert.FromBase64String(i.Expected);
                     byte[][] results =
                     {
-                        new PBKDF2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
+                        new Pbkdf2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
                     };
 
                     foreach (var j in results)
@@ -96,10 +96,10 @@ namespace LastPass.Test
                     var expected = Convert.FromBase64String(i.Expected);
                     byte[][] results =
                     {
-                        new PBKDF2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
-                        new PBKDF2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
+                        new Pbkdf2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
                     };
 
                     foreach (var j in results)
