@@ -12,7 +12,7 @@ namespace LastPass
 
             if (iterationCount == 1)
             {
-                using (var sha = SHA256.Create())
+                using (var sha = new SHA256Managed())
                 {
                     return sha.ComputeHash(Encoding.UTF8.GetBytes(username + password));
                 }
@@ -31,7 +31,7 @@ namespace LastPass
             var key = MakeKey(username, password, iterationCount);
             if (iterationCount == 1)
             {
-                using (var sha = SHA256.Create())
+                using (var sha = new SHA256Managed())
                 {
                     return ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(ToHexString(key) + password)));
                 }
