@@ -11,18 +11,32 @@ namespace LastPass.Test
     {
         private const string UnknownEmailMessage = "Unknown email address.";
         private const string InvalidPasswordMessage = "Invalid password!";
+        private const string UnknownReasonMessage = "Unknown reason";
 
         private const string Url = "https://lastpass.com/login.php";
         private const string Username = "username";
         private const string Password = "password";
-        private readonly NameValueCollection _expectedValues = new NameValueCollection
+        private const string Iterations1 = "1";
+        private const string Iterations2 = "5000";
+
+        private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
             {
                 {"method", "mobile"},
                 {"web", "1"},
                 {"xml", "1"},
-                {"username", Username},
+                {"username", Username}
+            };
+
+        private static readonly NameValueCollection ExpectedValues1 = new NameValueCollection(SharedExpectedValues)
+            {
                 {"hash", "e379d972c3eb59579abe3864d850b5f54911544adfa2daf9fb53c05d30cdc985"},
-                {"iterations", "1"}
+                {"iterations", Iterations1}
+            };
+
+        private static readonly NameValueCollection ExpectedValues2 = new NameValueCollection(SharedExpectedValues)
+            {
+                {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
+                {"iterations", Iterations2}
             };
 
         [Test]
@@ -36,7 +50,7 @@ namespace LastPass.Test
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, _expectedValues))))
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
             new Fetcher(Username, Password).Login(webClient.Object);
@@ -53,7 +67,37 @@ namespace LastPass.Test
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, _expectedValues))))
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
+                .Returns(response);
+
+            new Fetcher(Username, Password).Login(webClient.Object);
+        }
+
+        [Test]
+        [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownReasonMessage)]
+        public void Login_failed_for_unknown_reason_with_error_element()
+        {
+            var response = Encoding.UTF8.GetBytes("<response><error /></response>");
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
+                .Returns(response);
+
+            new Fetcher(Username, Password).Login(webClient.Object);
+        }
+
+        [Test]
+        [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownReasonMessage)]
+        public void Login_failed_for_unknown_reason_without_error_element()
+        {
+            var response = Encoding.UTF8.GetBytes("<response />");
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
             new Fetcher(Username, Password).Login(webClient.Object);
@@ -62,22 +106,18 @@ namespace LastPass.Test
         [Test]
         public void Login_rerequests_with_given_iterations()
         {
-            var response1 = Encoding.UTF8.GetBytes("<response><error iterations=\"5000\" /></response>");
+            var response1 = Encoding.UTF8.GetBytes(string.Format("<response><error iterations=\"{0}\" /></response>", Iterations2));
             var response2 = Encoding.UTF8.GetBytes("<ok />");
-
-            var expectedValues2 = new NameValueCollection(_expectedValues);
-            expectedValues2.Set("hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256");
-            expectedValues2.Set("iterations", "5000");
 
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, _expectedValues))))
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response1);
 
             webClient
                 .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, expectedValues2))))
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues2))))
                 .Returns(response2);
 
             new Fetcher(Username, Password).Login(webClient.Object);
