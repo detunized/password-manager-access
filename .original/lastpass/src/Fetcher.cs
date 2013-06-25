@@ -1,10 +1,17 @@
 using System.Collections.Specialized;
 using System.Globalization;
+using System.Text;
+using System.Xml.Linq;
+using System.Xml.XPath;
 
 namespace LastPass
 {
     public class Fetcher
     {
+        public class Session
+        {
+        }
+
         public Fetcher(string username, string password, int iterationCount = 1)
         {
             _username = username;
@@ -20,9 +27,9 @@ namespace LastPass
             }
         }
 
-        public void Login(IWebClient webClient)
+        public Session Login(IWebClient webClient)
         {
-            webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
+            var response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
                 {
                     {"method", "mobile"},
                     {"web", "1"},
@@ -31,6 +38,26 @@ namespace LastPass
                     {"hash", FetcherHelper.MakeHash(_username, _password, _iterationCount)},
                     {"iterations", _iterationCount.ToString(CultureInfo.InvariantCulture)}
                 });
+
+            var xml = XDocument.Parse(Encoding.UTF8.GetString(response));
+
+            var ok = xml.XPathSelectElement("ok");
+            if (ok != null)
+            {
+                return new Session();
+            }
+
+            var error = xml.XPathSelectElement("response/error");
+            if (error != null)
+            {
+                var message = error.Attribute("message");
+                if (message != null)
+                {
+                    throw new LoginException(message.Value);
+                }
+            }
+
+            throw new LoginException("Unknown reason");
         }
 
         private readonly string _username;

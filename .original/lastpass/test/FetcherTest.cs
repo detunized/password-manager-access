@@ -9,12 +9,15 @@ namespace LastPass.Test
     [TestFixture]
     class FetcherTest
     {
+        private const string UnknownEmailMessage = "Unknown email address.";
+
         [Test]
-        public void Login()
+        [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownEmailMessage)]
+        public void Login_failed_because_of_invalid_email()
         {
-            const string url = "https://lastpass.com/login.php";
-            const string username = "username";
-            const string password = "password";
+            var url = "https://lastpass.com/login.php";
+            var username = "username";
+            var password = "password";
             var expectedValues = new NameValueCollection
                 {
                     {"method", "mobile"},
@@ -24,17 +27,18 @@ namespace LastPass.Test
                     {"hash", "e379d972c3eb59579abe3864d850b5f54911544adfa2daf9fb53c05d30cdc985"},
                     {"iterations", "1"}
                 };
+            var response = Encoding.UTF8.GetBytes(string.Format(
+                "<response><error message=\"{0}\" cause=\"unknownemail\" /></response>",
+                UnknownEmailMessage));
 
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.Is<string>(s => s == url),
                                            It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))))
-                .Returns(Encoding.UTF8.GetBytes(""))
+                .Returns(response)
                 .Verifiable();
 
             new Fetcher(username, password).Login(webClient.Object);
-
-            webClient.Verify();
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
