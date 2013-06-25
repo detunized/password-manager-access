@@ -10,6 +10,12 @@ namespace LastPass
     {
         public class Session
         {
+            public Session(string id)
+            {
+                _id = id;
+            }
+
+            private readonly string _id;
         }
 
         public Fetcher(string username, string password, int iterationCount = 1)
@@ -41,10 +47,14 @@ namespace LastPass
 
             var xml = XDocument.Parse(Encoding.UTF8.GetString(response));
 
-            var ok = xml.XPathSelectElement("ok");
+            var ok = xml.Element("ok");
             if (ok != null)
             {
-                return new Session();
+                var sessionId = ok.Attribute("sessionid");
+                if (sessionId != null)
+                {
+                    return new Session(sessionId.Value);
+                }
             }
 
             var error = xml.XPathSelectElement("response/error");

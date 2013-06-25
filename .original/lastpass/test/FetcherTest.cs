@@ -107,7 +107,7 @@ namespace LastPass.Test
         public void Login_rerequests_with_given_iterations()
         {
             var response1 = Encoding.UTF8.GetBytes(string.Format("<response><error iterations=\"{0}\" /></response>", Iterations2));
-            var response2 = Encoding.UTF8.GetBytes("<ok />");
+            var response2 = Encoding.UTF8.GetBytes("<ok sessionid=\"53ru,Hb713QnEVM5zWZ16jMvxS0\" />");
 
             var webClient = new Mock<IWebClient>();
             webClient
