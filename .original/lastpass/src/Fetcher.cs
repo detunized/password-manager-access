@@ -50,6 +50,13 @@ namespace LastPass
             var error = xml.XPathSelectElement("response/error");
             if (error != null)
             {
+                var iterations = error.Attribute("iterations");
+                if (iterations != null)
+                {
+                    _iterationCount = int.Parse(iterations.Value);
+                    return Login(webClient);
+                }
+
                 var message = error.Attribute("message");
                 if (message != null)
                 {
@@ -62,6 +69,6 @@ namespace LastPass
 
         private readonly string _username;
         private readonly string _password;
-        private readonly int _iterationCount;
+        private int _iterationCount;
     }
 }

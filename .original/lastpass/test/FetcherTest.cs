@@ -59,6 +59,30 @@ namespace LastPass.Test
             new Fetcher(Username, Password).Login(webClient.Object);
         }
 
+        [Test]
+        public void Login_rerequests_with_given_iterations()
+        {
+            var response1 = Encoding.UTF8.GetBytes("<response><error iterations=\"5000\" /></response>");
+            var response2 = Encoding.UTF8.GetBytes("<ok />");
+
+            var expectedValues2 = new NameValueCollection(_expectedValues);
+            expectedValues2.Set("hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256");
+            expectedValues2.Set("iterations", "5000");
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, _expectedValues))))
+                .Returns(response1);
+
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, expectedValues2))))
+                .Returns(response2);
+
+            new Fetcher(Username, Password).Login(webClient.Object);
+        }
+
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
         {
             return a.AllKeys.OrderBy(s => s).SequenceEqual(b.AllKeys.OrderBy(s => s)) &&
