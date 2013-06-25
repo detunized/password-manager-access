@@ -40,7 +40,7 @@ namespace LastPass
             var bytes = new byte[byteCount];
             var hashSize = HashFunction.HashSize / 8;
             var blockCount = (byteCount + hashSize - 1) / hashSize;
-            for (int i = 0; i < blockCount; ++i)
+            for (var i = 0; i < blockCount; ++i)
             {
                 // TODO: Calculate the value in-place
                 var block = CalculateBlock(i + 1);
@@ -73,10 +73,10 @@ namespace LastPass
 
             var hashed = HashFunction.ComputeHash(hashInput);
             var result = hashed;
-            for (int i = 1; i < IterationCount; ++i)
+            for (var i = 1; i < IterationCount; ++i)
             {
                 hashed = HashFunction.ComputeHash(hashed);
-                for (int j = 0; j < hashed.Length; ++j)
+                for (var j = 0; j < hashed.Length; ++j)
                 {
                     result[j] ^= hashed[j];
                 }
