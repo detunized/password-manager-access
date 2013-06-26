@@ -45,6 +45,11 @@ namespace LastPass
                     {"iterations", _iterationCount.ToString(CultureInfo.InvariantCulture)}
                 });
 
+            return HandleLoginResponse(response, webClient);
+        }
+
+        private Session HandleLoginResponse(byte[] response, IWebClient webClient)
+        {
             var xml = XDocument.Parse(Encoding.UTF8.GetString(response));
 
             var ok = xml.Element("ok");
