@@ -12,10 +12,10 @@ namespace LastPass
         {
             public Session(string id)
             {
-                _id = id;
+                Id = id;
             }
 
-            private readonly string _id;
+            public string Id { get; private set; }
         }
 
         public Fetcher(string username, string password, int iterationCount = 1)

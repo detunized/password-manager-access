@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using Moq;
@@ -16,8 +17,9 @@ namespace LastPass.Test
         private const string Url = "https://lastpass.com/login.php";
         private const string Username = "username";
         private const string Password = "password";
-        private const string Iterations1 = "1";
-        private const string Iterations2 = "5000";
+        private const int IterationCount1 = 1;
+        private const int IterationCount2 = 5000;
+        private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
         private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
             {
@@ -30,13 +32,13 @@ namespace LastPass.Test
         private static readonly NameValueCollection ExpectedValues1 = new NameValueCollection(SharedExpectedValues)
             {
                 {"hash", "e379d972c3eb59579abe3864d850b5f54911544adfa2daf9fb53c05d30cdc985"},
-                {"iterations", Iterations1}
+                {"iterations", string.Format("{0}", IterationCount1)}
             };
 
         private static readonly NameValueCollection ExpectedValues2 = new NameValueCollection(SharedExpectedValues)
             {
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
-                {"iterations", Iterations2}
+                {"iterations", string.Format("{0}", IterationCount2)}
             };
 
         [Test]
@@ -106,8 +108,10 @@ namespace LastPass.Test
         [Test]
         public void Login_rerequests_with_given_iterations()
         {
-            var response1 = Encoding.UTF8.GetBytes(string.Format("<response><error iterations=\"{0}\" /></response>", Iterations2));
-            var response2 = Encoding.UTF8.GetBytes("<ok sessionid=\"53ru,Hb713QnEVM5zWZ16jMvxS0\" />");
+            var response1 = Encoding.UTF8.GetBytes(string.Format(
+                "<response><error iterations=\"{0}\" /></response>",
+                IterationCount2));
+            var response2 = Encoding.UTF8.GetBytes(string.Format("<ok sessionid=\"{0}\" />", SessionId));
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -120,7 +124,8 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues2))))
                 .Returns(response2);
 
-            new Fetcher(Username, Password).Login(webClient.Object);
+            var session = new Fetcher(Username, Password).Login(webClient.Object);
+            Assert.AreEqual(SessionId, session.Id);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
