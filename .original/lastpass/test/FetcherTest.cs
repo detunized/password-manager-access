@@ -1,6 +1,7 @@
+using System;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Text;
 using Moq;
 using NUnit.Framework;
@@ -129,13 +130,41 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Fetch()
+        public void Fetch_sets_cookies()
         {
             var session = new Fetcher.Session(SessionId);
+            var headers = new WebHeaderCollection();
+
             var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(headers);
+
+            new Fetcher(Username, Password).Fetch(session, webClient.Object);
+
+            Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
+        }
+
+        [Test]
+        public void Fetch_returns_blob()
+        {
+            var session = new Fetcher.Session(SessionId);
+            var response = new byte[] {1, 2, 3, 4};
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(new WebHeaderCollection());
+
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Returns(response)
+                .Verifiable();
+
             var blob = new Fetcher(Username, Password).Fetch(session, webClient.Object);
 
-            Assert.NotNull(blob);
+            webClient.Verify();
+            Assert.AreEqual(response, blob.Bytes);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)

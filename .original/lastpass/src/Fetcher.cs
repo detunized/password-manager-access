@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Text;
@@ -20,6 +21,12 @@ namespace LastPass
 
         public class Blob
         {
+            public Blob(byte[] bytes)
+            {
+                Bytes = bytes;
+            }
+
+            public byte[] Bytes { get; private set; }
         }
 
         public Fetcher(string username, string password, int iterationCount = 1)
@@ -29,16 +36,17 @@ namespace LastPass
             _iterationCount = iterationCount;
         }
 
-        public void Login()
+        public Session Login()
         {
             using (var webClient = new WebClient())
             {
-                Login(webClient);
+                return Login(webClient);
             }
         }
 
         public Session Login(IWebClient webClient)
         {
+            // TODO: Handle web error and (possibly) rethrow them as LastPass errors
             var response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
                 {
                     {"method", "mobile"},
@@ -62,7 +70,13 @@ namespace LastPass
 
         public Blob Fetch(Session session, IWebClient webClient)
         {
-            return new Blob();
+            webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
+
+            // TODO: Handle web error and (possibly) rethrow them as LastPass errors
+            var response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
+
+            // TODO: Convert from Base64 to bytes
+            return new Blob(response);
         }
 
         private Session HandleLoginResponse(byte[] response, IWebClient webClient)
