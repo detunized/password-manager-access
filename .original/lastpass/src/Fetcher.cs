@@ -18,6 +18,10 @@ namespace LastPass
             public string Id { get; private set; }
         }
 
+        public class Blob
+        {
+        }
+
         public Fetcher(string username, string password, int iterationCount = 1)
         {
             _username = username;
@@ -46,6 +50,19 @@ namespace LastPass
                 });
 
             return HandleLoginResponse(response, webClient);
+        }
+
+        public Blob Fetch(Session session)
+        {
+            using (var webClient = new WebClient())
+            {
+                return Fetch(session, webClient);
+            }
+        }
+
+        public Blob Fetch(Session session, IWebClient webClient)
+        {
+            return new Blob();
         }
 
         private Session HandleLoginResponse(byte[] response, IWebClient webClient)

@@ -128,6 +128,16 @@ namespace LastPass.Test
             Assert.AreEqual(SessionId, session.Id);
         }
 
+        [Test]
+        public void Fetch()
+        {
+            var session = new Fetcher.Session(SessionId);
+            var webClient = new Mock<IWebClient>();
+            var blob = new Fetcher(Username, Password).Fetch(session, webClient.Object);
+
+            Assert.NotNull(blob);
+        }
+
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
         {
             return a.AllKeys.OrderBy(s => s).SequenceEqual(b.AllKeys.OrderBy(s => s)) &&
