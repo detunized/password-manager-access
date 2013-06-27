@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace LastPass
 {
@@ -12,6 +13,11 @@ namespace LastPass
         public static uint FromBigEndian(this uint x)
         {
             return BitConverter.IsLittleEndian ? x.Reverse() : x;
+        }
+
+        public static string ToUtf8(this byte[] x)
+        {
+            return Encoding.UTF8.GetString(x);
         }
     }
 }

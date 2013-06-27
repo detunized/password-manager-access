@@ -24,5 +24,12 @@ namespace LastPass.Test
             Assert.AreEqual(0x12345678u, BitConverter.ToUInt32(new byte[] {0x12, 0x34, 0x56, 0x78}, 0).FromBigEndian());
             Assert.AreEqual(0xdeadbeefu, BitConverter.ToUInt32(new byte[] {0xde, 0xad, 0xbe, 0xef}, 0).FromBigEndian());
         }
+
+        [Test]
+        public void ToUtf8()
+        {
+            Assert.AreEqual("", new byte[] {}.ToUtf8());
+            Assert.AreEqual("Hello, UTF-8!", new byte[] {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x55, 0x54, 0x46, 0x2d, 0x38, 0x21}.ToUtf8());
+        }
     }
 }
