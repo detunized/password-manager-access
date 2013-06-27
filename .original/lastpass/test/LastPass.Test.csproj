@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="ExtensionsTest.cs" />
     <Compile Include="FetcherHelperTest.cs" />
     <Compile Include="FetcherTest.cs" />
     <Compile Include="ParserTest.cs" />
