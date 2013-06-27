@@ -30,7 +30,7 @@ namespace LastPass
         //   000C: --- Next chunk ---
         private void ReadChunk(BinaryReader reader)
         {
-            var id = Encoding.UTF8.GetString(reader.ReadBytes(4));
+            var id = reader.ReadBytes(4).ToUtf8();
             var size = reader.ReadUInt32().FromBigEndian();
             var payload = reader.ReadBytes((int)size);
         }

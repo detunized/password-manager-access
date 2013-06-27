@@ -77,13 +77,13 @@ namespace LastPass
             // TODO: Handle web error and (possibly) rethrow them as LastPass errors
             var response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
 
-            return new Blob(Convert.FromBase64String(Encoding.UTF8.GetString(response)),
+            return new Blob(Convert.FromBase64String(response.ToUtf8()),
                             FetcherHelper.MakeKey(_username, _password, _iterationCount));
         }
 
         private Session HandleLoginResponse(byte[] response, IWebClient webClient)
         {
-            var xml = XDocument.Parse(Encoding.UTF8.GetString(response));
+            var xml = XDocument.Parse(response.ToUtf8());
 
             var ok = xml.Element("ok");
             if (ok != null)
