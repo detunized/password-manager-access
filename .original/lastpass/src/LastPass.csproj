@@ -41,6 +41,7 @@
     <Compile Include="FetcherHelper.cs" />
     <Compile Include="IWebClient.cs" />
     <Compile Include="LoginException.cs" />
+    <Compile Include="Parser.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="WebClient.cs" />
   </ItemGroup>
