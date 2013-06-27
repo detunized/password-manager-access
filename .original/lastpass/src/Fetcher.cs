@@ -77,8 +77,8 @@ namespace LastPass
             // TODO: Handle web error and (possibly) rethrow them as LastPass errors
             var response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
 
-            // TODO: Convert from Base64 to bytes
-            return new Blob(response, FetcherHelper.MakeKey(_username, _password, _iterationCount));
+            return new Blob(Convert.FromBase64String(Encoding.UTF8.GetString(response)),
+                            FetcherHelper.MakeKey(_username, _password, _iterationCount));
         }
 
         private Session HandleLoginResponse(byte[] response, IWebClient webClient)

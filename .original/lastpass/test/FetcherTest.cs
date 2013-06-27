@@ -149,8 +149,9 @@ namespace LastPass.Test
         public void Fetch_returns_blob()
         {
             var session = new Fetcher.Session(SessionId);
-            var response = new byte[] {1, 2, 3, 4};
-            var encryptionKey = Convert.FromBase64String("vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=");
+            var response = Encoding.UTF8.GetBytes("VGVzdCBibG9i");
+            var expectedBlob = Encoding.UTF8.GetBytes("Test blob");
+            var expectedEncryptionKey = Convert.FromBase64String("vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=");
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -165,8 +166,8 @@ namespace LastPass.Test
             var blob = new Fetcher(Username, Password).Fetch(session, webClient.Object);
 
             webClient.Verify();
-            Assert.AreEqual(response, blob.Bytes);
-            Assert.AreEqual(encryptionKey, blob.EncryptionKey);
+            Assert.AreEqual(expectedBlob, blob.Bytes);
+            Assert.AreEqual(expectedEncryptionKey, blob.EncryptionKey);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
