@@ -21,12 +21,14 @@ namespace LastPass
 
         public class Blob
         {
-            public Blob(byte[] bytes)
+            public Blob(byte[] bytes, byte[] encryptionKey)
             {
                 Bytes = bytes;
+                EncryptionKey = encryptionKey;
             }
 
             public byte[] Bytes { get; private set; }
+            public byte[] EncryptionKey { get; private set; }
         }
 
         public Fetcher(string username, string password, int iterationCount = 1)
@@ -76,7 +78,7 @@ namespace LastPass
             var response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
 
             // TODO: Convert from Base64 to bytes
-            return new Blob(response);
+            return new Blob(response, FetcherHelper.MakeKey(_username, _password, _iterationCount));
         }
 
         private Session HandleLoginResponse(byte[] response, IWebClient webClient)
