@@ -24,5 +24,10 @@ namespace LastPass
         {
             return Encoding.UTF8.GetBytes(s);
         }
+
+        public static byte[] FromBase64(this string s)
+        {
+            return Convert.FromBase64String(s);
+        }
     }
 }
