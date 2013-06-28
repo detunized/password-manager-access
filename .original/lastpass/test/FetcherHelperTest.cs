@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
@@ -52,25 +51,6 @@ namespace LastPass.Test
             {
                 var result = FetcherHelper.MakeHash(username, password, i.Key);
                 Assert.AreEqual(i.Value, result);
-            }
-        }
-
-        [Test]
-        public void ToHexString()
-        {
-            var testCases = new Dictionary<string, byte[]>
-            {
-                {"", new byte[] {}},
-                {"00", new byte[] {0}},
-                {"00ff", new byte[] {0, 255}},
-                {"00010203040506070809", new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
-                {"000102030405060708090a0b0c0d0e0f", new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
-                {"8af633933e96a3c3550c2734bd814195", new byte[] {0x8a, 0xf6, 0x33, 0x93, 0x3e, 0x96, 0xa3, 0xc3, 0x55, 0x0c, 0x27, 0x34, 0xbd, 0x81, 0x41, 0x95}},
-            };
-
-            foreach (var i in testCases)
-            {
-                Assert.AreEqual(i.Key, FetcherHelper.ToHexString(i.Value));
             }
         }
     }

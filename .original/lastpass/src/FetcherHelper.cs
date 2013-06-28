@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Security.Cryptography;
 
 namespace LastPass
@@ -29,16 +28,11 @@ namespace LastPass
             {
                 using (var sha = new SHA256Managed())
                 {
-                    return ToHexString(sha.ComputeHash((ToHexString(key) + password).ToBytes()));
+                    return sha.ComputeHash((key.ToHex() + password).ToBytes()).ToHex();
                 }
             }
 
-            return ToHexString(Pbkdf2.Generate(key, password, 1, 32));
-        }
-
-        public static string ToHexString(byte[] bytes)
-        {
-            return bytes.ToHex();
+            return Pbkdf2.Generate(key, password, 1, 32).ToHex();
         }
     }
 }
