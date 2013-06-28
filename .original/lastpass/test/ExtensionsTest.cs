@@ -29,7 +29,17 @@ namespace LastPass.Test
         public void ToUtf8()
         {
             Assert.AreEqual("", new byte[] {}.ToUtf8());
-            Assert.AreEqual("Hello, UTF-8!", new byte[] {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x55, 0x54, 0x46, 0x2d, 0x38, 0x21}.ToUtf8());
+            Assert.AreEqual(_helloUtf8, _helloUtf8Bytes.ToUtf8());
         }
+
+        [Test]
+        public void ToBytes()
+        {
+            Assert.AreEqual(new byte[] {}, "".ToBytes());
+            Assert.AreEqual(_helloUtf8Bytes, _helloUtf8.ToBytes());
+        }
+
+        private readonly string _helloUtf8 = "Hello, UTF-8!";
+        private readonly byte[] _helloUtf8Bytes = new byte[] {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x55, 0x54, 0x46, 0x2d, 0x38, 0x21};
     }
 }

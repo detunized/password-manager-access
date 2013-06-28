@@ -19,5 +19,10 @@ namespace LastPass
         {
             return Encoding.UTF8.GetString(x);
         }
+
+        public static byte[] ToBytes(this string s)
+        {
+            return Encoding.UTF8.GetBytes(s);
+        }
     }
 }
