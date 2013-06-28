@@ -49,9 +49,9 @@ namespace LastPass.Test
         {
             var hashFunction = new HMACSHA1();
             const string password = "password";
-            var passwordBytes = Encoding.UTF8.GetBytes(password);
+            var passwordBytes = password.ToBytes();
             const string salt = "salt";
-            var saltBytes = Encoding.UTF8.GetBytes(salt);
+            var saltBytes = salt.ToBytes();
             const int iterationCount = 1000;
 
             var generator = new Pbkdf2(hashFunction, password, salt, iterationCount);
@@ -73,9 +73,9 @@ namespace LastPass.Test
                     byte[][] results =
                     {
                         new Pbkdf2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new Pbkdf2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
-                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
+                        new Pbkdf2(hmac, i.Password.ToBytes(), i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, i.Password, i.Salt.ToBytes(), i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, i.Password.ToBytes(), i.Salt.ToBytes(), i.IterationCount).GetBytes(expected.Length)
                     };
 
                     foreach (var j in results)
@@ -97,9 +97,9 @@ namespace LastPass.Test
                     byte[][] results =
                     {
                         new Pbkdf2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), i.Salt, i.IterationCount).GetBytes(expected.Length),
-                        new Pbkdf2(hmac, i.Password, Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length),
-                        new Pbkdf2(hmac, Encoding.UTF8.GetBytes(i.Password), Encoding.UTF8.GetBytes(i.Salt), i.IterationCount).GetBytes(expected.Length)
+                        new Pbkdf2(hmac, i.Password.ToBytes(), i.Salt, i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, i.Password, i.Salt.ToBytes(), i.IterationCount).GetBytes(expected.Length),
+                        new Pbkdf2(hmac, i.Password.ToBytes(), i.Salt.ToBytes(), i.IterationCount).GetBytes(expected.Length)
                     };
 
                     foreach (var j in results)

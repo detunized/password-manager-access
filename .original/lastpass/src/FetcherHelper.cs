@@ -14,7 +14,7 @@ namespace LastPass
             {
                 using (var sha = new SHA256Managed())
                 {
-                    return sha.ComputeHash(Encoding.UTF8.GetBytes(username + password));
+                    return sha.ComputeHash((username + password).ToBytes());
                 }
             }
 
@@ -33,7 +33,7 @@ namespace LastPass
             {
                 using (var sha = new SHA256Managed())
                 {
-                    return ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(ToHexString(key) + password)));
+                    return ToHexString(sha.ComputeHash((ToHexString(key) + password).ToBytes()));
                 }
             }
 

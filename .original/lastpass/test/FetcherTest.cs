@@ -46,9 +46,8 @@ namespace LastPass.Test
         [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownEmailMessage)]
         public void Login_failed_because_of_unknown_email()
         {
-            var response = Encoding.UTF8.GetBytes(string.Format(
-                "<response><error message=\"{0}\" cause=\"unknownemail\" /></response>",
-                UnknownEmailMessage));
+            var response = string.Format("<response><error message=\"{0}\" cause=\"unknownemail\" /></response>",
+                                         UnknownEmailMessage).ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -63,9 +62,8 @@ namespace LastPass.Test
         [ExpectedException(typeof(LoginException), ExpectedMessage = InvalidPasswordMessage)]
         public void Login_failed_because_of_invalid_password()
         {
-            var response = Encoding.UTF8.GetBytes(string.Format(
-                "<response><error message=\"{0}\" cause=\"unknownpassword\" /></response>",
-                InvalidPasswordMessage));
+            var response = string.Format("<response><error message=\"{0}\" cause=\"unknownpassword\" /></response>",
+                                         InvalidPasswordMessage).ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -80,7 +78,7 @@ namespace LastPass.Test
         [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownReasonMessage)]
         public void Login_failed_for_unknown_reason_with_error_element()
         {
-            var response = Encoding.UTF8.GetBytes("<response><error /></response>");
+            var response = "<response><error /></response>".ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -95,7 +93,7 @@ namespace LastPass.Test
         [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownReasonMessage)]
         public void Login_failed_for_unknown_reason_without_error_element()
         {
-            var response = Encoding.UTF8.GetBytes("<response />");
+            var response = "<response />".ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -109,10 +107,9 @@ namespace LastPass.Test
         [Test]
         public void Login_rerequests_with_given_iterations()
         {
-            var response1 = Encoding.UTF8.GetBytes(string.Format(
-                "<response><error iterations=\"{0}\" /></response>",
-                IterationCount2));
-            var response2 = Encoding.UTF8.GetBytes(string.Format("<ok sessionid=\"{0}\" />", SessionId));
+            var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
+                                          IterationCount2).ToBytes();
+            var response2 = string.Format("<ok sessionid=\"{0}\" />", SessionId).ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -149,8 +146,8 @@ namespace LastPass.Test
         public void Fetch_returns_blob()
         {
             var session = new Fetcher.Session(SessionId);
-            var response = Encoding.UTF8.GetBytes("VGVzdCBibG9i");
-            var expectedBlob = Encoding.UTF8.GetBytes("Test blob");
+            var response = "VGVzdCBibG9i".ToBytes();
+            var expectedBlob = "Test blob".ToBytes();
             var expectedEncryptionKey = Convert.FromBase64String("vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=");
 
             var webClient = new Mock<IWebClient>();
