@@ -38,7 +38,7 @@ namespace LastPass
 
         public static string ToHexString(byte[] bytes)
         {
-            return string.Join("", bytes.Select(i => i.ToString("x2")).ToArray());
+            return bytes.ToHex();
         }
     }
 }

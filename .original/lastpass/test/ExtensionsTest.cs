@@ -33,6 +33,13 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void ToHex()
+        {
+            Assert.AreEqual("", new byte[] {}.ToHex());
+            Assert.AreEqual(_helloHex, _helloHexBytes.ToHex());
+        }
+
+        [Test]
         public void ToBytes()
         {
             Assert.AreEqual(new byte[] {}, "".ToBytes());
@@ -51,5 +58,7 @@ namespace LastPass.Test
 
         private readonly string _helloUtf8 = "Hello, UTF-8!";
         private readonly byte[] _helloUtf8Bytes = new byte[] {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x55, 0x54, 0x46, 0x2d, 0x38, 0x21};
+        private readonly string _helloHex = "48656c6c6f2c2048455821"; // "Hello, HEX!"
+        private readonly byte[] _helloHexBytes = new byte[] {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x48, 0x45, 0x58, 0x21};
     }
 }
