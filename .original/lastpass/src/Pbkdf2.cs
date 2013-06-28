@@ -1,6 +1,5 @@
 using System;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace LastPass
 {
@@ -8,22 +7,30 @@ namespace LastPass
     {
         // TODO: Don't really need this Microsoft interface, just make it a static function
 
-        public Pbkdf2(HMAC hashFunction, string password, string salt, int iterationCount)
-            : this(hashFunction, password.ToBytes(), salt.ToBytes(), iterationCount)
+        public static byte[] Generate(string password, string salt, int iterationCount, int byteCount)
         {
+            return Generate(password.ToBytes(), salt.ToBytes(), iterationCount, byteCount);
         }
 
-        public Pbkdf2(HMAC hashFunction, byte[] password, string salt, int iterationCount)
-            : this(hashFunction, password, salt.ToBytes(), iterationCount)
+        public static byte[] Generate(string password, byte[] salt, int iterationCount, int byteCount)
         {
+            return Generate(password.ToBytes(), salt, iterationCount, byteCount);
         }
 
-        public Pbkdf2(HMAC hashFunction, string password, byte[] salt, int iterationCount)
-            : this(hashFunction, password.ToBytes(), salt, iterationCount)
+        public static byte[] Generate(byte[] password, string salt, int iterationCount, int byteCount)
         {
+            return Generate(password, salt.ToBytes(), iterationCount, byteCount);
         }
 
-        public Pbkdf2(HMAC hashFunction, byte[] password, byte[] salt, int iterationCount)
+        public static byte[] Generate(byte[] password, byte[] salt, int iterationCount, int byteCount)
+        {
+            using (var hmac = new HMACSHA256())
+            {
+                return new Pbkdf2(hmac, password, salt, iterationCount).GetBytes(byteCount);
+            }
+        }
+
+        private Pbkdf2(HMAC hashFunction, byte[] password, byte[] salt, int iterationCount)
         {
             // TODO: Check arguments and throw exceptions
             HashFunction = hashFunction;

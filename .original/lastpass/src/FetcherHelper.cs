@@ -1,6 +1,5 @@
 using System;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace LastPass
 {
@@ -18,10 +17,7 @@ namespace LastPass
                 }
             }
 
-            using (var hmac = new HMACSHA256())
-            {
-                return new Pbkdf2(hmac, password, username, iterationCount).GetBytes(32);
-            }
+            return Pbkdf2.Generate(password, username, iterationCount, 32);
         }
 
         public static string MakeHash(string username, string password, int iterationCount)
@@ -37,10 +33,7 @@ namespace LastPass
                 }
             }
 
-            using (var hmac = new HMACSHA256())
-            {
-                return ToHexString(new Pbkdf2(hmac, key, password, 1).GetBytes(32));
-            }
+            return ToHexString(Pbkdf2.Generate(key, password, 1, 32));
         }
 
         public static string ToHexString(byte[] bytes)
