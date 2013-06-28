@@ -1,4 +1,4 @@
-using System;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace LastPass
@@ -38,7 +38,7 @@ namespace LastPass
 
         public static string ToHexString(byte[] bytes)
         {
-            return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLower();
+            return string.Join("", bytes.Select(i => i.ToString("x2")).ToArray());
         }
     }
 }
