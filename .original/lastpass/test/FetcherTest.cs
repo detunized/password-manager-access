@@ -148,7 +148,7 @@ namespace LastPass.Test
             var session = new Fetcher.Session(SessionId);
             var response = "VGVzdCBibG9i".ToBytes();
             var expectedBlob = "Test blob".ToBytes();
-            var expectedEncryptionKey = "vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=".FromBase64();
+            var expectedEncryptionKey = "vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=".Decode64();
 
             var webClient = new Mock<IWebClient>();
             webClient

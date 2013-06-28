@@ -69,7 +69,7 @@ namespace LastPass.Test
             {
                 foreach (var i in _testDataSha1)
                 {
-                    var expected = i.Expected.FromBase64();
+                    var expected = i.Expected.Decode64();
                     byte[][] results =
                     {
                         new Pbkdf2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),
@@ -93,7 +93,7 @@ namespace LastPass.Test
             {
                 foreach (var i in _testDataSha256)
                 {
-                    var expected = i.Expected.FromBase64();
+                    var expected = i.Expected.Decode64();
                     byte[][] results =
                     {
                         new Pbkdf2(hmac, i.Password, i.Salt, i.IterationCount).GetBytes(expected.Length),

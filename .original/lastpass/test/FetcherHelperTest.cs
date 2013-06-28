@@ -27,7 +27,7 @@ namespace LastPass.Test
             foreach (var i in testCases)
             {
                 var result = FetcherHelper.MakeKey(username, password, i.Key);
-                Assert.AreEqual(i.Value.FromBase64(), result);
+                Assert.AreEqual(i.Value.Decode64(), result);
             }
         }
 

@@ -9,7 +9,7 @@ namespace LastPass.Test
         [Test]
         public void Parser_doesnt_throw()
         {
-            new Parser(new Fetcher.Blob(_blob.FromBase64(), new byte[] {}));
+            new Parser(new Fetcher.Blob(_blob.Decode64(), new byte[] {}));
         }
 
         private readonly string _blob =

@@ -40,13 +40,13 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void FromBase64()
+        public void Decode64()
         {
-            Assert.AreEqual(new byte[] {}, "".FromBase64());
-            Assert.AreEqual(new byte[] {0x61}, "YQ==".FromBase64());
-            Assert.AreEqual(new byte[] {0x61, 0x62}, "YWI=".FromBase64());
-            Assert.AreEqual(new byte[] {0x61, 0x62, 0x63}, "YWJj".FromBase64());
-            Assert.AreEqual(new byte[] {0x61, 0x62, 0x63, 0x64}, "YWJjZA==".FromBase64());
+            Assert.AreEqual(new byte[] {}, "".Decode64());
+            Assert.AreEqual(new byte[] {0x61}, "YQ==".Decode64());
+            Assert.AreEqual(new byte[] {0x61, 0x62}, "YWI=".Decode64());
+            Assert.AreEqual(new byte[] {0x61, 0x62, 0x63}, "YWJj".Decode64());
+            Assert.AreEqual(new byte[] {0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
         }
 
         private readonly string _helloUtf8 = "Hello, UTF-8!";
