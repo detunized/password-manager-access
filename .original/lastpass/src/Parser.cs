@@ -1,5 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Linq;
 
 namespace LastPass
 {
@@ -10,16 +11,24 @@ namespace LastPass
             using (var stream = new MemoryStream(blob.Bytes, false))
             using (var reader = new BinaryReader(stream))
             {
-                ExtractChunks(reader);
+                var chunks = ExtractChunks(reader);
             }
         }
 
-        private void ExtractChunks(BinaryReader reader)
+        private Dictionary<string, Chunk[]> ExtractChunks(BinaryReader reader)
         {
+            var chunks = new Dictionary<string, List<Chunk>>();
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
-                ReadChunk(reader);
+                var chunk = ReadChunk(reader);
+                if (!chunks.ContainsKey(chunk.Id))
+                {
+                    chunks[chunk.Id] = new List<Chunk>();
+                }
+                chunks[chunk.Id].Add(chunk);
             }
+
+            return chunks.ToDictionary(i => i.Key, i => i.Value.ToArray());
         }
 
         // LastPass blob chunk is made up of 4-byte ID, 4-byte size and payload of that size
@@ -28,11 +37,25 @@ namespace LastPass
         //   0004: 4
         //   0008: 0xDE 0xAD 0xBE 0xEF
         //   000C: --- Next chunk ---
-        private void ReadChunk(BinaryReader reader)
+        private Chunk ReadChunk(BinaryReader reader)
         {
             var id = reader.ReadBytes(4).ToUtf8();
             var size = reader.ReadUInt32().FromBigEndian();
             var payload = reader.ReadBytes((int)size);
+
+            return new Chunk(id, payload);
+        }
+
+        private class Chunk
+        {
+            public Chunk(string id, byte[] payload)
+            {
+                Id = id;
+                Payload = payload;
+            }
+
+            public string Id { get; private set; }
+            public byte[] Payload { get; private set; }
         }
     }
 }
