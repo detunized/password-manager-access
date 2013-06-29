@@ -49,6 +49,7 @@
     <Compile Include="ParserHelperTest.cs" />
     <Compile Include="ParserTest.cs" />
     <Compile Include="Pbkdf2Test.cs" />
+    <Compile Include="TestData.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\LastPass.csproj">
