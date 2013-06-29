@@ -46,6 +46,7 @@
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="FetcherHelperTest.cs" />
     <Compile Include="FetcherTest.cs" />
+    <Compile Include="ParserHelperTest.cs" />
     <Compile Include="ParserTest.cs" />
     <Compile Include="Pbkdf2Test.cs" />
   </ItemGroup>
