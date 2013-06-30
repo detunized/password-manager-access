@@ -32,8 +32,7 @@ namespace LastPass
             var response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
 
             // TODO: Remove hardcoded key, for testing only!
-            return new Blob(response.ToUtf8().Decode64(),
-                            "vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=".Decode64());
+            return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
         }
 
         private static Session Login(string username, string password, int keyIterationCount, IWebClient webClient)

@@ -18,8 +18,8 @@ namespace LastPass.Test
         private const string Url = "https://lastpass.com/login.php";
         private const string Username = "username";
         private const string Password = "password";
-        private const int IterationCount1 = 1;
-        private const int IterationCount2 = 5000;
+        private const int InitialIterationCount = 1;
+        private const int CorrectIterationCount = 5000;
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
         private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
@@ -33,13 +33,13 @@ namespace LastPass.Test
         private static readonly NameValueCollection ExpectedValues1 = new NameValueCollection(SharedExpectedValues)
             {
                 {"hash", "e379d972c3eb59579abe3864d850b5f54911544adfa2daf9fb53c05d30cdc985"},
-                {"iterations", string.Format("{0}", IterationCount1)}
+                {"iterations", string.Format("{0}", InitialIterationCount)}
             };
 
         private static readonly NameValueCollection ExpectedValues2 = new NameValueCollection(SharedExpectedValues)
             {
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
-                {"iterations", string.Format("{0}", IterationCount2)}
+                {"iterations", string.Format("{0}", CorrectIterationCount)}
             };
 
         [Test]
@@ -108,7 +108,7 @@ namespace LastPass.Test
         public void Login_rerequests_with_given_iterations()
         {
             var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
-                                          IterationCount2).ToBytes();
+                                          CorrectIterationCount).ToBytes();
             var response2 = string.Format("<ok sessionid=\"{0}\" />", SessionId).ToBytes();
 
             var webClient = new Mock<IWebClient>();
@@ -129,7 +129,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_sets_cookies()
         {
-            var session = new Session(SessionId, 1);
+            var session = new Session(SessionId, CorrectIterationCount);
             var headers = new WebHeaderCollection();
 
             var webClient = new Mock<IWebClient>();
@@ -145,10 +145,9 @@ namespace LastPass.Test
         [Test]
         public void Fetch_returns_blob()
         {
-            var session = new Session(SessionId, 1);
+            var session = new Session(SessionId, CorrectIterationCount);
             var response = "VGVzdCBibG9i".ToBytes();
             var expectedBlob = "Test blob".ToBytes();
-            var expectedEncryptionKey = "vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=".Decode64();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -164,7 +163,7 @@ namespace LastPass.Test
 
             webClient.Verify();
             Assert.AreEqual(expectedBlob, blob.Bytes);
-            Assert.AreEqual(expectedEncryptionKey, blob.EncryptionKey);
+            Assert.AreEqual(CorrectIterationCount, blob.KeyIterationCount);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)

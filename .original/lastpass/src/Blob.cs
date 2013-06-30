@@ -2,13 +2,13 @@ namespace LastPass
 {
     public class Blob
     {
-        public Blob(byte[] bytes, byte[] encryptionKey)
+        public Blob(byte[] bytes, int keyIterationCount)
         {
             Bytes = bytes;
-            EncryptionKey = encryptionKey;
+            KeyIterationCount = keyIterationCount;
         }
 
         public byte[] Bytes { get; private set; }
-        public byte[] EncryptionKey { get; private set; }
+        public int KeyIterationCount { get; private set; }
     }
 }
