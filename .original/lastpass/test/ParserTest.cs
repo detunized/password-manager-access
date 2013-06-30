@@ -8,7 +8,7 @@ namespace LastPass.Test
         [Test]
         public void Parser_doesnt_throw()
         {
-            new Parser(new Blob(TestData.Blob, 1));
+            Parser.Parse(new Blob(TestData.Blob, 1));
         }
     }
 }
