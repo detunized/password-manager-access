@@ -129,7 +129,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_sets_cookies()
         {
-            var session = new Fetcher.Session(SessionId);
+            var session = new Session(SessionId, 1);
             var headers = new WebHeaderCollection();
 
             var webClient = new Mock<IWebClient>();
@@ -145,7 +145,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_returns_blob()
         {
-            var session = new Fetcher.Session(SessionId);
+            var session = new Session(SessionId, 1);
             var response = "VGVzdCBibG9i".ToBytes();
             var expectedBlob = "Test blob".ToBytes();
             var expectedEncryptionKey = "vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=".Decode64();

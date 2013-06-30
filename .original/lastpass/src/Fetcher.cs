@@ -8,16 +8,6 @@ namespace LastPass
 {
     public static class Fetcher
     {
-        public class Session
-        {
-            public Session(string id)
-            {
-                Id = id;
-            }
-
-            public string Id { get; private set; }
-        }
-
         public class Blob
         {
             public Blob(byte[] bytes, byte[] encryptionKey)
@@ -59,7 +49,7 @@ namespace LastPass
                             "vtklQtp0DL5YesRbeQEgeheiVjaAss7aMEGVonM/FL4=".Decode64());
         }
 
-        private static Session Login(string username, string password, int keyItecationCount, IWebClient webClient)
+        private static Session Login(string username, string password, int keyIterationCount, IWebClient webClient)
         {
             // TODO: Handle web error and (possibly) rethrow them as LastPass errors
             var response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
@@ -68,14 +58,14 @@ namespace LastPass
                     {"web", "1"},
                     {"xml", "1"},
                     {"username", username},
-                    {"hash", FetcherHelper.MakeHash(username, password, keyItecationCount)},
-                    {"iterations", string.Format("{0}", keyItecationCount)}
+                    {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
+                    {"iterations", string.Format("{0}", keyIterationCount)}
                 });
 
-            return HandleLoginResponse(response, username, password, webClient);
+            return HandleLoginResponse(response, username, password, keyIterationCount, webClient);
         }
 
-        private static Session HandleLoginResponse(byte[] response, string username, string password, IWebClient webClient)
+        private static Session HandleLoginResponse(byte[] response, string username, string password, int keyIterationCount, IWebClient webClient)
         {
             var xml = XDocument.Parse(response.ToUtf8());
 
@@ -85,7 +75,7 @@ namespace LastPass
                 var sessionId = ok.Attribute("sessionid");
                 if (sessionId != null)
                 {
-                    return new Session(sessionId.Value);
+                    return new Session(sessionId.Value, keyIterationCount);
                 }
             }
 
