@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -8,18 +7,6 @@ namespace LastPass
 {
     public static class Fetcher
     {
-        public class Blob
-        {
-            public Blob(byte[] bytes, byte[] encryptionKey)
-            {
-                Bytes = bytes;
-                EncryptionKey = encryptionKey;
-            }
-
-            public byte[] Bytes { get; private set; }
-            public byte[] EncryptionKey { get; private set; }
-        }
-
         public static Session Login(string username, string password)
         {
             using (var webClient = new WebClient())
