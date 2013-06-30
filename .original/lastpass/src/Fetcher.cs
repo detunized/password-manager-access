@@ -49,11 +49,7 @@ namespace LastPass
                     {"iterations", string.Format("{0}", keyIterationCount)}
                 });
 
-            return HandleLoginResponse(response, username, password, keyIterationCount, webClient);
-        }
-
-        private static Session HandleLoginResponse(byte[] response, string username, string password, int keyIterationCount, IWebClient webClient)
-        {
+            // TODO: Handle xml parsing errors
             var xml = XDocument.Parse(response.ToUtf8());
 
             var ok = xml.Element("ok");
