@@ -1,4 +1,3 @@
-using System;
 using LastPass;
 
 namespace Example
