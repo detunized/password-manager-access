@@ -47,7 +47,7 @@
     <Compile Include="FetcherHelperTest.cs" />
     <Compile Include="FetcherTest.cs" />
     <Compile Include="ParserHelperTest.cs" />
-    <Compile Include="ParserTest.cs" />
+    <Compile Include="VaultTest.cs" />
     <Compile Include="Pbkdf2Test.cs" />
     <Compile Include="TestData.cs" />
   </ItemGroup>

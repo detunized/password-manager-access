@@ -8,7 +8,7 @@ namespace Example
         {
             var session = Fetcher.Login("username", "password");
             var blob = Fetcher.Fetch(session);
-            var vault = Parser.Parse(blob);
+            var vault = Vault.Create(blob);
         }
     }
 }
