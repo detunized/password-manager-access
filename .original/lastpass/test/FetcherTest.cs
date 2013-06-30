@@ -55,7 +55,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            new Fetcher(Username, Password).Login(webClient.Object);
+            Fetcher.Login(Username, Password, webClient.Object);
         }
 
         [Test]
@@ -71,7 +71,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            new Fetcher(Username, Password).Login(webClient.Object);
+            Fetcher.Login(Username, Password, webClient.Object);
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            new Fetcher(Username, Password).Login(webClient.Object);
+            Fetcher.Login(Username, Password, webClient.Object);
         }
 
         [Test]
@@ -101,7 +101,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            new Fetcher(Username, Password).Login(webClient.Object);
+            Fetcher.Login(Username, Password, webClient.Object);
         }
 
         [Test]
@@ -122,7 +122,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues2))))
                 .Returns(response2);
 
-            var session = new Fetcher(Username, Password).Login(webClient.Object);
+            var session = Fetcher.Login(Username, Password, webClient.Object);
             Assert.AreEqual(SessionId, session.Id);
         }
 
@@ -137,7 +137,7 @@ namespace LastPass.Test
                 .SetupGet(x => x.Headers)
                 .Returns(headers);
 
-            new Fetcher(Username, Password).Fetch(session, webClient.Object);
+            Fetcher.Fetch(session, webClient.Object);
 
             Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
         }
@@ -160,7 +160,7 @@ namespace LastPass.Test
                 .Returns(response)
                 .Verifiable();
 
-            var blob = new Fetcher(Username, Password).Fetch(session, webClient.Object);
+            var blob = Fetcher.Fetch(session, webClient.Object);
 
             webClient.Verify();
             Assert.AreEqual(expectedBlob, blob.Bytes);

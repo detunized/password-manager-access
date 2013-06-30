@@ -6,7 +6,8 @@ namespace Example
     {
         static void Main(string[] args)
         {
-            new Fetcher("username", "password").Login();
+            var session = Fetcher.Login("username", "password");
+            var blob = Fetcher.Fetch(session);
         }
     }
 }
