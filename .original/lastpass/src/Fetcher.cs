@@ -55,7 +55,7 @@ namespace LastPass
                     {"xml", "1"},
                     {"username", _username},
                     {"hash", FetcherHelper.MakeHash(_username, _password, _iterationCount)},
-                    {"iterations", _iterationCount.ToString(CultureInfo.InvariantCulture)}
+                    {"iterations", string.Format("{0}", _iterationCount)}
                 });
 
             return HandleLoginResponse(response, webClient);
