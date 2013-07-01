@@ -53,7 +53,7 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void ReadItems_returns_first_item()
+        public void ReadItem_returns_first_item()
         {
             WithBlob(reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
@@ -63,6 +63,24 @@ namespace LastPass.Test
                     var item = ParserHelper.ReadItem(chunkReader);
                     Assert.NotNull(item);
                 });
+            });
+        }
+
+        [Test]
+        public void SkipItem_skips_empty_item()
+        {
+            WithHex("00000000", reader => {
+                ParserHelper.SkipItem(reader);
+                Assert.AreEqual(4, reader.BaseStream.Position);
+            });
+        }
+
+        [Test]
+        public void SkipItem_skips_non_empty_item()
+        {
+            WithHex("00000004DEADBEEF", reader => {
+                ParserHelper.SkipItem(reader);
+                Assert.AreEqual(8, reader.BaseStream.Position);
             });
         }
 
@@ -102,6 +120,11 @@ namespace LastPass.Test
         private static void WithBlob(Action<BinaryReader> action)
         {
             ParserHelper.WithBytes(TestData.Blob, action);
+        }
+
+        private static void WithHex(string hex, Action<BinaryReader> action)
+        {
+            ParserHelper.WithBytes(hex.DecodeHex(), action);
         }
     }
 }

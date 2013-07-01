@@ -38,13 +38,13 @@ namespace LastPass
         public static Account ParseAccount(Chunk chunk)
         {
             return WithBytes(chunk.Payload, reader => {
-                ReadItem(reader);
+                SkipItem(reader);
                 var name = ReadItem(reader);
-                ReadItem(reader);
+                SkipItem(reader);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
-                ReadItem(reader);
-                ReadItem(reader);
-                ReadItem(reader);
+                SkipItem(reader);
+                SkipItem(reader);
+                SkipItem(reader);
                 var username = ReadItem(reader);
                 var password = ReadItem(reader);
 
@@ -90,6 +90,12 @@ namespace LastPass
             //   0008: --- Next item ---
 
             return ReadPayload(reader, ReadSize(reader));
+        }
+
+        public static void SkipItem(BinaryReader reader)
+        {
+            // See ReadItem for item description.
+            reader.BaseStream.Seek(ReadSize(reader), SeekOrigin.Current);
         }
 
         public static string ReadId(BinaryReader reader)
