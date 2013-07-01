@@ -15,7 +15,7 @@ namespace LastPass.Test
                 foreach (var i in accounts)
                 {
                     var account = ParserHelper.ParseAccount(i);
-                    Assert.NotNull(account);
+                    Assert.True(account.Url.StartsWith("http://"));
                 }
             });
         }

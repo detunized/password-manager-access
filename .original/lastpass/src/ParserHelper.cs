@@ -40,15 +40,15 @@ namespace LastPass
             return WithBytes(chunk.Payload, reader => {
                 ReadItem(reader);
                 var name = ReadItem(reader);
-                ReadItem(reader).ToUtf8();
-                var url = ReadItem(reader);
+                ReadItem(reader);
+                var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
                 ReadItem(reader);
                 ReadItem(reader);
                 ReadItem(reader);
                 var username = ReadItem(reader);
                 var password = ReadItem(reader);
 
-                return new Account(name, username, password, url.ToUtf8());
+                return new Account(name, username, password, url);
             });
         }
 
