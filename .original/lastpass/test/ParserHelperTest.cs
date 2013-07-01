@@ -53,6 +53,39 @@ namespace LastPass.Test
             });
         }
 
+        [Test]
+        public void ReadId_returns_id()
+        {
+            var expectedId = "ABCD";
+            WithBytes(expectedId.ToBytes(), reader => {
+                var id = ParserHelper.ReadId(reader);
+                Assert.AreEqual(expectedId, id);
+                Assert.AreEqual(4, reader.BaseStream.Position);
+            });
+        }
+
+        [Test]
+        public void ReadSize_returns_size()
+        {
+            WithBytes(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}, reader => {
+                var size = ParserHelper.ReadSize(reader);
+                Assert.AreEqual(0xDEADBEEF, size);
+                Assert.AreEqual(4, reader.BaseStream.Position);
+            });
+        }
+
+        [Test]
+        public void ReadPayload_returns_payload()
+        {
+            var expectedPayload = new byte[] {0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF};
+            var size = expectedPayload.Length;
+            WithBytes(expectedPayload, reader => {
+                var payload = ParserHelper.ReadPayload(reader, (uint)size);
+                Assert.AreEqual(expectedPayload, payload);
+                Assert.AreEqual(size, reader.BaseStream.Position);
+            });
+        }
+
         private static void WithBlob(Action<BinaryReader> action)
         {
             WithBytes(TestData.Blob, action);
