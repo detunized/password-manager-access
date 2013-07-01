@@ -35,9 +35,9 @@ namespace LastPass
             public string Url { get; private set; }
         }
 
-        public static void PraseAccount(Chunk chunk)
+        public static Account ParseAccount(Chunk chunk)
         {
-            WithBytes(chunk.Payload, reader => {
+            return WithBytes(chunk.Payload, reader => {
                 ReadItem(reader);
                 var name = ReadItem(reader);
                 ReadItem(reader).ToUtf8();
@@ -48,7 +48,7 @@ namespace LastPass
                 var username = ReadItem(reader);
                 var password = ReadItem(reader);
 
-                new Account(name, username, password, url.ToUtf8());
+                return new Account(name, username, password, url.ToUtf8());
             });
         }
 
@@ -109,9 +109,17 @@ namespace LastPass
 
         public static void WithBytes(byte[] bytes, Action<BinaryReader> action)
         {
+            WithBytes(bytes, (reader) => {
+                action(reader);
+                return 0;
+            });
+        }
+
+        public static TResult WithBytes<TResult>(byte[] bytes, Func<BinaryReader, TResult> action)
+        {
             using (var stream = new MemoryStream(bytes, false))
             using (var reader = new BinaryReader(stream))
-                action(reader);
+                return action(reader);
         }
     }
 }
