@@ -8,6 +8,16 @@ namespace LastPass.Test
     class ParserHelperTest
     {
         [Test]
+        public void ParseAccout_doesnt_throw()
+        {
+            WithBlob(reader => {
+                var accounts = ParserHelper.ExtractChunks(reader)["ACCT"];
+                foreach (var i in accounts)
+                    ParserHelper.PraseAccount(i);
+            });
+        }
+
+        [Test]
         public void ReadChunk_returns_first_chunk()
         {
             WithBlob(reader => {
