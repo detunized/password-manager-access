@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,11 +21,9 @@ namespace LastPass
 
         public static void PraseAccount(Chunk chunk)
         {
-            using (var stream = new MemoryStream(chunk.Payload, false))
-            using (var reader = new BinaryReader(stream))
-            {
+            WithBytes(chunk.Payload, reader => {
                 ReadItem(reader);
-            }
+            });
         }
 
         public static Dictionary<string, Chunk[]> ExtractChunks(BinaryReader reader)
@@ -80,6 +79,13 @@ namespace LastPass
         public static byte[] ReadPayload(BinaryReader reader, uint size)
         {
             return reader.ReadBytes((int)size);
+        }
+
+        public static void WithBytes(byte[] bytes, Action<BinaryReader> action)
+        {
+            using (var stream = new MemoryStream(bytes, false))
+            using (var reader = new BinaryReader(stream))
+                action(reader);
         }
     }
 }

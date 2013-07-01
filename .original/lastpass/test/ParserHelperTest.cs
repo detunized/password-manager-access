@@ -46,7 +46,7 @@ namespace LastPass.Test
                 var chunks = ParserHelper.ExtractChunks(reader);
                 Assert.AreEqual(100, chunks["ACCT"].Length);
 
-                WithBytes(chunks["ACCT"][0].Payload, chunkReader => {
+                ParserHelper.WithBytes(chunks["ACCT"][0].Payload, chunkReader => {
                     var item = ParserHelper.ReadItem(chunkReader);
                     Assert.NotNull(item);
                 });
@@ -57,7 +57,7 @@ namespace LastPass.Test
         public void ReadId_returns_id()
         {
             var expectedId = "ABCD";
-            WithBytes(expectedId.ToBytes(), reader => {
+            ParserHelper.WithBytes(expectedId.ToBytes(), reader => {
                 var id = ParserHelper.ReadId(reader);
                 Assert.AreEqual(expectedId, id);
                 Assert.AreEqual(4, reader.BaseStream.Position);
@@ -67,7 +67,7 @@ namespace LastPass.Test
         [Test]
         public void ReadSize_returns_size()
         {
-            WithBytes(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}, reader => {
+            ParserHelper.WithBytes(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}, reader => {
                 var size = ParserHelper.ReadSize(reader);
                 Assert.AreEqual(0xDEADBEEF, size);
                 Assert.AreEqual(4, reader.BaseStream.Position);
@@ -79,7 +79,7 @@ namespace LastPass.Test
         {
             var expectedPayload = new byte[] {0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF};
             var size = expectedPayload.Length;
-            WithBytes(expectedPayload, reader => {
+            ParserHelper.WithBytes(expectedPayload, reader => {
                 var payload = ParserHelper.ReadPayload(reader, (uint)size);
                 Assert.AreEqual(expectedPayload, payload);
                 Assert.AreEqual(size, reader.BaseStream.Position);
@@ -88,14 +88,7 @@ namespace LastPass.Test
 
         private static void WithBlob(Action<BinaryReader> action)
         {
-            WithBytes(TestData.Blob, action);
-        }
-
-        private static void WithBytes(byte[] bytes, Action<BinaryReader> action)
-        {
-            using (var stream = new MemoryStream(bytes, false))
-            using (var reader = new BinaryReader(stream))
-                action(reader);
+            ParserHelper.WithBytes(TestData.Blob, action);
         }
     }
 }
