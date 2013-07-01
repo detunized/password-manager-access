@@ -6,11 +6,9 @@ namespace LastPass
     {
         public static Vault Create(Blob blob)
         {
-            using (var stream = new MemoryStream(blob.Bytes, false))
-            using (var reader = new BinaryReader(stream))
-            {
+            ParserHelper.WithBytes(blob.Bytes, reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
-            }
+            });
 
             return new Vault();
         }
