@@ -14,8 +14,8 @@ namespace LastPass.Test
             {
                 var chunk1 = ParserHelper.ReadChunk(reader);
                 Assert.AreEqual("LPAV", chunk1.Id);
-                Assert.AreEqual(1, chunk1.Payload.Length);
-                Assert.AreEqual(9, reader.BaseStream.Position);
+                Assert.AreEqual(2, chunk1.Payload.Length);
+                Assert.AreEqual(10, reader.BaseStream.Position);
             }
         }
 
@@ -41,7 +41,7 @@ namespace LastPass.Test
             using (var reader = new BinaryReader(stream))
             {
                 var chunks = ParserHelper.ExtractChunks(reader);
-                Assert.AreEqual(20, chunks.Keys.Count);
+                Assert.AreEqual(21, chunks.Keys.Count);
                 Assert.AreEqual(TestData.ChunkIds, chunks.Keys);
             }
         }
