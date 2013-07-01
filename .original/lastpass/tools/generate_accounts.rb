@@ -1,6 +1,7 @@
 #!/usr/bin/enb ruby
 
 # This script generates test data in CSV format to be imported into the LastPass account.
+# Requires the faker gem. To install run "gem install faker".
 
 require "faker"
 include Faker

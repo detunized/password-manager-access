@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 
+# This script strips BOM marker from all the files in the repo.
+# It might blow up in your face. Use wisely.
+
 DRY_RUN = ARGV.delete("--dry-run") || ARGV.delete("-n")
 
 Dir["../**/*"].each do |filename|
