@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace LastPass.Test
@@ -35,14 +36,8 @@ namespace LastPass.Test
         [Test]
         public void ToHex()
         {
-            Assert.AreEqual("", new byte[] {}.ToHex());
-            Assert.AreEqual("00", new byte[] {0}.ToHex());
-            Assert.AreEqual("00ff", new byte[] {0, 255}.ToHex());
-            Assert.AreEqual("00010203040506070809", new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}.ToHex());
-            Assert.AreEqual("000102030405060708090a0b0c0d0e0f",
-                            new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}.ToHex());
-            Assert.AreEqual("8af633933e96a3c3550c2734bd814195",
-                            new byte[] { 0x8a, 0xf6, 0x33, 0x93, 0x3e, 0x96, 0xa3, 0xc3, 0x55, 0x0c, 0x27, 0x34, 0xbd, 0x81, 0x41, 0x95 }.ToHex());
+            foreach (var i in _hexToBytes)
+                Assert.AreEqual(i.Key, i.Value.ToHex());
         }
 
         [Test]
@@ -50,6 +45,30 @@ namespace LastPass.Test
         {
             Assert.AreEqual(new byte[] {}, "".ToBytes());
             Assert.AreEqual(_helloUtf8Bytes, _helloUtf8.ToBytes());
+        }
+
+        [Test]
+        public void DecodeHex()
+        {
+            foreach (var i in _hexToBytes)
+            {
+                Assert.AreEqual(i.Value, i.Key.DecodeHex());
+                Assert.AreEqual(i.Value, i.Key.ToUpper().DecodeHex());
+            }
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Input length must be multple of 2")]
+        public void DecodeHex_throws_on_odd_length()
+        {
+            "0".DecodeHex();
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Input contains invalid characters")]
+        public void DecodeHex_throws_on_non_hex_characters()
+        {
+            "xz".DecodeHex();
         }
 
         [Test]
@@ -63,6 +82,28 @@ namespace LastPass.Test
         }
 
         private readonly string _helloUtf8 = "Hello, UTF-8!";
-        private readonly byte[] _helloUtf8Bytes = new byte[] {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x55, 0x54, 0x46, 0x2d, 0x38, 0x21};
+        private readonly byte[] _helloUtf8Bytes = new byte[] {
+            0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x55, 0x54, 0x46, 0x2D, 0x38, 0x21
+        };
+
+        private readonly Dictionary<string, byte[]> _hexToBytes = new Dictionary<string, byte[]> {
+            {"",
+             new byte[] {}},
+
+            {"00",
+             new byte[] {0}},
+
+            {"00ff",
+             new byte[] {0, 255}},
+
+            {"00010203040506070809",
+             new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
+
+            {"000102030405060708090a0b0c0d0e0f",
+             new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
+
+            {"8af633933e96a3c3550c2734bd814195",
+             new byte[] {0x8A, 0xF6, 0x33, 0x93, 0x3E, 0x96, 0xA3, 0xC3, 0x55, 0x0C, 0x27, 0x34, 0xBD, 0x81, 0x41, 0x95}}
+        };
     }
 }
