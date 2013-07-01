@@ -18,6 +18,15 @@ namespace LastPass
             public byte[] Payload { get; private set; }
         }
 
+        public static void PraseAccount(Chunk chunk)
+        {
+            using (var stream = new MemoryStream(chunk.Payload, false))
+            using (var reader = new BinaryReader(stream))
+            {
+                ReadItem(reader);
+            }
+        }
+
         public static Dictionary<string, Chunk[]> ExtractChunks(BinaryReader reader)
         {
             var chunks = new Dictionary<string, List<Chunk>>();
@@ -47,6 +56,19 @@ namespace LastPass
             var payload = reader.ReadBytes((int)size);
 
             return new Chunk(id, payload);
+        }
+
+        // An item in an itemized chunk is made up of a size and the payload
+        // Example:
+        //   0000: 4
+        //   0004: 0xDE 0xAD 0xBE 0xEF
+        //   0008: --- Next item ---
+        public static byte[] ReadItem(BinaryReader reader)
+        {
+            var size = reader.ReadUInt32().FromBigEndian();
+            var payload = reader.ReadBytes((int)size);
+
+            return payload;
         }
     }
 }

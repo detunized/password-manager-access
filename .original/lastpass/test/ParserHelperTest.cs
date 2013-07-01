@@ -45,5 +45,23 @@ namespace LastPass.Test
                 Assert.AreEqual(TestData.ChunkIds, chunks.Keys);
             }
         }
+
+        [Test]
+        public void ReadItems_returns_first_item()
+        {
+            using (var stream = new MemoryStream(TestData.Blob, false))
+            using (var reader = new BinaryReader(stream))
+            {
+                var chunks = ParserHelper.ExtractChunks(reader);
+                Assert.AreEqual(100, chunks["ACCT"].Length);
+
+                using (var chunkStream = new MemoryStream(chunks["ACCT"][0].Payload, false))
+                using (var chunkReader = new BinaryReader(chunkStream))
+                {
+                    var item = ParserHelper.ReadItem(chunkReader);
+                    Assert.NotNull(item);
+                }
+            }
+        }
     }
 }
