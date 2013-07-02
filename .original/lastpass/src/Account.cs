@@ -2,7 +2,7 @@ namespace LastPass
 {
     public class Account
     {
-        public Account(byte[] name, byte[] username, byte[] password, string url)
+        public Account(string name, string username, string password, string url)
         {
             Name = name;
             Username = username;
@@ -10,9 +10,9 @@ namespace LastPass
             Url = url;
         }
 
-        public byte[] Name { get; private set; }
-        public byte[] Username { get; private set; }
-        public byte[] Password { get; private set; }
+        public string Name { get; private set; }
+        public string Username { get; private set; }
+        public string Password { get; private set; }
         public string Url { get; private set; }
     }
 }

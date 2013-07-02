@@ -10,8 +10,19 @@ namespace LastPass.Test
         public void Create_returns_vault_with_correct_accounts()
         {
             var vault = Vault.Create(new Blob(TestData.Blob, 1));
-            Assert.AreEqual(TestData.Accounts.Length, vault.Accounts.Length);
-            Assert.AreEqual(TestData.Accounts.Select(i => i.Url), vault.Accounts.Select(i => i.Url));
+            Assert.AreEqual(TestData.Accounts.Length, vault.EncryptedAccounts.Length);
+            Assert.AreEqual(TestData.Accounts.Select(i => i.Url), vault.EncryptedAccounts.Select(i => i.Url));
+        }
+
+        [Test]
+        public void DecryptAccount_decrypts_account()
+        {
+            var vault = Vault.Create(new Blob(TestData.Blob, 1));
+            var account = vault.DecryptAccount(vault.EncryptedAccounts[0], "", "");
+            Assert.AreEqual("name", account.Name);
+            Assert.AreEqual("username", account.Username);
+            Assert.AreEqual("password", account.Password);
+            Assert.AreEqual(TestData.Accounts[0].Url, account.Url);
         }
     }
 }
