@@ -838,5 +838,124 @@ namespace LastPass.Test
             "RU5ETQAAAAJPSw==";
 
         public static readonly byte[] Blob = BlobBase64.Decode64();
+
+        public struct Account
+        {
+            public Account(string name, string username, string password, string url)
+            {
+                Name = name;
+                Username = username;
+                Password = password;
+                Url = url;
+            }
+
+            public readonly string Name;
+            public readonly string Username;
+            public readonly string Password;
+            public readonly string Url;
+        }
+
+        public static readonly Account[] Accounts = new Account[] {
+            new Account("Muller, Morar and Wisoky", "branson_cormier", "8jgLCzQSkB2rTZ1OtF9sNGpc", "http://nienow.net/meagan.greenholt"),
+            new Account("goyette.net", "kris_quigley@baileyjewe.biz", "S5@3^wPv!6JsFj", "http://bechtelar.biz/tristian.barrows"),
+            new Account("Ward Inc", "angela_emard", "zp8N@KoWyS0IYu7VR$dvBF!t", "http://schuster.name/ashton"),
+            new Account("stehr.com", "bailee_marvin@mohrlegros.net", "cupiditate", "http://runolfon.org/te"),
+            new Account("kiehn.biz", "freda", "et", "http://hintzprohaska.biz/wade.fisher"),
+            new Account("Jacobs and Sons", "johnnie.hand", "gzyl6714", "http://schultzheaney.org/arvid"),
+            new Account("Larkin, Kautzer and Wiegand", "hilton", "zguovmdr8703", "http://streich.com/ramona"),
+            new Account("Conn Inc", "malvina_paucek@nikolausveum.net", "numquam", "http://conn.net/leda"),
+            new Account("Block, Sanford and Connelly", "marilie_wolff", "zKcy?U*aCGS^gf@Z", "http://conroy.biz/zachery"),
+            new Account("gradyrenner.org", "oswald@ryan.info", "ojgwad28", "http://kihn.org/candice"),
+            new Account("lesch.net", "nicholas", "Pkc72Lmr1qwI%sNV^d4@GtX", "http://glover.name/jerad"),
+            new Account("sipes.biz", "kaitlyn.bernier@reichel.net", "in", "http://mayert.name/jeromy"),
+            new Account("Hintz-Herman", "prince.moriette", "0hebvIS@s^BwMc", "http://sanfordwunsch.org/alek"),
+            new Account("Hammes-Kassulke", "brooke@gloverhintz.net", "paokcs08", "http://lehner.biz/stanley.dooley"),
+            new Account("hermann.com", "jasper_dickens", "Ppj2b!rIMLu*@ElTCZU", "http://rolfson.net/jaden"),
+            new Account("Veum and Sons", "marquise@quitzonbrown.com", "owsg728", "http://fahey.name/jon_ankunding"),
+            new Account("Balistreri, Emard and Mayert", "verona@willmswhite.info", "wnydas6714", "http://treutelkiehn.org/marcos"),
+            new Account("lindkeler.net", "ed", "quia", "http://leffler.info/chaya"),
+            new Account("nikolaus.biz", "leonard", "oW9fdvJLkp#%I", "http://brakuswilliamson.com/bret"),
+            new Account("bartonherzog.net", "dock@vonrueden.net", "beatae", "http://kunzeokuneva.info/shawn_langosh"),
+            new Account("howe.org", "chad@walker.biz", "zexfir7951", "http://crooks.com/sandrine"),
+            new Account("shields.info", "modesto@kunzenicolas.com", "*JDSdp@VyR8f5FOALW", "http://kemmer.org/hilton"),
+            new Account("kihnabernathy.com", "mafalda.treutel@gislason.name", "hwuoxizq18", "http://trompbernhard.com/trea.hirthe"),
+            new Account("Gislason and Sons", "torrey@kshlerin.info", "OfZrTFAIq?Uyl9X$", "http://ullrich.info/carlee"),
+            new Account("simonis.com", "marco.cronin", "upokmxct57", "http://rippin.name/bonita_hickle"),
+            new Account("Howell, Beer and Yundt", "raegan@cruickshankgreenholt.org", "dHPFrtOjieum4L", "http://aufderharrunolfsdottir.info/felicia_torphy"),
+            new Account("Gottlieb-Ernser", "ivory.moore@paucek.com", "fugit", "http://lockmanlynch.net/alba"),
+            new Account("Emmerich and Sons", "lacey.bernier@hansenboyer.com", "aqzkolu6021", "http://carrollschmitt.com/willy.emard"),
+            new Account("Gerlach, Kirlin and Roberts", "maiya@bayergusikowski.org", "nhit3214", "http://feil.net/natasha_howe"),
+            new Account("ryan.net", "rubie@fahey.org", "aihw^uFgXnC%R", "http://gleasonjakubowski.biz/august"),
+            new Account("Jewess, Wolf and Volkman", "kristin_blanda@howekuhlman.biz", "nacro5213", "http://wilkinsonleannon.name/bud.willms"),
+            new Account("Ritchie Group", "nathen_ortiz@turner.biz", "XfmN@G%ebsK1Jc$q", "http://price.info/urban"),
+            new Account("wiegand.info", "lavon_greenholt", "fzedpuq30", "http://paucekturcotte.org/kadin_gibson"),
+            new Account("Rohan, Schneider and Daniel", "zella.effertz", "wksei21", "http://runte.com/camryn.hane"),
+            new Account("boyle.name", "gennaro_goldner@kovacek.biz", "eaJD#Kb6UAis@M*8jhILk", "http://kulasklein.info/nyasia"),
+            new Account("Pouros-Funk", "maudie@fahey.org", "wahkvms6871", "http://schaefer.info/leslie.bogan"),
+            new Account("Parisian-Legros", "holly", "et", "http://naderrempel.net/gwen_schmidt"),
+            new Account("Rosenbaum-Schulist", "jordy.krajcik", "xqzflsy843", "http://dooley.info/alek_parker"),
+            new Account("christiansen.info", "phoebe@larson.info", "bilvs07", "http://johns.name/columbus.dooley"),
+            new Account("Hauck, Thiel and VonRueden", "leif", "QVx?JvZ46e1FBmsAi", "http://bauch.org/marlin"),
+            new Account("Sipes and Sons", "leland", "ecgs1758", "http://dubuque.com/jacey"),
+            new Account("Osinski LLC", "rhoda", "nhwo705", "http://schinner.org/price"),
+            new Account("daniel.name", "santina@wiegand.net", "dolorem", "http://torp.net/shyanne.smitham"),
+            new Account("darekutch.name", "ali", "U*kgl8u1p#QO9xWNnEd0b3", "http://mante.com/caie_streich"),
+            new Account("grimes.com", "eunice_satterfield@baileymante.net", "ipsam", "http://swaniawski.org/wendell_gaylord"),
+            new Account("conn.name", "sandrine", "rv%XVjo#2Id?@4L", "http://rolfson.com/willy_bartell"),
+            new Account("Kozey-Spinka", "brando.kshlerin", "consequatur", "http://collinsreichel.net/yasmine"),
+            new Account("Daugherty LLC", "horacio_schulist@davis.net", "sbxzn64", "http://deckow.net/roosevelt.kshlerin"),
+            new Account("Lubowitz LLC", "maxine@ebertmckenzie.biz", "qrcl02", "http://considineheidenreich.name/name.christiansen"),
+            new Account("mante.name", "jayne", "xnekizj90", "http://bogisich.net/lori"),
+            new Account("Mante LLC", "antonio.turner@sauertorphy.com", "ckomnf175", "http://herzog.name/luigi"),
+            new Account("Greenholt-Hodkiewicz", "moriah@mccullough.org", "udaxo7451", "http://mann.com/cecile"),
+            new Account("Rosenbaum, Sipes and Leffler", "keshaun@schroeder.info", "recusandae", "http://dooley.name/ewald"),
+            new Account("Fadel, Ferry and Kohler", "sister", "sUxoLNhl8Kty*Ve76b45G", "http://balistrerimcclure.com/jaquan_wilkinson"),
+            new Account("Schaden-Rosenbaum", "godfrey", "oDVcsx*m!0Rb@NjSyqdGIl", "http://pouros.net/jeremie"),
+            new Account("Monahan, Reinger and McKenzie", "christophe.kub@luettgen.name", "fLqj&e$TyNo8gd7!", "http://keler.info/nikita.lindgren"),
+            new Account("bednar.info", "roselyn@hickle.com", "*2tiEP&Ic7dT", "http://jaskolski.com/conner_ortiz"),
+            new Account("Jewess, Wolf and Feil", "hal", "doloribus", "http://champlin.org/lue_schroeder"),
+            new Account("Kunze-Hettinger", "camilla_pagac", "elpbzT08Dvo6NyQF3wPEr", "http://donnellyadams.com/santino"),
+            new Account("Jacobs, Toy and Schultz", "billy_boehm@will.biz", "g5X*hRwlmcL6ZM", "http://larkinconsidine.org/leola"),
+            new Account("sanford.com", "joy@abbott.org", "rfolun872", "http://runtemoen.name/pierre"),
+            new Account("upton.net", "susana.gaylord", "WR4KxbU^@$Vpi%QH9Mv#T", "http://moore.info/pearl"),
+            new Account("wiegand.biz", "ashleigh_gutmann", "t7C&j!Ox21oha5sX*f", "http://armstronghackett.name/jaeden"),
+            new Account("schneider.net", "eunice.sauer@ledner.org", "U%EFVGnxw2fQ^t*", "http://schulistmetz.info/esperanza_cummerata"),
+            new Account("Swift-Stoltenberg", "katelin_rempel", "labore", "http://beermills.net/danielle"),
+            new Account("Heathcote Group", "hope.waters@parisianbruen.info", "EhG7zBTb8OseI", "http://douglas.name/porter"),
+            new Account("hilpert.com", "phyllis.lemke", "est", "http://donnelly.com/tyrique_langosh"),
+            new Account("daviswolff.name", "martine@ryan.com", "incidunt", "http://schoen.info/macy"),
+            new Account("Bahringer, Prohaska and Mills", "merritt_reilly@lynch.info", "dyX^xZ3HTKsqFIMeA", "http://schuppe.com/rosetta.yundt"),
+            new Account("ledner.name", "billie.lueilwitz@kertzmann.org", "Zi5K6tXh91mJG3EnjBD4r", "http://feil.com/isabelle"),
+            new Account("jerdecormier.com", "renee.towne@ruecker.net", "vuzoskg85", "http://mckenzie.net/zaria"),
+            new Account("harbervandervort.org", "elta_haag@okuneva.net", "2?GVri70HkKceU*m#CZ3x", "http://whiteklocko.name/lacey.dare"),
+            new Account("gulgowskimann.org", "chaz_brakus", "explicabo", "http://okuneva.biz/lisandro"),
+            new Account("padbergconn.info", "lenore@ullrich.net", "ORrNKnhuqd7xeULa^YDk", "http://sauerkuvalis.info/braxton"),
+            new Account("davis.com", "margarett", "debitis", "http://spinka.info/kendra"),
+            new Account("Gerlach Inc", "krystel_boyer", "qui", "http://pouromitham.name/efrain"),
+            new Account("cummerata.net", "rudy.flatley", "mzqvakic527", "http://heidenreich.net/ryann_hayes"),
+            new Account("schowalter.name", "hyman.satterfield", "pjts564", "http://okeefedamore.biz/giovani"),
+            new Account("McLaughlin-Fadel", "fanny_sporer", "kyti64", "http://dickibosco.biz/zachariah"),
+            new Account("Gerlach-Nienow", "treva.block", "csnxhldi893", "http://kunzemurazik.net/johnny.koch"),
+            new Account("O'Reilly-Trantow", "grayson", "non", "http://harris.name/rosalind_marquardt"),
+            new Account("Larkin-Konopelski", "josianne_walker", "bwms78", "http://runolfsdottir.name/nicklaus_hayes"),
+            new Account("Swaniawski, Will and Gaylord", "jeramie.ohara@nader.org", "quia", "http://oreilly.info/dahlia_donnelly"),
+            new Account("emmerichgaylord.name", "diana@hansenbeahan.net", "omnis", "http://rath.net/leif_hermann"),
+            new Account("armstrong.org", "genesis@rosenbaumlueilwitz.biz", "zHeu%^kxj9Y0Qr4@m*3!ov", "http://schmidtmertz.name/kira"),
+            new Account("Waelchi Group", "trace.heaney@heidenreichbernier.com", "whljnru03", "http://moore.biz/anibal"),
+            new Account("fahey.org", "ward_okuneva", "qjnz18", "http://leuschke.com/daphney"),
+            new Account("koelpin.info", "dylan.klocko", "vdjlot364", "http://cronin.net/cyril"),
+            new Account("Murphy-Breitenberg", "marcia_kreiger", "dacyz723", "http://steuber.com/ali_gibson"),
+            new Account("andersondicki.org", "ceasar@lind.com", "nvymdsk14", "http://kertzmann.biz/jaydon_kunze"),
+            new Account("watersreichel.net", "adella_price@beahanblock.biz", "maiores", "http://gutkowskirau.org/dora.williamson"),
+            new Account("torphy.biz", "osborne_hackett@davis.org", "wkdcu1265", "http://buckridge.net/lauretta.veum"),
+            new Account("Moen-Hermiston", "hildegard@hahn.com", "zbag942", "http://cummingswehner.biz/april"),
+            new Account("Gaylord-Lowe", "jerrell", "quasi", "http://grady.biz/mohammed_brakus"),
+            new Account("Bechtelar, Wyman and Thompson", "shanie@batz.biz", "vel", "http://gottlieb.name/elisabeth"),
+            new Account("jacobs.info", "lon_champlin@cristlittel.name", "aut", "http://dachgislason.org/alva"),
+            new Account("ankunding.com", "reina_runolfon@altenwerthhilll.net", "@g&aWsoTeJEFhHK5wr#4", "http://rice.info/giovanny_ebert"),
+            new Account("Okuneva-Schmitt", "esperanza@kshlerin.com", "djwhba31", "http://glovermckenzie.info/katelynn"),
+            new Account("jones.name", "elvera", "ewoqt49", "http://sipes.com/joey.metz"),
+            new Account("Tromp-Roob", "brisa.mcdermott", "vcnkg254", "http://bernier.org/gage_haag")
+        };
     }
 }

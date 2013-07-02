@@ -12,10 +12,10 @@ namespace LastPass.Test
         {
             WithBlob(reader => {
                 var accounts = ParserHelper.ExtractChunks(reader)["ACCT"];
-                foreach (var i in accounts)
+                for (var i = 0; i < accounts.Length; ++i)
                 {
-                    var account = ParserHelper.ParseAccount(i);
-                    Assert.True(account.Url.StartsWith("http://"));
+                    var account = ParserHelper.ParseAccount(accounts[i]);
+                    Assert.True(account.Url.StartsWith(TestData.Accounts[i].Url));
                 }
             });
         }
