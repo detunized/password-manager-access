@@ -1,4 +1,4 @@
-using System.IO;
+using System.Linq;
 
 namespace LastPass
 {
@@ -6,15 +6,19 @@ namespace LastPass
     {
         public static Vault Create(Blob blob)
         {
-            ParserHelper.WithBytes(blob.Bytes, reader => {
+            return ParserHelper.WithBytes(blob.Bytes, reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
+                return new Vault(chunks.ContainsKey("ACCT")
+                                 ? chunks["ACCT"].Select(ParserHelper.ParseAccount).ToArray()
+                                 : new Account[] {});
             });
-
-            return new Vault();
         }
 
-        private Vault()
+        private Vault(Account[] accounts)
         {
+            Accounts = accounts;
         }
+
+        public Account[] Accounts { get; private set; }
     }
 }
