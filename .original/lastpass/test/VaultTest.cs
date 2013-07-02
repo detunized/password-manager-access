@@ -19,9 +19,9 @@ namespace LastPass.Test
         {
             var vault = Vault.Create(new Blob(TestData.Blob, 1));
             var account = vault.DecryptAccount(vault.EncryptedAccounts[0], "", "");
-            Assert.AreEqual("name", account.Name);
-            Assert.AreEqual("username", account.Username);
-            Assert.AreEqual("password", account.Password);
+            Assert.AreEqual("", account.Name);
+            Assert.AreEqual("", account.Username);
+            Assert.AreEqual("", account.Password);
             Assert.AreEqual(TestData.Accounts[0].Url, account.Url);
         }
     }

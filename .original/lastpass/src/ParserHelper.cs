@@ -97,6 +97,46 @@ namespace LastPass
             return reader.ReadBytes((int)size);
         }
 
+        public static byte[] DecryptAes256(byte[] data, byte[] encryptionKey)
+        {
+            var length = data.Length;
+            var length16 = length % 16;
+            var length64 = length % 64;
+
+            if (length == 0)
+                return new byte[] { };
+            else if (length16 == 0)
+                return DecryptAes256EcbPlain(data, encryptionKey);
+            else if (length64 == 0 || length64 == 24 || length64 == 44)
+                return DecryptAes256EcbBase64(data, encryptionKey);
+            else if (length16 == 1)
+                return DecryptAes256CbcPlain(data, encryptionKey);
+            else if (length64 == 6 || length64 == 26 || length64 == 50)
+                return DecryptAes256CbcBase64(data, encryptionKey);
+
+            throw new ArgumentException("Input doesn't seem to be AES-256 encrypted");
+        }
+
+        public static byte[] DecryptAes256EcbPlain(byte[] data, byte[] encryptionKey)
+        {
+            return new byte[] {};
+        }
+
+        public static byte[] DecryptAes256EcbBase64(byte[] data, byte[] encryptionKey)
+        {
+            return new byte[] {};
+        }
+
+        public static byte[] DecryptAes256CbcPlain(byte[] data, byte[] encryptionKey)
+        {
+            return new byte[] {};
+        }
+
+        public static byte[] DecryptAes256CbcBase64(byte[] data, byte[] encryptionKey)
+        {
+            return new byte[] {};
+        }
+
         public static void WithBytes(byte[] bytes, Action<BinaryReader> action)
         {
             WithBytes(bytes, (reader) => {
