@@ -98,7 +98,7 @@ namespace LastPass.Test
         [Test]
         public void ReadSize_returns_size()
         {
-            ParserHelper.WithBytes(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}, reader => {
+            WithHex("DEADBEEF", reader => {
                 var size = ParserHelper.ReadSize(reader);
                 Assert.AreEqual(0xDEADBEEF, size);
                 Assert.AreEqual(4, reader.BaseStream.Position);
@@ -108,7 +108,7 @@ namespace LastPass.Test
         [Test]
         public void ReadPayload_returns_payload()
         {
-            var expectedPayload = new byte[] {0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF};
+            var expectedPayload = "FEEDDEADBEEF".DecodeHex();
             var size = expectedPayload.Length;
             ParserHelper.WithBytes(expectedPayload, reader => {
                 var payload = ParserHelper.ReadPayload(reader, (uint)size);
