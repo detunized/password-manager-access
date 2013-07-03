@@ -120,17 +120,7 @@ namespace LastPass
 
         public static string DecryptAes256EcbPlain(byte[] data, byte[] encryptionKey)
         {
-            if (data.Length == 0)
-                return "";
-
-            using (var aes = new AesManaged { KeySize = 256, Mode = CipherMode.ECB, Key = encryptionKey })
-            using (var decryptor = aes.CreateDecryptor())
-            using (var stream = new MemoryStream(data, false))
-            using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
-            using (var reader = new StreamReader(cryptoStream))
-            {
-                return reader.ReadToEnd();
-            }
+            return DecryptAes256(data, encryptionKey, CipherMode.ECB);
         }
 
         public static string DecryptAes256EcbBase64(byte[] data, byte[] encryptionKey)
@@ -146,6 +136,26 @@ namespace LastPass
         public static string DecryptAes256CbcBase64(byte[] data, byte[] encryptionKey)
         {
             return "";
+        }
+
+        public static string DecryptAes256(byte[] data, byte[] encryptionKey, CipherMode mode)
+        {
+            return DecryptAes256(data, encryptionKey, mode, new byte[16]);
+        }
+
+        public static string DecryptAes256(byte[] data, byte[] encryptionKey, CipherMode mode, byte[] iv)
+        {
+            if (data.Length == 0)
+                return "";
+
+            using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = mode, IV = iv })
+            using (var decryptor = aes.CreateDecryptor())
+            using (var stream = new MemoryStream(data, false))
+            using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
+            using (var reader = new StreamReader(cryptoStream))
+            {
+                return reader.ReadToEnd();
+            }
         }
 
         public static void WithBytes(byte[] bytes, Action<BinaryReader> action)
