@@ -7,14 +7,16 @@ namespace Example
     {
         static void Main(string[] args)
         {
-            var session = Fetcher.Login("username", "password");
+            var username = "username";
+            var password = "password";
+            var session = Fetcher.Login(username, password);
             var blob = Fetcher.Fetch(session);
             var vault = Vault.Create(blob);
 
             for (var i = 0; i < vault.EncryptedAccounts.Length; ++i)
             {
-                var account = vault.EncryptedAccounts[i];
-                Console.WriteLine("{0}: {1}", i, account.Url);
+                var account = vault.DecryptAccount(vault.EncryptedAccounts[i], username, password);
+                Console.WriteLine("{0}: {1} {2} {3} {4}", i, account.Name, account.Username, account.Password, account.Url);
             }
         }
     }
