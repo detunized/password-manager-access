@@ -15,14 +15,19 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void DecryptAccount_decrypts_account()
+        public void DecryptAccount_decrypts_accounts()
         {
             var vault = Vault.Create(new Blob(TestData.Blob, 1));
-            var account = vault.DecryptAccount(vault.EncryptedAccounts[0], "p8utF7ZB8yD06SrtrD4hsdvEOiBU1Y19cr2dhG9DWZg=".Decode64());
-            Assert.AreEqual(TestData.Accounts[0].Name, account.Name);
-            Assert.AreEqual(TestData.Accounts[0].Username, account.Username);
-            Assert.AreEqual(TestData.Accounts[0].Password, account.Password);
-            Assert.AreEqual(TestData.Accounts[0].Url, account.Url);
+            for (var i = 0; i < vault.EncryptedAccounts.Length; ++i)
+            {
+                var account = vault.DecryptAccount(vault.EncryptedAccounts[i],
+                                                   "p8utF7ZB8yD06SrtrD4hsdvEOiBU1Y19cr2dhG9DWZg=".Decode64());
+                var expectedAccount = TestData.Accounts[i];
+                Assert.AreEqual(expectedAccount.Name, account.Name);
+                Assert.AreEqual(expectedAccount.Username, account.Username);
+                Assert.AreEqual(expectedAccount.Password, account.Password);
+                Assert.AreEqual(expectedAccount.Url, account.Url);
+            }
         }
     }
 }
