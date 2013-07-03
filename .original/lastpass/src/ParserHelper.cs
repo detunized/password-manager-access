@@ -130,7 +130,10 @@ namespace LastPass
 
         public static string DecryptAes256CbcPlain(byte[] data, byte[] encryptionKey)
         {
-            return "";
+            return DecryptAes256(data.Skip(17).ToArray(),
+                                 encryptionKey,
+                                 CipherMode.CBC,
+                                 data.Skip(1).Take(16).ToArray());
         }
 
         public static string DecryptAes256CbcBase64(byte[] data, byte[] encryptionKey)

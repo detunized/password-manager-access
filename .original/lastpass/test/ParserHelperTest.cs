@@ -144,6 +144,19 @@ namespace LastPass.Test
                 Assert.AreEqual(i.Key, ParserHelper.DecryptAes256EcbBase64(i.Value.ToBytes(), _encryptionKey));
         }
 
+        [Test]
+        public void DecryptAes256CbcPlain()
+        {
+            var tests = new Dictionary<string, string> {
+                {"", ""},
+                {"0123456789", "IQ+hiIy0vGG4srsHmXChe3ehWc/rYPnfiyqOG8h78DdX"},
+                {"All your base are belong to us", "IcokDWmjOkKtLpZehWKL6666Uj6fNXPpX6lLWlou+1Lrwb+D3ymP6BAwd6C0TB3hSA=="}
+            };
+
+            foreach (var i in tests)
+                Assert.AreEqual(i.Key, ParserHelper.DecryptAes256CbcPlain(i.Value.Decode64(), _encryptionKey));
+        }
+
         private static void WithBlob(Action<BinaryReader> action)
         {
             ParserHelper.WithBytes(TestData.Blob, action);
