@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 
@@ -117,6 +118,19 @@ namespace LastPass.Test
             });
         }
 
+        [Test]
+        public void DecryptAes256EcbPlain()
+        {
+            var tests = new Dictionary<string, string> {
+                {"", ""},
+                {"0123456789", "8mHxIA8rul6eq72a/Gq2iw=="},
+                {"All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM="}
+            };
+
+            foreach (var i in tests)
+                Assert.AreEqual(i.Key, ParserHelper.DecryptAes256EcbPlain(i.Value.Decode64(), _encryptionKey));
+        }
+
         private static void WithBlob(Action<BinaryReader> action)
         {
             ParserHelper.WithBytes(TestData.Blob, action);
@@ -126,5 +140,7 @@ namespace LastPass.Test
         {
             ParserHelper.WithBytes(hex.DecodeHex(), action);
         }
+
+        private static readonly byte[] _encryptionKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
     }
 }

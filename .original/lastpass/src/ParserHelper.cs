@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace LastPass
 {
@@ -97,14 +98,14 @@ namespace LastPass
             return reader.ReadBytes((int)size);
         }
 
-        public static byte[] DecryptAes256(byte[] data, byte[] encryptionKey)
+        public static string DecryptAes256(byte[] data, byte[] encryptionKey)
         {
             var length = data.Length;
             var length16 = length % 16;
             var length64 = length % 64;
 
             if (length == 0)
-                return new byte[] { };
+                return "";
             else if (length16 == 0)
                 return DecryptAes256EcbPlain(data, encryptionKey);
             else if (length64 == 0 || length64 == 24 || length64 == 44)
@@ -117,24 +118,34 @@ namespace LastPass
             throw new ArgumentException("Input doesn't seem to be AES-256 encrypted");
         }
 
-        public static byte[] DecryptAes256EcbPlain(byte[] data, byte[] encryptionKey)
+        public static string DecryptAes256EcbPlain(byte[] data, byte[] encryptionKey)
         {
-            return new byte[] {};
+            if (data.Length == 0)
+                return "";
+
+            using (var aes = new AesManaged { KeySize = 256, Mode = CipherMode.ECB, Key = encryptionKey })
+            using (var decryptor = aes.CreateDecryptor())
+            using (var stream = new MemoryStream(data, false))
+            using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
+            using (var reader = new StreamReader(cryptoStream))
+            {
+                return reader.ReadToEnd();
+            }
         }
 
-        public static byte[] DecryptAes256EcbBase64(byte[] data, byte[] encryptionKey)
+        public static string DecryptAes256EcbBase64(byte[] data, byte[] encryptionKey)
         {
-            return new byte[] {};
+            return "";
         }
 
-        public static byte[] DecryptAes256CbcPlain(byte[] data, byte[] encryptionKey)
+        public static string DecryptAes256CbcPlain(byte[] data, byte[] encryptionKey)
         {
-            return new byte[] {};
+            return "";
         }
 
-        public static byte[] DecryptAes256CbcBase64(byte[] data, byte[] encryptionKey)
+        public static string DecryptAes256CbcBase64(byte[] data, byte[] encryptionKey)
         {
-            return new byte[] {};
+            return "";
         }
 
         public static void WithBytes(byte[] bytes, Action<BinaryReader> action)

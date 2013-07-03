@@ -23,9 +23,9 @@ namespace LastPass
 
         public Account DecryptAccount(EncryptedAccount encryptedAccount, byte[] encryptionKey)
         {
-            return new Account(ParserHelper.DecryptAes256(encryptedAccount.Name, encryptionKey).ToUtf8(),
-                               ParserHelper.DecryptAes256(encryptedAccount.Username, encryptionKey).ToUtf8(),
-                               ParserHelper.DecryptAes256(encryptedAccount.Password, encryptionKey).ToUtf8(),
+            return new Account(ParserHelper.DecryptAes256(encryptedAccount.Name, encryptionKey),
+                               ParserHelper.DecryptAes256(encryptedAccount.Username, encryptionKey),
+                               ParserHelper.DecryptAes256(encryptedAccount.Password, encryptionKey),
                                encryptedAccount.Url);
         }
 
