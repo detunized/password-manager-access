@@ -125,7 +125,7 @@ namespace LastPass
 
         public static string DecryptAes256EcbBase64(byte[] data, byte[] encryptionKey)
         {
-            return "";
+            return DecryptAes256(data.ToUtf8().Decode64(), encryptionKey, CipherMode.ECB);
         }
 
         public static string DecryptAes256CbcPlain(byte[] data, byte[] encryptionKey)
