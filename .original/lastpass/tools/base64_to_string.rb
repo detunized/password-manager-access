@@ -1,4 +1,4 @@
-#!/usr/bin/enb ruby
+#!/usr/bin/env ruby
 
 # This script converts base64 encoded data from a file to a C# string.
 
