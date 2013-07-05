@@ -16,10 +16,15 @@ namespace LastPass
             });
         }
 
+        public static byte[] MakeKey(string username, string password, int iterationCount)
+        {
+            return FetcherHelper.MakeKey(username, password, iterationCount);
+        }
+
         public Account DecryptAccount(EncryptedAccount encryptedAccount, string username, string password)
         {
             return DecryptAccount(encryptedAccount,
-                                  FetcherHelper.MakeKey(username, password, _keyIterationCount));
+                                  MakeKey(username, password, _keyIterationCount));
         }
 
         public Account DecryptAccount(EncryptedAccount encryptedAccount, byte[] encryptionKey)
