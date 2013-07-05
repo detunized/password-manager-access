@@ -26,13 +26,14 @@ namespace Example
             for (var i = 0; i < vault.EncryptedAccounts.Length; ++i)
             {
                 var account = vault.DecryptAccount(vault.EncryptedAccounts[i], key);
-                Console.WriteLine("{0}: {1} {2} {3} {4} {5}",
+                Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
                                   i + 1,
                                   account.Id,
                                   account.Name,
                                   account.Username,
                                   account.Password,
-                                  account.Url);
+                                  account.Url,
+                                  account.Group);
             }
         }
     }
