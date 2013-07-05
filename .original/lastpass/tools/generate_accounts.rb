@@ -45,5 +45,13 @@ def password kind = [:bad, :soso, :secure].sample
     end
 end
 
-puts "name,username,password,url"
-100.times { puts %Q{"#{name}","#{username}","#{password}","#{Internet.url}"} }
+def url
+	Internet.url
+end
+
+def group
+	["", "one", "two", "three", "four"].sample
+end
+
+puts "name,username,password,url,grouping"
+100.times { puts %Q{"#{name}","#{username}","#{password}","#{url}","#{group}"} }
