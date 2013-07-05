@@ -1,6 +1,6 @@
 namespace LastPass
 {
-    public class Session
+    class Session
     {
         public Session(string id, int keyIterationCount)
         {

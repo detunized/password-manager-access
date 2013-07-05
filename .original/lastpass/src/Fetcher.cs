@@ -5,7 +5,7 @@ using System.Xml.XPath;
 
 namespace LastPass
 {
-    public static class Fetcher
+    static class Fetcher
     {
         public static Session Login(string username, string password)
         {

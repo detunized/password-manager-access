@@ -7,7 +7,7 @@ namespace LastPass
     {
         public static Vault Create(string username, string password)
         {
-            return Create(Fetcher.Fetch(Fetcher.Login(username, password)));
+            return Create(Download(username, password));
         }
 
         public static Vault Create(Blob blob)
@@ -19,6 +19,11 @@ namespace LastPass
                                     : new EncryptedAccount[] {},
                                  blob.KeyIterationCount);
             });
+        }
+
+        public static Blob Download(string username, string password)
+        {
+            return Fetcher.Fetch(Fetcher.Login(username, password));
         }
 
         public byte[] MakeKey(string username, string password)
