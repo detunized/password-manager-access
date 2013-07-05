@@ -27,8 +27,8 @@ namespace LastPass.Test
             WithBlob(reader => {
                 var chunk = ParserHelper.ReadChunk(reader);
                 Assert.AreEqual("LPAV", chunk.Id);
-                Assert.AreEqual(2, chunk.Payload.Length);
-                Assert.AreEqual(10, reader.BaseStream.Position);
+                Assert.AreEqual(3, chunk.Payload.Length);
+                Assert.AreEqual(11, reader.BaseStream.Position);
             });
         }
 
