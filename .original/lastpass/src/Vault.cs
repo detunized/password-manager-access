@@ -42,7 +42,8 @@ namespace LastPass
                                ParserHelper.DecryptAes256(encryptedAccount.Name, encryptionKey),
                                ParserHelper.DecryptAes256(encryptedAccount.Username, encryptionKey),
                                ParserHelper.DecryptAes256(encryptedAccount.Password, encryptionKey),
-                               encryptedAccount.Url);
+                               encryptedAccount.Url,
+                               ParserHelper.DecryptAes256(encryptedAccount.Group, encryptionKey));
         }
 
         private Vault(EncryptedAccount[] encryptedAccounts, int keyIterationCount)

@@ -29,6 +29,7 @@ namespace LastPass.Test
                 Assert.AreEqual(expectedAccount.Username, account.Username);
                 Assert.AreEqual(expectedAccount.Password, account.Password);
                 Assert.AreEqual(expectedAccount.Url, account.Url);
+                Assert.AreEqual(expectedAccount.Group, account.Group);
             }
         }
     }

@@ -25,7 +25,7 @@ namespace LastPass
             return WithBytes(chunk.Payload, reader => {
                 var id = ReadItem(reader).ToUtf8();
                 var name = ReadItem(reader);
-                SkipItem(reader);
+                var group = ReadItem(reader);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
                 SkipItem(reader);
                 SkipItem(reader);
@@ -33,7 +33,7 @@ namespace LastPass
                 var username = ReadItem(reader);
                 var password = ReadItem(reader);
 
-                return new EncryptedAccount(id, name, username, password, url);
+                return new EncryptedAccount(id, name, username, password, url, group);
             });
         }
 

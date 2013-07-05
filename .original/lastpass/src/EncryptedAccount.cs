@@ -2,13 +2,14 @@ namespace LastPass
 {
     public class EncryptedAccount
     {
-        public EncryptedAccount(string id, byte[] name, byte[] username, byte[] password, string url)
+        public EncryptedAccount(string id, byte[] name, byte[] username, byte[] password, string url, byte[] group)
         {
             Id = id;
             Name = name;
             Username = username;
             Password = password;
             Url = url;
+            Group = group;
         }
 
         public string Id { get; private set; }
@@ -16,5 +17,6 @@ namespace LastPass
         public byte[] Username { get; private set; }
         public byte[] Password { get; private set; }
         public string Url { get; private set; }
+        public byte[] Group { get; private set; }
     }
 }

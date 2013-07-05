@@ -13,13 +13,15 @@ namespace LastPass.Test
             var username = "username";
             var password = "password";
             var url = "url";
+            var group = "group";
 
-            var account = new Account(id, name, username, password, url);
+            var account = new Account(id, name, username, password, url, group);
             Assert.AreEqual(id, account.Id);
             Assert.AreEqual(name, account.Name);
             Assert.AreEqual(username, account.Username);
             Assert.AreEqual(password, account.Password);
             Assert.AreEqual(url, account.Url);
+            Assert.AreEqual(group, account.Group);
         }
     }
 }
