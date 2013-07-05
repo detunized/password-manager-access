@@ -5,6 +5,11 @@ namespace LastPass
 {
     public class Vault
     {
+        public static Vault Create(string username, string password)
+        {
+            return Create(Fetcher.Fetch(Fetcher.Login(username, password)));
+        }
+
         public static Vault Create(Blob blob)
         {
             return ParserHelper.WithBytes(blob.Bytes, reader => {
@@ -16,15 +21,14 @@ namespace LastPass
             });
         }
 
-        public static byte[] MakeKey(string username, string password, int iterationCount)
+        public byte[] MakeKey(string username, string password)
         {
-            return FetcherHelper.MakeKey(username, password, iterationCount);
+            return FetcherHelper.MakeKey(username, password, _keyIterationCount);
         }
 
         public Account DecryptAccount(EncryptedAccount encryptedAccount, string username, string password)
         {
-            return DecryptAccount(encryptedAccount,
-                                  MakeKey(username, password, _keyIterationCount));
+            return DecryptAccount(encryptedAccount, MakeKey(username, password));
         }
 
         public Account DecryptAccount(EncryptedAccount encryptedAccount, byte[] encryptionKey)
