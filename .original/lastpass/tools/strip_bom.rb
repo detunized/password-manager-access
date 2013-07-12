@@ -4,8 +4,9 @@
 # It might blow up in your face. Use wisely.
 
 DRY_RUN = ARGV.delete("--dry-run") || ARGV.delete("-n")
+ROOT_DIR = ARGV.shift || "."
 
-Dir["../**/*"].each do |filename|
+Dir[File.join ROOT_DIR, "**/*"].each do |filename|
     if File.file? filename
         without_bom = nil
         File.open filename, "rb" do |io|
