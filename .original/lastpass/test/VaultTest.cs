@@ -16,20 +16,24 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void DecryptAccount_decrypts_accounts()
+        public void DecryptAllAccounts_decrypts_all_accounts()
         {
             var vault = Vault.Create(new Blob(TestData.Blob, 1));
+            vault.DecryptAllAccounts(EncryptedAccount.Field.Name |
+                                     EncryptedAccount.Field.Username |
+                                     EncryptedAccount.Field.Password |
+                                     EncryptedAccount.Field.Group,
+                                     "p8utF7ZB8yD06SrtrD4hsdvEOiBU1Y19cr2dhG9DWZg=".Decode64());
             for (var i = 0; i < vault.EncryptedAccounts.Length; ++i)
             {
-                var account = vault.DecryptAccount(vault.EncryptedAccounts[i],
-                                                   "p8utF7ZB8yD06SrtrD4hsdvEOiBU1Y19cr2dhG9DWZg=".Decode64());
+                var account = vault.EncryptedAccounts[i];
                 var expectedAccount = TestData.Accounts[i];
                 Assert.AreEqual(expectedAccount.Id, account.Id);
-                Assert.AreEqual(expectedAccount.Name, account.Name);
-                Assert.AreEqual(expectedAccount.Username, account.Username);
-                Assert.AreEqual(expectedAccount.Password, account.Password);
+                Assert.AreEqual(expectedAccount.Name, account.Name.Decrypted);
+                Assert.AreEqual(expectedAccount.Username, account.Username.Decrypted);
+                Assert.AreEqual(expectedAccount.Password, account.Password.Decrypted);
                 Assert.AreEqual(expectedAccount.Url, account.Url);
-                Assert.AreEqual(expectedAccount.Group, account.Group);
+                Assert.AreEqual(expectedAccount.Group, account.Group.Decrypted);
             }
         }
     }

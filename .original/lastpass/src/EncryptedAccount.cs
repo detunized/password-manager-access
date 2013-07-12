@@ -2,52 +2,17 @@ using System;
 
 namespace LastPass
 {
-    public struct EncryptedString
-    {
-        public EncryptedString(byte[] encrypted)
-        {
-            _encrypted = encrypted;
-            _decrypted = null;
-        }
-
-        public string Decrypt(byte[] encryptionKey)
-        {
-            if (_decrypted == null)
-                _decrypted = ParserHelper.DecryptAes256(_encrypted, encryptionKey);
-
-            return _decrypted;
-        }
-
-        public static implicit operator string(EncryptedString self)
-        {
-            return self.Decrypted;
-        }
-
-        public byte[] Encrypted
-        {
-            get
-            {
-                return _encrypted;
-            }
-        }
-
-        public string Decrypted
-        {
-            get
-            {
-                if (_decrypted == null)
-                    throw new InvalidOperationException("The field has not been decrypted yet.");
-
-                return _decrypted;
-            }
-        }
-
-        private readonly byte[] _encrypted;
-        private string _decrypted;
-    }
-
     public class EncryptedAccount
     {
+        [Flags]
+        public enum Field
+        {
+            Name = 1,
+            Username = 2,
+            Password = 4,
+            Group = 8,
+        }
+
         public EncryptedAccount(string id, byte[] name, byte[] username, byte[] password, string url, byte[] group)
         {
             Id = id;
@@ -56,6 +21,29 @@ namespace LastPass
             Password = new EncryptedString(password);
             Url = url;
             Group = new EncryptedString(group);
+        }
+
+        public void Decrypt(Field fields, byte[] encryptionKey)
+        {
+            if ((fields & Field.Name) != 0)
+            {
+                Name.Decrypt(encryptionKey);
+            }
+
+            if ((fields & Field.Username) != 0)
+            {
+                Username.Decrypt(encryptionKey);
+            }
+
+            if ((fields & Field.Password) != 0)
+            {
+                Password.Decrypt(encryptionKey);
+            }
+
+            if ((fields & Field.Group) != 0)
+            {
+                Group.Decrypt(encryptionKey);
+            }
         }
 
         public string Id { get; private set; }

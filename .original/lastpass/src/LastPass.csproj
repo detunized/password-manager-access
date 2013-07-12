@@ -36,10 +36,10 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Account.cs" />
     <Compile Include="EncryptedAccount.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Blob.cs" />
+    <Compile Include="EncryptedString.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Fetcher.cs" />
     <Compile Include="FetcherHelper.cs" />

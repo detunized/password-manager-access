@@ -18,13 +18,18 @@ namespace Example
             // Fetch and create the vault from LastPass
             var vault = Vault.Create(username, password);
 
-            // Compute the encryption key only once (could be slow)
-            var key = vault.MakeKey(username, password);
+            // Decrypt all accounts
+            vault.DecryptAllAccounts(EncryptedAccount.Field.Name |
+                                     EncryptedAccount.Field.Username |
+                                     EncryptedAccount.Field.Password |
+                                     EncryptedAccount.Field.Group,
+                                     username,
+                                     password);
 
             // Dump all the accounts
             for (var i = 0; i < vault.EncryptedAccounts.Length; ++i)
             {
-                var account = vault.DecryptAccount(vault.EncryptedAccounts[i], key);
+                var account = vault.EncryptedAccounts[i];
                 Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
                                   i + 1,
                                   account.Id,

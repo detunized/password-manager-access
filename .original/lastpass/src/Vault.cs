@@ -30,19 +30,15 @@ namespace LastPass
             return FetcherHelper.MakeKey(username, password, _keyIterationCount);
         }
 
-        public Account DecryptAccount(EncryptedAccount encryptedAccount, string username, string password)
+        public void DecryptAllAccounts(EncryptedAccount.Field fields, string username, string password)
         {
-            return DecryptAccount(encryptedAccount, MakeKey(username, password));
+            DecryptAllAccounts(fields, MakeKey(username, password));
         }
 
-        public Account DecryptAccount(EncryptedAccount encryptedAccount, byte[] encryptionKey)
+        public void DecryptAllAccounts(EncryptedAccount.Field fields, byte[] encryptionKey)
         {
-            return new Account(encryptedAccount.Id,
-                               encryptedAccount.Name.Decrypt(encryptionKey),
-                               encryptedAccount.Username.Decrypt(encryptionKey),
-                               encryptedAccount.Password.Decrypt(encryptionKey),
-                               encryptedAccount.Url,
-                               encryptedAccount.Group.Decrypt(encryptionKey));
+            foreach (var i in EncryptedAccounts)
+                i.Decrypt(fields, encryptionKey);
         }
 
         private Vault(EncryptedAccount[] encryptedAccounts, int keyIterationCount)

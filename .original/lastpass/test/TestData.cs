@@ -895,6 +895,26 @@ namespace LastPass.Test
 
         public static readonly byte[] Blob = BlobBase64.Decode64();
 
+        public class Account
+        {
+            public Account(string id, string name, string username, string password, string url, string group)
+            {
+                Id = id;
+                Name = name;
+                Username = username;
+                Password = password;
+                Url = url;
+                Group = group;
+            }
+
+            public string Id { get; private set; }
+            public string Name { get; private set; }
+            public string Username { get; private set; }
+            public string Password { get; private set; }
+            public string Url { get; private set; }
+            public string Group { get; private set; }
+        }
+
         public static readonly Account[] Accounts = new Account[] {
             new Account("1872745596", "Muller, Morar and Wisoky", "branson_cormier", "8jgLCzQSkB2rTZ1OtF9sNGpc", "http://nienow.net/meagan.greenholt", "three"),
             new Account("1872745606", "goyette.net", "kris_quigley@baileyjewe.biz", "S5@3^wPv!6JsFj", "http://bechtelar.biz/tristian.barrows", "four"),
