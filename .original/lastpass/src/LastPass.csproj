@@ -36,7 +36,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EncryptedAccount.cs" />
+    <Compile Include="Account.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Blob.cs" />
     <Compile Include="EncryptedString.cs" />

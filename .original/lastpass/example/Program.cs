@@ -19,17 +19,17 @@ namespace Example
             var vault = Vault.Create(username, password);
 
             // Decrypt all accounts
-            vault.DecryptAllAccounts(EncryptedAccount.Field.Name |
-                                     EncryptedAccount.Field.Username |
-                                     EncryptedAccount.Field.Password |
-                                     EncryptedAccount.Field.Group,
+            vault.DecryptAllAccounts(Account.Field.Name |
+                                     Account.Field.Username |
+                                     Account.Field.Password |
+                                     Account.Field.Group,
                                      username,
                                      password);
 
             // Dump all the accounts
-            for (var i = 0; i < vault.EncryptedAccounts.Length; ++i)
+            for (var i = 0; i < vault.Accounts.Length; ++i)
             {
-                var account = vault.EncryptedAccounts[i];
+                var account = vault.Accounts[i];
                 Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
                                   i + 1,
                                   account.Id,

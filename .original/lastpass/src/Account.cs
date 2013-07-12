@@ -2,7 +2,7 @@ using System;
 
 namespace LastPass
 {
-    public class EncryptedAccount
+    public class Account
     {
         [Flags]
         public enum Field
@@ -13,7 +13,7 @@ namespace LastPass
             Group = 8,
         }
 
-        public EncryptedAccount(string id, byte[] name, byte[] username, byte[] password, string url, byte[] group)
+        public Account(string id, byte[] name, byte[] username, byte[] password, string url, byte[] group)
         {
             Id = id;
             Name = new EncryptedString(name);

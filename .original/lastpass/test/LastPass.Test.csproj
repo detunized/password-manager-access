@@ -43,7 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="EncryptedAccountTest.cs" />
+    <Compile Include="AccountTest.cs" />
     <Compile Include="EncryptedStringTest.cs" />
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="FetcherHelperTest.cs" />

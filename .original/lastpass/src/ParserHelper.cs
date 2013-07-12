@@ -20,7 +20,7 @@ namespace LastPass
             public byte[] Payload { get; private set; }
         }
 
-        public static EncryptedAccount ParseAccount(Chunk chunk)
+        public static Account ParseAccount(Chunk chunk)
         {
             return WithBytes(chunk.Payload, reader => {
                 var id = ReadItem(reader).ToUtf8();
@@ -33,7 +33,7 @@ namespace LastPass
                 var username = ReadItem(reader);
                 var password = ReadItem(reader);
 
-                return new EncryptedAccount(id, name, username, password, url, group);
+                return new Account(id, name, username, password, url, group);
             });
         }
 

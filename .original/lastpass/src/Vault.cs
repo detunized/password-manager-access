@@ -15,7 +15,7 @@ namespace LastPass
                 var chunks = ParserHelper.ExtractChunks(reader);
                 return new Vault(chunks.ContainsKey("ACCT")
                                     ? chunks["ACCT"].Select(ParserHelper.ParseAccount).ToArray()
-                                    : new EncryptedAccount[] {},
+                                    : new Account[] {},
                                  blob.KeyIterationCount);
             });
         }
@@ -30,24 +30,24 @@ namespace LastPass
             return FetcherHelper.MakeKey(username, password, _keyIterationCount);
         }
 
-        public void DecryptAllAccounts(EncryptedAccount.Field fields, string username, string password)
+        public void DecryptAllAccounts(Account.Field fields, string username, string password)
         {
             DecryptAllAccounts(fields, MakeKey(username, password));
         }
 
-        public void DecryptAllAccounts(EncryptedAccount.Field fields, byte[] encryptionKey)
+        public void DecryptAllAccounts(Account.Field fields, byte[] encryptionKey)
         {
-            foreach (var i in EncryptedAccounts)
+            foreach (var i in Accounts)
                 i.Decrypt(fields, encryptionKey);
         }
 
-        private Vault(EncryptedAccount[] encryptedAccounts, int keyIterationCount)
+        private Vault(Account[] accounts, int keyIterationCount)
         {
-            EncryptedAccounts = encryptedAccounts;
+            Accounts = accounts;
             _keyIterationCount = keyIterationCount;
         }
 
-        public EncryptedAccount[] EncryptedAccounts { get; private set; }
+        public Account[] Accounts { get; private set; }
         private readonly int _keyIterationCount;
     }
 }

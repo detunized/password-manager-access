@@ -3,7 +3,7 @@ using NUnit.Framework;
 namespace LastPass.Test
 {
     [TestFixture]
-    class EncryptedAccountTest
+    class AccountTest
     {
         [Test]
         public void EncryptedAccount_properties_are_set()
@@ -15,7 +15,7 @@ namespace LastPass.Test
             var url = "url";
             var group = "FEEDDEAD".DecodeHex();
 
-            var account = new EncryptedAccount(id, name, username, password, url, group);
+            var account = new Account(id, name, username, password, url, group);
             Assert.AreEqual(id, account.Id);
             Assert.AreEqual(name, account.Name.Encrypted);
             Assert.AreEqual(username, account.Username.Encrypted);
