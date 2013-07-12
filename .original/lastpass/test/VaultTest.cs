@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using NUnit.Framework;
 
@@ -35,6 +36,23 @@ namespace LastPass.Test
                 Assert.AreEqual(expectedAccount.Url, account.Url);
                 Assert.AreEqual(expectedAccount.Group, account.Group.Decrypted);
             }
+        }
+
+        [Test]
+        public void GetAccount_returns_corrent_account()
+        {
+            var vault = Vault.Create(new Blob(TestData.Blob, 1));
+            Assert.AreEqual("1872745596", vault.GetAccount("1872745596").Id);
+            Assert.AreEqual("1872746606", vault.GetAccount("1872746606").Id);
+            Assert.AreEqual("1872746006", vault.GetAccount("1872746006").Id);
+        }
+
+        [Test]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void GetAccount_throws_on_invalid_id()
+        {
+            var vault = Vault.Create(new Blob(TestData.Blob, 1));
+            var account = vault.GetAccount("Doesn't exist");
         }
     }
 }

@@ -30,6 +30,11 @@ namespace LastPass
             return FetcherHelper.MakeKey(username, password, _keyIterationCount);
         }
 
+        public Account GetAccount(string id)
+        {
+            return Accounts.First(i => i.Id == id);
+        }
+
         public void DecryptAllAccounts(Account.Field fields, string username, string password)
         {
             DecryptAllAccounts(fields, MakeKey(username, password));
