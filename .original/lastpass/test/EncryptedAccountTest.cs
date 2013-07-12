@@ -17,11 +17,11 @@ namespace LastPass.Test
 
             var account = new EncryptedAccount(id, name, username, password, url, group);
             Assert.AreEqual(id, account.Id);
-            Assert.AreEqual(name, account.Name);
-            Assert.AreEqual(username, account.Username);
-            Assert.AreEqual(password, account.Password);
+            Assert.AreEqual(name, account.Name.Encrypted);
+            Assert.AreEqual(username, account.Username.Encrypted);
+            Assert.AreEqual(password, account.Password.Encrypted);
             Assert.AreEqual(url, account.Url);
-            Assert.AreEqual(group, account.Group);
+            Assert.AreEqual(group, account.Group.Encrypted);
         }
     }
 }

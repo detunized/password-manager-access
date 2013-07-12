@@ -38,11 +38,11 @@ namespace LastPass
         public Account DecryptAccount(EncryptedAccount encryptedAccount, byte[] encryptionKey)
         {
             return new Account(encryptedAccount.Id,
-                               ParserHelper.DecryptAes256(encryptedAccount.Name, encryptionKey),
-                               ParserHelper.DecryptAes256(encryptedAccount.Username, encryptionKey),
-                               ParserHelper.DecryptAes256(encryptedAccount.Password, encryptionKey),
+                               encryptedAccount.Name.Decrypt(encryptionKey),
+                               encryptedAccount.Username.Decrypt(encryptionKey),
+                               encryptedAccount.Password.Decrypt(encryptionKey),
                                encryptedAccount.Url,
-                               ParserHelper.DecryptAes256(encryptedAccount.Group, encryptionKey));
+                               encryptedAccount.Group.Decrypt(encryptionKey));
         }
 
         private Vault(EncryptedAccount[] encryptedAccounts, int keyIterationCount)
