@@ -11,6 +11,7 @@ namespace LastPass.Test
     [TestFixture]
     class FetcherTest
     {
+        private const string WebExceptionMessage = "WebException occured";
         private const string UnknownEmailMessage = "Unknown email address.";
         private const string InvalidPasswordMessage = "Invalid password!";
         private const string UnknownReasonMessage = "Unknown reason";
@@ -41,6 +42,19 @@ namespace LastPass.Test
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
                 {"iterations", string.Format("{0}", CorrectIterationCount)}
             };
+
+        [Test]
+        [ExpectedException(typeof(LoginException), ExpectedMessage = WebExceptionMessage)]
+        public void Login_failed_because_of_WebException()
+        {
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
+                .Throws<WebException>();
+
+            Fetcher.Login(Username, Password, webClient.Object);
+        }
 
         [Test]
         [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownEmailMessage)]

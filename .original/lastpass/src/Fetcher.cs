@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.Net;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -36,16 +37,23 @@ namespace LastPass
 
         private static Session Login(string username, string password, int keyIterationCount, IWebClient webClient)
         {
-            // TODO: Handle web error and (possibly) rethrow them as LastPass errors
-            var response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
-                {
-                    {"method", "mobile"},
-                    {"web", "1"},
-                    {"xml", "1"},
-                    {"username", username},
-                    {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
-                    {"iterations", string.Format("{0}", keyIterationCount)}
-                });
+            byte[] response;
+            try
+            {
+                response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
+                    {
+                        {"method", "mobile"},
+                        {"web", "1"},
+                        {"xml", "1"},
+                        {"username", username},
+                        {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
+                        {"iterations", string.Format("{0}", keyIterationCount)}
+                    });
+            }
+            catch (WebException e)
+            {
+                throw new LoginException("WebException occured", e);
+            }
 
             // TODO: Handle xml parsing errors
             var xml = XDocument.Parse(response.ToUtf8());

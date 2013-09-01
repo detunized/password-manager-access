@@ -7,5 +7,9 @@ namespace LastPass
         public LoginException(string message): base(message)
         {
         }
+
+        public LoginException(string message, Exception innerException): base(message, innerException)
+        {
+        }
     }
 }
