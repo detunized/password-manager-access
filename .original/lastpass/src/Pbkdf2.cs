@@ -32,13 +32,38 @@ namespace LastPass
             {
                 hmac.Key = password;
 
+                // Prepare hash input (salt + block index)
+                var hashInputSize = salt.Length + 4;
+                var hashInput = new byte[hashInputSize];
+                salt.CopyTo(hashInput, 0);
+                hashInput[hashInputSize - 4] = 0;
+                hashInput[hashInputSize - 3] = 0;
+                hashInput[hashInputSize - 2] = 0;
+                hashInput[hashInputSize - 1] = 0;
+
                 var bytes = new byte[byteCount];
                 var hashSize = hmac.HashSize / 8;
                 var blockCount = (byteCount + hashSize - 1) / hashSize;
+
                 for (var i = 0; i < blockCount; ++i)
                 {
-                    // TODO: Calculate the value in-place
-                    var block = CalculateBlock(i + 1, hmac, salt, iterationCount);
+                    // Increase 32-bit big-endian block index at the end of the hash input buffer
+                    if (++hashInput[hashInputSize - 1] == 0)
+                        if (++hashInput[hashInputSize - 2] == 0)
+                            if (++hashInput[hashInputSize - 3] == 0)
+                                ++hashInput[hashInputSize - 4];
+
+                    var hashed = hmac.ComputeHash(hashInput);
+                    var block = hashed;
+                    for (var j = 1; j < iterationCount; ++j)
+                    {
+                        hashed = hmac.ComputeHash(hashed);
+                        for (var k = 0; k < hashed.Length; ++k)
+                        {
+                            block[k] ^= hashed[k];
+                        }
+                    }
+
                     var offset = i * hashSize;
                     var size = Math.Min(hashSize, byteCount - offset);
                     Array.Copy(block, 0, bytes, offset, size);
@@ -46,34 +71,6 @@ namespace LastPass
 
                 return bytes;
             }
-        }
-
-        private static byte[] CalculateBlock(int blockIndex, HMAC hmac, byte[] salt, int iterationCount)
-        {
-            // TODO: Get rid if the temporary
-            var hashInput = new byte[salt.Length + 4];
-            salt.CopyTo(hashInput, 0);
-
-            // TODO: Get rid if the temporary
-            var indexBytes = BitConverter.GetBytes(blockIndex);
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(indexBytes);
-            }
-            indexBytes.CopyTo(hashInput, salt.Length);
-
-            var hashed = hmac.ComputeHash(hashInput);
-            var result = hashed;
-            for (var i = 1; i < iterationCount; ++i)
-            {
-                hashed = hmac.ComputeHash(hashed);
-                for (var j = 0; j < hashed.Length; ++j)
-                {
-                    result[j] ^= hashed[j];
-                }
-            }
-
-            return result;
         }
     }
 }
