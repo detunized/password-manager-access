@@ -8,7 +8,7 @@ namespace LastPass
         public static byte[] MakeKey(string username, string password, int iterationCount)
         {
             if (iterationCount <= 0)
-                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be greater than 0");
+                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be positive");
 
             if (iterationCount == 1)
             {
@@ -24,7 +24,7 @@ namespace LastPass
         public static string MakeHash(string username, string password, int iterationCount)
         {
             if (iterationCount <= 0)
-                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be greater than 0");
+                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be positive");
 
             var key = MakeKey(username, password, iterationCount);
             if (iterationCount == 1)
