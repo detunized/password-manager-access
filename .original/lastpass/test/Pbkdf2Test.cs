@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace LastPass.Test
@@ -46,6 +47,20 @@ namespace LastPass.Test
                 Assert.AreEqual(expected,
                                 Pbkdf2.Generate(i.Password.ToBytes(), i.Salt.ToBytes(), i.IterationCount, expected.Length));
             }
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be greater than 0\r\nParameter name: iterationCount")]
+        public void Generate_throws_on_zero_iterationCount()
+        {
+            Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, 0, _testData[0].Expected.Decode64().Length);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be greater than 0\r\nParameter name: iterationCount")]
+        public void Generate_throws_on_negative_iterationCount()
+        {
+            Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, -1, _testData[0].Expected.Decode64().Length);
         }
     }
 }

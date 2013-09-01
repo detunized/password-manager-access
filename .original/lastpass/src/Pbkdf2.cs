@@ -22,6 +22,9 @@ namespace LastPass
 
         public static byte[] Generate(byte[] password, byte[] salt, int iterationCount, int byteCount)
         {
+            if (iterationCount <= 0)
+                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be greater than 0");
+
             using (var hmac = new HMACSHA256())
             {
                 hmac.Key = password;
