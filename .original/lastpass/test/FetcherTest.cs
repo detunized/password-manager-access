@@ -14,6 +14,7 @@ namespace LastPass.Test
         private const string WebExceptionMessage = "WebException occured";
         private const string UnknownEmailMessage = "Invalid username";
         private const string InvalidPasswordMessage = "Invalid password";
+        private const string OtherReasonMessage = "Other reason";
         private const string UnknownReasonMessage = "Unknown reason";
         private const string InvalidResponseMessage = "Invalid base64 in response";
 
@@ -45,7 +46,6 @@ namespace LastPass.Test
             };
 
         [Test]
-        [ExpectedException(typeof(LoginException), ExpectedMessage = WebExceptionMessage)]
         public void Login_failed_because_of_WebException()
         {
             var webClient = new Mock<IWebClient>();
@@ -54,15 +54,15 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Throws<WebException>();
 
-            Fetcher.Login(Username, Password, webClient.Object);
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(LoginException.FailureReason.WebException, e.Reason);
+            Assert.AreEqual(WebExceptionMessage, e.Message);
         }
 
         [Test]
-        [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownEmailMessage)]
         public void Login_failed_because_of_unknown_email()
         {
-            var response = string.Format("<response><error message=\"{0}\" cause=\"unknownemail\" /></response>",
-                                         UnknownEmailMessage).ToBytes();
+            var response = "<response><error message=\"Unknown email address.\" cause=\"unknownemail\" /></response>".ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -70,15 +70,15 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            Fetcher.Login(Username, Password, webClient.Object);
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(LoginException.FailureReason.LastPassInvalidUsername, e.Reason);
+            Assert.AreEqual(UnknownEmailMessage, e.Message);
         }
 
         [Test]
-        [ExpectedException(typeof(LoginException), ExpectedMessage = InvalidPasswordMessage)]
         public void Login_failed_because_of_invalid_password()
         {
-            var response = string.Format("<response><error message=\"{0}\" cause=\"unknownpassword\" /></response>",
-                                         InvalidPasswordMessage).ToBytes();
+            var response = "<response><error message=\"Invalid password!\" cause=\"unknownpassword\" /></response>".ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -86,11 +86,28 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            Fetcher.Login(Username, Password, webClient.Object);
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(LoginException.FailureReason.LastPassInvalidPassword, e.Reason);
+            Assert.AreEqual(InvalidPasswordMessage, e.Message);
         }
 
         [Test]
-        [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownReasonMessage)]
+        public void Login_failed_for_other_reason()
+        {
+            var response = string.Format("<response><error message=\"{0}\"/></response>", OtherReasonMessage).ToBytes();
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
+                .Returns(response);
+
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(LoginException.FailureReason.LastPassOther, e.Reason);
+            Assert.AreEqual(OtherReasonMessage, e.Message);
+        }
+
+        [Test]
         public void Login_failed_for_unknown_reason_with_error_element()
         {
             var response = "<response><error /></response>".ToBytes();
@@ -101,11 +118,12 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            Fetcher.Login(Username, Password, webClient.Object);
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(LoginException.FailureReason.LastPassUnknown, e.Reason);
+            Assert.AreEqual(UnknownReasonMessage, e.Message);
         }
 
         [Test]
-        [ExpectedException(typeof(LoginException), ExpectedMessage = UnknownReasonMessage)]
         public void Login_failed_for_unknown_reason_without_error_element()
         {
             var response = "<response />".ToBytes();
@@ -116,7 +134,9 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response);
 
-            Fetcher.Login(Username, Password, webClient.Object);
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(LoginException.FailureReason.LastPassUnknown, e.Reason);
+            Assert.AreEqual(UnknownReasonMessage, e.Message);
         }
 
         [Test]
