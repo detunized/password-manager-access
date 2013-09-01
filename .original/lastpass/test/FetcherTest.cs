@@ -202,7 +202,6 @@ namespace LastPass.Test
         }
 
         [Test]
-        [ExpectedException(typeof(FetchException), ExpectedMessage = WebExceptionMessage)]
         public void Fetch_throws_on_WebException()
         {
             var session = new Session(SessionId, CorrectIterationCount);
@@ -216,11 +215,12 @@ namespace LastPass.Test
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Throws<WebException>();
 
-            Fetcher.Fetch(session, webClient.Object);
+            var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(session, webClient.Object));
+            Assert.AreEqual(FetchException.FailureReason.WebException, e.Reason);
+            Assert.AreEqual(WebExceptionMessage, e.Message);
         }
 
         [Test]
-        [ExpectedException(typeof(FetchException), ExpectedMessage = InvalidResponseMessage)]
         public void Fetch_throws_on_invalid_response()
         {
             var session = new Session(SessionId, CorrectIterationCount);
@@ -234,7 +234,9 @@ namespace LastPass.Test
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Returns("Invalid base64 string!".ToBytes());
 
-            Fetcher.Fetch(session, webClient.Object);
+            var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(session, webClient.Object));
+            Assert.AreEqual(FetchException.FailureReason.InvalidResponse, e.Reason);
+            Assert.AreEqual(InvalidResponseMessage, e.Message);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
