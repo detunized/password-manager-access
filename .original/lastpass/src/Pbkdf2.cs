@@ -25,11 +25,13 @@ namespace LastPass
             if (iterationCount <= 0)
                 throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be greater than 0");
 
+            if (byteCount < 0)
+                throw new ArgumentOutOfRangeException("byteCount", "Byte count should be nonnegative");
+
             using (var hmac = new HMACSHA256())
             {
                 hmac.Key = password;
 
-                // TODO: Check for byteCount being too big
                 var bytes = new byte[byteCount];
                 var hashSize = hmac.HashSize / 8;
                 var blockCount = (byteCount + hashSize - 1) / hashSize;

@@ -25,6 +25,7 @@ namespace LastPass.Test
         // Test data for PBKDF2 HMAC-SHA256 is from http://stackoverflow.com/a/5136918/362938
         private readonly TestData[] _testData =
         {
+            new TestData("password", "salt", 1, ""),
             new TestData("password", "salt", 1, "Eg+2z/z4syxD5yJSVsT4N6hlSMkszDVICAWYfLcL4Xs="),
             new TestData("password", "salt", 2, "rk0Mla9rRtMtCt/5KPBt0CowP47zwlHf1uLYWpVHTEM="),
             new TestData("password", "salt", 4096, "xeR41ZKIyEGqUw22hFxMjZYok6ABzk4RpJY4c6qYE0o="),
@@ -61,6 +62,13 @@ namespace LastPass.Test
         public void Generate_throws_on_negative_iterationCount()
         {
             Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, -1, _testData[0].Expected.Decode64().Length);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Byte count should be nonnegative\r\nParameter name: byteCount")]
+        public void Generate_throws_on_negative_byteCount()
+        {
+            Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, _testData[0].IterationCount, -1);
         }
     }
 }
