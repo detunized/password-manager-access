@@ -66,7 +66,7 @@ namespace LastPass
             }
             catch (WebException e)
             {
-                throw new LoginException("WebException occured", e);
+                throw new LoginException(LoginException.FailureReason.WebException, "WebException occured", e);
             }
 
             // TODO: Handle xml parsing errors
@@ -94,11 +94,17 @@ namespace LastPass
                 var message = error.Attribute("message");
                 if (message != null)
                 {
-                    throw new LoginException(message.Value);
+                    var messageText = message.Value;
+                    if (messageText == "Unknown email address.")
+                        throw new LoginException(LoginException.FailureReason.LastPassInvalidUsername, "Invalid username");
+                    else if (messageText == "Invalid password!")
+                        throw new LoginException(LoginException.FailureReason.LastPassInvalidPassword, "Invalid password");
+                    else
+                        throw new LoginException(LoginException.FailureReason.LastPassOther, messageText);
                 }
             }
 
-            throw new LoginException("Unknown reason");
+            throw new LoginException(LoginException.FailureReason.LastPassUnknown, "Unknown reason");
         }
     }
 }

@@ -12,8 +12,8 @@ namespace LastPass.Test
     class FetcherTest
     {
         private const string WebExceptionMessage = "WebException occured";
-        private const string UnknownEmailMessage = "Unknown email address.";
-        private const string InvalidPasswordMessage = "Invalid password!";
+        private const string UnknownEmailMessage = "Invalid username";
+        private const string InvalidPasswordMessage = "Invalid password";
         private const string UnknownReasonMessage = "Unknown reason";
         private const string InvalidResponseMessage = "Invalid base64 in response";
 
