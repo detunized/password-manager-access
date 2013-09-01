@@ -43,6 +43,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Fetcher.cs" />
     <Compile Include="FetcherHelper.cs" />
+    <Compile Include="FetchException.cs" />
     <Compile Include="IWebClient.cs" />
     <Compile Include="LoginException.cs" />
     <Compile Include="ParserHelper.cs" />

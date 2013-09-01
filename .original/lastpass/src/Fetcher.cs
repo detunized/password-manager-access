@@ -29,8 +29,15 @@ namespace LastPass
         {
             webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
 
-            // TODO: Handle web error and (possibly) rethrow them as LastPass errors
-            var response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
+            byte[] response;
+            try
+            {
+                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
+            }
+            catch (WebException e)
+            {
+                throw new FetchException("WebException occured", e);
+            }
 
             return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
         }

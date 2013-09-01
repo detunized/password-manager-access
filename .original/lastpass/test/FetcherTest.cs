@@ -180,6 +180,24 @@ namespace LastPass.Test
             Assert.AreEqual(CorrectIterationCount, blob.KeyIterationCount);
         }
 
+        [Test]
+        [ExpectedException(typeof(FetchException), ExpectedMessage = WebExceptionMessage)]
+        public void Fetch_throws_on_WebException()
+        {
+            var session = new Session(SessionId, CorrectIterationCount);
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(new WebHeaderCollection());
+
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Throws<WebException>();
+
+            Fetcher.Fetch(session, webClient.Object);
+        }
+
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
         {
             return a.AllKeys.OrderBy(s => s).SequenceEqual(b.AllKeys.OrderBy(s => s)) &&
