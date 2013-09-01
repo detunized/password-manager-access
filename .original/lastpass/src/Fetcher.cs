@@ -31,7 +31,6 @@ namespace LastPass
             // TODO: Handle web error and (possibly) rethrow them as LastPass errors
             var response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
 
-            // TODO: Remove hardcoded key, for testing only!
             return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
         }
 
