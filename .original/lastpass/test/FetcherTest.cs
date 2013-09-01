@@ -63,97 +63,55 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_unknown_email()
         {
-            var response = "<response><error message=\"Unknown email address.\" cause=\"unknownemail\" /></response>".ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Returns(response);
-
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
-            Assert.AreEqual(LoginException.FailureReason.LastPassInvalidUsername, e.Reason);
-            Assert.AreEqual(UnknownEmailMessage, e.Message);
+            LoginAndVerifyException(
+                "<response><error message=\"Unknown email address.\" cause=\"unknownemail\" /></response>",
+                LoginException.FailureReason.LastPassInvalidUsername,
+                UnknownEmailMessage);
         }
 
         [Test]
         public void Login_failed_because_of_invalid_password()
         {
-            var response = "<response><error message=\"Invalid password!\" cause=\"unknownpassword\" /></response>".ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Returns(response);
-
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
-            Assert.AreEqual(LoginException.FailureReason.LastPassInvalidPassword, e.Reason);
-            Assert.AreEqual(InvalidPasswordMessage, e.Message);
+            LoginAndVerifyException(
+                "<response><error message=\"Invalid password!\" cause=\"unknownpassword\" /></response>",
+                LoginException.FailureReason.LastPassInvalidPassword,
+                InvalidPasswordMessage);
         }
 
         [Test]
         public void Login_failed_for_other_reason()
         {
-            var response = string.Format("<response><error message=\"{0}\"/></response>", OtherReasonMessage).ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Returns(response);
-
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
-            Assert.AreEqual(LoginException.FailureReason.LastPassOther, e.Reason);
-            Assert.AreEqual(OtherReasonMessage, e.Message);
+            LoginAndVerifyException(
+                string.Format("<response><error message=\"{0}\"/></response>", OtherReasonMessage),
+                LoginException.FailureReason.LastPassOther,
+                OtherReasonMessage);
         }
 
         [Test]
         public void Login_failed_for_unknown_reason_with_error_element()
         {
-            var response = "<response><error /></response>".ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Returns(response);
-
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
-            Assert.AreEqual(LoginException.FailureReason.LastPassUnknown, e.Reason);
-            Assert.AreEqual(UnknownReasonMessage, e.Message);
+            LoginAndVerifyException(
+                "<response><error /></response>",
+                LoginException.FailureReason.LastPassUnknown,
+                UnknownReasonMessage);
         }
 
         [Test]
         public void Login_failed_for_unknown_reason_without_error_element()
         {
-            var response = "<response />".ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Returns(response);
-
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
-            Assert.AreEqual(LoginException.FailureReason.LastPassUnknown, e.Reason);
-            Assert.AreEqual(UnknownReasonMessage, e.Message);
+            LoginAndVerifyException(
+                "<response />",
+                LoginException.FailureReason.LastPassUnknown,
+                UnknownReasonMessage);
         }
 
         [Test]
         public void Login_failed_because_of_invalid_xml()
         {
-            var response = "Invalid XML".ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Returns(response);
-
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
-            Assert.AreEqual(LoginException.FailureReason.InvalidResponse, e.Reason);
-            Assert.AreEqual(InvalidXmlMessage, e.Message);
+            LoginAndVerifyException(
+                "Invalid XML!",
+                LoginException.FailureReason.InvalidResponse,
+                InvalidXmlMessage);
         }
 
         [Test]
@@ -254,6 +212,19 @@ namespace LastPass.Test
             var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(session, webClient.Object));
             Assert.AreEqual(FetchException.FailureReason.InvalidResponse, e.Reason);
             Assert.AreEqual(InvalidBase64Message, e.Message);
+        }
+
+        private static void LoginAndVerifyException(string response, LoginException.FailureReason reason, string message)
+        {
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
+                .Returns(response.ToBytes());
+
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(reason, e.Reason);
+            Assert.AreEqual(message, e.Message);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
