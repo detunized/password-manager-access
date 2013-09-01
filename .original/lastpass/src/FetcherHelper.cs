@@ -1,3 +1,4 @@
+using System;
 using System.Security.Cryptography;
 
 namespace LastPass
@@ -6,7 +7,8 @@ namespace LastPass
     {
         public static byte[] MakeKey(string username, string password, int iterationCount)
         {
-            // TODO: Check for invalid interationCount
+            if (iterationCount <= 0)
+                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be greater than 0");
 
             if (iterationCount == 1)
             {
@@ -21,7 +23,8 @@ namespace LastPass
 
         public static string MakeHash(string username, string password, int iterationCount)
         {
-            // TODO: Check for invalid interationCount
+            if (iterationCount <= 0)
+                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be greater than 0");
 
             var key = MakeKey(username, password, iterationCount);
             if (iterationCount == 1)

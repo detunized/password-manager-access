@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
@@ -20,14 +21,25 @@ namespace LastPass.Test
                 {1000, "z7CdwlIkbu0XvcB7oQIpnlqwNGemdrGTBmDKnL9taPg="},
             };
 
-            const string username = "postlass@gmail.com";
-            const string password = "pl1234567890";
-
             foreach (var i in testCases)
             {
-                var result = FetcherHelper.MakeKey(username, password, i.Key);
+                var result = FetcherHelper.MakeKey(Username, Password, i.Key);
                 Assert.AreEqual(i.Value.Decode64(), result);
             }
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be greater than 0\r\nParameter name: iterationCount")]
+        public void MakeKey_throws_on_zero_iterationCount()
+        {
+            FetcherHelper.MakeKey(Username, Password, 0);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be greater than 0\r\nParameter name: iterationCount")]
+        public void MakeKey_throws_on_negative_iterationCount()
+        {
+            FetcherHelper.MakeKey(Username, Password, -1);
         }
 
         [Test]
@@ -44,14 +56,28 @@ namespace LastPass.Test
                 {1000, "03161354566c396fcd624a424164160e890e96b4b5fa6d942fc6377ab613513b"},
             };
 
-            const string username = "postlass@gmail.com";
-            const string password = "pl1234567890";
-
             foreach (var i in testCases)
             {
-                var result = FetcherHelper.MakeHash(username, password, i.Key);
+                var result = FetcherHelper.MakeHash(Username, Password, i.Key);
                 Assert.AreEqual(i.Value, result);
             }
         }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be greater than 0\r\nParameter name: iterationCount")]
+        public void MakeHash_throws_on_zero_iterationCount()
+        {
+            FetcherHelper.MakeHash(Username, Password, 0);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be greater than 0\r\nParameter name: iterationCount")]
+        public void MakeHash_throws_on_negative_iterationCount()
+        {
+            FetcherHelper.MakeHash(Username, Password, -1);
+        }
+
+        private const string Username = "postlass@gmail.com";
+        private const string Password = "pl1234567890";
     }
 }
