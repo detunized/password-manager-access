@@ -15,6 +15,7 @@ namespace LastPass.Test
         private const string UnknownEmailMessage = "Unknown email address.";
         private const string InvalidPasswordMessage = "Invalid password!";
         private const string UnknownReasonMessage = "Unknown reason";
+        private const string InvalidResponseMessage = "Invalid base64 in response";
 
         private const string Url = "https://lastpass.com/login.php";
         private const string Username = "username";
@@ -194,6 +195,24 @@ namespace LastPass.Test
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Throws<WebException>();
+
+            Fetcher.Fetch(session, webClient.Object);
+        }
+
+        [Test]
+        [ExpectedException(typeof(FetchException), ExpectedMessage = InvalidResponseMessage)]
+        public void Fetch_throws_on_invalid_response()
+        {
+            var session = new Session(SessionId, CorrectIterationCount);
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(new WebHeaderCollection());
+
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Returns("Invalid base64 string!".ToBytes());
 
             Fetcher.Fetch(session, webClient.Object);
         }

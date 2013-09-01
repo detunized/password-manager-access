@@ -39,7 +39,14 @@ namespace LastPass
                 throw new FetchException("WebException occured", e);
             }
 
-            return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
+            try
+            {
+                return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
+            }
+            catch (FormatException e)
+            {
+                throw new FetchException("Invalid base64 in response", e);
+            }
         }
 
         private static Session Login(string username, string password, int keyIterationCount, IWebClient webClient)
