@@ -4,12 +4,22 @@ namespace LastPass
 {
     public class FetchException: Exception
     {
-        public FetchException(string message): base(message)
+        public enum FailureReason
         {
+            InvalidResponse,
+            WebException
         }
 
-        public FetchException(string message, Exception innerException): base(message, innerException)
+        public FetchException(FailureReason reason, string message): base(message)
         {
+            Reason = reason;
         }
+
+        public FetchException(FailureReason reason, string message, Exception innerException): base(message, innerException)
+        {
+            Reason = reason;
+        }
+
+        public FailureReason Reason { get; private set; }
     }
 }

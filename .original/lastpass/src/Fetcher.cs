@@ -36,7 +36,7 @@ namespace LastPass
             }
             catch (WebException e)
             {
-                throw new FetchException("WebException occured", e);
+                throw new FetchException(FetchException.FailureReason.WebException, "WebException occured", e);
             }
 
             try
@@ -45,7 +45,7 @@ namespace LastPass
             }
             catch (FormatException e)
             {
-                throw new FetchException("Invalid base64 in response", e);
+                throw new FetchException(FetchException.FailureReason.InvalidResponse, "Invalid base64 in response", e);
             }
         }
 
