@@ -16,7 +16,8 @@ namespace LastPass.Test
         private const string InvalidPasswordMessage = "Invalid password";
         private const string OtherReasonMessage = "Other reason";
         private const string UnknownReasonMessage = "Unknown reason";
-        private const string InvalidResponseMessage = "Invalid base64 in response";
+        private const string InvalidXmlMessage = "Invalid XML in response";
+        private const string InvalidBase64Message = "Invalid base64 in response";
 
         private const string Url = "https://lastpass.com/login.php";
         private const string Username = "username";
@@ -140,6 +141,22 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void Login_failed_because_of_invalid_xml()
+        {
+            var response = "Invalid XML".ToBytes();
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
+                .Returns(response);
+
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            Assert.AreEqual(LoginException.FailureReason.InvalidResponse, e.Reason);
+            Assert.AreEqual(InvalidXmlMessage, e.Message);
+        }
+
+        [Test]
         public void Login_rerequests_with_given_iterations()
         {
             var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
@@ -236,7 +253,7 @@ namespace LastPass.Test
 
             var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(session, webClient.Object));
             Assert.AreEqual(FetchException.FailureReason.InvalidResponse, e.Reason);
-            Assert.AreEqual(InvalidResponseMessage, e.Message);
+            Assert.AreEqual(InvalidBase64Message, e.Message);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)

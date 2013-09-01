@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Net;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -69,8 +70,15 @@ namespace LastPass
                 throw new LoginException(LoginException.FailureReason.WebException, "WebException occured", e);
             }
 
-            // TODO: Handle xml parsing errors
-            var xml = XDocument.Parse(response.ToUtf8());
+            XDocument xml;
+            try
+            {
+                xml = XDocument.Parse(response.ToUtf8());
+            }
+            catch (XmlException e)
+            {
+                throw new LoginException(LoginException.FailureReason.InvalidResponse, "Invalid XML in response", e);
+            }
 
             var ok = xml.Element("ok");
             if (ok != null)
