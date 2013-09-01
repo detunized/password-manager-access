@@ -34,7 +34,7 @@ namespace LastPass.Test
         };
 
         [Test]
-        public void GetBytesSha256()
+        public void Generate_returns_correct_result()
         {
             foreach (var i in _testData)
             {
