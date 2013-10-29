@@ -2,7 +2,6 @@ using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
-using System.Text;
 using Moq;
 using NUnit.Framework;
 
@@ -14,6 +13,7 @@ namespace LastPass.Test
         private const string WebExceptionMessage = "WebException occured";
         private const string UnknownEmailMessage = "Invalid username";
         private const string InvalidPasswordMessage = "Invalid password";
+        private const string MissingMissingGoogleAuthenticationMessage = "Missing Google authentication";
         private const string OtherCause = "othercause";
         private const string OtherReasonMessage = "Other reason";
         private const string UnknownReasonMessage = "Unknown reason";
@@ -77,6 +77,20 @@ namespace LastPass.Test
                 "<response><error message=\"Invalid password!\" cause=\"unknownpassword\" /></response>",
                 LoginException.FailureReason.LastPassInvalidPassword,
                 InvalidPasswordMessage);
+        }
+
+        [Test]
+        public void Login_failed_because_of_missing_google_authentication()
+        {
+            LoginAndVerifyException(
+                "<response>" +
+                    "<error " +
+                        "message=\"Google Authenticator authentication required! Upgrade your browser extension so you can enter it.\" " +
+                        "cause=\"googleauthrequired\" " +
+                    "/>" +
+                "</response>",
+                LoginException.FailureReason.LastPassMissingGoogleAuthentication,
+                MissingMissingGoogleAuthenticationMessage);
         }
 
         [Test]

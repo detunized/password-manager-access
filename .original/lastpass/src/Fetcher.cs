@@ -107,9 +107,14 @@ namespace LastPass
                     switch (causeValue)
                     {
                     case "unknownemail":
-                        throw new LoginException(LoginException.FailureReason.LastPassInvalidUsername, "Invalid username");
+                        throw new LoginException(LoginException.FailureReason.LastPassInvalidUsername,
+                                                 "Invalid username");
                     case "unknownpassword":
-                        throw new LoginException(LoginException.FailureReason.LastPassInvalidPassword, "Invalid password");
+                        throw new LoginException(LoginException.FailureReason.LastPassInvalidPassword,
+                                                 "Invalid password");
+                    case "googleauthrequired":
+                        throw new LoginException(LoginException.FailureReason.LastPassMissingGoogleAuthentication,
+                                                 "Missing Google authentication");
                     default:
                         throw new LoginException(LoginException.FailureReason.LastPassOther,
                                                  message != null ? message.Value : causeValue);
