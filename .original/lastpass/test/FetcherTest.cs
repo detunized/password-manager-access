@@ -14,6 +14,7 @@ namespace LastPass.Test
         private const string WebExceptionMessage = "WebException occured";
         private const string UnknownEmailMessage = "Invalid username";
         private const string InvalidPasswordMessage = "Invalid password";
+        private const string OtherCause = "othercause";
         private const string OtherReasonMessage = "Other reason";
         private const string UnknownReasonMessage = "Unknown reason";
         private const string InvalidXmlMessage = "Invalid XML in response";
@@ -79,7 +80,25 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Login_failed_for_other_reason()
+        public void Login_failed_for_other_reason_with_message()
+        {
+            LoginAndVerifyException(
+                string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>", OtherReasonMessage, OtherCause),
+                LoginException.FailureReason.LastPassOther,
+                OtherReasonMessage);
+        }
+
+        [Test]
+        public void Login_failed_for_other_reason_without_message()
+        {
+            LoginAndVerifyException(
+                string.Format("<response><error cause=\"{0}\"/></response>", OtherCause),
+                LoginException.FailureReason.LastPassOther,
+                OtherCause);
+        }
+
+        [Test]
+        public void Login_failed_with_message_without_cause()
         {
             LoginAndVerifyException(
                 string.Format("<response><error message=\"{0}\"/></response>", OtherReasonMessage),

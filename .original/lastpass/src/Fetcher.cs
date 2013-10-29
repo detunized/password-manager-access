@@ -99,16 +99,25 @@ namespace LastPass
                     return Login(username, password, int.Parse(iterations.Value), webClient);
                 }
 
+                var cause = error.Attribute("cause");
                 var message = error.Attribute("message");
-                if (message != null)
+                if (cause != null)
                 {
-                    var messageText = message.Value;
-                    if (messageText == "Unknown email address.")
+                    var causeValue = cause.Value;
+                    switch (causeValue)
+                    {
+                    case "unknownemail":
                         throw new LoginException(LoginException.FailureReason.LastPassInvalidUsername, "Invalid username");
-                    else if (messageText == "Invalid password!")
+                    case "unknownpassword":
                         throw new LoginException(LoginException.FailureReason.LastPassInvalidPassword, "Invalid password");
-                    else
-                        throw new LoginException(LoginException.FailureReason.LastPassOther, messageText);
+                    default:
+                        throw new LoginException(LoginException.FailureReason.LastPassOther,
+                                                 message != null ? message.Value : causeValue);
+                    }
+                }
+                else if (message != null)
+                {
+                    throw new LoginException(LoginException.FailureReason.LastPassOther, message.Value);
                 }
             }
 
