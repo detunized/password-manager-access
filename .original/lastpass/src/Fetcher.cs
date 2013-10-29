@@ -12,18 +12,18 @@ namespace LastPass
         public static Session Login(string username, string password)
         {
             using (var webClient = new WebClient())
-                return Fetcher.Login(username, password, 1, webClient);
+                return Login(username, password, 1, webClient);
         }
 
         public static Session Login(string username, string password, IWebClient webClient)
         {
-            return Fetcher.Login(username, password, 1, webClient);
+            return Login(username, password, 1, webClient);
         }
 
         public static Blob Fetch(Session session)
         {
             using (var webClient = new WebClient())
-                return Fetcher.Fetch(session, webClient);
+                return Fetch(session, webClient);
         }
 
         public static Blob Fetch(Session session, IWebClient webClient)
@@ -120,7 +120,8 @@ namespace LastPass
                                                  message != null ? message.Value : causeValue);
                     }
                 }
-                else if (message != null)
+
+                if (message != null)
                 {
                     throw new LoginException(LoginException.FailureReason.LastPassOther, message.Value);
                 }

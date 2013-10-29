@@ -915,7 +915,7 @@ namespace LastPass.Test
             public string Group { get; private set; }
         }
 
-        public static readonly Account[] Accounts = new Account[] {
+        public static readonly Account[] Accounts = new[] {
             new Account("1872745596", "Muller, Morar and Wisoky", "branson_cormier", "8jgLCzQSkB2rTZ1OtF9sNGpc", "http://nienow.net/meagan.greenholt", "three"),
             new Account("1872745606", "goyette.net", "kris_quigley@baileyjewe.biz", "S5@3^wPv!6JsFj", "http://bechtelar.biz/tristian.barrows", "four"),
             new Account("1872745616", "Ward Inc", "angela_emard", "zp8N@KoWyS0IYu7VR$dvBF!t", "http://schuster.name/ashton", "one"),
