@@ -50,6 +50,7 @@ namespace LastPass
             }
         }
 
+        // TODO: Split this function, it's grown too big
         private static Session Login(string username, string password, int keyIterationCount, string multifactorPassword, IWebClient webClient)
         {
             byte[] response;
@@ -118,8 +119,11 @@ namespace LastPass
                         throw new LoginException(LoginException.FailureReason.LastPassInvalidPassword,
                                                  "Invalid password");
                     case "googleauthrequired":
-                        throw new LoginException(LoginException.FailureReason.LastPassGoogleAuthenticatorRequired,
-                                                 "Missing Google authentication");
+                        throw new LoginException(LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode,
+                                                 "Google Authenticator code is missing");
+                    case "googleauthfailed":
+                        throw new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
+                                                 "Google Authenticator code is incorrect");
                     default:
                         throw new LoginException(LoginException.FailureReason.LastPassOther,
                                                  message != null ? message.Value : causeValue);

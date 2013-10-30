@@ -13,7 +13,8 @@ namespace LastPass.Test
         private const string WebExceptionMessage = "WebException occured";
         private const string UnknownEmailMessage = "Invalid username";
         private const string InvalidPasswordMessage = "Invalid password";
-        private const string MissingMissingGoogleAuthenticationMessage = "Missing Google authentication";
+        private const string MissingGoogleAuthenticationCodeMessage = "Google Authenticator code is missing";
+        private const string IncorrectGoogleAuthenticationCodeMessage = "Google Authenticator code is incorrect";
         private const string OtherCause = "othercause";
         private const string OtherReasonMessage = "Other reason";
         private const string UnknownReasonMessage = "Unknown reason";
@@ -25,6 +26,7 @@ namespace LastPass.Test
         private const string Password = "password";
         private const int InitialIterationCount = 1;
         private const int CorrectIterationCount = 5000;
+        private const string GoogleAuthenticatorCode = "123456";
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
         private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
@@ -45,6 +47,11 @@ namespace LastPass.Test
             {
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
                 {"iterations", string.Format("{0}", CorrectIterationCount)}
+            };
+
+        private static readonly NameValueCollection ExpectedValuesGA = new NameValueCollection(ExpectedValues1)
+            {
+                {"otp", GoogleAuthenticatorCode}
             };
 
         [Test]
@@ -89,8 +96,23 @@ namespace LastPass.Test
                         "cause=\"googleauthrequired\" " +
                     "/>" +
                 "</response>",
-                LoginException.FailureReason.LastPassGoogleAuthenticatorRequired,
-                MissingMissingGoogleAuthenticationMessage);
+                LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode,
+                MissingGoogleAuthenticationCodeMessage);
+        }
+
+        [Test]
+        public void Login_failed_because_of_incorrect_google_authenticator_code()
+        {
+            LoginAndVerifyException(
+                "<response>" +
+                    "<error " +
+                        "message=\"Google Authenticator authentication failed!\" " +
+                        "cause=\"googleauthfailed\" " +
+                    "/>" +
+                "</response>",
+                LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
+                IncorrectGoogleAuthenticationCodeMessage,
+                "000000");
         }
 
         [Test]
@@ -247,15 +269,22 @@ namespace LastPass.Test
             Assert.AreEqual(InvalidBase64Message, e.Message);
         }
 
-        private static void LoginAndVerifyException(string response, LoginException.FailureReason reason, string message)
+        private static void LoginAndVerifyException(string response,
+                                                    LoginException.FailureReason reason,
+                                                    string message,
+                                                    string multifactorPassword = null)
         {
+            var values = multifactorPassword != null
+                ? new NameValueCollection(ExpectedValues1) {{"otp", multifactorPassword}}
+                : ExpectedValues1;
+
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
+                                           It.Is<NameValueCollection>(v => AreEqual(v, values))))
                 .Returns(response.ToBytes());
 
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, null, webClient.Object));
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, multifactorPassword, webClient.Object));
             Assert.AreEqual(reason, e.Reason);
             Assert.AreEqual(message, e.Message);
         }

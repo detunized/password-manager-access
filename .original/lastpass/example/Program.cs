@@ -24,7 +24,7 @@ namespace Example
             }
             catch (LoginException e)
             {
-                if (e.Reason == LoginException.FailureReason.LastPassGoogleAuthenticatorRequired)
+                if (e.Reason == LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode)
                 {
                     // Request Google Authenticator code
                     Console.Write("Enter Google Authenticator code: ");
