@@ -9,7 +9,7 @@ namespace LastPass
             // LastPass returned errors
             LastPassInvalidUsername,
             LastPassInvalidPassword,
-            LastPassMissingGoogleAuthentication,
+            LastPassGoogleAuthenticatorRequired,
             LastPassOther, // Message property contains the message given by the LastPass server
             LastPassUnknown,
 

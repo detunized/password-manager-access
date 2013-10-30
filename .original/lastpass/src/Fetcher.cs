@@ -9,15 +9,15 @@ namespace LastPass
 {
     static class Fetcher
     {
-        public static Session Login(string username, string password)
+        public static Session Login(string username, string password, string multifactorPassword)
         {
             using (var webClient = new WebClient())
-                return Login(username, password, 1, webClient);
+                return Login(username, password, 1, multifactorPassword, webClient);
         }
 
-        public static Session Login(string username, string password, IWebClient webClient)
+        public static Session Login(string username, string password, string multifactorPassword, IWebClient webClient)
         {
-            return Login(username, password, 1, webClient);
+            return Login(username, password, 1, multifactorPassword, webClient);
         }
 
         public static Blob Fetch(Session session)
@@ -50,12 +50,12 @@ namespace LastPass
             }
         }
 
-        private static Session Login(string username, string password, int keyIterationCount, IWebClient webClient)
+        private static Session Login(string username, string password, int keyIterationCount, string multifactorPassword, IWebClient webClient)
         {
             byte[] response;
             try
             {
-                response = webClient.UploadValues("https://lastpass.com/login.php", new NameValueCollection
+                var parameters = new NameValueCollection
                     {
                         {"method", "mobile"},
                         {"web", "1"},
@@ -63,7 +63,12 @@ namespace LastPass
                         {"username", username},
                         {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
                         {"iterations", string.Format("{0}", keyIterationCount)}
-                    });
+                    };
+
+                if (multifactorPassword != null)
+                    parameters["otp"] = multifactorPassword;
+
+                response = webClient.UploadValues("https://lastpass.com/login.php", parameters);
             }
             catch (WebException e)
             {
@@ -96,7 +101,7 @@ namespace LastPass
                 var iterations = error.Attribute("iterations");
                 if (iterations != null)
                 {
-                    return Login(username, password, int.Parse(iterations.Value), webClient);
+                    return Login(username, password, int.Parse(iterations.Value), null, webClient);
                 }
 
                 var cause = error.Attribute("cause");
@@ -113,7 +118,7 @@ namespace LastPass
                         throw new LoginException(LoginException.FailureReason.LastPassInvalidPassword,
                                                  "Invalid password");
                     case "googleauthrequired":
-                        throw new LoginException(LoginException.FailureReason.LastPassMissingGoogleAuthentication,
+                        throw new LoginException(LoginException.FailureReason.LastPassGoogleAuthenticatorRequired,
                                                  "Missing Google authentication");
                     default:
                         throw new LoginException(LoginException.FailureReason.LastPassOther,

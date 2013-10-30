@@ -56,7 +56,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Throws<WebException>();
 
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, null, webClient.Object));
             Assert.AreEqual(LoginException.FailureReason.WebException, e.Reason);
             Assert.AreEqual(WebExceptionMessage, e.Message);
         }
@@ -80,7 +80,7 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Login_failed_because_of_missing_google_authentication()
+        public void Login_failed_because_of_missing_google_authenticator_code()
         {
             LoginAndVerifyException(
                 "<response>" +
@@ -89,7 +89,7 @@ namespace LastPass.Test
                         "cause=\"googleauthrequired\" " +
                     "/>" +
                 "</response>",
-                LoginException.FailureReason.LastPassMissingGoogleAuthentication,
+                LoginException.FailureReason.LastPassGoogleAuthenticatorRequired,
                 MissingMissingGoogleAuthenticationMessage);
         }
 
@@ -165,7 +165,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues2))))
                 .Returns(response2);
 
-            var session = Fetcher.Login(Username, Password, webClient.Object);
+            var session = Fetcher.Login(Username, Password, null, webClient.Object);
             Assert.AreEqual(SessionId, session.Id);
         }
 
@@ -255,7 +255,7 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Returns(response.ToBytes());
 
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, webClient.Object));
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, null, webClient.Object));
             Assert.AreEqual(reason, e.Reason);
             Assert.AreEqual(message, e.Message);
         }

@@ -16,7 +16,28 @@ namespace Example
             var password = credentials[1];
 
             // Fetch and create the vault from LastPass
-            var vault = Vault.Create(username, password);
+            Vault vault = null;
+            try
+            {
+                // Frist try basic authentication
+                vault = Vault.Create(username, password);
+            }
+            catch (LoginException e)
+            {
+                if (e.Reason == LoginException.FailureReason.LastPassGoogleAuthenticatorRequired)
+                {
+                    // Request Google Authenticator code
+                    Console.Write("Enter Google Authenticator code: ");
+                    var code = Console.ReadLine();
+
+                    // Now try with GAuth code
+                    vault = Vault.Create(username, password, code);
+                }
+                else
+                {
+                    throw;
+                }
+            }
 
             // Decrypt all accounts
             vault.DecryptAllAccounts(Account.Field.Name |

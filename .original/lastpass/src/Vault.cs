@@ -4,9 +4,9 @@ namespace LastPass
 {
     public class Vault
     {
-        public static Vault Create(string username, string password)
+        public static Vault Create(string username, string password, string multifactorPassword = null)
         {
-            return Create(Download(username, password));
+            return Create(Download(username, password, multifactorPassword));
         }
 
         public static Vault Create(Blob blob)
@@ -20,9 +20,9 @@ namespace LastPass
             });
         }
 
-        public static Blob Download(string username, string password)
+        public static Blob Download(string username, string password, string multifactorPassword = null)
         {
-            return Fetcher.Fetch(Fetcher.Login(username, password));
+            return Fetcher.Fetch(Fetcher.Login(username, password, multifactorPassword));
         }
 
         public byte[] MakeKey(string username, string password)
