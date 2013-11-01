@@ -124,6 +124,12 @@ namespace LastPass
                     case "googleauthfailed":
                         throw new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
                                                  "Google Authenticator code is incorrect");
+                    case "outofbandrequired":
+                        throw new LoginException(LoginException.FailureReason.LastPassOutOfBandAuthenticationRequired,
+                                                 "Out of band authentication required");
+                    case "multifactorresponsefailed":
+                        throw new LoginException(LoginException.FailureReason.LastPassOutOfBandAuthenticationFailed,
+                                                 "Out of band authentication failed");
                     default:
                         throw new LoginException(LoginException.FailureReason.LastPassOther,
                                                  message != null ? message.Value : causeValue);

@@ -15,6 +15,8 @@ namespace LastPass.Test
         private const string InvalidPasswordMessage = "Invalid password";
         private const string MissingGoogleAuthenticationCodeMessage = "Google Authenticator code is missing";
         private const string IncorrectGoogleAuthenticationCodeMessage = "Google Authenticator code is incorrect";
+        private const string OutOfBandAuthenticationRequiredMessage = "Out of band authentication required";
+        private const string OutOfBandAuthenticationFailedMessage = "Out of band authentication failed";
         private const string OtherCause = "othercause";
         private const string OtherReasonMessage = "Other reason";
         private const string UnknownReasonMessage = "Unknown reason";
@@ -113,6 +115,36 @@ namespace LastPass.Test
                 LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
                 IncorrectGoogleAuthenticationCodeMessage,
                 "000000");
+        }
+
+        [Test]
+        public void Login_failed_because_out_of_band_authentication_required()
+        {
+            LoginAndVerifyException(
+                "<response>" +
+                    "<error " +
+                        "message=\"Multifactor authentication required! Upgrade your browser extension so you can enter it.\" " +
+                        "cause=\"outofbandrequired\" " +
+                        "retryid=\"2091457e-0ae8-4bee-948c-345afb49a132\" " +
+                    "/>" +
+                "</response>",
+                LoginException.FailureReason.LastPassOutOfBandAuthenticationRequired,
+                OutOfBandAuthenticationRequiredMessage);
+        }
+
+        [Test]
+        public void Login_failed_because_out_of_band_authentication_failed()
+        {
+            LoginAndVerifyException(
+                "<response>" +
+                    "<error " +
+                        "message=\"Multifactor authentication failed!\" " +
+                        "cause=\"multifactorresponsefailed\" " +
+                        "type=\"outofband\" " +
+                    "/>" +
+                "</response>",
+                LoginException.FailureReason.LastPassOutOfBandAuthenticationFailed,
+                OutOfBandAuthenticationFailedMessage);
         }
 
         [Test]
