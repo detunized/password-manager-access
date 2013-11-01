@@ -51,7 +51,12 @@ namespace LastPass.Test
                 {"iterations", string.Format("{0}", CorrectIterationCount)}
             };
 
-        private static readonly NameValueCollection ExpectedValuesGA = new NameValueCollection(ExpectedValues1)
+        private static readonly NameValueCollection ExpectedValuesGA1 = new NameValueCollection(ExpectedValues1)
+            {
+                {"otp", GoogleAuthenticatorCode}
+            };
+
+        private static readonly NameValueCollection ExpectedValuesGA2 = new NameValueCollection(ExpectedValues2)
             {
                 {"otp", GoogleAuthenticatorCode}
             };
@@ -220,6 +225,28 @@ namespace LastPass.Test
                 .Returns(response2);
 
             var session = Fetcher.Login(Username, Password, null, webClient.Object);
+            Assert.AreEqual(SessionId, session.Id);
+        }
+
+        [Test]
+        public void Login_rerequests_with_given_iterations_and_multifactor_password()
+        {
+            var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
+                                          CorrectIterationCount).ToBytes();
+            var response2 = string.Format("<ok sessionid=\"{0}\" />", SessionId).ToBytes();
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValuesGA1))))
+                .Returns(response1);
+
+            webClient
+                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValuesGA2))))
+                .Returns(response2);
+
+            var session = Fetcher.Login(Username, Password, GoogleAuthenticatorCode, webClient.Object);
             Assert.AreEqual(SessionId, session.Id);
         }
 

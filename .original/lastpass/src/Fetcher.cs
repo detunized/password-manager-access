@@ -102,7 +102,7 @@ namespace LastPass
                 var iterations = error.Attribute("iterations");
                 if (iterations != null)
                 {
-                    return Login(username, password, int.Parse(iterations.Value), null, webClient);
+                    return Login(username, password, int.Parse(iterations.Value), multifactorPassword, webClient);
                 }
 
                 var cause = error.Attribute("cause");
