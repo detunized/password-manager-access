@@ -211,6 +211,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_invalid_xml()
         {
+            // TODO: Verify the inner exception is set!
             LoginAndVerifyException(
                 "Invalid XML!",
                 LoginException.FailureReason.InvalidResponse,
