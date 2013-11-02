@@ -70,7 +70,10 @@ namespace LastPass.Test
                                            It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
                 .Throws<WebException>();
 
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, null, webClient.Object));
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username,
+                                                                      Password,
+                                                                      null,
+                                                                      webClient.Object));
             Assert.AreEqual(LoginException.FailureReason.WebException, e.Reason);
             Assert.AreEqual(WebExceptionMessage, e.Message);
         }
@@ -156,7 +159,9 @@ namespace LastPass.Test
         public void Login_failed_for_other_reason_with_message()
         {
             LoginAndVerifyException(
-                string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>", OtherReasonMessage, OtherCause),
+                string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>",
+                              OtherReasonMessage,
+                              OtherCause),
                 LoginException.FailureReason.LastPassOther,
                 OtherReasonMessage);
         }
@@ -231,7 +236,8 @@ namespace LastPass.Test
 
             Fetcher.Fetch(session, webClient.Object);
 
-            Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
+            Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)),
+                            headers["Cookie"]);
         }
 
         [Test]
