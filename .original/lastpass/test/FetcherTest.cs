@@ -64,18 +64,24 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_WebException()
         {
+            // Immitate WebException
+            var webException = new WebException();
             var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Throws<WebException>();
+                .Setup(x => x.UploadValues(It.IsAny<string>(),
+                                           It.IsAny<NameValueCollection>()))
+                .Throws(webException);
 
+            // Login is supposed to rethrow as LoginException
             var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username,
                                                                       Password,
                                                                       null,
                                                                       webClient.Object));
+
+            // Verify the exception is set up correctly
             Assert.AreEqual(LoginException.FailureReason.WebException, e.Reason);
             Assert.AreEqual(WebExceptionMessage, e.Message);
+            Assert.AreEqual(webException, e.InnerException);
         }
 
         [Test]
