@@ -209,45 +209,13 @@ namespace LastPass.Test
         [Test]
         public void Login_rerequests_with_given_iterations()
         {
-            var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
-                                          CorrectIterationCount).ToBytes();
-            var response2 = string.Format("<ok sessionid=\"{0}\" />", SessionId).ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues1))))
-                .Returns(response1);
-
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValues2))))
-                .Returns(response2);
-
-            var session = Fetcher.Login(Username, Password, null, webClient.Object);
-            Assert.AreEqual(SessionId, session.Id);
+            LoginAndVerifyRerequest(null, ExpectedValues1, ExpectedValues2);
         }
 
         [Test]
         public void Login_rerequests_with_given_iterations_and_multifactor_password()
         {
-            var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
-                                          CorrectIterationCount).ToBytes();
-            var response2 = string.Format("<ok sessionid=\"{0}\" />", SessionId).ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValuesGA1))))
-                .Returns(response1);
-
-            webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, ExpectedValuesGA2))))
-                .Returns(response2);
-
-            var session = Fetcher.Login(Username, Password, GoogleAuthenticatorCode, webClient.Object);
-            Assert.AreEqual(SessionId, session.Id);
+            LoginAndVerifyRerequest(GoogleAuthenticatorCode, ExpectedValuesGA1, ExpectedValuesGA2);
         }
 
         [Test]
@@ -346,6 +314,37 @@ namespace LastPass.Test
             var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, multifactorPassword, webClient.Object));
             Assert.AreEqual(reason, e.Reason);
             Assert.AreEqual(message, e.Message);
+        }
+
+        private static void LoginAndVerifyRerequest(string multifactorPassword,
+                                                    NameValueCollection expectedValues1,
+                                                    NameValueCollection expectedValues2)
+        {
+            // First LastPass responds with error, when PBKDF2 iteration count doesn't match
+            var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
+                                          CorrectIterationCount).ToBytes();
+
+            // Seconds response is a success
+            var response2 = string.Format("<ok sessionid=\"{0}\" />", SessionId).ToBytes();
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Returns(response1)
+                .Returns(response2);
+
+            var session = Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
+
+            // Verify the requests were made with appropriate POST values
+            // TODO: This doesn't check the order in which calls were made. Fix this!
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues1))),
+                             "Did not see expected POST request with expectedValues1");
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues2))),
+                             "Did not see expected POST request with expectedValues2");
+
+            Assert.AreEqual(SessionId, session.Id);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
