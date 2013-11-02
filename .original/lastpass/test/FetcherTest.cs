@@ -111,6 +111,7 @@ namespace LastPass.Test
         public void Login_failed_because_of_incorrect_google_authenticator_code()
         {
             LoginAndVerifyException(
+                "000000",
                 "<response>" +
                     "<error " +
                         "message=\"Google Authenticator authentication failed!\" " +
@@ -118,8 +119,7 @@ namespace LastPass.Test
                     "/>" +
                 "</response>",
                 LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
-                IncorrectGoogleAuthenticationCodeMessage,
-                "000000");
+                IncorrectGoogleAuthenticationCodeMessage);
         }
 
         [Test]
@@ -296,24 +296,50 @@ namespace LastPass.Test
             Assert.AreEqual(InvalidBase64Message, e.Message);
         }
 
+        //
+        // Helpers
+        //
+
         private static void LoginAndVerifyException(string response,
                                                     LoginException.FailureReason reason,
-                                                    string message,
-                                                    string multifactorPassword = null)
+                                                    string message)
         {
-            var values = multifactorPassword != null
-                ? new NameValueCollection(ExpectedValues1) {{"otp", multifactorPassword}}
-                : ExpectedValues1;
+            LoginAndVerifyException(null, response, reason, message, ExpectedValues1);
+        }
 
+        private static void LoginAndVerifyException(string multifactorPassword,
+                                                    string response,
+                                                    LoginException.FailureReason reason,
+                                                    string message)
+        {
+            var expectedValues = new NameValueCollection(ExpectedValues1) {{"otp", multifactorPassword}};
+            LoginAndVerifyException(multifactorPassword, response, reason, message, expectedValues);
+        }
+
+        private static void LoginAndVerifyException(string multifactorPassword,
+                                                    string response,
+                                                    LoginException.FailureReason reason,
+                                                    string message,
+                                                    NameValueCollection expectedValues)
+        {
             var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                           It.Is<NameValueCollection>(v => AreEqual(v, values))))
+                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
                 .Returns(response.ToBytes());
 
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username, Password, multifactorPassword, webClient.Object));
+            // Login is supposed to throw an exception
+            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username,
+                                                                      Password,
+                                                                      multifactorPassword,
+                                                                      webClient.Object));
+            // Verify the exception is the one we're expecting
             Assert.AreEqual(reason, e.Reason);
             Assert.AreEqual(message, e.Message);
+
+            // Verify the appropriate POST request was made
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
+                             "Did not see POST request with expected values");
         }
 
         private static void LoginAndVerifyRerequest(string multifactorPassword,
@@ -339,10 +365,10 @@ namespace LastPass.Test
             // TODO: This doesn't check the order in which calls were made. Fix this!
             webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues1))),
-                             "Did not see expected POST request with expectedValues1");
+                             "Did not see POST request with expected values 1");
             webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues2))),
-                             "Did not see expected POST request with expectedValues2");
+                             "Did not see POST request with expected values 2");
 
             Assert.AreEqual(SessionId, session.Id);
         }
