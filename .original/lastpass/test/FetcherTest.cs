@@ -75,6 +75,10 @@ namespace LastPass.Test
                 {"otp", YubikeyPassword}
             };
 
+        //
+        // Login
+        //
+
         [Test]
         public void Login_failed_because_of_WebException()
         {
@@ -278,6 +282,10 @@ namespace LastPass.Test
         {
             LoginAndVerifyRerequest(YubikeyPassword, ExpectedValuesYubikey1, ExpectedValuesYubikey2);
         }
+
+        //
+        // Download
+        //
 
         [Test]
         public void Fetch_sets_cookies()
