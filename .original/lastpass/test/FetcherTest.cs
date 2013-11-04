@@ -15,6 +15,8 @@ namespace LastPass.Test
         private const string InvalidPasswordMessage = "Invalid password";
         private const string MissingGoogleAuthenticationCodeMessage = "Google Authenticator code is missing";
         private const string IncorrectGoogleAuthenticationCodeMessage = "Google Authenticator code is incorrect";
+        private const string MissingYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
+        private const string IncorrectYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
         private const string OutOfBandAuthenticationRequiredMessage = "Out of band authentication required";
         private const string OutOfBandAuthenticationFailedMessage = "Out of band authentication failed";
         private const string OtherCause = "othercause";
@@ -29,6 +31,8 @@ namespace LastPass.Test
         private const int InitialIterationCount = 1;
         private const int CorrectIterationCount = 5000;
         private const string GoogleAuthenticatorCode = "123456";
+        private const string IncorrectYubikeyPassword = "qlzpirxbsmanfzydaqlkcmiydzmhqjfemruyzyqhmray";
+        private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
         private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
@@ -129,6 +133,35 @@ namespace LastPass.Test
                 "</response>",
                 LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
                 IncorrectGoogleAuthenticationCodeMessage);
+        }
+
+        [Test]
+        public void Login_failed_because_of_missing_yubikey_password()
+        {
+            LoginAndVerifyException(
+                "<response>" +
+                    "<error " +
+                        "message=\"Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication.\" " +
+                        "cause=\"yubikeyrestricted\" " +
+                    "/>" +
+                "</response>",
+                LoginException.FailureReason.LastPassIncorrectYubikeyCode,
+                MissingYubikeyPasswordMessage);
+        }
+
+        [Test]
+        public void Login_failed_because_of_incorrect_yubikey_password()
+        {
+            LoginAndVerifyException(
+                IncorrectYubikeyPassword,
+                "<response>" +
+                    "<error " +
+                        "message=\"Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication.\" " +
+                        "cause=\"yubikeyrestricted\" " +
+                    "/>" +
+                "</response>",
+                LoginException.FailureReason.LastPassIncorrectYubikeyCode,
+                IncorrectYubikeyPasswordMessage);
         }
 
         [Test]

@@ -24,18 +24,34 @@ namespace Example
             }
             catch (LoginException e)
             {
-                if (e.Reason == LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode)
+                switch (e.Reason)
                 {
-                    // Request Google Authenticator code
-                    Console.Write("Enter Google Authenticator code: ");
-                    var code = Console.ReadLine();
+                case LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode:
+                    {
+                        // Request Google Authenticator code
+                        Console.Write("Enter Google Authenticator code: ");
+                        var code = Console.ReadLine();
 
-                    // Now try with GAuth code
-                    vault = Vault.Create(username, password, code);
-                }
-                else
-                {
-                    throw;
+                        // Now try with GAuth code
+                        vault = Vault.Create(username, password, code);
+
+                        break;
+                    }
+                case LoginException.FailureReason.LastPassIncorrectYubikeyCode:
+                    {
+                        // Request Yubikey code
+                        Console.Write("Enter Yubikey code: ");
+                        var code = Console.ReadLine();
+
+                        // Now try with Yubikey code
+                        vault = Vault.Create(username, password, code);
+
+                        break;
+                    }
+                default:
+                    {
+                        throw;
+                    }
                 }
             }
 
