@@ -11,7 +11,7 @@ namespace LastPass
             LastPassInvalidPassword,
             LastPassMissingGoogleAuthenticatorCode,
             LastPassIncorrectGoogleAuthenticatorCode,
-            LastPassIncorrectYubikeyCode,
+            LastPassIncorrectYubikeyPassword,
             LastPassOutOfBandAuthenticationRequired,
             LastPassOutOfBandAuthenticationFailed,
             LastPassOther, // Message property contains the message given by the LastPass server

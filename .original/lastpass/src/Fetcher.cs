@@ -125,7 +125,7 @@ namespace LastPass
                         throw new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
                                                  "Google Authenticator code is incorrect");
                     case "yubikeyrestricted":
-                        throw new LoginException(LoginException.FailureReason.LastPassIncorrectYubikeyCode,
+                        throw new LoginException(LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                                                  "Yubikey password is missing or incorrect");
                     case "outofbandrequired":
                         throw new LoginException(LoginException.FailureReason.LastPassOutOfBandAuthenticationRequired,

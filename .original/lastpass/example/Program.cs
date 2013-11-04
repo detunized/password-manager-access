@@ -37,14 +37,14 @@ namespace Example
 
                         break;
                     }
-                case LoginException.FailureReason.LastPassIncorrectYubikeyCode:
+                case LoginException.FailureReason.LastPassIncorrectYubikeyPassword:
                     {
-                        // Request Yubikey code
-                        Console.Write("Enter Yubikey code: ");
-                        var code = Console.ReadLine();
+                        // Request Yubikey password
+                        Console.Write("Enter Yubikey password: ");
+                        var yubikeyPassword = Console.ReadLine();
 
-                        // Now try with Yubikey code
-                        vault = Vault.Create(username, password, code);
+                        // Now try with Yubikey password
+                        vault = Vault.Create(username, password, yubikeyPassword);
 
                         break;
                     }

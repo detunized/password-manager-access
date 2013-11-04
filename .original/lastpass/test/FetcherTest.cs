@@ -145,7 +145,7 @@ namespace LastPass.Test
                         "cause=\"yubikeyrestricted\" " +
                     "/>" +
                 "</response>",
-                LoginException.FailureReason.LastPassIncorrectYubikeyCode,
+                LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                 MissingYubikeyPasswordMessage);
         }
 
@@ -160,7 +160,7 @@ namespace LastPass.Test
                         "cause=\"yubikeyrestricted\" " +
                     "/>" +
                 "</response>",
-                LoginException.FailureReason.LastPassIncorrectYubikeyCode,
+                LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                 IncorrectYubikeyPasswordMessage);
         }
 
