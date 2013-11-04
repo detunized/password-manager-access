@@ -272,7 +272,7 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Login_rerequests_with_given_iterations_and_multifactor_password()
+        public void Login_rerequests_with_given_iterations_and_google_authenticator_password()
         {
             LoginAndVerifyRerequest(GoogleAuthenticatorCode, ExpectedValuesGA1, ExpectedValuesGA2);
         }
