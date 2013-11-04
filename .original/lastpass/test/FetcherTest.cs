@@ -65,6 +65,16 @@ namespace LastPass.Test
                 {"otp", GoogleAuthenticatorCode}
             };
 
+        private static readonly NameValueCollection ExpectedValuesYubikey1 = new NameValueCollection(ExpectedValues1)
+            {
+                {"otp", YubikeyPassword}
+            };
+
+        private static readonly NameValueCollection ExpectedValuesYubikey2 = new NameValueCollection(ExpectedValues2)
+            {
+                {"otp", YubikeyPassword}
+            };
+
         [Test]
         public void Login_failed_because_of_WebException()
         {
@@ -261,6 +271,12 @@ namespace LastPass.Test
         public void Login_rerequests_with_given_iterations_and_multifactor_password()
         {
             LoginAndVerifyRerequest(GoogleAuthenticatorCode, ExpectedValuesGA1, ExpectedValuesGA2);
+        }
+
+        [Test]
+        public void Login_rerequests_with_given_iterations_and_yubikey_password()
+        {
+            LoginAndVerifyRerequest(YubikeyPassword, ExpectedValuesYubikey1, ExpectedValuesYubikey2);
         }
 
         [Test]
