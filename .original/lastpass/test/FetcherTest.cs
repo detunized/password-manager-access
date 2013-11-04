@@ -35,6 +35,8 @@ namespace LastPass.Test
         private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
+        private static readonly string OkResponse = string.Format("<ok sessionid=\"{0}\" />", SessionId);
+
         private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
             {
                 {"method", "mobile"},
@@ -266,6 +268,24 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void Login_requests_with_correct_values()
+        {
+            LoginAndVerify(null, ExpectedValues1);
+        }
+
+        [Test]
+        public void Login_requests_with_correct_values_with_google_authenticator()
+        {
+            LoginAndVerify(GoogleAuthenticatorCode, ExpectedValuesGA1);
+        }
+
+        [Test]
+        public void Login_requests_with_correct_values_with_yubikey()
+        {
+            LoginAndVerify(YubikeyPassword, ExpectedValuesYubikey1);
+        }
+
+        [Test]
         public void Login_rerequests_with_given_iterations()
         {
             LoginAndVerifyRerequest(null, ExpectedValues1, ExpectedValues2);
@@ -412,6 +432,22 @@ namespace LastPass.Test
                              "Did not see POST request with expected values");
         }
 
+        private static void LoginAndVerify(string multifactorPassword, NameValueCollection expectedValues)
+        {
+            // Simulate successful login
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Returns(OkResponse.ToBytes());
+
+            Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
+
+            // Verify the requests were made with appropriate POST values
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
+                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
+                             "Did not see POST request with expected values");
+        }
+
         private static void LoginAndVerifyRerequest(string multifactorPassword,
                                                     NameValueCollection expectedValues1,
                                                     NameValueCollection expectedValues2)
@@ -421,7 +457,7 @@ namespace LastPass.Test
                                           CorrectIterationCount).ToBytes();
 
             // Seconds response is a success
-            var response2 = string.Format("<ok sessionid=\"{0}\" />", SessionId).ToBytes();
+            var response2 = OkResponse.ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
