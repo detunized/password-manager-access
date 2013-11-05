@@ -22,6 +22,7 @@ namespace LastPass.Test
         private const string OtherCause = "othercause";
         private const string OtherReasonMessage = "Other reason";
         private const string UnknownReasonMessage = "Unknown reason";
+        private const string UnknownResponseSchemaMessage = "Unknown response schema";
         private const string InvalidXmlMessage = "Invalid XML in response";
         private const string InvalidBase64Message = "Invalid base64 in response";
 
@@ -249,12 +250,12 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Login_failed_for_unknown_reason_without_error_element()
+        public void Login_failed_because_of_unknown_xml_schema()
         {
             LoginAndVerifyException(
                 "<response />",
-                LoginException.FailureReason.LastPassUnknown,
-                UnknownReasonMessage);
+                LoginException.FailureReason.UnknownResponseSchema,
+                UnknownResponseSchemaMessage);
         }
 
         [Test]

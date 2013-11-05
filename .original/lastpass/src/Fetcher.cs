@@ -50,7 +50,6 @@ namespace LastPass
             }
         }
 
-        // TODO: Split this function, it's grown too big
         private static Session Login(string username, string password, int keyIterationCount, string multifactorPassword, IWebClient webClient)
         {
             byte[] response;
@@ -102,50 +101,67 @@ namespace LastPass
                 var iterations = error.Attribute("iterations");
                 if (iterations != null)
                 {
+                    // TODO: Possible exception here in int.Parse
                     return Login(username, password, int.Parse(iterations.Value), multifactorPassword, webClient);
-                }
-
-                var cause = error.Attribute("cause");
-                var message = error.Attribute("message");
-                if (cause != null)
-                {
-                    var causeValue = cause.Value;
-                    switch (causeValue)
-                    {
-                    case "unknownemail":
-                        throw new LoginException(LoginException.FailureReason.LastPassInvalidUsername,
-                                                 "Invalid username");
-                    case "unknownpassword":
-                        throw new LoginException(LoginException.FailureReason.LastPassInvalidPassword,
-                                                 "Invalid password");
-                    case "googleauthrequired":
-                        throw new LoginException(LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode,
-                                                 "Google Authenticator code is missing");
-                    case "googleauthfailed":
-                        throw new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
-                                                 "Google Authenticator code is incorrect");
-                    case "yubikeyrestricted":
-                        throw new LoginException(LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
-                                                 "Yubikey password is missing or incorrect");
-                    case "outofbandrequired":
-                        throw new LoginException(LoginException.FailureReason.LastPassOutOfBandAuthenticationRequired,
-                                                 "Out of band authentication required");
-                    case "multifactorresponsefailed":
-                        throw new LoginException(LoginException.FailureReason.LastPassOutOfBandAuthenticationFailed,
-                                                 "Out of band authentication failed");
-                    default:
-                        throw new LoginException(LoginException.FailureReason.LastPassOther,
-                                                 message != null ? message.Value : causeValue);
-                    }
-                }
-
-                if (message != null)
-                {
-                    throw new LoginException(LoginException.FailureReason.LastPassOther, message.Value);
                 }
             }
 
-            throw new LoginException(LoginException.FailureReason.LastPassUnknown, "Unknown reason");
+            throw CreateLoginException(error);
+        }
+
+        private static LoginException CreateLoginException(XElement error)
+        {
+            // XML is valid but there's nothing in it we can understand
+            if (error == null)
+            {
+                return new LoginException(LoginException.FailureReason.UnknownResponseSchema, "Unknown response schema");
+            }
+
+            // Both of these are optional
+            var cause = error.Attribute("cause");
+            var message = error.Attribute("message");
+
+            // We have a cause element, see if it's one of ones we know
+            if (cause != null)
+            {
+                var causeValue = cause.Value;
+                switch (causeValue)
+                {
+                case "unknownemail":
+                    return new LoginException(LoginException.FailureReason.LastPassInvalidUsername,
+                                              "Invalid username");
+                case "unknownpassword":
+                    return new LoginException(LoginException.FailureReason.LastPassInvalidPassword,
+                                              "Invalid password");
+                case "googleauthrequired":
+                    return new LoginException(LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode,
+                                              "Google Authenticator code is missing");
+               case "googleauthfailed":
+                    return new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
+                                              "Google Authenticator code is incorrect");
+                case "yubikeyrestricted":
+                    return new LoginException(LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
+                                              "Yubikey password is missing or incorrect");
+                case "outofbandrequired":
+                    return new LoginException(LoginException.FailureReason.LastPassOutOfBandAuthenticationRequired,
+                                              "Out of band authentication required");
+                case "multifactorresponsefailed":
+                    return new LoginException(LoginException.FailureReason.LastPassOutOfBandAuthenticationFailed,
+                                              "Out of band authentication failed");
+                default:
+                    return new LoginException(LoginException.FailureReason.LastPassOther,
+                                              message != null ? message.Value : causeValue);
+                }
+            }
+
+            // No cause, maybe at least a message
+            if (message != null)
+            {
+                return new LoginException(LoginException.FailureReason.LastPassOther, message.Value);
+            }
+
+            // Nothing we know, just the error element
+            return new LoginException(LoginException.FailureReason.LastPassUnknown, "Unknown reason");
         }
     }
 }

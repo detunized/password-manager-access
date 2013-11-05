@@ -18,6 +18,7 @@ namespace LastPass
             LastPassUnknown,
 
             // Other
+            UnknownResponseSchema,
             InvalidResponse,
             WebException
         }
