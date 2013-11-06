@@ -102,7 +102,7 @@ namespace LastPass.Test
             // Verify the exception is set up correctly
             Assert.AreEqual(LoginException.FailureReason.WebException, e.Reason);
             Assert.AreEqual(WebExceptionMessage, e.Message);
-            Assert.AreEqual(webException, e.InnerException);
+            Assert.AreSame(webException, e.InnerException);
         }
 
         [Test]
@@ -353,6 +353,7 @@ namespace LastPass.Test
         public void Fetch_throws_on_WebException()
         {
             var session = new Session(SessionId, CorrectIterationCount);
+            var webException = new WebException();
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -361,11 +362,12 @@ namespace LastPass.Test
 
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Throws<WebException>();
+                .Throws(webException);
 
             var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(session, webClient.Object));
             Assert.AreEqual(FetchException.FailureReason.WebException, e.Reason);
             Assert.AreEqual(WebExceptionMessage, e.Message);
+            Assert.AreSame(webException, e.InnerException);
         }
 
         [Test]
