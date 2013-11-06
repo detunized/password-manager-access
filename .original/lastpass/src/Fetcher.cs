@@ -134,11 +134,9 @@ namespace LastPass
                     return new LoginException(LoginException.FailureReason.LastPassInvalidPassword,
                                               "Invalid password");
                 case "googleauthrequired":
-                    return new LoginException(LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode,
-                                              "Google Authenticator code is missing");
-               case "googleauthfailed":
+                case "googleauthfailed":
                     return new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
-                                              "Google Authenticator code is incorrect");
+                                              "Google Authenticator code is missing or incorrect");
                 case "yubikeyrestricted":
                     return new LoginException(LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                                               "Yubikey password is missing or incorrect");

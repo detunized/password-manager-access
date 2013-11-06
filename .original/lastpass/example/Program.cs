@@ -26,7 +26,7 @@ namespace Example
             {
                 switch (e.Reason)
                 {
-                case LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode:
+                case LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode:
                     {
                         // Request Google Authenticator code
                         Console.Write("Enter Google Authenticator code: ");

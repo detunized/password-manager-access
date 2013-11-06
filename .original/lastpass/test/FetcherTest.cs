@@ -13,8 +13,7 @@ namespace LastPass.Test
         private const string WebExceptionMessage = "WebException occured";
         private const string UnknownEmailMessage = "Invalid username";
         private const string InvalidPasswordMessage = "Invalid password";
-        private const string MissingGoogleAuthenticatorCodeMessage = "Google Authenticator code is missing";
-        private const string IncorrectGoogleAuthenticatorCodeMessage = "Google Authenticator code is incorrect";
+        private const string IncorrectGoogleAuthenticatorCodeMessage = "Google Authenticator code is missing or incorrect";
         private const string MissingYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
         private const string IncorrectYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
         private const string OutOfBandAuthenticationRequiredMessage = "Out of band authentication required";
@@ -135,8 +134,8 @@ namespace LastPass.Test
                         "cause=\"googleauthrequired\" " +
                     "/>" +
                 "</response>",
-                LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode,
-                MissingGoogleAuthenticatorCodeMessage);
+                LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
+                IncorrectGoogleAuthenticatorCodeMessage);
         }
 
         [Test]

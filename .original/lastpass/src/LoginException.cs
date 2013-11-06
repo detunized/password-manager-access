@@ -9,7 +9,6 @@ namespace LastPass
             // LastPass returned errors
             LastPassInvalidUsername,
             LastPassInvalidPassword,
-            LastPassMissingGoogleAuthenticatorCode,
             LastPassIncorrectGoogleAuthenticatorCode,
             LastPassIncorrectYubikeyPassword,
             LastPassOutOfBandAuthenticationRequired,
