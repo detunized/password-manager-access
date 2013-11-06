@@ -397,23 +397,13 @@ namespace LastPass.Test
                                                     LoginException.FailureReason reason,
                                                     string message)
         {
-            LoginAndVerifyException(null, response, reason, message, ExpectedValues1);
+            LoginAndVerifyException(null, response, reason, message);
         }
 
         private static void LoginAndVerifyException(string multifactorPassword,
                                                     string response,
                                                     LoginException.FailureReason reason,
                                                     string message)
-        {
-            var expectedValues = new NameValueCollection(ExpectedValues1) {{"otp", multifactorPassword}};
-            LoginAndVerifyException(multifactorPassword, response, reason, message, expectedValues);
-        }
-
-        private static void LoginAndVerifyException(string multifactorPassword,
-                                                    string response,
-                                                    LoginException.FailureReason reason,
-                                                    string message,
-                                                    NameValueCollection expectedValues)
         {
             var webClient = new Mock<IWebClient>();
             webClient
@@ -428,11 +418,6 @@ namespace LastPass.Test
             // Verify the exception is the one we're expecting
             Assert.AreEqual(reason, e.Reason);
             Assert.AreEqual(message, e.Message);
-
-            // Verify the appropriate POST request was made
-            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
-                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
-                             "Did not see POST request with expected values");
         }
 
         private static void LoginAndVerify(string multifactorPassword, NameValueCollection expectedValues)
