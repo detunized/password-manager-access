@@ -13,8 +13,8 @@ namespace LastPass.Test
         private const string WebExceptionMessage = "WebException occured";
         private const string UnknownEmailMessage = "Invalid username";
         private const string InvalidPasswordMessage = "Invalid password";
-        private const string MissingGoogleAuthenticationCodeMessage = "Google Authenticator code is missing";
-        private const string IncorrectGoogleAuthenticationCodeMessage = "Google Authenticator code is incorrect";
+        private const string MissingGoogleAuthenticatorCodeMessage = "Google Authenticator code is missing";
+        private const string IncorrectGoogleAuthenticatorCodeMessage = "Google Authenticator code is incorrect";
         private const string MissingYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
         private const string IncorrectYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
         private const string OutOfBandAuthenticationRequiredMessage = "Out of band authentication required";
@@ -32,8 +32,9 @@ namespace LastPass.Test
         private const int InitialIterationCount = 1;
         private const int CorrectIterationCount = 5000;
         private const string GoogleAuthenticatorCode = "123456";
-        private const string IncorrectYubikeyPassword = "qlzpirxbsmanfzydaqlkcmiydzmhqjfemruyzyqhmray";
+        private const string IncorrectGoogleAuthenticatorCode = "654321";
         private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
+        private const string IncorrectYubikeyPassword = "qlzpirxbsmanfzydaqlkcmiydzmhqjfemruyzyqhmray";
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
         private static readonly string OkResponse = string.Format("<ok sessionid=\"{0}\" />", SessionId);
@@ -134,14 +135,14 @@ namespace LastPass.Test
                     "/>" +
                 "</response>",
                 LoginException.FailureReason.LastPassMissingGoogleAuthenticatorCode,
-                MissingGoogleAuthenticationCodeMessage);
+                MissingGoogleAuthenticatorCodeMessage);
         }
 
         [Test]
         public void Login_failed_because_of_incorrect_google_authenticator_code()
         {
             LoginAndVerifyException(
-                "000000",
+                IncorrectGoogleAuthenticatorCode,
                 "<response>" +
                     "<error " +
                         "message=\"Google Authenticator authentication failed!\" " +
@@ -149,7 +150,7 @@ namespace LastPass.Test
                     "/>" +
                 "</response>",
                 LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
-                IncorrectGoogleAuthenticationCodeMessage);
+                IncorrectGoogleAuthenticatorCodeMessage);
         }
 
         [Test]
