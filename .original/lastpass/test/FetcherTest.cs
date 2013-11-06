@@ -26,7 +26,8 @@ namespace LastPass.Test
         private const string InvalidXmlMessage = "Invalid XML in response";
         private const string InvalidBase64Message = "Invalid base64 in response";
 
-        private const string Url = "https://lastpass.com/login.php";
+        private const string LoginUrl = "https://lastpass.com/login.php";
+        private const string AccoutDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0";
         private const string Username = "username";
         private const string Password = "password";
         private const int InitialIterationCount = 1;
@@ -327,6 +328,27 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void Fetch_requests_accounts_from_correct_url()
+        {
+            var session = new Session(SessionId, CorrectIterationCount);
+            var response = "VGVzdCBibG9i".ToBytes();
+            var expectedBlob = "Test blob".ToBytes();
+
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(new WebHeaderCollection());
+
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Returns(response);
+
+            Fetcher.Fetch(session, webClient.Object);
+
+            webClient.Verify(x => x.DownloadData(It.Is<string>(a => a == AccoutDownloadUrl)));
+        }
+
+        [Test]
         public void Fetch_returns_blob()
         {
             var session = new Session(SessionId, CorrectIterationCount);
@@ -340,12 +362,10 @@ namespace LastPass.Test
 
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Returns(response)
-                .Verifiable();
+                .Returns(response);
 
             var blob = Fetcher.Fetch(session, webClient.Object);
 
-            webClient.Verify();
             Assert.AreEqual(expectedBlob, blob.Bytes);
             Assert.AreEqual(CorrectIterationCount, blob.KeyIterationCount);
         }
@@ -432,7 +452,7 @@ namespace LastPass.Test
             Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
 
             // Verify the requests were made with appropriate POST values
-            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
                              "Did not see POST request with expected values");
         }
@@ -458,10 +478,10 @@ namespace LastPass.Test
 
             // Verify the requests were made with appropriate POST values
             // TODO: This doesn't check the order in which calls were made. Fix this!
-            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues1))),
                              "Did not see POST request with expected values 1");
-            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == Url),
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues2))),
                              "Did not see POST request with expected values 2");
 
