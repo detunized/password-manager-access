@@ -30,7 +30,6 @@ namespace LastPass.Test
         private const string AccoutDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0";
         private const string Username = "username";
         private const string Password = "password";
-        private const int InitialIterationCount = 1;
         private const int CorrectIterationCount = 5000;
         private const string GoogleAuthenticatorCode = "123456";
         private const string IncorrectGoogleAuthenticatorCode = "654321";
@@ -257,7 +256,7 @@ namespace LastPass.Test
             Fetcher.Login(Username, Password, null, webClient.Object);
 
             // Verify the requests were made with appropriate POST values
-            var expectedValues = new NameValueCollection() {{"email", Username}};
+            var expectedValues = new NameValueCollection {{"email", Username}};
             webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == IterationsUrl),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
                              "Did not see POST request with expected values");
@@ -309,7 +308,6 @@ namespace LastPass.Test
         {
             var session = new Session(SessionId, CorrectIterationCount);
             var response = "VGVzdCBibG9i".ToBytes();
-            var expectedBlob = "Test blob".ToBytes();
 
             var webClient = new Mock<IWebClient>();
             webClient
