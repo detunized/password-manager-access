@@ -17,9 +17,11 @@ namespace LastPass
 
         public static Session Login(string username, string password, string multifactorPassword, IWebClient webClient)
         {
-            int keyIterationCount = RequestIterationCount(username, webClient);
+            // First we need to request PBKDF2 key interation count
+            var keyIterationCount = RequestIterationCount(username, webClient);
 
-            byte[] response;
+            // Hash the password and log in
+            XDocument response;
             try
             {
                 var parameters = new NameValueCollection
@@ -35,24 +37,20 @@ namespace LastPass
                 if (multifactorPassword != null)
                     parameters["otp"] = multifactorPassword;
 
-                response = webClient.UploadValues("https://lastpass.com/login.php", parameters);
+                response = XDocument.Parse(webClient.UploadValues("https://lastpass.com/login.php",
+                                                                  parameters).ToUtf8());
             }
             catch (WebException e)
             {
                 throw new LoginException(LoginException.FailureReason.WebException, "WebException occured", e);
-            }
-
-            XDocument xml;
-            try
-            {
-                xml = XDocument.Parse(response.ToUtf8());
             }
             catch (XmlException e)
             {
                 throw new LoginException(LoginException.FailureReason.InvalidResponse, "Invalid XML in response", e);
             }
 
-            var ok = xml.Element("ok");
+            // Parse the response
+            var ok = response.Element("ok");
             if (ok != null)
             {
                 var sessionId = ok.Attribute("sessionid");
@@ -62,7 +60,7 @@ namespace LastPass
                 }
             }
 
-            throw CreateLoginException(xml.XPathSelectElement("response/error"));
+            throw CreateLoginException(response.XPathSelectElement("response/error"));
         }
 
         public static Blob Fetch(Session session)
