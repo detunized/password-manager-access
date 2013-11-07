@@ -25,6 +25,7 @@ namespace LastPass.Test
         private const string InvalidXmlMessage = "Invalid XML in response";
         private const string InvalidBase64Message = "Invalid base64 in response";
 
+        private const string IterationsUrl = "https://lastpass.com/iterations.php";
         private const string LoginUrl = "https://lastpass.com/login.php";
         private const string AccoutDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0";
         private const string Username = "username";
@@ -47,36 +48,10 @@ namespace LastPass.Test
                 {"username", Username}
             };
 
-        private static readonly NameValueCollection ExpectedValues1 = new NameValueCollection(SharedExpectedValues)
-            {
-                {"hash", "e379d972c3eb59579abe3864d850b5f54911544adfa2daf9fb53c05d30cdc985"},
-                {"iterations", string.Format("{0}", InitialIterationCount)}
-            };
-
-        private static readonly NameValueCollection ExpectedValues2 = new NameValueCollection(SharedExpectedValues)
+        private static readonly NameValueCollection ExpectedValues = new NameValueCollection(SharedExpectedValues)
             {
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
                 {"iterations", string.Format("{0}", CorrectIterationCount)}
-            };
-
-        private static readonly NameValueCollection ExpectedValuesGA1 = new NameValueCollection(ExpectedValues1)
-            {
-                {"otp", GoogleAuthenticatorCode}
-            };
-
-        private static readonly NameValueCollection ExpectedValuesGA2 = new NameValueCollection(ExpectedValues2)
-            {
-                {"otp", GoogleAuthenticatorCode}
-            };
-
-        private static readonly NameValueCollection ExpectedValuesYubikey1 = new NameValueCollection(ExpectedValues1)
-            {
-                {"otp", YubikeyPassword}
-            };
-
-        private static readonly NameValueCollection ExpectedValuesYubikey2 = new NameValueCollection(ExpectedValues2)
-            {
-                {"otp", YubikeyPassword}
             };
 
         //
@@ -270,39 +245,42 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void Login_requests_iteration_count()
+        {
+            // Simulate login process
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Returns(CorrectIterationCount.ToString().ToBytes())
+                .Returns(OkResponse.ToBytes());
+
+            Fetcher.Login(Username, Password, null, webClient.Object);
+
+            // Verify the requests were made with appropriate POST values
+            var expectedValues = new NameValueCollection() {{"email", Username}};
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == IterationsUrl),
+                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
+                             "Did not see POST request with expected values");
+        }
+
+        [Test]
         public void Login_requests_with_correct_values()
         {
-            LoginAndVerify(null, ExpectedValues1);
+            LoginAndVerify(null, ExpectedValues);
         }
 
         [Test]
         public void Login_requests_with_correct_values_with_google_authenticator()
         {
-            LoginAndVerify(GoogleAuthenticatorCode, ExpectedValuesGA1);
+            LoginAndVerify(GoogleAuthenticatorCode,
+                           new NameValueCollection(ExpectedValues) {{"otp", GoogleAuthenticatorCode}});
         }
 
         [Test]
         public void Login_requests_with_correct_values_with_yubikey()
         {
-            LoginAndVerify(YubikeyPassword, ExpectedValuesYubikey1);
-        }
-
-        [Test]
-        public void Login_rerequests_with_given_iterations()
-        {
-            LoginAndVerifyRerequest(null, ExpectedValues1, ExpectedValues2);
-        }
-
-        [Test]
-        public void Login_rerequests_with_given_iterations_and_google_authenticator_password()
-        {
-            LoginAndVerifyRerequest(GoogleAuthenticatorCode, ExpectedValuesGA1, ExpectedValuesGA2);
-        }
-
-        [Test]
-        public void Login_rerequests_with_given_iterations_and_yubikey_password()
-        {
-            LoginAndVerifyRerequest(YubikeyPassword, ExpectedValuesYubikey1, ExpectedValuesYubikey2);
+            LoginAndVerify(YubikeyPassword,
+                           new NameValueCollection(ExpectedValues) {{"otp", YubikeyPassword}});
         }
 
         //
@@ -427,7 +405,8 @@ namespace LastPass.Test
         {
             var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Returns(CorrectIterationCount.ToString().ToBytes())
                 .Returns(response.ToBytes());
 
             // Login is supposed to throw an exception
@@ -445,7 +424,8 @@ namespace LastPass.Test
             // Simulate successful login
             var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Returns(CorrectIterationCount.ToString().ToBytes())
                 .Returns(OkResponse.ToBytes());
 
             Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
@@ -454,37 +434,6 @@ namespace LastPass.Test
             webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
                              "Did not see POST request with expected values");
-        }
-
-        private static void LoginAndVerifyRerequest(string multifactorPassword,
-                                                    NameValueCollection expectedValues1,
-                                                    NameValueCollection expectedValues2)
-        {
-            // First LastPass responds with error, when PBKDF2 iteration count doesn't match
-            var response1 = string.Format("<response><error iterations=\"{0}\" /></response>",
-                                          CorrectIterationCount).ToBytes();
-
-            // Seconds response is a success
-            var response2 = OkResponse.ToBytes();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(response1)
-                .Returns(response2);
-
-            var session = Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
-
-            // Verify the requests were made with appropriate POST values
-            // TODO: This doesn't check the order in which calls were made. Fix this!
-            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
-                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues1))),
-                             "Did not see POST request with expected values 1");
-            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
-                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues2))),
-                             "Did not see POST request with expected values 2");
-
-            Assert.AreEqual(SessionId, session.Id);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)

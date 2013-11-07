@@ -12,46 +12,13 @@ namespace LastPass
         public static Session Login(string username, string password, string multifactorPassword)
         {
             using (var webClient = new WebClient())
-                return Login(username, password, 1, multifactorPassword, webClient);
+                return Login(username, password, multifactorPassword, webClient);
         }
 
         public static Session Login(string username, string password, string multifactorPassword, IWebClient webClient)
         {
-            return Login(username, password, 1, multifactorPassword, webClient);
-        }
+            int keyIterationCount = RequestIterationCount(username, webClient);
 
-        public static Blob Fetch(Session session)
-        {
-            using (var webClient = new WebClient())
-                return Fetch(session, webClient);
-        }
-
-        public static Blob Fetch(Session session, IWebClient webClient)
-        {
-            webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
-
-            byte[] response;
-            try
-            {
-                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
-            }
-            catch (WebException e)
-            {
-                throw new FetchException(FetchException.FailureReason.WebException, "WebException occured", e);
-            }
-
-            try
-            {
-                return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
-            }
-            catch (FormatException e)
-            {
-                throw new FetchException(FetchException.FailureReason.InvalidResponse, "Invalid base64 in response", e);
-            }
-        }
-
-        private static Session Login(string username, string password, int keyIterationCount, string multifactorPassword, IWebClient webClient)
-        {
             byte[] response;
             try
             {
@@ -95,18 +62,63 @@ namespace LastPass
                 }
             }
 
-            var error = xml.XPathSelectElement("response/error");
-            if (error != null)
+            throw CreateLoginException(xml.XPathSelectElement("response/error"));
+        }
+
+        public static Blob Fetch(Session session)
+        {
+            using (var webClient = new WebClient())
+                return Fetch(session, webClient);
+        }
+
+        public static Blob Fetch(Session session, IWebClient webClient)
+        {
+            webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
+
+            byte[] response;
+            try
             {
-                var iterations = error.Attribute("iterations");
-                if (iterations != null)
-                {
-                    // TODO: Possible exception here in int.Parse
-                    return Login(username, password, int.Parse(iterations.Value), multifactorPassword, webClient);
-                }
+                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
+            }
+            catch (WebException e)
+            {
+                throw new FetchException(FetchException.FailureReason.WebException, "WebException occured", e);
             }
 
-            throw CreateLoginException(error);
+            try
+            {
+                return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
+            }
+            catch (FormatException e)
+            {
+                throw new FetchException(FetchException.FailureReason.InvalidResponse, "Invalid base64 in response", e);
+            }
+        }
+
+        private static int RequestIterationCount(string username, IWebClient webClient)
+        {
+            Func<Exception, Exception> invalidInt = (e) => new LoginException(LoginException.FailureReason.InvalidResponse,
+                                                                              "Iteration count is invalid",
+                                                                              e);
+
+            try
+            {
+                // LastPass server is supposed to return paint text int, nothing fancy.
+                return int.Parse(webClient.UploadValues("https://lastpass.com/iterations.php",
+                                                        new NameValueCollection {{"email", username}}).ToUtf8());
+            }
+            catch (WebException e)
+            {
+                throw new LoginException(LoginException.FailureReason.WebException, "WebException occured", e);
+            }
+            catch (FormatException e)
+            {
+                throw invalidInt(e);
+            }
+            catch (OverflowException e)
+            {
+                throw invalidInt(e);
+            }
         }
 
         private static LoginException CreateLoginException(XElement error)
