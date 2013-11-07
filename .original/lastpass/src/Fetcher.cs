@@ -20,37 +20,11 @@ namespace LastPass
             // First we need to request PBKDF2 key interation count
             var keyIterationCount = RequestIterationCount(username, webClient);
 
-            // Hash the password and log in
-            XDocument response;
-            try
-            {
-                var parameters = new NameValueCollection
-                    {
-                        {"method", "mobile"},
-                        {"web", "1"},
-                        {"xml", "1"},
-                        {"username", username},
-                        {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
-                        {"iterations", string.Format("{0}", keyIterationCount)}
-                    };
-
-                if (multifactorPassword != null)
-                    parameters["otp"] = multifactorPassword;
-
-                response = XDocument.Parse(webClient.UploadValues("https://lastpass.com/login.php",
-                                                                  parameters).ToUtf8());
-            }
-            catch (WebException e)
-            {
-                throw new LoginException(LoginException.FailureReason.WebException, "WebException occured", e);
-            }
-            catch (XmlException e)
-            {
-                throw new LoginException(LoginException.FailureReason.InvalidResponse, "Invalid XML in response", e);
-            }
+            // Knowing the iterations count we can hash the password and log in
+            var response = Login(username, password, multifactorPassword, keyIterationCount, webClient);
 
             // Parse the response
-            var ok = response.Element("ok");
+            var ok = response.XPathSelectElement("ok");
             if (ok != null)
             {
                 var sessionId = ok.Attribute("sessionid");
@@ -116,6 +90,44 @@ namespace LastPass
             catch (OverflowException e)
             {
                 throw invalidInt(e);
+            }
+        }
+
+        private static XDocument Login(string username,
+                                       string password,
+                                       string multifactorPassword,
+                                       int keyIterationCount,
+                                       IWebClient webClient)
+        {
+            try
+            {
+                var parameters = new NameValueCollection
+                    {
+                        {"method", "mobile"},
+                        {"web", "1"},
+                        {"xml", "1"},
+                        {"username", username},
+                        {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
+                        {"iterations", string.Format("{0}", keyIterationCount)}
+                    };
+
+                if (multifactorPassword != null)
+                    parameters["otp"] = multifactorPassword;
+
+                return XDocument.Parse(webClient.UploadValues("https://lastpass.com/login.php",
+                                                              parameters).ToUtf8());
+            }
+            catch (WebException e)
+            {
+                throw new LoginException(LoginException.FailureReason.WebException,
+                                         "WebException occured",
+                                         e);
+            }
+            catch (XmlException e)
+            {
+                throw new LoginException(LoginException.FailureReason.InvalidResponse,
+                                         "Invalid XML in response",
+                                         e);
             }
         }
 
