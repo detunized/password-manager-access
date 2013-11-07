@@ -30,7 +30,7 @@ namespace LastPass.Test
         private const string AccoutDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0";
         private const string Username = "username";
         private const string Password = "password";
-        private const int CorrectIterationCount = 5000;
+        private const int IterationCount = 5000;
         private const string GoogleAuthenticatorCode = "123456";
         private const string IncorrectGoogleAuthenticatorCode = "654321";
         private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
@@ -50,7 +50,7 @@ namespace LastPass.Test
         private static readonly NameValueCollection ExpectedValues = new NameValueCollection(SharedExpectedValues)
             {
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
-                {"iterations", string.Format("{0}", CorrectIterationCount)}
+                {"iterations", string.Format("{0}", IterationCount)}
             };
 
         //
@@ -58,26 +58,29 @@ namespace LastPass.Test
         //
 
         [Test]
-        public void Login_failed_because_of_WebException()
+        public void Login_failed_because_of_WebException_in_iteration_request()
         {
-            // Immitate WebException
+            // Immitate WebException on first request
             var webException = new WebException();
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(),
-                                           It.IsAny<NameValueCollection>()))
-                .Throws(webException);
-
-            // Login is supposed to rethrow as LoginException
-            var e = Assert.Throws<LoginException>(() => Fetcher.Login(Username,
-                                                                      Password,
-                                                                      null,
-                                                                      webClient.Object));
+            var exception = LoginAndExpectException(webException);
 
             // Verify the exception is set up correctly
-            Assert.AreEqual(LoginException.FailureReason.WebException, e.Reason);
-            Assert.AreEqual(WebExceptionMessage, e.Message);
-            Assert.AreSame(webException, e.InnerException);
+            Assert.AreEqual(LoginException.FailureReason.WebException, exception.Reason);
+            Assert.AreEqual(WebExceptionMessage, exception.Message);
+            Assert.AreSame(webException, exception.InnerException);
+        }
+
+        [Test]
+        public void Login_failed_because_of_WebException_in_login_request()
+        {
+            // Immitate WebException on second request
+            var webException = new WebException();
+            var exception = LoginAndExpectException(IterationCount.ToString(), webException);
+
+            // Verify the exception is set up correctly
+            Assert.AreEqual(LoginException.FailureReason.WebException, exception.Reason);
+            Assert.AreEqual(WebExceptionMessage, exception.Message);
+            Assert.AreSame(webException, exception.InnerException);
         }
 
         [Test]
@@ -250,7 +253,7 @@ namespace LastPass.Test
             var webClient = new Mock<IWebClient>();
             webClient
                 .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(CorrectIterationCount.ToString().ToBytes())
+                .Returns(IterationCount.ToString().ToBytes())
                 .Returns(OkResponse.ToBytes());
 
             Fetcher.Login(Username, Password, null, webClient.Object);
@@ -289,7 +292,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_sets_cookies()
         {
-            var session = new Session(SessionId, CorrectIterationCount);
+            var session = new Session(SessionId, IterationCount);
             var headers = new WebHeaderCollection();
 
             var webClient = new Mock<IWebClient>();
@@ -306,7 +309,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_requests_accounts_from_correct_url()
         {
-            var session = new Session(SessionId, CorrectIterationCount);
+            var session = new Session(SessionId, IterationCount);
             var response = "VGVzdCBibG9i".ToBytes();
 
             var webClient = new Mock<IWebClient>();
@@ -326,7 +329,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_returns_blob()
         {
-            var session = new Session(SessionId, CorrectIterationCount);
+            var session = new Session(SessionId, IterationCount);
             var response = "VGVzdCBibG9i".ToBytes();
             var expectedBlob = "Test blob".ToBytes();
 
@@ -342,13 +345,13 @@ namespace LastPass.Test
             var blob = Fetcher.Fetch(session, webClient.Object);
 
             Assert.AreEqual(expectedBlob, blob.Bytes);
-            Assert.AreEqual(CorrectIterationCount, blob.KeyIterationCount);
+            Assert.AreEqual(IterationCount, blob.KeyIterationCount);
         }
 
         [Test]
         public void Fetch_throws_on_WebException()
         {
-            var session = new Session(SessionId, CorrectIterationCount);
+            var session = new Session(SessionId, IterationCount);
             var webException = new WebException();
 
             var webClient = new Mock<IWebClient>();
@@ -369,7 +372,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_throws_on_invalid_response()
         {
-            var session = new Session(SessionId, CorrectIterationCount);
+            var session = new Session(SessionId, IterationCount);
 
             var webClient = new Mock<IWebClient>();
             webClient
@@ -389,6 +392,41 @@ namespace LastPass.Test
         // Helpers
         //
 
+        private static Mock<IWebClient> SetupLogin(object iterationResponseOrException,
+                                                   object loginResponseOrException = null)
+        {
+            var webClient = new Mock<IWebClient>();
+            var sequence = webClient.SetupSequence(x => x.UploadValues(It.IsAny<string>(),
+                                                                       It.IsAny<NameValueCollection>()));
+
+            Assert.IsNotNull(iterationResponseOrException);
+            if (iterationResponseOrException is Exception)
+                sequence.Throws((Exception)iterationResponseOrException);
+            else
+            {
+                Assert.IsInstanceOf<string>(iterationResponseOrException);
+                sequence = sequence.Returns(((string)iterationResponseOrException).ToBytes());
+
+                Assert.IsNotNull(loginResponseOrException);
+                if (loginResponseOrException is Exception)
+                    sequence.Throws((Exception)loginResponseOrException);
+                else
+                    sequence.Returns(((string)loginResponseOrException).ToBytes());
+            }
+
+            return webClient;
+        }
+
+        private static LoginException LoginAndExpectException(object iterationResponseOrException,
+                                                              object loginResponseOrException = null)
+        {
+            var webClient = SetupLogin(iterationResponseOrException, loginResponseOrException);
+            return Assert.Throws<LoginException>(() => Fetcher.Login(Username,
+                                                                      Password,
+                                                                      null,
+                                                                      webClient.Object));
+        }
+
         private static void LoginAndVerifyException(string response,
                                                     LoginException.FailureReason reason,
                                                     string message)
@@ -404,7 +442,7 @@ namespace LastPass.Test
             var webClient = new Mock<IWebClient>();
             webClient
                 .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(CorrectIterationCount.ToString().ToBytes())
+                .Returns(IterationCount.ToString().ToBytes())
                 .Returns(response.ToBytes());
 
             // Login is supposed to throw an exception
@@ -423,7 +461,7 @@ namespace LastPass.Test
             var webClient = new Mock<IWebClient>();
             webClient
                 .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(CorrectIterationCount.ToString().ToBytes())
+                .Returns(IterationCount.ToString().ToBytes())
                 .Returns(OkResponse.ToBytes());
 
             Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
