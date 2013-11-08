@@ -12,19 +12,10 @@ namespace LastPass.Test
     class FetcherTest
     {
         private const string WebExceptionMessage = "WebException occured";
-        private const string UnknownEmailMessage = "Invalid username";
-        private const string InvalidPasswordMessage = "Invalid password";
         private const string IncorrectGoogleAuthenticatorCodeMessage = "Google Authenticator code is missing or incorrect";
-        private const string MissingYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
         private const string IncorrectYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
-        private const string OutOfBandAuthenticationRequiredMessage = "Out of band authentication required";
-        private const string OutOfBandAuthenticationFailedMessage = "Out of band authentication failed";
         private const string OtherCause = "othercause";
         private const string OtherReasonMessage = "Other reason";
-        private const string UnknownReasonMessage = "Unknown reason";
-        private const string UnknownResponseSchemaMessage = "Unknown response schema";
-        private const string InvalidXmlMessage = "Invalid XML in response";
-        private const string InvalidBase64Message = "Invalid base64 in response";
 
         private const string IterationsUrl = "https://lastpass.com/iterations.php";
         private const string LoginUrl = "https://lastpass.com/login.php";
@@ -34,9 +25,7 @@ namespace LastPass.Test
         private const int IterationCount = 5000;
         private const string NoMultifactorPassword = null;
         private const string GoogleAuthenticatorCode = "123456";
-        private const string IncorrectGoogleAuthenticatorCode = "654321";
         private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
-        private const string IncorrectYubikeyPassword = "qlzpirxbsmanfzydaqlkcmiydzmhqjfemruyzyqhmray";
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
         private static readonly string IterationResponse = IterationCount.ToString();
@@ -77,166 +66,123 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void Login_failed_because_of_invalid_xml()
+        {
+            LoginAndVerifyExceptionInLoginRequest<XmlException>("Invalid XML!",
+                                                                LoginException.FailureReason.InvalidResponse,
+                                                                "Invalid XML in response");
+        }
+
+        [Test]
         public void Login_failed_because_of_unknown_email()
         {
-            LoginAndVerifyException(
-                "<response><error message=\"Unknown email address.\" cause=\"unknownemail\" /></response>",
-                LoginException.FailureReason.LastPassInvalidUsername,
-                UnknownEmailMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("unknownemail", "Unknown email address."),
+                                                  LoginException.FailureReason.LastPassInvalidUsername,
+                                                  "Invalid username");
         }
 
         [Test]
         public void Login_failed_because_of_invalid_password()
         {
-            LoginAndVerifyException(
-                "<response><error message=\"Invalid password!\" cause=\"unknownpassword\" /></response>",
-                LoginException.FailureReason.LastPassInvalidPassword,
-                InvalidPasswordMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("unknownpassword", "Invalid password!"),
+                                                  LoginException.FailureReason.LastPassInvalidPassword,
+                                                  "Invalid password");
         }
 
         [Test]
         public void Login_failed_because_of_missing_google_authenticator_code()
         {
-            LoginAndVerifyException(
-                "<response>" +
-                    "<error " +
-                        "message=\"Google Authenticator authentication required! Upgrade your browser extension so you can enter it.\" " +
-                        "cause=\"googleauthrequired\" " +
-                    "/>" +
-                "</response>",
-                LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
-                IncorrectGoogleAuthenticatorCodeMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("googleauthrequired",
+                                                                 "Google Authenticator authentication required! Upgrade your browser extension so you can enter it."),
+                                                  LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
+                                                  IncorrectGoogleAuthenticatorCodeMessage);
         }
 
         [Test]
         public void Login_failed_because_of_incorrect_google_authenticator_code()
         {
-            LoginAndVerifyException(
-                IncorrectGoogleAuthenticatorCode,
-                "<response>" +
-                    "<error " +
-                        "message=\"Google Authenticator authentication failed!\" " +
-                        "cause=\"googleauthfailed\" " +
-                    "/>" +
-                "</response>",
-                LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
-                IncorrectGoogleAuthenticatorCodeMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("googleauthfailed",
+                                                                 "Google Authenticator authentication failed!"),
+                                                  LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
+                                                  IncorrectGoogleAuthenticatorCodeMessage);
         }
 
         [Test]
         public void Login_failed_because_of_missing_yubikey_password()
         {
-            LoginAndVerifyException(
-                "<response>" +
-                    "<error " +
-                        "message=\"Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication.\" " +
-                        "cause=\"yubikeyrestricted\" " +
-                    "/>" +
-                "</response>",
-                LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
-                MissingYubikeyPasswordMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("yubikeyrestricted",
+                                                                 "Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication."),
+                                                  LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
+                                                  IncorrectYubikeyPasswordMessage);
         }
 
         [Test]
         public void Login_failed_because_of_incorrect_yubikey_password()
         {
-            LoginAndVerifyException(
-                IncorrectYubikeyPassword,
-                "<response>" +
-                    "<error " +
-                        "message=\"Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication.\" " +
-                        "cause=\"yubikeyrestricted\" " +
-                    "/>" +
-                "</response>",
-                LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
-                IncorrectYubikeyPasswordMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("yubikeyrestricted",
+                                                                 "Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication."),
+                                                  LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
+                                                  IncorrectYubikeyPasswordMessage);
         }
 
         [Test]
         public void Login_failed_because_out_of_band_authentication_required()
         {
-            LoginAndVerifyException(
-                "<response>" +
-                    "<error " +
-                        "message=\"Multifactor authentication required! Upgrade your browser extension so you can enter it.\" " +
-                        "cause=\"outofbandrequired\" " +
-                        "retryid=\"2091457e-0ae8-4bee-948c-345afb49a132\" " +
-                    "/>" +
-                "</response>",
-                LoginException.FailureReason.LastPassOutOfBandAuthenticationRequired,
-                OutOfBandAuthenticationRequiredMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("outofbandrequired",
+                                                                 "Multifactor authentication required! Upgrade your browser extension so you can enter it."),
+                                                  LoginException.FailureReason.LastPassOutOfBandAuthenticationRequired,
+                                                  "Out of band authentication required");
         }
 
         [Test]
         public void Login_failed_because_out_of_band_authentication_failed()
         {
-            LoginAndVerifyException(
-                "<response>" +
-                    "<error " +
-                        "message=\"Multifactor authentication failed!\" " +
-                        "cause=\"multifactorresponsefailed\" " +
-                        "type=\"outofband\" " +
-                    "/>" +
-                "</response>",
-                LoginException.FailureReason.LastPassOutOfBandAuthenticationFailed,
-                OutOfBandAuthenticationFailedMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("multifactorresponsefailed",
+                                                                 "Multifactor authentication failed!"),
+                                                  LoginException.FailureReason.LastPassOutOfBandAuthenticationFailed,
+                                                  "Out of band authentication failed");
         }
 
         [Test]
         public void Login_failed_for_other_reason_with_message()
         {
-            LoginAndVerifyException(
-                string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>",
-                              OtherReasonMessage,
-                              OtherCause),
-                LoginException.FailureReason.LastPassOther,
-                OtherReasonMessage);
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse(OtherCause, OtherReasonMessage),
+                                                  LoginException.FailureReason.LastPassOther,
+                                                  OtherReasonMessage);
         }
 
         [Test]
         public void Login_failed_for_other_reason_without_message()
         {
-            LoginAndVerifyException(
-                string.Format("<response><error cause=\"{0}\"/></response>", OtherCause),
-                LoginException.FailureReason.LastPassOther,
-                OtherCause);
+            LoginAndVerifyExceptionInLoginRequest(string.Format("<response><error cause=\"{0}\"/></response>",
+                                                                OtherCause),
+                                                  LoginException.FailureReason.LastPassOther,
+                                                  OtherCause);
         }
 
         [Test]
         public void Login_failed_with_message_without_cause()
         {
-            LoginAndVerifyException(
-                string.Format("<response><error message=\"{0}\"/></response>", OtherReasonMessage),
-                LoginException.FailureReason.LastPassOther,
-                OtherReasonMessage);
+            LoginAndVerifyExceptionInLoginRequest(string.Format("<response><error message=\"{0}\"/></response>",
+                                                                OtherReasonMessage),
+                                                  LoginException.FailureReason.LastPassOther,
+                                                  OtherReasonMessage);
         }
 
         [Test]
         public void Login_failed_for_unknown_reason_with_error_element()
         {
-            LoginAndVerifyException(
-                "<response><error /></response>",
-                LoginException.FailureReason.LastPassUnknown,
-                UnknownReasonMessage);
+            LoginAndVerifyExceptionInLoginRequest("<response><error /></response>",
+                                                  LoginException.FailureReason.LastPassUnknown,
+                                                  "Unknown reason");
         }
 
         [Test]
         public void Login_failed_because_of_unknown_xml_schema()
         {
-            LoginAndVerifyException(
-                "<response />",
-                LoginException.FailureReason.UnknownResponseSchema,
-                UnknownResponseSchemaMessage);
-        }
-
-        [Test]
-        public void Login_failed_because_of_invalid_xml()
-        {
-            var exception = LoginAndFailWithException(NoMultifactorPassword, IterationResponse, "Invalid XML!");
-
-            Assert.AreEqual(LoginException.FailureReason.InvalidResponse, exception.Reason);
-            Assert.AreEqual(InvalidXmlMessage, exception.Message);
-            Assert.IsInstanceOf<XmlException>(exception.InnerException);
+            LoginAndVerifyExceptionInLoginRequest("<response />",
+                                                  LoginException.FailureReason.UnknownResponseSchema,
+                                                  "Unknown response schema");
         }
 
         [Test]
@@ -378,12 +324,19 @@ namespace LastPass.Test
 
             var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(session, webClient.Object));
             Assert.AreEqual(FetchException.FailureReason.InvalidResponse, e.Reason);
-            Assert.AreEqual(InvalidBase64Message, e.Message);
+            Assert.AreEqual("Invalid base64 in response", e.Message);
         }
 
         //
         // Helpers
         //
+
+        private static string FormatResponse(string cause, string message)
+        {
+            return string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>",
+                                 message,
+                                 cause);
+        }
 
         // Set up the login process. Response-or-exception parameters provide either
         // response or exception depending on the desired behavior. The login process
@@ -461,25 +414,22 @@ namespace LastPass.Test
             Assert.IsInstanceOf<TInnerExceptionType>(exception.InnerException);
         }
 
-        private static void LoginAndVerifyException(string response,
-                                                    LoginException.FailureReason reason,
-                                                    string message)
+        // Fail in login request and verify the exception.
+        // Response-or-exception argument should either a string
+        // with the provided response or an exception to be thrown.
+        // The iteration request is not supposed to fail and it's
+        // given a valid server response with the proper iteration count.
+        private static void LoginAndVerifyExceptionInLoginRequest(object loginResponseOrException,
+                                                                  LoginException.FailureReason reason,
+                                                                  string message)
         {
-            LoginAndVerifyException(NoMultifactorPassword, response, reason, message);
-        }
-
-        private static void LoginAndVerifyException(string multifactorPassword,
-                                                    string response,
-                                                    LoginException.FailureReason reason,
-                                                    string message,
-                                                    Exception innerException = null)
-        {
-            var exception = LoginAndFailWithException(multifactorPassword, IterationResponse, response);
+            var exception = LoginAndFailWithException(NoMultifactorPassword,
+                                                      IterationResponse,
+                                                      loginResponseOrException);
 
             // Verify the exception is the one we're expecting
             Assert.AreEqual(reason, exception.Reason);
             Assert.AreEqual(message, exception.Message);
-            Assert.AreSame(innerException, exception.InnerException);
         }
 
         private static void LoginAndVerify(string multifactorPassword, NameValueCollection expectedValues)
