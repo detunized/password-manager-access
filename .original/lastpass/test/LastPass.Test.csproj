@@ -48,6 +48,8 @@
     <Compile Include="EncryptedStringTest.cs" />
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="FetcherHelperTest.cs" />
+    <Compile Include="FetcherTest-Fetch.cs" />
+    <Compile Include="FetcherTest-Login.cs" />
     <Compile Include="FetcherTest.cs" />
     <Compile Include="ParserHelperTest.cs" />
     <Compile Include="VaultTest.cs" />
