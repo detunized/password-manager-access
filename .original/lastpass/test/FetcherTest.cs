@@ -224,6 +224,24 @@ namespace LastPass.Test
                                        new NameValueCollection(ExpectedLoginRequestValues) {{"otp", YubikeyPassword}});
         }
 
+        [Test]
+        public void Login_returns_session_without_multifactor_password()
+        {
+            LoginAndVerifySession(NoMultifactorPassword);
+        }
+
+        [Test]
+        public void Login_returns_session_with_google_authenticator()
+        {
+            LoginAndVerifySession(GoogleAuthenticatorCode);
+        }
+
+        [Test]
+        public void Login_returns_session_with_yubikey_password()
+        {
+            LoginAndVerifySession(YubikeyPassword);
+        }
+
         //
         // Download
         //
@@ -375,8 +393,14 @@ namespace LastPass.Test
 
         private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword)
         {
+            Session session;
+            return SuccessfullyLogin(multifactorPassword, out session);
+        }
+
+        private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword, out Session session)
+        {
             var webClient = SetupSuccessfulLogin();
-            Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
+            session = Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
             return webClient;
         }
 
@@ -460,6 +484,15 @@ namespace LastPass.Test
             webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
                              "Did not see login POST request with expected form data and/or URL");
+        }
+
+        private static void LoginAndVerifySession(string multifactorPassword)
+        {
+            Session session;
+            SuccessfullyLogin(multifactorPassword, out session);
+
+            Assert.AreEqual(SessionId, session.Id);
+            Assert.AreEqual(IterationCount, session.KeyIterationCount);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
