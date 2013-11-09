@@ -28,7 +28,7 @@ namespace LastPass.Test
         private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
 
-        private static readonly string IterationResponse = IterationCount.ToString();
+        private static readonly string IterationsResponse = IterationCount.ToString();
         private static readonly string OkResponse = string.Format("<ok sessionid=\"{0}\" />", SessionId);
 
         private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
@@ -50,11 +50,11 @@ namespace LastPass.Test
         //
 
         [Test]
-        public void Login_failed_because_of_WebException_in_iteration_request()
+        public void Login_failed_because_of_WebException_in_iterations_request()
         {
-            LoginAndVerifyExceptionInIterationRequest<WebException>(new WebException(),
-                                                                    LoginException.FailureReason.WebException,
-                                                                    WebExceptionMessage);
+            LoginAndVerifyExceptionInIterationsRequest<WebException>(new WebException(),
+                                                                     LoginException.FailureReason.WebException,
+                                                                     WebExceptionMessage);
         }
 
         [Test]
@@ -186,42 +186,30 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Login_requests_iteration_count()
+        public void Login_makes_iterations_request()
         {
-            // Simulate login process
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(IterationResponse.ToBytes())
-                .Returns(OkResponse.ToBytes());
-
-            Fetcher.Login(Username, Password, NoMultifactorPassword, webClient.Object);
-
-            // Verify the requests were made with appropriate POST values
-            var expectedValues = new NameValueCollection {{"email", Username}};
-            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == IterationsUrl),
-                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
-                             "Did not see POST request with expected values");
+            LoginAndVerifyIterationsRequest(NoMultifactorPassword,
+                                            new NameValueCollection {{"email", Username}});
         }
 
         [Test]
-        public void Login_requests_with_correct_values()
+        public void Login_makes_login_request_without_multifactor_password()
         {
-            LoginAndVerify(NoMultifactorPassword, ExpectedValues);
+            LoginAndVerifyLoginRequest(NoMultifactorPassword, ExpectedValues);
         }
 
         [Test]
-        public void Login_requests_with_correct_values_with_google_authenticator()
+        public void Login_makes_login_request_with_google_authenticator()
         {
-            LoginAndVerify(GoogleAuthenticatorCode,
-                           new NameValueCollection(ExpectedValues) {{"otp", GoogleAuthenticatorCode}});
+            LoginAndVerifyLoginRequest(GoogleAuthenticatorCode,
+                                       new NameValueCollection(ExpectedValues) {{"otp", GoogleAuthenticatorCode}});
         }
 
         [Test]
-        public void Login_requests_with_correct_values_with_yubikey()
+        public void Login_makes_login_request_with_yubikey()
         {
-            LoginAndVerify(YubikeyPassword,
-                           new NameValueCollection(ExpectedValues) {{"otp", YubikeyPassword}});
+            LoginAndVerifyLoginRequest(YubikeyPassword,
+                                       new NameValueCollection(ExpectedValues) {{"otp", YubikeyPassword}});
         }
 
         //
@@ -338,25 +326,30 @@ namespace LastPass.Test
                                  cause);
         }
 
+        private static Mock<IWebClient> SetupSuccessfulLogin()
+        {
+            return SetupLogin(IterationsResponse, OkResponse);
+        }
+
         // Set up the login process. Response-or-exception parameters provide either
         // response or exception depending on the desired behavior. The login process
         // is two phase: request iteration count, then log in receive the session id.
         // Each of the stages might fail because of the network problems or some other
         // reason.
-        private static Mock<IWebClient> SetupLogin(object iterationResponseOrException,
+        private static Mock<IWebClient> SetupLogin(object iterationsResponseOrException,
                                                    object loginResponseOrException = null)
         {
             var webClient = new Mock<IWebClient>();
             var sequence = webClient.SetupSequence(x => x.UploadValues(It.IsAny<string>(),
                                                                        It.IsAny<NameValueCollection>()));
 
-            Assert.IsNotNull(iterationResponseOrException);
-            if (iterationResponseOrException is Exception)
-                sequence.Throws((Exception)iterationResponseOrException);
+            Assert.IsNotNull(iterationsResponseOrException);
+            if (iterationsResponseOrException is Exception)
+                sequence.Throws((Exception)iterationsResponseOrException);
             else
             {
-                Assert.IsInstanceOf<string>(iterationResponseOrException);
-                sequence = sequence.Returns(((string)iterationResponseOrException).ToBytes());
+                Assert.IsInstanceOf<string>(iterationsResponseOrException);
+                sequence = sequence.Returns(((string)iterationsResponseOrException).ToBytes());
 
                 Assert.IsNotNull(loginResponseOrException);
                 if (loginResponseOrException is Exception)
@@ -368,26 +361,33 @@ namespace LastPass.Test
             return webClient;
         }
 
+        private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword)
+        {
+            var webClient = SetupSuccessfulLogin();
+            Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
+            return webClient;
+        }
+
         // Try to login and expect an exception, which is later validated by the caller.
         private static LoginException LoginAndFailWithException(string multifactorPassword,
-                                                                object iterationResponseOrException,
+                                                                object iterationsResponseOrException,
                                                                 object loginResponseOrException = null)
         {
-            var webClient = SetupLogin(iterationResponseOrException, loginResponseOrException);
+            var webClient = SetupLogin(iterationsResponseOrException, loginResponseOrException);
             return Assert.Throws<LoginException>(() => Fetcher.Login(Username,
                                                                      Password,
                                                                      multifactorPassword,
                                                                      webClient.Object));
         }
 
-        // Fail in iteration request and verify the exception.
+        // Fail in iterations request and verify the exception.
         // Response-or-exception argument should either a string
         // with the provided response or an exception to be thrown.
-        private static void LoginAndVerifyExceptionInIterationRequest<TInnerExceptionType>(object iterationResponseOrException,
-                                                                                           LoginException.FailureReason reason,
-                                                                                           string message)
+        private static void LoginAndVerifyExceptionInIterationsRequest<TInnerExceptionType>(object iterationsResponseOrException,
+                                                                                            LoginException.FailureReason reason,
+                                                                                            string message)
         {
-            var exception = LoginAndFailWithException(NoMultifactorPassword, iterationResponseOrException);
+            var exception = LoginAndFailWithException(NoMultifactorPassword, iterationsResponseOrException);
 
             // Verify the exception is the one we're expecting
             Assert.AreEqual(reason, exception.Reason);
@@ -398,14 +398,14 @@ namespace LastPass.Test
         // Fail in login request and verify the exception.
         // Response-or-exception argument should either a string
         // with the provided response or an exception to be thrown.
-        // The iteration request is not supposed to fail and it's
+        // The iterations request is not supposed to fail and it's
         // given a valid server response with the proper iteration count.
         private static void LoginAndVerifyExceptionInLoginRequest<TInnerExceptionType>(object loginResponseOrException,
                                                                                        LoginException.FailureReason reason,
                                                                                        string message)
         {
             var exception = LoginAndFailWithException(NoMultifactorPassword,
-                                                      IterationResponse,
+                                                      IterationsResponse,
                                                       loginResponseOrException);
 
             // Verify the exception is the one we're expecting
@@ -417,14 +417,14 @@ namespace LastPass.Test
         // Fail in login request and verify the exception.
         // Response-or-exception argument should either a string
         // with the provided response or an exception to be thrown.
-        // The iteration request is not supposed to fail and it's
+        // The iterations request is not supposed to fail and it's
         // given a valid server response with the proper iteration count.
         private static void LoginAndVerifyExceptionInLoginRequest(object loginResponseOrException,
                                                                   LoginException.FailureReason reason,
                                                                   string message)
         {
             var exception = LoginAndFailWithException(NoMultifactorPassword,
-                                                      IterationResponse,
+                                                      IterationsResponse,
                                                       loginResponseOrException);
 
             // Verify the exception is the one we're expecting
@@ -432,21 +432,22 @@ namespace LastPass.Test
             Assert.AreEqual(message, exception.Message);
         }
 
-        private static void LoginAndVerify(string multifactorPassword, NameValueCollection expectedValues)
+        private static void LoginAndVerifyIterationsRequest(string multifactorPassword,
+                                                            NameValueCollection expectedValues)
         {
-            // Simulate successful login
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupSequence(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(IterationResponse.ToBytes())
-                .Returns(OkResponse.ToBytes());
+            var webClient = SuccessfullyLogin(multifactorPassword);
+            webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == IterationsUrl),
+                                                 It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
+                             "Did not see iterations POST request with expected form data and/or URL");
+        }
 
-            Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
-
-            // Verify the requests were made with appropriate POST values
+        private static void LoginAndVerifyLoginRequest(string multifactorPassword,
+                                                       NameValueCollection expectedValues)
+        {
+            var webClient = SuccessfullyLogin(multifactorPassword);
             webClient.Verify(x => x.UploadValues(It.Is<string>(s => s == LoginUrl),
                                                  It.Is<NameValueCollection>(v => AreEqual(v, expectedValues))),
-                             "Did not see POST request with expected values");
+                             "Did not see login POST request with expected form data and/or URL");
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)
