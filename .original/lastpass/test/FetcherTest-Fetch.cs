@@ -23,11 +23,7 @@ namespace LastPass.Test
         public void Fetch_sets_cookies()
         {
             var headers = new WebHeaderCollection();
-
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupGet(x => x.Headers)
-                .Returns(headers);
+            var webClient = SetupFetch(headers);
 
             Fetcher.Fetch(Session, webClient.Object);
 
@@ -40,11 +36,7 @@ namespace LastPass.Test
         {
             var response = "VGVzdCBibG9i".ToBytes();
 
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupGet(x => x.Headers)
-                .Returns(new WebHeaderCollection());
-
+            var webClient = SetupFetch();
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Returns(response);
@@ -60,11 +52,7 @@ namespace LastPass.Test
             var response = "VGVzdCBibG9i".ToBytes();
             var expectedBlob = "Test blob".ToBytes();
 
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupGet(x => x.Headers)
-                .Returns(new WebHeaderCollection());
-
+            var webClient = SetupFetch();
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Returns(response);
@@ -80,11 +68,7 @@ namespace LastPass.Test
         {
             var webException = new WebException();
 
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupGet(x => x.Headers)
-                .Returns(new WebHeaderCollection());
-
+            var webClient = SetupFetch();
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Throws(webException);
@@ -98,11 +82,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_throws_on_invalid_response()
         {
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .SetupGet(x => x.Headers)
-                .Returns(new WebHeaderCollection());
-
+            var webClient = SetupFetch();
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Returns("Invalid base64 string!".ToBytes());
@@ -110,6 +90,20 @@ namespace LastPass.Test
             var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(Session, webClient.Object));
             Assert.AreEqual(FetchException.FailureReason.InvalidResponse, e.Reason);
             Assert.AreEqual("Invalid base64 in response", e.Message);
+        }
+
+        //
+        // Helpers
+        //
+
+        private static Mock<IWebClient> SetupFetch(WebHeaderCollection headers = null)
+        {
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(headers ?? new WebHeaderCollection());
+
+            return webClient;
         }
     }
 }
