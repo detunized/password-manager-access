@@ -19,7 +19,7 @@ namespace LastPass.Test
 
         private const string IterationsUrl = "https://lastpass.com/iterations.php";
         private const string LoginUrl = "https://lastpass.com/login.php";
-        private const string AccoutDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0";
+        private const string AccountDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0";
         private const string Username = "username";
         private const string Password = "password";
         private const int IterationCount = 5000;
@@ -262,7 +262,7 @@ namespace LastPass.Test
 
             Fetcher.Fetch(session, webClient.Object);
 
-            webClient.Verify(x => x.DownloadData(It.Is<string>(a => a == AccoutDownloadUrl)));
+            webClient.Verify(x => x.DownloadData(It.Is<string>(a => a == AccountDownloadUrl)));
         }
 
         [Test]
