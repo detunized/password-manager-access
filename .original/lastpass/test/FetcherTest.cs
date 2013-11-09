@@ -31,16 +31,17 @@ namespace LastPass.Test
         private static readonly string IterationsResponse = IterationCount.ToString();
         private static readonly string OkResponse = string.Format("<ok sessionid=\"{0}\" />", SessionId);
 
-        private static readonly NameValueCollection SharedExpectedValues = new NameValueCollection
+        private static readonly NameValueCollection ExpectedIterationsRequestValues = new NameValueCollection
+            {
+                {"email", Username}
+            };
+
+        private static readonly NameValueCollection ExpectedLoginRequestValues = new NameValueCollection
             {
                 {"method", "mobile"},
                 {"web", "1"},
                 {"xml", "1"},
-                {"username", Username}
-            };
-
-        private static readonly NameValueCollection ExpectedValues = new NameValueCollection(SharedExpectedValues)
-            {
+                {"username", Username},
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
                 {"iterations", string.Format("{0}", IterationCount)}
             };
@@ -188,28 +189,39 @@ namespace LastPass.Test
         [Test]
         public void Login_makes_iterations_request()
         {
-            LoginAndVerifyIterationsRequest(NoMultifactorPassword,
-                                            new NameValueCollection {{"email", Username}});
+            LoginAndVerifyIterationsRequest(NoMultifactorPassword, ExpectedIterationsRequestValues);
+        }
+
+        [Test]
+        public void Login_makes_iterations_request_with_google_authenticator()
+        {
+            LoginAndVerifyIterationsRequest(GoogleAuthenticatorCode, ExpectedIterationsRequestValues);
+        }
+
+        [Test]
+        public void Login_makes_iterations_request_with_yubikey()
+        {
+            LoginAndVerifyIterationsRequest(YubikeyPassword, ExpectedIterationsRequestValues);
         }
 
         [Test]
         public void Login_makes_login_request_without_multifactor_password()
         {
-            LoginAndVerifyLoginRequest(NoMultifactorPassword, ExpectedValues);
+            LoginAndVerifyLoginRequest(NoMultifactorPassword, ExpectedLoginRequestValues);
         }
 
         [Test]
         public void Login_makes_login_request_with_google_authenticator()
         {
             LoginAndVerifyLoginRequest(GoogleAuthenticatorCode,
-                                       new NameValueCollection(ExpectedValues) {{"otp", GoogleAuthenticatorCode}});
+                                       new NameValueCollection(ExpectedLoginRequestValues) {{"otp", GoogleAuthenticatorCode}});
         }
 
         [Test]
         public void Login_makes_login_request_with_yubikey()
         {
             LoginAndVerifyLoginRequest(YubikeyPassword,
-                                       new NameValueCollection(ExpectedValues) {{"otp", YubikeyPassword}});
+                                       new NameValueCollection(ExpectedLoginRequestValues) {{"otp", YubikeyPassword}});
         }
 
         //
