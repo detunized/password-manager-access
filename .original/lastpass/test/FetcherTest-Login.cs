@@ -265,16 +265,12 @@ namespace LastPass.Test
         // Helpers
         //
 
+        // Formats a valid LastPass response with a cause and a message.
         private static string FormatResponse(string cause, string message)
         {
             return string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>",
                                  message,
                                  cause);
-        }
-
-        private static Mock<IWebClient> SetupSuccessfulLogin()
-        {
-            return SetupLogin(IterationsResponse, OkResponse);
         }
 
         // Set up the login process. Response-or-exception parameters provide either
@@ -312,15 +308,17 @@ namespace LastPass.Test
             return webClient;
         }
 
+        // Immitates the successful login sequence.
         private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword)
         {
             Session session;
             return SuccessfullyLogin(multifactorPassword, out session);
         }
 
+        // Immitates the successful login sequence, returns the session.
         private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword, out Session session)
         {
-            var webClient = SetupSuccessfulLogin();
+            var webClient = SetupLogin(IterationsResponse, OkResponse);
             session = Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
             return webClient;
         }
@@ -344,31 +342,30 @@ namespace LastPass.Test
                                                                                             LoginException.FailureReason reason,
                                                                                             string message)
         {
-            var exception = LoginAndFailWithException(NoMultifactorPassword, iterationsResponseOrException);
-
-            // Verify the exception is the one we're expecting
-            Assert.AreEqual(reason, exception.Reason);
-            Assert.AreEqual(message, exception.Message);
-            Assert.IsInstanceOf<TInnerExceptionType>(exception.InnerException);
+            LoginAndVerifyException(iterationsResponseOrException,
+                                    null,
+                                    reason,
+                                    message,
+                                    Assert.IsInstanceOf<TInnerExceptionType>);
         }
 
-        // Fail in login request and verify the exception.
-        // Response-or-exception argument should either a string
-        // with the provided response or an exception to be thrown.
-        // The iterations request is not supposed to fail and it's
-        // given a valid server response with the proper iteration count.
+        // See the overload with an action.
         private static void LoginAndVerifyExceptionInLoginRequest<TInnerExceptionType>(object loginResponseOrException,
                                                                                        LoginException.FailureReason reason,
                                                                                        string message)
         {
-            var exception = LoginAndFailWithException(NoMultifactorPassword,
-                                                      IterationsResponse,
-                                                      loginResponseOrException);
+            LoginAndVerifyExceptionInLoginRequest(loginResponseOrException,
+                                                  reason,
+                                                  message,
+                                                  Assert.IsInstanceOf<TInnerExceptionType>);
+        }
 
-            // Verify the exception is the one we're expecting
-            Assert.AreEqual(reason, exception.Reason);
-            Assert.AreEqual(message, exception.Message);
-            Assert.IsInstanceOf<TInnerExceptionType>(exception.InnerException);
+        // See the overload with an action.
+        private static void LoginAndVerifyExceptionInLoginRequest(object loginResponseOrException,
+                                                                  LoginException.FailureReason reason,
+                                                                  string message)
+        {
+            LoginAndVerifyExceptionInLoginRequest(loginResponseOrException, reason, message, Assert.IsNull);
         }
 
         // Fail in login request and verify the exception.
@@ -378,17 +375,34 @@ namespace LastPass.Test
         // given a valid server response with the proper iteration count.
         private static void LoginAndVerifyExceptionInLoginRequest(object loginResponseOrException,
                                                                   LoginException.FailureReason reason,
-                                                                  string message)
+                                                                  string message,
+                                                                  Action<Exception> verifyInnerException)
         {
-            var exception = LoginAndFailWithException(NoMultifactorPassword,
-                                                      IterationsResponse,
-                                                      loginResponseOrException);
-
-            // Verify the exception is the one we're expecting
-            Assert.AreEqual(reason, exception.Reason);
-            Assert.AreEqual(message, exception.Message);
+            LoginAndVerifyException(IterationsResponse,
+                                    loginResponseOrException,
+                                    reason,
+                                    message,
+                                    verifyInnerException);
         }
 
+        // The most generic version. It expects on the requests to fail with an exception.
+        // The exception is verified agains the expectations.
+        private static void LoginAndVerifyException(object iterationsResponseOrException,
+                                                    object loginResponseOrException,
+                                                    LoginException.FailureReason reason,
+                                                    string message,
+                                                    Action<Exception> verifyInnerException)
+        {
+            var exception = LoginAndFailWithException(NoMultifactorPassword,
+                                                      iterationsResponseOrException,
+                                                      loginResponseOrException);
+
+            Assert.AreEqual(reason, exception.Reason);
+            Assert.AreEqual(message, exception.Message);
+            verifyInnerException(exception.InnerException);
+        }
+
+        // Verify the iterations POST request is correct.
         private static void LoginAndVerifyIterationsRequest(string multifactorPassword,
                                                             NameValueCollection expectedValues)
         {
@@ -398,6 +412,7 @@ namespace LastPass.Test
                              "Did not see iterations POST request with expected form data and/or URL");
         }
 
+        // Verify the login POST request is correct.
         private static void LoginAndVerifyLoginRequest(string multifactorPassword,
                                                        NameValueCollection expectedValues)
         {
@@ -407,6 +422,7 @@ namespace LastPass.Test
                              "Did not see login POST request with expected form data and/or URL");
         }
 
+        // Verify the session is correct.
         private static void LoginAndVerifySession(string multifactorPassword)
         {
             Session session;
