@@ -61,6 +61,23 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void Login_failed_because_of_invalid_iteration_count()
+        {
+            LoginAndVerifyExceptionInIterationsRequest<FormatException>("Not an integer",
+                                                                        LoginException.FailureReason.InvalidResponse,
+                                                                        "Iteration count is invalid");
+        }
+
+        [Test]
+        public void Login_failed_because_of_very_large_iteration_count()
+        {
+
+            LoginAndVerifyExceptionInIterationsRequest<OverflowException>("2147483648",
+                                                                          LoginException.FailureReason.InvalidResponse,
+                                                                          "Iteration count is invalid");
+        }
+
+        [Test]
         public void Login_failed_because_of_WebException_in_login_request()
         {
             LoginAndVerifyExceptionInLoginRequest<WebException>(new WebException(),
@@ -280,11 +297,16 @@ namespace LastPass.Test
                 Assert.IsInstanceOf<string>(iterationsResponseOrException);
                 sequence = sequence.Returns(((string)iterationsResponseOrException).ToBytes());
 
-                Assert.IsNotNull(loginResponseOrException);
-                if (loginResponseOrException is Exception)
-                    sequence.Throws((Exception)loginResponseOrException);
-                else
-                    sequence.Returns(((string)loginResponseOrException).ToBytes());
+                if (loginResponseOrException != null)
+                {
+                    if (loginResponseOrException is Exception)
+                        sequence.Throws((Exception)loginResponseOrException);
+                    else
+                    {
+                        Assert.IsInstanceOf<string>(loginResponseOrException);
+                        sequence.Returns(((string)loginResponseOrException).ToBytes());
+                    }
+                }
             }
 
             return webClient;
