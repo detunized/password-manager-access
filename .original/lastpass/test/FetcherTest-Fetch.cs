@@ -14,96 +14,102 @@ namespace LastPass.Test
 
         private const string AccountDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0";
         private static readonly Session Session = new Session(SessionId, IterationCount);
+        private const string FetchResponse = "VGVzdCBibG9i";
+        private static readonly byte[] Blob = "Test blob".ToBytes();
 
         //
         // Fetch tests
         //
 
         [Test]
-        public void Fetch_sets_cookies()
+        public void Fetch_sets_session_id_cookie()
         {
             var headers = new WebHeaderCollection();
-            var webClient = SetupFetch(headers);
+            SuccessfullyFetch(headers);
 
-            Fetcher.Fetch(Session, webClient.Object);
-
-            Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)),
-                            headers["Cookie"]);
+            Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
         }
 
         [Test]
         public void Fetch_requests_accounts_from_correct_url()
         {
-            var response = "VGVzdCBibG9i".ToBytes();
-
-            var webClient = SetupFetch();
-            webClient
-                .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Returns(response);
-
-            Fetcher.Fetch(Session, webClient.Object);
-
+            var webClient = SuccessfullyFetch();
             webClient.Verify(x => x.DownloadData(It.Is<string>(a => a == AccountDownloadUrl)));
         }
 
         [Test]
         public void Fetch_returns_blob()
         {
-            var response = "VGVzdCBibG9i".ToBytes();
-            var expectedBlob = "Test blob".ToBytes();
+            Blob blob;
+            SuccessfullyFetch(out blob);
 
-            var webClient = SetupFetch();
-            webClient
-                .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Returns(response);
-
-            var blob = Fetcher.Fetch(Session, webClient.Object);
-
-            Assert.AreEqual(expectedBlob, blob.Bytes);
+            Assert.AreEqual(Blob, blob.Bytes);
             Assert.AreEqual(IterationCount, blob.KeyIterationCount);
         }
 
         [Test]
         public void Fetch_throws_on_WebException()
         {
-            var webException = new WebException();
-
-            var webClient = SetupFetch();
-            webClient
-                .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Throws(webException);
-
-            var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(Session, webClient.Object));
-            Assert.AreEqual(FetchException.FailureReason.WebException, e.Reason);
-            Assert.AreEqual(WebExceptionMessage, e.Message);
-            Assert.AreSame(webException, e.InnerException);
+            FetchAndVerifyException<WebException>(new WebException(),
+                                                  FetchException.FailureReason.WebException,
+                                                  WebExceptionMessage);
         }
 
         [Test]
         public void Fetch_throws_on_invalid_response()
         {
-            var webClient = SetupFetch();
-            webClient
-                .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Returns("Invalid base64 string!".ToBytes());
-
-            var e = Assert.Throws<FetchException>(() => Fetcher.Fetch(Session, webClient.Object));
-            Assert.AreEqual(FetchException.FailureReason.InvalidResponse, e.Reason);
-            Assert.AreEqual("Invalid base64 in response", e.Message);
+            FetchAndVerifyException<FormatException>("Invalid base64 string!",
+                                                     FetchException.FailureReason.InvalidResponse,
+                                                     "Invalid base64 in response");
         }
 
         //
         // Helpers
         //
 
-        private static Mock<IWebClient> SetupFetch(WebHeaderCollection headers = null)
+        private static Mock<IWebClient> SetupFetch(object responseOrException, WebHeaderCollection headers = null)
         {
             var webClient = new Mock<IWebClient>();
+
             webClient
                 .SetupGet(x => x.Headers)
                 .Returns(headers ?? new WebHeaderCollection());
 
+            var downloadData = webClient.Setup(x => x.DownloadData(It.IsAny<string>()));
+            if (responseOrException is Exception)
+                downloadData.Throws((Exception)responseOrException);
+            else
+            {
+                Assert.IsInstanceOf<string>(responseOrException);
+                downloadData.Returns(((string)responseOrException).ToBytes());
+            }
+
             return webClient;
+        }
+
+        private static Mock<IWebClient> SuccessfullyFetch(WebHeaderCollection headers = null)
+        {
+            Blob blob;
+            return SuccessfullyFetch(out blob, headers);
+        }
+
+        private static Mock<IWebClient> SuccessfullyFetch(out Blob blob, WebHeaderCollection headers = null)
+        {
+            var webClient = SetupFetch(FetchResponse, headers);
+            blob = Fetcher.Fetch(Session, webClient.Object);
+            return webClient;
+        }
+
+        private static void FetchAndVerifyException<TInnerExceptionType>(object responseOrException,
+                                                                         FetchException.FailureReason reason,
+                                                                         string message)
+        {
+            var webClient = SetupFetch(responseOrException);
+            var exception = Assert.Throws<FetchException>(() => Fetcher.Fetch(Session, webClient.Object));
+
+            Assert.AreEqual(reason, exception.Reason);
+            Assert.AreEqual(message, exception.Message);
+            Assert.IsInstanceOf<TInnerExceptionType>(exception.InnerException);
         }
     }
 }

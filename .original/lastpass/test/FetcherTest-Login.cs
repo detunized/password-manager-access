@@ -43,7 +43,6 @@ namespace LastPass.Test
                 {"iterations", string.Format("{0}", IterationCount)}
             };
 
-        private const string WebExceptionMessage = "WebException occured";
         private const string IncorrectGoogleAuthenticatorCodeMessage = "Google Authenticator code is missing or incorrect";
         private const string IncorrectYubikeyPasswordMessage = "Yubikey password is missing or incorrect";
         private const string OtherCause = "othercause";

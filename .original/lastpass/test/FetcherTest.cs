@@ -11,5 +11,7 @@ namespace LastPass.Test
 
         private const int IterationCount = 5000;
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
+
+        private const string WebExceptionMessage = "WebException occured";
     }
 }
