@@ -50,7 +50,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_throws_on_WebException()
         {
-            FetchAndVerifyException<WebException>(new WebException(),
+            FetchAndVerifyException<WebException>(new ResponseOrException(new WebException()),
                                                   FetchException.FailureReason.WebException,
                                                   WebExceptionMessage);
         }
@@ -58,7 +58,7 @@ namespace LastPass.Test
         [Test]
         public void Fetch_throws_on_invalid_response()
         {
-            FetchAndVerifyException<FormatException>("Invalid base64 string!",
+            FetchAndVerifyException<FormatException>(new ResponseOrException("Invalid base64 string!"),
                                                      FetchException.FailureReason.InvalidResponse,
                                                      "Invalid base64 in response");
         }
@@ -67,7 +67,8 @@ namespace LastPass.Test
         // Helpers
         //
 
-        private static Mock<IWebClient> SetupFetch(object responseOrException, WebHeaderCollection headers = null)
+        private static Mock<IWebClient> SetupFetch(ResponseOrException responseOrException,
+                                                   WebHeaderCollection headers = null)
         {
             var webClient = new Mock<IWebClient>();
 
@@ -75,14 +76,7 @@ namespace LastPass.Test
                 .SetupGet(x => x.Headers)
                 .Returns(headers ?? new WebHeaderCollection());
 
-            var downloadData = webClient.Setup(x => x.DownloadData(It.IsAny<string>()));
-            if (responseOrException is Exception)
-                downloadData.Throws((Exception)responseOrException);
-            else
-            {
-                Assert.IsInstanceOf<string>(responseOrException);
-                downloadData.Returns(((string)responseOrException).ToBytes());
-            }
+            responseOrException.ReturnOrThrow(webClient.Setup(x => x.DownloadData(It.IsAny<string>())));
 
             return webClient;
         }
@@ -95,12 +89,12 @@ namespace LastPass.Test
 
         private static Mock<IWebClient> SuccessfullyFetch(out Blob blob, WebHeaderCollection headers = null)
         {
-            var webClient = SetupFetch(FetchResponse, headers);
+            var webClient = SetupFetch(new ResponseOrException(FetchResponse), headers);
             blob = Fetcher.Fetch(Session, webClient.Object);
             return webClient;
         }
 
-        private static void FetchAndVerifyException<TInnerExceptionType>(object responseOrException,
+        private static void FetchAndVerifyException<TInnerExceptionType>(ResponseOrException responseOrException,
                                                                          FetchException.FailureReason reason,
                                                                          string message)
         {
