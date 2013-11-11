@@ -25,8 +25,9 @@ namespace LastPass.Test
         private const string GoogleAuthenticatorCode = "123456";
         private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
 
-        private static readonly string IterationsResponse = IterationCount.ToString();
-        private static readonly string OkResponse = string.Format("<ok sessionid=\"{0}\" />", SessionId);
+        private static readonly ResponseOrException IterationsResponse = new ResponseOrException(IterationCount.ToString());
+        private static readonly ResponseOrException OkResponse = new ResponseOrException(string.Format("<ok sessionid=\"{0}\" />",
+                                                                                                       SessionId));
 
         private static readonly NameValueCollection ExpectedIterationsRequestValues = new NameValueCollection
             {
@@ -55,7 +56,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_WebException_in_iterations_request()
         {
-            LoginAndVerifyExceptionInIterationsRequest<WebException>(new WebException(),
+            LoginAndVerifyExceptionInIterationsRequest<WebException>(new ResponseOrException(new WebException()),
                                                                      LoginException.FailureReason.WebException,
                                                                      WebExceptionMessage);
         }
@@ -63,7 +64,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_invalid_iteration_count()
         {
-            LoginAndVerifyExceptionInIterationsRequest<FormatException>("Not an integer",
+            LoginAndVerifyExceptionInIterationsRequest<FormatException>(new ResponseOrException("Not an integer"),
                                                                         LoginException.FailureReason.InvalidResponse,
                                                                         "Iteration count is invalid");
         }
@@ -72,7 +73,7 @@ namespace LastPass.Test
         public void Login_failed_because_of_very_large_iteration_count()
         {
 
-            LoginAndVerifyExceptionInIterationsRequest<OverflowException>("2147483648",
+            LoginAndVerifyExceptionInIterationsRequest<OverflowException>(new ResponseOrException("2147483648"),
                                                                           LoginException.FailureReason.InvalidResponse,
                                                                           "Iteration count is invalid");
         }
@@ -80,7 +81,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_WebException_in_login_request()
         {
-            LoginAndVerifyExceptionInLoginRequest<WebException>(new WebException(),
+            LoginAndVerifyExceptionInLoginRequest<WebException>(new ResponseOrException(new WebException()),
                                                                 LoginException.FailureReason.WebException,
                                                                 WebExceptionMessage);
         }
@@ -88,7 +89,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_invalid_xml()
         {
-            LoginAndVerifyExceptionInLoginRequest<XmlException>("Invalid XML!",
+            LoginAndVerifyExceptionInLoginRequest<XmlException>(new ResponseOrException("Invalid XML!"),
                                                                 LoginException.FailureReason.InvalidResponse,
                                                                 "Invalid XML in response");
         }
@@ -174,8 +175,8 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_for_other_reason_without_message()
         {
-            LoginAndVerifyExceptionInLoginRequest(string.Format("<response><error cause=\"{0}\"/></response>",
-                                                                OtherCause),
+            LoginAndVerifyExceptionInLoginRequest(new ResponseOrException(string.Format("<response><error cause=\"{0}\"/></response>",
+                                                                                        OtherCause)),
                                                   LoginException.FailureReason.LastPassOther,
                                                   OtherCause);
         }
@@ -183,8 +184,8 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_with_message_without_cause()
         {
-            LoginAndVerifyExceptionInLoginRequest(string.Format("<response><error message=\"{0}\"/></response>",
-                                                                OtherReasonMessage),
+            LoginAndVerifyExceptionInLoginRequest(new ResponseOrException(string.Format("<response><error message=\"{0}\"/></response>",
+                                                                          OtherReasonMessage)),
                                                   LoginException.FailureReason.LastPassOther,
                                                   OtherReasonMessage);
         }
@@ -192,7 +193,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_for_unknown_reason_with_error_element()
         {
-            LoginAndVerifyExceptionInLoginRequest("<response><error /></response>",
+            LoginAndVerifyExceptionInLoginRequest(new ResponseOrException("<response><error /></response>"),
                                                   LoginException.FailureReason.LastPassUnknown,
                                                   "Unknown reason");
         }
@@ -200,7 +201,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_unknown_xml_schema()
         {
-            LoginAndVerifyExceptionInLoginRequest("<response />",
+            LoginAndVerifyExceptionInLoginRequest(new ResponseOrException("<response />"),
                                                   LoginException.FailureReason.UnknownResponseSchema,
                                                   "Unknown response schema");
         }
@@ -266,11 +267,11 @@ namespace LastPass.Test
         //
 
         // Formats a valid LastPass response with a cause and a message.
-        private static string FormatResponse(string cause, string message)
+        private static ResponseOrException FormatResponse(string cause, string message)
         {
-            return string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>",
-                                 message,
-                                 cause);
+            return new ResponseOrException(string.Format("<response><error message=\"{0}\" cause=\"{1}\"/></response>",
+                                                         message,
+                                                         cause));
         }
 
         // Set up the login process. Response-or-exception parameters provide either
@@ -278,32 +279,16 @@ namespace LastPass.Test
         // is two phase: request iteration count, then log in receive the session id.
         // Each of the stages might fail because of the network problems or some other
         // reason.
-        private static Mock<IWebClient> SetupLogin(object iterationsResponseOrException,
-                                                   object loginResponseOrException = null)
+        private static Mock<IWebClient> SetupLogin(ResponseOrException iterationsResponseOrException,
+                                                   ResponseOrException loginResponseOrException = null)
         {
             var webClient = new Mock<IWebClient>();
             var sequence = webClient.SetupSequence(x => x.UploadValues(It.IsAny<string>(),
                                                                        It.IsAny<NameValueCollection>()));
 
-            Assert.IsNotNull(iterationsResponseOrException);
-            if (iterationsResponseOrException is Exception)
-                sequence.Throws((Exception)iterationsResponseOrException);
-            else
-            {
-                Assert.IsInstanceOf<string>(iterationsResponseOrException);
-                sequence = sequence.Returns(((string)iterationsResponseOrException).ToBytes());
-
-                if (loginResponseOrException != null)
-                {
-                    if (loginResponseOrException is Exception)
-                        sequence.Throws((Exception)loginResponseOrException);
-                    else
-                    {
-                        Assert.IsInstanceOf<string>(loginResponseOrException);
-                        sequence.Returns(((string)loginResponseOrException).ToBytes());
-                    }
-                }
-            }
+            iterationsResponseOrException.ReturnOrThrow(sequence);
+            if (loginResponseOrException != null)
+                loginResponseOrException.ReturnOrThrow(sequence);
 
             return webClient;
         }
@@ -325,8 +310,8 @@ namespace LastPass.Test
 
         // Try to login and expect an exception, which is later validated by the caller.
         private static LoginException LoginAndFailWithException(string multifactorPassword,
-                                                                object iterationsResponseOrException,
-                                                                object loginResponseOrException = null)
+                                                                ResponseOrException iterationsResponseOrException,
+                                                                ResponseOrException loginResponseOrException = null)
         {
             var webClient = SetupLogin(iterationsResponseOrException, loginResponseOrException);
             return Assert.Throws<LoginException>(() => Fetcher.Login(Username,
@@ -338,7 +323,7 @@ namespace LastPass.Test
         // Fail in iterations request and verify the exception.
         // Response-or-exception argument should either a string
         // with the provided response or an exception to be thrown.
-        private static void LoginAndVerifyExceptionInIterationsRequest<TInnerExceptionType>(object iterationsResponseOrException,
+        private static void LoginAndVerifyExceptionInIterationsRequest<TInnerExceptionType>(ResponseOrException iterationsResponseOrException,
                                                                                             LoginException.FailureReason reason,
                                                                                             string message)
         {
@@ -350,7 +335,7 @@ namespace LastPass.Test
         }
 
         // See the overload with an action.
-        private static void LoginAndVerifyExceptionInLoginRequest<TInnerExceptionType>(object loginResponseOrException,
+        private static void LoginAndVerifyExceptionInLoginRequest<TInnerExceptionType>(ResponseOrException loginResponseOrException,
                                                                                        LoginException.FailureReason reason,
                                                                                        string message)
         {
@@ -361,7 +346,7 @@ namespace LastPass.Test
         }
 
         // See the overload with an action.
-        private static void LoginAndVerifyExceptionInLoginRequest(object loginResponseOrException,
+        private static void LoginAndVerifyExceptionInLoginRequest(ResponseOrException loginResponseOrException,
                                                                   LoginException.FailureReason reason,
                                                                   string message)
         {
@@ -373,7 +358,7 @@ namespace LastPass.Test
         // with the provided response or an exception to be thrown.
         // The iterations request is not supposed to fail and it's
         // given a valid server response with the proper iteration count.
-        private static void LoginAndVerifyExceptionInLoginRequest(object loginResponseOrException,
+        private static void LoginAndVerifyExceptionInLoginRequest(ResponseOrException loginResponseOrException,
                                                                   LoginException.FailureReason reason,
                                                                   string message,
                                                                   Action<Exception> verifyInnerException)
@@ -387,8 +372,8 @@ namespace LastPass.Test
 
         // The most generic version. It expects on the requests to fail with an exception.
         // The exception is verified agains the expectations.
-        private static void LoginAndVerifyException(object iterationsResponseOrException,
-                                                    object loginResponseOrException,
+        private static void LoginAndVerifyException(ResponseOrException iterationsResponseOrException,
+                                                    ResponseOrException loginResponseOrException,
                                                     LoginException.FailureReason reason,
                                                     string message,
                                                     Action<Exception> verifyInnerException)

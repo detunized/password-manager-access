@@ -1,5 +1,6 @@
 using System;
 using Moq;
+using Moq.Language;
 using Moq.Language.Flow;
 using NUnit.Framework;
 
@@ -30,6 +31,14 @@ namespace LastPass.Test
             }
 
             public void ReturnOrThrow(ISetup<IWebClient, byte[]> setup)
+            {
+                if (_exception != null)
+                    setup.Throws(_exception);
+                else
+                    setup.Returns(_response);
+            }
+
+            public void ReturnOrThrow(ISetupSequentialResult<byte[]> setup)
             {
                 if (_exception != null)
                     setup.Throws(_exception);
