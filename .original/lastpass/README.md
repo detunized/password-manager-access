@@ -21,8 +21,8 @@ A quick example of accessing your account information:
 ```csharp
 var vault = Vault.Create(username, password);
 vault.DecryptAllAccounts(Account.Field.Name |
-                             Account.Field.Username |
-                             Account.Field.Password,
+                         Account.Field.Username |
+                         Account.Field.Password,
                          username,
                          password);
 foreach (var i in vault.Accounts)
