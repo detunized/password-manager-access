@@ -11,6 +11,11 @@ namespace LastPass
             KeyIterationCount = keyIterationCount;
         }
 
+        public byte[] MakeEncryptionKey(string username, string password)
+        {
+            return FetcherHelper.MakeKey(username, password, KeyIterationCount);
+        }
+
         public byte[] Bytes { get; private set; }
         public int KeyIterationCount { get; private set; }
     }
