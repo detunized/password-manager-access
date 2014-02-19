@@ -7,53 +7,21 @@ namespace LastPass
 {
     public class Account
     {
-        [Flags]
-        public enum Field
-        {
-            Name = 1,
-            Username = 2,
-            Password = 4,
-            Group = 8,
-        }
-
-        public Account(string id, byte[] name, byte[] username, byte[] password, string url, byte[] group)
+        public Account(string id, string name, string username, string password, string url, string group)
         {
             Id = id;
-            Name = new EncryptedString(name);
-            Username = new EncryptedString(username);
-            Password = new EncryptedString(password);
+            Name = name;
+            Username = username;
+            Password = password;
             Url = url;
-            Group = new EncryptedString(group);
-        }
-
-        public void Decrypt(Field fields, byte[] encryptionKey)
-        {
-            if ((fields & Field.Name) != 0)
-            {
-                Name.Decrypt(encryptionKey);
-            }
-
-            if ((fields & Field.Username) != 0)
-            {
-                Username.Decrypt(encryptionKey);
-            }
-
-            if ((fields & Field.Password) != 0)
-            {
-                Password.Decrypt(encryptionKey);
-            }
-
-            if ((fields & Field.Group) != 0)
-            {
-                Group.Decrypt(encryptionKey);
-            }
+            Group = group;
         }
 
         public string Id { get; private set; }
-        public EncryptedString Name { get; private set; }
-        public EncryptedString Username { get; private set; }
-        public EncryptedString Password { get; private set; }
+        public string Name { get; private set; }
+        public string Username { get; private set; }
+        public string Password { get; private set; }
         public string Url { get; private set; }
-        public EncryptedString Group { get; private set; }
+        public string Group { get; private set; }
     }
 }

@@ -23,18 +23,18 @@ namespace LastPass
             public byte[] Payload { get; private set; }
         }
 
-        public static Account ParseAccount(Chunk chunk)
+        public static Account ParseAccount(Chunk chunk, byte[] encryptionKey)
         {
             return WithBytes(chunk.Payload, reader => {
                 var id = ReadItem(reader).ToUtf8();
-                var name = ReadItem(reader);
-                var group = ReadItem(reader);
+                var name = DecryptAes256(ReadItem(reader), encryptionKey);
+                var group = DecryptAes256(ReadItem(reader), encryptionKey);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
                 SkipItem(reader);
                 SkipItem(reader);
                 SkipItem(reader);
-                var username = ReadItem(reader);
-                var password = ReadItem(reader);
+                var username = DecryptAes256(ReadItem(reader), encryptionKey);
+                var password = DecryptAes256(ReadItem(reader), encryptionKey);
 
                 return new Account(id, name, username, password, url, group);
             });

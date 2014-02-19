@@ -29,21 +29,9 @@ namespace LastPass
             ParserHelper.WithBytes(blob.Bytes, reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
                 Accounts = chunks.ContainsKey("ACCT")
-                    ? chunks["ACCT"].Select(ParserHelper.ParseAccount).ToArray()
+                    ? chunks["ACCT"].Select(i => ParserHelper.ParseAccount(i, encryptionKey)).ToArray()
                     : new Account[] { };
             });
-
-            DecryptAllAccounts(Account.Field.Name |
-                               Account.Field.Username |
-                               Account.Field.Password |
-                               Account.Field.Group,
-                               encryptionKey);
-        }
-
-        private void DecryptAllAccounts(Account.Field fields, byte[] encryptionKey)
-        {
-            foreach (var i in Accounts)
-                i.Decrypt(fields, encryptionKey);
         }
 
         public Account[] Accounts { get; private set; }

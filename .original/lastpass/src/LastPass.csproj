@@ -39,7 +39,6 @@
     <Compile Include="Account.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Blob.cs" />
-    <Compile Include="EncryptedString.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Fetcher.cs" />
     <Compile Include="FetcherHelper.cs" />

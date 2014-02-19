@@ -46,7 +46,6 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AccountTest.cs" />
     <Compile Include="BlobTest.cs" />
-    <Compile Include="EncryptedStringTest.cs" />
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="FetcherHelperTest.cs" />
     <Compile Include="FetcherTest-Fetch.cs" />

@@ -897,6 +897,7 @@ namespace LastPass.Test
             "MFVSVUwAAAAaAAAADDZlNmY3NjJlNzI3NQAAAAExAAAAATBFTkRNAAAAAk9L";
 
         public static readonly byte[] Blob = BlobBase64.Decode64();
+        public static readonly byte[] EncryptionKey = "p8utF7ZB8yD06SrtrD4hsdvEOiBU1Y19cr2dhG9DWZg=".Decode64();
 
         public class Account
         {

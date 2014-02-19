@@ -12,19 +12,19 @@ namespace LastPass.Test
         public void EncryptedAccount_properties_are_set()
         {
             var id = "1234567890";
-            var name = "DEADBEEF".DecodeHex();
-            var username = "FEEDBEEF".DecodeHex();
-            var password = "BEEFDEAD".DecodeHex();
+            var name = "name";
+            var username = "username";
+            var password = "password";
             var url = "url";
-            var group = "FEEDDEAD".DecodeHex();
+            var group = "group";
 
             var account = new Account(id, name, username, password, url, group);
             Assert.AreEqual(id, account.Id);
-            Assert.AreEqual(name, account.Name.Encrypted);
-            Assert.AreEqual(username, account.Username.Encrypted);
-            Assert.AreEqual(password, account.Password.Encrypted);
+            Assert.AreEqual(name, account.Name);
+            Assert.AreEqual(username, account.Username);
+            Assert.AreEqual(password, account.Password);
             Assert.AreEqual(url, account.Url);
-            Assert.AreEqual(group, account.Group.Encrypted);
+            Assert.AreEqual(group, account.Group);
         }
     }
 }
