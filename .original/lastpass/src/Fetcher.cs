@@ -53,7 +53,7 @@ namespace LastPass
             byte[] response;
             try
             {
-                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0");
+                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc=android");
             }
             catch (WebException e)
             {
