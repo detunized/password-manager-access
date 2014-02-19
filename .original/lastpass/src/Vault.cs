@@ -23,27 +23,6 @@ namespace LastPass
             return Fetcher.Fetch(Fetcher.Login(username, password, multifactorPassword));
         }
 
-        public byte[] MakeKey(string username, string password)
-        {
-            return FetcherHelper.MakeKey(username, password, _keyIterationCount);
-        }
-
-        public Account GetAccount(string id)
-        {
-            return Accounts.First(i => i.Id == id);
-        }
-
-        public void DecryptAllAccounts(Account.Field fields, string username, string password)
-        {
-            DecryptAllAccounts(fields, MakeKey(username, password));
-        }
-
-        public void DecryptAllAccounts(Account.Field fields, byte[] encryptionKey)
-        {
-            foreach (var i in Accounts)
-                i.Decrypt(fields, encryptionKey);
-        }
-
         // TODO: Make a test for this!
         private Vault(Blob blob, byte[] encryptionKey)
         {
@@ -61,13 +40,12 @@ namespace LastPass
                                encryptionKey);
         }
 
-        private Vault(Account[] accounts, int keyIterationCount)
+        private void DecryptAllAccounts(Account.Field fields, byte[] encryptionKey)
         {
-            Accounts = accounts;
-            _keyIterationCount = keyIterationCount;
+            foreach (var i in Accounts)
+                i.Decrypt(fields, encryptionKey);
         }
 
         public Account[] Accounts { get; private set; }
-        private readonly int _keyIterationCount;
     }
 }
