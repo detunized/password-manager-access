@@ -19,6 +19,8 @@ program for detail.
 A quick example of accessing your account information:
 
 ```csharp
+using LastPass;
+
 var vault = Vault.Create(username, password);
 foreach (var i in vault.Accounts)
     Console.WriteLine("{0}:, {1}, {2}", i.Name, i.Username, i.Password);
