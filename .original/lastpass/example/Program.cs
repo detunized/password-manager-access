@@ -58,14 +58,6 @@ namespace Example
                 }
             }
 
-            // Decrypt all accounts
-            vault.DecryptAllAccounts(Account.Field.Name |
-                                     Account.Field.Username |
-                                     Account.Field.Password |
-                                     Account.Field.Group,
-                                     username,
-                                     password);
-
             // Dump all the accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
             {
