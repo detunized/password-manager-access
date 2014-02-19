@@ -27,10 +27,11 @@ namespace LastPass
         private Vault(Blob blob, byte[] encryptionKey)
         {
             ParserHelper.WithBytes(blob.Bytes, reader => {
-                var chunks = ParserHelper.ExtractChunks(reader);
-                Accounts = chunks.ContainsKey("ACCT")
-                    ? chunks["ACCT"].Select(i => ParserHelper.ParseAccount(i, encryptionKey)).ToArray()
-                    : new Account[] { };
+                Accounts = ParserHelper
+                    .ExtractChunks(reader)
+                    .Where(i => i.Id == "ACCT")
+                    .Select(i => ParserHelper.ParseAccount(i, encryptionKey))
+                    .ToArray();
             });
         }
 

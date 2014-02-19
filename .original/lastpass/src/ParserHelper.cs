@@ -40,20 +40,13 @@ namespace LastPass
             });
         }
 
-        public static Dictionary<string, Chunk[]> ExtractChunks(BinaryReader reader)
+        public static List<Chunk> ExtractChunks(BinaryReader reader)
         {
-            var chunks = new Dictionary<string, List<Chunk>>();
+            var chunks = new List<Chunk>();
             while (reader.BaseStream.Position < reader.BaseStream.Length)
-            {
-                var chunk = ReadChunk(reader);
-                if (!chunks.ContainsKey(chunk.Id))
-                {
-                    chunks[chunk.Id] = new List<Chunk>();
-                }
-                chunks[chunk.Id].Add(chunk);
-            }
+                chunks.Add(ReadChunk(reader));
 
-            return chunks.ToDictionary(i => i.Key, i => i.Value.ToArray());
+            return chunks;
         }
 
         public static Chunk ReadChunk(BinaryReader reader)

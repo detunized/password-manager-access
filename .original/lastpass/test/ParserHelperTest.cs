@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 
 namespace LastPass.Test
@@ -15,7 +16,7 @@ namespace LastPass.Test
         public void ParseAccount_returns_account()
         {
             WithBlob(reader => {
-                var accounts = ParserHelper.ExtractChunks(reader)["ACCT"];
+                var accounts = ParserHelper.ExtractChunks(reader).Where(i => i.Id == "ACCT").ToArray();
                 for (var i = 0; i < accounts.Length; ++i)
                 {
                     var account = ParserHelper.ParseAccount(accounts[i], TestData.EncryptionKey);
@@ -51,8 +52,8 @@ namespace LastPass.Test
         {
             WithBlob(reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
-                Assert.AreEqual(21, chunks.Keys.Count);
-                Assert.AreEqual(TestData.ChunkIds, chunks.Keys);
+                var ids = chunks.Select(i => i.Id).Distinct().ToArray();
+                Assert.AreEqual(TestData.ChunkIds, ids);
             });
         }
 
@@ -61,9 +62,11 @@ namespace LastPass.Test
         {
             WithBlob(reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
-                Assert.AreEqual(100, chunks["ACCT"].Length);
 
-                ParserHelper.WithBytes(chunks["ACCT"][0].Payload, chunkReader => {
+                var account = chunks.Find(i => i.Id == "ACCT");
+                Assert.NotNull(account);
+
+                ParserHelper.WithBytes(account.Payload, chunkReader => {
                     var item = ParserHelper.ReadItem(chunkReader);
                     Assert.NotNull(item);
                 });
