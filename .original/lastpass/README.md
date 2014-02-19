@@ -20,16 +20,8 @@ A quick example of accessing your account information:
 
 ```csharp
 var vault = Vault.Create(username, password);
-vault.DecryptAllAccounts(Account.Field.Name |
-                         Account.Field.Username |
-                         Account.Field.Password,
-                         username,
-                         password);
 foreach (var i in vault.Accounts)
-    Console.WriteLine("{0}:, {1}, {2}", 
-                      (string)i.Name, 
-                      (string)i.Username, 
-                      (string)i.Password);
+    Console.WriteLine("{0}:, {1}, {2}", i.Name, i.Username, i.Password);
 ```
 
 The blob received from LastPass could be safely stored locally (it's well
