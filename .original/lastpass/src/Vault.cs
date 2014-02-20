@@ -1,6 +1,7 @@
 // Copyright (C) 2013 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
 using System.Linq;
 
 namespace LastPass
@@ -24,14 +25,24 @@ namespace LastPass
         }
 
         // TODO: Make a test for this!
+        // TODO: Extract some of the code and put it some place else.
         private Vault(Blob blob, byte[] encryptionKey)
         {
             ParserHelper.WithBytes(blob.Bytes, reader => {
-                Accounts = ParserHelper
-                    .ExtractChunks(reader)
-                    .Where(i => i.Id == "ACCT")
-                    .Select(i => ParserHelper.ParseAccount(i, encryptionKey))
-                    .ToArray();
+                var chunks = ParserHelper.ExtractChunks(reader);
+                var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
+
+                foreach (var i in chunks)
+                {
+                    switch (i.Id)
+                    {
+                    case "ACCT":
+                        accounts.Add(ParserHelper.ParseAccount(i, encryptionKey));
+                        break;
+                    }
+                }
+
+                Accounts = accounts.ToArray();
             });
         }
 
