@@ -25,7 +25,8 @@ namespace LastPass
 
         public static Account ParseAccount(Chunk chunk, byte[] encryptionKey)
         {
-            return WithBytes(chunk.Payload, reader => {
+            return WithBytes(chunk.Payload, reader =>
+            {
                 var id = ReadItem(reader).ToUtf8();
                 var name = DecryptAes256(ReadItem(reader), encryptionKey);
                 var group = DecryptAes256(ReadItem(reader), encryptionKey);
@@ -37,6 +38,20 @@ namespace LastPass
                 var password = DecryptAes256(ReadItem(reader), encryptionKey);
 
                 return new Account(id, name, username, password, url, group);
+            });
+        }
+
+        // TODO: Return a proper object!
+        // TODO: Write a test for this!
+        public static byte[] Parse_SHAR(Chunk chunk, byte[] encryptionKey)
+        {
+            return WithBytes(chunk.Payload, reader =>
+            {
+                // TODO: Parse the other fields!
+                for (int i = 0; i < 5; ++i)
+                    SkipItem(reader);
+
+                return DecryptAes256(ReadItem(reader), encryptionKey).DecodeHex();
             });
         }
 

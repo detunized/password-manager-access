@@ -32,12 +32,16 @@ namespace LastPass
                 var chunks = ParserHelper.ExtractChunks(reader);
                 var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
 
+                var key = encryptionKey;
                 foreach (var i in chunks)
                 {
                     switch (i.Id)
                     {
                     case "ACCT":
-                        accounts.Add(ParserHelper.ParseAccount(i, encryptionKey));
+                        accounts.Add(ParserHelper.ParseAccount(i, key));
+                        break;
+                    case "SHAR":
+                        key = ParserHelper.Parse_SHAR(i, encryptionKey);
                         break;
                     }
                 }
