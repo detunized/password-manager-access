@@ -38,7 +38,7 @@ namespace LastPass
                     switch (i.Id)
                     {
                     case "ACCT":
-                        accounts.Add(ParserHelper.ParseAccount(i, key));
+                        accounts.Add(ParserHelper.Parse_ACCT(i, key));
                         break;
                     case "SHAR":
                         key = ParserHelper.Parse_SHAR(i, encryptionKey);

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -23,8 +24,10 @@ namespace LastPass
             public byte[] Payload { get; private set; }
         }
 
-        public static Account ParseAccount(Chunk chunk, byte[] encryptionKey)
+        public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey)
         {
+            Debug.Assert(chunk.Id == "ACCT");
+
             return WithBytes(chunk.Payload, reader =>
             {
                 var id = ReadItem(reader).ToUtf8();
@@ -45,6 +48,8 @@ namespace LastPass
         // TODO: Write a test for this!
         public static byte[] Parse_SHAR(Chunk chunk, byte[] encryptionKey)
         {
+            Debug.Assert(chunk.Id == "SHAR");
+
             return WithBytes(chunk.Payload, reader =>
             {
                 // TODO: Parse the other fields!
