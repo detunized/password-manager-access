@@ -62,53 +62,28 @@ namespace LastPass
             var asn1EncodedKey = decrypted.Substring(header.Length,
                                                      decrypted.Length - header.Length - footer.Length).DecodeHex();
 
-            var enclosingSequence = ParseAsn1Item(asn1EncodedKey);
+            var enclosingSequence = Asn1.ParseItem(asn1EncodedKey);
             var anotherEnclosingSequence = WithBytes(enclosingSequence.Value, reader => {
-                ExtractAsn1Item(reader);
-                ExtractAsn1Item(reader);
-                return ExtractAsn1Item(reader);
+                Asn1.ExtractItem(reader);
+                Asn1.ExtractItem(reader);
+                return Asn1.ExtractItem(reader);
             });
-            var yetAnotherEnclosingSequence = ParseAsn1Item(anotherEnclosingSequence.Value);
+            var yetAnotherEnclosingSequence = Asn1.ParseItem(anotherEnclosingSequence.Value);
 
             return WithBytes(yetAnotherEnclosingSequence.Value, reader => {
-                ExtractAsn1Item(reader);
+                Asn1.ExtractItem(reader);
 
                 return new RSAParameters {
-                    Modulus = ExtractAsn1Item(reader).Value,
-                    Exponent = ExtractAsn1Item(reader).Value,
-                    D = ExtractAsn1Item(reader).Value,
-                    P = ExtractAsn1Item(reader).Value,
-                    Q = ExtractAsn1Item(reader).Value,
-                    DP = ExtractAsn1Item(reader).Value,
-                    DQ = ExtractAsn1Item(reader).Value,
-                    InverseQ = ExtractAsn1Item(reader).Value
+                    Modulus = Asn1.ExtractItem(reader).Value,
+                    Exponent = Asn1.ExtractItem(reader).Value,
+                    D = Asn1.ExtractItem(reader).Value,
+                    P = Asn1.ExtractItem(reader).Value,
+                    Q = Asn1.ExtractItem(reader).Value,
+                    DP = Asn1.ExtractItem(reader).Value,
+                    DQ = Asn1.ExtractItem(reader).Value,
+                    InverseQ = Asn1.ExtractItem(reader).Value
                 };
             });
-        }
-
-        public static KeyValuePair<int, byte[]> ParseAsn1Item(byte[] bytes)
-        {
-            return WithBytes(bytes, reader => ExtractAsn1Item(reader));
-        }
-
-        public static KeyValuePair<int, byte[]> ExtractAsn1Item(BinaryReader reader)
-        {
-            var id = reader.ReadByte();
-            var tag = id & 0x1f;
-
-            int size = reader.ReadByte();
-            if ((size & 0x80) != 0)
-            {
-                var sizeLength = size & 0x7f;
-                size = 0;
-                for (var i = 0; i < sizeLength; ++i)
-                {
-                    var oneByte = reader.ReadByte();
-                    size = size * 256 + oneByte;
-                }
-            }
-
-            return new KeyValuePair<int, byte[]>(tag, reader.ReadBytes(size));
         }
 
         // TODO: Return a proper object!

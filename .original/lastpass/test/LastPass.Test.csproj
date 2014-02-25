@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Asn1Test.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AccountTest.cs" />
     <Compile Include="BlobTest.cs" />

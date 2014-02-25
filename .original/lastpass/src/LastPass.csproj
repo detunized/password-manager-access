@@ -37,6 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Account.cs" />
+    <Compile Include="Asn1.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Blob.cs" />
     <Compile Include="Extensions.cs" />
