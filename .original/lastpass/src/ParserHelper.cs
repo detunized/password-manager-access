@@ -73,32 +73,51 @@ namespace LastPass
             return WithBytes(yetAnotherEnclosingSequence.Value, reader => {
                 Asn1.ExtractItem(reader);
 
-                return new RSAParameters {
-                    Modulus = Asn1.ExtractItem(reader).Value,
-                    Exponent = Asn1.ExtractItem(reader).Value,
-                    D = Asn1.ExtractItem(reader).Value,
-                    P = Asn1.ExtractItem(reader).Value,
-                    Q = Asn1.ExtractItem(reader).Value,
-                    DP = Asn1.ExtractItem(reader).Value,
-                    DQ = Asn1.ExtractItem(reader).Value,
-                    InverseQ = Asn1.ExtractItem(reader).Value
+                // There are occasional leading zeroes that need to be stripped.
+                Func<byte[]> readInteger =
+                    () => Asn1.ExtractItem(reader).Value.SkipWhile(i => i == 0).ToArray();
+
+                return new RSAParameters
+                {
+                    Modulus = readInteger(),
+                    Exponent = readInteger(),
+                    D = readInteger(),
+                    P = readInteger(),
+                    Q = readInteger(),
+                    DP = readInteger(),
+                    DQ = readInteger(),
+                    InverseQ = readInteger()
                 };
             });
         }
 
         // TODO: Return a proper object!
         // TODO: Write a test for this!
-        public static byte[] Parse_SHAR(Chunk chunk, byte[] encryptionKey)
+        public static byte[] Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
         {
             Debug.Assert(chunk.Id == "SHAR");
 
             return WithBytes(chunk.Payload, reader =>
             {
-                // TODO: Parse the other fields!
-                for (int i = 0; i < 5; ++i)
-                    SkipItem(reader);
+                SkipItem(reader);
+                var rsaEncryptedFolderKey = ReadItem(reader);
+                SkipItem(reader);
+                SkipItem(reader);
+                SkipItem(reader);
+                var aesEncryptedFolderKey = ReadItem(reader);
 
-                return DecryptAes256(ReadItem(reader), encryptionKey).DecodeHex();
+                // Shared folder encryption key might come already in pre-decrypted form,
+                // where it's only AES encrypted with the regular encryption key.
+                if (aesEncryptedFolderKey.Length > 0)
+                    return DecryptAes256(aesEncryptedFolderKey, encryptionKey).DecodeHex();
+
+                // When the key is blank, then there's an RSA encrypted key, which has to
+                // be decrypted first before use.
+                using (var rsa = new RSACryptoServiceProvider())
+                {
+                    rsa.ImportParameters(rsaKey);
+                    return rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
+                }
             });
         }
 

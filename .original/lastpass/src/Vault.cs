@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace LastPass
 {
@@ -33,6 +34,8 @@ namespace LastPass
                 var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
 
                 var key = encryptionKey;
+                var rsaKey = new RSAParameters();
+
                 foreach (var i in chunks)
                 {
                     switch (i.Id)
@@ -41,10 +44,10 @@ namespace LastPass
                         accounts.Add(ParserHelper.Parse_ACCT(i, key));
                         break;
                     case "PRIK":
-                        ParserHelper.Parse_PRIK(i, encryptionKey);
+                        rsaKey = ParserHelper.Parse_PRIK(i, encryptionKey);
                         break;
                     case "SHAR":
-                        key = ParserHelper.Parse_SHAR(i, encryptionKey);
+                        key = ParserHelper.Parse_SHAR(i, encryptionKey, rsaKey);
                         break;
                     }
                 }
