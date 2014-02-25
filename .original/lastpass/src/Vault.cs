@@ -40,6 +40,9 @@ namespace LastPass
                     case "ACCT":
                         accounts.Add(ParserHelper.Parse_ACCT(i, key));
                         break;
+                    case "PRIK":
+                        ParserHelper.Parse_PRIK(i, encryptionKey);
+                        break;
                     case "SHAR":
                         key = ParserHelper.Parse_SHAR(i, encryptionKey);
                         break;
