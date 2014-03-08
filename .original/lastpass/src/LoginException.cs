@@ -5,7 +5,7 @@ using System;
 
 namespace LastPass
 {
-    public class LoginException: Exception
+    public class LoginException: BaseException
     {
         public enum FailureReason
         {
