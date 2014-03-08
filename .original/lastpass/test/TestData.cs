@@ -979,6 +979,49 @@ namespace LastPass.Test
             "5b78fb81701939efef4f57350c2dbf2fa05ff469aa48b2cac1f496de48cc55c8" +
             "c2d6db524687475335dd9169a496a4c2").ToBytes();
 
+        public static readonly byte[] RsaD = (
+            "oCZKcCWHrddSg44/MMadv3nW6VdMiR4Tpw13yvdO2XgFUX8Rt2o/mL1g+KYD" +
+            "F+Zu74bF2Jzj7asNxJM2CwZ2ayckE0w6Ew99GXwyMTHp18F5POEQvmvQO5Fm" +
+            "fpYClnjQiQ3pOaeCPXzKP6dlzEdQHUKkUvc+vAvSU02XwWCGpBTNmJNKiFSN" +
+            "+kHolIvM3Gn5GoFdp9m1HJlTWCoJl0oJND0ko+jozUvNEcmgtrsIC6YLypBN" +
+            "rZCHrdmgVi1WEtdfKowzcCQyYP9u4dctLOGBqSS5Uz4Ldw3MzL2R8y8Nbo2H" +
+            "OVgXqw7TM9zIdnZxkVs6yqzJ2FEiXI4KcK7J4iD3rQ==").Decode64();
+
+        public static readonly byte[] RsaDP = (
+            "oT8Dc/I+r2VX5xeyVt3VYrC7ExcVxx9tUsFm5b90S1CnfLRMzcOSTXM6z60Q" +
+            "bK0w1Q5hmblAViGbJr3twtqwYP7WDrfTOInnE28zXgItrRHCuFltwZmWOXxv" +
+            "wHjolcQV51o9gHs08XIV1BdHqHnNLph9qm5hfFJq2HWUn+8poT8=").Decode64();
+
+        public static readonly byte[] RsaDQ = (
+            "s6RccDP6SzSFDh63CobUHB5poehNsao5xwg9MLvdOa9PV9DR2qdj4HXvlRrY" +
+            "FCuhlafCPgYiTLZBM7COlipR9OneMuNw17YRfI3ROmqVcZLYKhBByZLdzypN" +
+            "TGNbcHyMGxj7nu2QJnWyLLCPWe1F7tco0V/bFMBO7Xjk0q0NBB0=").Decode64();
+
+        public static readonly byte[] RsaExponent = "AQAB".Decode64();
+
+        public static readonly byte[] RsaInverseQ = (
+            "tFK0dzELJnDl0tj5URPAycY1kXIWa4eMSNXo6KTsGYoCe0ZXjO/zwKKTVlPN" +
+            "JJmPZwnXQaN2YtwykrKGikx1ZvdnVfIx+i2FFVdPuGc9LAnmeTbhTC3T0vkK" +
+            "L4SqTnCjIpXmSwlV/aPhOOW9EGxK2LSKoD5jreOQatWmpN8Ry18=").Decode64();
+
+        public static readonly byte[] RsaModulus = (
+            "zufyGpNKMoL7WK2TyQ++OQjrWaJVhaxHyfI8sV/HZqhhJSFEtlL94/SvG5rd" +
+            "SKn24CENXYr4uHWAsSlcNUEndSUfxUyZeWobJUkzGqRDP+bknR+BEJS6LUbE" +
+            "44ttz9eU5mFr4SN44G2xKfX8F5+xNwwdZk7YzzT/F5zcAeD2nxV4kIVg2Dxm" +
+            "rl3yry+2reNq3oTGH7/iBXz9X1RsR6jxIfryJHUycuIt2ze2hjInVMUYBMdP" +
+            "kt0qUDpT7yBU40yGKIjj05Vlte0ZLbTcdv18aX4kWess8NOwT6n7zpxDPWrM" +
+            "BQhiL19o/CyogdaMd2tii3V7lgxSmLG671zmExgOeQ==").Decode64();
+
+        public static readonly byte[] RsaP = (
+            "/LXZfJ811wtpvxfRHzE0Ds2x3v3bRRGUKFLHQ1ZJ4kpAX8UXigVTk5P8kKXU" +
+            "uo6KIub++nC90xCXlKcbVtFNsPYYVobBUel07jrTAVaBvkJr5Kw1xNiXmOxc" +
+            "w8hlIDlGS2LX776aKn4LtMfd3Nte2WY7PcOmUXtoEl5L3BmM2W8=").Decode64();
+
+        public static readonly byte[] RsaQ = (
+            "0Zl0W6Cz920jJqy4RzwNwlaQ133n/+PnimMHROy69aNy90JgElhtyFnW54S/" +
+            "9hl+eqRPVBbcw7lLCTSKi4VrZpcy22j1y9aDXJ3Baovq3yjHt8XvgoX44ZVI" +
+            "EVu5r0tI9yd0LDIhG0Dy1uTT69JjEHni/3ccNto3Ua4soEDmEpc=").Decode64();
+
         public class Account
         {
             public Account(string id, string name, string username, string password, string url, string group)

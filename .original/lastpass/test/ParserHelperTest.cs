@@ -31,15 +31,14 @@ namespace LastPass.Test
             var chunk = new ParserHelper.Chunk("PRIK", TestData.Chunk_PRIK);
             var rsa = ParserHelper.Parse_PRIK(chunk, TestData.EncryptionKey);
 
-            // TODO: Verify the actual values!
-            Assert.AreEqual(256, rsa.D.Length);
-            Assert.AreEqual(128, rsa.DP.Length);
-            Assert.AreEqual(128, rsa.DQ.Length);
-            Assert.AreEqual(3, rsa.Exponent.Length);
-            Assert.AreEqual(128, rsa.InverseQ.Length);
-            Assert.AreEqual(256, rsa.Modulus.Length);
-            Assert.AreEqual(128, rsa.P.Length);
-            Assert.AreEqual(128, rsa.Q.Length);
+            Assert.AreEqual(TestData.RsaD, rsa.D);
+            Assert.AreEqual(TestData.RsaDP, rsa.DP);
+            Assert.AreEqual(TestData.RsaDQ, rsa.DQ);
+            Assert.AreEqual(TestData.RsaExponent, rsa.Exponent);
+            Assert.AreEqual(TestData.RsaInverseQ, rsa.InverseQ);
+            Assert.AreEqual(TestData.RsaModulus, rsa.Modulus);
+            Assert.AreEqual(TestData.RsaP, rsa.P);
+            Assert.AreEqual(TestData.RsaQ, rsa.Q);
         }
 
         [Test]
