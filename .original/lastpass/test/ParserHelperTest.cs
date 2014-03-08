@@ -29,7 +29,17 @@ namespace LastPass.Test
         public void Parse_PRIK_returns_private_key()
         {
             var chunk = new ParserHelper.Chunk("PRIK", TestData.Chunk_PRIK);
-            Assert.NotNull(ParserHelper.Parse_PRIK(chunk, TestData.EncryptionKey));
+            var rsa = ParserHelper.Parse_PRIK(chunk, TestData.EncryptionKey);
+
+            // TODO: Verify the actual values!
+            Assert.AreEqual(256, rsa.D.Length);
+            Assert.AreEqual(128, rsa.DP.Length);
+            Assert.AreEqual(128, rsa.DQ.Length);
+            Assert.AreEqual(3, rsa.Exponent.Length);
+            Assert.AreEqual(128, rsa.InverseQ.Length);
+            Assert.AreEqual(256, rsa.Modulus.Length);
+            Assert.AreEqual(128, rsa.P.Length);
+            Assert.AreEqual(128, rsa.Q.Length);
         }
 
         [Test]
