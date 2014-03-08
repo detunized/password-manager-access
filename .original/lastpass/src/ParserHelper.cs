@@ -44,7 +44,6 @@ namespace LastPass
             });
         }
 
-        // TODO: Write a test for this!
         public static RSAParameters Parse_PRIK(Chunk chunk, byte[] encryptionKey)
         {
             Debug.Assert(chunk.Id == "PRIK");
@@ -57,7 +56,7 @@ namespace LastPass
             const string header = "LastPassPrivateKey<";
             const string footer = ">LastPassPrivateKey";
             if (!decrypted.StartsWith(header) || !decrypted.EndsWith(footer))
-                throw new ArgumentException("Can't decrypt private key"); // TODO: Use custom exception
+                throw new ParseException(ParseException.FailureReason.CorruptedBlob, "Failed to decrypt private key");
 
             var asn1EncodedKey = decrypted.Substring(header.Length,
                                                      decrypted.Length - header.Length - footer.Length).DecodeHex();

@@ -33,6 +33,15 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void Parse_PRIK_throws_on_invalid_chunk()
+        {
+            var chunk = new ParserHelper.Chunk("PRIK", "".ToBytes());
+            var e = Assert.Throws<ParseException>(() => ParserHelper.Parse_PRIK(chunk, TestData.EncryptionKey));
+            Assert.AreEqual(ParseException.FailureReason.CorruptedBlob, e.Reason);
+            Assert.AreEqual("Failed to decrypt private key", e.Message);
+        }
+
+        [Test]
         public void ReadChunk_returns_first_chunk()
         {
             WithBlob(reader => {
