@@ -47,6 +47,7 @@
     <Compile Include="FetchException.cs" />
     <Compile Include="IWebClient.cs" />
     <Compile Include="LoginException.cs" />
+    <Compile Include="ParseException.cs" />
     <Compile Include="ParserHelper.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Session.cs" />

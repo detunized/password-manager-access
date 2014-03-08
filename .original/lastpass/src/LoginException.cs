@@ -30,7 +30,8 @@ namespace LastPass
             Reason = reason;
         }
 
-        public LoginException(FailureReason reason, string message, Exception innerException): base(message, innerException)
+        public LoginException(FailureReason reason, string message, Exception innerException):
+            base(message, innerException)
         {
             Reason = reason;
         }

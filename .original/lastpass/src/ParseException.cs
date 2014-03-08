@@ -5,21 +5,20 @@ using System;
 
 namespace LastPass
 {
-    public class FetchException: BaseException
+    public class ParseException: BaseException
     {
         public enum FailureReason
         {
-            InvalidResponse,
-            WebException
+            CorruptedBlob
         }
 
-        public FetchException(FailureReason reason, string message): base(message)
+        public ParseException(FailureReason reason, string message): base(message)
         {
             Reason = reason;
         }
 
-        public FetchException(FailureReason reason, string message, Exception innerException):
-            base(message, innerException)
+        public ParseException(FailureReason reason, string message, Exception innerException)
+            : base(message, innerException)
         {
             Reason = reason;
         }
