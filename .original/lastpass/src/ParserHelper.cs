@@ -236,6 +236,8 @@ namespace LastPass
             using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
             using (var reader = new StreamReader(cryptoStream))
             {
+                // TODO: StreamReader is a text reader. This might fail with arbitrary binary encrypted
+                //       data. Luckily we have only text encrypted. Pay attention when refactoring!
                 return reader.ReadToEnd();
             }
         }
