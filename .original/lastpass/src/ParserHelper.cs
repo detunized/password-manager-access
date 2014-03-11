@@ -90,33 +90,40 @@ namespace LastPass
             });
         }
 
-        // TODO: Return a proper object!
         // TODO: Write a test for the RSA case!
-        public static byte[] Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
+        public static SharedFolder Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
         {
             Debug.Assert(chunk.Id == "SHAR");
 
             return WithBytes(chunk.Payload, reader =>
             {
-                SkipItem(reader);
+                var id = ReadItem(reader).ToUtf8();
                 var rsaEncryptedFolderKey = ReadItem(reader);
-                SkipItem(reader);
+                var encrypted_name = ReadItem(reader);
                 SkipItem(reader);
                 SkipItem(reader);
                 var aesEncryptedFolderKey = ReadItem(reader);
 
+                byte[] key = null;
+
                 // Shared folder encryption key might come already in pre-decrypted form,
                 // where it's only AES encrypted with the regular encryption key.
                 if (aesEncryptedFolderKey.Length > 0)
-                    return DecryptAes256(aesEncryptedFolderKey, encryptionKey).DecodeHex();
-
-                // When the key is blank, then there's an RSA encrypted key, which has to
-                // be decrypted first before use.
-                using (var rsa = new RSACryptoServiceProvider())
                 {
-                    rsa.ImportParameters(rsaKey);
-                    return rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
+                    key = DecryptAes256(aesEncryptedFolderKey, encryptionKey).DecodeHex();
                 }
+                else
+                {
+                    // When the key is blank, then there's an RSA encrypted key, which has to
+                    // be decrypted first before use.
+                    using (var rsa = new RSACryptoServiceProvider())
+                    {
+                        rsa.ImportParameters(rsaKey);
+                        key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
+                    }
+                }
+
+                return new SharedFolder(id, DecryptAes256(encrypted_name, key), key);
             });
         }
 

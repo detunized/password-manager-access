@@ -47,7 +47,7 @@ namespace LastPass
                         rsaKey = ParserHelper.Parse_PRIK(i, encryptionKey);
                         break;
                     case "SHAR":
-                        key = ParserHelper.Parse_SHAR(i, encryptionKey, rsaKey);
+                        key = ParserHelper.Parse_SHAR(i, encryptionKey, rsaKey).EncryptionKey;
                         break;
                     }
                 }

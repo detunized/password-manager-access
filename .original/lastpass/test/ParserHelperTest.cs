@@ -43,20 +43,28 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Parse_SHAR_returns_encryption_key_when_aes_encrypted()
+        public void Parse_SHAR_returns_folder_key_when_aes_encrypted()
         {
-            var items = new [] {
-                MakeItem("skipped"),
+            var id = "id";
+            var name = "name";
+            var key = "0123456789012345".ToBytes();
+
+            var items = new[] {
+                MakeItem(id),
                 MakeItem("rsa"),
+                MakeItem(EncryptAes256(name, key)),
                 MakeItem("skipped"),
                 MakeItem("skipped"),
-                MakeItem("skipped"),
-                MakeItem(EncryptAes256("key".ToBytes().ToHex(), TestData.EncryptionKey)),
+                MakeItem(EncryptAes256(key.ToHex(), TestData.EncryptionKey)),
             };
-            var key = ParserHelper.Parse_SHAR(MakeChunk("SHAR", items),
-                                              TestData.EncryptionKey,
-                                              new RSAParameters());
-            Assert.AreEqual(key, "key".ToBytes());
+
+            var folder = ParserHelper.Parse_SHAR(MakeChunk("SHAR", items),
+                                                 TestData.EncryptionKey,
+                                                 new RSAParameters());
+
+            Assert.AreEqual(id, folder.Id);
+            Assert.AreEqual(name, folder.Name);
+            Assert.AreEqual(key, folder.EncryptionKey);
         }
 
         [Test]
