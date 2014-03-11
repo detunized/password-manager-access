@@ -33,7 +33,7 @@ namespace LastPass
                 var chunks = ParserHelper.ExtractChunks(reader);
                 var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
 
-                var key = encryptionKey;
+                SharedFolder folder = null;
                 var rsaKey = new RSAParameters();
 
                 foreach (var i in chunks)
@@ -41,13 +41,15 @@ namespace LastPass
                     switch (i.Id)
                     {
                     case "ACCT":
-                        accounts.Add(ParserHelper.Parse_ACCT(i, key));
+                        accounts.Add(ParserHelper.Parse_ACCT(i,
+                                                             folder == null ? encryptionKey : folder.EncryptionKey,
+                                                             folder));
                         break;
                     case "PRIK":
                         rsaKey = ParserHelper.Parse_PRIK(i, encryptionKey);
                         break;
                     case "SHAR":
-                        key = ParserHelper.Parse_SHAR(i, encryptionKey, rsaKey).EncryptionKey;
+                        folder = ParserHelper.Parse_SHAR(i, encryptionKey, rsaKey);
                         break;
                     }
                 }

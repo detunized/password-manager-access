@@ -24,7 +24,8 @@ namespace LastPass
             public byte[] Payload { get; private set; }
         }
 
-        public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey)
+        // TODO: Add a test for the folder case!
+        public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder = null)
         {
             Debug.Assert(chunk.Id == "ACCT");
 
@@ -39,6 +40,10 @@ namespace LastPass
                 SkipItem(reader);
                 var username = DecryptAes256(ReadItem(reader), encryptionKey);
                 var password = DecryptAes256(ReadItem(reader), encryptionKey);
+
+                // Override the group name with the shared folder name if any.
+                if (folder != null)
+                    group = folder.Name;
 
                 return new Account(id, name, username, password, url, group);
             });
