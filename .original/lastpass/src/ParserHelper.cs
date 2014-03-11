@@ -91,7 +91,7 @@ namespace LastPass
         }
 
         // TODO: Return a proper object!
-        // TODO: Write a test for this!
+        // TODO: Write a test for the RSA case!
         public static byte[] Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
         {
             Debug.Assert(chunk.Id == "SHAR");

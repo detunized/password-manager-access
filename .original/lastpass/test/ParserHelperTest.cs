@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using NUnit.Framework;
 
 namespace LastPass.Test
@@ -39,6 +40,23 @@ namespace LastPass.Test
             Assert.AreEqual(TestData.RsaModulus, rsa.Modulus);
             Assert.AreEqual(TestData.RsaP, rsa.P);
             Assert.AreEqual(TestData.RsaQ, rsa.Q);
+        }
+
+        [Test]
+        public void Parse_SHAR_returns_encryption_key_when_aes_encrypted()
+        {
+            var items = new [] {
+                MakeItem("skipped"),
+                MakeItem("rsa"),
+                MakeItem("skipped"),
+                MakeItem("skipped"),
+                MakeItem("skipped"),
+                MakeItem(EncryptAes256("key".ToBytes().ToHex(), TestData.EncryptionKey)),
+            };
+            var key = ParserHelper.Parse_SHAR(MakeChunk("SHAR", items),
+                                              TestData.EncryptionKey,
+                                              new RSAParameters());
+            Assert.AreEqual(key, "key".ToBytes());
         }
 
         [Test]
@@ -201,6 +219,10 @@ namespace LastPass.Test
                 Assert.AreEqual(i.Key, ParserHelper.DecryptAes256CbcBase64(i.Value.ToBytes(), _encryptionKey));
         }
 
+        //
+        // Helpers
+        //
+
         private static void WithBlob(Action<BinaryReader> action)
         {
             ParserHelper.WithBytes(TestData.Blob, action);
@@ -209,6 +231,46 @@ namespace LastPass.Test
         private static void WithHex(string hex, Action<BinaryReader> action)
         {
             ParserHelper.WithBytes(hex.DecodeHex(), action);
+        }
+
+        private static byte[] MakeItem(string payload)
+        {
+            return MakeItem(payload.ToBytes());
+        }
+
+        private static byte[] MakeItem(byte[] payload)
+        {
+            var sizeBits = BitConverter.GetBytes(payload.Length);
+            if (BitConverter.IsLittleEndian)
+                sizeBits = sizeBits.Reverse().ToArray();
+
+            return sizeBits.Concat(payload).ToArray();
+        }
+
+        private static ParserHelper.Chunk MakeChunk(string id, byte[][] items)
+        {
+            IEnumerable<IEnumerable<byte>> itemsAsEnumerable = items;
+            var chained = itemsAsEnumerable.Aggregate((chain, i) => chain.Concat(i));
+            return new ParserHelper.Chunk(id, chained.ToArray());
+        }
+
+        private static byte[] EncryptAes256(string data, byte[] encryptionKey)
+        {
+            return EncryptAes256(data.ToBytes(), encryptionKey);
+        }
+
+        private static byte[] EncryptAes256(byte[] data, byte[] encryptionKey)
+        {
+            using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.ECB })
+            using (var encryptor = aes.CreateEncryptor())
+            using (var encryptedStream = new MemoryStream())
+            using (var cryptoStream = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write))
+            {
+                cryptoStream.Write(data, 0, data.Length);
+                cryptoStream.FlushFinalBlock();
+
+                return encryptedStream.ToArray();
+            }
         }
 
         private static readonly byte[] _encryptionKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
