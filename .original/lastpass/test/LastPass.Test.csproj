@@ -54,6 +54,7 @@
     <Compile Include="FetcherTest-Login.cs" />
     <Compile Include="FetcherTest.cs" />
     <Compile Include="ParserHelperTest.cs" />
+    <Compile Include="SharedFolderTest.cs" />
     <Compile Include="VaultTest.cs" />
     <Compile Include="Pbkdf2Test.cs" />
     <Compile Include="TestData.cs" />

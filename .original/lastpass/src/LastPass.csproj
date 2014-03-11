@@ -51,6 +51,7 @@
     <Compile Include="ParserHelper.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Session.cs" />
+    <Compile Include="SharedFolder.cs" />
     <Compile Include="Vault.cs" />
     <Compile Include="WebClient.cs" />
   </ItemGroup>
