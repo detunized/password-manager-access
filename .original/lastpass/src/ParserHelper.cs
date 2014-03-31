@@ -104,7 +104,7 @@ namespace LastPass
             {
                 var id = ReadItem(reader).ToUtf8();
                 var rsaEncryptedFolderKey = ReadItem(reader);
-                var encrypted_name = ReadItem(reader);
+                var encryptedName = ReadItem(reader);
                 SkipItem(reader);
                 SkipItem(reader);
                 var aesEncryptedFolderKey = ReadItem(reader);
@@ -128,7 +128,7 @@ namespace LastPass
                     }
                 }
 
-                return new SharedFolder(id, DecryptAes256(encrypted_name, key), key);
+                return new SharedFolder(id, DecryptAes256(encryptedName, key), key);
             });
         }
 
