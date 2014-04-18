@@ -65,5 +65,11 @@ namespace LastPass
         {
             return Convert.FromBase64String(s);
         }
+
+        public static void Times(this int times, Action action)
+        {
+            for (var i = 0; i < times; ++i)
+                action();
+        }
     }
 }

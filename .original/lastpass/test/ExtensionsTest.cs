@@ -84,6 +84,18 @@ namespace LastPass.Test
             Assert.AreEqual(new byte[] {0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
         }
 
+        [Test]
+        public void Times()
+        {
+            var times = new int[] {0, 1, 2, 5, 10};
+            foreach (var i in times)
+            {
+                var called = 0;
+                i.Times(() => ++called);
+                Assert.AreEqual(i, called);
+            }
+        }
+
         private readonly string _helloUtf8 = "Hello, UTF-8!";
         private readonly byte[] _helloUtf8Bytes = new byte[] {
             0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x55, 0x54, 0x46, 0x2D, 0x38, 0x21
