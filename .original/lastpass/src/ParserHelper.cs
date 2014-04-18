@@ -132,6 +132,33 @@ namespace LastPass
             });
         }
 
+        public static void ParseSecureNoteServer(string notes, out string url, out string username, out string password)
+        {
+            url = "";
+            username = "";
+            password = "";
+
+            foreach (var i in notes.Split('\n'))
+            {
+                var keyValue = i.Split(new[] {':'}, 2);
+                if (keyValue.Length < 2)
+                    continue;
+
+                switch (keyValue[0])
+                {
+                case "Hostname":
+                    url = keyValue[1];
+                    break;
+                case "Username":
+                    username = keyValue[1];
+                    break;
+                case "Password":
+                    password = keyValue[1];
+                    break;
+                }
+            }
+        }
+
         public static List<Chunk> ExtractChunks(BinaryReader reader)
         {
             var chunks = new List<Chunk>();

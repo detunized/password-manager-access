@@ -77,6 +77,67 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void ParseSecureNoteServer_parses_all_parameters()
+        {
+            string url;
+            string username;
+            string password;
+            ParserHelper.ParseSecureNoteServer("Hostname:url\nUsername:username\nPassword:password",
+                                               out url,
+                                               out username,
+                                               out password);
+
+            Assert.AreEqual("url", url);
+            Assert.AreEqual("username", username);
+            Assert.AreEqual("password", password);
+        }
+
+        [Test]
+        public void ParseSecureNoteServer_handles_extra_colons()
+        {
+            string url;
+            string username;
+            string password;
+            ParserHelper.ParseSecureNoteServer("Hostname:url:url\nUsername:username:username\nPassword:password:password",
+                                               out url,
+                                               out username,
+                                               out password);
+
+            Assert.AreEqual("url:url", url);
+            Assert.AreEqual("username:username", username);
+            Assert.AreEqual("password:password", password);
+        }
+
+        [Test]
+        public void ParseSecureNoteServer_skips_invalid_lines()
+        {
+            string url;
+            string username;
+            string password;
+            ParserHelper.ParseSecureNoteServer("Hostname\nUsername:\n:\n::\n\n",
+                                               out url,
+                                               out username,
+                                               out password);
+
+            Assert.AreEqual("", url);
+            Assert.AreEqual("", username);
+            Assert.AreEqual("", password);
+        }
+
+        [Test]
+        public void ParseSecureNoteServer_initializes_output_parameters()
+        {
+            string url;
+            string username;
+            string password;
+            ParserHelper.ParseSecureNoteServer("", out url, out username, out password);
+
+            Assert.AreEqual("", url);
+            Assert.AreEqual("", username);
+            Assert.AreEqual("", password);
+        }
+
+        [Test]
         public void ReadChunk_returns_first_chunk()
         {
             WithBlob(reader => {
