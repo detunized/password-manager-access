@@ -24,22 +24,41 @@ namespace LastPass
             public byte[] Payload { get; private set; }
         }
 
+        // May return null when the chunk does not represent an account.
+        // All secure notes are ACCTs but not all of them strore account information.
+        //
         // TODO: Add a test for the folder case!
+        // TODO: Add a test case that covers secure note account!
         public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder = null)
         {
             Debug.Assert(chunk.Id == "ACCT");
 
             return WithBytes(chunk.Payload, reader =>
             {
+                // Read all items
                 var id = ReadItem(reader).ToUtf8();
                 var name = DecryptAes256(ReadItem(reader), encryptionKey);
                 var group = DecryptAes256(ReadItem(reader), encryptionKey);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
-                SkipItem(reader);
-                SkipItem(reader);
-                SkipItem(reader);
+                var notes = DecryptAes256(ReadItem(reader), encryptionKey);
+                2.Times(() => SkipItem(reader));
                 var username = DecryptAes256(ReadItem(reader), encryptionKey);
                 var password = DecryptAes256(ReadItem(reader), encryptionKey);
+                2.Times(() => SkipItem(reader));
+                var secureNoteMarker = ReadItem(reader).ToUtf8();
+
+                // Parse secure note
+                if (secureNoteMarker == "1")
+                {
+                    17.Times(() => SkipItem(reader));
+                    var secureNoteType = ReadItem(reader).ToUtf8();
+
+                    // Only the "server" secure note contains account information
+                    if (secureNoteType != "Server")
+                        return null;
+
+                    ParseSecureNoteServer(notes, out url, out username, out password);
+                }
 
                 // Override the group name with the shared folder name if any.
                 if (folder != null)

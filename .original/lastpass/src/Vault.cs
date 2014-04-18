@@ -41,9 +41,11 @@ namespace LastPass
                     switch (i.Id)
                     {
                     case "ACCT":
-                        accounts.Add(ParserHelper.Parse_ACCT(i,
-                                                             folder == null ? encryptionKey : folder.EncryptionKey,
-                                                             folder));
+                        var account = ParserHelper.Parse_ACCT(i,
+                                                              folder == null ? encryptionKey : folder.EncryptionKey,
+                                                              folder);
+                        if (account != null)
+                            accounts.Add(account);
                         break;
                     case "PRIK":
                         rsaKey = ParserHelper.Parse_PRIK(i, encryptionKey);
