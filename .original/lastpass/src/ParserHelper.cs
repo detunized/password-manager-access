@@ -87,8 +87,7 @@ namespace LastPass
 
             var enclosingSequence = Asn1.ParseItem(asn1EncodedKey);
             var anotherEnclosingSequence = WithBytes(enclosingSequence.Value, reader => {
-                Asn1.ExtractItem(reader);
-                Asn1.ExtractItem(reader);
+                2.Times(() => Asn1.ExtractItem(reader));
                 return Asn1.ExtractItem(reader);
             });
             var yetAnotherEnclosingSequence = Asn1.ParseItem(anotherEnclosingSequence.Value);
@@ -124,8 +123,7 @@ namespace LastPass
                 var id = ReadItem(reader).ToUtf8();
                 var rsaEncryptedFolderKey = ReadItem(reader);
                 var encryptedName = ReadItem(reader);
-                SkipItem(reader);
-                SkipItem(reader);
+                2.Times(() => SkipItem(reader));
                 var aesEncryptedFolderKey = ReadItem(reader);
 
                 byte[] key = null;
