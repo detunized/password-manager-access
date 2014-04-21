@@ -53,8 +53,8 @@ namespace LastPass
                     17.Times(() => SkipItem(reader));
                     var secureNoteType = ReadItem(reader).ToUtf8();
 
-                    // Only the "server" secure note contains account information
-                    if (secureNoteType != "Server")
+                    // Only the some secure notes contain account-like information
+                    if (!AllowedSecureNoteTypes.Contains(secureNoteType))
                         return null;
 
                     ParseSecureNoteServer(notes, out url, out username, out password);
@@ -312,5 +312,13 @@ namespace LastPass
             using (var reader = new BinaryReader(stream))
                 return action(reader);
         }
+
+        private static readonly HashSet<string> AllowedSecureNoteTypes = new HashSet<string>
+        {
+            "Server",
+            "Email Account",
+            "Database",
+            "Instant Messenger",
+        };
     }
 }
