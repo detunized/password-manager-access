@@ -52,7 +52,7 @@ namespace LastPass.Test
             var items = new[] {
                 MakeItem(id),
                 MakeItem("rsa"),
-                MakeItem(EncryptAes256(name, key)),
+                MakeItem(Encode64(EncryptAes256(name, key))),
                 MakeItem("skipped"),
                 MakeItem("skipped"),
                 MakeItem(EncryptAes256(key.ToHex(), TestData.EncryptionKey)),
@@ -347,6 +347,11 @@ namespace LastPass.Test
             IEnumerable<IEnumerable<byte>> itemsAsEnumerable = items;
             var chained = itemsAsEnumerable.Aggregate((chain, i) => chain.Concat(i));
             return new ParserHelper.Chunk(id, chained.ToArray());
+        }
+
+        private static string Encode64(byte[] data)
+        {
+            return Convert.ToBase64String(data);
         }
 
         private static byte[] EncryptAes256(string data, byte[] encryptionKey)

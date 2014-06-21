@@ -37,13 +37,13 @@ namespace LastPass
             {
                 // Read all items
                 var id = ReadItem(reader).ToUtf8();
-                var name = DecryptAes256(ReadItem(reader), encryptionKey);
-                var group = DecryptAes256(ReadItem(reader), encryptionKey);
+                var name = DecryptAes256Plain(ReadItem(reader), encryptionKey);
+                var group = DecryptAes256Plain(ReadItem(reader), encryptionKey);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
-                var notes = DecryptAes256(ReadItem(reader), encryptionKey);
+                var notes = DecryptAes256Plain(ReadItem(reader), encryptionKey);
                 2.Times(() => SkipItem(reader));
-                var username = DecryptAes256(ReadItem(reader), encryptionKey);
-                var password = DecryptAes256(ReadItem(reader), encryptionKey);
+                var username = DecryptAes256Plain(ReadItem(reader), encryptionKey);
+                var password = DecryptAes256Plain(ReadItem(reader), encryptionKey);
                 2.Times(() => SkipItem(reader));
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
@@ -132,7 +132,7 @@ namespace LastPass
                 // where it's only AES encrypted with the regular encryption key.
                 if (aesEncryptedFolderKey.Length > 0)
                 {
-                    key = DecryptAes256(aesEncryptedFolderKey, encryptionKey).DecodeHex();
+                    key = DecryptAes256Plain(aesEncryptedFolderKey, encryptionKey).DecodeHex();
                 }
                 else
                 {
@@ -145,7 +145,7 @@ namespace LastPass
                     }
                 }
 
-                return new SharedFolder(id, DecryptAes256(encryptedName, key), key);
+                return new SharedFolder(id, DecryptAes256Base64(encryptedName, key), key);
             });
         }
 
@@ -228,26 +228,6 @@ namespace LastPass
         public static byte[] ReadPayload(BinaryReader reader, uint size)
         {
             return reader.ReadBytes((int)size);
-        }
-
-        public static string DecryptAes256(byte[] data, byte[] encryptionKey)
-        {
-            var length = data.Length;
-            var length16 = length % 16;
-            var length64 = length % 64;
-
-            if (length == 0)
-                return "";
-            else if (length16 == 0)
-                return DecryptAes256EcbPlain(data, encryptionKey);
-            else if (length64 == 0 || length64 == 24 || length64 == 44)
-                return DecryptAes256EcbBase64(data, encryptionKey);
-            else if (length16 == 1)
-                return DecryptAes256CbcPlain(data, encryptionKey);
-            else if (length64 == 6 || length64 == 26 || length64 == 50)
-                return DecryptAes256CbcBase64(data, encryptionKey);
-
-            throw new ArgumentException("Input doesn't seem to be AES-256 encrypted");
         }
 
         public static string DecryptAes256Plain(byte[] data, byte[] encryptionKey)
