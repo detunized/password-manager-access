@@ -23,7 +23,7 @@ using LastPass;
 
 var vault = Vault.Create(username, password);
 foreach (var i in vault.Accounts)
-    Console.WriteLine("{0}:, {1}, {2}", i.Name, i.Username, i.Password);
+    Console.WriteLine("{0}: {1}, {2}", i.Name, i.Username, i.Password);
 ```
 
 The blob received from LastPass could be safely stored locally (it's well
