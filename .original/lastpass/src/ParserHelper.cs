@@ -250,6 +250,30 @@ namespace LastPass
             throw new ArgumentException("Input doesn't seem to be AES-256 encrypted");
         }
 
+        public static string DecryptAes256Plain(byte[] data, byte[] encryptionKey)
+        {
+            var length = data.Length;
+
+            if (length == 0)
+                return "";
+            else if (data[0] == '!' && length % 16 == 1 && length > 32)
+                return DecryptAes256CbcPlain(data, encryptionKey);
+            else
+                return DecryptAes256EcbPlain(data, encryptionKey);
+        }
+
+        public static string DecryptAes256Base64(byte[] data, byte[] encryptionKey)
+        {
+            var length = data.Length;
+
+            if (length == 0)
+                return "";
+            else if (data[0] == '!')
+                return DecryptAes256CbcBase64(data, encryptionKey);
+            else
+                return DecryptAes256EcbBase64(data, encryptionKey);
+        }
+
         public static string DecryptAes256EcbPlain(byte[] data, byte[] encryptionKey)
         {
             return DecryptAes256(data, encryptionKey, CipherMode.ECB);

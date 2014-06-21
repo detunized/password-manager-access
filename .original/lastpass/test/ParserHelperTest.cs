@@ -237,6 +237,32 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void DecryptAes256Plain()
+        {
+            var tests = new[,] {
+                {"", ""},
+                {"All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM="},
+                {"All your base are belong to us", "IcokDWmjOkKtLpZehWKL6666Uj6fNXPpX6lLWlou+1Lrwb+D3ymP6BAwd6C0TB3hSA=="}
+            };
+
+            for (var i = 0; i < tests.Rank; ++i)
+                Assert.AreEqual(tests[i, 0], ParserHelper.DecryptAes256Plain(tests[i, 1].Decode64(), _encryptionKey));
+        }
+
+        [Test]
+        public void DecryptAes256Base64()
+        {
+            var tests = new[,] {
+                {"", ""},
+                {"All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM="},
+                {"All your base are belong to us", "!YFuiAVZgOD2K+s6y8yaMOw==|TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI="}
+            };
+
+            for (var i = 0; i < tests.Rank; ++i)
+                Assert.AreEqual(tests[i, 0], ParserHelper.DecryptAes256Base64(tests[i, 1].ToBytes(), _encryptionKey));
+        }
+
+        [Test]
         public void DecryptAes256EcbPlain()
         {
             var tests = new Dictionary<string, string> {
