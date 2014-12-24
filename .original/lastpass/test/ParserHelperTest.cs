@@ -79,14 +79,17 @@ namespace LastPass.Test
         [Test]
         public void ParseSecureNoteServer_parses_all_parameters()
         {
-            string url;
-            string username;
-            string password;
-            ParserHelper.ParseSecureNoteServer("Hostname:url\nUsername:username\nPassword:password",
-                                               out url,
-                                               out username,
-                                               out password);
+            string type = "";
+            string url = "";
+            string username = "";
+            string password = "";
+            ParserHelper.ParseSecureNoteServer("NoteType:type\nHostname:url\nUsername:username\nPassword:password",
+                                               ref type,
+                                               ref url,
+                                               ref username,
+                                               ref password);
 
+            Assert.AreEqual("type", type);
             Assert.AreEqual("url", url);
             Assert.AreEqual("username", username);
             Assert.AreEqual("password", password);
@@ -95,14 +98,17 @@ namespace LastPass.Test
         [Test]
         public void ParseSecureNoteServer_handles_extra_colons()
         {
-            string url;
-            string username;
-            string password;
-            ParserHelper.ParseSecureNoteServer("Hostname:url:url\nUsername:username:username\nPassword:password:password",
-                                               out url,
-                                               out username,
-                                               out password);
+            string type = "";
+            string url = "";
+            string username = "";
+            string password = "";
+            ParserHelper.ParseSecureNoteServer("NoteType:type:type\nHostname:url:url\nUsername:username:username\nPassword:password:password",
+                                               ref type,
+                                               ref url,
+                                               ref username,
+                                               ref password);
 
+            Assert.AreEqual("type:type", type);
             Assert.AreEqual("url:url", url);
             Assert.AreEqual("username:username", username);
             Assert.AreEqual("password:password", password);
@@ -111,30 +117,35 @@ namespace LastPass.Test
         [Test]
         public void ParseSecureNoteServer_skips_invalid_lines()
         {
-            string url;
-            string username;
-            string password;
-            ParserHelper.ParseSecureNoteServer("Hostname\nUsername:\n:\n::\n\n",
-                                               out url,
-                                               out username,
-                                               out password);
+            string type = "";
+            string url = "";
+            string username = "";
+            string password = "";
+            ParserHelper.ParseSecureNoteServer("Something:Else\nHostname\nUsername:\n:\n::\n\n",
+                                               ref type,
+                                               ref url,
+                                               ref username,
+                                               ref password);
 
+            Assert.AreEqual("", type);
             Assert.AreEqual("", url);
             Assert.AreEqual("", username);
             Assert.AreEqual("", password);
         }
 
         [Test]
-        public void ParseSecureNoteServer_initializes_output_parameters()
+        public void ParseSecureNoteServer_does_not_modify_missing_parameters()
         {
-            string url;
-            string username;
-            string password;
-            ParserHelper.ParseSecureNoteServer("", out url, out username, out password);
+            string type = "type";
+            string url = "url";
+            string username = "username";
+            string password = "password";
+            ParserHelper.ParseSecureNoteServer("", ref type, ref url, ref username, ref password);
 
-            Assert.AreEqual("", url);
-            Assert.AreEqual("", username);
-            Assert.AreEqual("", password);
+            Assert.AreEqual("type", type);
+            Assert.AreEqual("url", url);
+            Assert.AreEqual("username", username);
+            Assert.AreEqual("password", password);
         }
 
         [Test]

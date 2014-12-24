@@ -50,14 +50,12 @@ namespace LastPass
                 // Parse secure note
                 if (secureNoteMarker == "1")
                 {
-                    17.Times(() => SkipItem(reader));
-                    var secureNoteType = ReadItem(reader).ToUtf8();
+                    var type = "";
+                    ParseSecureNoteServer(notes, ref type, ref url, ref username, ref password);
 
                     // Only the some secure notes contain account-like information
-                    if (!AllowedSecureNoteTypes.Contains(secureNoteType))
+                    if (!AllowedSecureNoteTypes.Contains(type))
                         return null;
-
-                    ParseSecureNoteServer(notes, out url, out username, out password);
                 }
 
                 // Override the group name with the shared folder name if any.
@@ -149,12 +147,12 @@ namespace LastPass
             });
         }
 
-        public static void ParseSecureNoteServer(string notes, out string url, out string username, out string password)
+        public static void ParseSecureNoteServer(string notes,
+                                                 ref string type,
+                                                 ref string url,
+                                                 ref string username,
+                                                 ref string password)
         {
-            url = "";
-            username = "";
-            password = "";
-
             foreach (var i in notes.Split('\n'))
             {
                 var keyValue = i.Split(new[] {':'}, 2);
@@ -163,6 +161,9 @@ namespace LastPass
 
                 switch (keyValue[0])
                 {
+                case "NoteType":
+                    type = keyValue[1];
+                    break;
                 case "Hostname":
                     url = keyValue[1];
                     break;
