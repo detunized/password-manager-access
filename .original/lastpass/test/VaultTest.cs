@@ -21,7 +21,7 @@ namespace LastPass.Test
         [Test]
         public void Create_throws_on_truncated_blob()
         {
-            var tests = new[] {1, 10, 100, 1000};
+            var tests = new[] {1, 2, 3, 4, 5, 10, 100, 1000};
             foreach (var i in tests)
             {
                 var e = Assert.Throws<ParseException>(() => Vault.Create(

@@ -180,8 +180,15 @@ namespace LastPass
         public static List<Chunk> ExtractChunks(BinaryReader reader)
         {
             var chunks = new List<Chunk>();
-            while (reader.BaseStream.Position < reader.BaseStream.Length)
-                chunks.Add(ReadChunk(reader));
+            try
+            {
+                while (reader.BaseStream.Position < reader.BaseStream.Length)
+                    chunks.Add(ReadChunk(reader));
+            }
+            catch (EndOfStreamException e)
+            {
+                // In case the stream is truncated we just ignore the incomplete chunk.
+            }
 
             return chunks;
         }
