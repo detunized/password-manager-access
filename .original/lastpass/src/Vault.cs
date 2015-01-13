@@ -31,15 +31,28 @@ namespace LastPass
         {
             ParserHelper.WithBytes(blob.Bytes, reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
-                var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
+                if (!IsComplete(chunks))
+                    throw new ParseException(ParseException.FailureReason.CorruptedBlob, "Blob is truncated");
 
-                SharedFolder folder = null;
-                var rsaKey = new RSAParameters();
+                Accounts = ParseAccounts(chunks, encryptionKey);
+            });
+        }
 
-                foreach (var i in chunks)
+        private bool IsComplete(List<ParserHelper.Chunk> chunks)
+        {
+            return chunks.Count > 0 && chunks.Last().Id == "ENDM" && chunks.Last().Payload.SequenceEqual("OK".ToBytes());
+        }
+
+        private Account[] ParseAccounts(List<ParserHelper.Chunk> chunks, byte[] encryptionKey)
+        {
+            var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
+            SharedFolder folder = null;
+            var rsaKey = new RSAParameters();
+
+            foreach (var i in chunks)
+            {
+                switch (i.Id)
                 {
-                    switch (i.Id)
-                    {
                     case "ACCT":
                         var account = ParserHelper.Parse_ACCT(i,
                                                               folder == null ? encryptionKey : folder.EncryptionKey,
@@ -53,11 +66,10 @@ namespace LastPass
                     case "SHAR":
                         folder = ParserHelper.Parse_SHAR(i, encryptionKey, rsaKey);
                         break;
-                    }
                 }
+            }
 
-                Accounts = accounts.ToArray();
-            });
+            return accounts.ToArray();
         }
 
         public Account[] Accounts { get; private set; }
