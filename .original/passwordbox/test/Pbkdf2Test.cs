@@ -44,12 +44,6 @@ namespace PasswordBox.Test
                 var expected = i.Expected.Decode64();
                 Assert.AreEqual(expected,
                                 Pbkdf2.Generate(i.Password, i.Salt, i.IterationCount, expected.Length));
-                Assert.AreEqual(expected,
-                                Pbkdf2.Generate(i.Password.ToBytes(), i.Salt, i.IterationCount, expected.Length));
-                Assert.AreEqual(expected,
-                                Pbkdf2.Generate(i.Password, i.Salt.ToBytes(), i.IterationCount, expected.Length));
-                Assert.AreEqual(expected,
-                                Pbkdf2.Generate(i.Password.ToBytes(), i.Salt.ToBytes(), i.IterationCount, expected.Length));
             }
         }
 

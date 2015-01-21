@@ -10,21 +10,6 @@ namespace PasswordBox
     {
         public static byte[] Generate(string password, string salt, int iterationCount, int byteCount)
         {
-            return Generate(password.ToBytes(), salt.ToBytes(), iterationCount, byteCount);
-        }
-
-        public static byte[] Generate(string password, byte[] salt, int iterationCount, int byteCount)
-        {
-            return Generate(password.ToBytes(), salt, iterationCount, byteCount);
-        }
-
-        public static byte[] Generate(byte[] password, string salt, int iterationCount, int byteCount)
-        {
-            return Generate(password, salt.ToBytes(), iterationCount, byteCount);
-        }
-
-        public static byte[] Generate(byte[] password, byte[] salt, int iterationCount, int byteCount)
-        {
             if (iterationCount <= 0)
                 throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be positive");
 
@@ -33,12 +18,12 @@ namespace PasswordBox
 
             using (var hmac = new HMACSHA256())
             {
-                hmac.Key = password;
+                hmac.Key = password.ToBytes();
 
                 // Prepare hash input (salt + block index)
                 var hashInputSize = salt.Length + 4;
                 var hashInput = new byte[hashInputSize];
-                salt.CopyTo(hashInput, 0);
+                salt.ToBytes().CopyTo(hashInput, 0);
                 hashInput[hashInputSize - 4] = 0;
                 hashInput[hashInputSize - 3] = 0;
                 hashInput[hashInputSize - 2] = 0;
