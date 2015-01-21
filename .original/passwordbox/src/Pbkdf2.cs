@@ -8,6 +8,11 @@ namespace PasswordBox
 {
     static class Pbkdf2
     {
+        public static byte[] GenerateSha1(string password, string salt, int iterationCount, int byteCount)
+        {
+            return Generate<HMACSHA1>(password, salt, iterationCount, byteCount);
+        }
+
         public static byte[] GenerateSha256(string password, string salt, int iterationCount, int byteCount)
         {
             return Generate<HMACSHA256>(password, salt, iterationCount, byteCount);
