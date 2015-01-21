@@ -1,5 +1,5 @@
-LastPass C# API
-===============
+PasswordBox C# API
+==================
 
 **This is unofficial PasswordBox API.**
 
