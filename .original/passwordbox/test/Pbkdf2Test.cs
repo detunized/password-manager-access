@@ -41,11 +41,11 @@ namespace PasswordBox.Test
         private readonly TestData[] _testDataSha256 =
         {
             new TestData("password", "salt", 1, ""),
-            new TestData("password", "salt", 1, "Eg+2z/z4syxD5yJSVsT4N6hlSMkszDVICAWYfLcL4Xs="),
-            new TestData("password", "salt", 2, "rk0Mla9rRtMtCt/5KPBt0CowP47zwlHf1uLYWpVHTEM="),
-            new TestData("password", "salt", 4096, "xeR41ZKIyEGqUw22hFxMjZYok6ABzk4RpJY4c6qYE0o="),
-            new TestData("passwordPASSWORDpassword", "saltSALTsaltSALTsaltSALTsaltSALTsalt", 4096, "NIyJ28vTKy8y2BS4EW6EzysXNH68GAAYHE4qH7jdU+HGNVGMfaxH6Q=="),
-            new TestData("pass\0word", "sa\0lt", 4096, "ibadBRb4KYk8aWImZQqGhw==")
+            new TestData("password", "salt", 1, "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b"),
+            new TestData("password", "salt", 2, "ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43"),
+            new TestData("password", "salt", 4096, "c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a"),
+            new TestData("passwordPASSWORDpassword", "saltSALTsaltSALTsaltSALTsaltSALTsalt", 4096, "348c89dbcbd32b2f32d814b8116e84cf2b17347ebc1800181c4e2a1fb8dd53e1c635518c7dac47e9"),
+            new TestData("pass\0word", "sa\0lt", 4096, "89b69d0516f829893c696226650a8687")
         };
 
         [Test]
@@ -66,7 +66,7 @@ namespace PasswordBox.Test
         {
             foreach (var i in _testDataSha256)
             {
-                var expected = i.Expected.Decode64();
+                var expected = i.Expected.DecodeHex();
                 Assert.AreEqual(expected,
                                 Pbkdf2.GenerateSha256(i.Password, i.Salt, i.IterationCount, expected.Length));
                 Assert.AreEqual(expected,
