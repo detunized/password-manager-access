@@ -1,3 +1,6 @@
+// Copyright (C) 2015 Dmitry Yakimenko (detunized@gmail.com).
+// Licensed under the terms of the MIT license. See LICENCE for details.
+
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -34,3 +37,5 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
+
+[assembly: InternalsVisibleTo("PasswordBox.Test")]
