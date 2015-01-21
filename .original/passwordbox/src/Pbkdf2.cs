@@ -8,7 +8,12 @@ namespace PasswordBox
 {
     static class Pbkdf2
     {
-        public static byte[] Generate(string password, string salt, int iterationCount, int byteCount)
+        public static byte[] GenerateSha256(string password, string salt, int iterationCount, int byteCount)
+        {
+            return Generate<HMACSHA256>(password, salt, iterationCount, byteCount);
+        }
+
+        public static byte[] Generate<T>(string password, string salt, int iterationCount, int byteCount) where T: HMAC, new ()
         {
             if (iterationCount <= 0)
                 throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be positive");
@@ -16,7 +21,7 @@ namespace PasswordBox
             if (byteCount < 0)
                 throw new ArgumentOutOfRangeException("byteCount", "Byte count should be nonnegative");
 
-            using (var hmac = new HMACSHA256())
+            using (var hmac = new T())
             {
                 hmac.Key = password.ToBytes();
 

@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Security.Cryptography;
 using NUnit.Framework;
 
 namespace PasswordBox.Test
@@ -37,35 +38,37 @@ namespace PasswordBox.Test
         };
 
         [Test]
-        public void Generate_returns_correct_result()
+        public void GenerateSha256_returns_correct_result()
         {
             foreach (var i in _testData)
             {
                 var expected = i.Expected.Decode64();
                 Assert.AreEqual(expected,
-                                Pbkdf2.Generate(i.Password, i.Salt, i.IterationCount, expected.Length));
+                                Pbkdf2.GenerateSha256(i.Password, i.Salt, i.IterationCount, expected.Length));
+                Assert.AreEqual(expected,
+                                Pbkdf2.Generate<HMACSHA256>(i.Password, i.Salt, i.IterationCount, expected.Length));
             }
         }
 
         [Test]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
-        public void Generate_throws_on_zero_iterationCount()
+        public void GenerateSha256_throws_on_zero_iterationCount()
         {
-            Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, 0, _testData[0].Expected.Decode64().Length);
+            Pbkdf2.GenerateSha256(_testData[0].Password, _testData[0].Salt, 0, _testData[0].Expected.Decode64().Length);
         }
 
         [Test]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
-        public void Generate_throws_on_negative_iterationCount()
+        public void GenerateSha256_throws_on_negative_iterationCount()
         {
-            Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, -1, _testData[0].Expected.Decode64().Length);
+            Pbkdf2.GenerateSha256(_testData[0].Password, _testData[0].Salt, -1, _testData[0].Expected.Decode64().Length);
         }
 
         [Test]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Byte count should be nonnegative\r\nParameter name: byteCount")]
-        public void Generate_throws_on_negative_byteCount()
+        public void GenerateSha256_throws_on_negative_byteCount()
         {
-            Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, _testData[0].IterationCount, -1);
+            Pbkdf2.GenerateSha256(_testData[0].Password, _testData[0].Salt, _testData[0].IterationCount, -1);
         }
     }
 }
