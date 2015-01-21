@@ -12,7 +12,7 @@ namespace LastPass.Test
     partial class FetcherTest
     {
         //
-        // Data shader between Login and Fetcher tests
+        // Data shared between Login and Fetcher tests
         //
 
         private const int IterationCount = 5000;
