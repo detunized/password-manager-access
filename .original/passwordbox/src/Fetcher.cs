@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace PasswordBox
 {
-    class Fetcher
+    public class Fetcher
     {
         public static Session Login(string username, string password)
         {

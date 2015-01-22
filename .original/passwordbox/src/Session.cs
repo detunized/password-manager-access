@@ -3,7 +3,7 @@
 
 namespace PasswordBox
 {
-    class Session
+    public class Session
     {
         public Session(string id)
         {
