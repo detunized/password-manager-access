@@ -18,8 +18,8 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
-            Console.WriteLine("Username: {0}", username);
-            Console.WriteLine("Password: {0}", password);
+            var session = Fetcher.Login(username, password);
+            Console.WriteLine("Session ID: {0}", session.Id);
         }
     }
 }
