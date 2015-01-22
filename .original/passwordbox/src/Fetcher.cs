@@ -64,11 +64,34 @@ namespace PasswordBox
             public readonly string EncryptedKey = null;
         }
 
+        [DataContract]
+        internal class DerivationRules
+        {
+            public DerivationRules(int clientIterationCount, int serverIterationCount)
+            {
+                ClientIterationCount = clientIterationCount;
+                ServerIterationCount = serverIterationCount;
+            }
+
+            [DataMember(Name = "client_iterations")]
+            public readonly int ClientIterationCount = 0;
+
+            [DataMember(Name = "iterations")]
+            public readonly int ServerIterationCount = 1;
+        }
+
         internal static LoginResponse ParseResponseJson(string json)
         {
             var s = new DataContractJsonSerializer(typeof(LoginResponse));
             using (var stream = new MemoryStream(json.ToBytes(), false))
                 return (LoginResponse)s.ReadObject(stream);
+        }
+
+        internal static DerivationRules ParseDerivationRulesJson(string json)
+        {
+            var s = new DataContractJsonSerializer(typeof(DerivationRules));
+            using (var stream = new MemoryStream(json.ToBytes(), false))
+                return (DerivationRules)s.ReadObject(stream);
         }
 
         internal static string ParseEncryptionKey(LoginResponse loginResponse, string password)

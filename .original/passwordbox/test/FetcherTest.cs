@@ -112,6 +112,14 @@ namespace PasswordBox.Test
             Fetcher.ParseEncryptionKey(response, Password);
         }
 
+        [Test]
+        public void ParseDerivationRulesJson_returns_correct_result()
+        {
+            var parsed = Fetcher.ParseDerivationRulesJson(DerivationRules);
+            Assert.AreEqual(500, parsed.ClientIterationCount);
+            Assert.AreEqual(9498, parsed.ServerIterationCount);
+        }
+
         //
         // Helpers
         //
