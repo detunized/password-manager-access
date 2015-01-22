@@ -1,4 +1,7 @@
 /.nuget/NuGet.exe
+/example/bin/
+/example/obj/
+/example/credentials.txt
 /packages/
 /src/bin/
 /src/obj/
