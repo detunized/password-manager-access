@@ -11,5 +11,6 @@ namespace PasswordBox
         byte[] UploadValues(string address, NameValueCollection data);
         byte[] DownloadData(string address);
         WebHeaderCollection Headers { get; }
+        WebHeaderCollection ResponseHeaders { get; }
     }
 }
