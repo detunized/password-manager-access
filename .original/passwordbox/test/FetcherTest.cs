@@ -24,11 +24,19 @@ namespace PasswordBox.Test
             };
 
         private const string Salt = "1095d8447adfdba215ea3dfd7dbf029cc8cf09c6fade18c76a356c908f48175b";
+        private const string DerivationRules = @"{""client_iterations"": ""500"", ""iterations"": ""9498""}";
+        private const string EncryptedKek = "AAR6fDOLfXJKRxiYYhm4u/OgQw3tIWtPUFutlF55RgshUagCtR3WXiZGG52m" +
+                                            "2RutxUrKcrJj7ZdTHVWukvYH2MveKbKuljwVv0zWnSwHqQSf0aRzJhyl0JWB";
 
-        private static readonly string ValidResponseJson = string.Format(@"
-        {{
-            ""salt"": ""{0}""
-        }}", Salt);
+        private static readonly string ValidResponseJson = string.Format(
+            @"{{
+                ""salt"":  ""{0}"",
+                ""dr"":    ""{1}"",
+                ""k_kek"": ""{2}""
+            }}",
+            Salt,
+            DerivationRules.Replace("\"", "\\\""), // Quotes have to be escaped before they are inserted into JSON
+            EncryptedKek);
 
         [Test]
         public void Login_returns_valid_session()
@@ -75,6 +83,8 @@ namespace PasswordBox.Test
         {
             var parsed = Fetcher.ParseResponseJson(ValidResponseJson);
             Assert.AreEqual(Salt, parsed.Salt);
+            Assert.AreEqual(DerivationRules, parsed.DerivationRulesJson);
+            Assert.AreEqual(EncryptedKek, parsed.EncryptedKey);
         }
 
         //

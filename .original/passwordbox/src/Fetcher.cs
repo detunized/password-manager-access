@@ -48,6 +48,12 @@ namespace PasswordBox
         {
             [DataMember(Name = "salt")]
             public readonly string Salt = null;
+
+            [DataMember(Name = "dr")]
+            public readonly string DerivationRulesJson = null;
+
+            [DataMember(Name = "k_kek")]
+            public readonly string EncryptedKey = null;
         }
 
         internal static LoginResponse ParseResponseJson(string json)
