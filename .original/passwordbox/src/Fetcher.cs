@@ -1,6 +1,7 @@
 // Copyright (C) 2015 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Specialized;
 using System.Security.Cryptography;
 
 namespace PasswordBox
@@ -15,6 +16,15 @@ namespace PasswordBox
 
         public static Session Login(string username, string password, IWebClient webClient)
         {
+            var parameters = new NameValueCollection
+                {
+                    {"member[email]", username},
+                    {"member[password]", ComputePasswordHash(username, password)},
+                };
+
+            var response = webClient.UploadValues("https://api0.passwordbox.com/api/0/api_login.json",
+                                                  parameters);
+
             return new Session("");
         }
 

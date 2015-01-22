@@ -1,6 +1,8 @@
 // Copyright (C) 2015 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Specialized;
+using System.Linq;
 using Moq;
 using NUnit.Framework;
 
@@ -9,14 +11,37 @@ namespace PasswordBox.Test
     [TestFixture]
     class FetcherTest
     {
+        // Test data is generated with the PasswordBox JavaScript sources
         private const string Username = "username";
         private const string Password = "password";
+        private const string PasswordHash = "bb5eeb368dd3d7ba5ab371c76ba5073e0a91f55697b81790bb34846d3e25f8e4";
+        private const string LoginUrl = "https://api0.passwordbox.com/api/0/api_login.json";
+
+        private static readonly NameValueCollection ExpectedLoginRequestValues = new NameValueCollection
+            {
+                {"member[email]", Username},
+                {"member[password]", PasswordHash},
+            };
 
         [Test]
         public void Login_returns_valid_session()
         {
             var webClient = new Mock<IWebClient>();
             var session = Fetcher.Login(Username, Password, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(
+                    It.Is<string>(s => s == LoginUrl),
+                    It.IsAny<NameValueCollection>()),
+                Times.Once(),
+                string.Format("Did not see a POST request made to the login URL ({0})", LoginUrl));
+
+            webClient.Verify(
+                x => x.UploadValues(
+                    It.IsAny<string>(),
+                    It.Is<NameValueCollection>(v => AreEqual(v, ExpectedLoginRequestValues))),
+                Times.Once(),
+                "Did not see a POST request made with the correct parameters");
 
             Assert.NotNull(session);
             Assert.AreEqual("", session.Id);
@@ -26,8 +51,8 @@ namespace PasswordBox.Test
         public void ComputePasswordHash_returns_correct_result()
         {
             // Test data is generated with the PasswordBox JavaScript sources
-            var hash = Fetcher.ComputePasswordHash("username", "password");
-            Assert.AreEqual("bb5eeb368dd3d7ba5ab371c76ba5073e0a91f55697b81790bb34846d3e25f8e4", hash);
+            var hash = Fetcher.ComputePasswordHash(Username, Password);
+            Assert.AreEqual(PasswordHash, hash);
         }
 
         [Test]
@@ -36,6 +61,16 @@ namespace PasswordBox.Test
             // Test data is from http://www.nsrl.nist.gov/testdata/
             var hash = Fetcher.Sha1Hex("abc");
             Assert.AreEqual("a9993e364706816aba3e25717850c26c9cd0d89d", hash);
+        }
+
+        //
+        // Helpers
+        //
+
+        private static bool AreEqual(NameValueCollection a, NameValueCollection b)
+        {
+            return a.AllKeys.OrderBy(s => s).SequenceEqual(b.AllKeys.OrderBy(s => s)) &&
+                   a.AllKeys.All(s => a[s] == b[s]);
         }
     }
 }
