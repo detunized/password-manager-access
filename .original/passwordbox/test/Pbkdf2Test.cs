@@ -3,6 +3,7 @@
 
 using System;
 using System.Security.Cryptography;
+using Moq;
 using NUnit.Framework;
 
 namespace PasswordBox.Test
@@ -76,44 +77,36 @@ namespace PasswordBox.Test
 
         [Test]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
-        public void GenerateSha1_throws_on_zero_iterationCount()
+        public void Generate_throws_on_zero_iterationCount()
         {
-            Pbkdf2.GenerateSha1("password", "salt", 0, 32);
+            Generate(0, 32);
         }
 
         [Test]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
-        public void GenerateSha1_throws_on_negative_iterationCount()
+        public void Generate_throws_on_negative_iterationCount()
         {
-            Pbkdf2.GenerateSha1("password", "salt", -1, 32);
+            Generate(-1, 32);
         }
 
         [Test]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Byte count should be nonnegative\r\nParameter name: byteCount")]
-        public void GenerateSha1_throws_on_negative_byteCount()
+        public void Generate_throws_on_negative_byteCount()
         {
-            Pbkdf2.GenerateSha1("password", "salt", 1, -1);
+            Generate(1, -1);
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
-        public void GenerateSha256_throws_on_zero_iterationCount()
+        //
+        // Helpers
+        //
+
+        private class NoopHmac: HMAC
         {
-            Pbkdf2.GenerateSha256("password", "salt", 0, 32);
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
-        public void GenerateSha256_throws_on_negative_iterationCount()
+        private void Generate(int iterationCount, int byteCount)
         {
-            Pbkdf2.GenerateSha256("password", "salt", -1, 32);
-        }
-
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Byte count should be nonnegative\r\nParameter name: byteCount")]
-        public void GenerateSha256_throws_on_negative_byteCount()
-        {
-            Pbkdf2.GenerateSha1("password", "salt", 1, -1);
+            Pbkdf2.Generate<NoopHmac>("password", "salt", iterationCount, byteCount);
         }
     }
 }
