@@ -1,6 +1,7 @@
 // Copyright (C) 2015 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Security.Cryptography;
@@ -46,6 +47,13 @@ namespace PasswordBox
         [DataContract]
         internal class LoginResponse
         {
+            public LoginResponse(string salt, string derivationRulesJson, string encryptedKey)
+            {
+                Salt = salt;
+                DerivationRulesJson = derivationRulesJson;
+                EncryptedKey = encryptedKey;
+            }
+
             [DataMember(Name = "salt")]
             public readonly string Salt = null;
 
@@ -61,6 +69,15 @@ namespace PasswordBox
             var s = new DataContractJsonSerializer(typeof(LoginResponse));
             using (var stream = new MemoryStream(json.ToBytes(), false))
                 return (LoginResponse)s.ReadObject(stream);
+        }
+
+        internal static string ParseEncryptionKey(LoginResponse loginResponse, string password)
+        {
+            var salt = loginResponse.Salt;
+            if (salt == null || salt.Length < 32)
+                throw new Exception("Legacy user is not supported"); // TODO: Use custom exception!
+
+            return "";
         }
     }
 }

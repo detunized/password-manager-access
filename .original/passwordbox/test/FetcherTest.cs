@@ -1,6 +1,7 @@
 // Copyright (C) 2015 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Specialized;
 using System.Linq;
 using Moq;
@@ -25,10 +26,10 @@ namespace PasswordBox.Test
 
         private const string Salt = "1095d8447adfdba215ea3dfd7dbf029cc8cf09c6fade18c76a356c908f48175b";
         private const string DerivationRules = @"{""client_iterations"": ""500"", ""iterations"": ""9498""}";
-        private const string EncryptedKek = "AAR6fDOLfXJKRxiYYhm4u/OgQw3tIWtPUFutlF55RgshUagCtR3WXiZGG52m" +
+        private const string EncryptedKey = "AAR6fDOLfXJKRxiYYhm4u/OgQw3tIWtPUFutlF55RgshUagCtR3WXiZGG52m" +
                                             "2RutxUrKcrJj7ZdTHVWukvYH2MveKbKuljwVv0zWnSwHqQSf0aRzJhyl0JWB";
 
-        private static readonly string ValidResponseJson = string.Format(
+        private static readonly string ValidLoginResponseJson = string.Format(
             @"{{
                 ""salt"":  ""{0}"",
                 ""dr"":    ""{1}"",
@@ -36,7 +37,7 @@ namespace PasswordBox.Test
             }}",
             Salt,
             DerivationRules.Replace("\"", "\\\""), // Quotes have to be escaped before they are inserted into JSON
-            EncryptedKek);
+            EncryptedKey);
 
         [Test]
         public void Login_returns_valid_session()
@@ -81,10 +82,34 @@ namespace PasswordBox.Test
         [Test]
         public void ParseResponseJson_returns_correct_result()
         {
-            var parsed = Fetcher.ParseResponseJson(ValidResponseJson);
+            var parsed = Fetcher.ParseResponseJson(ValidLoginResponseJson);
             Assert.AreEqual(Salt, parsed.Salt);
             Assert.AreEqual(DerivationRules, parsed.DerivationRulesJson);
-            Assert.AreEqual(EncryptedKek, parsed.EncryptedKey);
+            Assert.AreEqual(EncryptedKey, parsed.EncryptedKey);
+        }
+
+        [Test]
+        public void ParseEncryptionKey()
+        {
+            var response = new Fetcher.LoginResponse(Salt, DerivationRules, EncryptedKey);
+            var key = Fetcher.ParseEncryptionKey(response, Password);
+            Assert.AreEqual("", key);
+        }
+
+        [Test]
+        [ExpectedException(typeof(Exception), ExpectedMessage = "Legacy user is not supported")]
+        public void ParseEncryptionKey_throws_on_missing_salt()
+        {
+            var response = new Fetcher.LoginResponse(null, DerivationRules, EncryptedKey);
+            Fetcher.ParseEncryptionKey(response, Password);
+        }
+
+        [Test]
+        [ExpectedException(typeof(Exception), ExpectedMessage = "Legacy user is not supported")]
+        public void ParseEncryptionKey_throws_on_short_salt()
+        {
+            var response = new Fetcher.LoginResponse("too short", DerivationRules, EncryptedKey);
+            Fetcher.ParseEncryptionKey(response, Password);
         }
 
         //
