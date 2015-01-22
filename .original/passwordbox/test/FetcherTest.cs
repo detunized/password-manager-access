@@ -23,6 +23,13 @@ namespace PasswordBox.Test
                 {"member[password]", PasswordHash},
             };
 
+        private const string Salt = "1095d8447adfdba215ea3dfd7dbf029cc8cf09c6fade18c76a356c908f48175b";
+
+        private static readonly string ValidResponseJson = string.Format(@"
+        {{
+            ""salt"": ""{0}""
+        }}", Salt);
+
         [Test]
         public void Login_returns_valid_session()
         {
@@ -61,6 +68,13 @@ namespace PasswordBox.Test
             // Test data is from http://www.nsrl.nist.gov/testdata/
             var hash = Fetcher.Sha1Hex("abc");
             Assert.AreEqual("a9993e364706816aba3e25717850c26c9cd0d89d", hash);
+        }
+
+        [Test]
+        public void ParseResponseJson_returns_correct_result()
+        {
+            var parsed = Fetcher.ParseResponseJson(ValidResponseJson);
+            Assert.AreEqual(Salt, parsed.Salt);
         }
 
         //
