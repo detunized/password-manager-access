@@ -11,6 +11,14 @@ namespace PasswordBox.Test
         [Test]
         public void Decrypt_returns_correct_result()
         {
+            // TODO: Add real data
+            var decrypted = Crypto.Decrypt("", "");
+            Assert.AreEqual("", decrypted);
+        }
+
+        [Test]
+        public void Decrypt_returns_empty_on_empty_input()
+        {
             var decrypted = Crypto.Decrypt("", "");
             Assert.AreEqual("", decrypted);
         }

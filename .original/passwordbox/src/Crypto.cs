@@ -7,6 +7,9 @@ namespace PasswordBox
     {
         public static byte[] Decrypt(string encryptedBase64, string keyHex)
         {
+            if (encryptedBase64.Length == 0)
+                return new byte[0];
+
             return "".ToBytes();
         }
     }
