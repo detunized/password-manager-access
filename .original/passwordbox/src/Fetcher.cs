@@ -35,7 +35,7 @@ namespace PasswordBox
         internal static string ComputePasswordHash(string username, string password)
         {
             var salt = Sha1Hex(username);
-            return Pbkdf2.GenerateSha256(password, salt, 10000, 256 / 8).ToHex();
+            return Pbkdf2Sha256(password, salt, 10000, 256);
         }
 
         internal static string Sha1Hex(string text)
