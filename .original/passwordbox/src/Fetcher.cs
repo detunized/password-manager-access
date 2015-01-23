@@ -64,6 +64,11 @@ namespace PasswordBox
             public readonly string EncryptedKey = null;
         }
 
+        internal static LoginResponse ParseResponseJson(string json)
+        {
+            return ParseResponseJson<LoginResponse>(json);
+        }
+
         [DataContract]
         internal class DerivationRules
         {
@@ -80,18 +85,16 @@ namespace PasswordBox
             public readonly int ServerIterationCount = 1;
         }
 
-        internal static LoginResponse ParseResponseJson(string json)
-        {
-            var s = new DataContractJsonSerializer(typeof(LoginResponse));
-            using (var stream = new MemoryStream(json.ToBytes(), false))
-                return (LoginResponse)s.ReadObject(stream);
-        }
-
         internal static DerivationRules ParseDerivationRulesJson(string json)
         {
-            var s = new DataContractJsonSerializer(typeof(DerivationRules));
+            return ParseResponseJson<DerivationRules>(json);
+        }
+
+        internal static T ParseResponseJson<T>(string json)
+        {
+            var s = new DataContractJsonSerializer(typeof(T));
             using (var stream = new MemoryStream(json.ToBytes(), false))
-                return (DerivationRules)s.ReadObject(stream);
+                return (T)s.ReadObject(stream);
         }
 
         internal static string ParseEncryptionKey(LoginResponse loginResponse, string password)
