@@ -102,5 +102,38 @@ namespace PasswordBox
 
             return "";
         }
+
+        // Computes the KEK (key encryption key) which is used to encrypt/decrypt the actual key
+        // with which all the data is encrypted.
+        internal static string ComputeKek(string password, string salt, DerivationRules derivationRules)
+        {
+            var client = Math.Max(0, derivationRules.ClientIterationCount);
+            var server = Math.Max(1, derivationRules.ServerIterationCount);
+
+            var step1 = Pbkdf2Sha1(password, salt, 1, 512);
+            var step2 = Pbkdf2Sha256(step1, salt, client, 512);
+            var step3 = Pbkdf2Sha256(step2, salt, server, 256);
+            var step4 = Pbkdf2Sha1(step3 + password, salt, 1, 512);
+
+            return step4;
+        }
+
+        // TODO: Try to remove this copy-paste
+        internal static string Pbkdf2Sha1(string password, string salt, int iterationCount, int bits)
+        {
+            if (iterationCount <= 0)
+                return password;
+
+            return Pbkdf2.GenerateSha1(password, salt, iterationCount, bits / 8).ToHex();
+        }
+
+        // TODO: Try to remove this copy-paste
+        internal static string Pbkdf2Sha256(string password, string salt, int iterationCount, int bits)
+        {
+            if (iterationCount <= 0)
+                return password;
+
+            return Pbkdf2.GenerateSha256(password, salt, iterationCount, bits / 8).ToHex();
+        }
     }
 }
