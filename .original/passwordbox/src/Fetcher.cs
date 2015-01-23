@@ -121,22 +121,26 @@ namespace PasswordBox
             return step4;
         }
 
-        // TODO: Try to remove this copy-paste
         internal static string Pbkdf2Sha1(string password, string salt, int iterationCount, int bits)
         {
-            if (iterationCount <= 0)
-                return password;
-
-            return Pbkdf2.GenerateSha1(password, salt, iterationCount, bits / 8).ToHex();
+            return Pbkdf2Hex(password, salt, iterationCount, bits, Pbkdf2.GenerateSha1);
         }
 
-        // TODO: Try to remove this copy-paste
         internal static string Pbkdf2Sha256(string password, string salt, int iterationCount, int bits)
+        {
+            return Pbkdf2Hex(password, salt, iterationCount, bits, Pbkdf2.GenerateSha256);
+        }
+
+        internal static string Pbkdf2Hex(string password,
+                                         string salt,
+                                         int iterationCount,
+                                         int bits,
+                                         Func<string, string, int, int, byte[]> pbkdf2)
         {
             if (iterationCount <= 0)
                 return password;
 
-            return Pbkdf2.GenerateSha256(password, salt, iterationCount, bits / 8).ToHex();
+            return pbkdf2(password, salt, iterationCount, bits / 8).ToHex();
         }
     }
 }
