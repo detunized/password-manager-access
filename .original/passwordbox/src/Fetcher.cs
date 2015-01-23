@@ -10,7 +10,7 @@ using System.Runtime.Serialization.Json;
 
 namespace PasswordBox
 {
-    public class Fetcher
+    public static class Fetcher
     {
         public static Session Login(string username, string password)
         {
