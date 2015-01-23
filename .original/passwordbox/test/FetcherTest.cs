@@ -24,19 +24,22 @@ namespace PasswordBox.Test
                 {"member[password]", PasswordHash},
             };
 
+        private const int ClientIterationCount = 500;
+        private const int ServerIterationCount = 9498;
+
         private const string Salt = "1095d8447adfdba215ea3dfd7dbf029cc8cf09c6fade18c76a356c908f48175b";
-        private const string DerivationRules = @"{""client_iterations"": ""500"", ""iterations"": ""9498""}";
         private const string EncryptedKey = "AAR6fDOLfXJKRxiYYhm4u/OgQw3tIWtPUFutlF55RgshUagCtR3WXiZGG52m" +
                                             "2RutxUrKcrJj7ZdTHVWukvYH2MveKbKuljwVv0zWnSwHqQSf0aRzJhyl0JWB";
 
+        private static readonly string DerivationRulesJson = string.Format(
+            @"{{""client_iterations"":""{0}"",""iterations"":""{1}""}}",
+            ClientIterationCount,
+            ServerIterationCount);
+
         private static readonly string ValidLoginResponseJson = string.Format(
-            @"{{
-                ""salt"":  ""{0}"",
-                ""dr"":    ""{1}"",
-                ""k_kek"": ""{2}""
-            }}",
+            @"{{""salt"":""{0}"",""dr"":""{1}"",""k_kek"":""{2}""}}",
             Salt,
-            DerivationRules.Replace("\"", "\\\""), // Quotes have to be escaped before they are inserted into JSON
+            DerivationRulesJson.Replace("\"", "\\\""), // Quotes have to be escaped before they are inserted into JSON
             EncryptedKey);
 
         [Test]
@@ -84,14 +87,14 @@ namespace PasswordBox.Test
         {
             var parsed = Fetcher.ParseResponseJson(ValidLoginResponseJson);
             Assert.AreEqual(Salt, parsed.Salt);
-            Assert.AreEqual(DerivationRules, parsed.DerivationRulesJson);
+            Assert.AreEqual(DerivationRulesJson, parsed.DerivationRulesJson);
             Assert.AreEqual(EncryptedKey, parsed.EncryptedKey);
         }
 
         [Test]
         public void ParseEncryptionKey()
         {
-            var response = new Fetcher.LoginResponse(Salt, DerivationRules, EncryptedKey);
+            var response = new Fetcher.LoginResponse(Salt, DerivationRulesJson, EncryptedKey);
             var key = Fetcher.ParseEncryptionKey(response, Password);
             Assert.AreEqual("", key);
         }
@@ -100,7 +103,7 @@ namespace PasswordBox.Test
         [ExpectedException(typeof(Exception), ExpectedMessage = "Legacy user is not supported")]
         public void ParseEncryptionKey_throws_on_missing_salt()
         {
-            var response = new Fetcher.LoginResponse(null, DerivationRules, EncryptedKey);
+            var response = new Fetcher.LoginResponse(null, DerivationRulesJson, EncryptedKey);
             Fetcher.ParseEncryptionKey(response, Password);
         }
 
@@ -108,16 +111,16 @@ namespace PasswordBox.Test
         [ExpectedException(typeof(Exception), ExpectedMessage = "Legacy user is not supported")]
         public void ParseEncryptionKey_throws_on_short_salt()
         {
-            var response = new Fetcher.LoginResponse("too short", DerivationRules, EncryptedKey);
+            var response = new Fetcher.LoginResponse("too short", DerivationRulesJson, EncryptedKey);
             Fetcher.ParseEncryptionKey(response, Password);
         }
 
         [Test]
         public void ParseDerivationRulesJson_returns_correct_result()
         {
-            var parsed = Fetcher.ParseDerivationRulesJson(DerivationRules);
-            Assert.AreEqual(500, parsed.ClientIterationCount);
-            Assert.AreEqual(9498, parsed.ServerIterationCount);
+            var parsed = Fetcher.ParseDerivationRulesJson(DerivationRulesJson);
+            Assert.AreEqual(ClientIterationCount, parsed.ClientIterationCount);
+            Assert.AreEqual(ServerIterationCount, parsed.ServerIterationCount);
         }
 
         //
