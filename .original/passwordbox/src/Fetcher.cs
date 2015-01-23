@@ -103,6 +103,11 @@ namespace PasswordBox
             if (salt == null || salt.Length < 32)
                 throw new Exception("Legacy user is not supported"); // TODO: Use custom exception!
 
+            // TODO: Check for errors!
+            var dr = ParseDerivationRulesJson(loginResponse.DerivationRulesJson);
+
+            var kek = ComputeKek(password, salt, dr);
+
             return "";
         }
 
