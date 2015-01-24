@@ -6,8 +6,29 @@ using System.Linq;
 
 namespace PasswordBox
 {
-    static class SjclAes
+    class SjclAes
     {
+        private static readonly byte[] SboxTable;
+        private static readonly byte[] InverseSboxTable;
+        private static readonly uint[,] DecodeTable;
+
+        private uint[] _decryptionKey;
+
+        static SjclAes()
+        {
+            var doubleTable = ComputeDoubleTable();
+            var trippleTable = ComputeTrippleTable(doubleTable);
+            SboxTable = ComputeSboxTable(doubleTable, trippleTable);
+            InverseSboxTable = ComputeInverseSboxTable(SboxTable);
+            DecodeTable = ComputeDecodeTable(doubleTable, SboxTable);
+        }
+
+        public SjclAes(uint[] key)
+        {
+            var encKey = ScheduleEncryptionKey(key, SboxTable);
+            _decryptionKey = ScheduleDecryptionKey(encKey, SboxTable, DecodeTable);
+        }
+
         internal static byte[] ComputeDoubleTable()
         {
             var table = new byte[256];
