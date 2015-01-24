@@ -79,5 +79,43 @@ namespace PasswordBox
 
             return table;
         }
+
+        internal static uint[] ScheduleEncryptionKey(uint[] key, byte[] sboxTable)
+        {
+            var inputLength = key.Length;
+            if (inputLength != 4 && inputLength != 6 && inputLength != 8)
+                throw new Exception(string.Format("Invalid key length ({0})", inputLength)); // TODO: Use custom exception!
+
+            var keyLength = inputLength * 4 + 28;
+            var encKey = new uint[keyLength];
+            var decKey = new uint[keyLength];
+            uint rcon = 1;
+
+            key.CopyTo(encKey, 0);
+            for (var i = inputLength; i < keyLength; ++i)
+            {
+                var t = encKey[i - 1];
+
+                // Apply sbox
+                if (i % inputLength == 0 || (inputLength == 8 && i % inputLength == 4))
+                {
+                    t = (uint)((sboxTable[t >> 24] << 24) ^
+                               (sboxTable[(t >> 16) & 255] << 16) ^
+                               (sboxTable[(t >> 8) & 255] << 8) ^
+                               sboxTable[t & 255]);
+
+                    // Shift rows and add rcon
+                    if (i % inputLength == 0)
+                    {
+                        t = (t << 8) ^ (t >> 24) ^ (rcon << 24);
+                        rcon = (rcon << 1) ^ (rcon >> 7) * 283;
+                    }
+                }
+
+                encKey[i] = encKey[i - inputLength] ^ t;
+            }
+
+            return encKey;
+        }
     }
 }

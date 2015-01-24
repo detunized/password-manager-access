@@ -139,5 +139,42 @@ namespace PasswordBox.Test
             Assert.AreEqual(1817998408, table[3, 254]);
             Assert.AreEqual(3092726480, table[3, 255]);
         }
+
+        [Test]
+        public void ScheduleEncryptionKey_returns_correct_result()
+        {
+            var dt = SjclAes.ComputeDoubleTable();
+            var sbox = SjclAes.ComputeSboxTable(dt, SjclAes.ComputeTrippleTable(dt));
+
+            // TODO: Add more tests for longer/different keys
+
+            // Test data is generated with SJCL sources
+            var input = new uint[] {0, 0, 0, 0};
+            var expected = new uint[]
+            {
+                0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x62636363, 0x62636363, 0x62636363, 0x62636363,
+                0x9b9898c9, 0xf9fbfbaa, 0x9b9898c9, 0xf9fbfbaa, 0x90973450, 0x696ccffa, 0xf2f45733, 0x0b0fac99,
+                0xee06da7b, 0x876a1581, 0x759e42b2, 0x7e91ee2b, 0x7f2e2b88, 0xf8443e09, 0x8dda7cbb, 0xf34b9290,
+                0xec614b85, 0x1425758c, 0x99ff0937, 0x6ab49ba7, 0x21751787, 0x3550620b, 0xacaf6b3c, 0xc61bf09b,
+                0x0ef90333, 0x3ba96138, 0x97060a04, 0x511dfa9f, 0xb1d4d8e2, 0x8a7db9da, 0x1d7bb3de, 0x4c664941,
+                0xb4ef5bcb, 0x3e92e211, 0x23e951cf, 0x6f8f188e
+            };
+
+            var key = SjclAes.ScheduleEncryptionKey(input, sbox);
+            Assert.AreEqual(expected, key);
+        }
+
+        [Test]
+        public void ScheduleEncryptionKey_throws_on_incorrect_input_key_length()
+        {
+            var dt = SjclAes.ComputeDoubleTable();
+            var sbox = SjclAes.ComputeSboxTable(dt, SjclAes.ComputeTrippleTable(dt));
+
+            foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
+            {
+                var e = Assert.Throws<Exception>(() => SjclAes.ScheduleEncryptionKey(new uint[i], sbox));
+                Assert.AreEqual(string.Format("Invalid key length ({0})", i), e.Message);
+            }
+        }
     }
 }
