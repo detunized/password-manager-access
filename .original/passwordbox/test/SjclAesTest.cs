@@ -42,5 +42,29 @@ namespace PasswordBox.Test
             Assert.AreEqual(163, table[254]);
             Assert.AreEqual( 85, table[255]);
         }
+
+        [Test]
+        public void ComputeSboxTable_returns_correct_result()
+        {
+            var dt = SjclAes.ComputeDoubleTable();
+            var tt = SjclAes.ComputeTrippleTable(dt);
+            var table = SjclAes.ComputeSboxTable(dt, tt);
+
+            // Test data is generated with SJCL sources
+            Assert.AreEqual(256, table.Length);
+
+            Assert.AreEqual( 99, table[  0]);
+            Assert.AreEqual(124, table[  1]);
+            Assert.AreEqual(119, table[  2]);
+            Assert.AreEqual(210, table[127]);
+            Assert.AreEqual(205, table[128]);
+            Assert.AreEqual(187, table[254]);
+            Assert.AreEqual( 22, table[255]);
+
+            // Every value should be exactly once
+            Array.Sort(table);
+            for (var i = 0; i < 256; ++i)
+                Assert.AreEqual(i, table[i]);
+        }
     }
 }
