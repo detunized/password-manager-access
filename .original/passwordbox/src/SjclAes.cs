@@ -117,5 +117,29 @@ namespace PasswordBox
 
             return encKey;
         }
+
+        internal static uint[] ScheduleDecryptionKey(uint[] encKey, byte[] sboxTable, uint[,] decodeTable)
+        {
+            var decKey = new uint[encKey.Length];
+
+            var i = encKey.Length;
+            for (var j = 0; i != 0; ++j, --i)
+            {
+                var t = encKey[(j & 3) != 0 ? i : i - 4];
+                if (i <= 4 || j < 4)
+                {
+                    decKey[j] = t;
+                }
+                else
+                {
+                    decKey[j] = decodeTable[0, sboxTable[(t >> 24)      ]] ^
+                                decodeTable[1, sboxTable[(t >> 16) & 255]] ^
+                                decodeTable[2, sboxTable[(t >>  8) & 255]] ^
+                                decodeTable[3, sboxTable[ t        & 255]];
+                }
+            }
+
+            return decKey;
+        }
     }
 }

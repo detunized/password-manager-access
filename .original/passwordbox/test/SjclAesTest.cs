@@ -176,5 +176,31 @@ namespace PasswordBox.Test
                 Assert.AreEqual(string.Format("Invalid key length ({0})", i), e.Message);
             }
         }
+
+        [Test]
+        public void ScheduleDecryptionKey_returns_correct_result()
+        {
+            var dt = SjclAes.ComputeDoubleTable();
+            var sbox = SjclAes.ComputeSboxTable(dt, SjclAes.ComputeTrippleTable(dt));
+            var decode = SjclAes.ComputeDecodeTable(dt, sbox);
+
+            // TODO: Add more tests for longer/different keys
+
+            // Test data is generated with SJCL sources
+            var input = new uint[] { 0, 0, 0, 0 };
+            var encKey = SjclAes.ScheduleEncryptionKey(input, sbox);
+            var expected = new uint[]
+            {
+                0xb4ef5bcb, 0x6f8f188e, 0x23e951cf, 0x3e92e211, 0x5585820d, 0x258d64ee, 0x0c01b4b2, 0xeb1ceb88,
+                0x6ab6f2e9, 0x298cd05c, 0xe71d5f3a, 0xbe996985, 0xefea4a8b, 0xce918f66, 0x598436bf, 0xd42f9b6c,
+                0x2ae50b87, 0x9715b9d9, 0x8dabadd3, 0x3bc5d1e7, 0xb5a91ef0, 0x1abe140a, 0xb66e7c34, 0x1120da60,
+                0xc27d6492, 0xacd0683e, 0xa74ea654, 0xa489c490, 0x6ead0cac, 0x0b9ece6a, 0x03c762c4, 0x66f4a002,
+                0x6533c2c6, 0x0859acae, 0x6533c2c6, 0x0859acae, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68,
+                0x00000000, 0x00000000, 0x00000000, 0x00000000
+            };
+
+            var key = SjclAes.ScheduleDecryptionKey(encKey, sbox, decode);
+            Assert.AreEqual(expected, key);
+        }
     }
 }
