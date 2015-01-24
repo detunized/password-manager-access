@@ -10,6 +10,18 @@ namespace PasswordBox.Test
     class SjclAesTest
     {
         [Test]
+        public void Decrypt_returns_correct_value()
+        {
+            // TODO: Add more tests!
+
+            var expected = new uint[] {0x140f0f10, 0x11b5223d, 0x79587717, 0xffd9ec3a};
+            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            var plain = aes.Decrypt(new uint[] {0, 0, 0, 0});
+
+            Assert.AreEqual(expected, plain);
+        }
+
+        [Test]
         public void ComputeDoubleTable_returns_correct_result()
         {
             var table = SjclAes.ComputeDoubleTable();
@@ -187,7 +199,7 @@ namespace PasswordBox.Test
             // TODO: Add more tests for longer/different keys
 
             // Test data is generated with SJCL sources
-            var input = new uint[] { 0, 0, 0, 0 };
+            var input = new uint[] {0, 0, 0, 0};
             var encKey = SjclAes.ScheduleEncryptionKey(input, sbox);
             var expected = new uint[]
             {

@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Linq;
 
 namespace PasswordBox
 {
@@ -27,6 +26,81 @@ namespace PasswordBox
         {
             var encKey = ScheduleEncryptionKey(key, SboxTable);
             _decryptionKey = ScheduleDecryptionKey(encKey, SboxTable, DecodeTable);
+        }
+
+        public uint[] Decrypt(uint[] cipher)
+        {
+            if (cipher.Length != 4)
+                throw new ArgumentException(string.Format("Invalid cipher length: {0}", cipher.Length), "cipher");
+
+            var key = _decryptionKey;
+            var input = cipher;
+
+            var a = input[0] ^ key[0];
+            var b = input[3] ^ key[1];
+            var c = input[2] ^ key[2];
+            var d = input[1] ^ key[3];
+
+            var innerRoundCount = key.Length / 4 - 2;
+            var keyIndex = 4;
+            var table = DecodeTable;
+            var sbox = InverseSboxTable;
+
+            var plain = new uint[] {0, 0, 0, 0};
+
+            // Inner rounds
+            for (var i = 0; i < innerRoundCount; i++)
+            {
+                var a2 = (table[0, (a >> 24)      ]) ^
+                         (table[1, (b >> 16) & 255]) ^
+                         (table[2, (c >>  8) & 255]) ^
+                         (table[3, (d      ) & 255]) ^
+                         (key[keyIndex]            );
+
+                var b2 = (table[0, (b >> 24)      ]) ^
+                         (table[1, (c >> 16) & 255]) ^
+                         (table[2, (d >>  8) & 255]) ^
+                         (table[3, (a      ) & 255]) ^
+                         (key[keyIndex + 1]        );
+
+                var c2 = (table[0, (c >> 24)      ]) ^
+                         (table[1, (d >> 16) & 255]) ^
+                         (table[2, (a >>  8) & 255]) ^
+                         (table[3, (b      ) & 255]) ^
+                         (key[keyIndex + 2]        );
+
+                var d2 = (table[0, (d >> 24)      ]) ^
+                         (table[1, (a >> 16) & 255]) ^
+                         (table[2, (b >>  8) & 255]) ^
+                         (table[3, (c      ) & 255]) ^
+                         (key[keyIndex + 3]        );
+
+                a = a2;
+                b = b2;
+                c = c2;
+                d = d2;
+
+                keyIndex += 4;
+            }
+
+            // Last round
+            for (var i = 0; i < 4; i++)
+            {
+                plain[3 & -i] = ((uint)sbox[(a >> 24)      ] << 24) ^
+                                ((uint)sbox[(b >> 16) & 255] << 16) ^
+                                ((uint)sbox[(c >>  8) & 255] <<  8) ^
+                                ((uint)sbox[(d      ) & 255]      ) ^
+                                (key[keyIndex]                    );
+                var t = a;
+                a = b;
+                b = c;
+                c = d;
+                d = t;
+
+                ++keyIndex;
+            }
+
+            return plain;
         }
 
         internal static byte[] ComputeDoubleTable()
