@@ -55,5 +55,29 @@ namespace PasswordBox
 
             return table;
         }
+
+        internal static uint[,] ComputeDecodeTable(byte[] doubleTable, byte[] sboxTable)
+        {
+            var table = new uint[4, 256];
+            uint x = 0;
+
+            for (var i = 0; i < 256; ++i)
+            {
+                uint x2 = doubleTable[x];
+                uint x4 = doubleTable[x2];
+                uint x8 = doubleTable[x4];
+                uint dec = (x8 * 0x1010101) ^ (x4 * 0x10001) ^ (x2 * 0x101) ^ (x * 0x1010100);
+
+                for (var j = 0; j < 4; ++j)
+                {
+                    dec = (dec << 24) ^ (dec >> 8);
+                    table[j, sboxTable[x]] = dec;
+                }
+
+                x ^= Math.Max(x2, 1);
+            }
+
+            return table;
+        }
     }
 }
