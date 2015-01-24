@@ -46,5 +46,14 @@ namespace PasswordBox
 
             return table;
         }
+
+        internal static byte[] ComputeInverseSboxTable(byte[] sboxTable)
+        {
+            var table = new byte[256];
+            for (var i = 0; i < 256; ++i)
+                table[sboxTable[i]] = (byte)i;
+
+            return table;
+        }
     }
 }
