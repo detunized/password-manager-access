@@ -88,7 +88,6 @@ namespace PasswordBox
 
             var keyLength = inputLength * 4 + 28;
             var encKey = new uint[keyLength];
-            var decKey = new uint[keyLength];
             uint rcon = 1;
 
             key.CopyTo(encKey, 0);
