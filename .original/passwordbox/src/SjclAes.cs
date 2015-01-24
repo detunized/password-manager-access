@@ -98,10 +98,10 @@ namespace PasswordBox
                 // Apply sbox
                 if (i % inputLength == 0 || (inputLength == 8 && i % inputLength == 4))
                 {
-                    t = (uint)((sboxTable[t >> 24] << 24) ^
+                    t = (uint)((sboxTable[(t >> 24)      ] << 24) ^
                                (sboxTable[(t >> 16) & 255] << 16) ^
-                               (sboxTable[(t >> 8) & 255] << 8) ^
-                               sboxTable[t & 255]);
+                               (sboxTable[(t >>  8) & 255] <<  8) ^
+                               (sboxTable[(t      ) & 255]      ));
 
                     // Shift rows and add rcon
                     if (i % inputLength == 0)
@@ -134,7 +134,7 @@ namespace PasswordBox
                     decKey[j] = decodeTable[0, sboxTable[(t >> 24)      ]] ^
                                 decodeTable[1, sboxTable[(t >> 16) & 255]] ^
                                 decodeTable[2, sboxTable[(t >>  8) & 255]] ^
-                                decodeTable[3, sboxTable[ t        & 255]];
+                                decodeTable[3, sboxTable[(t      ) & 255]];
                 }
             }
 
