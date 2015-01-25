@@ -105,6 +105,54 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        public void ComputeEncodeTable_returns_correct_result()
+        {
+            var dt = SjclAes.ComputeDoubleTable();
+            var sbox = SjclAes.ComputeSboxTable(dt, SjclAes.ComputeTrippleTable(dt));
+            var table = SjclAes.ComputeEncodeTable(dt, sbox);
+
+            // Test data is generated with SJCL sources
+            Assert.AreEqual(4, table.GetLength(0));
+            Assert.AreEqual(256, table.GetLength(1));
+
+            // 0
+            Assert.AreEqual(0xc66363a5, table[0, 0x00]);
+            Assert.AreEqual(0xf87c7c84, table[0, 0x01]);
+            Assert.AreEqual(0xee777799, table[0, 0x02]);
+            Assert.AreEqual(0xbfd2d26d, table[0, 0x7f]);
+            Assert.AreEqual(0x81cdcd4c, table[0, 0x80]);
+            Assert.AreEqual(0x6dbbbbd6, table[0, 0xfe]);
+            Assert.AreEqual(0x2c16163a, table[0, 0xff]);
+
+            // 1
+            Assert.AreEqual(0xa5c66363, table[1, 0x00]);
+            Assert.AreEqual(0x84f87c7c, table[1, 0x01]);
+            Assert.AreEqual(0x99ee7777, table[1, 0x02]);
+            Assert.AreEqual(0x6dbfd2d2, table[1, 0x7f]);
+            Assert.AreEqual(0x4c81cdcd, table[1, 0x80]);
+            Assert.AreEqual(0xd66dbbbb, table[1, 0xfe]);
+            Assert.AreEqual(0x3a2c1616, table[1, 0xff]);
+
+            // 2
+            Assert.AreEqual(0x63a5c663, table[2, 0x00]);
+            Assert.AreEqual(0x7c84f87c, table[2, 0x01]);
+            Assert.AreEqual(0x7799ee77, table[2, 0x02]);
+            Assert.AreEqual(0xd26dbfd2, table[2, 0x7f]);
+            Assert.AreEqual(0xcd4c81cd, table[2, 0x80]);
+            Assert.AreEqual(0xbbd66dbb, table[2, 0xfe]);
+            Assert.AreEqual(0x163a2c16, table[2, 0xff]);
+
+            // 3
+            Assert.AreEqual(0x6363a5c6, table[3, 0x00]);
+            Assert.AreEqual(0x7c7c84f8, table[3, 0x01]);
+            Assert.AreEqual(0x777799ee, table[3, 0x02]);
+            Assert.AreEqual(0xd2d26dbf, table[3, 0x7f]);
+            Assert.AreEqual(0xcdcd4c81, table[3, 0x80]);
+            Assert.AreEqual(0xbbbbd66d, table[3, 0xfe]);
+            Assert.AreEqual(0x16163a2c, table[3, 0xff]);
+        }
+
+        [Test]
         public void ComputeDecodeTable_returns_correct_result()
         {
             var dt = SjclAes.ComputeDoubleTable();
