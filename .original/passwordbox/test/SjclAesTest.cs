@@ -29,13 +29,13 @@ namespace PasswordBox.Test
             // Test data is generated with SJCL sources
             Assert.AreEqual(256, table.Length);
 
-            Assert.AreEqual(  0, table[  0]);
-            Assert.AreEqual(  2, table[  1]);
-            Assert.AreEqual(  4, table[  2]);
-            Assert.AreEqual(254, table[127]);
-            Assert.AreEqual( 27, table[128]);
-            Assert.AreEqual(231, table[254]);
-            Assert.AreEqual(229, table[255]);
+            Assert.AreEqual(0x00, table[0x00]);
+            Assert.AreEqual(0x02, table[0x01]);
+            Assert.AreEqual(0x04, table[0x02]);
+            Assert.AreEqual(0xfe, table[0x7f]);
+            Assert.AreEqual(0x1b, table[0x80]);
+            Assert.AreEqual(0xe7, table[0xfe]);
+            Assert.AreEqual(0xe5, table[0xff]);
         }
 
         [Test]
@@ -46,13 +46,13 @@ namespace PasswordBox.Test
             // Test data is generated with SJCL sources
             Assert.AreEqual(256, table.Length);
 
-            Assert.AreEqual(  0, table[  0]);
-            Assert.AreEqual(246, table[  1]);
-            Assert.AreEqual(247, table[  2]);
-            Assert.AreEqual(220, table[127]);
-            Assert.AreEqual(137, table[128]);
-            Assert.AreEqual(163, table[254]);
-            Assert.AreEqual( 85, table[255]);
+            Assert.AreEqual(0x00, table[0x00]);
+            Assert.AreEqual(0xf6, table[0x01]);
+            Assert.AreEqual(0xf7, table[0x02]);
+            Assert.AreEqual(0xdc, table[0x7f]);
+            Assert.AreEqual(0x89, table[0x80]);
+            Assert.AreEqual(0xa3, table[0xfe]);
+            Assert.AreEqual(0x55, table[0xff]);
         }
 
         [Test]
@@ -65,13 +65,13 @@ namespace PasswordBox.Test
             // Test data is generated with SJCL sources
             Assert.AreEqual(256, table.Length);
 
-            Assert.AreEqual( 99, table[  0]);
-            Assert.AreEqual(124, table[  1]);
-            Assert.AreEqual(119, table[  2]);
-            Assert.AreEqual(210, table[127]);
-            Assert.AreEqual(205, table[128]);
-            Assert.AreEqual(187, table[254]);
-            Assert.AreEqual( 22, table[255]);
+            Assert.AreEqual(0x63, table[0x00]);
+            Assert.AreEqual(0x7c, table[0x01]);
+            Assert.AreEqual(0x77, table[0x02]);
+            Assert.AreEqual(0xd2, table[0x7f]);
+            Assert.AreEqual(0xcd, table[0x80]);
+            Assert.AreEqual(0xbb, table[0xfe]);
+            Assert.AreEqual(0x16, table[0xff]);
 
             // Every value should be exactly once
             Array.Sort(table);
@@ -90,13 +90,13 @@ namespace PasswordBox.Test
             // Test data is generated with SJCL sources
             Assert.AreEqual(256, table.Length);
 
-            Assert.AreEqual( 82, table[  0]);
-            Assert.AreEqual(  9, table[  1]);
-            Assert.AreEqual(106, table[  2]);
-            Assert.AreEqual(107, table[127]);
-            Assert.AreEqual( 58, table[128]);
-            Assert.AreEqual( 12, table[254]);
-            Assert.AreEqual(125, table[255]);
+            Assert.AreEqual(0x52, table[0x00]);
+            Assert.AreEqual(0x09, table[0x01]);
+            Assert.AreEqual(0x6a, table[0x02]);
+            Assert.AreEqual(0x6b, table[0x7f]);
+            Assert.AreEqual(0x3a, table[0x80]);
+            Assert.AreEqual(0x0c, table[0xfe]);
+            Assert.AreEqual(0x7d, table[0xff]);
 
             // Every value should be exactly once
             Array.Sort(table);
@@ -164,40 +164,40 @@ namespace PasswordBox.Test
             Assert.AreEqual(256, table.GetLength(1));
 
             // 0
-            Assert.AreEqual(1374988112, table[0,   0]);
-            Assert.AreEqual(2118214995, table[0,   1]);
-            Assert.AreEqual( 437757123, table[0,   2]);
-            Assert.AreEqual( 337553864, table[0, 127]);
-            Assert.AreEqual(1475418501, table[0, 128]);
-            Assert.AreEqual(1215061108, table[0, 254]);
-            Assert.AreEqual(3501741890, table[0, 255]);
+            Assert.AreEqual(0x51f4a750, table[0, 0x00]);
+            Assert.AreEqual(0x7e416553, table[0, 0x01]);
+            Assert.AreEqual(0x1a17a4c3, table[0, 0x02]);
+            Assert.AreEqual(0x141ea9c8, table[0, 0x7f]);
+            Assert.AreEqual(0x57f11985, table[0, 0x80]);
+            Assert.AreEqual(0x486c5c74, table[0, 0xfe]);
+            Assert.AreEqual(0xd0b85742, table[0, 0xff]);
 
             // 1
-            Assert.AreEqual(1347548327, table[1,   0]);
-            Assert.AreEqual(1400783205, table[1,   1]);
-            Assert.AreEqual(3273267108, table[1,   2]);
-            Assert.AreEqual(3356761769, table[1, 127]);
-            Assert.AreEqual(2237133081, table[1, 128]);
-            Assert.AreEqual(1950903388, table[1, 254]);
-            Assert.AreEqual(1120974935, table[1, 255]);
+            Assert.AreEqual(0x5051f4a7, table[1, 0x00]);
+            Assert.AreEqual(0x537e4165, table[1, 0x01]);
+            Assert.AreEqual(0xc31a17a4, table[1, 0x02]);
+            Assert.AreEqual(0xc8141ea9, table[1, 0x7f]);
+            Assert.AreEqual(0x8557f119, table[1, 0x80]);
+            Assert.AreEqual(0x74486c5c, table[1, 0xfe]);
+            Assert.AreEqual(0x42d0b857, table[1, 0xff]);
 
             // 2
-            Assert.AreEqual(2807058932, table[2,   0]);
-            Assert.AreEqual(1699970625, table[2,   1]);
-            Assert.AreEqual(2764249623, table[2,   2]);
-            Assert.AreEqual(2848461854, table[2, 127]);
-            Assert.AreEqual( 428169201, table[2, 128]);
-            Assert.AreEqual(1551124588, table[2, 254]);
-            Assert.AreEqual(1463996600, table[2, 255]);
+            Assert.AreEqual(0xa75051f4, table[2, 0x00]);
+            Assert.AreEqual(0x65537e41, table[2, 0x01]);
+            Assert.AreEqual(0xa4c31a17, table[2, 0x02]);
+            Assert.AreEqual(0xa9c8141e, table[2, 0x7f]);
+            Assert.AreEqual(0x198557f1, table[2, 0x80]);
+            Assert.AreEqual(0x5c74486c, table[2, 0xfe]);
+            Assert.AreEqual(0x5742d0b8, table[2, 0xff]);
 
             // 3
-            Assert.AreEqual(4104605777, table[3,   0]);
-            Assert.AreEqual(1097159550, table[3,   1]);
-            Assert.AreEqual( 396673818, table[3,   2]);
-            Assert.AreEqual( 514443284, table[3, 127]);
-            Assert.AreEqual(4044981591, table[3, 128]);
-            Assert.AreEqual(1817998408, table[3, 254]);
-            Assert.AreEqual(3092726480, table[3, 255]);
+            Assert.AreEqual(0xf4a75051, table[3, 0x00]);
+            Assert.AreEqual(0x4165537e, table[3, 0x01]);
+            Assert.AreEqual(0x17a4c31a, table[3, 0x02]);
+            Assert.AreEqual(0x1ea9c814, table[3, 0x7f]);
+            Assert.AreEqual(0xf1198557, table[3, 0x80]);
+            Assert.AreEqual(0x6c5c7448, table[3, 0xfe]);
+            Assert.AreEqual(0xb85742d0, table[3, 0xff]);
         }
 
         [Test]
