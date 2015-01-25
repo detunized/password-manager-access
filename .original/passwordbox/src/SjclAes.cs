@@ -9,8 +9,10 @@ namespace PasswordBox
     {
         private static readonly byte[] SboxTable;
         private static readonly byte[] InverseSboxTable;
+        private static readonly uint[,] EncodeTable;
         private static readonly uint[,] DecodeTable;
 
+        private uint[] _encryptionKey;
         private uint[] _decryptionKey;
 
         static SjclAes()
@@ -19,34 +21,55 @@ namespace PasswordBox
             var trippleTable = ComputeTrippleTable(doubleTable);
             SboxTable = ComputeSboxTable(doubleTable, trippleTable);
             InverseSboxTable = ComputeInverseSboxTable(SboxTable);
+            EncodeTable = ComputeEncodeTable(doubleTable, SboxTable);
             DecodeTable = ComputeDecodeTable(doubleTable, SboxTable);
         }
 
         public SjclAes(uint[] key)
         {
-            var encKey = ScheduleEncryptionKey(key, SboxTable);
-            _decryptionKey = ScheduleDecryptionKey(encKey, SboxTable, DecodeTable);
+            _encryptionKey = ScheduleEncryptionKey(key, SboxTable);
+            _decryptionKey = ScheduleDecryptionKey(_encryptionKey, SboxTable, DecodeTable);
         }
 
-        public uint[] Decrypt(uint[] cipher)
+        public uint[] Encrypt(uint[] plaintext)
         {
-            if (cipher.Length != 4)
-                throw new ArgumentException(string.Format("Invalid cipher length: {0}", cipher.Length), "cipher");
+            if (plaintext.Length != 4)
+            {
+                throw new ArgumentException(
+                    string.Format("Invalid plaintext length: {0}", plaintext.Length),
+                    "plaintext");
+            }
 
-            var key = _decryptionKey;
-            var input = cipher;
+            return Crypt(plaintext, true);
+        }
 
-            var a = input[0] ^ key[0];
-            var b = input[3] ^ key[1];
-            var c = input[2] ^ key[2];
-            var d = input[1] ^ key[3];
+        public uint[] Decrypt(uint[] ciphertext)
+        {
+            if (ciphertext.Length != 4)
+            {
+                throw new ArgumentException(
+                    string.Format("Invalid ciphertext length: {0}", ciphertext.Length),
+                    "ciphertext");
+            }
+
+            return Crypt(ciphertext, false);
+        }
+
+        private uint[] Crypt(uint[] input, bool encrypting)
+        {
+            var key = encrypting ? _encryptionKey : _decryptionKey;
+
+            var a = input[                 0] ^ key[0];
+            var b = input[encrypting ? 1 : 3] ^ key[1];
+            var c = input[                 2] ^ key[2];
+            var d = input[encrypting ? 3 : 1] ^ key[3];
 
             var innerRoundCount = key.Length / 4 - 2;
             var keyIndex = 4;
-            var table = DecodeTable;
-            var sbox = InverseSboxTable;
+            var table = encrypting ? EncodeTable : DecodeTable;
+            var sbox = encrypting ? SboxTable : InverseSboxTable;
 
-            var plain = new uint[] {0, 0, 0, 0};
+            var output = new uint[] {0, 0, 0, 0};
 
             // Inner rounds
             for (var i = 0; i < innerRoundCount; i++)
@@ -86,7 +109,8 @@ namespace PasswordBox
             // Last round
             for (var i = 0; i < 4; i++)
             {
-                plain[3 & -i] = ((uint)sbox[(a >> 24)      ] << 24) ^
+                var index = encrypting ? i : 3 & -i;
+                output[index] = ((uint)sbox[(a >> 24)      ] << 24) ^
                                 ((uint)sbox[(b >> 16) & 255] << 16) ^
                                 ((uint)sbox[(c >>  8) & 255] <<  8) ^
                                 ((uint)sbox[(d      ) & 255]      ) ^
@@ -100,7 +124,7 @@ namespace PasswordBox
                 ++keyIndex;
             }
 
-            return plain;
+            return output;
         }
 
         internal static byte[] ComputeDoubleTable()

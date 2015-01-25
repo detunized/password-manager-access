@@ -10,15 +10,53 @@ namespace PasswordBox.Test
     class SjclAesTest
     {
         [Test]
+        public void Encrypt_returns_correct_value()
+        {
+            // TODO: Add more tests!
+
+            var expected = new uint[] {0x66e94bd4, 0xef8a2c3b, 0x884cfa59, 0xca342b2e};
+            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            var ciphertext = aes.Encrypt(new uint[] {0, 0, 0, 0});
+
+            Assert.AreEqual(expected, ciphertext);
+        }
+
+        [Test]
+        public void Encrypt_throws_on_invalid_ciphertext_length()
+        {
+            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
+            {
+                var e = Assert.Throws<ArgumentException>(() => aes.Encrypt(new uint[i]));
+                Assert.AreEqual(
+                    string.Format("Invalid plaintext length: {0}\r\nParameter name: plaintext", i),
+                    e.Message);
+            }
+        }
+
+        [Test]
         public void Decrypt_returns_correct_value()
         {
             // TODO: Add more tests!
 
             var expected = new uint[] {0x140f0f10, 0x11b5223d, 0x79587717, 0xffd9ec3a};
             var aes = new SjclAes(new uint[] {0, 0, 0, 0});
-            var plain = aes.Decrypt(new uint[] {0, 0, 0, 0});
+            var plaintext = aes.Decrypt(new uint[] {0, 0, 0, 0});
 
-            Assert.AreEqual(expected, plain);
+            Assert.AreEqual(expected, plaintext);
+        }
+
+        [Test]
+        public void Decrypt_throws_on_invalid_ciphertext_length()
+        {
+            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
+            {
+                var e = Assert.Throws<ArgumentException>(() => aes.Decrypt(new uint[i]));
+                Assert.AreEqual(
+                    string.Format("Invalid ciphertext length: {0}\r\nParameter name: ciphertext", i),
+                    e.Message);
+            }
         }
 
         [Test]
