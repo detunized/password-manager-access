@@ -103,6 +103,11 @@ namespace PasswordBox
             };
         }
 
+        public static SjclQuad operator ^(SjclQuad lhs, SjclQuad rhs)
+        {
+            return new SjclQuad(lhs.A ^ rhs.A, lhs.B ^ rhs.B, lhs.C ^ rhs.C, lhs.D ^ rhs.D);
+        }
+
         public uint A;
         public uint B;
         public uint C;

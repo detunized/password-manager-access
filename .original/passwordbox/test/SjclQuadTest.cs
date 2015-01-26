@@ -217,6 +217,12 @@ namespace PasswordBox.Test
             Assert.AreEqual(AbcdBytes, Quad.ToBytes());
         }
 
+        [Test]
+        public void Xor_returns_correct_result()
+        {
+            VerifyZeroQuad(Quad ^ Quad);
+        }
+
         //
         // Helpers
         //
