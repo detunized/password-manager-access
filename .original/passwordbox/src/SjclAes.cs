@@ -31,6 +31,12 @@ namespace PasswordBox
             _decryptionKey = ScheduleDecryptionKey(_encryptionKey, SboxTable, DecodeTable);
         }
 
+        // TODO: Make it the other way around. Wrap this method with the array version!
+        public SjclQuad Encrypt(SjclQuad plaintext)
+        {
+            return new SjclQuad(Encrypt(plaintext.ToAbcd()));
+        }
+
         public uint[] Encrypt(uint[] plaintext)
         {
             if (plaintext.Length != 4)
@@ -41,6 +47,12 @@ namespace PasswordBox
             }
 
             return Crypt(plaintext, true);
+        }
+
+        // TODO: Make it the other way around. Wrap this method with the array version!
+        public SjclQuad Decrypt(SjclQuad ciphertext)
+        {
+            return new SjclQuad(Decrypt(ciphertext.ToAbcd()));
         }
 
         public uint[] Decrypt(uint[] ciphertext)

@@ -10,13 +10,25 @@ namespace PasswordBox.Test
     class SjclAesTest
     {
         [Test]
-        public void Encrypt_returns_correct_value()
+        public void Encrypt_array_returns_correct_value()
         {
             // TODO: Add more tests!
 
             var expected = new uint[] {0x66e94bd4, 0xef8a2c3b, 0x884cfa59, 0xca342b2e};
             var aes = new SjclAes(new uint[] {0, 0, 0, 0});
             var ciphertext = aes.Encrypt(new uint[] {0, 0, 0, 0});
+
+            Assert.AreEqual(expected, ciphertext);
+        }
+
+        [Test]
+        public void Encrypt_quad_returns_correct_value()
+        {
+            // TODO: Add more tests!
+
+            var expected = new SjclQuad(0x66e94bd4, 0xef8a2c3b, 0x884cfa59, 0xca342b2e);
+            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            var ciphertext = aes.Encrypt(new SjclQuad(0, 0, 0, 0));
 
             Assert.AreEqual(expected, ciphertext);
         }
@@ -35,13 +47,25 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        public void Decrypt_returns_correct_value()
+        public void Decrypt_array_returns_correct_value()
         {
             // TODO: Add more tests!
 
             var expected = new uint[] {0x140f0f10, 0x11b5223d, 0x79587717, 0xffd9ec3a};
             var aes = new SjclAes(new uint[] {0, 0, 0, 0});
             var plaintext = aes.Decrypt(new uint[] {0, 0, 0, 0});
+
+            Assert.AreEqual(expected, plaintext);
+        }
+
+        [Test]
+        public void Decrypt_quad_returns_correct_value()
+        {
+            // TODO: Add more tests!
+
+            var expected = new SjclQuad(0x140f0f10, 0x11b5223d, 0x79587717, 0xffd9ec3a);
+            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            var plaintext = aes.Decrypt(new SjclQuad(0, 0, 0, 0));
 
             Assert.AreEqual(expected, plaintext);
         }
