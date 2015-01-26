@@ -27,11 +27,11 @@ namespace PasswordBox
                 this[i / 4] |= (uint)bytes[offset + i] << (3 - i % 4) * 8;
         }
 
-        public uint this[int i]
+        public uint this[int index]
         {
             get
             {
-                switch (i)
+                switch (index)
                 {
                 case 0:
                     return A;
@@ -42,13 +42,13 @@ namespace PasswordBox
                 case 3:
                     return D;
                 default:
-                    throw new Exception(); // TODO: User proper exception and write a test!
+                    throw new ArgumentOutOfRangeException("index");
                 }
             }
 
             set
             {
-                switch (i)
+                switch (index)
                 {
                 case 0:
                     A = value;
@@ -63,7 +63,7 @@ namespace PasswordBox
                     D = value;
                     break;
                 default:
-                    throw new Exception(); // TODO: User proper exception and write a test!
+                    throw new ArgumentOutOfRangeException("index");
                 }
             }
         }
@@ -73,23 +73,23 @@ namespace PasswordBox
             return new uint[4] {A, B, C, D};
         }
 
-        public byte GetByte(int i)
+        public byte GetByte(int index)
         {
-            if (i < 0 || i > 15)
-                throw new Exception(); // TODO: User proper exception and write a test!
+            if (index < 0 || index > 15)
+                throw new ArgumentOutOfRangeException("index");
 
-            return (byte)(this[i / 4] >> (3 - i % 4) * 8);
+            return (byte)(this[index / 4] >> (3 - index % 4) * 8);
         }
 
-        public void SetByte(int i, byte b)
+        public void SetByte(int index, byte value)
         {
-            if (i < 0 || i > 15)
-                throw new Exception(); // TODO: User proper exception and write a test!
+            if (index < 0 || index > 15)
+                throw new ArgumentOutOfRangeException("index");
 
-            var index  = i / 4;
-            var shift = (3 - i % 4) * 8;
+            var word  = index / 4;
+            var shift = (3 - index % 4) * 8;
 
-            this[index] = (this[index] & ~(0xffu << shift)) | (uint)b << shift;
+            this[word] = (this[word] & ~(0xffu << shift)) | (uint)value << shift;
         }
 
         public byte[] ToBytes()

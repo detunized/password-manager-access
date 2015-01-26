@@ -1,6 +1,7 @@
 // Copyright (C) 2015 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Linq;
 using NUnit.Framework;
 
@@ -141,6 +142,20 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void Indexer_get_throws_on_negative_index()
+        {
+            var unused = Quad[-1];
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void Indexer_get_throws_on_too_large_index()
+        {
+            var unused = Quad[4];
+        }
+
+        [Test]
         public void Indexer_sets_correct_values()
         {
             var q = Quad;
@@ -150,6 +165,22 @@ namespace PasswordBox.Test
             q[3] = A;
 
             VerifyQuad(q, D, C, B, A);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void Indexer_set_throws_on_negative_index()
+        {
+            var q = Quad;
+            q[-1] = 0;
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void Indexer_set_throws_on_too_large_index()
+        {
+            var q = Quad;
+            q[4] = 0;
         }
 
         [Test]
@@ -184,6 +215,20 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void GetByte_throws_on_negative_index()
+        {
+            Quad.GetByte(-1);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void GetByte_throws_on_too_large_index()
+        {
+            Quad.GetByte(16);
+        }
+
+        [Test]
         public void SetByte_sets_correct_bytes()
         {
             var q = Quad;
@@ -209,6 +254,20 @@ namespace PasswordBox.Test
             q.SetByte(15, A3);
 
             VerifyQuad(q, D, C, B, A);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void SetByte_throws_on_negative_index()
+        {
+            Quad.SetByte(-1, 0);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void SetByte_throws_on_too_large_index()
+        {
+            Quad.SetByte(16, 0);
         }
 
         [Test]
