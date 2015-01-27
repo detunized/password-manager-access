@@ -87,6 +87,16 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        public void Constructed_from_partial_abcd_with_negative_offset()
+        {
+            VerifyQuad(new SjclQuad(Abcd, -1), 0, A, B, C);
+            VerifyQuad(new SjclQuad(Abcd, -2), 0, 0, A, B);
+            VerifyQuad(new SjclQuad(Abcd, -3), 0, 0, 0, A);
+
+            VerifyZeroQuad(new SjclQuad(Abcd, -4));
+        }
+
+        [Test]
         public void Constructed_from_partial_abcd_with_offset_past_end()
         {
             VerifyZeroQuad(new SjclQuad(Abcd, Abcd.Length * 2));
@@ -124,6 +134,33 @@ namespace PasswordBox.Test
         {
             var bytes = new byte[] {0xCC, 0xCC, 0xCC, A0, A1, A2, A3, B0, B1, B2};
             VerifyQuad(new SjclQuad(bytes, 3), A, (uint)B0 << 24 | (uint)B1 << 16 | (uint)B2 << 8, 0, 0);
+        }
+
+        [Test]
+        public void Constructed_from_partial_bytes_with_negative_offset()
+        {
+            VerifyQuad(new SjclQuad(AbcdBytes,  -1), W( 0, A0, A1, A2),
+                                                     W(A3, B0, B1, B2),
+                                                     W(B3, C0, C1, C2),
+                                                     W(C3, D0, D1, D2));
+            VerifyQuad(new SjclQuad(AbcdBytes,  -2), W( 0,  0, A0, A1),
+                                                     W(A2, A3, B0, B1),
+                                                     W(B2, B3, C0, C1),
+                                                     W(C2, C3, D0, D1));
+            VerifyQuad(new SjclQuad(AbcdBytes,  -3), W( 0,  0,  0, A0),
+                                                     W(A1, A2, A3, B0),
+                                                     W(B1, B2, B3, C0),
+                                                     W(C1, C2, C3, D0));
+            VerifyQuad(new SjclQuad(AbcdBytes,  -4), 0,
+                                                     A,
+                                                     B,
+                                                     C);
+            VerifyQuad(new SjclQuad(AbcdBytes, -14), 0,
+                                                     0,
+                                                     0,
+                                                     W( 0,  0,  0, A0));
+
+            VerifyZeroQuad(new SjclQuad(AbcdBytes, -15));
         }
 
         [Test]
@@ -294,17 +331,22 @@ namespace PasswordBox.Test
             }
         }
 
-        private void VerifyQuad(SjclQuad quad)
+        private static uint W(byte b0, byte b1 = 0, byte b2 = 0, byte b3 = 0)
+        {
+            return (uint)b0 << 24 | (uint)b1 << 16 | (uint)b2 << 8 | b3;
+        }
+
+        private static void VerifyQuad(SjclQuad quad)
         {
             VerifyQuad(quad, A, B, C, D);
         }
 
-        private void VerifyZeroQuad(SjclQuad quad)
+        private static void VerifyZeroQuad(SjclQuad quad)
         {
             VerifyQuad(quad, 0, 0, 0, 0);
         }
 
-        private void VerifyQuad(SjclQuad quad, uint a, uint b, uint c, uint d)
+        private static void VerifyQuad(SjclQuad quad, uint a, uint b, uint c, uint d)
         {
             Assert.AreEqual(a, quad.A);
             Assert.AreEqual(b, quad.B);

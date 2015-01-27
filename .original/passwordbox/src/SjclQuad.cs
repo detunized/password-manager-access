@@ -17,13 +17,13 @@ namespace PasswordBox
 
         public SjclQuad(uint[] abcd, int offset = 0): this(0, 0, 0, 0)
         {
-            for (var i = 0; i < 4 && offset + i < abcd.Length; ++i)
+            for (var i = Math.Max(0, -offset); i < 4 && offset + i < abcd.Length; ++i)
                 this[i] = abcd[offset + i];
         }
 
         public SjclQuad(byte[] bytes, int offset = 0): this(0, 0, 0, 0)
         {
-            for (var i = 0; i < 16 && offset + i < bytes.Length; ++i)
+            for (var i = Math.Max(0, -offset); i < 16 && offset + i < bytes.Length; ++i)
                 this[i / 4] |= (uint)bytes[offset + i] << (3 - i % 4) * 8;
         }
 
