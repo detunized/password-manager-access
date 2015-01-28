@@ -12,8 +12,8 @@ namespace PasswordBox
         private static readonly uint[,] EncodeTable;
         private static readonly uint[,] DecodeTable;
 
-        private uint[] _encryptionKey;
-        private uint[] _decryptionKey;
+        private readonly uint[] _encryptionKey;
+        private readonly uint[] _decryptionKey;
 
         static SjclAes()
         {
