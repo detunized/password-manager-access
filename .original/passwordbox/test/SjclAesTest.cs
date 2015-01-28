@@ -143,17 +143,7 @@ namespace PasswordBox.Test
         };
 
         [Test]
-        public void Encrypt_array_returns_correct_value()
-        {
-            foreach (var i in AesTestCases)
-            {
-                var ciphertext = new SjclAes(i.Key).Encrypt(i.Plaintext.ToAbcd());
-                Assert.AreEqual(i.Ciphertext.ToAbcd(), ciphertext);
-            }
-        }
-
-        [Test]
-        public void Encrypt_quad_returns_correct_value()
+        public void Encrypt_returns_correct_value()
         {
             foreach (var i in AesTestCases)
             {
@@ -163,48 +153,12 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        public void Encrypt_throws_on_invalid_ciphertext_length()
-        {
-            var aes = new SjclAes(new byte[16]);
-            foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
-            {
-                var e = Assert.Throws<ArgumentException>(() => aes.Encrypt(new uint[i]));
-                Assert.AreEqual(
-                    string.Format("Invalid plaintext length: {0}\r\nParameter name: plaintext", i),
-                    e.Message);
-            }
-        }
-
-        [Test]
-        public void Decrypt_array_returns_correct_value()
-        {
-            foreach (var i in AesTestCases)
-            {
-                var plaintext = new SjclAes(i.Key).Decrypt(i.Ciphertext.ToAbcd());
-                Assert.AreEqual(i.Plaintext.ToAbcd(), plaintext);
-            }
-        }
-
-        [Test]
-        public void Decrypt_quad_returns_correct_value()
+        public void Decrypt_returns_correct_value()
         {
             foreach (var i in AesTestCases)
             {
                 var plaintext = new SjclAes(i.Key).Decrypt(i.Ciphertext);
                 Assert.AreEqual(i.Plaintext, plaintext);
-            }
-        }
-
-        [Test]
-        public void Decrypt_throws_on_invalid_ciphertext_length()
-        {
-            var aes = new SjclAes(new byte[16]);
-            foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
-            {
-                var e = Assert.Throws<ArgumentException>(() => aes.Decrypt(new uint[i]));
-                Assert.AreEqual(
-                    string.Format("Invalid ciphertext length: {0}\r\nParameter name: ciphertext", i),
-                    e.Message);
             }
         }
 

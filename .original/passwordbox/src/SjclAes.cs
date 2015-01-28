@@ -40,33 +40,9 @@ namespace PasswordBox
             return Crypt(plaintext, true);
         }
 
-        public uint[] Encrypt(uint[] plaintext)
-        {
-            if (plaintext.Length != 4)
-            {
-                throw new ArgumentException(
-                    string.Format("Invalid plaintext length: {0}", plaintext.Length),
-                    "plaintext");
-            }
-
-            return Encrypt(new SjclQuad(plaintext)).ToAbcd();
-        }
-
         public SjclQuad Decrypt(SjclQuad ciphertext)
         {
             return Crypt(ciphertext, false);
-        }
-
-        public uint[] Decrypt(uint[] ciphertext)
-        {
-            if (ciphertext.Length != 4)
-            {
-                throw new ArgumentException(
-                    string.Format("Invalid ciphertext length: {0}", ciphertext.Length),
-                    "ciphertext");
-            }
-
-            return Decrypt(new SjclQuad(ciphertext)).ToAbcd();
         }
 
         private SjclQuad Crypt(SjclQuad input, bool encrypting)
