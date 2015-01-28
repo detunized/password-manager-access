@@ -23,18 +23,123 @@ namespace PasswordBox.Test
             public readonly SjclQuad Ciphertext;
         };
 
+        struct KeyTestCase
+        {
+            public KeyTestCase(uint[] key, uint[] encryptionKey, uint[] decryptionKey)
+            {
+                Key = key;
+                EncryptionKey = encryptionKey;
+                DecryptionKey = decryptionKey;
+            }
+
+            public readonly uint[] Key;
+            public readonly uint[] EncryptionKey;
+            public readonly uint[] DecryptionKey;
+        };
+
         private static readonly AesTestCase[] AesTestCases =
         {
             // TODO: Add more tests!
             new AesTestCase(
-                key: "00000000000000000000000000000000",
-                plaintext: "00000000000000000000000000000000",
+                       key: "00000000000000000000000000000000",
+                 plaintext: "00000000000000000000000000000000",
                 ciphertext: "66e94bd4ef8a2c3b884cfa59ca342b2e"),
 
             new AesTestCase(
-                key: "10a58869d74be5a374cf867cfb473859",
-                plaintext: "00000000000000000000000000000000",
+                       key: "10a58869d74be5a374cf867cfb473859",
+                 plaintext: "00000000000000000000000000000000",
                 ciphertext: "6d251e6944b051e04eaa6fb4dbf78465"),
+        };
+
+        // Test data is generated with SJCL sources
+        private static readonly KeyTestCase[] KeyTestCases =
+        {
+            new KeyTestCase(
+                          key: new uint[ 4] {0x00000000, 0x00000000, 0x00000000, 0x00000000},
+                encryptionKey: new uint[44] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                             0x62636363, 0x62636363, 0x62636363, 0x62636363,
+                                             0x9b9898c9, 0xf9fbfbaa, 0x9b9898c9, 0xf9fbfbaa,
+                                             0x90973450, 0x696ccffa, 0xf2f45733, 0x0b0fac99,
+                                             0xee06da7b, 0x876a1581, 0x759e42b2, 0x7e91ee2b,
+                                             0x7f2e2b88, 0xf8443e09, 0x8dda7cbb, 0xf34b9290,
+                                             0xec614b85, 0x1425758c, 0x99ff0937, 0x6ab49ba7,
+                                             0x21751787, 0x3550620b, 0xacaf6b3c, 0xc61bf09b,
+                                             0x0ef90333, 0x3ba96138, 0x97060a04, 0x511dfa9f,
+                                             0xb1d4d8e2, 0x8a7db9da, 0x1d7bb3de, 0x4c664941,
+                                             0xb4ef5bcb, 0x3e92e211, 0x23e951cf, 0x6f8f188e},
+                decryptionKey: new uint[44] {0xb4ef5bcb, 0x6f8f188e, 0x23e951cf, 0x3e92e211,
+                                             0x5585820d, 0x258d64ee, 0x0c01b4b2, 0xeb1ceb88,
+                                             0x6ab6f2e9, 0x298cd05c, 0xe71d5f3a, 0xbe996985,
+                                             0xefea4a8b, 0xce918f66, 0x598436bf, 0xd42f9b6c,
+                                             0x2ae50b87, 0x9715b9d9, 0x8dabadd3, 0x3bc5d1e7,
+                                             0xb5a91ef0, 0x1abe140a, 0xb66e7c34, 0x1120da60,
+                                             0xc27d6492, 0xacd0683e, 0xa74ea654, 0xa489c490,
+                                             0x6ead0cac, 0x0b9ece6a, 0x03c762c4, 0x66f4a002,
+                                             0x6533c2c6, 0x0859acae, 0x6533c2c6, 0x0859acae,
+                                             0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68,
+                                             0x00000000, 0x00000000, 0x00000000, 0x00000000}),
+            new KeyTestCase(
+                          key: new uint[ 6] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                             0x00000000, 0x00000000                        },
+                encryptionKey: new uint[52] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                             0x00000000, 0x00000000, 0x62636363, 0x62636363,
+                                             0x62636363, 0x62636363, 0x62636363, 0x62636363,
+                                             0x9b9898c9, 0xf9fbfbaa, 0x9b9898c9, 0xf9fbfbaa,
+                                             0x9b9898c9, 0xf9fbfbaa, 0x90973450, 0x696ccffa,
+                                             0xf2f45733, 0x0b0fac99, 0x90973450, 0x696ccffa,
+                                             0xc81d19a9, 0xa171d653, 0x53858160, 0x588a2df9,
+                                             0xc81d19a9, 0xa171d653, 0x7bebf49b, 0xda9a22c8,
+                                             0x891fa3a8, 0xd1958e51, 0x198897f8, 0xb8f941ab,
+                                             0xc26896f7, 0x18f2b43f, 0x91ed1797, 0x407899c6,
+                                             0x59f00e3e, 0xe1094f95, 0x83ecbc0f, 0x9b1e0830,
+                                             0x0af31fa7, 0x4a8b8661, 0x137b885f, 0xf272c7ca,
+                                             0x432ac886, 0xd834c0b6, 0xd2c7df11, 0x984c5970},
+                decryptionKey: new uint[52] {0x432ac886, 0x984c5970, 0xd2c7df11, 0xd834c0b6,
+                                             0xc8045fd2, 0xb45c80e5, 0xa9265767, 0xc31943bf,
+                                             0x6a3f14d8, 0xd2a820e7, 0xc78b5bcb, 0x1d7ad782,
+                                             0x0f0cd61e, 0x0b1d1c6d, 0x1aac7f35, 0x15237b2c,
+                                             0x0f8f0419, 0x7745c35a, 0x612208b5, 0x11b16358,
+                                             0x70936bed, 0x1a2fad32, 0x0c4866dd, 0x1667cbef,
+                                             0x70936bed, 0x1e3e6741, 0x15a0a92b, 0x1667cbef,
+                                             0x03c762c4, 0x66f4a002, 0x6ead0cac, 0x0b9ece6a,
+                                             0x6533c2c6, 0x66f4a002, 0x6ead0cac, 0x0859acae,
+                                             0x6533c2c6, 0x0859acae, 0x6533c2c6, 0x0859acae,
+                                             0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68,
+                                             0x00000000, 0x6d6a6e68, 0x6d6a6e68, 0x00000000,
+                                             0x00000000, 0x00000000, 0x00000000, 0x00000000}),
+            new KeyTestCase(
+                          key: new uint[ 8] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                             0x00000000, 0x00000000, 0x00000000, 0x00000000},
+                encryptionKey: new uint[60] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                             0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                             0x62636363, 0x62636363, 0x62636363, 0x62636363,
+                                             0xaafbfbfb, 0xaafbfbfb, 0xaafbfbfb, 0xaafbfbfb,
+                                             0x6f6c6ccf, 0x0d0f0fac, 0x6f6c6ccf, 0x0d0f0fac,
+                                             0x7d8d8d6a, 0xd7767691, 0x7d8d8d6a, 0xd7767691,
+                                             0x5354edc1, 0x5e5be26d, 0x31378ea2, 0x3c38810e,
+                                             0x968a81c1, 0x41fcf750, 0x3c717a3a, 0xeb070cab,
+                                             0x9eaa8f28, 0xc0f16d45, 0xf1c6e3e7, 0xcdfe62e9,
+                                             0x2b312bdf, 0x6acddc8f, 0x56bca6b5, 0xbdbbaa1e,
+                                             0x6406fd52, 0xa4f79017, 0x553173f0, 0x98cf1119,
+                                             0x6dbba90b, 0x07767584, 0x51cad331, 0xec71792f,
+                                             0xe7b0e89c, 0x4347788b, 0x16760b7b, 0x8eb91a62,
+                                             0x74ed0ba1, 0x739b7e25, 0x2251ad14, 0xce20d43b,
+                                             0x10f80a17, 0x53bf729c, 0x45c979e7, 0xcb706385},
+                decryptionKey: new uint[60] {0x10f80a17, 0xcb706385, 0x45c979e7, 0x53bf729c,
+                                             0x0aa1138b, 0x68b670af, 0x0e7d0eb7, 0xd0d8a01b,
+                                             0x55901cfa, 0x87a48de1, 0x32280f05, 0xa92a6713,
+                                             0x1e9032c8, 0x66cb7e18, 0xdea5aeac, 0xda79b390,
+                                             0x0d5f158a, 0xb58c82e4, 0x9b026816, 0xfcba7be9,
+                                             0xc04f0766, 0xb86ed0b4, 0x04dc1d3c, 0xc4e98158,
+                                             0xd5b9f906, 0x2e8eeaf2, 0x67b813ff, 0xf1e56e63,
+                                             0x7821d7d2, 0xbcb2cd88, 0xc0359c64, 0x04a6863e,
+                                             0xfb3713f4, 0x4936f90d, 0x965d7d9c, 0x245c9765,
+                                             0xc4931a5a, 0x7c8751ec, 0xc4931a5a, 0x7c8751ec,
+                                             0xb201eaf9, 0xdf6b8491, 0xb201eaf9, 0xdf6b8491,
+                                             0xb8144bb6, 0xb8144bb6, 0xb8144bb6, 0xb8144bb6,
+                                             0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68,
+                                             0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                             0x00000000, 0x00000000, 0x00000000, 0x00000000}),
         };
 
         [Test]
@@ -288,22 +393,11 @@ namespace PasswordBox.Test
             var dt = SjclAes.ComputeDoubleTable();
             var sbox = SjclAes.ComputeSboxTable(dt, SjclAes.ComputeTrippleTable(dt));
 
-            // TODO: Add more tests for longer/different keys
-
-            // Test data is generated with SJCL sources
-            var input = new uint[] {0, 0, 0, 0};
-            var expected = new uint[]
+            foreach (var i in KeyTestCases)
             {
-                0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x62636363, 0x62636363, 0x62636363, 0x62636363,
-                0x9b9898c9, 0xf9fbfbaa, 0x9b9898c9, 0xf9fbfbaa, 0x90973450, 0x696ccffa, 0xf2f45733, 0x0b0fac99,
-                0xee06da7b, 0x876a1581, 0x759e42b2, 0x7e91ee2b, 0x7f2e2b88, 0xf8443e09, 0x8dda7cbb, 0xf34b9290,
-                0xec614b85, 0x1425758c, 0x99ff0937, 0x6ab49ba7, 0x21751787, 0x3550620b, 0xacaf6b3c, 0xc61bf09b,
-                0x0ef90333, 0x3ba96138, 0x97060a04, 0x511dfa9f, 0xb1d4d8e2, 0x8a7db9da, 0x1d7bb3de, 0x4c664941,
-                0xb4ef5bcb, 0x3e92e211, 0x23e951cf, 0x6f8f188e
-            };
-
-            var key = SjclAes.ScheduleEncryptionKey(input, sbox);
-            Assert.AreEqual(expected, key);
+                var key = SjclAes.ScheduleEncryptionKey(i.Key, sbox);
+                Assert.AreEqual(i.EncryptionKey, key);
+            }
         }
 
         [Test]
@@ -326,23 +420,12 @@ namespace PasswordBox.Test
             var sbox = SjclAes.ComputeSboxTable(dt, SjclAes.ComputeTrippleTable(dt));
             var decode = SjclAes.ComputeDecodeTable(dt, sbox);
 
-            // TODO: Add more tests for longer/different keys
-
-            // Test data is generated with SJCL sources
-            var input = new uint[] {0, 0, 0, 0};
-            var encKey = SjclAes.ScheduleEncryptionKey(input, sbox);
-            var expected = new uint[]
+            foreach (var i in KeyTestCases)
             {
-                0xb4ef5bcb, 0x6f8f188e, 0x23e951cf, 0x3e92e211, 0x5585820d, 0x258d64ee, 0x0c01b4b2, 0xeb1ceb88,
-                0x6ab6f2e9, 0x298cd05c, 0xe71d5f3a, 0xbe996985, 0xefea4a8b, 0xce918f66, 0x598436bf, 0xd42f9b6c,
-                0x2ae50b87, 0x9715b9d9, 0x8dabadd3, 0x3bc5d1e7, 0xb5a91ef0, 0x1abe140a, 0xb66e7c34, 0x1120da60,
-                0xc27d6492, 0xacd0683e, 0xa74ea654, 0xa489c490, 0x6ead0cac, 0x0b9ece6a, 0x03c762c4, 0x66f4a002,
-                0x6533c2c6, 0x0859acae, 0x6533c2c6, 0x0859acae, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68,
-                0x00000000, 0x00000000, 0x00000000, 0x00000000
-            };
-
-            var key = SjclAes.ScheduleDecryptionKey(encKey, sbox, decode);
-            Assert.AreEqual(expected, key);
+                var encKey = SjclAes.ScheduleEncryptionKey(i.Key, sbox);
+                var key = SjclAes.ScheduleDecryptionKey(encKey, sbox, decode);
+                Assert.AreEqual(i.DecryptionKey, key);
+            }
         }
     }
 }
