@@ -23,7 +23,34 @@ namespace PasswordBox
             var tag = ComputeTag(aes, plaintext, iv, adata, tagLength, inputLengthLength);
             var ciphertextTag = ApplyCtr(aes, plaintext, iv, tag, tagLength, inputLengthLength);
 
-            return ciphertextTag.Ciphertext.Concat(ciphertextTag.Tag.ToBytes().Take(tagLength)).ToArray();
+            return ciphertextTag.Text.Concat(ciphertextTag.Tag.ToBytes().Take(tagLength)).ToArray();
+        }
+
+        // TODO: Parametrize on cipher!
+        // TODO: Factor out shared code between Encrypt and Decrypt!
+        // TODO: Validate parameters better!
+        public static byte[] Decrypt(SjclAes aes, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        {
+            var ivLength = iv.Length;
+            if (ivLength < 7)
+                throw new ArgumentException("IV must be at least 7 bytes long", "iv");
+
+            var plaintextLength = ciphertext.Length - tagLength;
+            var ciphertextOnly = ciphertext.Take(plaintextLength).ToArray();
+            var tag = new SjclQuad(ciphertext, plaintextLength);
+
+            var inputLengthLength = ComputeLengthLength(plaintextLength);
+            if (inputLengthLength < 15 - ivLength)
+                inputLengthLength = 15 - ivLength;
+            iv = iv.Take(15 - inputLengthLength).ToArray();
+
+            var plaintextWithTag = ApplyCtr(aes, ciphertextOnly, iv, tag, tagLength, inputLengthLength);
+            var expectedTag = ComputeTag(aes, plaintextWithTag.Text, iv, adata, tagLength, inputLengthLength);
+
+            if (tag.Equals(expectedTag))
+                throw new Exception("CCM tag doesn't match"); // TODO: Use custom exception!
+
+            return plaintextWithTag.Text;
         }
 
         internal static SjclQuad ComputeTag(SjclAes aes, byte[] plaintext, byte[] iv, byte[] adata, int tagLength, int plaintextLengthLength)
@@ -59,13 +86,13 @@ namespace PasswordBox
 
         internal struct CtrResult
         {
-            public CtrResult(byte[] ciphertext, SjclQuad tag)
+            public CtrResult(byte[] text, SjclQuad tag)
             {
-                Ciphertext = ciphertext;
+                Text = text;
                 Tag = tag;
             }
 
-            public readonly byte[] Ciphertext;
+            public readonly byte[] Text;
             public readonly SjclQuad Tag;
         }
 

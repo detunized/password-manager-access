@@ -168,6 +168,17 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        public void Decrypt_returns_correct_value()
+        {
+            foreach (var i in Rfc3610TestCases)
+            {
+                var aes = new SjclAes(i.Key);
+                var plaintext = SjclCcm.Decrypt(aes, i.Ciphertext, i.Iv, i.Adata, i.TagLength);
+                Assert.AreEqual(i.Plaintext, plaintext);
+            }
+        }
+
+        [Test]
         public void ComputeLengthLength_returns_corrent_value()
         {
             var testCases = new Dictionary<int, int>
