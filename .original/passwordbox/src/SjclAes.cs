@@ -25,9 +25,22 @@ namespace PasswordBox
             DecodeTable = ComputeDecodeTable(doubleTable, SboxTable);
         }
 
-        public SjclAes(uint[] key)
+        public SjclAes(byte[] key)
         {
-            _encryptionKey = ScheduleEncryptionKey(key, SboxTable);
+            var length4 = key.Length / 4;
+            var uintKey = new uint[length4];
+            for (var i = 0; i < length4; ++i)
+            {
+                var u = BitConverter.ToUInt32(key, i * 4);
+                if (BitConverter.IsLittleEndian)
+                {
+                    u = (u >> 16) | (u << 16);
+                    u = ((u & 0xff00ff00) >> 8) | ((u & 0x00ff00ff) << 8);
+                }
+                uintKey[i] = u;
+            }
+
+            _encryptionKey = ScheduleEncryptionKey(uintKey, SboxTable);
             _decryptionKey = ScheduleDecryptionKey(_encryptionKey, SboxTable, DecodeTable);
         }
 

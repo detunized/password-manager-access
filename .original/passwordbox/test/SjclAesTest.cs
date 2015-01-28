@@ -9,34 +9,58 @@ namespace PasswordBox.Test
     [TestFixture]
     class SjclAesTest
     {
+        struct AesTestCase
+        {
+            public AesTestCase(string key, string plaintext, string ciphertext)
+            {
+                Key = key.DecodeHex();
+                Plaintext = new SjclQuad(plaintext.DecodeHex());
+                Ciphertext = new SjclQuad(ciphertext.DecodeHex());
+            }
+
+            public readonly byte[] Key;
+            public readonly SjclQuad Plaintext;
+            public readonly SjclQuad Ciphertext;
+        };
+
+        private static readonly AesTestCase[] AesTestCases =
+        {
+            // TODO: Add more tests!
+            new AesTestCase(
+                key: "00000000000000000000000000000000",
+                plaintext: "00000000000000000000000000000000",
+                ciphertext: "66e94bd4ef8a2c3b884cfa59ca342b2e"),
+
+            new AesTestCase(
+                key: "10a58869d74be5a374cf867cfb473859",
+                plaintext: "00000000000000000000000000000000",
+                ciphertext: "6d251e6944b051e04eaa6fb4dbf78465"),
+        };
+
         [Test]
         public void Encrypt_array_returns_correct_value()
         {
-            // TODO: Add more tests!
-
-            var expected = new uint[] {0x66e94bd4, 0xef8a2c3b, 0x884cfa59, 0xca342b2e};
-            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
-            var ciphertext = aes.Encrypt(new uint[] {0, 0, 0, 0});
-
-            Assert.AreEqual(expected, ciphertext);
+            foreach (var i in AesTestCases)
+            {
+                var ciphertext = new SjclAes(i.Key).Encrypt(i.Plaintext.ToAbcd());
+                Assert.AreEqual(i.Ciphertext.ToAbcd(), ciphertext);
+            }
         }
 
         [Test]
         public void Encrypt_quad_returns_correct_value()
         {
-            // TODO: Add more tests!
-
-            var expected = new SjclQuad(0x66e94bd4, 0xef8a2c3b, 0x884cfa59, 0xca342b2e);
-            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
-            var ciphertext = aes.Encrypt(new SjclQuad(0, 0, 0, 0));
-
-            Assert.AreEqual(expected, ciphertext);
+            foreach (var i in AesTestCases)
+            {
+                var ciphertext = new SjclAes(i.Key).Encrypt(i.Plaintext);
+                Assert.AreEqual(i.Ciphertext, ciphertext);
+            }
         }
 
         [Test]
         public void Encrypt_throws_on_invalid_ciphertext_length()
         {
-            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            var aes = new SjclAes(new byte[16]);
             foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
             {
                 var e = Assert.Throws<ArgumentException>(() => aes.Encrypt(new uint[i]));
@@ -49,31 +73,27 @@ namespace PasswordBox.Test
         [Test]
         public void Decrypt_array_returns_correct_value()
         {
-            // TODO: Add more tests!
-
-            var expected = new uint[] {0x140f0f10, 0x11b5223d, 0x79587717, 0xffd9ec3a};
-            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
-            var plaintext = aes.Decrypt(new uint[] {0, 0, 0, 0});
-
-            Assert.AreEqual(expected, plaintext);
+            foreach (var i in AesTestCases)
+            {
+                var plaintext = new SjclAes(i.Key).Decrypt(i.Ciphertext.ToAbcd());
+                Assert.AreEqual(i.Plaintext.ToAbcd(), plaintext);
+            }
         }
 
         [Test]
         public void Decrypt_quad_returns_correct_value()
         {
-            // TODO: Add more tests!
-
-            var expected = new SjclQuad(0x140f0f10, 0x11b5223d, 0x79587717, 0xffd9ec3a);
-            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
-            var plaintext = aes.Decrypt(new SjclQuad(0, 0, 0, 0));
-
-            Assert.AreEqual(expected, plaintext);
+            foreach (var i in AesTestCases)
+            {
+                var plaintext = new SjclAes(i.Key).Decrypt(i.Ciphertext);
+                Assert.AreEqual(i.Plaintext, plaintext);
+            }
         }
 
         [Test]
         public void Decrypt_throws_on_invalid_ciphertext_length()
         {
-            var aes = new SjclAes(new uint[] {0, 0, 0, 0});
+            var aes = new SjclAes(new byte[16]);
             foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
             {
                 var e = Assert.Throws<ArgumentException>(() => aes.Decrypt(new uint[i]));
