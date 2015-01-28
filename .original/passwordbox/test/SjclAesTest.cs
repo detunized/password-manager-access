@@ -25,14 +25,14 @@ namespace PasswordBox.Test
 
         struct KeyTestCase
         {
-            public KeyTestCase(uint[] key, uint[] encryptionKey, uint[] decryptionKey)
+            public KeyTestCase(string key, uint[] encryptionKey, uint[] decryptionKey)
             {
-                Key = key;
+                Key = key.DecodeHex();
                 EncryptionKey = encryptionKey;
                 DecryptionKey = decryptionKey;
             }
 
-            public readonly uint[] Key;
+            public readonly byte[] Key;
             public readonly uint[] EncryptionKey;
             public readonly uint[] DecryptionKey;
         };
@@ -55,7 +55,7 @@ namespace PasswordBox.Test
         private static readonly KeyTestCase[] KeyTestCases =
         {
             new KeyTestCase(
-                          key: new uint[ 4] {0x00000000, 0x00000000, 0x00000000, 0x00000000},
+                          key: "00000000000000000000000000000000",
                 encryptionKey: new uint[44] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                              0x62636363, 0x62636363, 0x62636363, 0x62636363,
                                              0x9b9898c9, 0xf9fbfbaa, 0x9b9898c9, 0xf9fbfbaa,
@@ -79,8 +79,7 @@ namespace PasswordBox.Test
                                              0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68, 0x6d6a6e68,
                                              0x00000000, 0x00000000, 0x00000000, 0x00000000}),
             new KeyTestCase(
-                          key: new uint[ 6] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                             0x00000000, 0x00000000                        },
+                          key: "000000000000000000000000000000000000000000000000",
                 encryptionKey: new uint[52] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                              0x00000000, 0x00000000, 0x62636363, 0x62636363,
                                              0x62636363, 0x62636363, 0x62636363, 0x62636363,
@@ -108,8 +107,7 @@ namespace PasswordBox.Test
                                              0x00000000, 0x6d6a6e68, 0x6d6a6e68, 0x00000000,
                                              0x00000000, 0x00000000, 0x00000000, 0x00000000}),
             new KeyTestCase(
-                          key: new uint[ 8] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                             0x00000000, 0x00000000, 0x00000000, 0x00000000},
+                          key: "0000000000000000000000000000000000000000000000000000000000000000",
                 encryptionKey: new uint[60] {0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                              0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                              0x62636363, 0x62636363, 0x62636363, 0x62636363,
@@ -360,9 +358,9 @@ namespace PasswordBox.Test
             var dt = SjclAes.ComputeDoubleTable();
             var sbox = SjclAes.ComputeSboxTable(dt, SjclAes.ComputeTrippleTable(dt));
 
-            foreach (var i in new[] {0, 1, 2, 3, 5, 7, 9, 10, 1024})
+            foreach (var i in new[] {0, 1, 2, 3, 4, 15, 17, 23, 25, 31, 33, 1024})
             {
-                var e = Assert.Throws<Exception>(() => SjclAes.ScheduleEncryptionKey(new uint[i], sbox));
+                var e = Assert.Throws<Exception>(() => SjclAes.ScheduleEncryptionKey(new byte[i], sbox));
                 Assert.AreEqual(string.Format("Invalid key length ({0})", i), e.Message);
             }
         }

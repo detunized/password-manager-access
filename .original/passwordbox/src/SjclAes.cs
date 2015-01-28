@@ -27,11 +27,7 @@ namespace PasswordBox
 
         public SjclAes(byte[] key)
         {
-            var uintKey = new uint[key.Length / 4];
-            for (var i = 0; i < uintKey.Length; ++i)
-                uintKey[i] = BitConverter.ToUInt32(key, i * 4).FromBigEndian();
-
-            _encryptionKey = ScheduleEncryptionKey(uintKey, SboxTable);
+            _encryptionKey = ScheduleEncryptionKey(key, SboxTable);
             _decryptionKey = ScheduleDecryptionKey(_encryptionKey, SboxTable, DecodeTable);
         }
 
@@ -211,23 +207,26 @@ namespace PasswordBox
             return table;
         }
 
-        internal static uint[] ScheduleEncryptionKey(uint[] key, byte[] sboxTable)
+        internal static uint[] ScheduleEncryptionKey(byte[] key, byte[] sboxTable)
         {
-            var inputLength = key.Length;
-            if (inputLength != 4 && inputLength != 6 && inputLength != 8)
-                throw new Exception(string.Format("Invalid key length ({0})", inputLength)); // TODO: Use custom exception!
+            var keyLength = key.Length;
+            if (keyLength != 16 && keyLength != 24 && keyLength != 32)
+                throw new Exception(string.Format("Invalid key length ({0})", keyLength)); // TODO: Use custom exception!
 
-            var keyLength = inputLength * 4 + 28;
-            var encKey = new uint[keyLength];
+            var keyLength4 = keyLength / 4;
+            var encKeyLength = keyLength4 * 4 + 28;
+            var encKey = new uint[encKeyLength];
             uint rcon = 1;
 
-            key.CopyTo(encKey, 0);
-            for (var i = inputLength; i < keyLength; ++i)
+            for (var i = 0; i < keyLength4; ++i)
+                encKey[i] = BitConverter.ToUInt32(key, i * 4).FromBigEndian();
+
+            for (var i = keyLength4; i < encKeyLength; ++i)
             {
                 var t = encKey[i - 1];
 
                 // Apply sbox
-                if (i % inputLength == 0 || (inputLength == 8 && i % inputLength == 4))
+                if (i % keyLength4 == 0 || (keyLength4 == 8 && i % keyLength4 == 4))
                 {
                     t = (uint)((sboxTable[(t >> 24)      ] << 24) ^
                                (sboxTable[(t >> 16) & 255] << 16) ^
@@ -235,14 +234,14 @@ namespace PasswordBox
                                (sboxTable[(t      ) & 255]      ));
 
                     // Shift rows and add rcon
-                    if (i % inputLength == 0)
+                    if (i % keyLength4 == 0)
                     {
                         t = (t << 8) ^ (t >> 24) ^ (rcon << 24);
                         rcon = (rcon << 1) ^ (rcon >> 7) * 283;
                     }
                 }
 
-                encKey[i] = encKey[i - inputLength] ^ t;
+                encKey[i] = encKey[i - keyLength4] ^ t;
             }
 
             return encKey;
