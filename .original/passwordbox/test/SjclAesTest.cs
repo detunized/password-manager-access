@@ -427,5 +427,21 @@ namespace PasswordBox.Test
                 Assert.AreEqual(i.DecryptionKey, key);
             }
         }
+
+        [Test]
+        public void ToQuads_converts_words_to_quads()
+        {
+            Assert.AreEqual(
+                new SjclQuad[] {new SjclQuad(1, 2, 3, 4)},
+                SjclAes.ToQuads(new uint[] {1, 2, 3, 4}));
+
+            Assert.AreEqual(
+                new SjclQuad[] {new SjclQuad(1, 2, 3, 4), new SjclQuad(5, 6, 7, 8)},
+                SjclAes.ToQuads(new uint[] {1, 2, 3, 4, 5, 6, 7, 8}));
+
+            Assert.AreEqual(
+                new SjclQuad[] {new SjclQuad(1, 2, 3, 4), new SjclQuad(5, 6, 7, 8), new SjclQuad(9, 10, 11, 12)},
+                SjclAes.ToQuads(new uint[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}));
+        }
     }
 }

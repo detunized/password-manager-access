@@ -306,5 +306,17 @@ namespace PasswordBox
 
             return decKey;
         }
+
+        internal static SjclQuad[] ToQuads(uint[] abcds)
+        {
+            if (abcds.Length % 4 != 0)
+                throw new ArgumentException("Length must be a multiple of 4", "abcds");
+
+            var quads = new SjclQuad[abcds.Length / 4];
+            for (var i = 0; i < quads.Length; ++i)
+                quads[i] = new SjclQuad(abcds, i * 4);
+
+            return quads;
+        }
     }
 }
