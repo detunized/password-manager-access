@@ -35,10 +35,9 @@ namespace PasswordBox
             _decryptionKey = ScheduleDecryptionKey(_encryptionKey, SboxTable, DecodeTable);
         }
 
-        // TODO: Make it the other way around. Wrap this method with the array version!
         public SjclQuad Encrypt(SjclQuad plaintext)
         {
-            return new SjclQuad(Encrypt(plaintext.ToAbcd()));
+            return Crypt(plaintext, true);
         }
 
         public uint[] Encrypt(uint[] plaintext)
@@ -50,13 +49,12 @@ namespace PasswordBox
                     "plaintext");
             }
 
-            return Crypt(plaintext, true);
+            return Encrypt(new SjclQuad(plaintext)).ToAbcd();
         }
 
-        // TODO: Make it the other way around. Wrap this method with the array version!
         public SjclQuad Decrypt(SjclQuad ciphertext)
         {
-            return new SjclQuad(Decrypt(ciphertext.ToAbcd()));
+            return Crypt(ciphertext, false);
         }
 
         public uint[] Decrypt(uint[] ciphertext)
@@ -68,10 +66,10 @@ namespace PasswordBox
                     "ciphertext");
             }
 
-            return Crypt(ciphertext, false);
+            return Decrypt(new SjclQuad(ciphertext)).ToAbcd();
         }
 
-        private uint[] Crypt(uint[] input, bool encrypting)
+        private SjclQuad Crypt(SjclQuad input, bool encrypting)
         {
             var key = encrypting ? _encryptionKey : _decryptionKey;
 
@@ -85,7 +83,7 @@ namespace PasswordBox
             var table = encrypting ? EncodeTable : DecodeTable;
             var sbox = encrypting ? SboxTable : InverseSboxTable;
 
-            var output = new uint[] {0, 0, 0, 0};
+            var output = new SjclQuad(0, 0, 0, 0);
 
             // Inner rounds
             for (var i = 0; i < innerRoundCount; i++)
