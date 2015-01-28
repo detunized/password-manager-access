@@ -432,6 +432,10 @@ namespace PasswordBox.Test
         public void ToQuads_converts_words_to_quads()
         {
             Assert.AreEqual(
+                new SjclQuad[0],
+                SjclAes.ToQuads(new uint[0]));
+
+            Assert.AreEqual(
                 new SjclQuad[] {new SjclQuad(1, 2, 3, 4)},
                 SjclAes.ToQuads(new uint[] {1, 2, 3, 4}));
 
@@ -442,6 +446,15 @@ namespace PasswordBox.Test
             Assert.AreEqual(
                 new SjclQuad[] {new SjclQuad(1, 2, 3, 4), new SjclQuad(5, 6, 7, 8), new SjclQuad(9, 10, 11, 12)},
                 SjclAes.ToQuads(new uint[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}));
+        }
+
+        [Test]
+        [ExpectedException(
+            typeof(ArgumentException),
+            ExpectedMessage = "Length must be a multiple of 4\r\nParameter name: abcds")]
+        public void ToQuads_throws_on_length_that_is_not_multiple_of_4()
+        {
+            SjclAes.ToQuads(new uint[] {1, 2, 3});
         }
     }
 }
