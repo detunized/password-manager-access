@@ -360,8 +360,8 @@ namespace PasswordBox.Test
 
             foreach (var i in new[] {0, 1, 2, 3, 4, 15, 17, 23, 25, 31, 33, 1024})
             {
-                var e = Assert.Throws<Exception>(() => SjclAes.ScheduleEncryptionKey(new byte[i], sbox));
-                Assert.AreEqual(string.Format("Invalid key length ({0})", i), e.Message);
+                var e = Assert.Throws<ArgumentException>(() => SjclAes.ScheduleEncryptionKey(new byte[i], sbox));
+                Assert.AreEqual(string.Format("Invalid key length: {0}\r\nParameter name: key", i), e.Message);
             }
         }
 

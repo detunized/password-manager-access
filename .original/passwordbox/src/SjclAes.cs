@@ -211,7 +211,7 @@ namespace PasswordBox
         {
             var keyLength = key.Length;
             if (keyLength != 16 && keyLength != 24 && keyLength != 32)
-                throw new Exception(string.Format("Invalid key length ({0})", keyLength)); // TODO: Use custom exception!
+                throw new ArgumentException(string.Format("Invalid key length: {0}", keyLength), "key");
 
             var keyLength4 = keyLength / 4;
             var encKeyLength = keyLength4 * 4 + 28;
