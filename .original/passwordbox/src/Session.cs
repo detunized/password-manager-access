@@ -5,11 +5,13 @@ namespace PasswordBox
 {
     public class Session
     {
-        public Session(string id)
+        public Session(string id, byte[] key)
         {
             Id = id;
+            Key = key;
         }
 
         public string Id { get; private set; }
+        public byte[] Key { get; private set; }
     }
 }

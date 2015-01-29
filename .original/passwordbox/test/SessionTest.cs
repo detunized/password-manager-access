@@ -9,11 +9,15 @@ namespace PasswordBox.Test
     class SessionTest
     {
         [Test]
-        public void Session_id_is_set()
+        public void Session_properties_are_set()
         {
             var id = "12345678";
-            var session = new Session(id);
+            var key = "deadbeef".DecodeHex();
+
+            var session = new Session(id, key);
+
             Assert.AreEqual(id, session.Id);
+            Assert.AreEqual(key, session.Key);
         }
     }
 }

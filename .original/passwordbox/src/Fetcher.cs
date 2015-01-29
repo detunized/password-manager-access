@@ -29,10 +29,14 @@ namespace PasswordBox
             var response = webClient.UploadValues("https://api0.passwordbox.com/api/0/api_login.json",
                                                   parameters);
 
-            return new Session("");
+            var parsedResponse = ParseResponseJson(response.ToUtf8());
+            var key = ParseEncryptionKey(parsedResponse, password);
+
+            // TODO: Extract cookie!
+            return new Session("", key);
         }
 
-        internal static string ParseEncryptionKey(LoginResponse loginResponse, string password)
+        internal static byte[] ParseEncryptionKey(LoginResponse loginResponse, string password)
         {
             var salt = loginResponse.Salt;
             if (salt == null || salt.Length < 32)
@@ -42,7 +46,7 @@ namespace PasswordBox
             var dr = ParseDerivationRulesJson(loginResponse.DerivationRulesJson);
             var kek = Crypto.ComputeKek(password, salt, dr);
 
-            return Crypto.Decrypt(kek, loginResponse.EncryptedKey).ToUtf8();
+            return Crypto.Decrypt(kek, loginResponse.EncryptedKey).ToUtf8().DecodeHex();
         }
 
         [DataContract]

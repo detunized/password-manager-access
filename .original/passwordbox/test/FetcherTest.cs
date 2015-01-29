@@ -30,7 +30,7 @@ namespace PasswordBox.Test
         private const string Salt = "1095d8447adfdba215ea3dfd7dbf029cc8cf09c6fade18c76a356c908f48175b";
         private const string EncryptedKey = "AAR6fDOLfXJKRxiYYhm4u/OgQw3tIWtPUFutlF55RgshUagCtR3WXiZGG52m" +
                                             "2RutxUrKcrJj7ZdTHVWukvYH2MveKbKuljwVv0zWnSwHqQSf0aRzJhyl0JWB";
-        private const string Key = "bc0d63541710541e493d1077e49e92523a4b7c53af1883266ed6c5be2f1b9562";
+        private static readonly byte[] Key = "bc0d63541710541e493d1077e49e92523a4b7c53af1883266ed6c5be2f1b9562".DecodeHex();
 
         private static readonly string DerivationRulesJson = string.Format(
             @"{{""client_iterations"":""{0}"",""iterations"":""{1}""}}",
@@ -47,6 +47,11 @@ namespace PasswordBox.Test
         public void Login_returns_valid_session()
         {
             var webClient = new Mock<IWebClient>();
+
+            webClient
+                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Returns(ValidLoginResponseJson.ToBytes());
+
             var session = Fetcher.Login(Username, Password, webClient.Object);
 
             webClient.Verify(
@@ -63,8 +68,8 @@ namespace PasswordBox.Test
                 Times.Once(),
                 "Did not see a POST request made with the correct parameters");
 
-            Assert.NotNull(session);
             Assert.AreEqual("", session.Id);
+            Assert.AreEqual(Key, session.Key);
         }
 
         [Test]
