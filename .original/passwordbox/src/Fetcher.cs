@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text.RegularExpressions;
 
 namespace PasswordBox
 {
@@ -31,9 +32,10 @@ namespace PasswordBox
 
             var parsedResponse = ParseResponseJson(response.ToUtf8());
             var key = ParseEncryptionKey(parsedResponse, password);
+            var id = ExtractSessionId(webClient.ResponseHeaders["set-cookie"]);
 
             // TODO: Extract cookie!
-            return new Session("", key);
+            return new Session(id, key);
         }
 
         internal static byte[] ParseEncryptionKey(LoginResponse loginResponse, string password)
@@ -100,6 +102,15 @@ namespace PasswordBox
             var s = new DataContractJsonSerializer(typeof(T));
             using (var stream = new MemoryStream(json.ToBytes(), false))
                 return (T)s.ReadObject(stream);
+        }
+
+        internal static string ExtractSessionId(string cookies)
+        {
+            var match = Regex.Match(cookies, "_pwdbox_session=(.*?);");
+            if (!match.Success)
+                throw new Exception("Unsupported cookie format"); // TODO: Use custom exception!
+
+            return match.Groups[1].Value;
         }
     }
 }

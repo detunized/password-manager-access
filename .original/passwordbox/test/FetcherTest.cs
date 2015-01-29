@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using Moq;
 using NUnit.Framework;
 
@@ -43,6 +44,24 @@ namespace PasswordBox.Test
             DerivationRulesJson.Replace("\"", "\\\""), // Quotes have to be escaped before they are inserted into JSON
             EncryptedKey);
 
+        private const string SessionId = "BAh7C0kiD3Nlc3Npb25faWQGOgZFVEkiJThjYjM2MDM5YTk5ZWQzMj" +
+                                         "JmM2UzYjI1NjU4NWE4M2JmBjsAVEkiC3RhZ2dlZAY7AEZsKwevvspU" +
+                                         "SSIbd2FyZGVuLnVzZXIubWVtYmVyLmtleQY7AFRbB1sGaQOvxXhJIi" +
+                                         "IkMmEkMTAkUk5NaHo3QlE1a2dRck5OWXFVMDEyLgY7AFRJIh93YXJk" +
+                                         "ZW4udXNlci5tZW1iZXIuc2Vzc2lvbgY7AFR7BkkiFGxhc3RfcmVxdW" +
+                                         "VzdF9hdAY7AFRJdToJVGltZQ23wxzAmy02Nwk6DW5hbm9fbnVtaQL4" +
+                                         "AToNbmFub19kZW5pBjoNc3VibWljcm8iB1BAOgl6b25lSSIIVVRDBj" +
+                                         "sAVEkiEHNfdGltZXN0YW1wBjsARmwrB6%2B%2BylRJIhBfY3NyZl90" +
+                                         "b2tlbgY7AEZJIjEwcC90aGtYT3ZjdmUwazZsV0ZkdkFmNTZPaVFsdn" +
+                                         "lqK1RSYmVmOUUxRmFVPQY7AEY%3D--634da8b44072734f07b02aea" +
+                                         "c047b02a05a7b6bc";
+
+        private static readonly string SetCookie = string.Format(
+            "__cfduid=dd095cad151de65f366b14bab1cb5f3c71422573230; expires=Fri, 29-Jan-16 23:13:" +
+            "50 GMT; path=/; domain=.passwordbox.com; HttpOnly,lang=en_US; domain=.passwordbox.c" +
+            "om; path=/; expires=Fri, 29-Jan-2016 23:13:51 GMT,_pwdbox_session={0}; domain=.pass" +
+            "wordbox.com; path=/; secure; HttpOnly", SessionId);
+
         [Test]
         public void Login_returns_valid_session()
         {
@@ -51,6 +70,14 @@ namespace PasswordBox.Test
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
                 .Returns(ValidLoginResponseJson.ToBytes());
+
+            webClient
+                .SetupGet(x => x.ResponseHeaders)
+                .Returns(() => {
+                    var headers = new WebHeaderCollection();
+                    headers.Add("set-cookie", SetCookie);
+                    return headers;
+                });
 
             var session = Fetcher.Login(Username, Password, webClient.Object);
 
@@ -68,7 +95,7 @@ namespace PasswordBox.Test
                 Times.Once(),
                 "Did not see a POST request made with the correct parameters");
 
-            Assert.AreEqual("", session.Id);
+            Assert.AreEqual(SessionId, session.Id);
             Assert.AreEqual(Key, session.Key);
         }
 
@@ -111,6 +138,19 @@ namespace PasswordBox.Test
             var parsed = Fetcher.ParseDerivationRulesJson(DerivationRulesJson);
             Assert.AreEqual(ClientIterationCount, parsed.ClientIterationCount);
             Assert.AreEqual(ServerIterationCount, parsed.ServerIterationCount);
+        }
+
+        [Test]
+        public void ExtractSessionId_returns_correct_result()
+        {
+            Assert.AreEqual(SessionId, Fetcher.ExtractSessionId(SetCookie));
+        }
+
+        [Test]
+        [ExpectedException(typeof(Exception), ExpectedMessage = "Unsupported cookie format")]
+        public void ExtractSessionId_throws_on_invalid_cookies()
+        {
+            Assert.AreEqual(SessionId, Fetcher.ExtractSessionId(""));
         }
 
         //
