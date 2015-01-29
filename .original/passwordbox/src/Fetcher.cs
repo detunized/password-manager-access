@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Specialized;
 using System.IO;
-using System.Security.Cryptography;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 
@@ -21,27 +20,29 @@ namespace PasswordBox
         public static Session Login(string username, string password, IWebClient webClient)
         {
             var parameters = new NameValueCollection
-                {
-                    {"member[email]", username},
-                    {"member[password]", ComputePasswordHash(username, password)},
-                };
+            {
+                {"member[email]", username},
+                {"member[password]", Crypto.ComputePasswordHash(username, password)},
+            };
 
+            // TODO: Handle errors!
             var response = webClient.UploadValues("https://api0.passwordbox.com/api/0/api_login.json",
                                                   parameters);
 
             return new Session("");
         }
 
-        internal static string ComputePasswordHash(string username, string password)
+        internal static string ParseEncryptionKey(LoginResponse loginResponse, string password)
         {
-            var salt = Sha1Hex(username);
-            return Pbkdf2Sha256(password, salt, 10000, 256);
-        }
+            var salt = loginResponse.Salt;
+            if (salt == null || salt.Length < 32)
+                throw new Exception("Legacy user is not supported"); // TODO: Use custom exception!
 
-        internal static string Sha1Hex(string text)
-        {
-            using (var sha = new SHA1Managed())
-                return sha.ComputeHash(text.ToBytes()).ToHex();
+            // TODO: Check for errors!
+            var dr = ParseDerivationRulesJson(loginResponse.DerivationRulesJson);
+            var kek = Crypto.ComputeKek(password, salt, dr);
+
+            return Crypto.Decrypt(kek, loginResponse.EncryptedKey).ToUtf8();
         }
 
         [DataContract]
@@ -95,57 +96,6 @@ namespace PasswordBox
             var s = new DataContractJsonSerializer(typeof(T));
             using (var stream = new MemoryStream(json.ToBytes(), false))
                 return (T)s.ReadObject(stream);
-        }
-
-        internal static string ParseEncryptionKey(LoginResponse loginResponse, string password)
-        {
-            var salt = loginResponse.Salt;
-            if (salt == null || salt.Length < 32)
-                throw new Exception("Legacy user is not supported"); // TODO: Use custom exception!
-
-            // TODO: Check for errors!
-            var dr = ParseDerivationRulesJson(loginResponse.DerivationRulesJson);
-            var kek = ComputeKek(password, salt, dr);
-
-            // TODO: Clean up!
-            return Crypto.Decrypt(kek, loginResponse.EncryptedKey).ToUtf8();
-        }
-
-        // Computes the KEK (key encryption key) which is used to encrypt/decrypt the actual key
-        // with which all the data is encrypted.
-        internal static string ComputeKek(string password, string salt, DerivationRules derivationRules)
-        {
-            var client = Math.Max(0, derivationRules.ClientIterationCount);
-            var server = Math.Max(1, derivationRules.ServerIterationCount);
-
-            var step1 = Pbkdf2Sha1(password, salt, 1, 512);
-            var step2 = Pbkdf2Sha256(step1, salt, client, 512);
-            var step3 = Pbkdf2Sha256(step2, salt, server, 256);
-            var step4 = Pbkdf2Sha1(step3 + password, salt, 1, 512);
-
-            return step4;
-        }
-
-        internal static string Pbkdf2Sha1(string password, string salt, int iterationCount, int bits)
-        {
-            return Pbkdf2Hex(password, salt, iterationCount, bits, Pbkdf2.GenerateSha1);
-        }
-
-        internal static string Pbkdf2Sha256(string password, string salt, int iterationCount, int bits)
-        {
-            return Pbkdf2Hex(password, salt, iterationCount, bits, Pbkdf2.GenerateSha256);
-        }
-
-        internal static string Pbkdf2Hex(string password,
-                                         string salt,
-                                         int iterationCount,
-                                         int bits,
-                                         Func<string, string, int, int, byte[]> pbkdf2)
-        {
-            if (iterationCount <= 0)
-                return password;
-
-            return pbkdf2(password, salt, iterationCount, bits / 8).ToHex();
         }
     }
 }

@@ -12,20 +12,6 @@ namespace PasswordBox.Test
     [TestFixture]
     class FetcherTest
     {
-        private struct KekTestCase
-        {
-            public KekTestCase(int clientIterationCount, int serverIterationCount, string expected)
-            {
-                ClientIterationCount = clientIterationCount;
-                ServerIterationCount = serverIterationCount;
-                Expected = expected;
-            }
-
-            public readonly int ClientIterationCount;
-            public readonly int ServerIterationCount;
-            public readonly string Expected;
-        }
-
         // Test data is generated with the PasswordBox JavaScript sources
         private const string Username = "username";
         private const string Password = "password";
@@ -57,34 +43,6 @@ namespace PasswordBox.Test
             DerivationRulesJson.Replace("\"", "\\\""), // Quotes have to be escaped before they are inserted into JSON
             EncryptedKey);
 
-        // Test data is generated with the PasswordBox JavaScript sources
-        private const string KekPassword = "password";
-        private const string KekSalt = "salt";
-
-        private static readonly KekTestCase[] KekTestData = new KekTestCase[]
-        {
-            new KekTestCase(0, 0, "4d30606be4afc1f3f37d52b6c69c068661dd6cf0afdf2f3fc102797f336c5133" +
-                                  "3f6cf517ab5adb7b78d9cdd295ba6d8b04ef7ec406e53a5b062cec4a3dffb4ef"),
-
-            new KekTestCase(1,  0, "49f3b020c9311e6e37bd608ef8963b1d369e8d4df28c4d99d1f91d9cacf2240b" +
-                                   "45e20d746dcb6daa53fb0217755982bddc76483edaed608842b6578f798a17ac"),
-
-            new KekTestCase(0,  1, "4d30606be4afc1f3f37d52b6c69c068661dd6cf0afdf2f3fc102797f336c5133" +
-                                   "3f6cf517ab5adb7b78d9cdd295ba6d8b04ef7ec406e53a5b062cec4a3dffb4ef"),
-
-            new KekTestCase(1,  1, "49f3b020c9311e6e37bd608ef8963b1d369e8d4df28c4d99d1f91d9cacf2240b" +
-                                   "45e20d746dcb6daa53fb0217755982bddc76483edaed608842b6578f798a17ac"),
-
-            new KekTestCase(10,  0, "76ea6ae400308d72ceb56f223a44a31a552bdf03598f5fd39387467b618ce245" +
-                                    "ecb1877528ca94f3e9e720dfdbd9f85af68f13346c3f9dfaed7417a4ea2dbeba"),
-
-            new KekTestCase(0, 10, "57ffc1876b96dab3f8d3daed9455547f3f7c692de3684d34ea27f7b36143e2d2" +
-                                   "03480a01370ba30ea03f6b1cb8fe89db63f1adec34913a7def56e194ed1b0a6a"),
-
-            new KekTestCase(13, 42, "3f64e210cb30e46672e74a6c63e73201183a4fec4279480df4163882dd4ac1b2" +
-                                    "6fd1333ba819dfb4f97381b93c65ba6b768034019113470db0356206f1bb9708"),
-        };
-
         [Test]
         public void Login_returns_valid_session()
         {
@@ -107,31 +65,6 @@ namespace PasswordBox.Test
 
             Assert.NotNull(session);
             Assert.AreEqual("", session.Id);
-        }
-
-        [Test]
-        public void ComputePasswordHash_returns_correct_result()
-        {
-            // Test data is generated with the PasswordBox JavaScript sources
-            var hash = Fetcher.ComputePasswordHash(Username, Password);
-            Assert.AreEqual(PasswordHash, hash);
-        }
-
-        [Test]
-        public void HexSha1_returns_correct_result()
-        {
-            // Test data is from http://www.nsrl.nist.gov/testdata/
-            var hash = Fetcher.Sha1Hex("abc");
-            Assert.AreEqual("a9993e364706816aba3e25717850c26c9cd0d89d", hash);
-        }
-
-        [Test]
-        public void ParseResponseJson_returns_correct_result()
-        {
-            var parsed = Fetcher.ParseResponseJson(ValidLoginResponseJson);
-            Assert.AreEqual(Salt, parsed.Salt);
-            Assert.AreEqual(DerivationRulesJson, parsed.DerivationRulesJson);
-            Assert.AreEqual(EncryptedKey, parsed.EncryptedKey);
         }
 
         [Test]
@@ -159,25 +92,20 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        public void ParseResponseJson_returns_correct_result()
+        {
+            var parsed = Fetcher.ParseResponseJson(ValidLoginResponseJson);
+            Assert.AreEqual(Salt, parsed.Salt);
+            Assert.AreEqual(DerivationRulesJson, parsed.DerivationRulesJson);
+            Assert.AreEqual(EncryptedKey, parsed.EncryptedKey);
+        }
+
+        [Test]
         public void ParseDerivationRulesJson_returns_correct_result()
         {
             var parsed = Fetcher.ParseDerivationRulesJson(DerivationRulesJson);
             Assert.AreEqual(ClientIterationCount, parsed.ClientIterationCount);
             Assert.AreEqual(ServerIterationCount, parsed.ServerIterationCount);
-        }
-
-        [Test]
-        public void ComputeKek_returns_correct_result()
-        {
-            foreach (var i in KekTestData)
-            {
-                var kek = Fetcher.ComputeKek(
-                    KekPassword,
-                    KekSalt,
-                    new Fetcher.DerivationRules(i.ClientIterationCount, i.ServerIterationCount));
-
-                Assert.AreEqual(i.Expected, kek);
-            }
         }
 
         //
