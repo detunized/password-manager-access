@@ -47,7 +47,10 @@ namespace PasswordBox
             var plaintextWithTag = ApplyCtr(aes, ciphertextOnly, iv, tag, tagLength, inputLengthLength);
             var expectedTag = ComputeTag(aes, plaintextWithTag.Text, iv, adata, tagLength, inputLengthLength);
 
-            if (tag.Equals(expectedTag))
+            var expectedTagBytes = expectedTag.ToBytes().Take(tagLength);
+            var actualTagBytes = plaintextWithTag.Tag.ToBytes().Take(tagLength);
+
+            if (!actualTagBytes.SequenceEqual(expectedTagBytes))
                 throw new Exception("CCM tag doesn't match"); // TODO: Use custom exception!
 
             return plaintextWithTag.Text;

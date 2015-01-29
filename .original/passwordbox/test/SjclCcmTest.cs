@@ -179,6 +179,30 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        public void Decrypt_throws_on_mismatching_tag()
+        {
+            foreach (var i in Rfc3610TestCases)
+            {
+                var aes = new SjclAes(i.Key);
+
+                // Change ciphertext
+                var ciphertext = (byte[])i.Ciphertext.Clone();
+                ++ciphertext[ciphertext.Length / 2];
+                VerifyCmmMismatchThrown(aes, ciphertext, i.Iv, i.Adata, i.TagLength);
+
+                // Change iv
+                var iv = (byte[])i.Iv.Clone();
+                ++iv[iv.Length / 2];
+                VerifyCmmMismatchThrown(aes, i.Ciphertext, iv, i.Adata, i.TagLength);
+
+                // Change adata
+                var adata = (byte[])i.Adata.Clone();
+                ++adata[adata.Length / 2];
+                VerifyCmmMismatchThrown(aes, i.Ciphertext, i.Iv, adata, i.TagLength);
+            }
+        }
+
+        [Test]
         public void ComputeLengthLength_returns_corrent_value()
         {
             var testCases = new Dictionary<int, int>
@@ -228,6 +252,16 @@ namespace PasswordBox.Test
         public void EncodeAdataLengt_throws_on_negative_length()
         {
             SjclCcm.EncodeAdataLength(-1);
+        }
+
+        //
+        // Helpers
+        //
+
+        private static void VerifyCmmMismatchThrown(SjclAes aes, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        {
+            var e = Assert.Throws<Exception>(() => SjclCcm.Decrypt(aes, ciphertext, iv, adata, tagLength));
+            Assert.AreEqual("CCM tag doesn't match", e.Message);
         }
     }
 }
