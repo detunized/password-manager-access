@@ -105,10 +105,10 @@ namespace PasswordBox
 
             // TODO: Check for errors!
             var dr = ParseDerivationRulesJson(loginResponse.DerivationRulesJson);
-
             var kek = ComputeKek(password, salt, dr);
 
-            return "";
+            // TODO: Clean up!
+            return Crypto.Decrypt(kek, loginResponse.EncryptedKey).ToUtf8();
         }
 
         // Computes the KEK (key encryption key) which is used to encrypt/decrypt the actual key
