@@ -28,6 +28,13 @@ namespace PasswordBox
 
         public static byte[] Decrypt(byte[] key, byte[] encrypted)
         {
+            if (key.Length < 16)
+                throw new ArgumentException("Encryption key should be at least 16 bytes long", "key");
+
+            // Use only first 256 bits
+            if (key.Length > 32)
+                key = key.Take(32).ToArray();
+
             if (encrypted.Length == 0)
                 return new byte[0];
 

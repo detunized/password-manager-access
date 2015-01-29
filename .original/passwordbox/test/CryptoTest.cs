@@ -11,6 +11,7 @@ namespace PasswordBox.Test
     {
         private const string KeyHex = "bc0d63541710541e493d1077e49e92523a4b7c53af1883266ed6c5be2f1b9562";
         private const string CiphertextBase64 = "AATXkbQnk41DJzqyfcFtcTaYE+ptuHwtC9TCmVdsK8/uXA==";
+        private static readonly byte[] Ciphertext = CiphertextBase64.Decode64();
         private static readonly byte[] Plaintext = "password".ToBytes();
         private static readonly byte[] Key = KeyHex.DecodeHex();
 
@@ -24,7 +25,7 @@ namespace PasswordBox.Test
         [Test]
         public void Decrypt_binary_returns_correct_result()
         {
-            var decrypted = Crypto.Decrypt(Key, CiphertextBase64.Decode64());
+            var decrypted = Crypto.Decrypt(Key, Ciphertext);
             Assert.AreEqual(Plaintext, decrypted);
         }
 
@@ -40,6 +41,21 @@ namespace PasswordBox.Test
         {
             var decrypted = Crypto.Decrypt(Key, "".ToBytes());
             Assert.IsEmpty(decrypted);
+        }
+
+        [Test]
+        public void Decrypt_uses_first_256_bits_of_key_only()
+        {
+            var decrypted = Crypto.Decrypt(KeyHex + "0102030405060708", CiphertextBase64);
+            Assert.AreEqual(Plaintext, decrypted);
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentException),
+                           ExpectedMessage = "Encryption key should be at least 16 bytes long\r\nParameter name: key")]
+        public void Decrypt_throws_on_too_short_key()
+        {
+            Crypto.Decrypt(new byte[15], Ciphertext);
         }
 
         [Test]
