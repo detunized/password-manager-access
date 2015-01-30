@@ -52,9 +52,9 @@ namespace PasswordBox
 
             // TODO: Handle errors!
 
-            var accouts = ParseFetchResponseJson(response.ToUtf8());
+            var accounts = ParseFetchResponseJson(response.ToUtf8());
 
-            return accouts.Length;
+            return accounts.Length;
         }
 
         internal static byte[] ParseEncryptionKey(LoginResponse loginResponse, string password)
