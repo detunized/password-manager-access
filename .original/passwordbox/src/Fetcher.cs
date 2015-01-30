@@ -38,6 +38,25 @@ namespace PasswordBox
             return new Session(id, key);
         }
 
+        public static int Fetch(Session session)
+        {
+            using (var webClient = new WebClient())
+                return Fetch(session, webClient);
+        }
+
+        public static int Fetch(Session session, IWebClient webClient)
+        {
+            // TODO: Figure out url-escaping. It seems the cookie already comes escaped.
+            webClient.Headers.Add("Cookie", string.Format("_pwdbox_session={0}", session.Id));
+            var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/assets");
+
+            // TODO: Handle errors!
+
+            var accouts = ParseFetchResponseJson(response.ToUtf8());
+
+            return accouts.Length;
+        }
+
         internal static byte[] ParseEncryptionKey(LoginResponse loginResponse, string password)
         {
             var salt = loginResponse.Salt;
@@ -73,7 +92,7 @@ namespace PasswordBox
 
         internal static LoginResponse ParseResponseJson(string json)
         {
-            return ParseResponseJson<LoginResponse>(json);
+            return ParseJson<LoginResponse>(json);
         }
 
         [DataContract]
@@ -94,10 +113,10 @@ namespace PasswordBox
 
         internal static DerivationRules ParseDerivationRulesJson(string json)
         {
-            return ParseResponseJson<DerivationRules>(json);
+            return ParseJson<DerivationRules>(json);
         }
 
-        internal static T ParseResponseJson<T>(string json)
+        internal static T ParseJson<T>(string json)
         {
             var s = new DataContractJsonSerializer(typeof(T));
             using (var stream = new MemoryStream(json.ToBytes(), false))
@@ -111,6 +130,30 @@ namespace PasswordBox
                 throw new Exception("Unsupported cookie format"); // TODO: Use custom exception!
 
             return match.Groups[1].Value;
+        }
+
+        [DataContract]
+        internal class Account
+        {
+            [DataMember(Name = "name")]
+            public readonly string Name = null;
+
+            [DataMember(Name = "url")]
+            public readonly string Url = null;
+
+            [DataMember(Name = "login")]
+            public readonly string Username = null;
+
+            [DataMember(Name = "password")]
+            public readonly string Password = null;
+
+            [DataMember(Name = "notes")]
+            public readonly string Notes = null;
+        }
+
+        internal static Account[] ParseFetchResponseJson(string json)
+        {
+            return ParseJson<Account[]>(json);
         }
     }
 }

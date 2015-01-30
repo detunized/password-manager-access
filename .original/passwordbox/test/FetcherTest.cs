@@ -62,6 +62,22 @@ namespace PasswordBox.Test
             "om; path=/; expires=Fri, 29-Jan-2016 23:13:51 GMT,_pwdbox_session={0}; domain=.pass" +
             "wordbox.com; path=/; secure; HttpOnly", SessionId);
 
+        private const string FetchResponseJson =
+            "[{\"id\":15839376,\"member_id\":7914927,\"name\":\"example.com\",\"url\":\"http://e" +
+            "xample.com\",\"login\":\"username\",\"password\":null,\"note\":{},\"created_at\":\"" +
+            "2014-12-12T19:25:45-05:00\",\"updated_at\":\"2015-01-17T19:27:58-05:00\",\"type\":\"" +
+            "Other\",\"virtual_password\":null,\"fields\":null,\"domain\":\"example.com\",\"deta" +
+            "ils\":\"\",\"password_k\":\"AATXkbQnk41DJzqyfcFtcTaYE+ptuHwtC9TCmVdsK8/uXA==\",\"se" +
+            "ttings\":\"{\\\"autologin\\\":\\\"1\\\",\\\"password_reprompt\\\":\\\"0\\\",\\\"sub" +
+            "domain_only\\\":\\\"0\\\"}\",\"memo_k\":null},{\"id\":15845973,\"member_id\":791492" +
+            "7,\"name\":\"dude\",\"url\":\"https://dude.com\",\"login\":\"jeffrey.lebowski\",\"p" +
+            "assword\":null,\"note\":{},\"created_at\":\"2014-12-13T06:25:32-05:00\",\"updated_a" +
+            "t\":\"2015-01-17T19:44:03-05:00\",\"type\":\"Other\",\"virtual_password\":null,\"fi" +
+            "elds\":null,\"domain\":\"dude.com\",\"details\":null,\"password_k\":\"AASkzvBholmWA" +
+            "Q1hktcv91xhy3jL36DnUie3LRQpPvKabQwO\",\"settings\":\"{\\\"autologin\\\":\\\"1\\\",\\" +
+            "\"password_reprompt\\\":\\\"0\\\",\\\"subdomain_only\\\":\\\"0\\\"}\",\"memo_k\":\"" +
+            "AATXMJp/fQisb66TB9kEH6J2rDTxF7SL+xKO9nXfiCMH67W+ooeHaA==\"}]";
+
         [Test]
         public void Login_returns_valid_session()
         {
@@ -81,6 +97,8 @@ namespace PasswordBox.Test
 
             var session = Fetcher.Login(Username, Password, webClient.Object);
 
+            // TODO: Split this test in two or more! It's checking at least two different things.
+
             webClient.Verify(
                 x => x.UploadValues(
                     It.Is<string>(s => s == LoginUrl),
@@ -97,6 +115,26 @@ namespace PasswordBox.Test
 
             Assert.AreEqual(SessionId, session.Id);
             Assert.AreEqual(Key, session.Key);
+        }
+
+        [Test]
+        public void Fetch_returns_valid_accounts()
+        {
+            var webClient = new Mock<IWebClient>();
+
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Returns(FetchResponseJson.ToBytes());
+
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(new WebHeaderCollection());
+
+            // TODO: Split this test in two or more! It's checking at least two different things.
+
+            var count = Fetcher.Fetch(new Session("", new byte[0]), webClient.Object);
+
+            Assert.AreEqual(2, count);
         }
 
         [Test]
@@ -151,6 +189,13 @@ namespace PasswordBox.Test
         public void ExtractSessionId_throws_on_invalid_cookies()
         {
             Assert.AreEqual(SessionId, Fetcher.ExtractSessionId(""));
+        }
+
+        [Test]
+        public void ParseFetchResponseJson_returns_correct_result()
+        {
+            var parsed = Fetcher.ParseFetchResponseJson(FetchResponseJson);
+            Assert.AreEqual(2, parsed.Length);
         }
 
         //
