@@ -151,9 +151,9 @@ namespace PasswordBox.Test
 
             // TODO: Split this test in two or more! It's checking at least two different things.
 
-            var count = Fetcher.Fetch(new Session(SessionId, Key), webClient.Object);
+            var accounts = Fetcher.Fetch(new Session(SessionId, Key), webClient.Object);
 
-            Assert.AreEqual(2, count);
+            Assert.AreEqual(Accounts.Length, accounts.Length);
         }
 
         [Test]

@@ -39,13 +39,13 @@ namespace PasswordBox
             return new Session(id, key);
         }
 
-        public static int Fetch(Session session)
+        public static Account[] Fetch(Session session)
         {
             using (var webClient = new WebClient())
                 return Fetch(session, webClient);
         }
 
-        public static int Fetch(Session session, IWebClient webClient)
+        public static Account[] Fetch(Session session, IWebClient webClient)
         {
             // TODO: Figure out url-escaping. It seems the cookie already comes escaped.
             webClient.Headers.Add("Cookie", string.Format("_pwdbox_session={0}", session.Id));
@@ -54,9 +54,7 @@ namespace PasswordBox
             // TODO: Handle errors!
 
             var encryptedAccounts = ParseFetchResponseJson(response.ToUtf8());
-            var accounts = DecryptAccounts(encryptedAccounts, session.Key);
-
-            return accounts.Length;
+            return DecryptAccounts(encryptedAccounts, session.Key);
         }
 
         internal static byte[] ParseEncryptionKey(LoginResponse loginResponse, string password)
@@ -163,6 +161,9 @@ namespace PasswordBox
 
         internal static Account[] DecryptAccounts(EncryptedAccount[] encryptedAccounts, byte[] key)
         {
+            // TODO: Figure out how not to reconvert key to hex all the time!
+            // TODO: Figure out how to reuse AES object that is created in Crypto.Decypt!
+
             return encryptedAccounts.Select(i => new Account(
                       id: i.Id ?? "",
                     name: i.Name ?? "",
