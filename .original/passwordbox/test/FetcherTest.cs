@@ -78,6 +78,25 @@ namespace PasswordBox.Test
             "\"password_reprompt\\\":\\\"0\\\",\\\"subdomain_only\\\":\\\"0\\\"}\",\"memo_k\":\"" +
             "AATXMJp/fQisb66TB9kEH6J2rDTxF7SL+xKO9nXfiCMH67W+ooeHaA==\"}]";
 
+        private static readonly Account[] Accounts =
+        {
+            new Account(
+                      id: "15839376",
+                    name: "example.com",
+                     url: "http://example.com",
+                username: "username",
+                password: "password",
+                   notes: ""),
+
+            new Account(
+                      id: "15845973",
+                    name: "dude",
+                     url: "https://dude.com",
+                username: "jeffrey.lebowski",
+                password: "logjammin'",
+                   notes: "Get a new rug!"),
+        };
+
         [Test]
         public void Login_returns_valid_session()
         {
@@ -132,7 +151,7 @@ namespace PasswordBox.Test
 
             // TODO: Split this test in two or more! It's checking at least two different things.
 
-            var count = Fetcher.Fetch(new Session("", new byte[0]), webClient.Object);
+            var count = Fetcher.Fetch(new Session(SessionId, Key), webClient.Object);
 
             Assert.AreEqual(2, count);
         }
@@ -195,7 +214,40 @@ namespace PasswordBox.Test
         public void ParseFetchResponseJson_returns_correct_result()
         {
             var parsed = Fetcher.ParseFetchResponseJson(FetchResponseJson);
-            Assert.AreEqual(2, parsed.Length);
+
+            Assert.AreEqual(Accounts.Length, parsed.Length);
+            for (var i = 0; i < parsed.Length; ++i)
+            {
+                var a = Accounts[i];
+                var p = parsed[i];
+
+                // Only check these, the rest is encrypted
+                // TODO: Make a complete test!
+                Assert.AreEqual(a.Id, p.Id);
+                Assert.AreEqual(a.Name, p.Name);
+                Assert.AreEqual(a.Username, p.Username);
+                Assert.AreEqual(a.Url, p.Url);
+            }
+        }
+
+        [Test]
+        public void DecryptAccounts_returns_correct_result()
+        {
+            var accounts = Fetcher.DecryptAccounts(Fetcher.ParseFetchResponseJson(FetchResponseJson), Key);
+
+            Assert.AreEqual(Accounts.Length, accounts.Length);
+            for (var i = 0; i < accounts.Length; ++i)
+            {
+                var e = Accounts[i];
+                var a = accounts[i];
+
+                Assert.AreEqual(e.Id, a.Id);
+                Assert.AreEqual(e.Name, a.Name);
+                Assert.AreEqual(e.Username, a.Username);
+                Assert.AreEqual(e.Password, a.Password);
+                Assert.AreEqual(e.Url, a.Url);
+                Assert.AreEqual(e.Notes, a.Notes);
+            }
         }
 
         //

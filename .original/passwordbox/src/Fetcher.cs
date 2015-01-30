@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
@@ -52,7 +53,8 @@ namespace PasswordBox
 
             // TODO: Handle errors!
 
-            var accounts = ParseFetchResponseJson(response.ToUtf8());
+            var encryptedAccounts = ParseFetchResponseJson(response.ToUtf8());
+            var accounts = DecryptAccounts(encryptedAccounts, session.Key);
 
             return accounts.Length;
         }
@@ -133,8 +135,11 @@ namespace PasswordBox
         }
 
         [DataContract]
-        internal class Account
+        internal class EncryptedAccount
         {
+            [DataMember(Name = "id")]
+            public readonly string Id = null;
+
             [DataMember(Name = "name")]
             public readonly string Name = null;
 
@@ -144,16 +149,28 @@ namespace PasswordBox
             [DataMember(Name = "login")]
             public readonly string Username = null;
 
-            [DataMember(Name = "password")]
+            [DataMember(Name = "password_k")]
             public readonly string Password = null;
 
-            [DataMember(Name = "notes")]
+            [DataMember(Name = "memo_k")]
             public readonly string Notes = null;
         }
 
-        internal static Account[] ParseFetchResponseJson(string json)
+        internal static EncryptedAccount[] ParseFetchResponseJson(string json)
         {
-            return ParseJson<Account[]>(json);
+            return ParseJson<EncryptedAccount[]>(json);
+        }
+
+        internal static Account[] DecryptAccounts(EncryptedAccount[] encryptedAccounts, byte[] key)
+        {
+            return encryptedAccounts.Select(i => new Account(
+                      id: i.Id ?? "",
+                    name: i.Name ?? "",
+                username: i.Username ?? "",
+                password: Crypto.Decrypt(key.ToHex(), i.Password ?? "").ToUtf8(),
+                     url: i.Url ?? "",
+                   notes: Crypto.Decrypt(key.ToHex(), i.Notes ?? "").ToUtf8()
+            )).ToArray();
         }
     }
 }
