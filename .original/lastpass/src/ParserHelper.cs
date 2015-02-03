@@ -185,7 +185,7 @@ namespace LastPass
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
                     chunks.Add(ReadChunk(reader));
             }
-            catch (EndOfStreamException e)
+            catch (EndOfStreamException)
             {
                 // In case the stream is truncated we just ignore the incomplete chunk.
             }
