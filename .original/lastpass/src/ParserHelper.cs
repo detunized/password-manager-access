@@ -35,15 +35,17 @@ namespace LastPass
 
             return WithBytes(chunk.Payload, reader =>
             {
+                var placeholder = "decryption failed";
+
                 // Read all items
                 var id = ReadItem(reader).ToUtf8();
-                var name = DecryptAes256Plain(ReadItem(reader), encryptionKey);
-                var group = DecryptAes256Plain(ReadItem(reader), encryptionKey);
+                var name = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+                var group = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
-                var notes = DecryptAes256Plain(ReadItem(reader), encryptionKey);
+                var notes = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 2.Times(() => SkipItem(reader));
-                var username = DecryptAes256Plain(ReadItem(reader), encryptionKey);
-                var password = DecryptAes256Plain(ReadItem(reader), encryptionKey);
+                var username = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+                var password = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 2.Times(() => SkipItem(reader));
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
