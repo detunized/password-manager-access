@@ -238,6 +238,16 @@ namespace LastPass
             return reader.ReadBytes((int)size);
         }
 
+        public static string DecryptAes256Plain(byte[] data, byte[] encryptionKey, string defaultValue)
+        {
+            return DecryptAes256WithDefaultValue(data, encryptionKey, defaultValue, DecryptAes256Plain);
+        }
+
+        public static string DecryptAes256Base64(byte[] data, byte[] encryptionKey, string defaultValue)
+        {
+            return DecryptAes256WithDefaultValue(data, encryptionKey, defaultValue, DecryptAes256Base64);
+        }
+
         public static string DecryptAes256Plain(byte[] data, byte[] encryptionKey)
         {
             var length = data.Length;
@@ -298,7 +308,7 @@ namespace LastPass
             if (data.Length == 0)
                 return "";
 
-            using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = mode, IV = iv })
+            using (var aes = new AesManaged {KeySize = 256, Key = encryptionKey, Mode = mode, IV = iv})
             using (var decryptor = aes.CreateDecryptor())
             using (var stream = new MemoryStream(data, false))
             using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
@@ -323,6 +333,21 @@ namespace LastPass
             using (var stream = new MemoryStream(bytes, false))
             using (var reader = new BinaryReader(stream))
                 return action(reader);
+        }
+
+        private static string DecryptAes256WithDefaultValue(byte[] data,
+                                                            byte[] encryptionKey,
+                                                            string defaultValue,
+                                                            Func<byte[], byte[], string> decrypt)
+        {
+            try
+            {
+                return decrypt(data, encryptionKey);
+            }
+            catch (CryptographicException)
+            {
+                return defaultValue;
+            }
         }
 
         private static readonly HashSet<string> AllowedSecureNoteTypes = new HashSet<string>

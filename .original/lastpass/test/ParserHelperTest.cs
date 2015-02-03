@@ -248,6 +248,26 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void DecryptAes256Plain_with_default_value()
+        {
+            var defVal = "ohai!";
+            var plaintext = ParserHelper.DecryptAes256Plain("not a valid ciphertext".ToBytes(),
+                                                            _encryptionKey,
+                                                            defVal);
+            Assert.AreEqual(defVal, plaintext);
+        }
+
+        [Test]
+        public void DecryptAes256Base64_with_default_value()
+        {
+            var defVal = "ohai!";
+            var plaintext = ParserHelper.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(),
+                                                             _encryptionKey,
+                                                             defVal);
+            Assert.AreEqual(defVal, plaintext);
+        }
+
+        [Test]
         public void DecryptAes256Plain()
         {
             var tests = new[,] {
