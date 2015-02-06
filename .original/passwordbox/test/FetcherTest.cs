@@ -18,6 +18,7 @@ namespace PasswordBox.Test
         private const string Password = "password";
         private const string PasswordHash = "bb5eeb368dd3d7ba5ab371c76ba5073e0a91f55697b81790bb34846d3e25f8e4";
         private const string LoginUrl = "https://api0.passwordbox.com/api/0/api_login.json";
+        private const string LogoutUrl = "https://api0.passwordbox.com/api/0/api_logout.json";
 
         private static readonly NameValueCollection ExpectedLoginRequestValues = new NameValueCollection
             {
@@ -43,6 +44,8 @@ namespace PasswordBox.Test
             Salt,
             DerivationRulesJson.Replace("\"", "\\\""), // Quotes have to be escaped before they are inserted into JSON
             EncryptedKey);
+
+        private const string LogoutResponseJson = @"{""message"": ""Good bye""}";
 
         private const string SessionId = "BAh7C0kiD3Nlc3Npb25faWQGOgZFVEkiJThjYjM2MDM5YTk5ZWQzMj" +
                                          "JmM2UzYjI1NjU4NWE4M2JmBjsAVEkiC3RhZ2dlZAY7AEZsKwevvspU" +
@@ -134,6 +137,32 @@ namespace PasswordBox.Test
 
             Assert.AreEqual(SessionId, session.Id);
             Assert.AreEqual(Key, session.Key);
+        }
+
+        [Test]
+        public void Logout_makes_get_request()
+        {
+            var webClient = new Mock<IWebClient>();
+            var headers = new WebHeaderCollection();
+
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Returns(LogoutResponseJson.ToBytes());
+
+            webClient
+                .SetupGet(x => x.Headers)
+                .Returns(headers);
+
+            // TODO: Split this test in two or more! It's checking at least two different things.
+
+            Fetcher.Logout(new Session(SessionId, Key), webClient.Object);
+
+            webClient.Verify(
+                x => x.DownloadData(It.Is<string>(s => s == LogoutUrl)),
+                Times.Once(),
+                string.Format("Did not see a GET request made to the logout URL ({0})", LogoutUrl));
+
+            Assert.AreEqual(string.Format("_pwdbox_session={0}", SessionId), headers["Cookie"]);
         }
 
         [Test]

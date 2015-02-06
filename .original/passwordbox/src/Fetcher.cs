@@ -39,6 +39,20 @@ namespace PasswordBox
             return new Session(id, key);
         }
 
+        public static void Logout(Session session)
+        {
+            using (var webClient = new WebClient())
+                Logout(session, webClient);
+        }
+
+        public static void Logout(Session session, IWebClient webClient)
+        {
+            webClient.Headers.Add("Cookie", string.Format("_pwdbox_session={0}", session.Id));
+            var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/api_logout.json");
+            // TODO: Parse response to see if it's ok.
+            //       {"message": "Good bye"}
+        }
+
         public static Account[] Fetch(Session session)
         {
             using (var webClient = new WebClient())
