@@ -5,8 +5,26 @@ namespace PasswordBox
 {
     public class Vault
     {
-        public Vault()
+        public static Vault Create(string username, string password)
         {
+            using (var webClient = new WebClient())
+                return Create(username, password, webClient);
+        }
+
+        public static Vault Create(string username, string password, IWebClient webClient)
+        {
+            var session = Fetcher.Login(username, password, webClient);
+            var accounts = Fetcher.Fetch(session, webClient);
+            Fetcher.Logout(session);
+
+            return new Vault(accounts);
+        }
+
+        public Account[] Accounts { get; private set; }
+
+        private Vault(Account[] accounts)
+        {
+            Accounts = accounts;
         }
     }
 }

@@ -11,8 +11,7 @@ namespace PasswordBox.Test
         [Test]
         public void Vault_is_created()
         {
-            var vault = new Vault();
-            Assert.NotNull(vault);
+            // TODO: Share the data and the code with FetcherTest to set up mock web client.
         }
     }
 }
