@@ -113,7 +113,7 @@ namespace PasswordBox.Test
                 .SetupGet(x => x.ResponseHeaders)
                 .Returns(() => {
                     var headers = new WebHeaderCollection();
-                    headers.Add("set-cookie", SetCookie);
+                    headers.Add(HttpResponseHeader.SetCookie, SetCookie);
                     return headers;
                 });
 
@@ -162,7 +162,7 @@ namespace PasswordBox.Test
                 Times.Once(),
                 string.Format("Did not see a GET request made to the logout URL ({0})", LogoutUrl));
 
-            Assert.AreEqual(string.Format("_pwdbox_session={0}", SessionId), headers["Cookie"]);
+            Assert.AreEqual(string.Format("_pwdbox_session={0}", SessionId), headers[HttpRequestHeader.Cookie]);
         }
 
         [Test]

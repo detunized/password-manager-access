@@ -5,6 +5,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
@@ -33,7 +34,7 @@ namespace PasswordBox
 
             var parsedResponse = ParseResponseJson(response.ToUtf8());
             var key = ParseEncryptionKey(parsedResponse, password);
-            var id = ExtractSessionId(webClient.ResponseHeaders["set-cookie"]);
+            var id = ExtractSessionId(webClient.ResponseHeaders[HttpResponseHeader.SetCookie]);
 
             return new Session(id, key);
         }
@@ -46,7 +47,7 @@ namespace PasswordBox
 
         public static void Logout(Session session, IWebClient webClient)
         {
-            webClient.Headers.Add("Cookie", string.Format("_pwdbox_session={0}", session.Id));
+            webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("_pwdbox_session={0}", session.Id));
             var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/api_logout.json");
 
             var parsedResponse = ParseLogoutResponseJson(response.ToUtf8());
@@ -63,7 +64,7 @@ namespace PasswordBox
         public static Account[] Fetch(Session session, IWebClient webClient)
         {
             // TODO: Figure out url-escaping. It seems the cookie already comes escaped.
-            webClient.Headers.Add("Cookie", string.Format("_pwdbox_session={0}", session.Id));
+            webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("_pwdbox_session={0}", session.Id));
             var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/assets");
 
             // TODO: Handle errors!
