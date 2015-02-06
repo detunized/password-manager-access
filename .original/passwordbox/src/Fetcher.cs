@@ -49,8 +49,10 @@ namespace PasswordBox
         {
             webClient.Headers.Add("Cookie", string.Format("_pwdbox_session={0}", session.Id));
             var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/api_logout.json");
-            // TODO: Parse response to see if it's ok.
-            //       {"message": "Good bye"}
+
+            var parsedResponse = ParseLogoutResponseJson(response.ToUtf8());
+            if (parsedResponse.Message != "Good bye")
+                throw new Exception("Logout failed"); // TODO: Use custom exception!
         }
 
         public static Account[] Fetch(Session session)
@@ -144,6 +146,18 @@ namespace PasswordBox
                 throw new Exception("Unsupported cookie format"); // TODO: Use custom exception!
 
             return match.Groups[1].Value;
+        }
+
+        [DataContract]
+        internal class LogoutResponse
+        {
+            [DataMember(Name = "message")]
+            public readonly string Message;
+        }
+
+        internal static LogoutResponse ParseLogoutResponseJson(string json)
+        {
+            return ParseJson<LogoutResponse>(json);
         }
 
         [DataContract]
