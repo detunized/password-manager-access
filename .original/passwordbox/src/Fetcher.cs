@@ -35,7 +35,6 @@ namespace PasswordBox
             var key = ParseEncryptionKey(parsedResponse, password);
             var id = ExtractSessionId(webClient.ResponseHeaders["set-cookie"]);
 
-            // TODO: Extract cookie!
             return new Session(id, key);
         }
 
