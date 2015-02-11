@@ -10,8 +10,7 @@ namespace PasswordBox
         public enum FailureReason
         {
             // PasswordBox returned errors
-            InvalidUsername,
-            InvalidPassword,
+            InvalidCredentials,
             Other, // Message property contains the message given by the LastPass server
             Unknown,
 

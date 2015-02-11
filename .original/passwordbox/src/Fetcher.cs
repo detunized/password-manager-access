@@ -53,8 +53,8 @@ namespace PasswordBox
                 switch (parsedResponse.ErrorCode)
                 {
                 case "invalid_credentials":
-                    reason = LoginException.FailureReason.InvalidUsername;
-                    message = "Invalid username";
+                    reason = LoginException.FailureReason.InvalidCredentials;
+                    message = "Invalid username and/or password";
                     break;
                 default:
                     if (string.IsNullOrEmpty(message))
