@@ -69,7 +69,7 @@ namespace PasswordBox
                     break;
                 }
 
-                throw new LoginException(reason, message);
+                throw new LoginException(reason, message, e);
             }
         }
 
