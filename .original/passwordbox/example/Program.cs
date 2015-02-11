@@ -18,8 +18,22 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
-            var session = Fetcher.Login(username, password);
-            Console.WriteLine("Session ID: {0}", session.Id);
+            // Log in, fetch data, parse it, log out.
+            var vault = Vault.Create(username, password);
+
+            // Print all the accounts
+            for (var i = 0; i < vault.Accounts.Length; ++i)
+            {
+                var account = vault.Accounts[i];
+                Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
+                                  i + 1,
+                                  account.Id,
+                                  account.Name,
+                                  account.Username,
+                                  account.Password,
+                                  account.Url,
+                                  account.Notes);
+            }
         }
     }
 }
