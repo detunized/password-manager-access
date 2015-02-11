@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PasswordBox
@@ -28,15 +29,48 @@ namespace PasswordBox
                 {"member[password]", Crypto.ComputePasswordHash(username, password)},
             };
 
-            // TODO: Handle errors!
-            var response = webClient.UploadValues("https://api0.passwordbox.com/api/0/api_login.json",
-                                                  parameters);
+            try
+            {
+                var response = webClient.UploadValues("https://api0.passwordbox.com/api/0/api_login.json",
+                                                      parameters);
+                var parsedResponse = ParseResponseJson(response.ToUtf8());
+                var key = ParseEncryptionKey(parsedResponse, password);
+                var id = ExtractSessionId(webClient.ResponseHeaders[HttpResponseHeader.SetCookie]);
 
-            var parsedResponse = ParseResponseJson(response.ToUtf8());
-            var key = ParseEncryptionKey(parsedResponse, password);
-            var id = ExtractSessionId(webClient.ResponseHeaders[HttpResponseHeader.SetCookie]);
+                return new Session(id, key);
+            }
+            catch (WebException e)
+            {
+                string response;
+                using (var s = new StreamReader(e.Response.GetResponseStream(), Encoding.UTF8))
+                    response = s.ReadToEnd();
 
-            return new Session(id, key);
+                var parsedResponse = ErrorResponse.FromJson(response);
+
+                LoginException.FailureReason reason;
+                var message = parsedResponse.Message;
+
+                switch (parsedResponse.ErrorCode)
+                {
+                case "invalid_credentials":
+                    reason = LoginException.FailureReason.InvalidUsername;
+                    message = "Invalid username";
+                    break;
+                default:
+                    if (string.IsNullOrEmpty(message))
+                    {
+                        reason = LoginException.FailureReason.Unknown;
+                        message = "Unknown Reason";
+                    }
+                    else
+                    {
+                        reason = LoginException.FailureReason.Other;
+                    }
+                    break;
+                }
+
+                throw new LoginException(reason, message);
+            }
         }
 
         public static void Logout(Session session)
@@ -84,6 +118,35 @@ namespace PasswordBox
             var kek = Crypto.ComputeKek(password, salt, dr);
 
             return Crypto.Decrypt(kek, loginResponse.EncryptedKey).ToUtf8().DecodeHex();
+        }
+
+        [DataContract]
+        internal class ErrorResponse
+        {
+            public static ErrorResponse FromJson(string json)
+            {
+                return ParseJson<ErrorResponse>(json);
+            }
+
+            public ErrorResponse(string errorType, string httpStatus, string errorCode, string message)
+            {
+                ErrorType = errorType;
+                HttpStatus = httpStatus;
+                ErrorCode = errorCode;
+                Message = message;
+            }
+
+            [DataMember(Name = "error_type")]
+            public readonly string ErrorType = null;
+
+            [DataMember(Name = "http_status")]
+            public readonly string HttpStatus = null;
+
+            [DataMember(Name = "error_code")]
+            public readonly string ErrorCode = null;
+
+            [DataMember(Name = "message")]
+            public readonly string Message = null;
         }
 
         [DataContract]

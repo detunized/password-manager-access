@@ -140,6 +140,13 @@ namespace PasswordBox.Test
         }
 
         [Test]
+        public void Login_throws_on_invalid_username()
+        {
+            // TODO: There dosen't seem to be an easy way to create an HttpWebResponse object
+            //       for mocking the response. See what can be done about this.
+        }
+
+        [Test]
         public void Logout_makes_get_request()
         {
             var webClient = new Mock<IWebClient>();
@@ -207,6 +214,24 @@ namespace PasswordBox.Test
         {
             var response = new Fetcher.LoginResponse("too short", DerivationRulesJson, EncryptedKey);
             Fetcher.ParseEncryptionKey(response, Password);
+        }
+
+        [Test]
+        public void ErrorResponse_FromJson_returns_correct_result()
+        {
+            const string json =
+            "{" +
+                "\"error_type\":\"client_error\"," +
+                "\"http_status\":\"403\"," +
+                "\"error_code\":\"invalid_credentials\"," +
+                "\"message\":\"Could not authenticate with provided credentials\"" +
+            "}";
+
+            var parsed = Fetcher.ErrorResponse.FromJson(json);
+            Assert.AreEqual("client_error", parsed.ErrorType);
+            Assert.AreEqual("403", parsed.HttpStatus);
+            Assert.AreEqual("invalid_credentials", parsed.ErrorCode);
+            Assert.AreEqual("Could not authenticate with provided credentials", parsed.Message);
         }
 
         [Test]
