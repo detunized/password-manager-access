@@ -62,17 +62,14 @@ namespace Example
             for (var i = 0; i < vault.Accounts.Length; ++i)
             {
                 var account = vault.Accounts[i];
-
-                // Need explicit converstion to string.
-                // String.Format doesn't do that for EncryptedString.
                 Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
                                   i + 1,
                                   account.Id,
-                                  (string)account.Name,
-                                  (string)account.Username,
-                                  (string)account.Password,
+                                  account.Name,
+                                  account.Username,
+                                  account.Password,
                                   account.Url,
-                                  (string)account.Group);
+                                  account.Group);
             }
         }
     }
