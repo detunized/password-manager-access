@@ -9,15 +9,10 @@ namespace PasswordBox
     {
         public enum FailureReason
         {
-            // PasswordBox returned errors
             InvalidCredentials,
+            InvalidResponse,
             Other, // Message property contains the message given by the LastPass server
             Unknown,
-
-            // Other
-            UnknownResponseSchema,
-            InvalidResponse,
-            WebException
         }
 
         public LoginException(FailureReason reason, string message): base(message)

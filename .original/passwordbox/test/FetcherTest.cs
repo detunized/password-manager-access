@@ -5,6 +5,7 @@ using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization;
 using Moq;
 using NUnit.Framework;
 
@@ -190,6 +191,61 @@ namespace PasswordBox.Test
             var accounts = Fetcher.Fetch(new Session(SessionId, Key), webClient.Object);
 
             Assert.AreEqual(Accounts.Length, accounts.Length);
+        }
+
+        [Test]
+        public void CreateLoginException_handles_invalid_json()
+        {
+            var we = new WebException();
+            var e = Fetcher.CreateLoginException("not json", we);
+
+            Assert.AreEqual(LoginException.FailureReason.InvalidResponse, e.Reason);
+            Assert.AreEqual("Invalid response", e.Message);
+            Assert.IsInstanceOf<SerializationException>(e.InnerException);
+        }
+
+        [Test]
+        public void CreateLoginException_handles_other_reason_with_message()
+        {
+            var we = new WebException();
+            var e = Fetcher.CreateLoginException("{\"message\":\"ohai!\"}", we);
+
+            Assert.AreEqual(LoginException.FailureReason.Other, e.Reason);
+            Assert.AreEqual("ohai!", e.Message);
+            Assert.AreSame(we, e.InnerException);
+        }
+
+        [Test]
+        public void CreateLoginException_handles_unknown_reason_with_blank_message()
+        {
+            var we = new WebException();
+            var e = Fetcher.CreateLoginException("{\"message\":\"\"}", we);
+
+            Assert.AreEqual(LoginException.FailureReason.Unknown, e.Reason);
+            Assert.AreEqual("Unknown reason", e.Message);
+            Assert.AreSame(we, e.InnerException);
+        }
+
+        [Test]
+        public void CreateLoginException_handles_unknown_reason_with_no_message()
+        {
+            var we = new WebException();
+            var e = Fetcher.CreateLoginException("{}", we);
+
+            Assert.AreEqual(LoginException.FailureReason.Unknown, e.Reason);
+            Assert.AreEqual("Unknown reason", e.Message);
+            Assert.AreSame(we, e.InnerException);
+        }
+
+        [Test]
+        public void CreateLoginException_handles_invalid_credentials()
+        {
+            var we = new WebException();
+            var e = Fetcher.CreateLoginException("{\"error_code\":\"invalid_credentials\"}", we);
+
+            Assert.AreEqual(LoginException.FailureReason.InvalidCredentials, e.Reason);
+            Assert.AreEqual("Invalid username and/or password", e.Message);
+            Assert.AreSame(we, e.InnerException);
         }
 
         [Test]

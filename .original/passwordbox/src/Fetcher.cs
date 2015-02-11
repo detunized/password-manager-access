@@ -41,35 +41,7 @@ namespace PasswordBox
             }
             catch (WebException e)
             {
-                string response;
-                using (var s = new StreamReader(e.Response.GetResponseStream(), Encoding.UTF8))
-                    response = s.ReadToEnd();
-
-                var parsedResponse = ErrorResponse.FromJson(response);
-
-                LoginException.FailureReason reason;
-                var message = parsedResponse.Message;
-
-                switch (parsedResponse.ErrorCode)
-                {
-                case "invalid_credentials":
-                    reason = LoginException.FailureReason.InvalidCredentials;
-                    message = "Invalid username and/or password";
-                    break;
-                default:
-                    if (string.IsNullOrEmpty(message))
-                    {
-                        reason = LoginException.FailureReason.Unknown;
-                        message = "Unknown Reason";
-                    }
-                    else
-                    {
-                        reason = LoginException.FailureReason.Other;
-                    }
-                    break;
-                }
-
-                throw new LoginException(reason, message, e);
+                throw CreateLoginException(e);
             }
         }
 
@@ -105,6 +77,56 @@ namespace PasswordBox
 
             var encryptedAccounts = ParseFetchResponseJson(response.ToUtf8());
             return DecryptAccounts(encryptedAccounts, session.Key);
+        }
+
+        //
+        // internal
+        //
+
+        internal static LoginException CreateLoginException(WebException webException)
+        {
+            string response;
+            using (var s = new StreamReader(webException.Response.GetResponseStream(), Encoding.UTF8))
+                response = s.ReadToEnd();
+
+            return CreateLoginException(response, webException);
+        }
+
+        internal static LoginException CreateLoginException(string response, WebException originalCause)
+        {
+            ErrorResponse parsedResponse;
+            try
+            {
+                parsedResponse = ErrorResponse.FromJson(response);
+            }
+            catch (SerializationException e)
+            {
+                return new LoginException(LoginException.FailureReason.InvalidResponse, "Invalid response", e);
+            }
+
+            LoginException.FailureReason reason;
+            var message = parsedResponse.Message;
+
+            switch (parsedResponse.ErrorCode)
+            {
+            case "invalid_credentials":
+                reason = LoginException.FailureReason.InvalidCredentials;
+                message = "Invalid username and/or password";
+                break;
+            default:
+                if (string.IsNullOrEmpty(message))
+                {
+                    reason = LoginException.FailureReason.Unknown;
+                    message = "Unknown reason";
+                }
+                else
+                {
+                    reason = LoginException.FailureReason.Other;
+                }
+                break;
+            }
+
+            return new LoginException(reason, message, originalCause);
         }
 
         internal static byte[] ParseEncryptionKey(LoginResponse loginResponse, string password)
