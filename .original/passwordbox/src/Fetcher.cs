@@ -54,11 +54,18 @@ namespace PasswordBox
         public static void Logout(Session session, IWebClient webClient)
         {
             webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("_pwdbox_session={0}", session.Id));
-            var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/api_logout.json");
 
-            var parsedResponse = ParseLogoutResponseJson(response.ToUtf8());
-            if (parsedResponse.Message != "Good bye")
-                throw new Exception("Logout failed"); // TODO: Use custom exception!
+            try
+            {
+                var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/api_logout.json");
+                var parsedResponse = ParseLogoutResponseJson(response.ToUtf8());
+                if (parsedResponse.Message != "Good bye")
+                    throw new LogoutException(LogoutException.FailureReason.InvalidResponse, "Logout failed");
+            }
+            catch (WebException e)
+            {
+                throw new LogoutException(LogoutException.FailureReason.Unknown, "Logout failed", e);
+            }
         }
 
         public static Account[] Fetch(Session session)
