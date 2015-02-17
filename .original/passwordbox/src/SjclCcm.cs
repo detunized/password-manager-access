@@ -13,7 +13,7 @@ namespace PasswordBox
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
-                throw new ArgumentException("IV must be at least 7 bytes long", "iv");
+                throw new CryptoException("IV must be at least 7 bytes long");
 
             var inputLengthLength = ComputeLengthLength(plaintext.Length);
             if (inputLengthLength < 15 - ivLength)
@@ -33,7 +33,7 @@ namespace PasswordBox
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
-                throw new ArgumentException("IV must be at least 7 bytes long", "iv");
+                throw new CryptoException("IV must be at least 7 bytes long");
 
             var plaintextLength = ciphertext.Length - tagLength;
             var ciphertextOnly = ciphertext.Take(plaintextLength).ToArray();
@@ -51,7 +51,7 @@ namespace PasswordBox
             var actualTagBytes = plaintextWithTag.Tag.ToBytes().Take(tagLength);
 
             if (!actualTagBytes.SequenceEqual(expectedTagBytes))
-                throw new Exception("CCM tag doesn't match"); // TODO: Use custom exception!
+                throw new CryptoException("CCM tag doesn't match");
 
             return plaintextWithTag.Text;
         }
@@ -59,7 +59,7 @@ namespace PasswordBox
         internal static SjclQuad ComputeTag(SjclAes aes, byte[] plaintext, byte[] iv, byte[] adata, int tagLength, int plaintextLengthLength)
         {
             if (tagLength % 2 != 0 || tagLength < 4 || tagLength > 16)
-                throw new ArgumentException("Tag must be 4, 8, 10, 12, 14 or 16 bytes long", "tagLength");
+                throw new CryptoException("Tag must be 4, 8, 10, 12, 14 or 16 bytes long");
 
             // flags + iv + plaintext-length
             var tag = new SjclQuad(iv, -1);
@@ -132,7 +132,7 @@ namespace PasswordBox
         internal static byte[] EncodeAdataLength(int length)
         {
             if (length <= 0)
-                throw new ArgumentOutOfRangeException("length");
+                throw new CryptoException("Adata length must be positive");
 
             if (length < 0xfeff) // 16 bit
                 return new byte[] {(byte)(length >> 8), (byte)length};

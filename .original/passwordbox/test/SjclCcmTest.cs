@@ -147,9 +147,9 @@ namespace PasswordBox.Test
             var aes = new SjclAes(new byte[16]);
             for (var i = 0; i < 7; ++i)
             {
-                var e = Assert.Throws<ArgumentException>(
+                var e = Assert.Throws<CryptoException>(
                     () => SjclCcm.Encrypt(aes, new byte[1], new byte[i], new byte[0], 8));
-                Assert.AreEqual("IV must be at least 7 bytes long\r\nParameter name: iv", e.Message);
+                Assert.AreEqual("IV must be at least 7 bytes long", e.Message);
             }
         }
 
@@ -161,9 +161,9 @@ namespace PasswordBox.Test
             var aes = new SjclAes(new byte[16]);
             foreach (var i in testCases)
             {
-                var e = Assert.Throws<ArgumentException>(
+                var e = Assert.Throws<CryptoException>(
                     () => SjclCcm.Encrypt(aes, new byte[1], new byte[16], new byte[0], i));
-                Assert.AreEqual("Tag must be 4, 8, 10, 12, 14 or 16 bytes long\r\nParameter name: tagLength", e.Message);
+                Assert.AreEqual("Tag must be 4, 8, 10, 12, 14 or 16 bytes long", e.Message);
             }
         }
 
@@ -241,14 +241,14 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        [ExpectedException(typeof(CryptoException), ExpectedMessage = "Adata length must be positive")]
         public void EncodeAdataLengt_throws_on_zero_length()
         {
             SjclCcm.EncodeAdataLength(0);
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        [ExpectedException(typeof(CryptoException), ExpectedMessage = "Adata length must be positive")]
         public void EncodeAdataLengt_throws_on_negative_length()
         {
             SjclCcm.EncodeAdataLength(-1);
@@ -260,7 +260,7 @@ namespace PasswordBox.Test
 
         private static void VerifyCmmMismatchThrown(SjclAes aes, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
         {
-            var e = Assert.Throws<Exception>(() => SjclCcm.Decrypt(aes, ciphertext, iv, adata, tagLength));
+            var e = Assert.Throws<CryptoException>(() => SjclCcm.Decrypt(aes, ciphertext, iv, adata, tagLength));
             Assert.AreEqual("CCM tag doesn't match", e.Message);
         }
     }
