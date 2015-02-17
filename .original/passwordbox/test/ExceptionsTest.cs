@@ -84,5 +84,13 @@ namespace PasswordBox.Test
             Assert.AreSame(InnerException, e.InnerException);
             Assert.AreEqual(FetchReason, e.Reason);
         }
+
+        [Test]
+        public void CryptoException_with_message()
+        {
+            var e = new CryptoException(Message);
+            Assert.AreEqual(Message, e.Message);
+            Assert.IsNull(e.InnerException);
+        }
     }
 }

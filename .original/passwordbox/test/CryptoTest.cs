@@ -97,15 +97,15 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentException),
-                           ExpectedMessage = "Encryption key should be at least 16 bytes long\r\nParameter name: key")]
+        [ExpectedException(typeof(CryptoException),
+                           ExpectedMessage = "Encryption key should be at least 16 bytes long")]
         public void Decrypt_throws_on_too_short_key()
         {
             Crypto.Decrypt(new byte[15], Ciphertext);
         }
 
         [Test]
-        [ExpectedException(typeof(Exception),
+        [ExpectedException(typeof(CryptoException),
                            ExpectedMessage = "Ciphertext is too short (version byte is missing)")]
         public void Decrypt_throws_on_missing_format_byte()
         {
@@ -113,7 +113,7 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        [ExpectedException(typeof(Exception),
+        [ExpectedException(typeof(CryptoException),
                            ExpectedMessage = "Ciphertext is too short (IV is missing)")]
         public void Decrypt_throws_on_missing_iv()
         {
@@ -121,7 +121,7 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        [ExpectedException(typeof(Exception),
+        [ExpectedException(typeof(CryptoException),
                            ExpectedMessage = "Unsupported cipher format version (5)")]
         public void Decrypt_throws_on_unsupported_version()
         {

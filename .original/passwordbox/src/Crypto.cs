@@ -30,7 +30,7 @@ namespace PasswordBox
         public static byte[] Decrypt(byte[] key, byte[] encrypted)
         {
             if (key.Length < 16)
-                throw new ArgumentException("Encryption key should be at least 16 bytes long", "key");
+                throw new CryptoException("Encryption key should be at least 16 bytes long");
 
             // Use only first 256 bits
             if (key.Length > 32)
@@ -40,16 +40,16 @@ namespace PasswordBox
                 return new byte[0];
 
             if (encrypted.Length < 2)
-                throw new Exception("Ciphertext is too short (version byte is missing)"); // TODO: Use custom exception!
+                throw new CryptoException("Ciphertext is too short (version byte is missing)");
 
             // Version byte is at offset 1.
             // We only support version 4 which seems to be the current.
             var version = encrypted[1];
             if (version != 4)
-                throw new Exception(String.Format("Unsupported cipher format version ({0})", version)); // TODO: Use custom exception!
+                throw new CryptoException(String.Format("Unsupported cipher format version ({0})", version));
 
             if (encrypted.Length < 18)
-                throw new Exception("Ciphertext is too short (IV is missing)"); // TODO: Use custom exception!
+                throw new CryptoException("Ciphertext is too short (IV is missing)");
 
             // Split encrypted into IV and cipher
             var ciphertext = encrypted.Skip(18).ToArray();
