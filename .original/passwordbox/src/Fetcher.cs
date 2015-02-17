@@ -78,12 +78,18 @@ namespace PasswordBox
         {
             // TODO: Figure out url-escaping. It seems the cookie already comes escaped.
             webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("_pwdbox_session={0}", session.Id));
-            var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/assets");
 
-            // TODO: Handle errors!
+            try
+            {
+                var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/assets");
 
-            var encryptedAccounts = ParseFetchResponseJson(response.ToUtf8());
-            return DecryptAccounts(encryptedAccounts, session.Key);
+                var encryptedAccounts = ParseFetchResponseJson(response.ToUtf8());
+                return DecryptAccounts(encryptedAccounts, session.Key);
+            }
+            catch (WebException e)
+            {
+                throw new Exception("Fetch failed", e); // TODO: Use custom exception!
+            }
         }
 
         //
