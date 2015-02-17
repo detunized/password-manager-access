@@ -151,7 +151,6 @@ namespace PasswordBox
             if (salt == null || salt.Length < 32)
                 throw new FetchException(FetchException.FailureReason.LegacyUser, "Legacy user is not supported");
 
-            // TODO: Check for errors!
             var dr = ParseDerivationRulesJson(loginResponse.DerivationRulesJson);
             var kek = Crypto.ComputeKek(password, salt, dr);
 
