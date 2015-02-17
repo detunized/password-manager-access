@@ -257,19 +257,23 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        [ExpectedException(typeof(Exception), ExpectedMessage = "Legacy user is not supported")]
         public void ParseEncryptionKey_throws_on_missing_salt()
         {
             var response = new Fetcher.LoginResponse(null, DerivationRulesJson, EncryptedKey);
-            Fetcher.ParseEncryptionKey(response, Password);
+            var e = Assert.Throws<FetchException>(() => Fetcher.ParseEncryptionKey(response, Password));
+
+            Assert.AreEqual(FetchException.FailureReason.LegacyUser, e.Reason);
+            Assert.AreEqual("Legacy user is not supported", e.Message);
         }
 
         [Test]
-        [ExpectedException(typeof(Exception), ExpectedMessage = "Legacy user is not supported")]
         public void ParseEncryptionKey_throws_on_short_salt()
         {
             var response = new Fetcher.LoginResponse("too short", DerivationRulesJson, EncryptedKey);
-            Fetcher.ParseEncryptionKey(response, Password);
+            var e = Assert.Throws<FetchException>(() => Fetcher.ParseEncryptionKey(response, Password));
+
+            Assert.AreEqual(FetchException.FailureReason.LegacyUser, e.Reason);
+            Assert.AreEqual("Legacy user is not supported", e.Message);
         }
 
         [Test]

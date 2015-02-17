@@ -149,7 +149,7 @@ namespace PasswordBox
         {
             var salt = loginResponse.Salt;
             if (salt == null || salt.Length < 32)
-                throw new Exception("Legacy user is not supported"); // TODO: Use custom exception!
+                throw new FetchException(FetchException.FailureReason.LegacyUser, "Legacy user is not supported");
 
             // TODO: Check for errors!
             var dr = ParseDerivationRulesJson(loginResponse.DerivationRulesJson);
