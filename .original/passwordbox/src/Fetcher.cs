@@ -244,7 +244,7 @@ namespace PasswordBox
         {
             var match = Regex.Match(cookies, "_pwdbox_session=(.*?);");
             if (!match.Success)
-                throw new Exception("Unsupported cookie format"); // TODO: Use custom exception!
+                throw new FetchException(FetchException.FailureReason.InvalidCookie, "Unsupported cookie format");
 
             return match.Groups[1].Value;
         }

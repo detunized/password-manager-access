@@ -12,6 +12,7 @@ namespace PasswordBox
             Network,
             InvalidResponse,
             LegacyUser,
+            InvalidCookie,
             Unknown,
         }
 

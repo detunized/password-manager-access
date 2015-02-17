@@ -318,10 +318,11 @@ namespace PasswordBox.Test
         }
 
         [Test]
-        [ExpectedException(typeof(Exception), ExpectedMessage = "Unsupported cookie format")]
         public void ExtractSessionId_throws_on_invalid_cookies()
         {
-            Assert.AreEqual(SessionId, Fetcher.ExtractSessionId(""));
+            var e = Assert.Throws<FetchException>(() => Fetcher.ExtractSessionId(""));
+            Assert.AreEqual(FetchException.FailureReason.InvalidCookie, e.Reason);
+            Assert.AreEqual("Unsupported cookie format", e.Message);
         }
 
         [Test]
