@@ -12,6 +12,7 @@ namespace PasswordBox.Test
         private const string Message = "message";
         private const LoginException.FailureReason LoginReason = LoginException.FailureReason.Unknown;
         private const LogoutException.FailureReason LogoutReason = LogoutException.FailureReason.Unknown;
+        private const FetchException.FailureReason FetchReason = FetchException.FailureReason.Unknown;
         private readonly Exception InnerException = new Exception();
 
         [Test]
@@ -64,6 +65,24 @@ namespace PasswordBox.Test
             Assert.AreEqual(Message, e.Message);
             Assert.AreSame(InnerException, e.InnerException);
             Assert.AreEqual(LogoutReason, e.Reason);
+        }
+
+        [Test]
+        public void FetchException_with_message()
+        {
+            var e = new FetchException(FetchReason, Message);
+            Assert.AreEqual(Message, e.Message);
+            Assert.IsNull(e.InnerException);
+            Assert.AreEqual(FetchReason, e.Reason);
+        }
+
+        [Test]
+        public void FetchException_with_message_and_inner_exception()
+        {
+            var e = new FetchException(FetchReason, Message, InnerException);
+            Assert.AreEqual(Message, e.Message);
+            Assert.AreSame(InnerException, e.InnerException);
+            Assert.AreEqual(FetchReason, e.Reason);
         }
     }
 }

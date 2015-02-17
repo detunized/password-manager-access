@@ -82,13 +82,16 @@ namespace PasswordBox
             try
             {
                 var response = webClient.DownloadData("https://api0.passwordbox.com/api/0/assets");
-
                 var encryptedAccounts = ParseFetchResponseJson(response.ToUtf8());
                 return DecryptAccounts(encryptedAccounts, session.Key);
             }
             catch (WebException e)
             {
-                throw new Exception("Fetch failed", e); // TODO: Use custom exception!
+                throw new FetchException(FetchException.FailureReason.Network, "Network error", e);
+            }
+            catch (SerializationException e)
+            {
+                throw new FetchException(FetchException.FailureReason.InvalidResponse, "Invalid response, failed to parse JSON", e);
             }
         }
 
