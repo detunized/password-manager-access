@@ -44,6 +44,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="ParserTest.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\Dashlane.csproj">
+      <Project>{8b3d9c34-bb1c-4ef1-bb00-7098ac9c9e0f}</Project>
+      <Name>Dashlane</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
