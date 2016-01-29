@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Text;
 using NUnit.Framework;
 
 namespace Dashlane.Test
@@ -16,7 +15,7 @@ namespace Dashlane.Test
         public void ComputeEncryptionKey_returns_correct_result()
         {
             var key = Parser.ComputeEncryptionKey("password", Salt);
-            Assert.AreEqual("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(), key);
+            Assert.That(key, Is.EqualTo("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64()));
         }
 
         [Test]
