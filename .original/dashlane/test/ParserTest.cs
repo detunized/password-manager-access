@@ -15,7 +15,7 @@ namespace Dashlane.Test
         {
             var key = Parser.ComputeEncryptionKey(
                 "password",
-                Encoding.UTF8.GetBytes("saltsaltsaltsaltsaltsaltsaltsalt"));
+                "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes());
             Assert.AreEqual(
                 Convert.FromBase64String("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY="),
                 key);
@@ -24,7 +24,7 @@ namespace Dashlane.Test
         [Test]
         public void Sha1_computes_sha1_given_times()
         {
-            var bytes = Encoding.UTF8.GetBytes("All your base are belong to us");
+            var bytes = "All your base are belong to us".ToBytes();
             Assert.AreEqual(bytes, Parser.Sha1(bytes, 0));
             Assert.AreEqual(
                 Convert.FromBase64String("xgmXgTCENlJpbnSLucn3NwPXkIk="),
