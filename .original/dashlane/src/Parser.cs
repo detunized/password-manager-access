@@ -55,17 +55,16 @@ namespace Dashlane
                 iv: joined.Skip(32).Take(16).ToArray());
         }
 
-        public static string DecryptAes256(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
+        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
         {
             using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.CBC, IV = iv })
             using (var decryptor = aes.CreateDecryptor())
-            using (var stream = new MemoryStream(ciphertext, false))
-            using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
-            using (var reader = new StreamReader(cryptoStream))
+            using (var inputStream = new MemoryStream(ciphertext, false))
+            using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
+            using (var outputStream = new MemoryStream())
             {
-                // TODO: StreamReader is a text reader. This might fail with arbitrary binary encrypted
-                //       data. Luckily we have only text encrypted. Pay attention when refactoring!
-                return reader.ReadToEnd();
+                cryptoStream.CopyTo(outputStream);
+                return outputStream.ToArray();
             }
         }
     }

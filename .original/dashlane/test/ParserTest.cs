@@ -11,7 +11,7 @@ namespace Dashlane.Test
     {
         private const string Password = "password";
         private static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
-        private const string Content = "All your base are belong to us";
+        private static readonly byte[] Content = "All your base are belong to us".ToBytes();
 
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()
@@ -23,11 +23,10 @@ namespace Dashlane.Test
         [Test]
         public void Sha1_computes_sha1_given_times()
         {
-            var bytes = Content.ToBytes();
             var check = new Action<int, string>((iterations, expected) =>
-                Assert.That(Parser.Sha1(bytes, iterations), Is.EqualTo(expected.Decode64())));
+                Assert.That(Parser.Sha1(Content, iterations), Is.EqualTo(expected.Decode64())));
 
-            check(0, Convert.ToBase64String(bytes));
+            check(0, Convert.ToBase64String(Content));
             check(1, "xgmXgTCENlJpbnSLucn3NwPXkIk=");
             check(5, "RqcjtwJ5KY1MON7n3WwvqGhrrpg=");
         }
