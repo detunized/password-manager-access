@@ -11,5 +11,15 @@ namespace Dashlane
         {
             return new Rfc2898DeriveBytes(password, salt, 10204).GetBytes(32);
         }
+
+        public static byte[] Sha1(byte[] bytes, int times)
+        {
+            var result = bytes;
+            using (var sha = new SHA1Managed())
+                for (var i = 0; i < times; ++i)
+                    result = sha.ComputeHash(result);
+
+            return result;
+        }
     }
 }

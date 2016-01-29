@@ -20,5 +20,18 @@ namespace Dashlane.Test
                 Convert.FromBase64String("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY="),
                 key);
         }
+
+        [Test]
+        public void Sha1_computes_sha1_given_times()
+        {
+            var bytes = Encoding.UTF8.GetBytes("All your base are belong to us");
+            Assert.AreEqual(bytes, Parser.Sha1(bytes, 0));
+            Assert.AreEqual(
+                Convert.FromBase64String("xgmXgTCENlJpbnSLucn3NwPXkIk="),
+                Parser.Sha1(bytes, 1));
+            Assert.AreEqual(
+                Convert.FromBase64String("RqcjtwJ5KY1MON7n3WwvqGhrrpg="),
+                Parser.Sha1(bytes, 5));
+        }
     }
 }
