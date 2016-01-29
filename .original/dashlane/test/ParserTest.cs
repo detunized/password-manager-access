@@ -10,6 +10,7 @@ namespace Dashlane.Test
     class ParserTest
     {
         private static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
+        private const string Content = "All your base are belong to us";
 
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()
@@ -21,7 +22,7 @@ namespace Dashlane.Test
         [Test]
         public void Sha1_computes_sha1_given_times()
         {
-            var bytes = "All your base are belong to us".ToBytes();
+            var bytes = Content.ToBytes();
             var check = new Action<int, string>((iterations, expected) =>
                 Assert.That(Parser.Sha1(bytes, iterations), Is.EqualTo(expected.Decode64())));
 
@@ -43,6 +44,17 @@ namespace Dashlane.Test
 
             check(1, "6HA2Rq9GTeKzAc1imNjvyaXBGW4zRA5wIr60Vbx/o8w=", "fCk2EkpIYGn05JHcVfR8eQ==");
             check(5, "fsuGfEOoYL4uOmp24ZuAExIuVePh6YIu7t0rfCDogpM=", "/vsHfrsRzyGCQOBP4UEQuw==");
+        }
+
+        [Test]
+        public void DecryptAes256_decrypts_ciphertext()
+        {
+            Assert.That(
+                Parser.DecryptAes256(
+                    "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                    "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                    "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()),
+                Is.EqualTo(Content));
         }
     }
 }

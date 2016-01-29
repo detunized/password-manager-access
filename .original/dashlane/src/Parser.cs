@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -52,6 +53,20 @@ namespace Dashlane
             return new KeyIvPair(
                 key: joined.Take(32).ToArray(),
                 iv: joined.Skip(32).Take(16).ToArray());
+        }
+
+        public static string DecryptAes256(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
+        {
+            using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.CBC, IV = iv })
+            using (var decryptor = aes.CreateDecryptor())
+            using (var stream = new MemoryStream(ciphertext, false))
+            using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
+            using (var reader = new StreamReader(cryptoStream))
+            {
+                // TODO: StreamReader is a text reader. This might fail with arbitrary binary encrypted
+                //       data. Luckily we have only text encrypted. Pay attention when refactoring!
+                return reader.ReadToEnd();
+            }
         }
     }
 }
