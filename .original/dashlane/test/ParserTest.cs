@@ -10,12 +10,12 @@ namespace Dashlane.Test
     [TestFixture]
     class ParserTest
     {
+        private static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
+
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()
         {
-            var key = Parser.ComputeEncryptionKey(
-                "password",
-                "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes());
+            var key = Parser.ComputeEncryptionKey("password", Salt);
             Assert.AreEqual("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(), key);
         }
 
@@ -26,6 +26,21 @@ namespace Dashlane.Test
             Assert.AreEqual(bytes, Parser.Sha1(bytes, 0));
             Assert.AreEqual("xgmXgTCENlJpbnSLucn3NwPXkIk=".Decode64(), Parser.Sha1(bytes, 1));
             Assert.AreEqual("RqcjtwJ5KY1MON7n3WwvqGhrrpg=".Decode64(), Parser.Sha1(bytes, 5));
+        }
+
+        [Test]
+        public void DeriveEncryptionKeyAndIv_computes_key_and_iv_for_given_number_of_iterations()
+        {
+            var key = "OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64();
+            var check = new Action<int, string, string>((iterations, expectedKey, expectedIv) =>
+            {
+                var keyIv = Parser.DeriveEncryptionKeyAndIv(key, Salt, iterations);
+                Assert.That(keyIv.Key, Is.EqualTo(expectedKey.Decode64()));
+                Assert.That(keyIv.Iv, Is.EqualTo(expectedIv.Decode64()));
+            });
+
+            check(1, "6HA2Rq9GTeKzAc1imNjvyaXBGW4zRA5wIr60Vbx/o8w=", "fCk2EkpIYGn05JHcVfR8eQ==");
+            check(5, "fsuGfEOoYL4uOmp24ZuAExIuVePh6YIu7t0rfCDogpM=", "/vsHfrsRzyGCQOBP4UEQuw==");
         }
     }
 }

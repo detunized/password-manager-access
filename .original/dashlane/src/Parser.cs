@@ -1,6 +1,9 @@
 // Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace Dashlane
@@ -20,6 +23,35 @@ namespace Dashlane
                     result = sha.ComputeHash(result);
 
             return result;
+        }
+
+        public struct KeyIvPair
+        {
+            public KeyIvPair(byte[] key, byte[] iv)
+            {
+                Key = key;
+                Iv = iv;
+            }
+
+            public readonly byte[] Key;
+            public readonly byte[] Iv;
+        }
+
+        public static KeyIvPair DeriveEncryptionKeyAndIv(byte[] key, byte[] salt, int iterations)
+        {
+            var saltyKey = key.Concat(salt.Take(8)).ToArray();
+            var last = new byte[] {};
+            IEnumerable<byte> joined = new byte[] {};
+
+            for (var i = 0; i < 3; ++i)
+            {
+                last = Sha1(last.Concat(saltyKey).ToArray(), iterations);
+                joined = joined.Concat(last);
+            }
+
+            return new KeyIvPair(
+                key: joined.Take(32).ToArray(),
+                iv: joined.Skip(32).Take(16).ToArray());
         }
     }
 }
