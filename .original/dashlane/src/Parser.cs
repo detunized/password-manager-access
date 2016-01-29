@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace Dashlane
 {
-    public static class Parser
+    static class Parser
     {
         public static byte[] ComputeEncryptionKey(string password, byte[] salt)
         {

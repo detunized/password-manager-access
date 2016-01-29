@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace Dashlane.Test
 {
     [TestFixture]
-    internal class ParserTest
+    class ParserTest
     {
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()

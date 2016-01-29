@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Dashlane.Test
 {
-    internal static class Extensions
+    static class Extensions
     {
         public static byte[] ToBytes(this string s)
         {
