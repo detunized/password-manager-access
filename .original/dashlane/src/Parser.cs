@@ -147,6 +147,6 @@ namespace Dashlane
 
         }
 
-        private static readonly byte[] Kwc3 = { (byte)'K', (byte)'W', (byte)'C', (byte)'3' };
+        private static readonly byte[] Kwc3 = {(byte)'K', (byte)'W', (byte)'C', (byte)'3'};
     }
 }

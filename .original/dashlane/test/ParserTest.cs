@@ -91,5 +91,26 @@ namespace Dashlane.Test
             Assert.That(parsed.UseDerivedKey, Is.True);
             Assert.That(parsed.Iterations, Is.EqualTo(5));
         }
+
+        [Test]
+        public void ParseEncryptedBlob_parses_short_blob_as_legacy()
+        {
+            var ciphertext = new byte[] {13, 37};
+            var blob = Salt.Concat(ciphertext).ToArray();
+            var parsed = Parser.ParseEncryptedBlob(blob);
+
+            Assert.That(parsed.Ciphertext, Is.EqualTo(ciphertext));
+            Assert.That(parsed.Salt, Is.EqualTo(Salt));
+            Assert.That(parsed.Compressed, Is.False);
+            Assert.That(parsed.UseDerivedKey, Is.True);
+            Assert.That(parsed.Iterations, Is.EqualTo(5));
+        }
+
+        [Test]
+        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Blob is too short\r\nParameter name: blob")]
+        public void ParseEncryptedBlob_throws_on_too_short_blob()
+        {
+            Parser.ParseEncryptedBlob(new byte[] {13, 37});
+        }
     }
 }
