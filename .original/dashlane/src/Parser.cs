@@ -118,18 +118,18 @@ namespace Dashlane
 
         public static Blob ParseEncryptedBlob(byte[] blob)
         {
-            const int SaltLength = 32;
-            const int VersionLength = 4;
+            const int saltLength = 32;
+            const int versionLength = 4;
 
-            var salt = blob.Sub(0, SaltLength);
-            if (salt.Length < SaltLength)
+            var salt = blob.Sub(0, saltLength);
+            if (salt.Length < saltLength)
                 throw new ArgumentException("Blob is too short", "blob");
 
-            var version = blob.Sub(SaltLength, VersionLength);
+            var version = blob.Sub(saltLength, versionLength);
             if (version.SequenceEqual(Kwc3))
             {
                 return new Blob(
-                    blob.Sub(SaltLength + VersionLength, int.MaxValue),
+                    blob.Sub(saltLength + versionLength, int.MaxValue),
                     salt,
                     true,
                     false,
@@ -138,7 +138,7 @@ namespace Dashlane
             else
             {
                 return new Blob(
-                    blob.Sub(SaltLength, int.MaxValue),
+                    blob.Sub(saltLength, int.MaxValue),
                     salt,
                     false,
                     true,
