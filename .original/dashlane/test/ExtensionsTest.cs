@@ -18,5 +18,15 @@ namespace Dashlane.Test
                     101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115 },
                 "All your base are belong to us".ToBytes());
         }
+
+        [Test]
+        public void String_Decode64_decodes_base64()
+        {
+            Assert.AreEqual(new byte[] { }, "".Decode64());
+            Assert.AreEqual(new byte[] { 0x61 }, "YQ==".Decode64());
+            Assert.AreEqual(new byte[] { 0x61, 0x62 }, "YWI=".Decode64());
+            Assert.AreEqual(new byte[] { 0x61, 0x62, 0x63 }, "YWJj".Decode64());
+            Assert.AreEqual(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA==".Decode64());
+        }
     }
 }
