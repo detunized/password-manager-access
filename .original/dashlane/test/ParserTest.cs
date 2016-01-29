@@ -23,9 +23,12 @@ namespace Dashlane.Test
         public void Sha1_computes_sha1_given_times()
         {
             var bytes = "All your base are belong to us".ToBytes();
-            Assert.AreEqual(bytes, Parser.Sha1(bytes, 0));
-            Assert.AreEqual("xgmXgTCENlJpbnSLucn3NwPXkIk=".Decode64(), Parser.Sha1(bytes, 1));
-            Assert.AreEqual("RqcjtwJ5KY1MON7n3WwvqGhrrpg=".Decode64(), Parser.Sha1(bytes, 5));
+            var check = new Action<int, string>((iterations, expected) =>
+                Assert.That(Parser.Sha1(bytes, iterations), Is.EqualTo(expected.Decode64())));
+
+            check(0, Convert.ToBase64String(bytes));
+            check(1, "xgmXgTCENlJpbnSLucn3NwPXkIk=");
+            check(5, "RqcjtwJ5KY1MON7n3WwvqGhrrpg=");
         }
 
         [Test]
