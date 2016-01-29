@@ -125,11 +125,8 @@ namespace Dashlane
             if (salt.Length < SaltLength)
                 throw new ArgumentException("Blob is too short", "blob");
 
-            // TODO: Make this a const
-            var kwc3 = new[] { (byte)'K', (byte)'W', (byte)'C', (byte)'3' };
-
             var version = blob.Sub(SaltLength, VersionLength);
-            if (version.SequenceEqual(kwc3))
+            if (version.SequenceEqual(Kwc3))
             {
                 return new Blob(
                     blob.Sub(SaltLength + VersionLength, int.MaxValue),
@@ -149,5 +146,7 @@ namespace Dashlane
             }
 
         }
+
+        private static readonly byte[] Kwc3 = { (byte)'K', (byte)'W', (byte)'C', (byte)'3' };
     }
 }
