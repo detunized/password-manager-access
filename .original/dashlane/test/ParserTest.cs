@@ -56,5 +56,13 @@ namespace Dashlane.Test
                     "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()),
                 Is.EqualTo(Content));
         }
+
+        [Test]
+        public void Inflate_decompresses_data()
+        {
+            Assert.That(
+                Parser.Inflate("c8zJUajMLy1SSEosTlVILEpVSErNyc9LVyjJVygtBgA=".Decode64()),
+                Is.EqualTo(Content));
+        }
     }
 }

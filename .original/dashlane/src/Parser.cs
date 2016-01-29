@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -64,6 +65,17 @@ namespace Dashlane
             using (var outputStream = new MemoryStream())
             {
                 cryptoStream.CopyTo(outputStream);
+                return outputStream.ToArray();
+            }
+        }
+
+        public static byte[] Inflate(byte[] compressed)
+        {
+            using (var inputStream = new MemoryStream(compressed, false))
+            using (var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress))
+            using (var outputStream = new MemoryStream())
+            {
+                deflateStream.CopyTo(outputStream);
                 return outputStream.ToArray();
             }
         }
