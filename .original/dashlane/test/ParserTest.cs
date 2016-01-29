@@ -9,13 +9,14 @@ namespace Dashlane.Test
     [TestFixture]
     class ParserTest
     {
+        private const string Password = "password";
         private static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
         private const string Content = "All your base are belong to us";
 
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()
         {
-            var key = Parser.ComputeEncryptionKey("password", Salt);
+            var key = Parser.ComputeEncryptionKey(Password, Salt);
             Assert.That(key, Is.EqualTo("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64()));
         }
 
