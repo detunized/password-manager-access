@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace Dashlane
@@ -78,6 +80,74 @@ namespace Dashlane
                 deflateStream.CopyTo(outputStream);
                 return outputStream.ToArray();
             }
+        }
+
+        public struct Blob
+        {
+            public Blob(byte[] ciphertext, byte[] salt, bool compressed, bool useDerivedKey, int iterations)
+                : this()
+            {
+                Ciphertext = ciphertext;
+                Salt = salt;
+                Compressed = compressed;
+                UseDerivedKey = useDerivedKey;
+                Iterations = iterations;
+            }
+
+            public readonly byte[] Ciphertext;
+            public readonly byte[] Salt;
+            public readonly bool Compressed;
+            public readonly bool UseDerivedKey;
+            public readonly int Iterations;
+        }
+
+        // TODO: Move this out of here!
+        // TODO: Add tests!
+        public static byte[] Sub(this byte[] array, int start, int length)
+        {
+            if (length < 0)
+                throw new ArgumentOutOfRangeException("length", "Length should be nonnegative");
+
+            var bytesLeft = Math.Max(array.Length - start, 0);
+            var actualLength = Math.Min(bytesLeft, length);
+            var sub = new byte[actualLength];
+            Array.Copy(array, start, sub, 0, actualLength);
+
+            return sub;
+        }
+
+        public static Blob ParseEncryptedBlob(byte[] blob)
+        {
+            const int SaltLength = 32;
+            const int VersionLength = 4;
+
+            var salt = blob.Sub(0, SaltLength);
+            if (salt.Length < SaltLength)
+                throw new ArgumentException("Blob is too short", "blob");
+
+            // TODO: Make this a const
+            var kwc3 = new[] { (byte)'K', (byte)'W', (byte)'C', (byte)'3' };
+
+            var version = blob.Sub(SaltLength, VersionLength);
+            if (version.SequenceEqual(kwc3))
+            {
+                return new Blob(
+                    blob.Sub(SaltLength + VersionLength, int.MaxValue),
+                    salt,
+                    true,
+                    false,
+                    1);
+            }
+            else
+            {
+                return new Blob(
+                    blob.Sub(SaltLength, int.MaxValue),
+                    salt,
+                    false,
+                    true,
+                    5);
+            }
+
         }
     }
 }

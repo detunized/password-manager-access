@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Dashlane.Test
@@ -63,6 +64,32 @@ namespace Dashlane.Test
             Assert.That(
                 Parser.Inflate("c8zJUajMLy1SSEosTlVILEpVSErNyc9LVyjJVygtBgA=".Decode64()),
                 Is.EqualTo(Content));
+        }
+
+        [Test]
+        public void ParseEncryptedBlob_parses_kwc3_blob()
+        {
+            var blob = Salt.Concat("KWC3".ToBytes()).Concat(Content).ToArray();
+            var parsed = Parser.ParseEncryptedBlob(blob);
+
+            Assert.That(parsed.Ciphertext, Is.EqualTo(Content));
+            Assert.That(parsed.Salt, Is.EqualTo(Salt));
+            Assert.That(parsed.Compressed, Is.True);
+            Assert.That(parsed.UseDerivedKey, Is.False);
+            Assert.That(parsed.Iterations, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ParseEncryptedBlob_parses_legacy_blob()
+        {
+            var blob = Salt.Concat(Content).ToArray();
+            var parsed = Parser.ParseEncryptedBlob(blob);
+
+            Assert.That(parsed.Ciphertext, Is.EqualTo(Content));
+            Assert.That(parsed.Salt, Is.EqualTo(Salt));
+            Assert.That(parsed.Compressed, Is.False);
+            Assert.That(parsed.UseDerivedKey, Is.True);
+            Assert.That(parsed.Iterations, Is.EqualTo(5));
         }
     }
 }
