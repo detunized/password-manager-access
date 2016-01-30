@@ -126,25 +126,9 @@ namespace Dashlane
                 throw new ArgumentException("Blob is too short", "blob");
 
             var version = blob.Sub(saltLength, versionLength);
-            if (version.SequenceEqual(Kwc3))
-            {
-                return new Blob(
-                    blob.Sub(saltLength + versionLength, int.MaxValue),
-                    salt,
-                    true,
-                    false,
-                    1);
-            }
-            else
-            {
-                return new Blob(
-                    blob.Sub(saltLength, int.MaxValue),
-                    salt,
-                    false,
-                    true,
-                    5);
-            }
-
+            return version.SequenceEqual(Kwc3)
+                ? new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, true, false, 1)
+                : new Blob(blob.Sub(saltLength, int.MaxValue), salt, false, true, 5);
         }
 
         private static readonly byte[] Kwc3 = {(byte)'K', (byte)'W', (byte)'C', (byte)'3'};
