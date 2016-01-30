@@ -114,6 +114,19 @@ namespace Dashlane
                 : new Blob(blob.Sub(saltLength, int.MaxValue), salt, false, true, 5);
         }
 
+        public static byte[] DecryptBlob(byte[] blob, string password)
+        {
+            var parsed = ParseEncryptedBlob(blob);
+            var key = ComputeEncryptionKey(password, parsed.Salt);
+            var derivedKeyIv = DeriveEncryptionKeyAndIv(key, parsed.Salt, parsed.Iterations);
+            var plaintext = DecryptAes256(
+                parsed.Ciphertext,
+                derivedKeyIv.Iv,
+                parsed.UseDerivedKey ? derivedKeyIv.Key : key);
+
+            return parsed.Compressed ? Inflate(plaintext.Sub(6, int.MaxValue)) : plaintext;
+        }
+
         public static readonly byte[] Kwc3 = "KWC3".ToBytes();
     }
 }

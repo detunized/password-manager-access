@@ -112,5 +112,13 @@ namespace Dashlane.Test
         {
             Parser.ParseEncryptedBlob(new byte[] {13, 37});
         }
+
+        [Test]
+        public void DecryptBlob_returns_decrypted_content_from_kwc3_blob()
+        {
+            var blob = "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzxDNg8kGh5rSYkNvXzzn+" +
+                       "3xsCKXSKgGhb2pGnbuqQo32blVfJpurp7jj8oSnzxa66";
+            Assert.That(Parser.DecryptBlob(blob.Decode64(), Password), Is.EqualTo(Content));
+        }
     }
 }
