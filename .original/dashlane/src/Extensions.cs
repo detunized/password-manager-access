@@ -1,9 +1,15 @@
 using System;
+using System.Text;
 
 namespace Dashlane
 {
     static class Extensions
     {
+        public static byte[] ToBytes(this string s)
+        {
+            return Encoding.UTF8.GetBytes(s);
+        }
+
         public static byte[] Sub(this byte[] array, int start, int length)
         {
             if (length < 0)

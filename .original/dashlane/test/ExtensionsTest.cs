@@ -14,6 +14,21 @@ namespace Dashlane.Test
         //
 
         [Test]
+        public void String_ToBytes_converts_string_to_utf8_bytes()
+        {
+            Assert.That(
+                "".ToBytes(),
+                Is.EqualTo(new byte[] { }));
+
+            Assert.That(
+                "All your base are belong to us".ToBytes(),
+                Is.EqualTo(new byte[] {
+                    65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97, 114,
+                    101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115}
+                ));
+        }
+
+        [Test]
         public void ByteArray_Sub_returns_subarray()
         {
             var array = "0123456789abcdef".ToBytes();
@@ -77,21 +92,6 @@ namespace Dashlane.Test
         //
         // Dashlane.Test extensions
         //
-
-        [Test]
-        public void String_ToBytes_converts_string_to_utf8_bytes()
-        {
-            Assert.That(
-                "".ToBytes(),
-                Is.EqualTo(new byte[] {}));
-
-            Assert.That(
-                "All your base are belong to us".ToBytes(),
-                Is.EqualTo(new byte[] {
-                    65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97, 114,
-                    101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115 }
-                ));
-        }
 
         [Test]
         public void String_Decode64_decodes_base64()
