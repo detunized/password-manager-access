@@ -114,6 +114,6 @@ namespace Dashlane
                 : new Blob(blob.Sub(saltLength, int.MaxValue), salt, false, true, 5);
         }
 
-        private static readonly byte[] Kwc3 = "KWC3".ToBytes();
+        public static readonly byte[] Kwc3 = "KWC3".ToBytes();
     }
 }
