@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace Dashlane
@@ -99,21 +97,6 @@ namespace Dashlane
             public readonly bool Compressed;
             public readonly bool UseDerivedKey;
             public readonly int Iterations;
-        }
-
-        // TODO: Move this out of here!
-        // TODO: Add tests!
-        public static byte[] Sub(this byte[] array, int start, int length)
-        {
-            if (length < 0)
-                throw new ArgumentOutOfRangeException("length", "Length should be nonnegative");
-
-            var bytesLeft = Math.Max(array.Length - start, 0);
-            var actualLength = Math.Min(bytesLeft, length);
-            var sub = new byte[actualLength];
-            Array.Copy(array, start, sub, 0, actualLength);
-
-            return sub;
         }
 
         public static Blob ParseEncryptedBlob(byte[] blob)
