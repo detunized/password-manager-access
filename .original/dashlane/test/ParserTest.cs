@@ -157,6 +157,43 @@ namespace Dashlane.Test
         }
 
         [Test]
+        public void ParseAccount_returns_account()
+        {
+            var e = XDocument.Parse(
+                @"<KWAuthentifiant>
+                    <KWDataItem key='Id'><![CDATA[1]]></KWDataItem>
+                    <KWDataItem key='Title'><![CDATA[dude]]></KWDataItem>
+                    <KWDataItem key='Login'><![CDATA[jeffrey.lebowski]]></KWDataItem>
+                    <KWDataItem key='Password'><![CDATA[logjammin]]></KWDataItem>
+                    <KWDataItem key='Url'><![CDATA[https://dude.com]]></KWDataItem>
+                    <KWDataItem key='Note'><![CDATA[Get a new rug!]]></KWDataItem>
+                </KWAuthentifiant>");
+            var account = Parser.ParseAccount(e.Root);
+
+            Assert.That(account.Id, Is.EqualTo("1"));
+            Assert.That(account.Name, Is.EqualTo("dude"));
+            Assert.That(account.Username, Is.EqualTo("jeffrey.lebowski"));
+            Assert.That(account.Password, Is.EqualTo("logjammin"));
+            Assert.That(account.Url, Is.EqualTo("https://dude.com"));
+            Assert.That(account.Note, Is.EqualTo("Get a new rug!"));
+        }
+
+        [Test]
+        public void ParseAccount_returns_account_with_all_defaults()
+        {
+            var e = XDocument.Parse("<KWAuthentifiant></KWAuthentifiant>");
+            var account = Parser.ParseAccount(e.Root);
+
+            Assert.That(account.Id, Is.EqualTo(""));
+            Assert.That(account.Name, Is.EqualTo(""));
+            Assert.That(account.Username, Is.EqualTo(""));
+            Assert.That(account.Password, Is.EqualTo(""));
+            Assert.That(account.Url, Is.EqualTo(""));
+            Assert.That(account.Note, Is.EqualTo(""));
+        }
+
+
+        [Test]
         public void GetValueForKeyOrDefault_returns_value_when_present()
         {
             var e = XDocument.Parse("<root><KWDataItem key='key'>value</KWDataItem></root>");

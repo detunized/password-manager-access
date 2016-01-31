@@ -137,7 +137,6 @@ namespace Dashlane
                 .ToArray();
         }
 
-        // TODO: Test this!
         public static Account ParseAccount(XElement e)
         {
             return new Account(
