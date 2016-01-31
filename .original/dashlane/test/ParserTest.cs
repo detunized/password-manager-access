@@ -120,5 +120,39 @@ namespace Dashlane.Test
                        "3xsCKXSKgGhb2pGnbuqQo32blVfJpurp7jj8oSnzxa66";
             Assert.That(Parser.DecryptBlob(blob.Decode64(), Password), Is.EqualTo(Content));
         }
+
+        [Test]
+        public void ExtractAccountsFromXml_extracts_accounts_at_different_levels()
+        {
+            var xml = @"
+                <KWAuthentifiant>
+                    <KWDataItem key='Id'><![CDATA[1]]></KWDataItem>
+                    <KWDataItem key='Title'><![CDATA[dude]]></KWDataItem>
+                    <KWDataItem key='Login'><![CDATA[jeffrey.lebowski]]></KWDataItem>
+                    <KWDataItem key='Password'><![CDATA[logjammin]]></KWDataItem>
+                    <KWDataItem key='Url'><![CDATA[https://dude.com]]></KWDataItem>
+                    <KWDataItem key='Note'><![CDATA[Get a new rug!]]></KWDataItem>
+                </KWAuthentifiant>
+                <KWAuthentifiant>
+                    <KWDataItem key='Id'><![CDATA[2]]></KWDataItem>
+                    <KWDataItem key='Title'><![CDATA[walter]]></KWDataItem>
+                    <KWDataItem key='Login'><![CDATA[walter.sobchak]]></KWDataItem>
+                    <KWDataItem key='Password'><![CDATA[worldofpain]]></KWDataItem>
+                    <KWDataItem key='Url'><![CDATA[https://nam.com]]></KWDataItem>
+                    <KWDataItem key='Note'><![CDATA[Don't roll on Shabbos!]]></KWDataItem>
+                </KWAuthentifiant>";
+
+            Assert.That(
+                Parser.ExtractAccountsFromXml("<root />"),
+                Is.Empty);
+
+            Assert.That(
+                Parser.ExtractAccountsFromXml("<root>" + xml + "</root>").Length,
+                Is.EqualTo(2));
+
+            Assert.That(
+                Parser.ExtractAccountsFromXml("<root><subroot>" + xml + "</subroot></root>").Length,
+                Is.EqualTo(2));
+        }
     }
 }
