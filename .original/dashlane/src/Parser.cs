@@ -149,7 +149,6 @@ namespace Dashlane
                 note: GetValueForKeyOrDefault(e, "Note"));
         }
 
-        // TODO: Test this!
         public static string GetValueForKeyOrDefault(XElement e, string key, string defaultValue = "")
         {
             var item = e.XPathSelectElement(string.Format("KWDataItem[@key='{0}']", key));

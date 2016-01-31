@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Xml.Linq;
 using NUnit.Framework;
 
 namespace Dashlane.Test
@@ -153,6 +154,26 @@ namespace Dashlane.Test
             Assert.That(
                 Parser.ExtractAccountsFromXml("<root><subroot>" + xml + "</subroot></root>").Length,
                 Is.EqualTo(2));
+        }
+
+        [Test]
+        public void GetValueForKeyOrDefault_returns_value_when_present()
+        {
+            var e = XDocument.Parse("<root><KWDataItem key='key'>value</KWDataItem></root>");
+
+            Assert.That(
+                Parser.GetValueForKeyOrDefault(e.Root, "key", "default"),
+                Is.EqualTo("value"));
+        }
+
+        [Test]
+        public void GetValueForKeyOrDefault_returns_default_value_when_not_present()
+        {
+            var e = XDocument.Parse("<root><KWDataItem key='key'>value</KWDataItem></root>");
+
+            Assert.That(
+                Parser.GetValueForKeyOrDefault(e.Root, "not-a-key", "default"),
+                Is.EqualTo("default"));
         }
     }
 }
