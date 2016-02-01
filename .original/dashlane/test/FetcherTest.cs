@@ -26,6 +26,20 @@ namespace Dashlane.Test
                 Times.Once);
         }
 
+        [Test]
+        public void Fetch_makes_post_request_with_correct_username_and_uki()
+        {
+            var webClient = SetupWebClient();
+
+            Fetcher.Fetch(Username, Uki, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(
+                    It.IsAny<string>(),
+                    It.Is<NameValueCollection>(p => p["login"] == Username && p["uki"] == Uki)),
+                Times.Once);
+        }
+
         //
         // Helpers
         //
