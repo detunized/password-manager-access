@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Newtonsoft.Json.Linq;
 
 namespace Dashlane
 {
@@ -27,6 +28,12 @@ namespace Dashlane
                 Array.Copy(array, start, sub, 0, actualLength);
 
             return sub;
+        }
+
+        public static string GetString(this JToken jtoken, string path)
+        {
+            var t = jtoken.SelectToken(path);
+            return t != null && t.Type == JTokenType.String ? (string)t : null;
         }
     }
 }
