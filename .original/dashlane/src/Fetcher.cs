@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Specialized;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Dashlane
