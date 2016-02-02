@@ -19,6 +19,8 @@ namespace Dashlane
 
         public static string Fetch(string username, string uki, IWebClient webClient)
         {
+            // TODO: Handle web exceptions!
+
             var response = webClient.UploadValues(LatestUrl, new NameValueCollection {
                 {"login", username},
                 {"lock", "nolock"},
