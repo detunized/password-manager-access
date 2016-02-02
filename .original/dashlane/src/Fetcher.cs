@@ -9,6 +9,12 @@ namespace Dashlane
     {
         public const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
 
+        public static string Fetch(string username, string uki)
+        {
+            using (var webClient = new WebClient())
+                return Fetch(username, uki, webClient);
+        }
+
         public static string Fetch(string username, string uki, IWebClient webClient)
         {
             return webClient.UploadValues(LatestUrl, new NameValueCollection
