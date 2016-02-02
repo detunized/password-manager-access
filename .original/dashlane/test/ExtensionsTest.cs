@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Dashlane.Test
@@ -92,6 +94,32 @@ namespace Dashlane.Test
         public void ByteArray_Sub_throws_on_negative_length()
         {
             new byte[] {}.Sub(0, -1337);
+        }
+
+        [Test]
+        public void JToken_GetString_returns_string()
+        {
+            Action<string, string> check = (json, key) =>
+                Assert.That(JToken.Parse(json).GetString(key), Is.EqualTo("value"));
+
+            check("{'key': 'value'}", "key");
+            check("{'key': {'kee': 'value'}}", "key.kee");
+        }
+
+        [Test]
+        public void JToken_GetString_returns_null()
+        {
+            Action<string, string> check = (json, key) =>
+                Assert.That(JToken.Parse(json).GetString(key), Is.Null);
+
+            check("0", "key");
+            check("''", "key");
+            check("[]", "key");
+            check("{}", "key");
+            check("{'key': 0}", "key");
+            check("{'key': []}", "key");
+            check("{'key': {}}", "key");
+            check("{'key': 'value'}", "kee");
         }
 
         //
