@@ -9,7 +9,7 @@ namespace Dashlane
     {
         public const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
 
-        public static byte[] Fetch(string username, string uki, IWebClient webClient)
+        public static string Fetch(string username, string uki, IWebClient webClient)
         {
             return webClient.UploadValues(LatestUrl, new NameValueCollection
             {
@@ -18,7 +18,7 @@ namespace Dashlane
                 {"timestamp", "1"},
                 {"sharingTimestamp", "0"},
                 {"uki", uki},
-            });
+            }).ToUtf8();
         }
     }
 }
