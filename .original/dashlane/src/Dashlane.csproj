@@ -49,6 +49,7 @@
     <Compile Include="Fetcher.cs" />
     <Compile Include="IWebClient.cs" />
     <Compile Include="Parser.cs" />
+    <Compile Include="Vault.cs" />
     <Compile Include="WebClient.cs" />
   </ItemGroup>
   <ItemGroup>

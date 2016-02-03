@@ -57,6 +57,7 @@
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="FetcherTest.cs" />
     <Compile Include="ParserTest.cs" />
+    <Compile Include="VaultTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\Dashlane.csproj">
