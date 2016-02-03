@@ -62,6 +62,26 @@ namespace Dashlane.Test
         }
 
         [Test]
+        public void Fetch_throws_on_invalid_json_in_response()
+        {
+            string[] responses =
+            {
+                "",
+                "0",
+                "''",
+                "[]",
+                "} invalid {",
+            };
+
+            foreach (var i in responses)
+            {
+                Assert.That(
+                    () => Fetcher.Fetch(Username, Uki, SetupWebClient(i).Object),
+                    Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Invalid JSON in response"));
+            }
+        }
+
+        [Test]
         [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Oops!")]
         public void Fetch_throws_on_error_with_message()
         {
@@ -86,9 +106,12 @@ namespace Dashlane.Test
             };
 
             foreach (var i in responses)
+            {
                 Assert.That(
                     () => Fetcher.Fetch(Username, Uki, SetupWebClient(i).Object),
                     Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Unknown error"));
+
+            }
         }
 
         [Test]
