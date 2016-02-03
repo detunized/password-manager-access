@@ -11,6 +11,11 @@ namespace Dashlane
             return Encoding.UTF8.GetBytes(s);
         }
 
+        public static byte[] Decode64(this string s)
+        {
+            return Convert.FromBase64String(s);
+        }
+
         public static string ToUtf8(this byte[] x)
         {
             return Encoding.UTF8.GetString(x);

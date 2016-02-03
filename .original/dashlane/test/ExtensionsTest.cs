@@ -17,15 +17,21 @@ namespace Dashlane.Test
             114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
         };
 
-        //
-        // Dashlane extensions
-        //
-
         [Test]
         public void String_ToBytes_converts_string_to_utf8_bytes()
         {
             Assert.That("".ToBytes(), Is.EqualTo(new byte[] {}));
             Assert.That(TestString.ToBytes(), Is.EqualTo(TestBytes));
+        }
+
+        [Test]
+        public void String_Decode64_decodes_base64()
+        {
+            Assert.That("".Decode64(), Is.EqualTo(new byte[] {}));
+            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
+            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
+            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
+            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
         }
 
         [Test]
@@ -120,20 +126,6 @@ namespace Dashlane.Test
             check("{'key': []}", "key");
             check("{'key': {}}", "key");
             check("{'key': 'value'}", "kee");
-        }
-
-        //
-        // Dashlane.Test extensions
-        //
-
-        [Test]
-        public void String_Decode64_decodes_base64()
-        {
-            Assert.That("".Decode64(), Is.EqualTo(new byte[] {}));
-            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
-            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
-            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
-            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
         }
     }
 }
