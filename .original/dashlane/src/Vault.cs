@@ -5,6 +5,12 @@ namespace Dashlane
 {
     public class Vault
     {
+        public static Vault Open(string username, string password, string uki)
+        {
+            using (var webClient = new WebClient())
+                return Open(username, password, username, webClient);
+        }
+
         public static Vault Open(string username, string password, string uki, IWebClient webClient)
         {
             return new Vault();
