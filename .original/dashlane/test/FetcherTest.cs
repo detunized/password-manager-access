@@ -5,6 +5,7 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using Moq;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Dashlane.Test
@@ -19,9 +20,12 @@ namespace Dashlane.Test
         [Test]
         public void Fetch_returns_received_json()
         {
-            var json = "{'what': 'ever'}";
+            var response = new JObject();
+            response["what"] = "ever";
 
-            Assert.That(Fetcher.Fetch(Username, Uki, SetupWebClient(json).Object), Is.EqualTo(json));
+            Assert.That(
+                Fetcher.Fetch(Username, Uki, SetupWebClient("{'what': 'ever'}").Object),
+                Is.EqualTo(response));
         }
 
         [Test]
