@@ -17,6 +17,14 @@ namespace Dashlane.Test
         private const string FetchUrl = "https://www.dashlane.com/12/backup/latest";
 
         [Test]
+        public void Fetch_returns_received_json()
+        {
+            var json = "{'what': 'ever'}";
+
+            Assert.That(Fetcher.Fetch(Username, Uki, SetupWebClient(json).Object), Is.EqualTo(json));
+        }
+
+        [Test]
         public void Fetch_makes_post_request_to_specific_url()
         {
             var webClient = SetupWebClient();
