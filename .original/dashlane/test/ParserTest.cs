@@ -212,5 +212,20 @@ namespace Dashlane.Test
                 Parser.GetValueForKeyOrDefault(e.Root, "not-a-key", "default"),
                 Is.EqualTo("default"));
         }
+
+        [Test]
+        public void ExtractEncryptedAccounts_returns_accounts()
+        {
+            var blob = "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzAxW0NQiQrbiEe4yl26Ga" +
+                       "gNu1edW/lK/INVrdUkE1+nmpiTZHlNkKKSK5NXbWGuztnk3256De1/2GtaUXjTKOMYvh" +
+                       "eV3TJJZWHKHEbSBHJ63OXH/svTCBm1yncDDcqWicVOjQwzP5C4oTmRB9jCAE9A7kx8bZ" +
+                       "jz2VQaAAxbKWwCFCSrzFXB22R6DwH+rpnKshrcHiflI8Fy2o000mU1XRhk1yFNqYZkiJ" +
+                       "BH0N3aJR7AkqRRALhUaLsMgYWsCxPqD9dP0dsp7A03htUKllVMfjfRexwJfJGi2ezSUv" +
+                       "egGVt3k=";
+
+            Assert.That(
+                Parser.ExtractEncryptedAccounts(blob.Decode64(), Password).Length,
+                Is.EqualTo(2));
+        }
     }
 }

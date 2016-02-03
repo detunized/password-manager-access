@@ -154,6 +154,11 @@ namespace Dashlane
             return item != null ? item.Value : defaultValue;
         }
 
+        public static Account[] ExtractEncryptedAccounts(byte[] blob, string password)
+        {
+            return ExtractAccountsFromXml(DecryptBlob(blob, password).ToUtf8());
+        }
+
         public static readonly byte[] Kwc3 = "KWC3".ToBytes();
     }
 }
