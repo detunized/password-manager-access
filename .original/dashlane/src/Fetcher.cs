@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Specialized;
+using System.Net;
 using Newtonsoft.Json.Linq;
 
 namespace Dashlane
@@ -19,15 +20,22 @@ namespace Dashlane
 
         public static string Fetch(string username, string uki, IWebClient webClient)
         {
-            // TODO: Handle web exceptions!
-
-            var response = webClient.UploadValues(LatestUrl, new NameValueCollection {
-                {"login", username},
-                {"lock", "nolock"},
-                {"timestamp", "1"},
-                {"sharingTimestamp", "0"},
-                {"uki", uki},
-            }).ToUtf8();
+            string response;
+            try
+            {
+                response = webClient.UploadValues(LatestUrl, new NameValueCollection {
+                    {"login", username},
+                    {"lock", "nolock"},
+                    {"timestamp", "1"},
+                    {"sharingTimestamp", "0"},
+                    {"uki", uki},
+                }).ToUtf8();
+            }
+            catch (WebException e)
+            {
+                // TODO: Use custom exception!
+                throw new InvalidOperationException("Network error", e);
+            }
 
             CheckForErrorsAndThrow(response);
 

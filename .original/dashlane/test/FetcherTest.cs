@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Specialized;
+using System.Net;
 using Moq;
 using NUnit.Framework;
 
@@ -39,6 +40,13 @@ namespace Dashlane.Test
                     It.IsAny<string>(),
                     It.Is<NameValueCollection>(p => p["login"] == Username && p["uki"] == Uki)),
                 Times.Once);
+        }
+
+        [Test]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Network error")]
+        public void Fetch_throws_on_network_error()
+        {
+            Fetcher.Fetch(Username, Uki, SetupWebClient(new WebException()).Object);
         }
 
         [Test]
@@ -117,6 +125,16 @@ namespace Dashlane.Test
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
                 .Returns(response.ToBytes());
+
+            return webClient;
+        }
+
+        private static Mock<IWebClient> SetupWebClient(Exception e)
+        {
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Throws(e);
 
             return webClient;
         }
