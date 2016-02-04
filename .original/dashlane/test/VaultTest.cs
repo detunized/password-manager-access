@@ -3,6 +3,7 @@
 
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using Moq;
 using NUnit.Framework;
 
@@ -11,29 +12,38 @@ namespace Dashlane.Test
     [TestFixture]
     class VaultTest
     {
-        public readonly string Username = "username";
-        public readonly string Password = "password";
-        public readonly string Uki = "uki";
+        public const string Username = "username";
+        public const string Password = "password";
+        public const string Uki = "uki";
+
+        public const string Dude = "dude.com";
+        public const string Nam = "nam.com";
 
         [Test]
         public void Open_opens_empty_vault()
         {
-            Assert.That(
-                Vault.Open(Username, Password, Uki, SetupWebClient("empty-vault")).Accounts,
-                Is.Empty);
+            Assert.That(Accounts("empty-vault"), Is.Empty);
         }
 
         [Test]
         public void Open_opens_a_vault_with_empty_fullfile_and_one_add_transaction()
         {
             Assert.That(
-                Vault.Open(Username, Password, Uki, SetupWebClient("empty-fullfile-one-add-transaction")).Accounts.Length,
-                Is.EqualTo(1));
+                Accounts("empty-fullfile-one-add-transaction"),
+                Is.EqualTo(new[] {Dude}));
         }
 
         //
         // Helpers
         //
+
+        private static string[] Accounts(string filename)
+        {
+            return Vault.Open(Username, Password, Uki, SetupWebClient(filename))
+                .Accounts
+                .Select(i => i.Name)
+                .ToArray();
+        }
 
         private static IWebClient SetupWebClient(string filename)
         {
