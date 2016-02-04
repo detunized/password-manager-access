@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Dashlane
 {
-    static class Fetcher
+    static class Remote
     {
         public const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
 

@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace Dashlane.Test
 {
     [TestFixture]
-    class FetcherTest
+    class RemoteTest
     {
         private const string Username = "username";
         private const string Uki = "uki";
@@ -24,7 +24,7 @@ namespace Dashlane.Test
             response["what"] = "ever";
 
             Assert.That(
-                Fetcher.Fetch(Username, Uki, SetupWebClient("{'what': 'ever'}").Object),
+                Remote.Fetch(Username, Uki, SetupWebClient("{'what': 'ever'}").Object),
                 Is.EqualTo(response));
         }
 
@@ -33,7 +33,7 @@ namespace Dashlane.Test
         {
             var webClient = SetupWebClient();
 
-            Fetcher.Fetch(Username, Uki, webClient.Object);
+            Remote.Fetch(Username, Uki, webClient.Object);
 
             webClient.Verify(
                 x => x.UploadValues(It.Is<string>(s => s == FetchUrl), It.IsAny<NameValueCollection>()),
@@ -45,7 +45,7 @@ namespace Dashlane.Test
         {
             var webClient = SetupWebClient();
 
-            Fetcher.Fetch(Username, Uki, webClient.Object);
+            Remote.Fetch(Username, Uki, webClient.Object);
 
             webClient.Verify(
                 x => x.UploadValues(
@@ -58,7 +58,7 @@ namespace Dashlane.Test
         [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Network error")]
         public void Fetch_throws_on_network_error()
         {
-            Fetcher.Fetch(Username, Uki, SetupWebClient(new WebException()).Object);
+            Remote.Fetch(Username, Uki, SetupWebClient(new WebException()).Object);
         }
 
         [Test]
@@ -76,7 +76,7 @@ namespace Dashlane.Test
             foreach (var i in responses)
             {
                 Assert.That(
-                    () => Fetcher.Fetch(Username, Uki, SetupWebClient(i).Object),
+                    () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
                     Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Invalid JSON in response"));
             }
         }
@@ -85,7 +85,7 @@ namespace Dashlane.Test
         [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Oops!")]
         public void Fetch_throws_on_error_with_message()
         {
-            Fetcher.Fetch(Username, Uki, SetupWebClient("{'error': {'message': 'Oops!'}}").Object);
+            Remote.Fetch(Username, Uki, SetupWebClient("{'error': {'message': 'Oops!'}}").Object);
         }
 
         [Test]
@@ -108,7 +108,7 @@ namespace Dashlane.Test
             foreach (var i in responses)
             {
                 Assert.That(
-                    () => Fetcher.Fetch(Username, Uki, SetupWebClient(i).Object),
+                    () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
                     Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Unknown error"));
 
             }
@@ -118,7 +118,7 @@ namespace Dashlane.Test
         [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Invalid username or password")]
         public void Fetch_throws_on_invalid_username_or_password()
         {
-            Fetcher.Fetch(Username, Uki, SetupWebClient(
+            Remote.Fetch(Username, Uki, SetupWebClient(
                 "{'objectType': 'message', 'content': 'Incorrect authentification'}").Object);
         }
 
@@ -126,7 +126,7 @@ namespace Dashlane.Test
         [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Oops!")]
         public void Fetch_throws_on_other_message()
         {
-            Fetcher.Fetch(Username, Uki, SetupWebClient("{'objectType': 'message', 'content': 'Oops!'}").Object);
+            Remote.Fetch(Username, Uki, SetupWebClient("{'objectType': 'message', 'content': 'Oops!'}").Object);
         }
 
         [Test]
@@ -145,7 +145,7 @@ namespace Dashlane.Test
             foreach (var i in responses)
             {
                 Assert.That(
-                    () => Fetcher.Fetch(Username, Uki, SetupWebClient(i).Object),
+                    () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
                     Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Unknown error"));
             }
         }

@@ -17,7 +17,7 @@ namespace Dashlane
 
         public static Vault Open(string username, string password, string uki, IWebClient webClient)
         {
-            return new Vault(Fetcher.Fetch(username, uki, webClient), password);
+            return new Vault(Remote.Fetch(username, uki, webClient), password);
         }
 
         public Account[] Accounts { get; private set; }

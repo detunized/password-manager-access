@@ -54,7 +54,7 @@
     <Compile Include="AccountTest.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="ExtensionsTest.cs" />
-    <Compile Include="FetcherTest.cs" />
+    <Compile Include="RemoteTest.cs" />
     <Compile Include="ParseTest.cs" />
     <Compile Include="VaultTest.cs" />
   </ItemGroup>
