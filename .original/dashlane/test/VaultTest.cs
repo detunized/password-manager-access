@@ -33,6 +33,54 @@ namespace Dashlane.Test
                 Is.EqualTo(new[] {Dude}));
         }
 
+        [Test]
+        public void Open_opens_a_vault_with_empty_fullfile_and_two_add_transations()
+        {
+            Assert.That(
+                Accounts("empty-fullfile-two-add-transactions"),
+                Is.EqualTo(new[] {Dude, Nam}));
+        }
+
+        [Test]
+        public void Open_opens_a_vault_with_empty_fullfile_and_two_add_and_one_remove_transations()
+        {
+            Assert.That(
+                Accounts("empty-fullfile-two-add-one-remove-transactions"),
+                Is.EqualTo(new[] {Dude, Nam}));
+        }
+
+        [Test]
+        public void Open_opens_a_vault_with_two_accounts_in_fullfile()
+        {
+            Assert.That(
+                Accounts("two-accounts-in-fullfile"),
+                Is.EqualTo(new[] {Dude, Nam}));
+        }
+
+        [Test]
+        public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_one_remove_transaction()
+        {
+            Assert.That(
+                Accounts("two-accounts-in-fullfile-one-remove-transaction"),
+                Is.EqualTo(new[] {Dude}));
+        }
+
+        [Test]
+        public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_two_remove_transactions()
+        {
+            Assert.That(
+                Accounts("two-accounts-in-fullfile-two-remove-transactions"),
+                Is.Empty);
+        }
+
+        [Test]
+        public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_two_remove_and_one_add_transactions()
+        {
+            Assert.That(
+                Accounts("two-accounts-in-fullfile-two-remove-one-add-transactions"),
+                Is.EqualTo(new[] {Dude}));
+        }
+
         //
         // Helpers
         //
