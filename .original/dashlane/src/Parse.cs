@@ -12,7 +12,7 @@ using System.Xml.XPath;
 
 namespace Dashlane
 {
-    static class Parser
+    static class Parse
     {
         public static byte[] ComputeEncryptionKey(string password, byte[] salt)
         {

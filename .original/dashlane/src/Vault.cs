@@ -28,7 +28,7 @@ namespace Dashlane
 
             var fullFile = blob.GetString("fullBackupFile");
             if (!string.IsNullOrWhiteSpace(fullFile))
-                foreach (var i in Parser.ExtractEncryptedAccounts(fullFile.Decode64(), password))
+                foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), password))
                     accounts.Add(i.Id, i);
 
             foreach (var transaction in blob.SelectToken("transactionList"))
@@ -41,7 +41,7 @@ namespace Dashlane
                 case "BACKUP_EDIT":
                     var content = transaction.GetString("content");
                     if (!string.IsNullOrWhiteSpace(content))
-                        foreach (var i in Parser.ExtractEncryptedAccounts(content.Decode64(), password))
+                        foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), password))
                             accounts.Add(i.Id, i);
 
                     break;

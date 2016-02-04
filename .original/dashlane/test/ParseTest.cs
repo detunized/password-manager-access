@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Dashlane.Test
 {
     [TestFixture]
-    class ParserTest
+    class ParseTest
     {
         private const string Password = "password";
         private static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
@@ -18,7 +18,7 @@ namespace Dashlane.Test
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()
         {
-            var key = Parser.ComputeEncryptionKey(Password, Salt);
+            var key = Parse.ComputeEncryptionKey(Password, Salt);
             Assert.That(key, Is.EqualTo("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64()));
         }
 
@@ -26,7 +26,7 @@ namespace Dashlane.Test
         public void Sha1_computes_sha1_given_times()
         {
             var check = new Action<int, string>((iterations, expected) =>
-                Assert.That(Parser.Sha1(Content, iterations), Is.EqualTo(expected.Decode64())));
+                Assert.That(Parse.Sha1(Content, iterations), Is.EqualTo(expected.Decode64())));
 
             check(0, Convert.ToBase64String(Content));
             check(1, "xgmXgTCENlJpbnSLucn3NwPXkIk=");
@@ -39,7 +39,7 @@ namespace Dashlane.Test
             var key = "OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64();
             var check = new Action<int, string, string>((iterations, expectedKey, expectedIv) =>
             {
-                var keyIv = Parser.DeriveEncryptionKeyAndIv(key, Salt, iterations);
+                var keyIv = Parse.DeriveEncryptionKeyAndIv(key, Salt, iterations);
                 Assert.That(keyIv.Key, Is.EqualTo(expectedKey.Decode64()));
                 Assert.That(keyIv.Iv, Is.EqualTo(expectedIv.Decode64()));
             });
@@ -52,7 +52,7 @@ namespace Dashlane.Test
         public void DecryptAes256_decrypts_ciphertext()
         {
             Assert.That(
-                Parser.DecryptAes256(
+                Parse.DecryptAes256(
                     "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
                     "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
                     "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()),
@@ -63,7 +63,7 @@ namespace Dashlane.Test
         public void Inflate_decompresses_data()
         {
             Assert.That(
-                Parser.Inflate("c8zJUajMLy1SSEosTlVILEpVSErNyc9LVyjJVygtBgA=".Decode64()),
+                Parse.Inflate("c8zJUajMLy1SSEosTlVILEpVSErNyc9LVyjJVygtBgA=".Decode64()),
                 Is.EqualTo(Content));
         }
 
@@ -71,7 +71,7 @@ namespace Dashlane.Test
         public void ParseEncryptedBlob_parses_kwc3_blob()
         {
             var blob = Salt.Concat("KWC3".ToBytes()).Concat(Content).ToArray();
-            var parsed = Parser.ParseEncryptedBlob(blob);
+            var parsed = Parse.ParseEncryptedBlob(blob);
 
             Assert.That(parsed.Ciphertext, Is.EqualTo(Content));
             Assert.That(parsed.Salt, Is.EqualTo(Salt));
@@ -84,7 +84,7 @@ namespace Dashlane.Test
         public void ParseEncryptedBlob_parses_legacy_blob()
         {
             var blob = Salt.Concat(Content).ToArray();
-            var parsed = Parser.ParseEncryptedBlob(blob);
+            var parsed = Parse.ParseEncryptedBlob(blob);
 
             Assert.That(parsed.Ciphertext, Is.EqualTo(Content));
             Assert.That(parsed.Salt, Is.EqualTo(Salt));
@@ -98,7 +98,7 @@ namespace Dashlane.Test
         {
             var ciphertext = new byte[] {13, 37};
             var blob = Salt.Concat(ciphertext).ToArray();
-            var parsed = Parser.ParseEncryptedBlob(blob);
+            var parsed = Parse.ParseEncryptedBlob(blob);
 
             Assert.That(parsed.Ciphertext, Is.EqualTo(ciphertext));
             Assert.That(parsed.Salt, Is.EqualTo(Salt));
@@ -111,7 +111,7 @@ namespace Dashlane.Test
         [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Blob is too short\r\nParameter name: blob")]
         public void ParseEncryptedBlob_throws_on_too_short_blob()
         {
-            Parser.ParseEncryptedBlob(new byte[] {13, 37});
+            Parse.ParseEncryptedBlob(new byte[] {13, 37});
         }
 
         [Test]
@@ -119,7 +119,7 @@ namespace Dashlane.Test
         {
             var blob = "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzxDNg8kGh5rSYkNvXzzn+" +
                        "3xsCKXSKgGhb2pGnbuqQo32blVfJpurp7jj8oSnzxa66";
-            Assert.That(Parser.DecryptBlob(blob.Decode64(), Password), Is.EqualTo(Content));
+            Assert.That(Parse.DecryptBlob(blob.Decode64(), Password), Is.EqualTo(Content));
         }
 
         [Test]
@@ -144,15 +144,15 @@ namespace Dashlane.Test
                 </KWAuthentifiant>";
 
             Assert.That(
-                Parser.ExtractAccountsFromXml("<root />"),
+                Parse.ExtractAccountsFromXml("<root />"),
                 Is.Empty);
 
             Assert.That(
-                Parser.ExtractAccountsFromXml("<root>" + xml + "</root>").Length,
+                Parse.ExtractAccountsFromXml("<root>" + xml + "</root>").Length,
                 Is.EqualTo(2));
 
             Assert.That(
-                Parser.ExtractAccountsFromXml("<root><subroot>" + xml + "</subroot></root>").Length,
+                Parse.ExtractAccountsFromXml("<root><subroot>" + xml + "</subroot></root>").Length,
                 Is.EqualTo(2));
         }
 
@@ -168,7 +168,7 @@ namespace Dashlane.Test
                     <KWDataItem key='Url'><![CDATA[https://dude.com]]></KWDataItem>
                     <KWDataItem key='Note'><![CDATA[Get a new rug!]]></KWDataItem>
                 </KWAuthentifiant>");
-            var account = Parser.ParseAccount(e.Root);
+            var account = Parse.ParseAccount(e.Root);
 
             Assert.That(account.Id, Is.EqualTo("1"));
             Assert.That(account.Name, Is.EqualTo("dude"));
@@ -182,7 +182,7 @@ namespace Dashlane.Test
         public void ParseAccount_returns_account_with_all_defaults()
         {
             var e = XDocument.Parse("<KWAuthentifiant></KWAuthentifiant>");
-            var account = Parser.ParseAccount(e.Root);
+            var account = Parse.ParseAccount(e.Root);
 
             Assert.That(account.Id, Is.EqualTo(""));
             Assert.That(account.Name, Is.EqualTo(""));
@@ -199,7 +199,7 @@ namespace Dashlane.Test
             var e = XDocument.Parse("<root><KWDataItem key='key'>value</KWDataItem></root>");
 
             Assert.That(
-                Parser.GetValueForKeyOrDefault(e.Root, "key", "default"),
+                Parse.GetValueForKeyOrDefault(e.Root, "key", "default"),
                 Is.EqualTo("value"));
         }
 
@@ -209,7 +209,7 @@ namespace Dashlane.Test
             var e = XDocument.Parse("<root><KWDataItem key='key'>value</KWDataItem></root>");
 
             Assert.That(
-                Parser.GetValueForKeyOrDefault(e.Root, "not-a-key", "default"),
+                Parse.GetValueForKeyOrDefault(e.Root, "not-a-key", "default"),
                 Is.EqualTo("default"));
         }
 
@@ -224,7 +224,7 @@ namespace Dashlane.Test
                        "egGVt3k=";
 
             Assert.That(
-                Parser.ExtractEncryptedAccounts(blob.Decode64(), Password).Length,
+                Parse.ExtractEncryptedAccounts(blob.Decode64(), Password).Length,
                 Is.EqualTo(2));
         }
     }
