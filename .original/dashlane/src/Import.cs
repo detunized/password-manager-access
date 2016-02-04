@@ -26,15 +26,21 @@ namespace Dashlane
 
         private static string FindSettingsFile(string username)
         {
-            // TODO: Check the platform!
-            // TODO: Check it exists!
-            return Path.Combine(
+            // TODO: Are there other platforms besides Windows desktop we need to check on?
+
+            var filename = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "Dashlane",
                 "profiles",
                 username,
                 "Settings",
                 "localSettings.aes");
+
+            if (!File.Exists(filename))
+                throw new InvalidOperationException(
+                    string.Format("Profile '{0}' doesn't exist", username));
+
+            return filename;
         }
     }
 }
