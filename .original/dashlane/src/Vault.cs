@@ -24,13 +24,37 @@ namespace Dashlane
 
         private Vault(JObject blob, string password)
         {
-            var accounts = new List<Account>();
+            var accounts = new Dictionary<string, Account>();
 
             var fullFile = blob.GetString("fullBackupFile");
             if (!string.IsNullOrWhiteSpace(fullFile))
-                accounts.AddRange(Parser.ExtractEncryptedAccounts(fullFile.Decode64(), password));
+                foreach (var i in Parser.ExtractEncryptedAccounts(fullFile.Decode64(), password))
+                    accounts.Add(i.Id, i);
 
-            Accounts = accounts.OrderBy(i => i.Id).ToArray();
+            foreach (var transaction in blob.SelectToken("transactionList"))
+            {
+                if (transaction.GetString("type") != "AUTHENTIFIANT")
+                    continue;
+
+                switch (transaction.GetString("action"))
+                {
+                case "BACKUP_EDIT":
+                    var content = transaction.GetString("content");
+                    if (!string.IsNullOrWhiteSpace(content))
+                        foreach (var i in Parser.ExtractEncryptedAccounts(content.Decode64(), password))
+                            accounts.Add(i.Id, i);
+
+                    break;
+                case "BACKUP_REMOVE":
+                    var id = transaction.GetString("identifier");
+                    if (id != null)
+                        accounts.Remove(id);
+
+                    break;
+                }
+            }
+
+            Accounts = accounts.Values.OrderBy(i => i.Id).ToArray();
         }
     }
 }

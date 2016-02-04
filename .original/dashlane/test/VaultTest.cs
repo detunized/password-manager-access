@@ -23,6 +23,14 @@ namespace Dashlane.Test
                 Is.Empty);
         }
 
+        [Test]
+        public void Open_opens_a_vault_with_empty_fullfile_and_one_add_transaction()
+        {
+            Assert.That(
+                Vault.Open(Username, Password, Uki, SetupWebClient("empty-fullfile-one-add-transaction")).Accounts.Length,
+                Is.EqualTo(1));
+        }
+
         //
         // Helpers
         //
