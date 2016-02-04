@@ -19,7 +19,7 @@ namespace Dashlane.Test
         public void Open_opens_empty_vault()
         {
             Assert.That(
-                Vault.Open(Username, Password, Uki, SetupWebClient("{}")).Accounts,
+                Vault.Open(Username, Password, Uki, SetupWebClient("empty-vault")).Accounts,
                 Is.Empty);
         }
 
@@ -27,12 +27,12 @@ namespace Dashlane.Test
         // Helpers
         //
 
-        private static IWebClient SetupWebClient(string response)
+        private static IWebClient SetupWebClient(string filename)
         {
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(response.ToBytes());
+                .Returns(File.ReadAllBytes(string.Format("Fixtures/{0}.json", filename)));
 
             return webClient.Object;
         }
