@@ -13,14 +13,14 @@ namespace Dashlane
         // TODO: Not sure how to test this!
         public static string ImportUki(string username, string password)
         {
-            var xml = LoadSettings(username, password);
+            var xml = LoadSettings(FindSettingsFile(username), password);
             // TODO: Check it parses!
             return XDocument.Parse(xml).XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']").Value;
         }
 
-        private static string LoadSettings(string username, string password)
+        public static string LoadSettings(string filename, string password)
         {
-            var blob = File.ReadAllBytes(FindSettingsFile(username));
+            var blob = File.ReadAllBytes(filename);
             return Parse.DecryptBlob(blob, password).ToUtf8();
         }
 
