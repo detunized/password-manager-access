@@ -1,6 +1,7 @@
 // Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json;
@@ -11,6 +12,7 @@ namespace Dashlane
     public static class Remote
     {
         private const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
+        private const string TokenUrl = "https://www.dashlane.com/6/authentication/sendtoken";
 
         public static JObject Fetch(string username, string uki)
         {
@@ -43,6 +45,29 @@ namespace Dashlane
             CheckForErrors(parsed);
 
             return parsed;
+        }
+
+        public static void RegisterUkiStep1(string username, IWebClient webClient)
+        {
+            byte[] response;
+            try
+            {
+                response = webClient.UploadValues(TokenUrl, new NameValueCollection {
+                    {"login", username},
+                    {"isOTPAware", "true"},
+                });
+            }
+            catch (WebException e)
+            {
+                // TODO: Use custom exception!
+                // TODO: Test this!
+                throw new InvalidOperationException("Network error occurred", e);
+            }
+
+            // TODO: Use custom exception!
+            // TODO: Test this!
+            if (response.ToUtf8() != "SUCCESS")
+                throw new InvalidOperationException("Register UKI failed");
         }
 
         private static JObject ParseResponse(byte[] response)

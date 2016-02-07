@@ -17,6 +17,7 @@ namespace Dashlane.Test
         public const string Username = "username";
         public const string Uki = "uki";
         public const string FetchUrl = "https://www.dashlane.com/12/backup/latest";
+        public const string RegisterStep1Url = "https://www.dashlane.com/6/authentication/sendtoken";
 
         [Test]
         public void Fetch_returns_received_json()
@@ -177,6 +178,32 @@ namespace Dashlane.Test
                         .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
                         .And.Message.EqualTo("Unknown error"));
             }
+        }
+
+        [Test]
+        public void RegisterUkiStep1_makes_post_request_to_specific_url()
+        {
+            var webClient = SetupWebClient("SUCCESS");
+
+            Remote.RegisterUkiStep1(Username, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(It.Is<string>(s => s == RegisterStep1Url), It.IsAny<NameValueCollection>()),
+                Times.Once);
+        }
+
+        [Test]
+        public void RegisterUkiStep1_makes_post_request_with_correct_username()
+        {
+            var webClient = SetupWebClient("SUCCESS");
+
+            Remote.RegisterUkiStep1(Username, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(
+                    It.IsAny<string>(),
+                    It.Is<NameValueCollection>(p => p["login"] == Username)),
+                Times.Once);
         }
 
         //
