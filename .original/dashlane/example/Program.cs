@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Dashlane;
 
 namespace Example
 {
@@ -22,6 +23,9 @@ namespace Example
             var uki = credentials.ElementAtOrDefault(2);
             if (string.IsNullOrWhiteSpace(uki))
                 uki = "";
+
+            if (uki == "")
+                uki = Import.ImportUki(username, password);
 
             Console.WriteLine("Got\nusername: {0}\npassword: {1}\nuki: {2}", username, password, uki);
         }

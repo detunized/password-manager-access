@@ -44,6 +44,12 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\Dashlane.csproj">
+      <Project>{8b3d9c34-bb1c-4ef1-bb00-7098ac9c9e0f}</Project>
+      <Name>Dashlane</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
