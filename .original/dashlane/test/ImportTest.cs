@@ -1,8 +1,7 @@
 // Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
-using System.IO;
+using System.Xml;
 using System.Xml.Linq;
 using NUnit.Framework;
 
@@ -38,12 +37,15 @@ namespace Dashlane.Test
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Invalid XML in the settings file")]
         public void ImportUkiFromSettings_as_xml_string_throws_on_invalid_xml()
         {
             Assert.That(
-                Import.ImportUkiFromSettings("> not really xml <"),
-                Is.EqualTo(Uki));
+                () => Import.ImportUkiFromSettings("> not really xml <"),
+                Throws
+                    .TypeOf<ImportException>()
+                    .And.Property("Reason").EqualTo(ImportException.FailureReason.InvalidFormat)
+                    .And.Message.EqualTo("Failed to parse XML settings file")
+                    .And.InnerException.TypeOf<XmlException>());
         }
 
         [Test]
@@ -55,12 +57,14 @@ namespace Dashlane.Test
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "The settings file doesn't contain an UKI")]
         public void ImportUkiFromSettings_as_xdocument_throws_on_wrong_xml()
         {
             Assert.That(
-                Import.ImportUkiFromSettings(XDocument.Parse("<root />")),
-                Is.EqualTo(Uki));
+                () => Import.ImportUkiFromSettings(XDocument.Parse("<root />")),
+                Throws
+                    .TypeOf<ImportException>()
+                    .And.Property("Reason").EqualTo(ImportException.FailureReason.InvalidFormat)
+                    .And.Message.EqualTo("The settings file doesn't contain an UKI"));
         }
 
         [Test]

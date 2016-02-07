@@ -30,8 +30,10 @@ namespace Dashlane
             }
             catch (XmlException e)
             {
-                // TODO: Use custom exception!
-                throw new InvalidOperationException("Invalid XML in the settings file", e);
+                throw new ImportException(
+                    ImportException.FailureReason.InvalidFormat,
+                    "Failed to parse XML settings file",
+                    e);
             }
         }
 
@@ -39,8 +41,9 @@ namespace Dashlane
         {
             var uki = settings.XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']");
             if (uki == null)
-                // TODO: Use custom exception!
-                throw new InvalidOperationException("The settings file doesn't contain an UKI");
+                throw new ImportException(
+                    ImportException.FailureReason.InvalidFormat,
+                    "The settings file doesn't contain an UKI");
 
             return uki.Value;
         }
@@ -65,8 +68,8 @@ namespace Dashlane
                 "localSettings.aes");
 
             if (!File.Exists(filename))
-                // TODO: Use custom exception!
-                throw new InvalidOperationException(
+                throw new ImportException(
+                    ImportException.FailureReason.ProfileNotFound,
                     string.Format("Profile '{0}' doesn't exist", username));
 
             return filename;
