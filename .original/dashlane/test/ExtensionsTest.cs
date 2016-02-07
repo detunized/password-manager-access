@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -12,7 +11,8 @@ namespace Dashlane.Test
     class ExtensionsTest
     {
         public const string TestString = "All your base are belong to us";
-        public readonly byte[] TestBytes = {
+        public const string TestHex = "416c6c20796f75722062617365206172652062656c6f6e6720746f207573";
+        public static readonly byte[] TestBytes = {
             65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
             114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
         };
@@ -39,6 +39,13 @@ namespace Dashlane.Test
         {
             Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
             Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+        }
+
+        [Test]
+        public void ByteArray_ToHex_returns_hex_string()
+        {
+            Assert.That(new byte[] { }.ToHex(), Is.EqualTo(""));
+            Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
         }
 
         [Test]
