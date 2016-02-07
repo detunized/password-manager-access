@@ -53,6 +53,7 @@
     <Compile Include="Remote.cs" />
     <Compile Include="IWebClient.cs" />
     <Compile Include="Parse.cs" />
+    <Compile Include="Uki.cs" />
     <Compile Include="Vault.cs" />
     <Compile Include="WebClient.cs" />
   </ItemGroup>

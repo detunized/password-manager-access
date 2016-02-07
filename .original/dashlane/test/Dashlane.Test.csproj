@@ -57,6 +57,7 @@
     <Compile Include="ImportTest.cs" />
     <Compile Include="RemoteTest.cs" />
     <Compile Include="ParseTest.cs" />
+    <Compile Include="UkiTest.cs" />
     <Compile Include="VaultTest.cs" />
   </ItemGroup>
   <ItemGroup>
