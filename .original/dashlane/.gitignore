@@ -1,4 +1,6 @@
 /dashlane-sharp.v12.suo
+/example/bin/
+/example/obj/
 /packages/
 /src/bin/
 /src/obj/
