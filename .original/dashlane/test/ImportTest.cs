@@ -45,7 +45,7 @@ namespace Dashlane.Test
                     .TypeOf<ImportException>()
                     .And.Property("Reason").EqualTo(ImportException.FailureReason.InvalidFormat)
                     .And.Message.EqualTo("Failed to parse XML settings file")
-                    .And.InnerException.TypeOf<XmlException>());
+                    .And.InnerException.InstanceOf<XmlException>());
         }
 
         [Test]

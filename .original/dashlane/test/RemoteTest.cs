@@ -5,6 +5,7 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using Moq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -55,10 +56,15 @@ namespace Dashlane.Test
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Network error")]
         public void Fetch_throws_on_network_error()
         {
-            Remote.Fetch(Username, Uki, SetupWebClient(new WebException()).Object);
+            Assert.That(
+                () => Remote.Fetch(Username, Uki, SetupWebClient(new WebException()).Object),
+                Throws
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.NetworkError)
+                    .And.Message.EqualTo("Network error occurred")
+                    .And.InnerException.InstanceOf<WebException>());
         }
 
         [Test]
@@ -77,15 +83,24 @@ namespace Dashlane.Test
             {
                 Assert.That(
                     () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
-                    Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Invalid JSON in response"));
+                    Throws
+                        .TypeOf<FetchException>()
+                        .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidResponse)
+                        .And.Message.EqualTo("Invalid JSON in response")
+                        .And.InnerException.InstanceOf<JsonException>());
             }
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Oops!")]
         public void Fetch_throws_on_error_with_message()
         {
-            Remote.Fetch(Username, Uki, SetupWebClient("{'error': {'message': 'Oops!'}}").Object);
+            var response = "{'error': {'message': 'Oops!'}}";
+            Assert.That(
+                () => Remote.Fetch(Username, Uki, SetupWebClient(response).Object),
+                Throws
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
+                    .And.Message.EqualTo("Oops!"));
         }
 
         [Test]
@@ -109,24 +124,35 @@ namespace Dashlane.Test
             {
                 Assert.That(
                     () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
-                    Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Unknown error"));
-
+                    Throws
+                        .TypeOf<FetchException>()
+                        .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
+                        .And.Message.EqualTo("Unknown error"));
             }
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Invalid username or password")]
         public void Fetch_throws_on_invalid_username_or_password()
         {
-            Remote.Fetch(Username, Uki, SetupWebClient(
-                "{'objectType': 'message', 'content': 'Incorrect authentification'}").Object);
+            var response = "{'objectType': 'message', 'content': 'Incorrect authentification'}";
+            Assert.That(
+                () => Remote.Fetch(Username, Uki, SetupWebClient(response).Object),
+                Throws
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidCredentials)
+                    .And.Message.EqualTo("Invalid username or password"));
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Oops!")]
         public void Fetch_throws_on_other_message()
         {
-            Remote.Fetch(Username, Uki, SetupWebClient("{'objectType': 'message', 'content': 'Oops!'}").Object);
+            var response = "{'objectType': 'message', 'content': 'Oops!'}";
+            Assert.That(
+                () => Remote.Fetch(Username, Uki, SetupWebClient(response).Object),
+                Throws
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
+                    .And.Message.EqualTo("Oops!"));
         }
 
         [Test]
@@ -146,7 +172,10 @@ namespace Dashlane.Test
             {
                 Assert.That(
                     () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
-                    Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Unknown error"));
+                    Throws
+                        .TypeOf<FetchException>()
+                        .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
+                        .And.Message.EqualTo("Unknown error"));
             }
         }
 

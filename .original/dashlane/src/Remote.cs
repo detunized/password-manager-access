@@ -1,7 +1,6 @@
 // Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json;
@@ -34,8 +33,10 @@ namespace Dashlane
             }
             catch (WebException e)
             {
-                // TODO: Use custom exception!
-                throw new InvalidOperationException("Network error", e);
+                throw new FetchException(
+                    FetchException.FailureReason.NetworkError,
+                    "Network error occurred",
+                    e);
             }
 
             var parsed = ParseResponse(response);
@@ -52,33 +53,42 @@ namespace Dashlane
             }
             catch (JsonException e)
             {
-                // TODO: Use custom exceptions!
-                throw new InvalidOperationException("Invalid JSON in response", e);
+                throw new FetchException(
+                    FetchException.FailureReason.InvalidResponse,
+                    "Invalid JSON in response",
+                    e);
             }
         }
 
-        // TODO: Use custom exceptions!
         private static void CheckForErrors(JObject response)
         {
             var error = response.SelectToken("error");
             if (error != null)
             {
                 var message = error.GetString("message") ?? "Unknown error";
-                throw new InvalidOperationException(message);
+                throw new FetchException(
+                    FetchException.FailureReason.UnknownError,
+                    message);
             }
 
             if (response.GetString("objectType") == "message")
             {
                 var message = response.GetString("content");
                 if (message == null)
-                    throw new InvalidOperationException("Unknown error");
+                    throw new FetchException(
+                        FetchException.FailureReason.UnknownError,
+                        "Unknown error");
 
                 switch (message)
                 {
                 case "Incorrect authentification":
-                    throw new InvalidOperationException("Invalid username or password");
+                    throw new FetchException(
+                        FetchException.FailureReason.InvalidCredentials,
+                        "Invalid username or password");
                 default:
-                    throw new InvalidOperationException(message);
+                    throw new FetchException(
+                        FetchException.FailureReason.UnknownError,
+                        message);
                 }
             }
         }
