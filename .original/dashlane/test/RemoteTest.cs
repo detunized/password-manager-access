@@ -16,8 +16,11 @@ namespace Dashlane.Test
     {
         public const string Username = "username";
         public const string Uki = "uki";
+        public const string DeviceName = "device";
+        public const string Token = "token";
         public const string FetchUrl = "https://www.dashlane.com/12/backup/latest";
         public const string RegisterStep1Url = "https://www.dashlane.com/6/authentication/sendtoken";
+        public const string RegisterStep2Url = "https://www.dashlane.com/6/authentication/registeruki";
 
         [Test]
         public void Fetch_returns_received_json()
@@ -203,6 +206,36 @@ namespace Dashlane.Test
                 x => x.UploadValues(
                     It.IsAny<string>(),
                     It.Is<NameValueCollection>(p => p["login"] == Username)),
+                Times.Once);
+        }
+
+        [Test]
+        public void RegisterUkiStep2_makes_post_request_to_specific_url()
+        {
+            var webClient = SetupWebClient("SUCCESS");
+
+            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(It.Is<string>(s => s == RegisterStep2Url), It.IsAny<NameValueCollection>()),
+                Times.Once);
+        }
+
+        [Test]
+        public void RegisterUkiStep2_makes_post_request_with_correct_username_and_other_parameters()
+        {
+            var webClient = SetupWebClient("SUCCESS");
+
+            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(
+                    It.IsAny<string>(),
+                    It.Is<NameValueCollection>(p =>
+                        p["login"] == Username &&
+                        p["deviceName"] == DeviceName &&
+                        p["uki"] == Uki &&
+                        p["token"] == Token)),
                 Times.Once);
         }
 

@@ -13,6 +13,7 @@ namespace Dashlane
     {
         private const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
         private const string TokenUrl = "https://www.dashlane.com/6/authentication/sendtoken";
+        private const string RegisterUrl = "https://www.dashlane.com/6/authentication/registeruki";
 
         public static JObject Fetch(string username, string uki)
         {
@@ -55,6 +56,38 @@ namespace Dashlane
                 response = webClient.UploadValues(TokenUrl, new NameValueCollection {
                     {"login", username},
                     {"isOTPAware", "true"},
+                });
+            }
+            catch (WebException e)
+            {
+                // TODO: Use custom exception!
+                // TODO: Test this!
+                throw new InvalidOperationException("Network error occurred", e);
+            }
+
+            // TODO: Use custom exception!
+            // TODO: Test this!
+            if (response.ToUtf8() != "SUCCESS")
+                throw new InvalidOperationException("Register UKI failed");
+        }
+
+        public static void RegisterUkiStep2(
+            string username,
+            string deviceName,
+            string uki,
+            string token,
+            IWebClient webClient)
+        {
+            byte[] response;
+            try
+            {
+                response = webClient.UploadValues(RegisterUrl, new NameValueCollection {
+                    {"deviceName", deviceName},
+                    {"login", username},
+                    {"platform", "webaccess"},
+                    {"temporary", "0"},
+                    {"token", token},
+                    {"uki", uki},
                 });
             }
             catch (WebException e)
