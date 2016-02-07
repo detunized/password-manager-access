@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -23,14 +24,25 @@ namespace Dashlane
 
         public static string ImportUkiFromSettings(string settingsXml)
         {
-            return ImportUkiFromSettings(XDocument.Parse(settingsXml));
+            try
+            {
+                return ImportUkiFromSettings(XDocument.Parse(settingsXml));
+            }
+            catch (XmlException e)
+            {
+                // TODO: Use custom exception!
+                throw new InvalidOperationException("Invalid XML in the settings file", e);
+            }
         }
 
         public static string ImportUkiFromSettings(XDocument settings)
         {
-            return settings
-                .XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']")
-                .Value;
+            var uki = settings.XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']");
+            if (uki == null)
+                // TODO: Use custom exception!
+                throw new InvalidOperationException("The settings file doesn't contain an UKI");
+
+            return uki.Value;
         }
 
         public static string LoadSettingsFile(string filename, string password)

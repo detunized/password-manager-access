@@ -1,6 +1,7 @@
 // Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.IO;
 using System.Xml.Linq;
 using NUnit.Framework;
@@ -37,10 +38,28 @@ namespace Dashlane.Test
         }
 
         [Test]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "Invalid XML in the settings file")]
+        public void ImportUkiFromSettings_as_xml_string_throws_on_invalid_xml()
+        {
+            Assert.That(
+                Import.ImportUkiFromSettings("> not really xml <"),
+                Is.EqualTo(Uki));
+        }
+
+        [Test]
         public void ImportUkiFromSettings_as_xdocument_returns_uki()
         {
             Assert.That(
                 Import.ImportUkiFromSettings(XDocument.Parse(Xml)),
+                Is.EqualTo(Uki));
+        }
+
+        [Test]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "The settings file doesn't contain an UKI")]
+        public void ImportUkiFromSettings_as_xdocument_throws_on_wrong_xml()
+        {
+            Assert.That(
+                Import.ImportUkiFromSettings(XDocument.Parse("<root />")),
                 Is.EqualTo(Uki));
         }
 
