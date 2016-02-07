@@ -37,6 +37,7 @@ namespace Dashlane
                 "localSettings.aes");
 
             if (!File.Exists(filename))
+                // TODO: Use custom exception!
                 throw new InvalidOperationException(
                     string.Format("Profile '{0}' doesn't exist", username));
 
