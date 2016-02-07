@@ -10,6 +10,7 @@ namespace Example
 {
     class Program
     {
+        // TODO: Add some comments and some error handling!
         static void Main(string[] args)
         {
             // Read Dashlane credentials from a file
@@ -27,7 +28,21 @@ namespace Example
             if (uki == "")
                 uki = Import.ImportUki(username, password);
 
-            Console.WriteLine("Got\nusername: {0}\npassword: {1}\nuki: {2}", username, password, uki);
+            var vault = Vault.Open(username, password, uki);
+
+            for (var i = 0; i < vault.Accounts.Length; i++)
+            {
+                var account = vault.Accounts[i];
+                Console.WriteLine(
+                    "{0}: {1} {2} {3} {4} {5} {6}",
+                    i + 1,
+                    account.Id,
+                    account.Name,
+                    account.Username,
+                    account.Password,
+                    account.Url,
+                    account.Note);
+            }
         }
     }
 }
