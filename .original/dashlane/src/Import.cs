@@ -13,17 +13,33 @@ namespace Dashlane
         // TODO: Not sure how to test this!
         public static string ImportUki(string username, string password)
         {
-            var xml = LoadSettings(FindSettingsFile(username), password);
-            // TODO: Check it parses!
-            return XDocument.Parse(xml).XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']").Value;
+            return ImportUkiFromSettingsFile(FindSettingsFile(username), password);
         }
 
-        public static string LoadSettings(string filename, string password)
+        public static string ImportUkiFromSettingsFile(string filename, string password)
+        {
+            return ImportUkiFromSettings(LoadSettingsFile(filename, password));
+        }
+
+        public static string ImportUkiFromSettings(string settingsXml)
+        {
+            return ImportUkiFromSettings(XDocument.Parse(settingsXml));
+        }
+
+        public static string ImportUkiFromSettings(XDocument settings)
+        {
+            return settings
+                .XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']")
+                .Value;
+        }
+
+        public static string LoadSettingsFile(string filename, string password)
         {
             var blob = File.ReadAllBytes(filename);
             return Parse.DecryptBlob(blob, password).ToUtf8();
         }
 
+        // TODO: Not sure how to test this!
         private static string FindSettingsFile(string username)
         {
             // TODO: Are there other platforms besides Windows desktop we need to check on?
