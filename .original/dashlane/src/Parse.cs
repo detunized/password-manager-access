@@ -142,12 +142,12 @@ namespace Dashlane
         public static Account ParseAccount(XElement e)
         {
             return new Account(
-                id: GetValueForKeyOrDefault(e, "Id"),
-                name: GetValueForKeyOrDefault(e, "Title"),
-                username: GetValueForKeyOrDefault(e, "Login"),
-                password: GetValueForKeyOrDefault(e, "Password"),
-                url: GetValueForKeyOrDefault(e, "Url"),
-                note: GetValueForKeyOrDefault(e, "Note"));
+                GetValueForKeyOrDefault(e, "Id"),
+                GetValueForKeyOrDefault(e, "Title"),
+                GetValueForKeyOrDefault(e, "Login"),
+                GetValueForKeyOrDefault(e, "Password"),
+                GetValueForKeyOrDefault(e, "Url"),
+                GetValueForKeyOrDefault(e, "Note"));
         }
 
         public static string GetValueForKeyOrDefault(XElement e, string key, string defaultValue = "")
