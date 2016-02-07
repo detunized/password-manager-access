@@ -12,8 +12,10 @@ using System.Xml.XPath;
 
 namespace Dashlane
 {
-    static class Parse
+    public static class Parse
     {
+        private static readonly byte[] Kwc3 = "KWC3".ToBytes();
+
         public static byte[] ComputeEncryptionKey(string password, byte[] salt)
         {
             return new Rfc2898DeriveBytes(password, salt, 10204).GetBytes(32);
@@ -158,7 +160,5 @@ namespace Dashlane
         {
             return ExtractAccountsFromXml(DecryptBlob(blob, password).ToUtf8());
         }
-
-        public static readonly byte[] Kwc3 = "KWC3".ToBytes();
     }
 }

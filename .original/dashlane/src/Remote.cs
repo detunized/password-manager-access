@@ -9,9 +9,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Dashlane
 {
-    static class Remote
+    public static class Remote
     {
-        public const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
+        private const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
 
         public static JObject Fetch(string username, string uki)
         {

@@ -11,9 +11,9 @@ namespace Dashlane.Test
     [TestFixture]
     class ParseTest
     {
-        private const string Password = "password";
-        private static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
-        private static readonly byte[] Content = "All your base are belong to us".ToBytes();
+        public const string Password = "password";
+        public static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
+        public static readonly byte[] Content = "All your base are belong to us".ToBytes();
 
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()

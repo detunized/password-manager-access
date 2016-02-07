@@ -52,7 +52,7 @@ namespace Dashlane
         }
 
         // TODO: Not sure how to test this!
-        private static string FindSettingsFile(string username)
+        public static string FindSettingsFile(string username)
         {
             // TODO: Are there other platforms besides Windows desktop we need to check on?
 

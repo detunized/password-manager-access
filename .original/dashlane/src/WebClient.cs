@@ -4,7 +4,7 @@
 namespace Dashlane
 {
     [System.ComponentModel.DesignerCategory("Code")]
-    public class WebClient: System.Net.WebClient, IWebClient
+    class WebClient: System.Net.WebClient, IWebClient
     {
     }
 }

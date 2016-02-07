@@ -22,7 +22,7 @@ namespace Dashlane
 
         public Account[] Accounts { get; private set; }
 
-        private Vault(JObject blob, string password)
+        public Vault(JObject blob, string password)
         {
             var accounts = new Dictionary<string, Account>();
 

@@ -13,9 +13,9 @@ namespace Dashlane.Test
     [TestFixture]
     class RemoteTest
     {
-        private const string Username = "username";
-        private const string Uki = "uki";
-        private const string FetchUrl = "https://www.dashlane.com/12/backup/latest";
+        public const string Username = "username";
+        public const string Uki = "uki";
+        public const string FetchUrl = "https://www.dashlane.com/12/backup/latest";
 
         [Test]
         public void Fetch_returns_received_json()

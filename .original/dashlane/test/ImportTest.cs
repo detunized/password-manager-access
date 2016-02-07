@@ -11,10 +11,10 @@ namespace Dashlane.Test
     [TestFixture]
     class ImportTest
     {
-        private const string Passowrd = "password";
-        private const string Uki = "local-uki";
-        private const string Filename = "Fixtures/localSettings.aes";
-        private const string Xml =
+        public const string Passowrd = "password";
+        public const string Uki = "local-uki";
+        public const string Filename = "Fixtures/localSettings.aes";
+        public const string Xml =
             "<root>" +
                 "<KWLocalSettingsManager>" +
                     "<KWDataItem key='uki'>local-uki</KWDataItem>" +
