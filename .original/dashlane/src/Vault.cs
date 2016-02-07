@@ -20,8 +20,6 @@ namespace Dashlane
             return new Vault(Remote.Fetch(username, uki, webClient), password);
         }
 
-        public Account[] Accounts { get; private set; }
-
         public Vault(JObject blob, string password)
         {
             var accounts = new Dictionary<string, Account>();
@@ -56,5 +54,7 @@ namespace Dashlane
 
             Accounts = accounts.Values.OrderBy(i => i.Id).ToArray();
         }
+
+        public Account[] Accounts { get; private set; }
     }
 }
