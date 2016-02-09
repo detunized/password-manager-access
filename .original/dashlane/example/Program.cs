@@ -126,7 +126,12 @@ namespace Example
             }
             catch (FetchException e)
             {
-                Console.WriteLine("Could not open the vault");
+                Console.WriteLine("Could not download the vault");
+                Console.WriteLine("Error: {0} ({1})", e.Message, e.Reason);
+            }
+            catch (ParseException e)
+            {
+                Console.WriteLine("Could not parse the vault");
                 Console.WriteLine("Error: {0} ({1})", e.Message, e.Reason);
             }
         }
