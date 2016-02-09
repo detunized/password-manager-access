@@ -66,15 +66,18 @@ namespace Dashlane
             }
             catch (WebException e)
             {
-                // TODO: Use custom exception!
                 // TODO: Test this!
-                throw new InvalidOperationException("Network error occurred", e);
+                throw new RegisterException(
+                    RegisterException.FailureReason.NetworkError,
+                    "Network error occurred",
+                    e);
             }
 
-            // TODO: Use custom exception!
             // TODO: Test this!
             if (response.ToUtf8() != "SUCCESS")
-                throw new InvalidOperationException("Register UKI failed");
+                throw new RegisterException(
+                    RegisterException.FailureReason.InvalidResponse,
+                    "Register UKI failed");
         }
 
         public static void RegisterUkiStep2(string username, string deviceName, string uki, string token)
@@ -104,15 +107,18 @@ namespace Dashlane
             }
             catch (WebException e)
             {
-                // TODO: Use custom exception!
                 // TODO: Test this!
-                throw new InvalidOperationException("Network error occurred", e);
+                throw new RegisterException(
+                    RegisterException.FailureReason.NetworkError,
+                    "Network error occurred",
+                    e);
             }
 
-            // TODO: Use custom exception!
             // TODO: Test this!
             if (response.ToUtf8() != "SUCCESS")
-                throw new InvalidOperationException("Register UKI failed");
+                throw new RegisterException(
+                    RegisterException.FailureReason.InvalidResponse,
+                    "Register UKI failed");
         }
 
         private static JObject ParseResponse(byte[] response)
