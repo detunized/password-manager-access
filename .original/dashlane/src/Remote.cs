@@ -95,7 +95,7 @@ namespace Dashlane
             try
             {
                 response = webClient.UploadValues(RegisterUrl, new NameValueCollection {
-                    {"deviceName", deviceName},
+                    {"devicename", deviceName},
                     {"login", username},
                     {"platform", "webaccess"},
                     {"temporary", "0"},

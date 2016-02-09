@@ -256,7 +256,7 @@ namespace Dashlane.Test
                     It.IsAny<string>(),
                     It.Is<NameValueCollection>(p =>
                         p["login"] == Username &&
-                        p["deviceName"] == DeviceName &&
+                        p["devicename"] == DeviceName &&
                         p["uki"] == Uki &&
                         p["token"] == Token)),
                 Times.Once);
