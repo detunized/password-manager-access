@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -51,7 +52,17 @@ namespace Dashlane
         public static string LoadSettingsFile(string filename, string password)
         {
             var blob = File.ReadAllBytes(filename);
-            return Parse.DecryptBlob(blob, password).ToUtf8();
+            try
+            {
+                return Parse.DecryptBlob(blob, password).ToUtf8();
+            }
+            catch (ParseException e)
+            {
+                throw new ImportException(
+                    ImportException.FailureReason.IncorrectPassword,
+                    "The settings file is corrupted or the password is incorrect",
+                    e);
+            }
         }
 
         // TODO: Not sure how to test this!

@@ -74,5 +74,17 @@ namespace Dashlane.Test
                 Import.LoadSettingsFile(Filename, Passowrd),
                 Is.StringStarting("<?xml").And.StringEnding("</root>\n"));
         }
+
+        [Test]
+        public void LoadSettingsFile_throws_on_incorrect_password()
+        {
+            Assert.That(
+                () => Import.LoadSettingsFile(Filename, "Incorrect password"),
+                Throws
+                    .TypeOf<ImportException>()
+                    .And.Property("Reason").EqualTo(ImportException.FailureReason.IncorrectPassword)
+                    .And.Message.EqualTo("The settings file is corrupted or the password is incorrect")
+                    .And.InnerException.InstanceOf<ParseException>());
+        }
     }
 }

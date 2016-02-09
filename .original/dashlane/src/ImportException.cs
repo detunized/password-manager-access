@@ -11,6 +11,7 @@ namespace Dashlane
         {
             ProfileNotFound,
             InvalidFormat,
+            IncorrectPassword,
         }
 
         public ImportException(FailureReason reason, string message): base(message)
