@@ -12,7 +12,6 @@ using System.Xml.XPath;
 
 namespace Dashlane
 {
-    // TODO: Catch crypto exceptions which signal that the password is most likely incorrect!
     public static class Parse
     {
         private static readonly byte[] Kwc3 = "KWC3".ToBytes();
@@ -63,14 +62,24 @@ namespace Dashlane
 
         public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
         {
-            using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.CBC, IV = iv })
-            using (var decryptor = aes.CreateDecryptor())
-            using (var inputStream = new MemoryStream(ciphertext, false))
-            using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
-            using (var outputStream = new MemoryStream())
+            try
             {
-                cryptoStream.CopyTo(outputStream);
-                return outputStream.ToArray();
+                using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.CBC, IV = iv })
+                using (var decryptor = aes.CreateDecryptor())
+                using (var inputStream = new MemoryStream(ciphertext, false))
+                using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
+                using (var outputStream = new MemoryStream())
+                {
+                    cryptoStream.CopyTo(outputStream);
+                    return outputStream.ToArray();
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new ParseException(
+                    ParseException.FailureReason.IncorrectPassword,
+                    "Decryption failed due to incorrect password or data corruption",
+                    e);
             }
         }
 

@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 using NUnit.Framework;
 
@@ -14,6 +15,9 @@ namespace Dashlane.Test
         public const string Password = "password";
         public static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
         public static readonly byte[] Content = "All your base are belong to us".ToBytes();
+        public static readonly byte[] Blob =
+            ("c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzxDNg8kGh5" +
+            "rSYkNvXzzn+3xsCKXSKgGhb2pGnbuqQo32blVfJpurp7jj8oSnzxa66").Decode64();
 
         [Test]
         public void ComputeEncryptionKey_returns_correct_result()
@@ -57,6 +61,21 @@ namespace Dashlane.Test
                     "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
                     "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()),
                 Is.EqualTo(Content));
+        }
+
+        [Test]
+        public void DecryptAes256_throws_on_incorrect_encryption_key()
+        {
+            Assert.That(
+                () => Parse.DecryptAes256(
+                    "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                    "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                    "Incorrect key must be 32 bytes!!".ToBytes()),
+                Throws
+                    .TypeOf<ParseException>()
+                    .And.Property("Reason").EqualTo(ParseException.FailureReason.IncorrectPassword)
+                    .And.Message.EqualTo("Decryption failed due to incorrect password or data corruption")
+                    .And.InnerException.InstanceOf<CryptographicException>());
         }
 
         [Test]
@@ -117,9 +136,19 @@ namespace Dashlane.Test
         [Test]
         public void DecryptBlob_returns_decrypted_content_from_kwc3_blob()
         {
-            var blob = "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzxDNg8kGh5rSYkNvXzzn+" +
-                       "3xsCKXSKgGhb2pGnbuqQo32blVfJpurp7jj8oSnzxa66";
-            Assert.That(Parse.DecryptBlob(blob.Decode64(), Password), Is.EqualTo(Content));
+            Assert.That(Parse.DecryptBlob(Blob, Password), Is.EqualTo(Content));
+        }
+
+        [Test]
+        public void DecryptBlob_throws_on_incorrect_password()
+        {
+            Assert.That(
+                () => Parse.DecryptBlob(Blob, "Incorrect password"),
+                Throws
+                    .TypeOf<ParseException>()
+                    .And.Property("Reason").EqualTo(ParseException.FailureReason.IncorrectPassword)
+                    .And.Message.EqualTo("Decryption failed due to incorrect password or data corruption")
+                    .And.InnerException.InstanceOf<CryptographicException>());
         }
 
         [Test]

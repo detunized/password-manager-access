@@ -50,6 +50,7 @@
     <Compile Include="FetchException.cs" />
     <Compile Include="Import.cs" />
     <Compile Include="ImportException.cs" />
+    <Compile Include="ParseException.cs" />
     <Compile Include="RegisterException.cs" />
     <Compile Include="Remote.cs" />
     <Compile Include="IWebClient.cs" />
