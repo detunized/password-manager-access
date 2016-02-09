@@ -66,14 +66,12 @@ namespace Dashlane
             }
             catch (WebException e)
             {
-                // TODO: Test this!
                 throw new RegisterException(
                     RegisterException.FailureReason.NetworkError,
                     "Network error occurred",
                     e);
             }
 
-            // TODO: Test this!
             if (response.ToUtf8() != "SUCCESS")
                 throw new RegisterException(
                     RegisterException.FailureReason.InvalidResponse,
@@ -107,14 +105,12 @@ namespace Dashlane
             }
             catch (WebException e)
             {
-                // TODO: Test this!
                 throw new RegisterException(
                     RegisterException.FailureReason.NetworkError,
                     "Network error occurred",
                     e);
             }
 
-            // TODO: Test this!
             if (response.ToUtf8() != "SUCCESS")
                 throw new RegisterException(
                     RegisterException.FailureReason.InvalidResponse,

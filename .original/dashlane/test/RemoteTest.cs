@@ -210,6 +210,29 @@ namespace Dashlane.Test
         }
 
         [Test]
+        public void RegisterUkiStep1_throws_on_network_error()
+        {
+            Assert.That(
+                () => Remote.RegisterUkiStep1(Username, SetupWebClient(new WebException()).Object),
+                Throws
+                    .TypeOf<RegisterException>()
+                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.NetworkError)
+                    .And.Message.EqualTo("Network error occurred")
+                    .And.InnerException.InstanceOf<WebException>());
+        }
+
+        [Test]
+        public void RegisterUkiStep1_throws_on_invalid_response()
+        {
+            Assert.That(
+                () => Remote.RegisterUkiStep1(Username, SetupWebClient("NOT A GREAT SUCCESS").Object),
+                Throws
+                    .TypeOf<RegisterException>()
+                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.InvalidResponse)
+                    .And.Message.EqualTo("Register UKI failed"));
+        }
+
+        [Test]
         public void RegisterUkiStep2_makes_post_request_to_specific_url()
         {
             var webClient = SetupWebClient("SUCCESS");
@@ -237,6 +260,39 @@ namespace Dashlane.Test
                         p["uki"] == Uki &&
                         p["token"] == Token)),
                 Times.Once);
+        }
+
+        [Test]
+        public void RegisterUkiStep2_throws_on_network_error()
+        {
+            Assert.That(
+                () => Remote.RegisterUkiStep2(
+                    Username,
+                    DeviceName,
+                    Uki,
+                    Token,
+                    SetupWebClient(new WebException()).Object),
+                Throws
+                    .TypeOf<RegisterException>()
+                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.NetworkError)
+                    .And.Message.EqualTo("Network error occurred")
+                    .And.InnerException.InstanceOf<WebException>());
+        }
+
+        [Test]
+        public void RegisterUkiStep2_throws_on_invalid_response()
+        {
+            Assert.That(
+                () => Remote.RegisterUkiStep2(
+                    Username,
+                    DeviceName,
+                    Uki,
+                    Token,
+                    SetupWebClient("NOT A GREAT SUCCESS").Object),
+                Throws
+                    .TypeOf<RegisterException>()
+                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.InvalidResponse)
+                    .And.Message.EqualTo("Register UKI failed"));
         }
 
         //
