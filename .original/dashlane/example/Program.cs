@@ -28,8 +28,8 @@ namespace Example
             // An UKI is a device id that is registered with the Dashlane server. There are
             // two ways to obtain one.
 
-            // 1. On a machine that has a Dashlane client installed we can rummage through
-            // the settings database and find an UKI that is used by the client. This way
+            // 1. On a machine that has a Dashlane client installed we could rummage through
+            // the settings database and find the UKI that is used by the client. This way
             // we can pretend to be that client and silently authenticate with the server.
             if (uki == "")
             {
@@ -43,36 +43,67 @@ namespace Example
                 }
             }
 
-            // 2. ...
+            // 2. Alternatively we could try to generate a new UKI and register it with the
+            // server. The process is interactive and is made up of two steps. Step one
+            // initiates the process and triggers an email to be sent to the user and the
+            // registered email address with a security token.
+            // In step 2 the token along with the machine name and the new UKI is registered
+            // with the server. After these two steps the new UKI could be used to authenticate
+            // with the Dashlane server and fetch the vault.
             if (uki == "")
             {
-                // TODO: Register an UKI!
+                try
+                {
+                    // Request a security token to be sent to the user's email address.
+                    Remote.RegisterUkiStep1(username);
+
+                    // Ask the user to enter the token.
+                    Console.Write("Enter the token sent by email: ");
+                    Console.Out.Flush();
+                    var token = Console.ReadLine().Trim();
+
+                    // Generate a new UKI.
+                    var newUki = Uki.Generate();
+
+                    // Register all that with the server.
+                    Remote.RegisterUkiStep2(username, "dashlane-sharp", newUki, token);
+
+                    // Great success!
+                    uki = newUki;
+                }
+                catch (RegisterException e)
+                {
+                    Console.WriteLine("Register failed: {0} ({1})", e.Message, e.Reason);
+                }
             }
 
-            // Now, when we have a registered UKI we can try to fetch and open the vault.
-            Vault vault;
+            // We still don't have a valid UKI. Cannot proceed any further.
+            if (uki == "")
+                return;
+
+            // Now, when we have a registered UKI we can try to open the vault.
             try
             {
-                vault = Vault.Open(username, password, uki);
+                // Fetch and parse first.
+                var vault = Vault.Open(username, password, uki);
+
+                // And then dump the accounts.
+                for (var i = 0; i < vault.Accounts.Length; i++)
+                {
+                    var account = vault.Accounts[i];
+                    Console.WriteLine(
+                        "{0}: {1} {2} {3} {4} {5}",
+                        i + 1,
+                        account.Name,
+                        account.Username,
+                        account.Password,
+                        account.Url,
+                        account.Note);
+                }
             }
             catch (FetchException e)
             {
-                Console.WriteLine("Vault fetch failed: {0} ({1})", e.Message, e.Reason);
-                return;
-            }
-
-            // Dump the vault
-            for (var i = 0; i < vault.Accounts.Length; i++)
-            {
-                var account = vault.Accounts[i];
-                Console.WriteLine(
-                    "{0}: {1} {2} {3} {4} {5}",
-                    i + 1,
-                    account.Name,
-                    account.Username,
-                    account.Password,
-                    account.Url,
-                    account.Note);
+                Console.WriteLine("Vault open failed: {0} ({1})", e.Message, e.Reason);
             }
         }
     }
