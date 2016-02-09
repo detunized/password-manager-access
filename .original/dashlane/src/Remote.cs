@@ -48,6 +48,12 @@ namespace Dashlane
             return parsed;
         }
 
+        public static void RegisterUkiStep1(string username)
+        {
+            using (var webClient = new WebClient())
+                RegisterUkiStep1(username, webClient);
+        }
+
         public static void RegisterUkiStep1(string username, IWebClient webClient)
         {
             byte[] response;
@@ -69,6 +75,12 @@ namespace Dashlane
             // TODO: Test this!
             if (response.ToUtf8() != "SUCCESS")
                 throw new InvalidOperationException("Register UKI failed");
+        }
+
+        public static void RegisterUkiStep2(string username, string deviceName, string uki, string token)
+        {
+            using (var webClient = new WebClient())
+                RegisterUkiStep2(username, deviceName, uki, token, webClient);
         }
 
         public static void RegisterUkiStep2(
