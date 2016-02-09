@@ -12,6 +12,7 @@ using System.Xml.XPath;
 
 namespace Dashlane
 {
+    // TODO: Catch crypto exceptions which signal that the password is most likely incorrect!
     public static class Parse
     {
         private static readonly byte[] Kwc3 = "KWC3".ToBytes();
