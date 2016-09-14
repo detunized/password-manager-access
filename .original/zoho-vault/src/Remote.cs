@@ -56,5 +56,10 @@ namespace ZohoVault
 
             return match.Groups[1].Value;
         }
+
+        public static void Logout(string token)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
