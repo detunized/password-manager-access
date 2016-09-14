@@ -41,6 +41,7 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="IWebClient.cs" />
+    <Compile Include="Pbkdf2.cs" />
     <Compile Include="Remote.cs" />
     <Compile Include="WebClient.cs" />
   </ItemGroup>
