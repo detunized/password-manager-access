@@ -31,7 +31,26 @@ namespace ZohoVault.Test
         }
 
         [Test]
-        public void JObject_At_throws_on_invalid_path()
+        public void JToken_chained_At_returns_token()
+        {
+            var j = JObject.Parse(@"{
+                'k1': {'k2': {'k3': 'v3'}}
+            }");
+
+            var k1 = j["k1"];
+            var k2 = j["k1"]["k2"];
+            var k3 = j["k1"]["k2"]["k3"];
+
+            Assert.That(j.At("k1"), Is.EqualTo(k1));
+            Assert.That(j.At("k1").At("k2"), Is.EqualTo(k2));
+            Assert.That(j.At("k1").At("k2").At("k3"), Is.EqualTo(k3));
+
+            Assert.That(j.At("k1").At("k2/k3"), Is.EqualTo(k3));
+            Assert.That(j.At("k1/k2").At("k3"), Is.EqualTo(k3));
+        }
+
+        [Test]
+        public void JToken_At_throws_on_invalid_path()
         {
             var j = JObject.Parse(@"{
                 'k1': 'v1',
@@ -50,7 +69,7 @@ namespace ZohoVault.Test
         }
 
         [Test]
-        public void JObject_At_throws_on_non_objects()
+        public void JToken_At_throws_on_non_objects()
         {
             var j = JObject.Parse(@"{
                 'k1': [],
@@ -63,7 +82,7 @@ namespace ZohoVault.Test
         }
 
         [Test]
-        public void JObject_StringAt_returns_string()
+        public void JToken_StringAt_returns_string()
         {
             var j = JObject.Parse(@"{
                 'k1': 'v1',
@@ -76,7 +95,7 @@ namespace ZohoVault.Test
         }
 
         [Test]
-        public void JObject_StringAt_throws_on_non_stings()
+        public void JToken_StringAt_throws_on_non_stings()
         {
             var j = JObject.Parse(@"{
                 'k1': true,
@@ -93,7 +112,7 @@ namespace ZohoVault.Test
         }
 
         [Test]
-        public void JObject_IntAt_throws_on_non_ints()
+        public void JToken_IntAt_throws_on_non_ints()
         {
             var j = JObject.Parse(@"{
                 'k1': true,

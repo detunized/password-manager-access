@@ -28,12 +28,31 @@ namespace ZohoVault
         }
 
         //
-        // JObject
+        // JToken
         //
 
         public static JToken At(this JObject j, string path)
         {
-            var c = j.Root;
+            return At(j.Root, path);
+        }
+
+        public static string StringAt(this JObject j, string path)
+        {
+            return StringAt(j.Root, path);
+        }
+
+        public static int IntAt(this JObject j, string path)
+        {
+            return IntAt(j.Root, path);
+        }
+
+        //
+        // JToken
+        //
+
+        public static JToken At(this JToken j, string path)
+        {
+            var c = j;
             foreach (var i in path.Split('/'))
             {
                 if (c.Type != JTokenType.Object)
@@ -48,7 +67,7 @@ namespace ZohoVault
             return c;
         }
 
-        public static string StringAt(this JObject j, string path)
+        public static string StringAt(this JToken j, string path)
         {
             var s = j.At(path);
             if (s.Type != JTokenType.String)
@@ -57,7 +76,7 @@ namespace ZohoVault
             return (string)s;
         }
 
-        public static int IntAt(this JObject j, string path)
+        public static int IntAt(this JToken j, string path)
         {
             var s = j.At(path);
             if (s.Type != JTokenType.Integer)
