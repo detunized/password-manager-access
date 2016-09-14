@@ -1,0 +1,21 @@
+{
+    "operation": {
+        "details": {
+            "ITERATION": 1000,
+            "LASTMODFIEDTIME": "",
+            "LOGIN": "PBKDF2_AES",
+            "PASSPHRASE": "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==",
+            "SALT": "f78e6ffce8e57501a02c9be303db2c68",
+            "USER": {
+                "EMAIL": "lastpass.ruby@gmail.com",
+                "USERID": "30024000000008004",
+                "USERNAME": "lastpass.ruby"
+            }
+        },
+        "name": "GET_LOGIN",
+        "result": {
+            "message": "",
+            "status": "success"
+        }
+    }
+}

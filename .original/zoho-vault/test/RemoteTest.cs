@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Specialized;
+using System.IO;
 using System.Net;
 using Moq;
 using NUnit.Framework;
@@ -66,6 +67,25 @@ namespace ZohoVault.Test
                 Throws.TypeOf<InvalidOperationException>());
         }
 
+        // TODO: Add more GetAuthInfo tests
+
+        [Test]
+        public void GetAuthInfo_returns_auth_info()
+        {
+            var webClient = SetupWebClientForGetWithFixture("auth-info-response");
+            var info = Remote.GetAuthInfo(Token, webClient.Object);
+
+            Assert.That(
+                info.IterationCount,
+                Is.EqualTo(1000));
+            Assert.That(
+                info.Salt,
+                Is.EqualTo("f78e6ffce8e57501a02c9be303db2c68".ToBytes()));
+            Assert.That(
+                info.EncryptedPassphrase,
+                Is.EqualTo("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".ToBytes()));
+        }
+
         //
         // Helpers
         //
@@ -90,6 +110,19 @@ namespace ZohoVault.Test
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
                 .Returns(response.ToBytes());
+
+            return webClient;
+        }
+
+        private static Mock<IWebClient> SetupWebClientForGetWithFixture(string filename)
+        {
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.Headers)
+                .Returns(new WebHeaderCollection());
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Returns(File.ReadAllBytes(string.Format("Fixtures/{0}.json", filename)));
 
             return webClient;
         }

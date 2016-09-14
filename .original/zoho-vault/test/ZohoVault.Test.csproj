@@ -51,6 +51,9 @@
     <Compile Include="RemoteTest.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Fixtures\auth-info-response.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
