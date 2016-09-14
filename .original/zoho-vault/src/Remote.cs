@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace ZohoVault
 {
@@ -43,10 +44,17 @@ namespace ZohoVault
             // original page. "showsuccess" is called when everything went well.
             var responseText = response.ToUtf8();
             if (!responseText.StartsWith("showsuccess"))
+                // TODO: Use custom exception
                 throw new InvalidOperationException("Login failed, credentials are invalid");
 
-            // TODO: Get token out of the response headers
-            return "<token>";
+            // Extract the token from the response headers
+            var cookies = webClient.ResponseHeaders[HttpResponseHeader.SetCookie];
+            var match = Regex.Match(cookies, "\\bIAMAUTHTOKEN=(\\w+);");
+            if (!match.Success)
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Unsupported cookie format");
+
+            return match.Groups[1].Value;
         }
     }
 }

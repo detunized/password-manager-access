@@ -14,14 +14,14 @@ namespace ZohoVault.Test
     {
         public const string Username = "lebowski";
         public const string Password = "logjammin";
-        public const string Token = "<token>";
+        public const string Token = "1auth2token3";
         public const string LoginUrlPrefix = "https://accounts.zoho.com/login?";
 
         [Test]
         public void Login_returns_token()
         {
             Assert.That(
-                Remote.Login(Username, Password, SetupWebClient("showsuccess('It worked')").Object),
+                Remote.Login(Username, Password, SetupWebClientWithSuccess().Object),
                 Is.EqualTo(Token));
         }
 
@@ -77,10 +77,16 @@ namespace ZohoVault.Test
 
         private static Mock<IWebClient> SetupWebClient(string response)
         {
+            var responseHeaders = new WebHeaderCollection();
+            responseHeaders[HttpResponseHeader.SetCookie] = string.Format("IAMAUTHTOKEN={0};", Token);
+
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.Headers)
                 .Returns(new WebHeaderCollection());
+            webClient
+                .Setup(x => x.ResponseHeaders)
+                .Returns(responseHeaders);
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
                 .Returns(response.ToBytes());
