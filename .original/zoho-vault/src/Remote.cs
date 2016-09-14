@@ -69,7 +69,7 @@ namespace ZohoVault
             throw new NotImplementedException();
         }
 
-        public struct AuthInfo
+        internal struct AuthInfo
         {
             public AuthInfo(int iterationCount, byte[] salt, byte[] encryptedPassphrase)
             {
@@ -83,7 +83,7 @@ namespace ZohoVault
             public byte[] EncryptedPassphrase;
         }
 
-        public static AuthInfo GetAuthInfo(string token, IWebClient client)
+        internal static AuthInfo GetAuthInfo(string token, IWebClient client)
         {
             // Set headers
             client.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
