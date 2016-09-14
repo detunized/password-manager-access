@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Specialized;
+using System.Net;
 using Moq;
 using NUnit.Framework;
 
@@ -49,6 +50,15 @@ namespace ZohoVault.Test
         }
 
         [Test]
+        public void Login_makes_post_request_with_cookie_set()
+        {
+            var webClient = SetupWebClientWithSuccess();
+            Remote.Login(Username, Password, webClient.Object);
+
+            Assert.That(webClient.Object.Headers["Cookie"], Is.StringContaining("iamcsr=12345678"));
+        }
+
+        [Test]
         public void Login_throws_on_error()
         {
             Assert.That(
@@ -65,9 +75,12 @@ namespace ZohoVault.Test
             return SetupWebClient("showsuccess('')");
         }
 
-        private static Mock<IWebClient> SetupWebClient(string response = "{}")
+        private static Mock<IWebClient> SetupWebClient(string response)
         {
             var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.Headers)
+                .Returns(new WebHeaderCollection());
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
                 .Returns(response.ToBytes());

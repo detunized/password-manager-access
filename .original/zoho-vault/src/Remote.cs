@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Specialized;
+using System.Net;
 
 namespace ZohoVault
 {
@@ -22,7 +23,10 @@ namespace ZohoVault
             // TODO: This should probably be random
             const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
 
-            // TODO: Set a cookie
+            // Set a cookie with some random gibberish
+            webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("iamcsr={0}", iamcsrcoo));
+
+            // POST
             var response = webClient.UploadValues(LoginUrl, new NameValueCollection
             {
                 {"LOGIN_ID", username},
@@ -35,6 +39,8 @@ namespace ZohoVault
 
             // TODO: Handle errors
 
+            // The returned text is JavaScript which is supposed to call some functions on the
+            // original page. "showsuccess" is called when everything went well.
             var responseText = response.ToUtf8();
             if (!responseText.StartsWith("showsuccess"))
                 throw new InvalidOperationException("Login failed, credentials are invalid");
