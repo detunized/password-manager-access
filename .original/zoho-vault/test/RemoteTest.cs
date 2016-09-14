@@ -11,8 +11,8 @@ namespace ZohoVault.Test
     [TestFixture]
     class RemoteTest
     {
-        public const string Username = "username";
-        public const string Password = "password";
+        public const string Username = "lebowski";
+        public const string Password = "logjammin";
         public const string Token = "<token>";
         public const string LoginUrlPrefix = "https://accounts.zoho.com/login?";
 
