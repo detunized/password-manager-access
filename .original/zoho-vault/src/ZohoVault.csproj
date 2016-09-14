@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="IWebClient.cs" />
+    <Compile Include="Remote.cs" />
     <Compile Include="WebClient.cs" />
   </ItemGroup>
   <ItemGroup>
