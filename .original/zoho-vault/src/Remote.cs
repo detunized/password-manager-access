@@ -59,6 +59,12 @@ namespace ZohoVault
 
         public static void Logout(string token)
         {
+            using (var webClient = new WebClient())
+                Logout(token, webClient);
+        }
+
+        public static void Logout(string token, IWebClient webClient)
+        {
             throw new NotImplementedException();
         }
     }
