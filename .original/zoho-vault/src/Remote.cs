@@ -39,7 +39,7 @@ namespace ZohoVault
 
             // TODO: Handle errors
 
-            var responseText = Encoding.UTF8.GetString(response);
+            var responseText = response.ToUtf8();
             if (!responseText.StartsWith("showsuccess"))
                 throw new InvalidOperationException("Login failed, credentials are invalid");
 

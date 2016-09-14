@@ -44,7 +44,7 @@ namespace ZohoVault.Test
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(Encoding.UTF8.GetBytes(response));
+                .Returns(response.ToBytes());
 
             return webClient;
         }
