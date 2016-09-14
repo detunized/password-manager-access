@@ -14,6 +14,7 @@ namespace ZohoVault.Test
         public const string Username = "username";
         public const string Password = "password";
         public const string Token = "<token>";
+        public const string LoginUrlPrefix = "https://accounts.zoho.com/login?";
 
         [Test]
         public void Login_returns_token()
@@ -21,6 +22,30 @@ namespace ZohoVault.Test
             Assert.That(
                 Remote.Login(Username, Password, SetupWebClient("showsuccess('It worked')").Object),
                 Is.EqualTo(Token));
+        }
+
+        [Test]
+        public void Login_makes_post_request_to_specific_url()
+        {
+            var webClient = SetupWebClientWithSuccess();
+            Remote.Login(Username, Password, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(It.Is<string>(s => s.StartsWith(LoginUrlPrefix)), It.IsAny<NameValueCollection>()),
+                Times.Once);
+        }
+
+        [Test]
+        public void Login_makes_post_request_with_correct_username_and_password()
+        {
+            var webClient = SetupWebClientWithSuccess();
+            Remote.Login(Username, Password, webClient.Object);
+
+            webClient.Verify(
+                x => x.UploadValues(
+                    It.IsAny<string>(),
+                    It.Is<NameValueCollection>(p => p["LOGIN_ID"] == Username && p["PASSWORD"] == Password)),
+                Times.Once);
         }
 
         [Test]
@@ -34,6 +59,11 @@ namespace ZohoVault.Test
         //
         // Helpers
         //
+
+        private static Mock<IWebClient> SetupWebClientWithSuccess()
+        {
+            return SetupWebClient("showsuccess('')");
+        }
 
         private static Mock<IWebClient> SetupWebClient(string response = "{}")
         {
