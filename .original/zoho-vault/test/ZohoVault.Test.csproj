@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="ExtensionsTest.cs" />
     <Compile Include="RemoteTest.cs" />
   </ItemGroup>
   <ItemGroup>
