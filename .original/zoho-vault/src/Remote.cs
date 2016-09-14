@@ -5,6 +5,7 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 
 namespace ZohoVault
 {
@@ -66,6 +67,48 @@ namespace ZohoVault
         public static void Logout(string token, IWebClient webClient)
         {
             throw new NotImplementedException();
+        }
+
+        public struct AuthInfo
+        {
+            public AuthInfo(int iterationCount, byte[] salt, byte[] encryptedPassphrase)
+            {
+                IterationCount = iterationCount;
+                Salt = salt;
+                EncryptedPassphrase = encryptedPassphrase;
+            }
+
+            public int IterationCount;
+            public byte[] Salt;
+            public byte[] EncryptedPassphrase;
+        }
+
+        public static AuthInfo GetAuthInfo(string token, IWebClient client)
+        {
+            // Set headers
+            client.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
+            client.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
+            client.Headers["requestFrom"] = "vaultmobilenative";
+
+            // GET
+            var response = client.DownloadData("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN");
+
+            // Parse the response
+            var parsed = JObject.Parse(response.ToUtf8());
+            if (parsed.StringAt("operation/result/status") != "success")
+                throw new InvalidOperationException("Invalid response");
+
+            // Validate the response
+            var details = parsed.At("operation/details");
+            if (details.StringAt("LOGIN") != "PBKDF2_AES")
+                throw new InvalidOperationException("Only PBKDF2/AES is supported");
+
+            // Extract and convert important information
+            return new AuthInfo(
+                details.IntAt("ITERATION"),
+                details.StringAt("SALT").ToBytes(),
+                details.StringAt("PASSPHRASE").ToBytes() // TODO: Decode base64 here
+            );
         }
     }
 }
