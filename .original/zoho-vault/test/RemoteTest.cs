@@ -3,11 +3,7 @@
 
 using System;
 using System.Collections.Specialized;
-using System.Net;
-using System.Text;
 using Moq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace ZohoVault.Test
