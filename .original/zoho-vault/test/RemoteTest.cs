@@ -86,6 +86,19 @@ namespace ZohoVault.Test
                 Is.EqualTo("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".ToBytes()));
         }
 
+        [Test]
+        public void ComputeKey_returns_key()
+        {
+            var info = new Remote.AuthInfo
+            {
+                IterationCount = 1000,
+                Salt = "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
+                EncryptedPassphrase = "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".ToBytes()
+            };
+            var key = Remote.ComputeKey(info, "passphrase123");
+            Assert.That(key, Is.EqualTo("d7643007973dba7243d724f66fd806bf".ToBytes()));
+        }
+
         //
         // Helpers
         //

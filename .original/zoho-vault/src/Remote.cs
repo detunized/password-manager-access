@@ -110,5 +110,18 @@ namespace ZohoVault
                 details.StringAt("PASSPHRASE").ToBytes() // TODO: Decode base64 here
             );
         }
+
+        internal static byte[] ComputeKey(AuthInfo authInfo, string passphrase)
+        {
+            // Regular PBKDF2 with HMAC-SHA256
+            var key = Pbkdf2.Generate(
+                passphrase.ToBytes(),
+                authInfo.Salt,
+                authInfo.IterationCount,
+                32);
+
+            // They actual key is the hex bytes, not the key itself
+            return key.ToHex().Substring(0, 32).ToBytes();
+        }
     }
 }
