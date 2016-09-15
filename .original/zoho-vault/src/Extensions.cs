@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Linq;
 using System.Text;
 using Newtonsoft.Json.Linq;
 
@@ -30,6 +31,13 @@ namespace ZohoVault
         public static string ToUtf8(this byte[] x)
         {
             return Encoding.UTF8.GetString(x);
+        }
+
+        public static string ToHex(this byte[] x)
+        {
+            // TODO: This does not perform very well. We use it just a couple of times
+            //       so it shouldn't be a big deal.
+            return string.Join("", x.Select(i => i.ToString("x2")));
         }
 
         //
