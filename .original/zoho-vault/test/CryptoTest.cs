@@ -26,6 +26,16 @@ namespace ZohoVault.Test
                                                 "30c81c46a35ce411e5fbc1191a0a52ef" +
                                                 "f69f2445df4f9b17ad2b417be66c3710").DecodeHex();
 
+        [Test]
+        public void Decrypt_returns_plaintext()
+        {
+            // Calculated with the original Js code
+            var plaintext = Crypto.Decrypt(
+                "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(),
+                Key).ToUtf8();
+            Assert.That(plaintext, Is.EqualTo("{\"date\":\"2016-08-30T15:05:42.874Z\"}"));
+        }
+
 
         [Test]
         public void ComputeAesCtrKey_returns_key()
