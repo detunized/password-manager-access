@@ -66,5 +66,17 @@ namespace ZohoVault
 
             return plaintext;
         }
+
+        internal static void IncrementCounter(byte[] counter)
+        {
+            int n = counter.Length;
+            for (int i = 0, carry = 1; i < n && carry > 0; i += 1)
+            {
+                int index = n - 1 - i;
+                int inc = counter[index] + carry;
+                counter[index] = (byte) (inc & 0xff);
+                carry = inc >> 8;
+            }
+        }
     }
 }
