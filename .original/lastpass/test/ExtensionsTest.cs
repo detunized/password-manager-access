@@ -61,7 +61,7 @@ namespace LastPass.Test
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Input length must be multple of 2")]
+        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Input length must be multiple of 2")]
         public void DecodeHex_throws_on_odd_length()
         {
             "0".DecodeHex();
