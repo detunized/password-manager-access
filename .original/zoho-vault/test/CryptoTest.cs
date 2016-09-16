@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace ZohoVault.Test
@@ -13,6 +14,19 @@ namespace ZohoVault.Test
         // Calculated with the original Js code
         public readonly byte[] Key = "d7643007973dba7243d724f66fd806bf".ToBytes();
 
+        // From http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
+        public readonly byte[] NistKey = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4".DecodeHex();
+        public readonly byte[] NistCtr = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff".DecodeHex();
+        public readonly byte[] NistCiphertext = ("601ec313775789a5b7a7f504bbf3d228" +
+                                                 "f443e3ca4d62b59aca84e990cacaf5c5" +
+                                                 "2b0930daa23de94ce87017ba2d84988d" +
+                                                 "dfc9c58db67aada613c2dd08457941a6").DecodeHex();
+        public readonly byte[] NistPlaintext = ("6bc1bee22e409f96e93d7e117393172a" +
+                                                "ae2d8a571e03ac9c9eb76fac45af8e51" +
+                                                "30c81c46a35ce411e5fbc1191a0a52ef" +
+                                                "f69f2445df4f9b17ad2b417be66c3710").DecodeHex();
+
+
         [Test]
         public void ComputeAesCtrKey_returns_key()
         {
@@ -21,16 +35,41 @@ namespace ZohoVault.Test
             Assert.That(Crypto.ComputeAesCtrKey(Key), Is.EqualTo(ctrKey));
         }
 
-        [Test]
-        public void DecryptAes256Ctr_returns_plaintext()
-        {
-            // From http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
-            var key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4".DecodeHex();
-            var ctr = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff".DecodeHex();
-            var ciphertext = "601ec313775789a5b7a7f504bbf3d228".DecodeHex();
-            var plaintext = "6bc1bee22e409f96e93d7e117393172a".DecodeHex();
+        //
+        // AES-256 CTR
+        //
 
-            Assert.That(Crypto.DecryptAes256Ctr(ciphertext, key, ctr), Is.EqualTo(plaintext));
+        [Test]
+        public void DecryptAes256Ctr_decrypts_one_block()
+        {
+            var ciphertext = NistCiphertext.Take(16).ToArray();
+            var plaintext = NistPlaintext.Take(16).ToArray();
+
+            Assert.That(Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr), Is.EqualTo(plaintext));
+        }
+
+        [Test]
+        public void DecryptAes256Ctr_decrypts_multiple_blocks()
+        {
+            Assert.That(Crypto.DecryptAes256Ctr(NistCiphertext, NistKey, NistCtr), Is.EqualTo(NistPlaintext));
+        }
+
+        [Test]
+        public void DecryptAes256Ctr_decrypts_empty_input()
+        {
+            Assert.That(Crypto.DecryptAes256Ctr(new byte[0], NistKey, NistCtr), Is.EqualTo(new byte[0]));
+        }
+
+        [Test]
+        public void DecryptAes256Ctr_decrypts_unaligned_input()
+        {
+            for (var i = 1; i < NistCiphertext.Length - 1; i += 1)
+            {
+                var ciphertext = NistCiphertext.Take(i).ToArray();
+                var plaintext = NistPlaintext.Take(i).ToArray();
+
+                Assert.That(Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr), Is.EqualTo(plaintext));
+            }
         }
 
         [Test]
