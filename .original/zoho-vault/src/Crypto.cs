@@ -7,76 +7,72 @@ using System.Security.Cryptography;
 
 namespace ZohoVault
 {
-    public static class Crypto
+    static class Crypto
     {
+        // For AES block size is always 16 bytes
+        public const int BlockSize = 16;
+
+        // TODO: See if this "key derivation" could be moved out of here
+        //       not to recalculate it every time.
         public static byte[] Decrypt(byte[] ctrCiphertext, byte[] key)
         {
             if (ctrCiphertext.Length < 8 + 1)
                 return new byte[] {};
 
+            // First 8 bytes of the ciphertext is the ctr initial value. Has to be padded with zeros.
             var ctr = ctrCiphertext.Take(8).Concat(new byte[8]).ToArray();
+
+            // The rest is the ciphertext.
             var ciphertext = ctrCiphertext.Skip(8).ToArray();
+
+            // Have to produce a decryption key out of a decryption key. Weird.
             var ctrKey = ComputeAesCtrKey(key);
 
-            return ciphertext;
+            // Now decrypt using regular AES-256 CTR
+            return DecryptAes256Ctr(ciphertext, ctrKey, ctr);
         }
 
-        internal static byte[] ComputeAesCtrKey(byte[] key)
+        public static byte[] ComputeAesCtrKey(byte[] key)
         {
-            using (
-                var aes = new AesManaged
-                {
-                    BlockSize = 128,
-                    KeySize = 256,
-                    Key = key,
-                    Mode = CipherMode.ECB,
-                    Padding = PaddingMode.None
-                })
+            // The actual encryption key is the original key encrypted with AES-ECB
+            // using itself as a key. Then it's duplicated and pasted together.
+            using (var aes = CreateAes256Ecb(key))
             using (var encryptor = aes.CreateEncryptor())
             {
-                var ctrKey = encryptor.TransformFinalBlock(key, 0, 16);
-                return ctrKey.Concat(ctrKey).ToArray();
+                var ctrKey = new byte[BlockSize * 2];
+                encryptor.TransformBlock(key, 0, BlockSize, ctrKey, 0);
+                Array.Copy(ctrKey, 0, ctrKey, BlockSize, BlockSize);
+                return ctrKey;
             }
         }
 
-        internal static byte[] DecryptAes256Ctr(byte[] ciphertext, byte[] key, byte[] initialCounter)
+        public static byte[] DecryptAes256Ctr(byte[] ciphertext, byte[] key, byte[] initialCounter)
         {
             var length = ciphertext.Length;
             var plaintext = new byte[length];
 
-            using (
-                var aes = new AesManaged
-                {
-                    BlockSize = 128,
-                    KeySize = 256,
-                    Key = key,
-                    Mode = CipherMode.ECB,
-                    Padding = PaddingMode.None
-                })
+            using (var aes = CreateAes256Ecb(key))
             using (var encryptor = aes.CreateEncryptor())
             {
-                // For AES block size is always 16 bytes
-                const int blockSize = 16;
-
                 // Clone the counter not to modify the input
-                var counter = initialCounter.Take(blockSize).ToArray();
+                var counter = initialCounter.Take(BlockSize).ToArray();
 
                 // Number of blocks in the input. The last block extends past
                 // the input buffer, when the size is not aligned.
-                var blockCount = (length + blockSize - 1) / blockSize;
+                var blockCount = (length + BlockSize - 1) / BlockSize;
 
                 // XOR mask, allocate once and reuse
-                var xor = new byte[blockSize];
+                var xor = new byte[BlockSize];
 
                 for (var block = 0; block < blockCount; block += 1)
                 {
                     // XOR mask is simply the AES-ECB encrypted counter value
-                    encryptor.TransformBlock(counter, 0, blockSize, xor, 0);
+                    encryptor.TransformBlock(counter, 0, BlockSize, xor, 0);
                     IncrementCounter(counter);
 
                     // Need to pay attention no to poke outside of the buffers
-                    var blockStartIndex = block * blockSize;
-                    var thisBlockSize = Math.Min(blockSize, length - blockStartIndex);
+                    var blockStartIndex = block * BlockSize;
+                    var thisBlockSize = Math.Min(BlockSize, length - blockStartIndex);
 
                     // XOR input with the mask. That's all there is to CTR mode.
                     for (var i = 0; i < thisBlockSize; i += 1)
@@ -87,7 +83,7 @@ namespace ZohoVault
             return plaintext;
         }
 
-        internal static void IncrementCounter(byte[] counter)
+        public static void IncrementCounter(byte[] counter)
         {
             var n = counter.Length;
             for (int i = 0, carry = 1; i < n && carry > 0; i += 1)
@@ -97,6 +93,18 @@ namespace ZohoVault
                 counter[index] = (byte) (inc & 0xff);
                 carry = inc >> 8;
             }
+        }
+
+        private static AesManaged CreateAes256Ecb(byte[] key)
+        {
+            return new AesManaged
+            {
+                BlockSize = 128,
+                KeySize = 256,
+                Key = key,
+                Mode = CipherMode.ECB,
+                Padding = PaddingMode.None
+            };
         }
     }
 }
