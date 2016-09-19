@@ -69,6 +69,31 @@ namespace ZohoVault
             throw new NotImplementedException();
         }
 
+        // TODO: Rather return a session object or something like that
+        // Returns the encryption key
+        public static byte[] Authenticate(string token, string passphrase, IWebClient webClient)
+        {
+            // Fetch key derivation parameters and some other stuff
+            var info = GetAuthInfo(token, webClient);
+
+            // Decryption key
+            var key = Crypto.ComputeKey(passphrase, info.Salt, info.IterationCount);
+
+            // Verify that the key is correct
+            // AuthInfo.EncryptionCheck contains some encrypted JSON that could be
+            // decrypted and parsed to check if the passphrase is correct. We have
+            // to rely here on the encrypted JSON simply not parsing correctly and
+            // producing some sort of error.
+            var decrypted = Crypto.Decrypt(info.EncryptedPassphrase, key).ToUtf8();
+
+            // TODO: Catch any JSON related errors and rethrow
+            var parsed = JToken.Parse(decrypted);
+            if (parsed == null)
+                throw new InvalidOperationException("Passphrase is incorrect");
+
+            return key;
+        }
+
         internal struct AuthInfo
         {
             public AuthInfo(int iterationCount, byte[] salt, byte[] encryptedPassphrase)

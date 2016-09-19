@@ -67,6 +67,15 @@ namespace ZohoVault.Test
                 Throws.TypeOf<InvalidOperationException>());
         }
 
+        [Test]
+        public void Authenticate_returns_key()
+        {
+            var webClient = SetupWebClientForGetWithFixture("auth-info-response");
+            Assert.That(
+                Remote.Authenticate(Token, TestData.Passphrase, webClient.Object),
+                Is.EqualTo(TestData.Key));
+        }
+
         // TODO: Add more GetAuthInfo tests
 
         [Test]
