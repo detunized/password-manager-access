@@ -83,7 +83,7 @@ namespace ZohoVault.Test
                 Is.EqualTo("f78e6ffce8e57501a02c9be303db2c68".ToBytes()));
             Assert.That(
                 info.EncryptedPassphrase,
-                Is.EqualTo("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".ToBytes()));
+                Is.EqualTo("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64()));
         }
 
         //

@@ -107,7 +107,7 @@ namespace ZohoVault
             return new AuthInfo(
                 details.IntAt("ITERATION"),
                 details.StringAt("SALT").ToBytes(),
-                details.StringAt("PASSPHRASE").ToBytes() // TODO: Decode base64 here
+                details.StringAt("PASSPHRASE").Decode64()
             );
         }
     }
