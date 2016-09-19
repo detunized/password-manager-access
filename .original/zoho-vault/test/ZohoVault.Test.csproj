@@ -51,6 +51,7 @@
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="Pbkdf2Test.cs" />
     <Compile Include="RemoteTest.cs" />
+    <Compile Include="TestData.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures\auth-info-response.json">

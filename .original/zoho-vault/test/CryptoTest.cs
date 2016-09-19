@@ -10,9 +10,6 @@ namespace ZohoVault.Test
     [TestFixture]
     class CryptoTest
     {
-        // Calculated with the original Js code
-        public readonly byte[] Key = "d7643007973dba7243d724f66fd806bf".ToBytes();
-
         // From http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
         public readonly byte[] NistKey = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4".DecodeHex();
         public readonly byte[] NistCtr = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff".DecodeHex();
@@ -32,7 +29,7 @@ namespace ZohoVault.Test
                 "passphrase123",
                 "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
                 1000);
-            Assert.That(key, Is.EqualTo(Key));
+            Assert.That(key, Is.EqualTo(TestData.Key));
         }
 
         [Test]
@@ -41,7 +38,7 @@ namespace ZohoVault.Test
             // Calculated with the original Js code
             var plaintext = Crypto.Decrypt(
                 "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(),
-                Key).ToUtf8();
+                TestData.Key).ToUtf8();
             Assert.That(plaintext, Is.EqualTo("{\"date\":\"2016-08-30T15:05:42.874Z\"}"));
         }
 
@@ -51,7 +48,7 @@ namespace ZohoVault.Test
         {
             // Calculated with the original Js code
             var ctrKey = "1fad494b86d62e89f945e8cfb9925e341fad494b86d62e89f945e8cfb9925e34".DecodeHex();
-            Assert.That(Crypto.ComputeAesCtrKey(Key), Is.EqualTo(ctrKey));
+            Assert.That(Crypto.ComputeAesCtrKey(TestData.Key), Is.EqualTo(ctrKey));
         }
 
         //
