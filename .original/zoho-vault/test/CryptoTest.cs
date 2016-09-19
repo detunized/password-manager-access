@@ -26,7 +26,7 @@ namespace ZohoVault.Test
         public void ComputeKey_returns_key()
         {
             var key = Crypto.ComputeKey(
-                "passphrase123",
+                TestData.Passphrase,
                 "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
                 1000);
             Assert.That(key, Is.EqualTo(TestData.Key));
