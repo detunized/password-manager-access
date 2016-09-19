@@ -76,6 +76,15 @@ namespace ZohoVault.Test
                 Is.EqualTo(TestData.Key));
         }
 
+        [Test]
+        public void DownloadVault_returns_vault_json()
+        {
+            var webClient = SetupWebClientForGetWithFixture("vault-response");
+            Assert.That(
+                Remote.DownloadVault(Token, TestData.Key, webClient.Object),
+                Is.StringStarting("{"));
+        }
+
         // TODO: Add more GetAuthInfo tests
 
         [Test]

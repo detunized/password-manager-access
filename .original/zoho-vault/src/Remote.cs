@@ -13,6 +13,8 @@ namespace ZohoVault
     {
         private const string LoginUrl =
             "https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false";
+        private const string VaultUrl =
+            "https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
 
         public static string Login(string username, string password)
         {
@@ -92,6 +94,22 @@ namespace ZohoVault
                 throw new InvalidOperationException("Passphrase is incorrect");
 
             return key;
+        }
+
+        public static string DownloadVault(string token, byte[] key, IWebClient webClient)
+        {
+            // TODO: DRY this up
+            // Set headers
+            webClient.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
+            webClient.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
+            webClient.Headers["requestFrom"] = "vaultmobilenative";
+
+            // GET
+            var response = webClient.DownloadData(VaultUrl);
+
+            // TODO: Handle errors
+
+            return response.ToUtf8();
         }
 
         internal struct AuthInfo
