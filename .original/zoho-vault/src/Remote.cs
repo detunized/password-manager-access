@@ -83,15 +83,15 @@ namespace ZohoVault
             public byte[] EncryptedPassphrase;
         }
 
-        internal static AuthInfo GetAuthInfo(string token, IWebClient client)
+        internal static AuthInfo GetAuthInfo(string token, IWebClient webClient)
         {
             // Set headers
-            client.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
-            client.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
-            client.Headers["requestFrom"] = "vaultmobilenative";
+            webClient.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
+            webClient.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
+            webClient.Headers["requestFrom"] = "vaultmobilenative";
 
             // GET
-            var response = client.DownloadData("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN");
+            var response = webClient.DownloadData("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN");
 
             // Parse the response
             var parsed = JObject.Parse(response.ToUtf8());
