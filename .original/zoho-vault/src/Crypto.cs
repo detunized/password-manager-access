@@ -12,13 +12,13 @@ namespace ZohoVault
         // For AES block size is always 16 bytes
         public const int BlockSize = 16;
 
-        public static byte[] ComputeKey(Remote.AuthInfo authInfo, string passphrase)
+        public static byte[] ComputeKey(string passphrase, byte[] salt, int iterationCount)
         {
             // Regular PBKDF2 with HMAC-SHA256
             var key = Pbkdf2.Generate(
                 passphrase.ToBytes(),
-                authInfo.Salt,
-                authInfo.IterationCount,
+                salt,
+                iterationCount,
                 32);
 
             // They actual key is the hex bytes, not the key itself
