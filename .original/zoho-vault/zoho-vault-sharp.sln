@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZohoVault", "src\ZohoVault.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZohoVault.Test", "test\ZohoVault.Test.csproj", "{8CE92765-EE78-434D-8413-D11934E20396}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example", "example\Example.csproj", "{A64CEEF4-CE1B-492E-96EC-71E0A115FF88}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{8CE92765-EE78-434D-8413-D11934E20396}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8CE92765-EE78-434D-8413-D11934E20396}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8CE92765-EE78-434D-8413-D11934E20396}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A64CEEF4-CE1B-492E-96EC-71E0A115FF88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A64CEEF4-CE1B-492E-96EC-71E0A115FF88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A64CEEF4-CE1B-492E-96EC-71E0A115FF88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A64CEEF4-CE1B-492E-96EC-71E0A115FF88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
