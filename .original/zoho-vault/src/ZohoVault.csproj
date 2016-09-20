@@ -44,6 +44,7 @@
     <Compile Include="IWebClient.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Remote.cs" />
+    <Compile Include="Vault.cs" />
     <Compile Include="WebClient.cs" />
   </ItemGroup>
   <ItemGroup>
