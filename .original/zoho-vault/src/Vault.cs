@@ -43,12 +43,7 @@ namespace ZohoVault
                     note);
             });
 
-            return new Vault(accounts.ToArray());
-        }
-
-        internal Vault(Account[] accounts)
-        {
-            Accounts = accounts;
+            return new Vault() { Accounts = accounts.ToArray() };
         }
 
         public Account[] Accounts { get; private set; }
