@@ -109,7 +109,9 @@ namespace ZohoVault
             // GET
             var response = webClient.DownloadData(VaultUrl);
 
-            // TODO: Handle errors
+            // TODO: Handle network errors
+            // TODO: Parse JSON here and check that the results are successful and valid
+            // TODO: Rather return JObject/JToken, the users can serialize it if they need to
 
             return response.ToUtf8();
         }
