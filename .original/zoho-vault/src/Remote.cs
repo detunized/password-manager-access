@@ -13,6 +13,8 @@ namespace ZohoVault
     {
         private const string LoginUrl =
             "https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false";
+        private const string AuthUrl =
+            "https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN";
         private const string VaultUrl =
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
 
@@ -86,7 +88,7 @@ namespace ZohoVault
             // decrypted and parsed to check if the passphrase is correct. We have
             // to rely here on the encrypted JSON simply not parsing correctly and
             // producing some sort of error.
-            var decrypted = Crypto.Decrypt(info.EncryptedPassphrase, key).ToUtf8();
+            var decrypted = Crypto.Decrypt(info.EncryptionCheck, key).ToUtf8();
 
             // TODO: Catch any JSON related errors and rethrow
             var parsed = JToken.Parse(decrypted);
@@ -114,16 +116,16 @@ namespace ZohoVault
 
         internal struct AuthInfo
         {
-            public AuthInfo(int iterationCount, byte[] salt, byte[] encryptedPassphrase)
+            public AuthInfo(int iterationCount, byte[] salt, byte[] encryptionCheck)
             {
                 IterationCount = iterationCount;
                 Salt = salt;
-                EncryptedPassphrase = encryptedPassphrase;
+                EncryptionCheck = encryptionCheck;
             }
 
             public int IterationCount;
             public byte[] Salt;
-            public byte[] EncryptedPassphrase;
+            public byte[] EncryptionCheck;
         }
 
         internal static AuthInfo GetAuthInfo(string token, IWebClient webClient)
@@ -134,7 +136,7 @@ namespace ZohoVault
             webClient.Headers["requestFrom"] = "vaultmobilenative";
 
             // GET
-            var response = webClient.DownloadData("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN");
+            var response = webClient.DownloadData(AuthUrl);
 
             // Parse the response
             var parsed = JObject.Parse(response.ToUtf8());
