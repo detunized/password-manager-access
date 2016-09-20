@@ -20,21 +20,37 @@ namespace ZohoVault
             var key = Remote.Authenticate(token, passphrase, webClient);
             var vaultJson = Remote.DownloadVault(token, key, webClient);
 
-            return Open(vaultJson, passphrase);
+            return Open(vaultJson, key);
         }
 
-        public static Vault Open(string json, string passphrase)
+        public static Vault Open(string json, byte[] key)
         {
-            var j = JObject.Parse(json);
-            var accounts = j["operation"]["details"]["SECRETS"].Select(i => (string)i["SECRETNAME"]).ToArray();
-            return new Vault(accounts);
+            // TODO: Catch JSON errors
+            var parsed = JObject.Parse(json);
+            var accounts = parsed["operation"]["details"]["SECRETS"].Select(entry =>
+            {
+                var secret = JObject.Parse(entry.StringAt("SECRETDATA"));
+                var username = Crypto.Decrypt(secret.StringAt("username").Decode64(), key).ToUtf8();
+                var password = Crypto.Decrypt(secret.StringAt("password").Decode64(), key).ToUtf8();
+                var note = Crypto.Decrypt(entry.StringAt("SECURENOTE").Decode64(), key).ToUtf8();
+
+                return new Account(
+                    entry.StringAt("SECRETID"),
+                    entry.StringAt("SECRETNAME"),
+                    username,
+                    password,
+                    entry.StringAt("SECRETURL"),
+                    note);
+            });
+
+            return new Vault(accounts.ToArray());
         }
 
-        internal Vault(string[] accounts)
+        internal Vault(Account[] accounts)
         {
             Accounts = accounts;
         }
 
-        public string[] Accounts { get; private set; }
+        public Account[] Accounts { get; private set; }
     }
 }
