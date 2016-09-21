@@ -2,17 +2,27 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.IO;
 using ZohoVault;
 
 namespace Example
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            // TODO: Read credentials from a file
-            var vault = Vault.Open("username", "password", "passphrase");
+            // Read ZohoVault credentials from a file
+            // The file should contain 3 lines: username, password and passphrase
+            // See credentials.txt.example for an example.
+            var credentials = File.ReadAllLines("../../credentials.txt");
+            var username = credentials[0];
+            var password = credentials[1];
+            var passphrase = credentials[2];
 
+            // Log in, fetch data, parse it, log out.
+            var vault = Vault.Open(username, password, passphrase);
+
+            // Print all the accounts
             for (var i = 0; i < vault.Accounts.Length; i += 1)
             {
                 var account = vault.Accounts[i];
