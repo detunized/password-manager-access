@@ -33,17 +33,24 @@ namespace ZohoVault
             webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("iamcsr={0}", iamcsrcoo));
 
             // POST
-            var response = webClient.UploadValues(LoginUrl, new NameValueCollection
+            byte[] response;
+            try
             {
-                {"LOGIN_ID", username},
-                {"PASSWORD", password},
-                {"IS_AJAX", "true"},
-                {"remember", "-1"},
-                {"hide_reg_link", "false"},
-                {"iamcsrcoo", iamcsrcoo}
-            });
-
-            // TODO: Handle errors
+                response = webClient.UploadValues(LoginUrl, new NameValueCollection
+                {
+                    {"LOGIN_ID", username},
+                    {"PASSWORD", password},
+                    {"IS_AJAX", "true"},
+                    {"remember", "-1"},
+                    {"hide_reg_link", "false"},
+                    {"iamcsrcoo", iamcsrcoo}
+                });
+            }
+            catch (WebException e)
+            {
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Network error occurred", e);
+            }
 
             // The returned text is JavaScript which is supposed to call some functions on the
             // original page. "showsuccess" is called when everything went well.

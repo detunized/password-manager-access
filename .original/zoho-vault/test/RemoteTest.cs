@@ -60,6 +60,17 @@ namespace ZohoVault.Test
         }
 
         [Test]
+        public void Login_throws_on_network_error()
+        {
+            var webClient = SetupWebClient(new WebException());
+            Assert.That(
+                () => Remote.Login(Username, Password, webClient.Object),
+                Throws
+                    .TypeOf<InvalidOperationException>()
+                    .And.InnerException.TypeOf<WebException>());
+        }
+
+        [Test]
         public void Login_throws_on_error()
         {
             Assert.That(
@@ -115,6 +126,26 @@ namespace ZohoVault.Test
 
         private static Mock<IWebClient> SetupWebClient(string response)
         {
+            var webClient = SetupWebClientHeaders();
+            webClient
+                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Returns(response.ToBytes());
+
+            return webClient;
+        }
+
+        private static Mock<IWebClient> SetupWebClient(Exception e)
+        {
+            var webClient = SetupWebClientHeaders();
+            webClient
+                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
+                .Throws(e);
+
+            return webClient;
+        }
+
+        private static Mock<IWebClient> SetupWebClientHeaders()
+        {
             var responseHeaders = new WebHeaderCollection();
             responseHeaders[HttpResponseHeader.SetCookie] = string.Format("IAMAUTHTOKEN={0};", Token);
 
@@ -125,9 +156,6 @@ namespace ZohoVault.Test
             webClient
                 .Setup(x => x.ResponseHeaders)
                 .Returns(responseHeaders);
-            webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(response.ToBytes());
 
             return webClient;
         }
@@ -141,16 +169,6 @@ namespace ZohoVault.Test
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Returns(File.ReadAllBytes(string.Format("Fixtures/{0}.json", filename)));
-
-            return webClient;
-        }
-
-        private static Mock<IWebClient> SetupWebClient(Exception e)
-        {
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Throws(e);
 
             return webClient;
         }
