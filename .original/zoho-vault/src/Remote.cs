@@ -118,14 +118,13 @@ namespace ZohoVault
             return key;
         }
 
-        public static string DownloadVault(string token, byte[] key, IWebClient webClient)
+        public static JObject DownloadVault(string token, byte[] key, IWebClient webClient)
         {
             var response = MakeAuthenticatedGetRequest(VaultUrl, token, webClient);
 
-            // TODO: Parse JSON here and check that the results are successful and valid
-            // TODO: Rather return JObject/JToken, the users can serialize it if they need to
-
-            return response.ToUtf8();
+            // TODO: Handle JSON errors
+            // TODO: Handle "operation/result/status"
+            return JObject.Parse(response.ToUtf8());
         }
 
         internal struct AuthInfo

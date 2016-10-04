@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.IO;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace ZohoVault.Test
@@ -12,7 +13,8 @@ namespace ZohoVault.Test
         public void Open_with_json_returns_vault()
         {
             var json = File.ReadAllBytes(string.Format("Fixtures/{0}.json", "vault-response")).ToUtf8();
-            var vault = Vault.Open(json, TestData.Key);
+            var parsed = JObject.Parse(json);
+            var vault = Vault.Open(parsed, TestData.Key);
             var accounts = vault.Accounts;
 
             Assert.That(accounts.Length, Is.EqualTo(2));

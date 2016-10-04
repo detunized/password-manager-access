@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Moq;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace ZohoVault.Test
@@ -102,7 +103,7 @@ namespace ZohoVault.Test
             var webClient = SetupWebClientForGetWithFixture("vault-response");
             Assert.That(
                 Remote.DownloadVault(Token, TestData.Key, webClient.Object),
-                Is.StringStarting("{"));
+                Is.Not.Null);
         }
 
         [Test]
