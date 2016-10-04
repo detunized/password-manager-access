@@ -153,13 +153,21 @@ namespace ZohoVault
 
         internal static byte[] MakeAuthenticatedGetRequest(string url, string token, IWebClient webClient)
         {
+            // Set headers
             webClient.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
             webClient.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
             webClient.Headers["requestFrom"] = "vaultmobilenative";
 
-            // GET
-            // TODO: Handle network errors
-            return webClient.DownloadData(url);
+            try
+            {
+                // GET
+                return webClient.DownloadData(url);
+            }
+            catch (WebException e)
+            {
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Network error occurred", e);
+            }
         }
     }
 }

@@ -96,6 +96,17 @@ namespace ZohoVault.Test
                 Is.StringStarting("{"));
         }
 
+        [Test]
+        public void DownloadVault_throws_on_network_error()
+        {
+            var webClient = SetupWebClientForGet(new WebException());
+            Assert.That(
+                () => Remote.DownloadVault(Token, TestData.Key, webClient.Object),
+                Throws
+                    .TypeOf<InvalidOperationException>()
+                    .And.InnerException.TypeOf<WebException>());
+        }
+
         // TODO: Add more GetAuthInfo tests
 
         [Test]
@@ -169,6 +180,19 @@ namespace ZohoVault.Test
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
                 .Returns(File.ReadAllBytes(string.Format("Fixtures/{0}.json", filename)));
+
+            return webClient;
+        }
+
+        private static Mock<IWebClient> SetupWebClientForGet(Exception e)
+        {
+            var webClient = new Mock<IWebClient>();
+            webClient
+                .Setup(x => x.Headers)
+                .Returns(new WebHeaderCollection());
+            webClient
+                .Setup(x => x.DownloadData(It.IsAny<string>()))
+                .Throws(e);
 
             return webClient;
         }
