@@ -88,6 +88,15 @@ namespace ZohoVault.Test
         }
 
         [Test]
+        public void Authenticate_throws_on_incorrect_passphrase()
+        {
+            var webClient = SetupWebClientForGetWithFixture("auth-info-response");
+            Assert.That(
+                () => Remote.Authenticate(Token, "Not really a passphrase", webClient.Object),
+                Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
         public void DownloadVault_returns_vault_json()
         {
             var webClient = SetupWebClientForGetWithFixture("vault-response");

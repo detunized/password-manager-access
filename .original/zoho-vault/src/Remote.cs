@@ -5,6 +5,7 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace ZohoVault
@@ -97,9 +98,21 @@ namespace ZohoVault
             // producing some sort of error.
             var decrypted = Crypto.Decrypt(info.EncryptionCheck, key).ToUtf8();
 
-            // TODO: Catch any JSON related errors and rethrow
-            var parsed = JToken.Parse(decrypted);
+            // TODO: See if ToUtf8 could throw something
+
+            JToken parsed;
+            try
+            {
+                parsed = JToken.Parse(decrypted);
+            }
+            catch (JsonException)
+            {
+                parsed = null;
+            }
+
+            // This would be null in case of JSON exception or if Parse returned null (would it?)
             if (parsed == null)
+                // TODO: Use custom exception
                 throw new InvalidOperationException("Passphrase is incorrect");
 
             return key;
