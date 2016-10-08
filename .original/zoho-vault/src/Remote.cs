@@ -49,8 +49,7 @@ namespace ZohoVault
             }
             catch (WebException e)
             {
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Network error occurred", e);
+                throw new FetchException(FetchException.FailureReason.NetworkError, "Network error occurred", e);
             }
 
             // The returned text is JavaScript which is supposed to call some functions on the
@@ -174,8 +173,7 @@ namespace ZohoVault
             }
             catch (WebException e)
             {
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Network error occurred", e);
+                throw new FetchException(FetchException.FailureReason.NetworkError, "Network error occurred", e);
             }
             catch (JsonException e)
             {

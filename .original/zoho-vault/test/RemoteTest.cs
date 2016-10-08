@@ -67,7 +67,9 @@ namespace ZohoVault.Test
             Assert.That(
                 () => Remote.Login(Username, Password, webClient.Object),
                 Throws
-                    .TypeOf<InvalidOperationException>()
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.NetworkError)
+                    .And.Message.EqualTo("Network error occurred")
                     .And.InnerException.TypeOf<WebException>());
         }
 
@@ -113,7 +115,9 @@ namespace ZohoVault.Test
             Assert.That(
                 () => Remote.DownloadVault(Token, TestData.Key, webClient.Object),
                 Throws
-                    .TypeOf<InvalidOperationException>()
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.NetworkError)
+                    .And.Message.EqualTo("Network error occurred")
                     .And.InnerException.TypeOf<WebException>());
         }
 
