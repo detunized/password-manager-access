@@ -118,13 +118,9 @@ namespace ZohoVault
             return key;
         }
 
-        public static JObject DownloadVault(string token, byte[] key, IWebClient webClient)
+        public static JToken DownloadVault(string token, byte[] key, IWebClient webClient)
         {
-            var response = MakeAuthenticatedGetRequest(VaultUrl, token, webClient);
-
-            // TODO: Handle JSON errors
-            // TODO: Handle "operation/result/status"
-            return JObject.Parse(response.ToUtf8());
+            return GetJsonObject(VaultUrl, token, webClient);
         }
 
         internal struct AuthInfo
@@ -143,43 +139,56 @@ namespace ZohoVault
 
         internal static AuthInfo GetAuthInfo(string token, IWebClient webClient)
         {
-            var response = MakeAuthenticatedGetRequest(AuthUrl, token, webClient);
+            var response = GetJsonObject(AuthUrl, token, webClient);
 
-            // Parse the response
-            var parsed = JObject.Parse(response.ToUtf8());
-            if (parsed.StringAt("operation/result/status") != "success")
-                throw new InvalidOperationException("Invalid response");
-
-            // Validate the response
-            var details = parsed.At("operation/details");
-            if (details.StringAt("LOGIN") != "PBKDF2_AES")
+            // TODO: This could throw
+            if (response.StringAt("LOGIN") != "PBKDF2_AES")
                 throw new InvalidOperationException("Only PBKDF2/AES is supported");
 
             // Extract and convert important information
             return new AuthInfo(
-                details.IntAt("ITERATION"),
-                details.StringAt("SALT").ToBytes(),
-                details.StringAt("PASSPHRASE").Decode64()
-            );
+                response.IntAt("ITERATION"),
+                response.StringAt("SALT").ToBytes(),
+                response.StringAt("PASSPHRASE").Decode64());
         }
 
-        internal static byte[] MakeAuthenticatedGetRequest(string url, string token, IWebClient webClient)
+        internal static JToken GetJsonObject(string url, string token, IWebClient webClient)
         {
             // Set headers
             webClient.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
             webClient.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
             webClient.Headers["requestFrom"] = "vaultmobilenative";
 
+            JObject parsed;
             try
             {
                 // GET
-                return webClient.DownloadData(url);
+                var response = webClient.DownloadData(url);
+
+                // Parse
+                parsed = JObject.Parse(response.ToUtf8());
             }
             catch (WebException e)
             {
                 // TODO: Use custom exception
                 throw new InvalidOperationException("Network error occurred", e);
             }
+            catch (JsonException e)
+            {
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Invalid JSON in response", e);
+            }
+
+            // TODO: This could throw
+            if (parsed.StringAt("operation/result/status") != "success")
+                throw new InvalidOperationException("Invalid response");
+
+            // TODO: This could throw
+            var details = parsed.At("operation/details");
+            if (details.Type != JTokenType.Object)
+                throw new InvalidOperationException("Invalid response");
+
+            return details;
         }
     }
 }

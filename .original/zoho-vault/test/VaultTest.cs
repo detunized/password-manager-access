@@ -14,7 +14,7 @@ namespace ZohoVault.Test
         {
             var json = File.ReadAllBytes(string.Format("Fixtures/{0}.json", "vault-response")).ToUtf8();
             var parsed = JObject.Parse(json);
-            var vault = Vault.Open(parsed, TestData.Key);
+            var vault = Vault.Open(parsed.At("operation/details"), TestData.Key);
             var accounts = vault.Accounts;
 
             Assert.That(accounts.Length, Is.EqualTo(2));

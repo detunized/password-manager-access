@@ -23,10 +23,10 @@ namespace ZohoVault
             return Open(vaultJson, key);
         }
 
-        public static Vault Open(JObject json, byte[] key)
+        public static Vault Open(JToken json, byte[] key)
         {
             // TODO: Catch JSON access errors
-            var accounts = json["operation"]["details"]["SECRETS"].Select(entry =>
+            var accounts = json["SECRETS"].Select(entry =>
             {
                 var secret = JObject.Parse(entry.StringAt("SECRETDATA"));
                 var username = Crypto.Decrypt(secret.StringAt("username").Decode64(), key).ToUtf8();
