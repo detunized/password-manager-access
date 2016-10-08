@@ -86,14 +86,29 @@ namespace ZohoVault
             return At(j.Root, path);
         }
 
+        public static JToken AtOrNull(this JObject j, string path)
+        {
+            return AtOrNull(j.Root, path);
+        }
+
         public static string StringAt(this JObject j, string path)
         {
             return StringAt(j.Root, path);
         }
 
+        public static string StringAtOrNull(this JObject j, string path)
+        {
+            return StringAtOrNull(j.Root, path);
+        }
+
         public static int IntAt(this JObject j, string path)
         {
             return IntAt(j.Root, path);
+        }
+
+        public static int? IntAtOrNull(this JObject j, string path)
+        {
+            return IntAtOrNull(j.Root, path);
         }
 
         //
@@ -111,7 +126,22 @@ namespace ZohoVault
                 c = c[i];
                 if (c == null)
                     throw new ArgumentException("Path doesn't exist", path);
+            }
 
+            return c;
+        }
+
+        public static JToken AtOrNull(this JToken j, string path)
+        {
+            var c = j;
+            foreach (var i in path.Split('/'))
+            {
+                if (c.Type != JTokenType.Object)
+                    return null;
+
+                c = c[i];
+                if (c == null)
+                    return null;
             }
 
             return c;
@@ -126,11 +156,29 @@ namespace ZohoVault
             return (string)s;
         }
 
+        public static string StringAtOrNull(this JToken j, string path)
+        {
+            var s = j.AtOrNull(path);
+            if (s == null || s.Type != JTokenType.String)
+                return null;
+
+            return (string)s;
+        }
+
         public static int IntAt(this JToken j, string path)
         {
             var s = j.At(path);
             if (s.Type != JTokenType.Integer)
                 throw new ArgumentException("The value is not an integer");
+
+            return (int)s;
+        }
+
+        public static int? IntAtOrNull(this JToken j, string path)
+        {
+            var s = j.AtOrNull(path);
+            if (s == null || s.Type != JTokenType.Integer)
+                return null;
 
             return (int)s;
         }

@@ -141,15 +141,19 @@ namespace ZohoVault
         {
             var response = GetJsonObject(AuthUrl, token, webClient);
 
-            // TODO: This could throw
-            if (response.StringAt("LOGIN") != "PBKDF2_AES")
+            if (response.StringAtOrNull("LOGIN") != "PBKDF2_AES")
                 throw new InvalidOperationException("Only PBKDF2/AES is supported");
 
             // Extract and convert important information
-            return new AuthInfo(
-                response.IntAt("ITERATION"),
-                response.StringAt("SALT").ToBytes(),
-                response.StringAt("PASSPHRASE").Decode64());
+            var iterations = response.IntAtOrNull("ITERATION");
+            var salt = response.StringAtOrNull("SALT");
+            var passphrase = response.StringAtOrNull("PASSPHRASE");
+
+            if (iterations == null || salt == null || passphrase == null)
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Invalid response");
+
+            return new AuthInfo(iterations.Value, salt.ToBytes(), passphrase.Decode64());
         }
 
         internal static JToken GetJsonObject(string url, string token, IWebClient webClient)
@@ -179,13 +183,11 @@ namespace ZohoVault
                 throw new InvalidOperationException("Invalid JSON in response", e);
             }
 
-            // TODO: This could throw
-            if (parsed.StringAt("operation/result/status") != "success")
+            if (parsed.StringAtOrNull("operation/result/status") != "success")
                 throw new InvalidOperationException("Invalid response");
 
-            // TODO: This could throw
-            var details = parsed.At("operation/details");
-            if (details.Type != JTokenType.Object)
+            var details = parsed.AtOrNull("operation/details");
+            if (details == null || details.Type != JTokenType.Object)
                 throw new InvalidOperationException("Invalid response");
 
             return details;
