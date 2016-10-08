@@ -78,7 +78,10 @@ namespace ZohoVault.Test
         {
             Assert.That(
                 () => Remote.Login(Username, Password, SetupWebClient("showerror('It failed')").Object),
-                Throws.TypeOf<InvalidOperationException>());
+                Throws
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidCredentials)
+                    .And.Message.EqualTo("Login failed, most likely the credentials are invalid"));
         }
 
         [Test]
@@ -96,7 +99,10 @@ namespace ZohoVault.Test
             var webClient = SetupWebClientForGetWithFixture("auth-info-response");
             Assert.That(
                 () => Remote.Authenticate(Token, "Not really a passphrase", webClient.Object),
-                Throws.TypeOf<InvalidOperationException>());
+                Throws
+                    .TypeOf<FetchException>()
+                    .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidPassphrase)
+                    .And.Message.EqualTo("Passphrase is incorrect"));
         }
 
         [Test]

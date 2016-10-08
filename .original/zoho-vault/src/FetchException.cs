@@ -12,6 +12,7 @@ namespace ZohoVault
             NetworkError,
             InvalidResponse,
             InvalidCredentials,
+            InvalidPassphrase,
             UnknownError,
         }
 

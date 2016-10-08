@@ -49,22 +49,20 @@ namespace ZohoVault
             }
             catch (WebException e)
             {
-                throw new FetchException(FetchException.FailureReason.NetworkError, "Network error occurred", e);
+                throw MakeNetworkError(e);
             }
 
             // The returned text is JavaScript which is supposed to call some functions on the
             // original page. "showsuccess" is called when everything went well.
             var responseText = response.ToUtf8();
             if (!responseText.StartsWith("showsuccess"))
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Login failed, credentials are invalid");
+                throw new FetchException(FetchException.FailureReason.InvalidCredentials, "Login failed, most likely the credentials are invalid");
 
             // Extract the token from the response headers
             var cookies = webClient.ResponseHeaders[HttpResponseHeader.SetCookie];
             var match = Regex.Match(cookies, "\\bIAMAUTHTOKEN=(\\w+);");
             if (!match.Success)
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Unsupported cookie format");
+                throw MakeInvalidResponse("Unsupported cookie format");
 
             return match.Groups[1].Value;
         }
@@ -99,20 +97,18 @@ namespace ZohoVault
 
             // TODO: See if ToUtf8 could throw something
 
-            JToken parsed;
+            JToken parsed = null;
             try
             {
                 parsed = JToken.Parse(decrypted);
             }
             catch (JsonException)
             {
-                parsed = null;
             }
 
             // This would be null in case of JSON exception or if Parse returned null (would it?)
             if (parsed == null)
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Passphrase is incorrect");
+                throw new FetchException(FetchException.FailureReason.InvalidPassphrase, "Passphrase is incorrect");
 
             return key;
         }
@@ -141,7 +137,7 @@ namespace ZohoVault
             var response = GetJsonObject(AuthUrl, token, webClient);
 
             if (response.StringAtOrNull("LOGIN") != "PBKDF2_AES")
-                throw new InvalidOperationException("Only PBKDF2/AES is supported");
+                throw MakeInvalidResponse("Only PBKDF2/AES is supported");
 
             // Extract and convert important information
             var iterations = response.IntAtOrNull("ITERATION");
@@ -149,8 +145,7 @@ namespace ZohoVault
             var passphrase = response.StringAtOrNull("PASSPHRASE");
 
             if (iterations == null || salt == null || passphrase == null)
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Invalid response");
+                throw MakeInvalidResponseFormat();
 
             return new AuthInfo(iterations.Value, salt.ToBytes(), passphrase.Decode64());
         }
@@ -173,22 +168,36 @@ namespace ZohoVault
             }
             catch (WebException e)
             {
-                throw new FetchException(FetchException.FailureReason.NetworkError, "Network error occurred", e);
+                throw MakeNetworkError(e);
             }
             catch (JsonException e)
             {
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Invalid JSON in response", e);
+                throw MakeInvalidResponse("Invalid JSON in response", e);
             }
 
             if (parsed.StringAtOrNull("operation/result/status") != "success")
-                throw new InvalidOperationException("Invalid response");
+                throw MakeInvalidResponseFormat();
 
             var details = parsed.AtOrNull("operation/details");
             if (details == null || details.Type != JTokenType.Object)
-                throw new InvalidOperationException("Invalid response");
+                throw MakeInvalidResponseFormat();
 
             return details;
+        }
+
+        private static FetchException MakeNetworkError(WebException innerException)
+        {
+            return new FetchException(FetchException.FailureReason.NetworkError, "Network error occurred", innerException);
+        }
+
+        private static FetchException MakeInvalidResponseFormat()
+        {
+            return MakeInvalidResponse("Invalid response format");
+        }
+
+        private static FetchException MakeInvalidResponse(string message, Exception innerException = null)
+        {
+            return new FetchException(FetchException.FailureReason.InvalidResponse, message, innerException);
         }
     }
 }
