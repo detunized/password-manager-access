@@ -6,7 +6,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Moq;
-using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace ZohoVault.Test
