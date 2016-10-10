@@ -45,6 +45,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="FetchException.cs" />
     <Compile Include="IWebClient.cs" />
+    <Compile Include="ParseException.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Remote.cs" />
     <Compile Include="Vault.cs" />
