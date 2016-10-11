@@ -31,20 +31,9 @@ namespace ZohoVault
             // TODO: This should probably be random
             const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
 
-            // TODO: This should be new every time or should be requested from the server
-            //       otherwise it seems that the server assigns it under SESSIONID=""
-            //       and at some point it runs out of tokens for this session.
-            // TODO: Figure out a way to test it with a random session id
-            const string sessionId = "27AAFCA1DC962FEA2FC1E53D5749CF1B";
-
-            // TODO: It looks like this doesn't help very much. We should request a page from
-            // https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false
-            // (see android2.flow in zoho repo). Extract iamcsr, JSESSIONID and maybe other cookies
-            // to request the login.
-
             // Set a cookie with some random gibberish
             webClient.Headers.Add(HttpRequestHeader.Cookie,
-                string.Format("iamcsr={0};JSESSIONID={1}", iamcsrcoo, sessionId));
+                string.Format("iamcsr={0}", iamcsrcoo));
 
             // POST
             byte[] response;
