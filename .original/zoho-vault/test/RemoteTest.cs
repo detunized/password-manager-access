@@ -17,6 +17,8 @@ namespace ZohoVault.Test
         public const string Password = "logjammin";
         public const string Token = "1auth2token3";
         public const string LoginUrlPrefix = "https://accounts.zoho.com/login?";
+        public const string LogoutUrlPrefix = "https://accounts.zoho.com/apiauthtoken/delete?";
+        public const string LogoutResponse = "RESULT=TRUE";
 
         [Test]
         public void Login_returns_token()
@@ -81,6 +83,29 @@ namespace ZohoVault.Test
                     .TypeOf<FetchException>()
                     .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidCredentials)
                     .And.Message.EqualTo("Login failed, most likely the credentials are invalid"));
+        }
+
+        [Test]
+        public void Logout_makes_get_request_to_specific_url()
+        {
+            var webClient = SetupWebClientForGet(LogoutResponse);
+            Remote.Logout(Token, webClient.Object);
+
+            webClient.Verify(
+                x => x.DownloadData(It.Is<string>(s => s.StartsWith(LogoutUrlPrefix))),
+                Times.Once);
+        }
+
+        [Test]
+        public void Logout_makes_get_request_with_token()
+        {
+            var webClient = SetupWebClientForGet(LogoutResponse);
+            Remote.Logout(Token, webClient.Object);
+
+            var authToken = string.Format("AUTHTOKEN={0}", Token);
+            webClient.Verify(
+                x => x.DownloadData(It.Is<string>(s => s.EndsWith(authToken))),
+                Times.Once);
         }
 
         [Test]
@@ -192,13 +217,18 @@ namespace ZohoVault.Test
 
         private static Mock<IWebClient> SetupWebClientForGetWithFixture(string filename)
         {
+            return SetupWebClientForGet(File.ReadAllText(string.Format("Fixtures/{0}.json", filename)));
+        }
+
+        private static Mock<IWebClient> SetupWebClientForGet(string response)
+        {
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.Headers)
                 .Returns(new WebHeaderCollection());
             webClient
                 .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Returns(File.ReadAllBytes(string.Format("Fixtures/{0}.json", filename)));
+                .Returns(response.ToBytes());
 
             return webClient;
         }

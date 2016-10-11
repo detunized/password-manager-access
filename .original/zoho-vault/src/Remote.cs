@@ -14,6 +14,7 @@ namespace ZohoVault
     {
         private const string LoginUrl =
             "https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false";
+        private const string LogoutUrl = "https://accounts.zoho.com/apiauthtoken/delete";
         private const string AuthUrl =
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN";
         private const string VaultUrl =
@@ -87,7 +88,8 @@ namespace ZohoVault
 
         public static void Logout(string token, IWebClient webClient)
         {
-            throw new NotImplementedException();
+            var url = string.Format("{0}?AUTHTOKEN={1}", LogoutUrl, token);
+            Get(url, token, webClient);
         }
 
         // TODO: Rather return a session object or something like that
@@ -162,25 +164,30 @@ namespace ZohoVault
             return new AuthInfo(iterations.Value, salt.ToBytes(), passphrase.Decode64());
         }
 
-        internal static JToken GetJsonObject(string url, string token, IWebClient webClient)
+        internal static string Get(string url, string token, IWebClient webClient)
         {
             // Set headers
             webClient.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
             webClient.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
             webClient.Headers["requestFrom"] = "vaultmobilenative";
 
-            JObject parsed;
             try
             {
                 // GET
-                var response = webClient.DownloadData(url);
-
-                // Parse
-                parsed = JObject.Parse(response.ToUtf8());
+                return webClient.DownloadData(url).ToUtf8();
             }
             catch (WebException e)
             {
                 throw MakeNetworkError(e);
+            }
+        }
+
+        internal static JToken GetJsonObject(string url, string token, IWebClient webClient)
+        {
+            JObject parsed;
+            try
+            {
+                parsed = JObject.Parse(Get(url, token, webClient));
             }
             catch (JsonException e)
             {
