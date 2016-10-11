@@ -32,8 +32,7 @@ namespace ZohoVault
             const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
 
             // Set a cookie with some random gibberish
-            webClient.Headers.Add(HttpRequestHeader.Cookie,
-                string.Format("iamcsr={0}", iamcsrcoo));
+            webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("iamcsr={0}", iamcsrcoo));
 
             // POST
             byte[] response;

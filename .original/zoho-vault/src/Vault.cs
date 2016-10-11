@@ -18,12 +18,17 @@ namespace ZohoVault
         public static Vault Open(string username, string password, string passphrase, IWebClient webClient)
         {
             var token = Remote.Login(username, password, webClient);
-            var key = Remote.Authenticate(token, passphrase, webClient);
-            var vaultJson = Remote.DownloadVault(token, key, webClient);
+            try
+            {
+                var key = Remote.Authenticate(token, passphrase, webClient);
+                var vaultJson = Remote.DownloadVault(token, key, webClient);
 
-            // TODO: Logout here!
-
-            return Open(vaultJson, key);
+                return Open(vaultJson, key);
+            }
+            finally
+            {
+                Remote.Logout(token, webClient);
+            }
         }
 
         public static Vault Open(JToken json, byte[] key)
