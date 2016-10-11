@@ -21,6 +21,8 @@ namespace ZohoVault
             var key = Remote.Authenticate(token, passphrase, webClient);
             var vaultJson = Remote.DownloadVault(token, key, webClient);
 
+            // TODO: Logout here!
+
             return Open(vaultJson, key);
         }
 
