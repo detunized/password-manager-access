@@ -33,30 +33,33 @@ namespace ZohoVault
 
         public static Vault Open(JToken json, byte[] key)
         {
-            try
-            {
-                var accounts = json["SECRETS"].Select(entry =>
+            var accounts = json["SECRETS"]
+                .Select(entry =>
                 {
-                    var secret = JObject.Parse(entry.StringAt("SECRETDATA"));
-                    var username = Crypto.Decrypt(secret.StringAt("username").Decode64(), key).ToUtf8();
-                    var password = Crypto.Decrypt(secret.StringAt("password").Decode64(), key).ToUtf8();
-                    var note = Crypto.Decrypt(entry.StringAt("SECURENOTE").Decode64(), key).ToUtf8();
+                    try
+                    {
+                        var secret = JObject.Parse(entry.StringAt("SECRETDATA"));
+                        var username = Crypto.Decrypt(secret.StringAt("username").Decode64(), key).ToUtf8();
+                        var password = Crypto.Decrypt(secret.StringAt("password").Decode64(), key).ToUtf8();
+                        var note = Crypto.Decrypt(entry.StringAt("SECURENOTE").Decode64(), key).ToUtf8();
 
-                    return new Account(
-                        entry.StringAt("SECRETID"),
-                        entry.StringAt("SECRETNAME"),
-                        username,
-                        password,
-                        entry.StringAt("SECRETURL"),
-                        note);
-                });
+                        return new Account(
+                            entry.StringAt("SECRETID"),
+                            entry.StringAt("SECRETNAME"),
+                            username,
+                            password,
+                            entry.StringAt("SECRETURL"),
+                            note);
+                    }
+                    catch (ArgumentException)
+                    {
+                        // Some secret types don't look like accounts, so we simply ignore everything that doesn't parse
+                        return null;
+                    }
+                })
+                .Where(account => account != null);
 
-                return new Vault { Accounts = accounts.ToArray() };
-            }
-            catch (ArgumentException e)
-            {
-                throw new ParseException(ParseException.FailureReason.InvalidFormat, "Invalid vault format", e);
-            }
+            return new Vault {Accounts = accounts.ToArray()};
         }
 
         public Account[] Accounts { get; private set; }
