@@ -8,11 +8,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("StickyPassword")]
+[assembly: AssemblyTitle("StickyPassword.Test")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("detunized")]
-[assembly: AssemblyProduct("StickyPassword")]
+[assembly: AssemblyProduct("StickyPassword.Test")]
 [assembly: AssemblyCopyright("Copyright © detunized 2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -23,7 +23,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("f8df2b69-f953-4142-9503-684a6be229db")]
+[assembly: Guid("fff0a4f8-6f73-44af-929e-feb3c4e4de5a")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -37,5 +37,3 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
-
-[assembly: InternalsVisibleTo("StickyPassword.Test")]
