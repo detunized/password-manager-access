@@ -1,5 +1,7 @@
 /stickypassword-sharp.v12.suo
 /packages/
+/example/bin/
+/example/obj/
 /src/bin/
 /src/obj/
 /test/bin/
