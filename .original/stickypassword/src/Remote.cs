@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using RestSharp;
+using RestSharp.Deserializers;
 
 namespace StickyPassword
 {
@@ -16,6 +17,17 @@ namespace StickyPassword
             return GetEncryptedToken(username, deviceId, timestamp, new RestClient());
         }
 
+        public class GetCrpTokenResponse
+        {
+            public string CrpToken { get; set; }
+        }
+
+        public class SpcResponse
+        {
+            public int Status { get; set; }
+            public GetCrpTokenResponse GetCrpTokenResponse { get; set; }
+        }
+
         public static string GetEncryptedToken(string username, string deviceId, DateTime timestamp, IRestClient client)
         {
             ConfigureClient(client, deviceId);
@@ -24,8 +36,11 @@ namespace StickyPassword
                 {"uaid", username},
             });
 
-            // TODO: Parse the response
-            return response.Content;
+            var parsed = new XmlDeserializer().Deserialize<SpcResponse>(response);
+            if (parsed == null || parsed.GetCrpTokenResponse == null)
+                throw new InvalidOperationException();
+
+            return parsed.GetCrpTokenResponse.CrpToken;
         }
 
         private static void ConfigureClient(IRestClient client, string deviceId)

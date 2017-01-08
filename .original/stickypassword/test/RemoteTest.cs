@@ -15,11 +15,13 @@ namespace StickyPassword.Test
         public const string Password = "logjammin";
         public const string DeviceId = "ringer";
         public static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
+        public const string Token = "2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=";
+        public const string Response = @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?><SpcResponse xmlns=""http://www.stickypassword.com/cb/clientapi/schema/v2""><Status>13</Status><GetCrpTokenResponse><CrpToken>2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=</CrpToken></GetCrpTokenResponse></SpcResponse>";
 
         [Test]
         public void GetEncryptedToken_sets_api_base_url()
         {
-            var client = SetupClient("");
+            var client = SetupClient();
 
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
@@ -30,7 +32,7 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_sets_user_agent_with_device_id()
         {
-            var client = SetupClient("");
+            var client = SetupClient();
 
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
@@ -40,7 +42,7 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_makes_post_request_to_specific_end_point()
         {
-            var client = SetupClient("");
+            var client = SetupClient();
 
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
@@ -51,7 +53,7 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_date_header_is_set()
         {
-            var client = SetupClient("");
+            var client = SetupClient();
 
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
@@ -66,19 +68,18 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_returns_response()
         {
-            var resposne = "<xml></xml>";
-            var client = SetupClient(resposne);
+            var client = SetupClient();
 
             Assert.That(
                 Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object),
-                Is.EqualTo(resposne));
+                Is.EqualTo(Token));
         }
 
         //
         // Helpers
         //
 
-        private static Mock<IRestClient> SetupClient(string response)
+        private static Mock<IRestClient> SetupClient(string response = Response)
         {
             var mock = new Mock<IRestClient>();
             mock
