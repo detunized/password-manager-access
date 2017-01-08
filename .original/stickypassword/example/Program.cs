@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using StickyPassword;
 
@@ -14,7 +15,7 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
-            Remote.GetEncryptedToken(username, "stickypassword-sharp");
+            Remote.GetEncryptedToken(username, "stickypassword-sharp", DateTime.Now);
         }
     }
 }

@@ -11,17 +11,15 @@ namespace StickyPassword
     {
         private const string ApiUrl = "https://spcb.stickypassword.com/SPCClient/";
 
-        public static string GetEncryptedToken(string username, string deviceId)
+        public static string GetEncryptedToken(string username, string deviceId, DateTime timestamp)
         {
-            return GetEncryptedToken(username, deviceId, new RestClient());
+            return GetEncryptedToken(username, deviceId, timestamp, new RestClient());
         }
 
-        public static string GetEncryptedToken(string username, string deviceId, IRestClient client)
+        public static string GetEncryptedToken(string username, string deviceId, DateTime timestamp, IRestClient client)
         {
-            // TODO: Pass timestamp from the outside
-
             ConfigureClient(client, deviceId);
-            var response = Post(client, "GetCrpToken", DateTime.Now, new Dictionary<string, string>
+            var response = Post(client, "GetCrpToken", timestamp, new Dictionary<string, string>
             {
                 {"uaid", username},
             });

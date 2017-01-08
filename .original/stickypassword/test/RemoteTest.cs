@@ -14,13 +14,14 @@ namespace StickyPassword.Test
         public const string Username = "lebowski";
         public const string Password = "logjammin";
         public const string DeviceId = "ringer";
+        public static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
 
         [Test]
         public void GetEncryptedToken_sets_api_base_url()
         {
             var client = SetupClient("");
 
-            Remote.GetEncryptedToken(Username, DeviceId, client.Object);
+            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.VerifySet(x => x.BaseUrl = It.Is<Uri>(
                 u => u.AbsoluteUri.Contains("stickypassword.com/SPCClient")));
@@ -31,7 +32,7 @@ namespace StickyPassword.Test
         {
             var client = SetupClient("");
 
-            Remote.GetEncryptedToken(Username, DeviceId, client.Object);
+            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.VerifySet(x => x.UserAgent = It.Is<string>(s => s.Contains(DeviceId)));
         }
@@ -41,10 +42,25 @@ namespace StickyPassword.Test
         {
             var client = SetupClient("");
 
-            Remote.GetEncryptedToken(Username, DeviceId, client.Object);
+            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.Verify(x => x.Execute(It.Is<IRestRequest>(
                 r => r.Method == Method.POST && r.Resource == "GetCrpToken")));
+        }
+
+        [Test]
+        public void GetEncryptedToken_date_header_is_set()
+        {
+            var client = SetupClient("");
+
+            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
+
+            var expectedDate = Timestamp.ToUniversalTime().ToString("R");
+            client.Verify(x => x.Execute(It.Is<IRestRequest>(
+                r => r.Parameters.Exists(
+                    p => p.Type == ParameterType.HttpHeader
+                        && p.Name == "Date"
+                        && p.Value.ToString() == expectedDate))));
         }
 
         [Test]
@@ -53,7 +69,9 @@ namespace StickyPassword.Test
             var resposne = "<xml></xml>";
             var client = SetupClient(resposne);
 
-            Assert.That(Remote.GetEncryptedToken(Username, DeviceId, client.Object), Is.EqualTo(resposne));
+            Assert.That(
+                Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object),
+                Is.EqualTo(resposne));
         }
 
         //
