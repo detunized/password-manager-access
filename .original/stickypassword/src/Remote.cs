@@ -13,7 +13,15 @@ namespace StickyPassword
 
         public static string GetEncryptedToken(string username, string deviceId)
         {
-            var response = Post("GetCrpToken", deviceId, DateTime.Now, new Dictionary<string, string>()
+            return GetEncryptedToken(username, deviceId, new RestClient());
+        }
+
+        public static string GetEncryptedToken(string username, string deviceId, IRestClient client)
+        {
+            // TODO: Pass timestamp from the outside
+
+            ConfigureClient(client, deviceId);
+            var response = Post(client, "GetCrpToken", DateTime.Now, new Dictionary<string, string>
             {
                 {"uaid", username},
             });
@@ -22,24 +30,20 @@ namespace StickyPassword
             return response.Content;
         }
 
+        private static void ConfigureClient(IRestClient client, string deviceId)
+        {
+            client.BaseUrl = new Uri(ApiUrl);
+            client.UserAgent = GetUserAgent(deviceId);
+        }
+
         private static string GetUserAgent(string deviceId)
         {
             return string.Format("SP/8.0.3436 Prot=2 ID={0} Lng=EN Os=Android/4.4.4 Lic= LicStat= PackageID=", deviceId);
         }
 
-        private static RestClient CreateClient(string deviceId)
-        {
-            return new RestClient(ApiUrl)
-            {
-                UserAgent = GetUserAgent(deviceId)
-            };
-        }
-
-        private static IRestResponse Post(string endPoint, string deviceId, DateTime timestamp,
+        private static IRestResponse Post(IRestClient client, string endPoint, DateTime timestamp,
             Dictionary<string, string> parameters)
         {
-            var client = CreateClient(deviceId);
-
             var request = new RestRequest(endPoint, Method.POST);
             SetRequestHeaders(request, timestamp);
 
