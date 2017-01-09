@@ -22,7 +22,7 @@ namespace StickyPassword.Test
         [Test]
         public void DecryptToken_returns_token()
         {
-            Assert.That(Crypto.DecryptToken(Username, Password, Token), Is.EqualTo(Token));
+            Assert.That(Crypto.DecryptToken(Username, Password, EncryptedToken), Is.EqualTo(Token));
         }
 
         [Test]
