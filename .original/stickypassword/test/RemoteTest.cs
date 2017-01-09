@@ -18,9 +18,10 @@ namespace StickyPassword.Test
 
         public static readonly byte[] Token = new byte[]
         {
-            216, 204, 194, 28, 105, 10, 219, 173, 32, 149, 92, 27, 240, 175,
-            223, 120, 187, 208, 208, 21, 174, 229, 39, 183, 255, 121, 193, 11,
-            169, 25, 206, 64
+            0xd8, 0xcc, 0xc2, 0x1c, 0x69, 0x0a, 0xdb, 0xad,
+            0x20, 0x95, 0x5c, 0x1b, 0xf0, 0xaf, 0xdf, 0x78,
+            0xbb, 0xd0, 0xd0, 0x15, 0xae, 0xe5, 0x27, 0xb7,
+            0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40
         };
 
         public const string Response = @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?><SpcResponse xmlns=""http://www.stickypassword.com/cb/clientapi/schema/v2""><Status>13</Status><GetCrpTokenResponse><CrpToken>2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=</CrpToken></GetCrpTokenResponse></SpcResponse>";
