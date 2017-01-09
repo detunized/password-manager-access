@@ -12,7 +12,7 @@ namespace StickyPassword
     {
         private const string ApiUrl = "https://spcb.stickypassword.com/SPCClient/";
 
-        public static string GetEncryptedToken(string username, string deviceId, DateTime timestamp)
+        public static byte[] GetEncryptedToken(string username, string deviceId, DateTime timestamp)
         {
             return GetEncryptedToken(username, deviceId, timestamp, new RestClient());
         }
@@ -28,7 +28,7 @@ namespace StickyPassword
             public GetCrpTokenResponse GetCrpTokenResponse { get; set; }
         }
 
-        public static string GetEncryptedToken(string username, string deviceId, DateTime timestamp, IRestClient client)
+        public static byte[] GetEncryptedToken(string username, string deviceId, DateTime timestamp, IRestClient client)
         {
             ConfigureClient(client, deviceId);
             var response = Post(client, "GetCrpToken", timestamp, new Dictionary<string, string>
@@ -40,7 +40,7 @@ namespace StickyPassword
             if (parsed == null || parsed.GetCrpTokenResponse == null)
                 throw new InvalidOperationException();
 
-            return parsed.GetCrpTokenResponse.CrpToken;
+            return parsed.GetCrpTokenResponse.CrpToken.Decode64();
         }
 
         private static void ConfigureClient(IRestClient client, string deviceId)

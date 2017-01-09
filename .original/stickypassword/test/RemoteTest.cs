@@ -15,7 +15,14 @@ namespace StickyPassword.Test
         public const string Password = "logjammin";
         public const string DeviceId = "ringer";
         public static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
-        public const string Token = "2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=";
+
+        public static readonly byte[] Token = new byte[]
+        {
+            216, 204, 194, 28, 105, 10, 219, 173, 32, 149, 92, 27, 240, 175,
+            223, 120, 187, 208, 208, 21, 174, 229, 39, 183, 255, 121, 193, 11,
+            169, 25, 206, 64
+        };
+
         public const string Response = @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?><SpcResponse xmlns=""http://www.stickypassword.com/cb/clientapi/schema/v2""><Status>13</Status><GetCrpTokenResponse><CrpToken>2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=</CrpToken></GetCrpTokenResponse></SpcResponse>";
 
         [Test]
