@@ -83,6 +83,22 @@ namespace StickyPassword.Test
                 Is.EqualTo(Token));
         }
 
+        [Test]
+        public void AuthorizeDevice_works()
+        {
+            // TODO: Provide the actual response
+            var client = SetupClient("<SpcResponse><Status>4005</Status></SpcResponse>");
+
+            // TODO: DRY this up
+            Remote.AuthorizeDevice(
+                "LastPass.Ruby@gmaiL.cOm",
+                "e450ec3dee464c7ea158cb707f86c52d".ToBytes(),
+                "12345678-1234-1234-1234-123456789abc",
+                "stickypassword-sharp",
+                Timestamp,
+                client.Object);
+        }
+
         //
         // Helpers
         //
