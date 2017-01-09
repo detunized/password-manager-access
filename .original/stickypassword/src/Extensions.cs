@@ -30,5 +30,10 @@ namespace StickyPassword
         {
             return Encoding.UTF8.GetString(x);
         }
+
+        public static string Encode64(this byte[] x)
+        {
+            return Convert.ToBase64String(x);
+        }
     }
 }

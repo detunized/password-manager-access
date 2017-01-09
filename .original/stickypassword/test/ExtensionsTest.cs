@@ -45,5 +45,15 @@ namespace StickyPassword.Test
             Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
             Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
         }
+
+        [Test]
+        public void ByteArray_Encode64_returns_base64()
+        {
+            Assert.That(new byte[] { }.Encode64(), Is.EqualTo(""));
+            Assert.That(new byte[] { 0x61 }.Encode64(), Is.EqualTo("YQ=="));
+            Assert.That(new byte[] { 0x61, 0x62 }.Encode64(), Is.EqualTo("YWI="));
+            Assert.That(new byte[] { 0x61, 0x62, 0x63 }.Encode64(), Is.EqualTo("YWJj"));
+            Assert.That(new byte[] { 0x61, 0x62, 0x63, 0x64 }.Encode64(), Is.EqualTo("YWJjZA=="));
+        }
     }
 }
