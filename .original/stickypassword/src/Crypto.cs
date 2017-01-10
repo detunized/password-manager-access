@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace StickyPassword
 {
-    static class Crypto
+    public static class Crypto
     {
         public static byte[] DecryptToken(string username, string password, byte[] encryptedToken)
         {

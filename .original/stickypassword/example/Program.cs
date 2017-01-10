@@ -15,7 +15,13 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
-            Remote.GetEncryptedToken(username, "stickypassword-sharp", DateTime.Now);
+            // TODO: Move this to the config
+            var deviceId = "12345678-1234-1234-1234-123456789abc";
+            var deviceName = "stickypassword-sharp";
+
+            var encryptedToken = Remote.GetEncryptedToken(username, deviceId, DateTime.Now);
+            var token = Crypto.DecryptToken(username, password, encryptedToken);
+            Remote.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);
         }
     }
 }

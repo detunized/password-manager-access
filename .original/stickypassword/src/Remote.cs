@@ -44,6 +44,12 @@ namespace StickyPassword
         }
 
         public static void AuthorizeDevice(string username, byte[] token, string deviceId, string deviceName,
+            DateTime timestamp)
+        {
+            AuthorizeDevice(username, token, deviceId, deviceName, timestamp, new RestClient());
+        }
+
+        public static void AuthorizeDevice(string username, byte[] token, string deviceId, string deviceName,
             DateTime timestamp, IRestClient client)
         {
             ConfigureClient(client, deviceId);
