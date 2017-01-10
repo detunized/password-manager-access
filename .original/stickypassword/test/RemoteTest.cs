@@ -26,6 +26,26 @@ namespace StickyPassword.Test
 
         public const string Response = @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?><SpcResponse xmlns=""http://www.stickypassword.com/cb/clientapi/schema/v2""><Status>13</Status><GetCrpTokenResponse><CrpToken>2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=</CrpToken></GetCrpTokenResponse></SpcResponse>";
 
+        private const string GetS3TokenResponse =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
+                "<Status>0</Status>" +
+                "<AccountInfo>" +
+                    "<Expiration>2037-01-01Z</Expiration>" +
+                    "<LicType>free</LicType>" +
+                    "<AltEmail></AltEmail>" +
+                    "<TFAStatus>off</TFAStatus>" +
+                "</AccountInfo>" +
+                "<GetS3TokenResponse>" +
+                    "<AccessKeyId>ASIAIFIAL3EJEOPJXVCQ</AccessKeyId>" +
+                    "<SecretAccessKey>TRuR/+smCDzIqEcFTe+WCbgoNXK5OD0k4CdWhD6d</SecretAccessKey>" +
+                    "<SessionToken>FQoDYXdzEHYaDMzzWZ6Bc0LZKKiX5iLYAjsN+/1ou0rwiiiGumEdPZ1dE/o0xP1MvUNlgdcN7HKvoXIiQ4yAnawKDU1/7A/cgJ/QNdnj2yJRq0wz9LZkvKeuh+LMu74/GkvR7NZLM7fCg81lySsGq20wol2Z580l8N6QN/B52fsJq2nwYpalRp1/F0KbgRctffGMqelSvXjeqIH6OIdk53oilM72myMPtVZjjv+0CAyTxpg/ObGSdDazUMmNcBHdU5eJr02FXnOL3b/dhvf1YwMexRiMUNkb+0SpCCF4tApvNgR676nIoRSHtVfe7V1IvaKH6jBuDAUHAAJRyOro5+LwCHTOCaADp0jyuWXNJBD4cRaheWeMvLJBQKspgZp17sEO6MQuuTlBApYGngvrg+kISlU2uUKbOYmqpTTueRQR1h2Qp33/K9JWSf3fsvrhDz2Keri8fe9a5qbpkZ5wavsxko3/jZjvKaO76JAjg8xdKPik08MF</SessionToken>" +
+                    "<DateExpiration>2017-01-11T12:24:24.000Z</DateExpiration>" +
+                    "<BucketName>spclouddata</BucketName>" +
+                    "<ObjectPrefix>31645cc8-6ae9-4a22-aaea-557efe9e43af/</ObjectPrefix>" +
+                "</GetS3TokenResponse>" +
+            "</SpcResponse>";
+
         [Test]
         public void GetEncryptedToken_sets_api_base_url()
         {
@@ -97,6 +117,27 @@ namespace StickyPassword.Test
                 "stickypassword-sharp",
                 Timestamp,
                 client.Object);
+        }
+
+        [Test]
+        public void GetS3Token_returns_s3_token()
+        {
+            var client = SetupClient(GetS3TokenResponse);
+
+            // TODO: DRY this up
+            var s3 = Remote.GetS3Token(
+                "LastPass.Ruby@gmaiL.cOm",
+                "e450ec3dee464c7ea158cb707f86c52d".ToBytes(),
+                "12345678-1234-1234-1234-123456789abc",
+                Timestamp,
+                client.Object);
+
+            Assert.That(s3.AccessKeyId, Is.EqualTo("ASIAIFIAL3EJEOPJXVCQ"));
+            Assert.That(s3.SecretAccessKey, Is.EqualTo("TRuR/+smCDzIqEcFTe+WCbgoNXK5OD0k4CdWhD6d"));
+            Assert.That(s3.SessionToken, Is.EqualTo("FQoDYXdzEHYaDMzzWZ6Bc0LZKKiX5iLYAjsN+/1ou0rwiiiGumEdPZ1dE/o0xP1MvUNlgdcN7HKvoXIiQ4yAnawKDU1/7A/cgJ/QNdnj2yJRq0wz9LZkvKeuh+LMu74/GkvR7NZLM7fCg81lySsGq20wol2Z580l8N6QN/B52fsJq2nwYpalRp1/F0KbgRctffGMqelSvXjeqIH6OIdk53oilM72myMPtVZjjv+0CAyTxpg/ObGSdDazUMmNcBHdU5eJr02FXnOL3b/dhvf1YwMexRiMUNkb+0SpCCF4tApvNgR676nIoRSHtVfe7V1IvaKH6jBuDAUHAAJRyOro5+LwCHTOCaADp0jyuWXNJBD4cRaheWeMvLJBQKspgZp17sEO6MQuuTlBApYGngvrg+kISlU2uUKbOYmqpTTueRQR1h2Qp33/K9JWSf3fsvrhDz2Keri8fe9a5qbpkZ5wavsxko3/jZjvKaO76JAjg8xdKPik08MF"));
+            Assert.That(s3.DateExpiration, Is.EqualTo("2017-01-11T12:24:24.000Z"));
+            Assert.That(s3.BucketName, Is.EqualTo("spclouddata"));
+            Assert.That(s3.ObjectPrefix, Is.EqualTo("31645cc8-6ae9-4a22-aaea-557efe9e43af/"));
         }
 
         //

@@ -75,6 +75,45 @@ namespace StickyPassword
             throw new InvalidOperationException("Device authorization failed");
         }
 
+        public class GetS3TokenResponse
+        {
+            public string AccessKeyId { get; set; }
+            public string SecretAccessKey { get; set; }
+            public string SessionToken { get; set; }
+            public string DateExpiration { get; set; }
+            public string BucketName { get; set; }
+            public string ObjectPrefix { get; set; }
+        }
+
+        public static GetS3TokenResponse GetS3Token(string username, byte[] token, string deviceId, DateTime timestamp)
+        {
+            return GetS3Token(username, token, deviceId, timestamp, new RestClient());
+        }
+
+        public static GetS3TokenResponse GetS3Token(string username, byte[] token, string deviceId, DateTime timestamp, IRestClient client)
+        {
+            ConfigureClient(client, deviceId);
+            var response = Post(client, "GetS3Token", timestamp, username, token, new Dictionary<string, string>());
+
+            // TODO: Use a different class
+            var parsed = new XmlDeserializer().Deserialize<SpcResponse>(response);
+            if (parsed == null)
+                throw new InvalidOperationException();
+
+            if (parsed.Status != 0)
+                throw new InvalidOperationException("Failed to retrieve the S3 token");
+
+            var result = new XmlDeserializer().Deserialize<GetS3TokenResponse>(response);
+            if (result == null)
+                throw new InvalidOperationException();
+
+            return result;
+        }
+
+        //
+        // Private
+        //
+
         private static void ConfigureClient(IRestClient client, string deviceId)
         {
             client.BaseUrl = new Uri(ApiUrl);
