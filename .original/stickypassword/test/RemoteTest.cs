@@ -13,10 +13,11 @@ namespace StickyPassword.Test
     [TestFixture]
     class RemoteTest
     {
-        public const string Username = "lebowski";
-        public const string Password = "logjammin";
-        public const string DeviceId = "ringer";
-        public static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
+        private const string Username = "LastPass.Ruby@gmaiL.cOm";
+        private const string DeviceId = "12345678-1234-1234-1234-123456789abc";
+        private const string DeviceName = "stickypassword-sharp";
+
+        private static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
 
         private const string Bucket = "bucket";
         private const string ObjectPrefix = "objectPrefix/";
@@ -24,7 +25,7 @@ namespace StickyPassword.Test
         private const string VersionInfo = "VERSION 123456789\nMILESTONE 987654321";
         private const string DbContent = "All your base are belong to us";
 
-        public static readonly byte[] Token = new byte[]
+        private static readonly byte[] EncryptedToken =
         {
             0xd8, 0xcc, 0xc2, 0x1c, 0x69, 0x0a, 0xdb, 0xad,
             0x20, 0x95, 0x5c, 0x1b, 0xf0, 0xaf, 0xdf, 0x78,
@@ -32,7 +33,28 @@ namespace StickyPassword.Test
             0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40
         };
 
-        public const string Response = @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?><SpcResponse xmlns=""http://www.stickypassword.com/cb/clientapi/schema/v2""><Status>13</Status><GetCrpTokenResponse><CrpToken>2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=</CrpToken></GetCrpTokenResponse></SpcResponse>";
+        private static readonly byte[] Token = "e450ec3dee464c7ea158cb707f86c52d".ToBytes();
+
+        private const string GetTokenResponse =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
+                "<Status>13</Status>" +
+                "<GetCrpTokenResponse>" +
+                    "<CrpToken>2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=</CrpToken>" +
+                "</GetCrpTokenResponse>" +
+            "</SpcResponse>";
+
+        private const string AuthorizeDeviceResponse =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
+                "<Status>0</Status>" +
+                "<AccountInfo>" +
+                    "<Expiration>2016-12-16Z</Expiration>" +
+                    "<LicType>trial</LicType>" +
+                    "<AltEmail></AltEmail>" +
+                    "<TFAStatus>off</TFAStatus>" +
+                "</AccountInfo>" +
+            "</SpcResponse>";
 
         private const string GetS3TokenResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
@@ -57,8 +79,7 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_sets_api_base_url()
         {
-            var client = SetupClient();
-
+            var client = SetupClient(GetTokenResponse);
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.VerifySet(x => x.BaseUrl = It.Is<Uri>(
@@ -68,8 +89,7 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_sets_user_agent_with_device_id()
         {
-            var client = SetupClient();
-
+            var client = SetupClient(GetTokenResponse);
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.VerifySet(x => x.UserAgent = It.Is<string>(s => s.Contains(DeviceId)));
@@ -78,8 +98,7 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_makes_post_request_to_specific_end_point()
         {
-            var client = SetupClient();
-
+            var client = SetupClient(GetTokenResponse);
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.Verify(x => x.Execute(It.Is<IRestRequest>(
@@ -89,8 +108,7 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_date_header_is_set()
         {
-            var client = SetupClient();
-
+            var client = SetupClient(GetTokenResponse);
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             var expectedDate = Timestamp.ToUniversalTime().ToString("R");
@@ -104,41 +122,27 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_returns_response()
         {
-            var client = SetupClient();
+            var client = SetupClient(GetTokenResponse);
 
             Assert.That(
                 Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object),
-                Is.EqualTo(Token));
+                Is.EqualTo(EncryptedToken));
         }
 
         [Test]
         public void AuthorizeDevice_works()
         {
-            // TODO: Provide the actual response
-            var client = SetupClient("<SpcResponse><Status>4005</Status></SpcResponse>");
+            // TODO: Make this test verify something
 
-            // TODO: DRY this up
-            Remote.AuthorizeDevice(
-                "LastPass.Ruby@gmaiL.cOm",
-                "e450ec3dee464c7ea158cb707f86c52d".ToBytes(),
-                "12345678-1234-1234-1234-123456789abc",
-                "stickypassword-sharp",
-                Timestamp,
-                client.Object);
+            var client = SetupClient(AuthorizeDeviceResponse);
+            Remote.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
         }
 
         [Test]
         public void GetS3Token_returns_s3_token()
         {
             var client = SetupClient(GetS3TokenResponse);
-
-            // TODO: DRY this up
-            var s3 = Remote.GetS3Token(
-                "LastPass.Ruby@gmaiL.cOm",
-                "e450ec3dee464c7ea158cb707f86c52d".ToBytes(),
-                "12345678-1234-1234-1234-123456789abc",
-                Timestamp,
-                client.Object);
+            var s3 = Remote.GetS3Token(Username, Token, DeviceId, Timestamp, client.Object);
 
             Assert.That(s3.AccessKeyId, Is.EqualTo("ASIAIFIAL3EJEOPJXVCQ"));
             Assert.That(s3.SecretAccessKey, Is.EqualTo("TRuR/+smCDzIqEcFTe+WCbgoNXK5OD0k4CdWhD6d"));
@@ -194,7 +198,7 @@ namespace StickyPassword.Test
         // Helpers
         //
 
-        private static Mock<IRestClient> SetupClient(string response = Response)
+        private static Mock<IRestClient> SetupClient(string response)
         {
             var mock = new Mock<IRestClient>();
             mock
