@@ -22,7 +22,8 @@ namespace Example
             var encryptedToken = Remote.GetEncryptedToken(username, deviceId, DateTime.Now);
             var token = Crypto.DecryptToken(username, password, encryptedToken);
             Remote.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);
-            Remote.GetS3Token(username, token, deviceId, DateTime.Now);
+            var s3Token = Remote.GetS3Token(username, token, deviceId, DateTime.Now);
+            var db = Remote.DownloadLastestDb(s3Token);
         }
     }
 }
