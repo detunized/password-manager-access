@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.IO;
+using Amazon.S3;
 using Moq;
 using NUnit.Framework;
 using RestSharp;
@@ -15,6 +17,12 @@ namespace StickyPassword.Test
         public const string Password = "logjammin";
         public const string DeviceId = "ringer";
         public static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
+
+        private const string Bucket = "bucket";
+        private const string ObjectPrefix = "objectPrefix/";
+        private const string Version = "123456789";
+        private const string VersionInfo = "VERSION 123456789\nMILESTONE 987654321";
+        private const string DbContent = "All your base are belong to us";
 
         public static readonly byte[] Token = new byte[]
         {
@@ -140,6 +148,48 @@ namespace StickyPassword.Test
             Assert.That(s3.ObjectPrefix, Is.EqualTo("31645cc8-6ae9-4a22-aaea-557efe9e43af/"));
         }
 
+        [Test]
+        public void FindLastestDbVersion_returns_version_from_s3()
+        {
+            var s3 = SetupS3(VersionInfo);
+
+            Assert.That(
+                Remote.FindLastestDbVersion(Bucket, ObjectPrefix, s3.Object),
+                Is.EqualTo(Version));
+        }
+
+        [Test]
+        public void FindLastestDbVersion_requests_file_from_s3()
+        {
+            var s3 = SetupS3(VersionInfo);
+            Remote.FindLastestDbVersion(Bucket, ObjectPrefix, s3.Object);
+
+            s3.Verify(x => x.GetObject(
+                It.Is<string>(s => s == Bucket),
+                It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains("spc.info"))));
+        }
+
+        [Test]
+        public void DownloadDb_returns_content_from_s3()
+        {
+            var s3 = SetupS3(DbContent);
+
+            Assert.That(
+                Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object),
+                Is.EqualTo(DbContent.ToBytes()));
+        }
+
+        [Test]
+        public void DownloadDb_requests_file_from_s3()
+        {
+            var s3 = SetupS3("");
+            Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object);
+
+            s3.Verify(x => x.GetObject(
+                It.Is<string>(s => s == Bucket),
+                It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains(Version))));
+        }
+
         //
         // Helpers
         //
@@ -158,6 +208,19 @@ namespace StickyPassword.Test
             var mock = new Mock<IRestResponse>();
             mock.Setup(x => x.Content).Returns(response);
             return mock;
+        }
+
+        private static Mock<IAmazonS3> SetupS3(string response)
+        {
+            var s3 = new Mock<IAmazonS3>();
+            s3
+                .Setup(x => x.GetObject(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(new Amazon.S3.Model.GetObjectResponse
+                {
+                    ResponseStream = new MemoryStream(response.ToBytes())
+                });
+
+            return s3;
         }
     }
 }
