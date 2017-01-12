@@ -23,8 +23,18 @@ namespace StickyPassword.Test
         private const string ObjectPrefix = "objectPrefix/";
         private const string Version = "123456789";
         private const string VersionInfo = "VERSION 123456789\nMILESTONE 987654321";
-        private const string DbContent = "All your base are belong to us";
 
+        private const string DbContent = "All your base are belong to us";
+        private static readonly byte[] CompressedDbContent =
+        {
+            0x78, 0x9c, 0x73, 0xcc, 0xc9, 0x51, 0xa8, 0xcc,
+            0x2f, 0x2d, 0x52, 0x48, 0x4a, 0x2c, 0x4e, 0x55,
+            0x48, 0x2c, 0x4a, 0x55, 0x48, 0x4a, 0xcd, 0xc9,
+            0xcf, 0x4b, 0x57, 0x28, 0xc9, 0x57, 0x28, 0x2d,
+            0x06, 0x00, 0xa5, 0x50, 0x0a, 0xbe
+        };
+
+        private static readonly byte[] Token = "e450ec3dee464c7ea158cb707f86c52d".ToBytes();
         private static readonly byte[] EncryptedToken =
         {
             0xd8, 0xcc, 0xc2, 0x1c, 0x69, 0x0a, 0xdb, 0xad,
@@ -32,8 +42,6 @@ namespace StickyPassword.Test
             0xbb, 0xd0, 0xd0, 0x15, 0xae, 0xe5, 0x27, 0xb7,
             0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40
         };
-
-        private static readonly byte[] Token = "e450ec3dee464c7ea158cb707f86c52d".ToBytes();
 
         private const string GetTokenResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
@@ -176,7 +184,7 @@ namespace StickyPassword.Test
         [Test]
         public void DownloadDb_returns_content_from_s3()
         {
-            var s3 = SetupS3(DbContent);
+            var s3 = SetupS3(CompressedDbContent);
 
             Assert.That(
                 Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object),
@@ -216,12 +224,17 @@ namespace StickyPassword.Test
 
         private static Mock<IAmazonS3> SetupS3(string response)
         {
+            return SetupS3(response.ToBytes());
+        }
+
+        private static Mock<IAmazonS3> SetupS3(byte[] response)
+        {
             var s3 = new Mock<IAmazonS3>();
             s3
                 .Setup(x => x.GetObject(It.IsAny<string>(), It.IsAny<string>()))
                 .Returns(new Amazon.S3.Model.GetObjectResponse
                 {
-                    ResponseStream = new MemoryStream(response.ToBytes())
+                    ResponseStream = new MemoryStream(response)
                 });
 
             return s3;

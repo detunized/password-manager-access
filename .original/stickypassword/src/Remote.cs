@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Amazon;
 using Amazon.S3;
@@ -149,7 +151,7 @@ namespace StickyPassword
             // TODO: Handle S3 errors
             var filename = string.Format("{0}1/db_{1}.dmp", objectPrefix, version);
             var response = s3.GetObject(bucketName, filename);
-            return response.ResponseStream.ReadAsBytes();
+            return Inflate(response.ResponseStream);
         }
 
         //
@@ -208,6 +210,16 @@ namespace StickyPassword
         private static string GetAuthorizationHeader(string username, byte[] token)
         {
             return "Basic " + string.Format("{0}:{1}", username, token.Encode64()).ToBytes().Encode64();
+        }
+
+        private static byte[] Inflate(Stream s)
+        {
+            // Eat first two bytes
+            // See: http://stackoverflow.com/a/21544269/362938
+            s.ReadByte();
+            s.ReadByte();
+
+            return new DeflateStream(s, CompressionMode.Decompress).ReadAsBytes();
         }
     }
 }
