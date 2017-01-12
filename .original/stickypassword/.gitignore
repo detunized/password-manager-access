@@ -5,5 +5,7 @@
 /example/credentials.txt
 /src/bin/
 /src/obj/
+/src/x64/
+/src/x86/
 /test/bin/
 /test/obj/
