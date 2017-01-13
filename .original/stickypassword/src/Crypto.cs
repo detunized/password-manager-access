@@ -1,9 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 
 namespace StickyPassword
@@ -14,17 +12,6 @@ namespace StickyPassword
         {
             var key = DeriveTokenKey(username, password);
             return DecryptAes256(encryptedToken, key);
-        }
-
-        public static byte[] DeriveDbKey(string password, byte[] salt, byte[] verification)
-        {
-            var key = DeriveDbKey(password, salt);
-
-            var marker = EncryptAes256("VERIFY".ToBytes(), key, PaddingMode.PKCS7);
-            if (!marker.SequenceEqual(verification))
-                throw new InvalidOperationException("Password verification failed");
-
-            return key;
         }
 
         public static byte[] DeriveTokenKey(string username, string password)

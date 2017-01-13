@@ -1,10 +1,12 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace StickyPassword
 {
@@ -29,9 +31,18 @@ namespace StickyPassword
             using (var db = new SQLiteConnection(string.Format("Data Source={0};Version=3;", filename)))
             {
                 db.Open();
+
                 var user = GetDefaultUser(db);
-                var key = Crypto.DeriveDbKey(password, user.Salt, user.Verification);
+                var key = Crypto.DeriveDbKey(password, user.Salt);
+                if (!IsKeyCorrect(key, user.Verification))
+                    throw new InvalidOperationException("Password verification failed");
             }
+        }
+
+        public static bool IsKeyCorrect(byte[] key, byte[] verification)
+        {
+            var test = Crypto.EncryptAes256("VERIFY".ToBytes(), key, PaddingMode.PKCS7);
+            return test.SequenceEqual(verification);
         }
 
         //
