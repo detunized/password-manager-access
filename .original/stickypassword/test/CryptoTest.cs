@@ -8,26 +8,31 @@ namespace StickyPassword.Test
     [TestFixture]
     class CryptoTest
     {
-        public const string Username = "LastPass.Ruby@gmaiL.cOm";
-        public const string Password = "Password123";
-        public static readonly byte[] EncryptedToken = new byte[]
-        {
-            0xd8, 0xcc, 0xc2, 0x1c, 0x69, 0x0a, 0xdb, 0xad,
-            0x20, 0x95, 0x5c, 0x1b, 0xf0, 0xaf, 0xdf, 0x78,
-            0xbb, 0xd0, 0xd0, 0x15, 0xae, 0xe5, 0x27, 0xb7,
-            0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40
-        };
-        public static readonly byte[] Token = "e450ec3dee464c7ea158cb707f86c52d".ToBytes();
+        private const string Username = "LastPass.Ruby@gmaiL.cOm";
+        private const string Password = "Password123";
 
         [Test]
         public void DecryptToken_returns_token()
         {
-            Assert.That(Crypto.DecryptToken(Username, Password, EncryptedToken), Is.EqualTo(Token));
+            // The actual bytes dumped from the running app
+            var expected = "e450ec3dee464c7ea158cb707f86c52d".ToBytes();
+            var encryptedToken = new byte[]
+            {
+                0xd8, 0xcc, 0xc2, 0x1c, 0x69, 0x0a, 0xdb, 0xad,
+                0x20, 0x95, 0x5c, 0x1b, 0xf0, 0xaf, 0xdf, 0x78,
+                0xbb, 0xd0, 0xd0, 0x15, 0xae, 0xe5, 0x27, 0xb7,
+                0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40
+            };
+
+            Assert.That(
+                Crypto.DecryptToken(Username, Password, encryptedToken),
+                Is.EqualTo(expected));
         }
 
         [Test]
         public void DeriveTokenKey_returns_key()
         {
+            // The actual bytes dumped from the running app
             var expected = new byte[]
             {
                 0xaa, 0xae, 0xbb, 0xde, 0x84, 0x75, 0x3e, 0x78,
@@ -36,7 +41,9 @@ namespace StickyPassword.Test
                 0xaa, 0x8f, 0x5c, 0x2f, 0x81, 0x0c, 0xb4, 0xf1
             };
 
-            Assert.That(Crypto.DeriveTokenKey(Username, Password), Is.EqualTo(expected));
+            Assert.That(
+                Crypto.DeriveTokenKey(Username, Password),
+                Is.EqualTo(expected));
         }
 
         [Test]
@@ -58,7 +65,9 @@ namespace StickyPassword.Test
                 0x8f, 0xb6, 0x97, 0xd8, 0xdd, 0x55, 0xa1, 0x41
             };
 
-            Assert.That(Crypto.DeriveDbKey(Password, salt), Is.EqualTo(expected));
+            Assert.That(
+                Crypto.DeriveDbKey(Password, salt),
+                Is.EqualTo(expected));
         }
 
         [Test]
@@ -71,7 +80,9 @@ namespace StickyPassword.Test
                 0xd6, 0x96, 0x3f, 0x7d, 0x28, 0xe1, 0x7f, 0x72
             };
 
-            Assert.That(Crypto.Md5("abc"), Is.EqualTo(expected));
+            Assert.That(
+                Crypto.Md5("abc"),
+                Is.EqualTo(expected));
         }
     }
 }
