@@ -66,11 +66,10 @@ namespace StickyPassword
         private static User GetDefaultUser(SQLiteConnection db)
         {
             // "6400..." is "default\0" in UTF-16
-            var r = Sql(db,
-                "select USER_ID, KEY, PASSWORD " +
-                    "from USER " +
-                    "where DATE_DELETED = 1 " +
-                        "and USERNAME = x'640065006600610075006c0074000000'");
+            var r = Sql(db, "select USER_ID, KEY, PASSWORD " +
+                            "from USER " +
+                            "where DATE_DELETED = 1 " +
+                                "and USERNAME = x'640065006600610075006c0074000000'");
 
             return new User(id: (long)r[0]["USER_ID"],
                             salt: (byte[])r[0]["KEY"],
