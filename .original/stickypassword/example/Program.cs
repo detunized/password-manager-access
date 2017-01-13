@@ -1,3 +1,6 @@
+// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Licensed under the terms of the MIT license. See LICENCE for details.
+
 using System;
 using System.IO;
 using StickyPassword;
@@ -15,15 +18,27 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
-            // TODO: Move this to the config
-            var deviceId = "12345678-1234-1234-1234-123456789abc";
-            var deviceName = "stickypassword-sharp";
+            var vault = Vault.Open(username, password);
+            for (var i = 0; i < vault.Accounts.Length; ++i)
+            {
+                var a = vault.Accounts[i];
+                Console.WriteLine("{0}: {1} {2} {3} {4}",
+                                  i + 1,
+                                  a.Id,
+                                  a.Name,
+                                  a.Url,
+                                  a.Notes);
 
-            var encryptedToken = Remote.GetEncryptedToken(username, deviceId, DateTime.Now);
-            var token = Crypto.DecryptToken(username, password, encryptedToken);
-            Remote.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);
-            var s3Token = Remote.GetS3Token(username, token, deviceId, DateTime.Now);
-            var db = Remote.DownloadLastestDb(s3Token);
+                for (var j = 0; j < a.Credentials.Length; ++j)
+                {
+                    var c = a.Credentials[j];
+                    Console.WriteLine("  - {0}: {1}:{2} ({3})",
+                                      j + 1,
+                                      c.Username,
+                                      c.Password,
+                                      c.Description);
+                }
+            }
         }
     }
 }
