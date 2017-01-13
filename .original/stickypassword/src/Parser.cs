@@ -4,18 +4,19 @@
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
+using System.Linq;
 
 namespace StickyPassword
 {
     public static class Parser
     {
-        public static void OpenDb(byte[] db)
+        public static void OpenDb(byte[] db, string password)
         {
             var filename = Path.GetTempFileName();
             try
             {
                 File.WriteAllBytes(filename, db);
-                OpenDb(filename);
+                OpenDb(filename, password);
             }
             finally
             {
@@ -23,12 +24,13 @@ namespace StickyPassword
             }
         }
 
-        public static void OpenDb(string filename)
+        public static void OpenDb(string filename, string password)
         {
             using (var db = new SQLiteConnection(string.Format("Data Source={0};Version=3;", filename)))
             {
                 db.Open();
                 var user = GetDefaultUser(db);
+                var key = Crypto.DeriveDbKey(password, user.Salt, user.Verification);
             }
         }
 

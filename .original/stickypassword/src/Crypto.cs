@@ -1,7 +1,9 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace StickyPassword
@@ -12,6 +14,17 @@ namespace StickyPassword
         {
             var key = DeriveTokenKey(username, password);
             return DecryptAes256(encryptedToken, key);
+        }
+
+        public static byte[] DeriveDbKey(string password, byte[] salt, byte[] verification)
+        {
+            var key = DeriveDbKey(password, salt);
+
+            var marker = EncryptAes256("VERIFY".ToBytes(), key, PaddingMode.PKCS7);
+            if (!marker.SequenceEqual(verification))
+                throw new InvalidOperationException("Password verification failed");
+
+            return key;
         }
 
         public static byte[] DeriveTokenKey(string username, string password)
@@ -33,9 +46,9 @@ namespace StickyPassword
                 return md5.ComputeHash(text.ToBytes());
         }
 
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] key)
+        public static byte[] DecryptAes256(byte[] ciphertext, byte[] key, PaddingMode padding = PaddingMode.None)
         {
-            using (var aes = CreateAes256Cbc(key))
+            using (var aes = CreateAes256Cbc(key, padding))
             using (var decryptor = aes.CreateDecryptor())
             using (var stream = new MemoryStream(ciphertext, false))
             using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
@@ -50,7 +63,25 @@ namespace StickyPassword
             }
         }
 
-        private static AesManaged CreateAes256Cbc(byte[] key)
+        public static byte[] EncryptAes256(byte[] plaintext, byte[] key, PaddingMode padding = PaddingMode.None)
+        {
+            // TODO: DRY this up (share code with Decrypt)
+            using (var aes = CreateAes256Cbc(key, padding))
+            using (var encryptor = aes.CreateEncryptor())
+            using (var stream = new MemoryStream(plaintext, false))
+            using (var cryptoStream = new CryptoStream(stream, encryptor, CryptoStreamMode.Read))
+            using (var ciphertext = new MemoryStream())
+            {
+                var buffer = new byte[256];
+                int bytesRead;
+                while ((bytesRead = cryptoStream.Read(buffer, 0, buffer.Length)) > 0)
+                    ciphertext.Write(buffer, 0, bytesRead);
+
+                return ciphertext.ToArray();
+            }
+        }
+
+        private static AesManaged CreateAes256Cbc(byte[] key, PaddingMode padding)
         {
             return new AesManaged
             {
@@ -59,7 +90,7 @@ namespace StickyPassword
                 Key = key,
                 IV = new byte[16],
                 Mode = CipherMode.CBC,
-                Padding = PaddingMode.None
+                Padding = padding
             };
         }
     }
