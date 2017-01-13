@@ -54,7 +54,7 @@ namespace StickyPassword
 
         private struct User
         {
-            public User(long id, byte[] salt, byte[] verification): this()
+            public User(long id, byte[] salt, byte[] verification)
             {
                 Id = id;
                 Salt = salt;
@@ -77,38 +77,6 @@ namespace StickyPassword
             return new User(id: (long)r[0]["USER_ID"],
                             salt: (byte[])r[0]["KEY"],
                             verification: (byte[])r[0]["PASSWORD"]);
-        }
-
-        private struct Account
-        {
-            public readonly long Id;
-            public readonly string Name;
-            public readonly string Url;
-            public readonly string Notes;
-            public readonly Credentials[] Credentials;
-
-            public Account(long id, string name, string url, string notes, Credentials[] credentials): this()
-            {
-                Id = id;
-                Name = name;
-                Url = url;
-                Notes = notes;
-                Credentials = credentials;
-            }
-        }
-
-        private struct Credentials
-        {
-            public readonly string Username;
-            public readonly string Password;
-            public readonly string Description;
-
-            public Credentials(string username, string password, string description)
-            {
-                Username = username;
-                Password = password;
-                Description = description;
-            }
         }
 
         private static Account[] GetAccounts(SQLiteConnection db, User user, byte[] key)
