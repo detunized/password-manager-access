@@ -40,6 +40,28 @@ namespace StickyPassword.Test
         }
 
         [Test]
+        public void DeriveDbKey_returns_key()
+        {
+            // The actual bytes from the user database
+            var salt = new byte[]
+            {
+                0x63, 0x51, 0xee, 0x97, 0x8c, 0x6e, 0xe0, 0xd8,
+                0x1e, 0x66, 0xdf, 0x61, 0x90, 0x3a, 0x5a, 0x88
+            };
+
+            // The actual bytes dumped from the running app
+            var expected = new byte[]
+            {
+                0x69, 0xd6, 0xb0, 0xd2, 0x50, 0x8e, 0x4b, 0x83,
+                0x4a, 0xb9, 0xe3, 0x14, 0x3c, 0x40, 0x81, 0x44,
+                0x75, 0x44, 0x47, 0x95, 0x43, 0x72, 0x01, 0xf8,
+                0x8f, 0xb6, 0x97, 0xd8, 0xdd, 0x55, 0xa1, 0x41
+            };
+
+            Assert.That(Crypto.DeriveDbKey(Password, salt), Is.EqualTo(expected));
+        }
+
+        [Test]
         public void Md5_computes_md5()
         {
             // From http://www.nsrl.nist.gov/testdata/

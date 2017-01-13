@@ -21,6 +21,12 @@ namespace StickyPassword
             return kdf.GetBytes(32);
         }
 
+        public static byte[] DeriveDbKey(string password, byte[] salt)
+        {
+            var kdf = new Rfc2898DeriveBytes(password, salt, 10000);
+            return kdf.GetBytes(32);
+        }
+
         public static byte[] Md5(string text)
         {
             using (var md5 = MD5.Create())
