@@ -3,14 +3,8 @@
 
 namespace StickyPassword
 {
-    public struct Account
+    public class Account
     {
-        public readonly long Id;
-        public readonly string Name;
-        public readonly string Url;
-        public readonly string Notes;
-        public readonly Credentials[] Credentials;
-
         public Account(long id, string name, string url, string notes, Credentials[] credentials)
         {
             Id = id;
@@ -19,19 +13,25 @@ namespace StickyPassword
             Notes = notes;
             Credentials = credentials;
         }
+
+        public long Id { get; private set; }
+        public string Name { get; private set; }
+        public string Url { get; private set; }
+        public string Notes { get; private set; }
+        public Credentials[] Credentials { get; private set; }
     }
 
-    public struct Credentials
+    public class Credentials
     {
-        public readonly string Username;
-        public readonly string Password;
-        public readonly string Description;
-
         public Credentials(string username, string password, string description)
         {
             Username = username;
             Password = password;
             Description = description;
         }
+
+        public string Username { get; private set; }
+        public string Password { get; private set; }
+        public string Description { get; private set; }
     }
 }
