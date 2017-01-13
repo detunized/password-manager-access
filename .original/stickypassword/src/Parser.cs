@@ -81,15 +81,33 @@ namespace StickyPassword
 
         private struct Account
         {
+            public readonly long Id;
             public readonly string Name;
             public readonly string Url;
             public readonly string Notes;
+            public readonly Credentials[] Credentials;
 
-            public Account(string name, string url, string notes): this()
+            public Account(long id, string name, string url, string notes, Credentials[] credentials): this()
             {
+                Id = id;
                 Name = name;
                 Url = url;
                 Notes = notes;
+                Credentials = credentials;
+            }
+        }
+
+        private struct Credentials
+        {
+            public readonly string Username;
+            public readonly string Password;
+            public readonly string Description;
+
+            public Credentials(string username, string password, string description)
+            {
+                Username = username;
+                Password = password;
+                Description = description;
             }
         }
 
@@ -103,10 +121,34 @@ namespace StickyPassword
                     "and GROUP_TYPE = 2 " +
                 "order by ENTRY_ID", user.Id));
 
-            return r.Select(i => new Account(
-                name: DecryptTextField(i["UDC_ENTRY_NAME"], key),
-                url: DecryptTextField(i["UDC_URL"], key),
-                notes: DecryptTextField(i["UD_COMMENT"], key))).ToArray();
+            return r.Select(i =>
+            {
+                var id = (long)i["ENTRY_ID"];
+                return new Account(
+                    id: id,
+                    name: DecryptTextField(i["UDC_ENTRY_NAME"], key),
+                    url: DecryptTextField(i["UDC_URL"], key),
+                    notes: DecryptTextField(i["UD_COMMENT"], key),
+                    credentials: GetCredentialsForAccount(db, user, id, key));
+            }).ToArray();
+        }
+
+        private static Credentials[] GetCredentialsForAccount(SQLiteConnection db, User user, long accountId, byte[] key)
+        {
+            var r = Sql(db, string.Format(
+                "select LOG.UDC_USERNAME, LOG.UD_PASSWORD, LOG.UDC_DESCRIPTION " +
+                    "from ACC_LOGIN LOG, ACC_LINK LINK " +
+                    "where LINK.DATE_DELETED = 1 " +
+                        "and LINK.USER_ID = {0} " +
+                        "and LINK.ENTRY_ID = {1} " +
+                        "and LOG.LOGIN_ID = LINK.LOGIN_ID " +
+                    "order by LINK.LOGIN_ID", user.Id, accountId));
+
+            return r.Select(i => new Credentials(
+                username: DecryptTextField(i["UDC_USERNAME"], key),
+                password: DecryptTextField(i["UD_PASSWORD"], key),
+                description: DecryptTextField(i["UDC_DESCRIPTION"], key)
+            )).ToArray();
         }
 
         private static string DecryptTextField(object encrypted, byte[] key)
