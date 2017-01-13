@@ -14,13 +14,13 @@ namespace StickyPassword
     // TODO: Write more tests
     public static class Parser
     {
-        public static void OpenDb(byte[] db, string password)
+        public static Account[] ParseAccounts(byte[] db, string password)
         {
             var filename = Path.GetTempFileName();
             try
             {
                 File.WriteAllBytes(filename, db);
-                OpenDb(filename, password);
+                return ParseAccounts(filename, password);
             }
             finally
             {
@@ -28,7 +28,7 @@ namespace StickyPassword
             }
         }
 
-        public static void OpenDb(string filename, string password)
+        public static Account[] ParseAccounts(string filename, string password)
         {
             using (var db = new SQLiteConnection(string.Format("Data Source={0};Version=3;", filename)))
             {
@@ -38,7 +38,8 @@ namespace StickyPassword
                 var key = Crypto.DeriveDbKey(password, user.Salt);
                 if (!IsKeyCorrect(key, user.Verification))
                     throw new InvalidOperationException("Password verification failed");
-                var accounts = GetAccounts(db, user, key);
+
+                return GetAccounts(db, user, key);
             }
         }
 
