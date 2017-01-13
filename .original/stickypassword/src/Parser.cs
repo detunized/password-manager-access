@@ -38,9 +38,16 @@ namespace StickyPassword
 
         private struct User
         {
-            public long Id { get; set; }
-            public byte[] Salt { get; set; }
-            public byte[] Verification { get; set; }
+            public User(long id, byte[] salt, byte[] verification): this()
+            {
+                Id = id;
+                Salt = salt;
+                Verification = verification;
+            }
+
+            public readonly long Id;
+            public readonly byte[] Salt;
+            public readonly byte[] Verification;
         }
 
         private static User GetDefaultUser(SQLiteConnection db)
@@ -52,12 +59,9 @@ namespace StickyPassword
                     "where DATE_DELETED = 1 " +
                         "and USERNAME = x'640065006600610075006c0074000000'");
 
-            return new User
-            {
-                Id = (long)r[0]["USER_ID"],
-                Salt = (byte[])r[0]["KEY"],
-                Verification = (byte[])r[0]["PASSWORD"]
-            };
+            return new User(id: (long)r[0]["USER_ID"],
+                            salt: (byte[])r[0]["KEY"],
+                            verification: (byte[])r[0]["PASSWORD"]);
         }
 
         private static Dictionary<string, object>[] Sql(SQLiteConnection db, string sql)
