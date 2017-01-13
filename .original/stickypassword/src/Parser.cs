@@ -7,9 +7,11 @@ using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace StickyPassword
 {
+    // TODO: Write more tests
     public static class Parser
     {
         public static void OpenDb(byte[] db, string password)
@@ -36,6 +38,7 @@ namespace StickyPassword
                 var key = Crypto.DeriveDbKey(password, user.Salt);
                 if (!IsKeyCorrect(key, user.Verification))
                     throw new InvalidOperationException("Password verification failed");
+                var accounts = GetAccounts(db, user, key);
             }
         }
 
@@ -74,6 +77,42 @@ namespace StickyPassword
             return new User(id: (long)r[0]["USER_ID"],
                             salt: (byte[])r[0]["KEY"],
                             verification: (byte[])r[0]["PASSWORD"]);
+        }
+
+        private struct Account
+        {
+            public readonly string Name;
+            public readonly string Url;
+            public readonly string Notes;
+
+            public Account(string name, string url, string notes): this()
+            {
+                Name = name;
+                Url = url;
+                Notes = notes;
+            }
+        }
+
+        private static Account[] GetAccounts(SQLiteConnection db, User user, byte[] key)
+        {
+            var r = Sql(db, string.Format(
+                "select ENTRY_ID, UDC_ENTRY_NAME, UDC_URL, UD_COMMENT " +
+                "from ACC_ACCOUNT " +
+                "where DATE_DELETED = 1 " +
+                    "and USER_ID = {0} " +
+                    "and GROUP_TYPE = 2 " +
+                "order by ENTRY_ID", user.Id));
+
+            return r.Select(i => new Account(
+                name: DecryptTextField(i["UDC_ENTRY_NAME"], key),
+                url: DecryptTextField(i["UDC_URL"], key),
+                notes: DecryptTextField(i["UD_COMMENT"], key))).ToArray();
+        }
+
+        private static string DecryptTextField(object encrypted, byte[] key)
+        {
+            var bytes = Crypto.DecryptAes256((byte[])encrypted, key, PaddingMode.PKCS7);
+            return Encoding.Unicode.GetString(bytes).TrimEnd('\0');
         }
 
         private static Dictionary<string, object>[] Sql(SQLiteConnection db, string sql)
