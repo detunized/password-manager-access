@@ -39,34 +39,16 @@ namespace StickyPassword
             using (var decryptor = aes.CreateDecryptor())
             using (var stream = new MemoryStream(ciphertext, false))
             using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
-            using (var plaintext = new MemoryStream())
-            {
-                // TODO: Use Stream.ReadAll
-                var buffer = new byte[256];
-                int bytesRead;
-                while ((bytesRead = cryptoStream.Read(buffer, 0, buffer.Length)) > 0)
-                    plaintext.Write(buffer, 0, bytesRead);
-
-                return plaintext.ToArray();
-            }
+                return cryptoStream.ReadAll(256);
         }
 
         public static byte[] EncryptAes256(byte[] plaintext, byte[] key, PaddingMode padding = PaddingMode.None)
         {
-            // TODO: DRY this up (share code with Decrypt)
             using (var aes = CreateAes256Cbc(key, padding))
             using (var encryptor = aes.CreateEncryptor())
             using (var stream = new MemoryStream(plaintext, false))
             using (var cryptoStream = new CryptoStream(stream, encryptor, CryptoStreamMode.Read))
-            using (var ciphertext = new MemoryStream())
-            {
-                var buffer = new byte[256];
-                int bytesRead;
-                while ((bytesRead = cryptoStream.Read(buffer, 0, buffer.Length)) > 0)
-                    ciphertext.Write(buffer, 0, bytesRead);
-
-                return ciphertext.ToArray();
-            }
+                return cryptoStream.ReadAll(256);
         }
 
         private static AesManaged CreateAes256Cbc(byte[] key, PaddingMode padding)
