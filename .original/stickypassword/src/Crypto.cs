@@ -41,6 +41,7 @@ namespace StickyPassword
             using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
             using (var plaintext = new MemoryStream())
             {
+                // TODO: Use Stream.ReadAll
                 var buffer = new byte[256];
                 int bytesRead;
                 while ((bytesRead = cryptoStream.Read(buffer, 0, buffer.Length)) > 0)

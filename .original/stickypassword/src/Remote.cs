@@ -11,7 +11,6 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 using Amazon;
 using Amazon.S3;
-using RestSharp.Extensions; // TODO: Get rid of this!
 
 namespace StickyPassword
 {
@@ -190,7 +189,7 @@ namespace StickyPassword
         {
             // TODO: Handle S3 errors
             var response = s3.GetObject(bucketName, objectPrefix + "1/spc.info");
-            var info = response.ResponseStream.ReadAsBytes().ToUtf8();
+            var info = response.ResponseStream.ReadAll().ToUtf8();
 
             var re = new Regex(@"VERSION\s+(\d+)");
             var m = re.Match(info);
@@ -270,7 +269,7 @@ namespace StickyPassword
             s.ReadByte();
             s.ReadByte();
 
-            return new DeflateStream(s, CompressionMode.Decompress).ReadAsBytes();
+            return new DeflateStream(s, CompressionMode.Decompress).ReadAll();
         }
     }
 }
