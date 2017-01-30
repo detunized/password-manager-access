@@ -2,11 +2,11 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Amazon.S3;
 using Moq;
 using NUnit.Framework;
-using RestSharp;
 
 namespace StickyPassword.Test
 {
@@ -46,10 +46,16 @@ namespace StickyPassword.Test
         private const string GetTokenResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
-                "<Status>13</Status>" +
+                "<Status>0</Status>" +
                 "<GetCrpTokenResponse>" +
                     "<CrpToken>2MzCHGkK260glVwb8K/feLvQ0BWu5Se3/3nBC6kZzkA=</CrpToken>" +
                 "</GetCrpTokenResponse>" +
+            "</SpcResponse>";
+
+        private const string GetTokenResponseWithStatus =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
+                "<Status>13</Status>" +
             "</SpcResponse>";
 
         private const string AuthorizeDeviceResponse =
@@ -85,56 +91,59 @@ namespace StickyPassword.Test
             "</SpcResponse>";
 
         [Test]
-        public void GetEncryptedToken_sets_api_base_url()
+        public void GetEncryptedToken_makes_post_request()
         {
-            var client = SetupClient(GetTokenResponse);
+            var client = SetupClientForPost(GetTokenResponse);
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
-            client.VerifySet(x => x.BaseUrl = It.Is<Uri>(
-                u => u.AbsoluteUri.Contains("stickypassword.com/SPCClient")));
-        }
-
-        [Test]
-        public void GetEncryptedToken_sets_user_agent_with_device_id()
-        {
-            var client = SetupClient(GetTokenResponse);
-            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
-
-            client.VerifySet(x => x.UserAgent = It.Is<string>(s => s.Contains(DeviceId)));
-        }
-
-        [Test]
-        public void GetEncryptedToken_makes_post_request_to_specific_end_point()
-        {
-            var client = SetupClient(GetTokenResponse);
-            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
-
-            client.Verify(x => x.Execute(It.Is<IRestRequest>(
-                r => r.Method == Method.POST && r.Resource == "GetCrpToken")));
-        }
-
-        [Test]
-        public void GetEncryptedToken_date_header_is_set()
-        {
-            var client = SetupClient(GetTokenResponse);
-            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
-
-            var expectedDate = Timestamp.ToUniversalTime().ToString("R");
-            client.Verify(x => x.Execute(It.Is<IRestRequest>(
-                r => r.Parameters.Exists(
-                    p => p.Type == ParameterType.HttpHeader
-                        && p.Name == "Date"
-                        && p.Value.ToString() == expectedDate))));
+            client.Verify(x => x.Post(
+                It.Is<string>(s => s.EndsWith("/GetCrpToken")),
+                It.Is<string>(s => s.Contains(DeviceId)),
+                It.Is<DateTime>(d => d == Timestamp),
+                It.Is<Dictionary<string, string>>(
+                    d => d.ContainsKey("uaid") && d["uaid"] == Username)));
         }
 
         [Test]
         public void GetEncryptedToken_returns_response()
         {
-            var client = SetupClient(GetTokenResponse);
-
             Assert.That(
-                Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object),
+                Remote.GetEncryptedToken(Username,
+                                         DeviceId,
+                                         Timestamp,
+                                         SetupClientForPost(GetTokenResponse).Object),
                 Is.EqualTo(EncryptedToken));
+        }
+
+        [Test]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void GetEncryptedToken_throws_on_non_zero_status()
+        {
+            Remote.GetEncryptedToken(Username,
+                                     DeviceId,
+                                     Timestamp,
+                                     SetupClientForPost(GetTokenResponseWithStatus).Object);
+        }
+
+        [Test]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void GetEncryptedToken_throws_on_incorrect_xml()
+        {
+            Remote.GetEncryptedToken(Username,
+                                     DeviceId,
+                                     Timestamp,
+                                     SetupClientForPost("<xml />").Object);
+        }
+
+        [Test]
+        [Ignore("Throws XmlException instead")] // TODO: Remove this
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void GetEncryptedToken_throws_on_invalid_xml()
+        {
+            Remote.GetEncryptedToken(Username,
+                                     DeviceId,
+                                     Timestamp,
+                                     SetupClientForPost(">invalid xml<").Object);
         }
 
         [Test]
@@ -142,14 +151,14 @@ namespace StickyPassword.Test
         {
             // TODO: Make this test verify something
 
-            var client = SetupClient(AuthorizeDeviceResponse);
+            var client = SetupClientForPostWithAuth(AuthorizeDeviceResponse);
             Remote.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
         }
 
         [Test]
         public void GetS3Token_returns_s3_token()
         {
-            var client = SetupClient(GetS3TokenResponse);
+            var client = SetupClientForPostWithAuth(GetS3TokenResponse);
             var s3 = Remote.GetS3Token(Username, Token, DeviceId, Timestamp, client.Object);
 
             Assert.That(s3.AccessKeyId, Is.EqualTo("ASIAIFIAL3EJEOPJXVCQ"));
@@ -206,19 +215,28 @@ namespace StickyPassword.Test
         // Helpers
         //
 
-        private static Mock<IRestClient> SetupClient(string response)
+        private static Mock<IHttpClient> SetupClientForPost(string response)
         {
-            var mock = new Mock<IRestClient>();
+            var mock = new Mock<IHttpClient>();
             mock
-                .Setup(x => x.Execute(It.IsAny<IRestRequest>()))
-                .Returns(SetupResponse(response).Object);
+                .Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<string>(),
+                                   It.IsAny<DateTime>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Returns(response);
             return mock;
         }
 
-        private static Mock<IRestResponse> SetupResponse(string response)
+        private static Mock<IHttpClient> SetupClientForPostWithAuth(string response)
         {
-            var mock = new Mock<IRestResponse>();
-            mock.Setup(x => x.Content).Returns(response);
+            var mock = new Mock<IHttpClient>();
+            mock
+                .Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<string>(),
+                                   It.IsAny<string>(),
+                                   It.IsAny<DateTime>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Returns(response);
             return mock;
         }
 
