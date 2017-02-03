@@ -128,22 +128,10 @@ namespace StickyPassword.Test
         [Test]
         public void GetEncryptedToken_throws_on_incorrect_xml()
         {
-            var responses = new[]
-            {
-                "",
-                "<xml />",
-                ">invalid<",
-                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-            };
-
-            foreach (var i in responses)
-            {
-                Assert.That(() => Remote.GetEncryptedToken(Username,
-                                                           DeviceId,
-                                                           Timestamp,
-                                                           SetupClientForPost(i).Object),
-                            Throws.InvalidOperationException);
-            }
+            TestOnIncorrectXml(client => Remote.GetEncryptedToken(Username,
+                                                                  DeviceId,
+                                                                  Timestamp,
+                                                                  client));
         }
 
         [Test]
@@ -153,6 +141,17 @@ namespace StickyPassword.Test
 
             var client = SetupClientForPostWithAuth(AuthorizeDeviceResponse);
             Remote.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
+        }
+
+        [Test]
+        public void AuthorizeDevice_throws_on_incorrect_xml()
+        {
+            TestOnIncorrectXml(client => Remote.AuthorizeDevice(Username,
+                                                                Token,
+                                                                DeviceId,
+                                                                DeviceName,
+                                                                Timestamp,
+                                                                client));
         }
 
         [Test]
@@ -167,6 +166,16 @@ namespace StickyPassword.Test
             Assert.That(s3.ExpirationDate, Is.EqualTo("2017-01-11T12:24:24.000Z"));
             Assert.That(s3.BucketName, Is.EqualTo("spclouddata"));
             Assert.That(s3.ObjectPrefix, Is.EqualTo("31645cc8-6ae9-4a22-aaea-557efe9e43af/"));
+        }
+
+        [Test]
+        public void GetS3Token_throws_on_incorrect_xml()
+        {
+            TestOnIncorrectXml(client => Remote.GetS3Token(Username,
+                                                           Token,
+                                                           DeviceId,
+                                                           Timestamp,
+                                                           client));
         }
 
         [Test]
@@ -256,6 +265,23 @@ namespace StickyPassword.Test
                 });
 
             return s3;
+        }
+
+        public void TestOnIncorrectXml(Action<IHttpClient> what)
+        {
+            var responses = new[]
+            {
+                "",
+                "<xml />",
+                ">invalid<",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            };
+
+            foreach (var i in responses)
+            {
+                Assert.That(() => what(SetupClientForPost(i).Object),
+                            Throws.InvalidOperationException);
+            }
         }
     }
 }
