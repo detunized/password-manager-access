@@ -35,21 +35,15 @@ namespace StickyPassword
                                     {"uaid", username},
                                 });
 
-            var xml = XDocument.Parse(response);
-            var ns = new XmlNamespaceManager(new NameTable());
-            ns.AddNamespace("ns", "http://www.stickypassword.com/cb/clientapi/schema/v2");
-
-            var status = xml.XPathSelectElement("/ns:SpcResponse/ns:Status", ns);
-            if (status == null || status.Value != "0")
+            var xml = XmlResponse.Parse(response);
+            if (xml.Status == null || xml.Status != "0")
                 throw new InvalidOperationException();
 
-            var token = xml.XPathSelectElement(
-                "/ns:SpcResponse/ns:GetCrpTokenResponse/ns:CrpToken",
-                ns);
+            var token = xml.Get("/SpcResponse/GetCrpTokenResponse/CrpToken");
             if (token == null)
                 throw new InvalidOperationException();
 
-            return token.Value.Decode64();
+            return token.Decode64();
         }
 
         public static void AuthorizeDevice(string username,
@@ -79,21 +73,16 @@ namespace StickyPassword
                                     {"hid", deviceName}
                                 });
 
-            // TODO: DRY this up!
-            var xml = XDocument.Parse(response);
-            var ns = new XmlNamespaceManager(new NameTable());
-            ns.AddNamespace("ns", "http://www.stickypassword.com/cb/clientapi/schema/v2");
-
-            var status = xml.XPathSelectElement("/ns:SpcResponse/ns:Status", ns);
-            if (status == null)
+            var xml = XmlResponse.Parse(response);
+            if (xml.Status == null)
                 throw new InvalidOperationException();
 
             // A new device just got registered
-            if (status.Value == "0")
+            if (xml.Status == "0")
                 return;
 
             // The device is known and has been registered in the past
-            if (status.Value == "4005")
+            if (xml.Status == "4005")
                 return;
 
             // TODO: Use custom exception
@@ -122,22 +111,17 @@ namespace StickyPassword
                                 timestamp,
                                 new Dictionary<string, string>());
 
-            // TODO: DRY this up!
-            var xml = XDocument.Parse(response);
-            var ns = new XmlNamespaceManager(new NameTable());
-            ns.AddNamespace("ns", "http://www.stickypassword.com/cb/clientapi/schema/v2");
-
-            var status = xml.XPathSelectElement("/ns:SpcResponse/ns:Status", ns);
-            if (status == null || status.Value != "0")
+            var xml = XmlResponse.Parse(response);
+            if (xml.Status == null || xml.Status != "0")
                 throw new InvalidOperationException();
 
             return new S3Token(
-                    accessKeyId: GetS3TokenItem(xml, ns, "AccessKeyId"),
-                secretAccessKey: GetS3TokenItem(xml, ns, "SecretAccessKey"),
-                   sessionToken: GetS3TokenItem(xml, ns, "SessionToken"),
-                 expirationDate: GetS3TokenItem(xml, ns, "DateExpiration"),
-                     bucketName: GetS3TokenItem(xml, ns, "BucketName"),
-                   objectPrefix: GetS3TokenItem(xml, ns, "ObjectPrefix")
+                    accessKeyId: GetS3TokenItem(xml, "AccessKeyId"),
+                secretAccessKey: GetS3TokenItem(xml, "SecretAccessKey"),
+                   sessionToken: GetS3TokenItem(xml, "SessionToken"),
+                 expirationDate: GetS3TokenItem(xml, "DateExpiration"),
+                     bucketName: GetS3TokenItem(xml, "BucketName"),
+                   objectPrefix: GetS3TokenItem(xml, "ObjectPrefix")
             );
         }
 
@@ -188,6 +172,41 @@ namespace StickyPassword
         // Private
         //
 
+        private class XmlResponse
+        {
+            public static XmlResponse Parse(string text)
+            {
+                var doc = XDocument.Parse(text);
+                var man = new XmlNamespaceManager(new NameTable());
+                man.AddNamespace(NamespaceName,
+                                 "http://www.stickypassword.com/cb/clientapi/schema/v2");
+
+                return new XmlResponse(doc, man);
+            }
+
+            public string Status { get; private set; }
+
+            // Get is very simple. Every path component must start with /.
+            public string Get(string path)
+            {
+                var e = _document.XPathSelectElement(path.Replace("/", "/" + NamespaceName + ":"),
+                                                     _namespaceManager);
+                return e == null ? null : e.Value;
+            }
+
+            private XmlResponse(XDocument document, XmlNamespaceManager namespaceManager)
+            {
+                _document = document;
+                _namespaceManager = namespaceManager;
+                Status = Get("/SpcResponse/Status");
+            }
+
+            private const string NamespaceName = "ns";
+
+            private readonly XDocument _document;
+            private readonly XmlNamespaceManager _namespaceManager;
+        }
+
         private static string Post(IHttpClient client,
                                    string endpoint,
                                    string deviceId,
@@ -225,14 +244,14 @@ namespace StickyPassword
                    string.Format("{0}:{1}", username, token.Encode64()).ToBytes().Encode64();
         }
 
-        private static string GetS3TokenItem(XDocument xml, XmlNamespaceManager ns, string name)
+        private static string GetS3TokenItem(XmlResponse xml, string name)
         {
-            var item = xml.XPathSelectElement("/ns:SpcResponse/ns:GetS3TokenResponse/ns:" + name, ns);
+            var item = xml.Get("/SpcResponse/GetS3TokenResponse/" + name);
             if (item == null)
                 // TODO: Use custom exception
                 throw new InvalidOperationException();
 
-            return item.Value;
+            return item;
         }
 
         private static byte[] Inflate(Stream s)
