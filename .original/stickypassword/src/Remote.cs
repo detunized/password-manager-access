@@ -35,14 +35,11 @@ namespace StickyPassword
                                     {"uaid", username},
                                 });
 
-            if (response.Status == null || response.Status != "0")
-                throw new InvalidOperationException();
+            if (response.Status != "0")
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Failed to retrieve the encrypted token");
 
-            var token = response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken");
-            if (token == null)
-                throw new InvalidOperationException();
-
-            return token.Decode64();
+            return response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken").Decode64();
         }
 
         public static void AuthorizeDevice(string username,
@@ -72,9 +69,6 @@ namespace StickyPassword
                                     {"hid", deviceName}
                                 });
 
-            if (response.Status == null)
-                throw new InvalidOperationException();
-
             // A new device just got registered
             if (response.Status == "0")
                 return;
@@ -84,7 +78,7 @@ namespace StickyPassword
                 return;
 
             // TODO: Use custom exception
-            throw new InvalidOperationException("Device authorization failed");
+            throw new InvalidOperationException("Failed to authorization the device");
         }
 
         public static S3Token GetS3Token(string username,
@@ -109,8 +103,9 @@ namespace StickyPassword
                                 timestamp,
                                 new Dictionary<string, string>());
 
-            if (response.Status == null || response.Status != "0")
-                throw new InvalidOperationException();
+            if (response.Status != "0")
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Failed to retrieve the S3 token");
 
             return new S3Token(
                     accessKeyId: GetS3TokenItem(response, "AccessKeyId"),
@@ -149,6 +144,7 @@ namespace StickyPassword
             var m = re.Match(info);
 
             if (!m.Success)
+                // TODO: Use custom exception
                 throw new InvalidOperationException("Invalid database info format");
 
             return m.Groups[1].Value;
@@ -188,7 +184,11 @@ namespace StickyPassword
             {
                 var e = _document.XPathSelectElement(path.Replace("/", "/" + NamespaceName + ":"),
                                                      _namespaceManager);
-                return e == null ? null : e.Value;
+                if (e == null)
+                    // TODO: Use custom exception
+                    throw new InvalidOperationException("Unknown response format");
+
+                return e.Value;
             }
 
             private XmlResponse(XDocument document, XmlNamespaceManager namespaceManager)
@@ -246,12 +246,7 @@ namespace StickyPassword
 
         private static string GetS3TokenItem(XmlResponse xml, string name)
         {
-            var item = xml.Get("/SpcResponse/GetS3TokenResponse/" + name);
-            if (item == null)
-                // TODO: Use custom exception
-                throw new InvalidOperationException();
-
-            return item;
+            return xml.Get("/SpcResponse/GetS3TokenResponse/" + name);
         }
 
         private static byte[] Inflate(Stream s)
