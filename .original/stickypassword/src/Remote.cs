@@ -35,11 +35,10 @@ namespace StickyPassword
                                     {"uaid", username},
                                 });
 
-            var xml = XmlResponse.Parse(response);
-            if (xml.Status == null || xml.Status != "0")
+            if (response.Status == null || response.Status != "0")
                 throw new InvalidOperationException();
 
-            var token = xml.Get("/SpcResponse/GetCrpTokenResponse/CrpToken");
+            var token = response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken");
             if (token == null)
                 throw new InvalidOperationException();
 
@@ -73,16 +72,15 @@ namespace StickyPassword
                                     {"hid", deviceName}
                                 });
 
-            var xml = XmlResponse.Parse(response);
-            if (xml.Status == null)
+            if (response.Status == null)
                 throw new InvalidOperationException();
 
             // A new device just got registered
-            if (xml.Status == "0")
+            if (response.Status == "0")
                 return;
 
             // The device is known and has been registered in the past
-            if (xml.Status == "4005")
+            if (response.Status == "4005")
                 return;
 
             // TODO: Use custom exception
@@ -111,17 +109,16 @@ namespace StickyPassword
                                 timestamp,
                                 new Dictionary<string, string>());
 
-            var xml = XmlResponse.Parse(response);
-            if (xml.Status == null || xml.Status != "0")
+            if (response.Status == null || response.Status != "0")
                 throw new InvalidOperationException();
 
             return new S3Token(
-                    accessKeyId: GetS3TokenItem(xml, "AccessKeyId"),
-                secretAccessKey: GetS3TokenItem(xml, "SecretAccessKey"),
-                   sessionToken: GetS3TokenItem(xml, "SessionToken"),
-                 expirationDate: GetS3TokenItem(xml, "DateExpiration"),
-                     bucketName: GetS3TokenItem(xml, "BucketName"),
-                   objectPrefix: GetS3TokenItem(xml, "ObjectPrefix")
+                    accessKeyId: GetS3TokenItem(response, "AccessKeyId"),
+                secretAccessKey: GetS3TokenItem(response, "SecretAccessKey"),
+                   sessionToken: GetS3TokenItem(response, "SessionToken"),
+                 expirationDate: GetS3TokenItem(response, "DateExpiration"),
+                     bucketName: GetS3TokenItem(response, "BucketName"),
+                   objectPrefix: GetS3TokenItem(response, "ObjectPrefix")
             );
         }
 
@@ -207,28 +204,31 @@ namespace StickyPassword
             private readonly XmlNamespaceManager _namespaceManager;
         }
 
-        private static string Post(IHttpClient client,
-                                   string endpoint,
-                                   string deviceId,
-                                   DateTime timestamp,
-                                   Dictionary<string, string> parameters)
+        private static XmlResponse Post(IHttpClient client,
+                                        string endpoint,
+                                        string deviceId,
+                                        DateTime timestamp,
+                                        Dictionary<string, string> parameters)
         {
-            return client.Post(endpoint, GetUserAgent(deviceId), timestamp, parameters);
+            return XmlResponse.Parse(client.Post(endpoint,
+                                                 GetUserAgent(deviceId),
+                                                 timestamp,
+                                                 parameters));
         }
 
-        private static string Post(IHttpClient client,
-                                   string endpoint,
-                                   string deviceId,
-                                   string username,
-                                   byte[] token,
-                                   DateTime timestamp,
-                                   Dictionary<string, string> parameters)
+        private static XmlResponse Post(IHttpClient client,
+                                        string endpoint,
+                                        string deviceId,
+                                        string username,
+                                        byte[] token,
+                                        DateTime timestamp,
+                                        Dictionary<string, string> parameters)
         {
-            return client.Post(endpoint,
-                               GetUserAgent(deviceId),
-                               GetAuthorizationHeader(username, token),
-                               timestamp,
-                               parameters);
+            return XmlResponse.Parse(client.Post(endpoint,
+                                                 GetUserAgent(deviceId),
+                                                 GetAuthorizationHeader(username, token),
+                                                 timestamp,
+                                                 parameters));
         }
 
         private static string GetUserAgent(string deviceId)
