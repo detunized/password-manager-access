@@ -126,24 +126,24 @@ namespace StickyPassword.Test
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException))]
         public void GetEncryptedToken_throws_on_incorrect_xml()
         {
-            Remote.GetEncryptedToken(Username,
-                                     DeviceId,
-                                     Timestamp,
-                                     SetupClientForPost("<xml />").Object);
-        }
+            var responses = new[]
+            {
+                "",
+                "<xml />",
+                ">invalid<",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            };
 
-        [Test]
-        [Ignore("Throws XmlException instead")] // TODO: Remove this
-        [ExpectedException(typeof(InvalidOperationException))]
-        public void GetEncryptedToken_throws_on_invalid_xml()
-        {
-            Remote.GetEncryptedToken(Username,
-                                     DeviceId,
-                                     Timestamp,
-                                     SetupClientForPost(">invalid xml<").Object);
+            foreach (var i in responses)
+            {
+                Assert.That(() => Remote.GetEncryptedToken(Username,
+                                                           DeviceId,
+                                                           Timestamp,
+                                                           SetupClientForPost(i).Object),
+                            Throws.InvalidOperationException);
+            }
         }
 
         [Test]

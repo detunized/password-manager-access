@@ -169,7 +169,17 @@ namespace StickyPassword
         {
             public static XmlResponse Parse(string text)
             {
-                var doc = XDocument.Parse(text);
+                XDocument doc;
+                try
+                {
+                    doc = XDocument.Parse(text);
+                }
+                catch (XmlException e)
+                {
+                    // TODO: Use custom exception
+                    throw new InvalidOperationException("Unknown response format", e);
+                }
+
                 var man = new XmlNamespaceManager(new NameTable());
                 man.AddNamespace(NamespaceName,
                                  "http://www.stickypassword.com/cb/clientapi/schema/v2");
