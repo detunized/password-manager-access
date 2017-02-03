@@ -97,7 +97,7 @@ namespace StickyPassword.Test
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.Verify(x => x.Post(
-                It.Is<string>(s => s.EndsWith("/GetCrpToken")),
+                It.Is<string>(s => s == "GetCrpToken"),
                 It.Is<string>(s => s.Contains(DeviceId)),
                 It.Is<DateTime>(d => d == Timestamp),
                 It.Is<Dictionary<string, string>>(

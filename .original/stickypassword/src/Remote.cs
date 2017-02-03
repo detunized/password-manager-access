@@ -16,8 +16,6 @@ namespace StickyPassword
 {
     public static class Remote
     {
-        private const string ApiUrl = "https://spcb.stickypassword.com/SPCClient/";
-
         public static byte[] GetEncryptedToken(string username, string deviceId, DateTime timestamp)
         {
             return GetEncryptedToken(username, deviceId, timestamp, new HttpClient());
@@ -191,23 +189,23 @@ namespace StickyPassword
         //
 
         private static string Post(IHttpClient client,
-                                   string endPoint,
+                                   string endpoint,
                                    string deviceId,
                                    DateTime timestamp,
                                    Dictionary<string, string> parameters)
         {
-            return client.Post(ApiUrl + endPoint, GetUserAgent(deviceId), timestamp, parameters);
+            return client.Post(endpoint, GetUserAgent(deviceId), timestamp, parameters);
         }
 
         private static string Post(IHttpClient client,
-                                   string endPoint,
+                                   string endpoint,
                                    string deviceId,
                                    string username,
                                    byte[] token,
                                    DateTime timestamp,
                                    Dictionary<string, string> parameters)
         {
-            return client.Post(ApiUrl + endPoint,
+            return client.Post(endpoint,
                                GetUserAgent(deviceId),
                                GetAuthorizationHeader(username, token),
                                timestamp,

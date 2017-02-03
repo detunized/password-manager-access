@@ -6,14 +6,17 @@ using System.Collections.Generic;
 
 namespace StickyPassword
 {
+    // This is not intended to be a general purpose HTTP client. This interface intentionally
+    // defines only the bare minimum of what is needed to communicate with the StickyPassword
+    // server.
     public interface IHttpClient
     {
-        string Post(string url,
+        string Post(string endpoint,
                     string userAgent,
                     DateTime timestamp,
                     Dictionary<string, string> parameters);
 
-        string Post(string url,
+        string Post(string endpoint,
                     string userAgent,
                     string authorization,
                     DateTime timestamp,

@@ -14,21 +14,28 @@ namespace StickyPassword
     //       WebRequest.Create would have to be replaced with some factory first.
     public class HttpClient: IHttpClient
     {
-        public string Post(string url,
+        public const string DefaultBaseUrl = "https://spcb.stickypassword.com/SPCClient";
+
+        public HttpClient(string baseUrl = DefaultBaseUrl)
+        {
+            _baseUrl = new Uri(baseUrl);
+        }
+
+        public string Post(string endpoint,
                            string userAgent,
                            DateTime timestamp,
                            Dictionary<string, string> parameters)
         {
-            return Post(url, userAgent, "", timestamp, parameters);
+            return Post(endpoint, userAgent, "", timestamp, parameters);
         }
 
-        public string Post(string url,
+        public string Post(string endpoint,
                            string userAgent,
                            string authorization,
                            DateTime timestamp,
                            Dictionary<string, string> parameters)
         {
-            var request = (HttpWebRequest)WebRequest.Create(url);
+            var request = (HttpWebRequest)WebRequest.Create(new Uri(_baseUrl, endpoint));
             request.Method = "POST";
             request.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
             request.Accept = "application/xml";
@@ -51,5 +58,7 @@ namespace StickyPassword
             using (var reader = new StreamReader(response.GetResponseStream()))
                 return reader.ReadToEnd();
         }
+
+        private readonly Uri _baseUrl;
     }
 }
