@@ -164,7 +164,7 @@ namespace StickyPassword.Test
             Assert.That(s3.AccessKeyId, Is.EqualTo("ASIAIFIAL3EJEOPJXVCQ"));
             Assert.That(s3.SecretAccessKey, Is.EqualTo("TRuR/+smCDzIqEcFTe+WCbgoNXK5OD0k4CdWhD6d"));
             Assert.That(s3.SessionToken, Is.EqualTo("FQoDYXdzEHYaDMzzWZ6Bc0LZKKiX5iLYAjsN+/1ou0rwiiiGumEdPZ1dE/o0xP1MvUNlgdcN7HKvoXIiQ4yAnawKDU1/7A/cgJ/QNdnj2yJRq0wz9LZkvKeuh+LMu74/GkvR7NZLM7fCg81lySsGq20wol2Z580l8N6QN/B52fsJq2nwYpalRp1/F0KbgRctffGMqelSvXjeqIH6OIdk53oilM72myMPtVZjjv+0CAyTxpg/ObGSdDazUMmNcBHdU5eJr02FXnOL3b/dhvf1YwMexRiMUNkb+0SpCCF4tApvNgR676nIoRSHtVfe7V1IvaKH6jBuDAUHAAJRyOro5+LwCHTOCaADp0jyuWXNJBD4cRaheWeMvLJBQKspgZp17sEO6MQuuTlBApYGngvrg+kISlU2uUKbOYmqpTTueRQR1h2Qp33/K9JWSf3fsvrhDz2Keri8fe9a5qbpkZ5wavsxko3/jZjvKaO76JAjg8xdKPik08MF"));
-            Assert.That(s3.DateExpiration, Is.EqualTo("2017-01-11T12:24:24.000Z"));
+            Assert.That(s3.ExpirationDate, Is.EqualTo("2017-01-11T12:24:24.000Z"));
             Assert.That(s3.BucketName, Is.EqualTo("spclouddata"));
             Assert.That(s3.ObjectPrefix, Is.EqualTo("31645cc8-6ae9-4a22-aaea-557efe9e43af/"));
         }

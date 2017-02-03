@@ -137,7 +137,7 @@ namespace StickyPassword
                     accessKeyId: GetS3TokenItem(xml, ns, "AccessKeyId"),
                 secretAccessKey: GetS3TokenItem(xml, ns, "SecretAccessKey"),
                    sessionToken: GetS3TokenItem(xml, ns, "SessionToken"),
-                 dateExpiration: GetS3TokenItem(xml, ns, "DateExpiration"),
+                 expirationDate: GetS3TokenItem(xml, ns, "DateExpiration"),
                      bucketName: GetS3TokenItem(xml, ns, "BucketName"),
                    objectPrefix: GetS3TokenItem(xml, ns, "ObjectPrefix")
             );

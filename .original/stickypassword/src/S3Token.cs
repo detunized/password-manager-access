@@ -8,14 +8,14 @@ namespace StickyPassword
         public S3Token(string accessKeyId,
                        string secretAccessKey,
                        string sessionToken,
-                       string dateExpiration,
+                       string expirationDate,
                        string bucketName,
                        string objectPrefix)
         {
             AccessKeyId = accessKeyId;
             SecretAccessKey = secretAccessKey;
             SessionToken = sessionToken;
-            DateExpiration = dateExpiration;
+            ExpirationDate = expirationDate;
             BucketName = bucketName;
             ObjectPrefix = objectPrefix;
         }
@@ -23,7 +23,7 @@ namespace StickyPassword
         public string AccessKeyId { get; private set; }
         public string SecretAccessKey { get; private set; }
         public string SessionToken { get; private set; }
-        public string DateExpiration { get; private set; }
+        public string ExpirationDate { get; private set; }
         public string BucketName { get; private set; }
         public string ObjectPrefix { get; private set; }
     }

@@ -14,21 +14,21 @@ namespace StickyPassword.Test
             var accessKeyId = "accessKeyId";
             var secretAccessKey = "secretAccessKey";
             var sessionToken = "sessionToken";
-            var dateExpiration = "dateExpiration";
+            var expirationDate = "expirationDate";
             var bucketName = "bucketName";
             var objectPrefix = "objectPrefix";
 
             var token = new S3Token(accessKeyId,
                                     secretAccessKey,
                                     sessionToken,
-                                    dateExpiration,
+                                    expirationDate,
                                     bucketName,
                                     objectPrefix);
 
             Assert.That(token.AccessKeyId, Is.EqualTo(accessKeyId));
             Assert.That(token.SecretAccessKey, Is.EqualTo(secretAccessKey));
             Assert.That(token.SessionToken, Is.EqualTo(sessionToken));
-            Assert.That(token.DateExpiration, Is.EqualTo(dateExpiration));
+            Assert.That(token.ExpirationDate, Is.EqualTo(expirationDate));
             Assert.That(token.BucketName, Is.EqualTo(bucketName));
             Assert.That(token.ObjectPrefix, Is.EqualTo(objectPrefix));
         }
