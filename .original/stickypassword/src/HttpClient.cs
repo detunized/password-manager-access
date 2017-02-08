@@ -14,7 +14,7 @@ namespace StickyPassword
     //       WebRequest.Create would have to be replaced with some factory first.
     public class HttpClient: IHttpClient
     {
-        public const string DefaultBaseUrl = "https://spcb.stickypassword.com/SPCClient";
+        public const string DefaultBaseUrl = "https://spcb.stickypassword.com/SPCClient/";
 
         public HttpClient(string baseUrl = DefaultBaseUrl)
         {
