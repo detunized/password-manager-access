@@ -131,7 +131,8 @@ namespace StickyPassword.Test
             TestOnIncorrectXml(client => Remote.GetEncryptedToken(Username,
                                                                   DeviceId,
                                                                   Timestamp,
-                                                                  client));
+                                                                  client),
+                               SetupClientForPost);
         }
 
         [Test]
@@ -151,7 +152,8 @@ namespace StickyPassword.Test
                                                                 DeviceId,
                                                                 DeviceName,
                                                                 Timestamp,
-                                                                client));
+                                                                client),
+                               SetupClientForPostWithAuth);
         }
 
         [Test]
@@ -175,7 +177,8 @@ namespace StickyPassword.Test
                                                            Token,
                                                            DeviceId,
                                                            Timestamp,
-                                                           client));
+                                                           client),
+                               SetupClientForPostWithAuth);
         }
 
         [Test]
@@ -267,7 +270,8 @@ namespace StickyPassword.Test
             return s3;
         }
 
-        public void TestOnIncorrectXml(Action<IHttpClient> what)
+        public void TestOnIncorrectXml(Action<IHttpClient> what,
+                                       Func<string, Mock<IHttpClient>> setup)
         {
             var responses = new[]
             {
@@ -279,7 +283,7 @@ namespace StickyPassword.Test
 
             foreach (var i in responses)
             {
-                Assert.That(() => what(SetupClientForPost(i).Object),
+                Assert.That(() => what(setup(i).Object),
                             Throws.InvalidOperationException);
             }
         }
