@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -226,10 +227,10 @@ namespace StickyPassword
                                         DateTime timestamp,
                                         Dictionary<string, string> parameters)
         {
-            return XmlResponse.Parse(client.Post(endpoint,
-                                                 GetUserAgent(deviceId),
-                                                 timestamp,
-                                                 parameters));
+            return HandlePostResponse(() => client.Post(endpoint,
+                                                        GetUserAgent(deviceId),
+                                                        timestamp,
+                                                        parameters));
         }
 
         private static XmlResponse Post(IHttpClient client,
@@ -240,11 +241,25 @@ namespace StickyPassword
                                         DateTime timestamp,
                                         Dictionary<string, string> parameters)
         {
-            return XmlResponse.Parse(client.Post(endpoint,
-                                                 GetUserAgent(deviceId),
-                                                 GetAuthorizationHeader(username, token),
-                                                 timestamp,
-                                                 parameters));
+            return HandlePostResponse(() => client.Post(endpoint,
+                                                        GetUserAgent(deviceId),
+                                                        GetAuthorizationHeader(username, token),
+                                                        timestamp,
+                                                        parameters));
+        }
+
+        private static XmlResponse HandlePostResponse(Func<string> post)
+        {
+            try
+            {
+                return XmlResponse.Parse(post());
+            }
+            catch (WebException e)
+            {
+                throw new FetchException(FetchException.FailureReason.NetworkError,
+                                         "Network request failed",
+                                         e);
+            }
         }
 
         private static string GetUserAgent(string deviceId)

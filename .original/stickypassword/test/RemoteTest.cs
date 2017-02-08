@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using Amazon.S3;
 using Moq;
 using NUnit.Framework;
@@ -116,6 +117,16 @@ namespace StickyPassword.Test
         }
 
         [Test]
+        public void GetEncryptedToken_throws_on_network_error()
+        {
+            TestThrowsNetworkError(client => Remote.GetEncryptedToken(Username,
+                                                                      DeviceId,
+                                                                      Timestamp,
+                                                                      client),
+                                   SetupClientForPostError);
+        }
+
+        [Test]
         [ExpectedException(typeof(FetchException))]
         public void GetEncryptedToken_throws_on_non_zero_status()
         {
@@ -142,6 +153,18 @@ namespace StickyPassword.Test
 
             var client = SetupClientForPostWithAuth(AuthorizeDeviceResponse);
             Remote.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
+        }
+
+        [Test]
+        public void AuthorizeDevice_throws_on_network_error()
+        {
+            TestThrowsNetworkError(client => Remote.AuthorizeDevice(Username,
+                                                                    Token,
+                                                                    DeviceId,
+                                                                    DeviceName,
+                                                                    Timestamp,
+                                                                    client),
+                                   SetupClientForPostWithAuthError);
         }
 
         [Test]
@@ -191,6 +214,17 @@ namespace StickyPassword.Test
                               DeviceId,
                               Timestamp,
                               SetupClientForPostWithAuth(ResponseWithError).Object);
+        }
+
+        [Test]
+        public void GetS3Token_throws_on_network_error()
+        {
+            TestThrowsNetworkError(client => Remote.GetS3Token(Username,
+                                                               Token,
+                                                               DeviceId,
+                                                               Timestamp,
+                                                               client),
+                                   SetupClientForPostWithAuthError);
         }
 
         [Test]
@@ -262,6 +296,18 @@ namespace StickyPassword.Test
             return mock;
         }
 
+        private static Mock<IHttpClient> SetupClientForPostError()
+        {
+            var mock = new Mock<IHttpClient>();
+            mock
+                .Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<string>(),
+                                   It.IsAny<DateTime>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Throws<WebException>();
+            return mock;
+        }
+
         private static Mock<IHttpClient> SetupClientForPostWithAuth(string response)
         {
             var mock = new Mock<IHttpClient>();
@@ -272,6 +318,19 @@ namespace StickyPassword.Test
                                    It.IsAny<DateTime>(),
                                    It.IsAny<Dictionary<string, string>>()))
                 .Returns(response);
+            return mock;
+        }
+
+        private static Mock<IHttpClient> SetupClientForPostWithAuthError()
+        {
+            var mock = new Mock<IHttpClient>();
+            mock
+                .Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<string>(),
+                                   It.IsAny<string>(),
+                                   It.IsAny<DateTime>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Throws<WebException>();
             return mock;
         }
 
@@ -293,8 +352,17 @@ namespace StickyPassword.Test
             return s3;
         }
 
-        public void TestOnIncorrectXml(Action<IHttpClient> what,
-                                       Func<string, Mock<IHttpClient>> setup)
+        private void TestThrowsNetworkError(Action<IHttpClient> what,
+                                            Func<Mock<IHttpClient>> setup)
+        {
+            var client = setup();
+            var e = Assert.Throws<FetchException>(() => what(client.Object));
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.NetworkError));
+            Assert.That(e.InnerException, Is.TypeOf<WebException>());
+        }
+
+        private void TestOnIncorrectXml(Action<IHttpClient> what,
+                                        Func<string, Mock<IHttpClient>> setup)
         {
             var responses = new[]
             {
