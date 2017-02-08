@@ -173,8 +173,9 @@ namespace StickyPassword
                 }
                 catch (XmlException e)
                 {
-                    // TODO: Use custom exception
-                    throw new InvalidOperationException("Unknown response format", e);
+                    throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                             "Unknown response format",
+                                             e);
                 }
 
                 var man = new XmlNamespaceManager(new NameTable());
@@ -192,8 +193,8 @@ namespace StickyPassword
                 var e = _document.XPathSelectElement(path.Replace("/", "/" + NamespaceName + ":"),
                                                      _namespaceManager);
                 if (e == null)
-                    // TODO: Use custom exception
-                    throw new InvalidOperationException("Unknown response format");
+                    throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                             "Unknown response format");
 
                 return e.Value;
             }

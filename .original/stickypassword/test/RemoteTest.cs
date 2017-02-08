@@ -306,8 +306,8 @@ namespace StickyPassword.Test
 
             foreach (var i in responses)
             {
-                Assert.That(() => what(setup(i).Object),
-                            Throws.InvalidOperationException);
+                var e = Assert.Throws<FetchException>(() => what(setup(i).Object));
+                Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.InvalidResponse));
             }
         }
     }
