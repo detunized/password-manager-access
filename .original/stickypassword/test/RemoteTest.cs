@@ -52,12 +52,6 @@ namespace StickyPassword.Test
                 "</GetCrpTokenResponse>" +
             "</SpcResponse>";
 
-        private const string GetTokenResponseWithStatus =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
-                "<Status>13</Status>" +
-            "</SpcResponse>";
-
         private const string AuthorizeDeviceResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
@@ -90,6 +84,12 @@ namespace StickyPassword.Test
                 "</GetS3TokenResponse>" +
             "</SpcResponse>";
 
+        private const string ResponseWithError =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
+                "<Status>13</Status>" +
+            "</SpcResponse>";
+
         [Test]
         public void GetEncryptedToken_makes_post_request()
         {
@@ -116,13 +116,13 @@ namespace StickyPassword.Test
         }
 
         [Test]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(FetchException))]
         public void GetEncryptedToken_throws_on_non_zero_status()
         {
             Remote.GetEncryptedToken(Username,
                                      DeviceId,
                                      Timestamp,
-                                     SetupClientForPost(GetTokenResponseWithStatus).Object);
+                                     SetupClientForPost(ResponseWithError).Object);
         }
 
         [Test]
@@ -142,6 +142,18 @@ namespace StickyPassword.Test
 
             var client = SetupClientForPostWithAuth(AuthorizeDeviceResponse);
             Remote.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
+        }
+
+        [Test]
+        [ExpectedException(typeof(FetchException))]
+        public void AuthorizeDevice_throws_on_non_zero_status()
+        {
+            Remote.AuthorizeDevice(Username,
+                                   Token,
+                                   DeviceId,
+                                   DeviceName,
+                                   Timestamp,
+                                   SetupClientForPostWithAuth(ResponseWithError).Object);
         }
 
         [Test]
@@ -168,6 +180,17 @@ namespace StickyPassword.Test
             Assert.That(s3.ExpirationDate, Is.EqualTo("2017-01-11T12:24:24.000Z"));
             Assert.That(s3.BucketName, Is.EqualTo("spclouddata"));
             Assert.That(s3.ObjectPrefix, Is.EqualTo("31645cc8-6ae9-4a22-aaea-557efe9e43af/"));
+        }
+
+        [Test]
+        [ExpectedException(typeof(FetchException))]
+        public void GetS3Token_throws_on_non_zero_status()
+        {
+            Remote.GetS3Token(Username,
+                              Token,
+                              DeviceId,
+                              Timestamp,
+                              SetupClientForPostWithAuth(ResponseWithError).Object);
         }
 
         [Test]

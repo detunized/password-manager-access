@@ -36,8 +36,7 @@ namespace StickyPassword
                                 });
 
             if (response.Status != "0")
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Failed to retrieve the encrypted token");
+                ThrowReturnedError("retrieve the encrypted token", response);
 
             return response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken").Decode64();
         }
@@ -77,8 +76,7 @@ namespace StickyPassword
             if (response.Status == "4005")
                 return;
 
-            // TODO: Use custom exception
-            throw new InvalidOperationException("Failed to authorization the device");
+            ThrowReturnedError("authorize the device", response);
         }
 
         public static S3Token GetS3Token(string username,
@@ -104,8 +102,7 @@ namespace StickyPassword
                                 new Dictionary<string, string>());
 
             if (response.Status != "0")
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Failed to retrieve the S3 token");
+                ThrowReturnedError("retrieve the S3 token", response);
 
             return new S3Token(
                     accessKeyId: GetS3TokenItem(response, "AccessKeyId"),
@@ -212,6 +209,14 @@ namespace StickyPassword
 
             private readonly XDocument _document;
             private readonly XmlNamespaceManager _namespaceManager;
+        }
+
+        private static void ThrowReturnedError(string operation, XmlResponse xml)
+        {
+            throw new FetchException(FetchException.FailureReason.RespondedWithError,
+                                     string.Format("Failed to {0} (error: {1})",
+                                                   operation,
+                                                   xml.Status));
         }
 
         private static XmlResponse Post(IHttpClient client,
