@@ -278,6 +278,30 @@ namespace StickyPassword.Test
         }
 
         [Test]
+        public void FindLatestDbVersion_throws_on_network_error()
+        {
+            var s3 = SetupS3Error<WebException>();
+
+            var e = Assert.Throws<FetchException>(
+                () => Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
+
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.NetworkError));
+            Assert.That(e.InnerException, Is.TypeOf<WebException>());
+        }
+
+        [Test]
+        public void FindLatestDbVersion_throws_on_aws_error()
+        {
+            var s3 = SetupS3Error<AmazonServiceException>();
+
+            var e = Assert.Throws<FetchException>(
+                () => Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
+
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.S3Error));
+            Assert.That(e.InnerException, Is.TypeOf<AmazonServiceException>());
+        }
+
+        [Test]
         public void FindLatestDbVersion_throws_on_invalid_format()
         {
             var responses = new[]

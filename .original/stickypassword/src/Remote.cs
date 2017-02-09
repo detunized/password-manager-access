@@ -14,6 +14,7 @@ using System.Xml.XPath;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
+using Amazon.S3.Model;
 
 namespace StickyPassword
 {
@@ -136,9 +137,9 @@ namespace StickyPassword
                                                  string objectPrefix,
                                                  IAmazonS3 s3)
         {
-            // TODO: Handle S3 errors
+            var filename = objectPrefix + "1/spc.info";
             string info;
-            using (var response = s3.GetObject(bucketName, objectPrefix + "1/spc.info"))
+            using (var response = GetS3Object(s3, bucketName, filename, "the database info"))
                 info = response.ResponseStream.ReadAll().ToUtf8();
 
             var re = new Regex(@"VERSION\s+(\d+)");
@@ -156,33 +157,12 @@ namespace StickyPassword
                                         string objectPrefix,
                                         IAmazonS3 s3)
         {
-            try
-            {
-                var filename = string.Format(CultureInfo.InvariantCulture,
-                                             "{0}1/db_{1}.dmp",
-                                             objectPrefix,
-                                             version);
-                using (var response = s3.GetObject(bucketName, filename))
-                    return Inflate(response.ResponseStream);
-            }
-            catch (WebException e)
-            {
-                throw new FetchException(FetchException.FailureReason.NetworkError,
-                                         "Failed to download the database",
-                                         e);
-            }
-            catch (AmazonServiceException e)
-            {
-                throw new FetchException(FetchException.FailureReason.S3Error,
-                                         "Failed to download the database",
-                                         e);
-            }
-            catch (InvalidDataException e) // Thrown from Inflate
-            {
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         "Failed to decompress the database",
-                                         e);
-            }
+            var filename = string.Format(CultureInfo.InvariantCulture,
+                                         "{0}1/db_{1}.dmp",
+                                         objectPrefix,
+                                         version);
+            using (var response = GetS3Object(s3, bucketName, filename, "the database"))
+                return Inflate(response.ResponseStream, "the database");
         }
 
         //
@@ -310,14 +290,46 @@ namespace StickyPassword
             return xml.Get("/SpcResponse/GetS3TokenResponse/" + name);
         }
 
-        private static byte[] Inflate(Stream s)
+        private static GetObjectResponse GetS3Object(IAmazonS3 s3,
+                                                     string bucketName,
+                                                     string filename,
+                                                     string name)
+        {
+            try
+            {
+                return s3.GetObject(bucketName, filename);
+            }
+            catch (WebException e)
+            {
+                throw new FetchException(FetchException.FailureReason.NetworkError,
+                                         "Failed to download " + name,
+                                         e);
+            }
+            catch (AmazonServiceException e)
+            {
+                throw new FetchException(FetchException.FailureReason.S3Error,
+                                         "Failed to download " + name,
+                                         e);
+            }
+        }
+
+        private static byte[] Inflate(Stream s, string name)
         {
             // Eat first two bytes
             // See: http://stackoverflow.com/a/21544269/362938
             s.ReadByte();
             s.ReadByte();
 
-            return new DeflateStream(s, CompressionMode.Decompress).ReadAll();
+            try
+            {
+                return new DeflateStream(s, CompressionMode.Decompress).ReadAll();
+            }
+            catch (InvalidDataException e)
+            {
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                         "Failed to decompress " + name,
+                                         e);
+            }
         }
     }
 }
