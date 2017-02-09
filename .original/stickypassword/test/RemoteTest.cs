@@ -277,6 +277,26 @@ namespace StickyPassword.Test
         }
 
         [Test]
+        public void FindLastestDbVersion_throws_on_invalid_format()
+        {
+            var responses = new[]
+            {
+                "",
+                "   ",
+                "\t\n",
+                "VERSION\nMILESTONE\n"
+            };
+
+            foreach (var i in responses)
+            {
+                var s3 = SetupS3(i);
+                var e = Assert.Throws<FetchException>(
+                    () => Remote.FindLastestDbVersion(Bucket, ObjectPrefix, s3.Object));
+                Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.InvalidResponse));
+            }
+        }
+
+        [Test]
         public void DownloadDb_returns_content_from_s3()
         {
             var s3 = SetupS3(CompressedDbContent);

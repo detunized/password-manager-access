@@ -142,8 +142,8 @@ namespace StickyPassword
             var m = re.Match(info);
 
             if (!m.Success)
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Invalid database info format");
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                         "Invalid database info format");
 
             return m.Groups[1].Value;
         }
