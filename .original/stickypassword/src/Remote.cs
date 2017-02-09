@@ -153,10 +153,19 @@ namespace StickyPassword
                                         string objectPrefix,
                                         IAmazonS3 s3)
         {
-            // TODO: Handle S3 errors
-            var filename = string.Format("{0}1/db_{1}.dmp", objectPrefix, version);
-            var response = s3.GetObject(bucketName, filename);
-            return Inflate(response.ResponseStream);
+            try
+            {
+                var filename = string.Format("{0}1/db_{1}.dmp", objectPrefix, version);
+                // TODO: Handle S3 errors
+                var response = s3.GetObject(bucketName, filename);
+                return Inflate(response.ResponseStream);
+            }
+            catch (InvalidDataException e) // Thrown from Inflate
+            {
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                         "Failed to decompress the database",
+                                         e);
+            }
         }
 
         //

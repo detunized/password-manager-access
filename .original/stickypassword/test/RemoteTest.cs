@@ -317,6 +317,17 @@ namespace StickyPassword.Test
                 It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains(Version))));
         }
 
+        [Test]
+        public void DownloadDb_throws_on_invalid_deflated_content()
+        {
+            var s3 = SetupS3("Not really deflated");
+
+            var e = Assert.Throws<FetchException>(
+                () => Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.InvalidResponse));
+            Assert.That(e.InnerException, Is.TypeOf<InvalidDataException>());
+        }
+
         //
         // Helpers
         //
