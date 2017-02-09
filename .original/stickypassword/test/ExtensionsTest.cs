@@ -65,7 +65,7 @@ namespace StickyPassword.Test
         [Test]
         public void Stream_ReadAll_reads_from_empty_stream()
         {
-            var bytes = new byte[][]
+            var bytes = new[]
             {
                 new byte[] {},
                 new byte[] {1},

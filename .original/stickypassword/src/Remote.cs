@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -116,28 +117,29 @@ namespace StickyPassword
             );
         }
 
-        public static byte[] DownloadLastestDb(S3Token s3Token)
+        public static byte[] DownloadLatestDb(S3Token s3Token)
         {
             using (var s3 = new AmazonS3Client(s3Token.AccessKeyId,
                                                s3Token.SecretAccessKey,
                                                s3Token.SessionToken,
                                                RegionEndpoint.USEast1))
-                return DownloadLastestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
+                return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
         }
 
-        public static byte[] DownloadLastestDb(string bucketName, string objectPrefix, IAmazonS3 s3)
+        public static byte[] DownloadLatestDb(string bucketName, string objectPrefix, IAmazonS3 s3)
         {
-            var version = FindLastestDbVersion(bucketName, objectPrefix, s3);
+            var version = FindLatestDbVersion(bucketName, objectPrefix, s3);
             return DownloadDb(version, bucketName, objectPrefix, s3);
         }
 
-        public static string FindLastestDbVersion(string bucketName,
-                                                  string objectPrefix,
-                                                  IAmazonS3 s3)
+        public static string FindLatestDbVersion(string bucketName,
+                                                 string objectPrefix,
+                                                 IAmazonS3 s3)
         {
             // TODO: Handle S3 errors
-            var response = s3.GetObject(bucketName, objectPrefix + "1/spc.info");
-            var info = response.ResponseStream.ReadAll().ToUtf8();
+            string info;
+            using (var response = s3.GetObject(bucketName, objectPrefix + "1/spc.info"))
+                info = response.ResponseStream.ReadAll().ToUtf8();
 
             var re = new Regex(@"VERSION\s+(\d+)");
             var m = re.Match(info);
@@ -156,9 +158,12 @@ namespace StickyPassword
         {
             try
             {
-                var filename = string.Format("{0}1/db_{1}.dmp", objectPrefix, version);
-                var response = s3.GetObject(bucketName, filename);
-                return Inflate(response.ResponseStream);
+                var filename = string.Format(CultureInfo.InvariantCulture,
+                                             "{0}1/db_{1}.dmp",
+                                             objectPrefix,
+                                             version);
+                using (var response = s3.GetObject(bucketName, filename))
+                    return Inflate(response.ResponseStream);
             }
             catch (WebException e)
             {
@@ -237,7 +242,8 @@ namespace StickyPassword
         private static void ThrowReturnedError(string operation, XmlResponse xml)
         {
             throw new FetchException(FetchException.FailureReason.RespondedWithError,
-                                     string.Format("Failed to {0} (error: {1})",
+                                     string.Format(CultureInfo.InvariantCulture,
+                                                   "Failed to {0} (error: {1})",
                                                    operation,
                                                    xml.Status));
         }
@@ -286,6 +292,7 @@ namespace StickyPassword
         private static string GetUserAgent(string deviceId)
         {
             return string.Format(
+                CultureInfo.InvariantCulture,
                 "SP/8.0.3436 Prot=2 ID={0} Lng=EN Os=Android/4.4.4 Lic= LicStat= PackageID=",
                 deviceId);
         }
@@ -293,7 +300,9 @@ namespace StickyPassword
         private static string GetAuthorizationHeader(string username, byte[] token)
         {
             return "Basic " +
-                   string.Format("{0}:{1}", username, token.Encode64()).ToBytes().Encode64();
+                   string.Format(CultureInfo.InvariantCulture, "{0}:{1}", username, token.Encode64())
+                       .ToBytes()
+                       .Encode64();
         }
 
         private static string GetS3TokenItem(XmlResponse xml, string name)

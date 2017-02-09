@@ -16,15 +16,15 @@ namespace StickyPassword
 
         public static byte[] DeriveTokenKey(string username, string password)
         {
-            var salt = Md5(username.ToLower());
-            var kdf = new Rfc2898DeriveBytes(password, salt, 5000);
-            return kdf.GetBytes(32);
+            var salt = Md5(username.ToLowerInvariant());
+            using (var kdf = new Rfc2898DeriveBytes(password, salt, 5000))
+                return kdf.GetBytes(32);
         }
 
         public static byte[] DeriveDbKey(string password, byte[] salt)
         {
-            var kdf = new Rfc2898DeriveBytes(password, salt, 10000);
-            return kdf.GetBytes(32);
+            using (var kdf = new Rfc2898DeriveBytes(password, salt, 10000))
+                return kdf.GetBytes(32);
         }
 
         public static byte[] Md5(string text)

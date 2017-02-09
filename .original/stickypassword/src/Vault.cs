@@ -19,7 +19,7 @@ namespace StickyPassword
             var token = Crypto.DecryptToken(username, password, encryptedToken);
             Remote.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);
             var s3Token = Remote.GetS3Token(username, token, deviceId, DateTime.Now);
-            var db = Remote.DownloadLastestDb(s3Token);
+            var db = Remote.DownloadLatestDb(s3Token);
             var accounts = Parser.ParseAccounts(db, password);
 
             return new Vault(accounts);

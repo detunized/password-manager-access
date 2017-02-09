@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -30,7 +31,9 @@ namespace StickyPassword
 
         public static Account[] ParseAccounts(string filename, string password)
         {
-            using (var db = new SQLiteConnection(string.Format("Data Source={0};Version=3;", filename)))
+            using (var db = new SQLiteConnection(string.Format(CultureInfo.InvariantCulture,
+                                                               "Data Source={0};Version=3;",
+                                                               filename)))
             {
                 db.Open();
 
@@ -82,7 +85,7 @@ namespace StickyPassword
 
         private static Account[] GetAccounts(SQLiteConnection db, User user, byte[] key)
         {
-            var r = Sql(db, string.Format(
+            var r = Sql(db, string.Format(CultureInfo.InvariantCulture,
                 "select ENTRY_ID, UDC_ENTRY_NAME, UDC_URL, UD_COMMENT " +
                 "from ACC_ACCOUNT " +
                 "where DATE_DELETED = 1 " +
@@ -104,7 +107,7 @@ namespace StickyPassword
 
         private static Credentials[] GetCredentialsForAccount(SQLiteConnection db, User user, long accountId, byte[] key)
         {
-            var r = Sql(db, string.Format(
+            var r = Sql(db, string.Format(CultureInfo.InvariantCulture,
                 "select LOG.UDC_USERNAME, LOG.UD_PASSWORD, LOG.UDC_DESCRIPTION " +
                     "from ACC_LOGIN LOG, ACC_LINK LINK " +
                     "where LINK.DATE_DELETED = 1 " +

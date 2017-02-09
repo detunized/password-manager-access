@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -47,6 +48,7 @@ namespace StickyPassword
 
             var content = string.Join("&", parameters.Select(
                 i => string.Format(
+                    CultureInfo.InvariantCulture,
                     "{0}={1}",
                     HttpUtility.UrlEncode(i.Key),
                     HttpUtility.UrlEncode(i.Value)))).ToBytes();

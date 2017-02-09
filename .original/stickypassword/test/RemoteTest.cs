@@ -257,20 +257,20 @@ namespace StickyPassword.Test
         }
 
         [Test]
-        public void FindLastestDbVersion_returns_version_from_s3()
+        public void FindLatestDbVersion_returns_version_from_s3()
         {
             var s3 = SetupS3(VersionInfo);
 
             Assert.That(
-                Remote.FindLastestDbVersion(Bucket, ObjectPrefix, s3.Object),
+                Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object),
                 Is.EqualTo(Version));
         }
 
         [Test]
-        public void FindLastestDbVersion_requests_file_from_s3()
+        public void FindLatestDbVersion_requests_file_from_s3()
         {
             var s3 = SetupS3(VersionInfo);
-            Remote.FindLastestDbVersion(Bucket, ObjectPrefix, s3.Object);
+            Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object);
 
             s3.Verify(x => x.GetObject(
                 It.Is<string>(s => s == Bucket),
@@ -278,7 +278,7 @@ namespace StickyPassword.Test
         }
 
         [Test]
-        public void FindLastestDbVersion_throws_on_invalid_format()
+        public void FindLatestDbVersion_throws_on_invalid_format()
         {
             var responses = new[]
             {
@@ -292,7 +292,7 @@ namespace StickyPassword.Test
             {
                 var s3 = SetupS3(i);
                 var e = Assert.Throws<FetchException>(
-                    () => Remote.FindLastestDbVersion(Bucket, ObjectPrefix, s3.Object));
+                    () => Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
                 Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.InvalidResponse));
             }
         }
