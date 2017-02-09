@@ -12,7 +12,8 @@ namespace StickyPassword
             NetworkError,
             RespondedWithError,
             InvalidResponse,
-            UnknownError,
+            S3Error,
+            UnknownError
         }
 
         public FetchException(FailureReason reason, string message): base(message)

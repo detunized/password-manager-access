@@ -11,6 +11,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 
 namespace StickyPassword
@@ -156,9 +157,20 @@ namespace StickyPassword
             try
             {
                 var filename = string.Format("{0}1/db_{1}.dmp", objectPrefix, version);
-                // TODO: Handle S3 errors
                 var response = s3.GetObject(bucketName, filename);
                 return Inflate(response.ResponseStream);
+            }
+            catch (WebException e)
+            {
+                throw new FetchException(FetchException.FailureReason.NetworkError,
+                                         "Failed to download the database",
+                                         e);
+            }
+            catch (AmazonServiceException e)
+            {
+                throw new FetchException(FetchException.FailureReason.S3Error,
+                                         "Failed to download the database",
+                                         e);
             }
             catch (InvalidDataException e) // Thrown from Inflate
             {

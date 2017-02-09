@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using Amazon.Runtime;
 using Amazon.S3;
 using Moq;
 using NUnit.Framework;
@@ -309,12 +310,36 @@ namespace StickyPassword.Test
         [Test]
         public void DownloadDb_requests_file_from_s3()
         {
-            var s3 = SetupS3("");
+            var s3 = SetupS3(CompressedDbContent);
             Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object);
 
             s3.Verify(x => x.GetObject(
                 It.Is<string>(s => s == Bucket),
                 It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains(Version))));
+        }
+
+        [Test]
+        public void DownloadDb_throws_on_network_error()
+        {
+            var s3 = SetupS3Error<WebException>();
+
+            var e = Assert.Throws<FetchException>(
+                () => Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
+
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.NetworkError));
+            Assert.That(e.InnerException, Is.TypeOf<WebException>());
+        }
+
+        [Test]
+        public void DownloadDb_throws_on_aws_error()
+        {
+            var s3 = SetupS3Error<AmazonServiceException>();
+
+            var e = Assert.Throws<FetchException>(
+                () => Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
+
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.S3Error));
+            Assert.That(e.InnerException, Is.TypeOf<AmazonServiceException>());
         }
 
         [Test]
@@ -396,6 +421,16 @@ namespace StickyPassword.Test
                 {
                     ResponseStream = new MemoryStream(response)
                 });
+
+            return s3;
+        }
+
+        private static Mock<IAmazonS3> SetupS3Error<T>() where T : Exception, new()
+        {
+            var s3 = new Mock<IAmazonS3>();
+            s3
+                .Setup(x => x.GetObject(It.IsAny<string>(), It.IsAny<string>()))
+                .Throws<T>();
 
             return s3;
         }
