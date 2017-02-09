@@ -97,12 +97,11 @@ namespace StickyPassword.Test
             var client = SetupClientForPost(GetTokenResponse);
             Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
-            client.Verify(x => x.Post(
-                It.Is<string>(s => s == "GetCrpToken"),
-                It.Is<string>(s => s.Contains(DeviceId)),
-                It.Is<DateTime>(d => d == Timestamp),
-                It.Is<Dictionary<string, string>>(
-                    d => d.ContainsKey("uaid") && d["uaid"] == Username)));
+            client.Verify(x => x.Post(It.Is<string>(s => s == "GetCrpToken"),
+                                      It.Is<string>(s => s.Contains(DeviceId)),
+                                      It.Is<DateTime>(d => d == Timestamp),
+                                      It.Is<Dictionary<string, string>>(
+                                          d => d.ContainsKey("uaid") && d["uaid"] == Username)));
         }
 
         [Test]
@@ -147,12 +146,17 @@ namespace StickyPassword.Test
         }
 
         [Test]
-        public void AuthorizeDevice_works()
+        public void AuthorizeDevice_makes_post_request()
         {
-            // TODO: Make this test verify something
-
             var client = SetupClientForPostWithAuth(AuthorizeDeviceResponse);
             Remote.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
+
+            client.Verify(x => x.Post(It.Is<string>(s => s == "DevAuth"),
+                                      It.Is<string>(s => s.Contains(DeviceId)),
+                                      It.Is<string>(s => s.StartsWith("Basic ")),
+                                      It.Is<DateTime>(d => d == Timestamp),
+                                      It.Is<Dictionary<string, string>>(
+                                          d => d.ContainsKey("hid") && d["hid"] == DeviceName)));
         }
 
         [Test]
@@ -189,6 +193,19 @@ namespace StickyPassword.Test
                                                                 Timestamp,
                                                                 client),
                                SetupClientForPostWithAuth);
+        }
+
+        [Test]
+        public void GetS3Token_makes_post_request()
+        {
+            var client = SetupClientForPostWithAuth(GetS3TokenResponse);
+            Remote.GetS3Token(Username, Token, DeviceId, Timestamp, client.Object);
+
+            client.Verify(x => x.Post(It.Is<string>(s => s == "GetS3Token"),
+                                      It.Is<string>(s => s.Contains(DeviceId)),
+                                      It.Is<string>(s => s.StartsWith("Basic ")),
+                                      It.Is<DateTime>(d => d == Timestamp),
+                                      It.Is<Dictionary<string, string>>(d => d.Count == 0)));
         }
 
         [Test]
