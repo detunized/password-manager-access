@@ -18,7 +18,7 @@ namespace StickyPassword
 
         public HttpClient(string baseUrl = DefaultBaseUrl)
         {
-            _baseUrl = new Uri(baseUrl);
+            _baseUrl = baseUrl;
         }
 
         public string Post(string endpoint,
@@ -35,7 +35,7 @@ namespace StickyPassword
                            DateTime timestamp,
                            Dictionary<string, string> parameters)
         {
-            var request = (HttpWebRequest)WebRequest.Create(new Uri(_baseUrl, endpoint));
+            var request = (HttpWebRequest)WebRequest.Create(_baseUrl + endpoint);
             request.Method = "POST";
             request.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
             request.Accept = "application/xml";
@@ -59,6 +59,6 @@ namespace StickyPassword
                 return reader.ReadToEnd();
         }
 
-        private readonly Uri _baseUrl;
+        private readonly string _baseUrl;
     }
 }
