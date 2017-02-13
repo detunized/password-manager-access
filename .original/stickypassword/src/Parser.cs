@@ -17,6 +17,10 @@ namespace StickyPassword
     {
         public static Account[] ParseAccounts(byte[] db, string password)
         {
+            // We're not handling the system errors here. It's way too many of them,
+            // catching all the exceptions doesn't make sense. When any of those
+            // exceptions is thrown it means something is wrong with the system,
+            // it's not our error.
             var filename = Path.GetTempFileName();
             try
             {
@@ -31,18 +35,28 @@ namespace StickyPassword
 
         public static Account[] ParseAccounts(string filename, string password)
         {
-            using (var db = new SQLiteConnection(string.Format(CultureInfo.InvariantCulture,
-                                                               "Data Source={0};Version=3;",
-                                                               filename)))
+            try
             {
-                db.Open();
+                using (var db = new SQLiteConnection(string.Format(CultureInfo.InvariantCulture,
+                                                                   "Data Source={0};Version=3;",
+                                                                   filename)))
+                {
+                    db.Open();
 
-                var user = GetDefaultUser(db);
-                var key = Crypto.DeriveDbKey(password, user.Salt);
-                if (!IsKeyCorrect(key, user.Verification))
-                    throw new InvalidOperationException("Password verification failed");
+                    var user = GetDefaultUser(db);
+                    var key = Crypto.DeriveDbKey(password, user.Salt);
+                    if (!IsKeyCorrect(key, user.Verification))
+                        throw new ParseException(ParseException.FailureReason.IncorrectPassword,
+                                                 "Password verification failed");
 
-                return GetAccounts(db, user, key);
+                    return GetAccounts(db, user, key);
+                }
+            }
+            catch (SQLiteException e)
+            {
+                throw new ParseException(ParseException.FailureReason.SqliteError,
+                                         "Failed to parse the database",
+                                         e);
             }
         }
 
