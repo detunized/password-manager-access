@@ -33,8 +33,8 @@ namespace StickyPassword
         // The device id and the device name identify the device in use. It's not 100% clear
         // what the id and the name are for. Why not just one? The id is a random string of bytes.
         // The name is the model of the device on Android. The device must be registered before
-        // it could be used to download the database. It's possible this step could be skipped.
-        // It doesn't return any information back from the server.
+        // it could be used to download the database. It doesn't return any information back from
+        // the server.
         public static void AuthorizeDevice(string username,
                                            byte[] token,
                                            string deviceId,
