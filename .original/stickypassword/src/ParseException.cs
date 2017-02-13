@@ -9,7 +9,7 @@ namespace StickyPassword
     {
         public enum FailureReason
         {
-            IncorrectPassword,
+            InvalidPassword,
             SqliteError,
             UnknownError
         }

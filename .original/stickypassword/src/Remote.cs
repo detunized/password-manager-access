@@ -269,6 +269,15 @@ namespace StickyPassword
             }
             catch (WebException e)
             {
+                // Special handling for 401. There's no other way to tell if the password is correct.
+                // TODO: Write a test for this path. It's not trivial to mock HttpWebResponse
+                //       if at all possible.
+                var r = e.Response as HttpWebResponse;
+                if (r != null && r.StatusCode == HttpStatusCode.Unauthorized)
+                    throw new FetchException(FetchException.FailureReason.InvalidPassword,
+                                             "Invalid password",
+                                             e);
+
                 throw new FetchException(FetchException.FailureReason.NetworkError,
                                          "Network request failed",
                                          e);

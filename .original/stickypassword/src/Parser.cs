@@ -46,7 +46,7 @@ namespace StickyPassword
                     var user = GetDefaultUser(db);
                     var key = Crypto.DeriveDbKey(password, user.Salt);
                     if (!IsKeyCorrect(key, user.Verification))
-                        throw new ParseException(ParseException.FailureReason.IncorrectPassword,
+                        throw new ParseException(ParseException.FailureReason.InvalidPassword,
                                                  "Password verification failed");
 
                     return GetAccounts(db, user, key);
