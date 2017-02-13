@@ -143,14 +143,14 @@ namespace StickyPassword.Test
         }
 
         [Test]
-        public void GetEncryptedToken_throws_invalid_username_on_1006_status()
+        public void GetEncryptedToken_throws_incorrect_username_on_1006_status()
         {
             var e = Assert.Throws<FetchException>(
                 () => Remote.GetEncryptedToken(Username,
                                                DeviceId,
                                                Timestamp,
                                                SetupClientForPost(ResponseWithError1006).Object));
-            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.InvalidUsername));
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.IncorrectUsername));
         }
 
         [Test]

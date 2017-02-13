@@ -44,8 +44,8 @@ namespace StickyPassword
             case "0":
                 return response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken").Decode64();
             case "1006":
-                throw new FetchException(FetchException.FailureReason.InvalidUsername,
-                                         "Invalid username");
+                throw new FetchException(FetchException.FailureReason.IncorrectUsername,
+                                         "Incorrect username");
             default:
                 throw CreateException("retrieve the encrypted token", response);
             }
@@ -274,8 +274,8 @@ namespace StickyPassword
                 //       if at all possible.
                 var r = e.Response as HttpWebResponse;
                 if (r != null && r.StatusCode == HttpStatusCode.Unauthorized)
-                    throw new FetchException(FetchException.FailureReason.InvalidPassword,
-                                             "Invalid password",
+                    throw new FetchException(FetchException.FailureReason.IncorrectPassword,
+                                             "Incorrect password",
                                              e);
 
                 throw new FetchException(FetchException.FailureReason.NetworkError,
