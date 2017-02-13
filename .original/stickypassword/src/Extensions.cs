@@ -7,7 +7,7 @@ using System.Text;
 
 namespace StickyPassword
 {
-    static class Extensions
+    internal static class Extensions
     {
         //
         // string

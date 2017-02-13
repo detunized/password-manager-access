@@ -1,7 +1,6 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Globalization;
@@ -15,6 +14,9 @@ namespace StickyPassword
     // TODO: Write more tests
     public static class Parser
     {
+        // This function saves the database to a temporary file (since System.Data.SQLite
+        // cannot handle in memory databases) and parses it, extracts all the account
+        // information and decrypts the encrypted fields.
         public static Account[] ParseAccounts(byte[] db, string password)
         {
             // We're not handling the system errors here. It's way too many of them,
@@ -33,7 +35,11 @@ namespace StickyPassword
             }
         }
 
-        public static Account[] ParseAccounts(string filename, string password)
+        //
+        // Internal (accessed by the tests)
+        //
+
+        internal static Account[] ParseAccounts(string filename, string password)
         {
             try
             {
@@ -60,7 +66,7 @@ namespace StickyPassword
             }
         }
 
-        public static bool IsKeyCorrect(byte[] key, byte[] verification)
+        internal static bool IsKeyCorrect(byte[] key, byte[] verification)
         {
             var test = Crypto.EncryptAes256("VERIFY".ToBytes(), key, PaddingMode.PKCS7);
             return test.SequenceEqual(verification);

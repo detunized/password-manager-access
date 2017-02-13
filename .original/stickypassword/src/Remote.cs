@@ -20,15 +20,59 @@ namespace StickyPassword
 {
     public static class Remote
     {
+        // This function requests an encrypted token for the specified username. There's no
+        // authentication of any kind at this point. The token is encrypted with the user's
+        // master password. The user should decrypt it and supply with the subsequent POST
+        // requests. If the password is incorrect, the following calls will be rejected with
+        // the 401 code and the database with fail to download.
         public static byte[] GetEncryptedToken(string username, string deviceId, DateTime timestamp)
         {
             return GetEncryptedToken(username, deviceId, timestamp, new HttpClient());
         }
 
-        public static byte[] GetEncryptedToken(string username,
-                                               string deviceId,
-                                               DateTime timestamp,
-                                               IHttpClient client)
+        // The device id and the device name identify the device in use. It's not 100% clear
+        // what the id and the name are for. Why not just one? The id is a random string of bytes.
+        // The name is the model of the device on Android. The device must be registered before
+        // it could be used to download the database. It's possible this step could be skipped.
+        // It doesn't return any information back from the server.
+        public static void AuthorizeDevice(string username,
+                                           byte[] token,
+                                           string deviceId,
+                                           string deviceName,
+                                           DateTime timestamp)
+        {
+            AuthorizeDevice(username, token, deviceId, deviceName, timestamp, new HttpClient());
+        }
+
+        // This function requests the AWS S3 access token and some additional info that
+        // is needed to download the database info and the database itself.
+        public static S3Token GetS3Token(string username,
+                                         byte[] token,
+                                         string deviceId,
+                                         DateTime timestamp)
+        {
+            return GetS3Token(username, token, deviceId, timestamp, new HttpClient());
+        }
+
+        // This functions finds out what the latest version of the database is and downloads
+        // it from S3.
+        public static byte[] DownloadLatestDb(S3Token s3Token)
+        {
+            using (var s3 = new AmazonS3Client(s3Token.AccessKeyId,
+                                               s3Token.SecretAccessKey,
+                                               s3Token.SessionToken,
+                                               RegionEndpoint.USEast1))
+                return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
+        }
+
+        //
+        // Internal (accessed by the tests)
+        //
+
+        internal static byte[] GetEncryptedToken(string username,
+                                                 string deviceId,
+                                                 DateTime timestamp,
+                                                 IHttpClient client)
         {
             var response = Post(client,
                                 "GetCrpToken",
@@ -51,21 +95,12 @@ namespace StickyPassword
             }
         }
 
-        public static void AuthorizeDevice(string username,
-                                           byte[] token,
-                                           string deviceId,
-                                           string deviceName,
-                                           DateTime timestamp)
-        {
-            AuthorizeDevice(username, token, deviceId, deviceName, timestamp, new HttpClient());
-        }
-
-        public static void AuthorizeDevice(string username,
-                                           byte[] token,
-                                           string deviceId,
-                                           string deviceName,
-                                           DateTime timestamp,
-                                           IHttpClient client)
+        internal static void AuthorizeDevice(string username,
+                                             byte[] token,
+                                             string deviceId,
+                                             string deviceName,
+                                             DateTime timestamp,
+                                             IHttpClient client)
         {
             var response = Post(client,
                                 "DevAuth",
@@ -90,19 +125,11 @@ namespace StickyPassword
             }
         }
 
-        public static S3Token GetS3Token(string username,
-                                         byte[] token,
-                                         string deviceId,
-                                         DateTime timestamp)
-        {
-            return GetS3Token(username, token, deviceId, timestamp, new HttpClient());
-        }
-
-        public static S3Token GetS3Token(string username,
-                                         byte[] token,
-                                         string deviceId,
-                                         DateTime timestamp,
-                                         IHttpClient client)
+        internal static S3Token GetS3Token(string username,
+                                           byte[] token,
+                                           string deviceId,
+                                           DateTime timestamp,
+                                           IHttpClient client)
         {
             var response = Post(client,
                                 "GetS3Token",
@@ -125,24 +152,15 @@ namespace StickyPassword
             );
         }
 
-        public static byte[] DownloadLatestDb(S3Token s3Token)
-        {
-            using (var s3 = new AmazonS3Client(s3Token.AccessKeyId,
-                                               s3Token.SecretAccessKey,
-                                               s3Token.SessionToken,
-                                               RegionEndpoint.USEast1))
-                return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
-        }
-
-        public static byte[] DownloadLatestDb(string bucketName, string objectPrefix, IAmazonS3 s3)
+        internal static byte[] DownloadLatestDb(string bucketName, string objectPrefix, IAmazonS3 s3)
         {
             var version = FindLatestDbVersion(bucketName, objectPrefix, s3);
             return DownloadDb(version, bucketName, objectPrefix, s3);
         }
 
-        public static string FindLatestDbVersion(string bucketName,
-                                                 string objectPrefix,
-                                                 IAmazonS3 s3)
+        internal static string FindLatestDbVersion(string bucketName,
+                                                   string objectPrefix,
+                                                   IAmazonS3 s3)
         {
             var filename = objectPrefix + "1/spc.info";
             string info;
@@ -159,10 +177,10 @@ namespace StickyPassword
             return m.Groups[1].Value;
         }
 
-        public static byte[] DownloadDb(string version,
-                                        string bucketName,
-                                        string objectPrefix,
-                                        IAmazonS3 s3)
+        internal static byte[] DownloadDb(string version,
+                                          string bucketName,
+                                          string objectPrefix,
+                                          IAmazonS3 s3)
         {
             var filename = string.Format(CultureInfo.InvariantCulture,
                                          "{0}1/db_{1}.dmp",

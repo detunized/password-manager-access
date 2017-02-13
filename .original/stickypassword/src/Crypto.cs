@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace StickyPassword
 {
-    public static class Crypto
+    internal static class Crypto
     {
         public static byte[] DecryptToken(string username, string password, byte[] encryptedToken)
         {
@@ -50,6 +50,10 @@ namespace StickyPassword
             using (var cryptoStream = new CryptoStream(stream, encryptor, CryptoStreamMode.Read))
                 return cryptoStream.ReadAll(256);
         }
+
+        //
+        // Private
+        //
 
         private static AesManaged CreateAes256Cbc(byte[] key, PaddingMode padding)
         {
