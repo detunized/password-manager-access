@@ -92,6 +92,12 @@ namespace StickyPassword.Test
                 "<Status>13</Status>" +
             "</SpcResponse>";
 
+        private const string ResponseWithError1006 =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
+                "<Status>1006</Status>" +
+            "</SpcResponse>";
+
         [Test]
         public void GetEncryptedToken_makes_post_request()
         {
@@ -134,6 +140,17 @@ namespace StickyPassword.Test
                                      DeviceId,
                                      Timestamp,
                                      SetupClientForPost(ResponseWithError).Object);
+        }
+
+        [Test]
+        public void GetEncryptedToken_throws_invalid_username_on_1006_status()
+        {
+            var e = Assert.Throws<FetchException>(
+                () => Remote.GetEncryptedToken(Username,
+                                               DeviceId,
+                                               Timestamp,
+                                               SetupClientForPost(ResponseWithError1006).Object));
+            Assert.That(e.Reason, Is.EqualTo(FetchException.FailureReason.InvalidUsername));
         }
 
         [Test]

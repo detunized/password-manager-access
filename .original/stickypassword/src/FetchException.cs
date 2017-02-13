@@ -9,6 +9,7 @@ namespace StickyPassword
     {
         public enum FailureReason
         {
+            InvalidUsername,
             NetworkError,
             RespondedWithError,
             InvalidResponse,
