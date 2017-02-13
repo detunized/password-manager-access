@@ -78,15 +78,16 @@ namespace StickyPassword
                                     {"hid", deviceName}
                                 });
 
-            // A new device just got registered
-            if (response.Status == "0")
-                return;
 
-            // The device is known and has been registered in the past
-            if (response.Status == "4005")
+            switch (response.Status)
+            {
+            case "0": // A new device just got registered
                 return;
-
-            throw CreateException("authorize the device", response);
+            case "4005": // The device is known and has been registered in the past
+                return;
+            default:
+                throw CreateException("authorize the device", response);
+            }
         }
 
         public static S3Token GetS3Token(string username,
