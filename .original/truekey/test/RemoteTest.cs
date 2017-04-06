@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.IO;
 using Moq;
 using NUnit.Framework;
 
@@ -13,12 +14,11 @@ namespace TrueKey.Test
         [Test]
         public void RegisetNewDevice_returns_device_info()
         {
-            // TODO: Use actual response example
-            var client = SetupPost("{clientToken: 'token', tkDeviceId: 'id'}");
+            var client = SetupPostWithFixture("register-new-device-response");
             var result = Remote.RegisetNewDevice("truekey-sharp", client.Object);
 
-            Assert.That(result.Token, Is.EqualTo("token"));
-            Assert.That(result.Id, Is.EqualTo("id"));
+            Assert.That(result.Token, Is.StringStarting("AQCmAwEA"));
+            Assert.That(result.Id, Is.StringStarting("d871347b"));
         }
 
         //
@@ -32,6 +32,11 @@ namespace TrueKey.Test
                                    It.IsAny<Dictionary<string, string>>()))
                 .Returns(response);
             return mock;
+        }
+
+        private static Mock<IHttpClient> SetupPostWithFixture(string name)
+        {
+            return SetupPost(File.ReadAllText(string.Format("Fixtures/{0}.json", name)));
         }
     }
 }
