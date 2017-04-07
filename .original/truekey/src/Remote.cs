@@ -6,19 +6,6 @@ using Newtonsoft.Json.Linq;
 
 namespace TrueKey
 {
-    public interface IHttpClient
-    {
-        string Post(string url, Dictionary<string, string> parameters);
-    }
-
-    public class HttpClient: IHttpClient
-    {
-        public string Post(string url, Dictionary<string, string> parameters)
-        {
-            return "";
-        }
-    }
-
     public static class Remote
     {
         public class DeviceInfo
