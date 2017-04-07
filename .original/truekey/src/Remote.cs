@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
@@ -42,14 +43,24 @@ namespace TrueKey
                                     {"oSName", "Unknown"},
                                     {"oathTokenType", "1"},
                                 });
-            return new DeviceInfo((string)response.clientToken, (string)response.tkDeviceId);
+
+            // TODO: Verify results
+            return new DeviceInfo(response.StringAtOrNull("clientToken"),
+                                  response.StringAtOrNull("tkDeviceId"));
         }
 
-        internal static dynamic Post(IHttpClient client, string url, Dictionary<string, string> parameters)
+        internal static JObject Post(IHttpClient client, string url, Dictionary<string, string> parameters)
         {
             // TODO: Handle network errors
             var response = client.Post(url, parameters);
-            return JObject.Parse(response);
+            var parsed = JObject.Parse(response);
+
+            var success = parsed.AtOrNull("responseResult/isSuccess");
+            if (success == null || (bool?)success != true)
+                // TODO: Use custom exception
+                throw new InvalidOperationException("Operation failed");
+
+            return parsed;
         }
     }
 }
