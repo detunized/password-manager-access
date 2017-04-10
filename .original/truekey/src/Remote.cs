@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json.Linq;
 
 namespace TrueKey
@@ -11,14 +12,14 @@ namespace TrueKey
     {
         public class DeviceInfo
         {
+            public readonly string Token;
+            public readonly string Id;
+
             public DeviceInfo(string token, string id)
             {
                 Token = token;
                 Id = id;
             }
-
-            public readonly string Token;
-            public readonly string Id;
         }
 
         // This is the first step in authentication process for a new device.
@@ -30,6 +31,85 @@ namespace TrueKey
         public static DeviceInfo RegisetNewDevice(string deviceName)
         {
             return RegisetNewDevice(deviceName, new HttpClient());
+        }
+
+        public class OtpInfo
+        {
+            public readonly int Version;
+            public readonly int OtpAlgorithm;
+            public readonly int OtpLength;
+            public readonly int HashAlgorithm;
+            public readonly int TimeStep;
+            public readonly uint StartTime;
+            public readonly byte[] Suite;
+            public readonly byte[] HmacSeed;
+            public readonly byte[] Iptmk;
+
+            public OtpInfo(int version,
+                           int otpAlgorithm,
+                           int otpLength,
+                           int hashAlgorithm,
+                           int timeStep,
+                           uint startTime,
+                           byte[] suite,
+                           byte[] hmacSeed,
+                           byte[] iptmk)
+            {
+                Version = version;
+                OtpAlgorithm = otpAlgorithm;
+                OtpLength = otpLength;
+                HashAlgorithm = hashAlgorithm;
+                TimeStep = timeStep;
+                StartTime = startTime;
+                Suite = suite;
+                HmacSeed = hmacSeed;
+                Iptmk = iptmk;
+            }
+        }
+
+        // Parses clientToken field returned by the server. It contains encoded
+        // OCRA/OPT/RFC 6287 information. This is used later on to sign messages.
+        public static OtpInfo ParseClientToken(string encodedToken)
+        {
+            using (var s = new MemoryStream(encodedToken.Decode64()))
+            using (var r = new BinaryReader(s))
+            {
+                var tokenType = r.ReadByte();
+                var tokenLength = r.ReadUInt16BigEndian();
+                var token = r.ReadBytes(tokenLength);
+                var iptmkTag = r.ReadByte();
+                var iptmkLength = r.ReadUInt16BigEndian();
+                var iptmk = r.ReadBytes(iptmkLength);
+
+                using (var ts = new MemoryStream(token))
+                using (var tr = new BinaryReader(ts))
+                {
+                    var version = tr.ReadByte();
+                    var otpAlgorithm = tr.ReadByte();
+                    var otpLength = tr.ReadByte();
+                    var hashAlgorithm = tr.ReadByte();
+                    var timeStep = tr.ReadByte();
+                    var startTime = tr.ReadUInt32BigEndian();
+                    var serverTime = tr.ReadUInt32BigEndian();
+                    var wysOption = tr.ReadByte();
+                    var suiteLength = tr.ReadUInt16BigEndian();
+                    var suite = tr.ReadBytes(suiteLength);
+
+                    ts.Position = 128;
+                    var hmacSeedLength = tr.ReadUInt16BigEndian();
+                    var hmacSeed = tr.ReadBytes(hmacSeedLength);
+
+                    return new OtpInfo(version: version,
+                                       otpAlgorithm: otpAlgorithm,
+                                       otpLength: otpLength,
+                                       hashAlgorithm: hashAlgorithm,
+                                       timeStep: timeStep,
+                                       startTime: startTime,
+                                       suite: suite,
+                                       hmacSeed: hmacSeed,
+                                       iptmk: iptmk);
+                }
+            }
         }
 
         //
