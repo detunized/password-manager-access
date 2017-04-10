@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Moq;
 using NUnit.Framework;
 
@@ -33,7 +32,7 @@ namespace TrueKey.Test
             Assert.That(otp.HashAlgorithm, Is.EqualTo(2));
             Assert.That(otp.TimeStep, Is.EqualTo(30));
             Assert.That(otp.StartTime, Is.EqualTo(0));
-            Assert.That(otp.Suite, Is.EqualTo(Encoding.UTF8.GetBytes("OCRA-1:HOTP-SHA256-0:QA08")));
+            Assert.That(otp.Suite, Is.EqualTo("OCRA-1:HOTP-SHA256-0:QA08".ToBytes()));
             Assert.That(otp.HmacSeed, Is.EqualTo("6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64()));
             Assert.That(otp.Iptmk, Is.EqualTo("HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64()));
         }
