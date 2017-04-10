@@ -21,6 +21,12 @@ namespace TrueKey
             public readonly string Id;
         }
 
+        // This is the first step in authentication process for a new device.
+        // This requests the client token with is used in OCRA (RFC 6287) exchange
+        // later on. There's also a server assigned id for the new device.
+        //
+        // `deviceName` is the name of the device registered with the True Key service.
+        // For example 'Chrome' or 'Nexus 5'.
         public static DeviceInfo RegisetNewDevice(string deviceName)
         {
             return RegisetNewDevice(deviceName, new HttpClient());
