@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace TrueKey
@@ -12,6 +13,11 @@ namespace TrueKey
         //
         // string
         //
+
+        public static byte[] ToBytes(this string s)
+        {
+            return Encoding.UTF8.GetBytes(s);
+        }
 
         public static byte[] Decode64(this string s)
         {
