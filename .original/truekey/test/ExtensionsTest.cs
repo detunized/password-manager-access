@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.IO;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -22,6 +23,32 @@ namespace TrueKey.Test
             Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
             Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
             Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+        }
+
+        //
+        // BinaryReader
+        //
+
+        [Test]
+        public void BinaryReader_ReadUInt16BigEndian_reads_ushort()
+        {
+            using (var s = new MemoryStream(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}))
+            using (var r = new BinaryReader(s))
+            {
+                Assert.That(r.ReadUInt16BigEndian(), Is.EqualTo(0xDEAD));
+                Assert.That(r.ReadUInt16BigEndian(), Is.EqualTo(0xBEEF));
+            }
+        }
+
+        [Test]
+        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
+        {
+            using (var s = new MemoryStream(new byte[] {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED, 0xF0, 0x0D}))
+            using (var r = new BinaryReader(s))
+            {
+                Assert.That(r.ReadUInt32BigEndian(), Is.EqualTo(0xDEADBEEF));
+                Assert.That(r.ReadUInt32BigEndian(), Is.EqualTo(0xFEEDF00D));
+            }
         }
 
         //

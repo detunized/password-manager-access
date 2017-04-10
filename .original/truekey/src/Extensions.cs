@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.IO;
 using Newtonsoft.Json.Linq;
 
 namespace TrueKey
@@ -15,6 +16,33 @@ namespace TrueKey
         public static byte[] Decode64(this string s)
         {
             return Convert.FromBase64String(s);
+        }
+
+        //
+        // BinaryReader
+        //
+
+        public static ushort ReadUInt16BigEndian(this BinaryReader r)
+        {
+            var result = r.ReadUInt16();
+
+            if (BitConverter.IsLittleEndian)
+                result = (ushort)((result << 8) | (result >> 8));
+
+            return result;
+        }
+
+        public static uint ReadUInt32BigEndian(this BinaryReader r)
+        {
+            var result = r.ReadUInt32();
+
+            if (BitConverter.IsLittleEndian)
+                result = ((result & 0x000000FF) << 24) |
+                         ((result & 0x0000FF00) <<  8) |
+                         ((result & 0x00FF0000) >>  8) |
+                         ((result & 0xFF000000) >> 24);
+
+            return result;
         }
 
         //
