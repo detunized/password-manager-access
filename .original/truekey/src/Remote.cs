@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace TrueKey
@@ -110,6 +111,35 @@ namespace TrueKey
                                        iptmk: iptmk);
                 }
             }
+        }
+
+        public static void ValidateOtpIfno(OtpInfo otp)
+        {
+            Action<object, object, string> throwError = (actual, expected, name) =>
+            {
+                throw new ArgumentException(
+                    string.Format("Invalid OTP {0} (expected {1}, got {2})",
+                                  name,
+                                  expected,
+                                  actual));
+            };
+
+            Action<int, int, string> verify = (actual, expected, name) =>
+            {
+                if (actual != expected)
+                    throwError(actual, expected, name);
+            };
+
+            verify(otp.Version, 3, "version");
+            verify(otp.OtpAlgorithm, 1, "algorithm");
+            verify(otp.OtpLength, 0, "length");
+            verify(otp.HashAlgorithm, 2, "hash");
+            verify(otp.HmacSeed.Length, 32, "HMAC length");
+            verify(otp.Iptmk.Length, 32, "IPTMK length");
+
+            const string suite = "OCRA-1:HOTP-SHA256-0:QA08";
+            if (!otp.Suite.SequenceEqual(suite.ToBytes()))
+                throwError(otp.Suite, suite, "suite");
         }
 
         //
