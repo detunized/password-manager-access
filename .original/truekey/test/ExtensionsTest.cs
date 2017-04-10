@@ -11,6 +11,20 @@ namespace TrueKey.Test
     class ExtensionsTest
     {
         //
+        // string
+        //
+
+        [Test]
+        public void String_Decode64_decodes_base64()
+        {
+            Assert.That("".Decode64(), Is.EqualTo(new byte[] { }));
+            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
+            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
+            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
+            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+        }
+
+        //
         // JToken
         //
 

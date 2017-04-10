@@ -9,6 +9,15 @@ namespace TrueKey
     static class Extensions
     {
         //
+        // string
+        //
+
+        public static byte[] Decode64(this string s)
+        {
+            return Convert.FromBase64String(s);
+        }
+
+        //
         // Case insensitive nested JObject access by path with and without exceptions
         //
 
