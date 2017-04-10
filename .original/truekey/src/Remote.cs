@@ -113,7 +113,7 @@ namespace TrueKey
             }
         }
 
-        public static void ValidateOtpIfno(OtpInfo otp)
+        public static void ValidateOtpInfo(OtpInfo otp)
         {
             Action<object, object, string> throwError = (actual, expected, name) =>
             {
