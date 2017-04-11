@@ -196,6 +196,7 @@ namespace TrueKey
                                 "https://truekeyapi.intelsecurity.com/session/auth",
                                 MakeCommonRequest(clientInfo, "session_id_token"));
 
+            // TODO: Verify results
             return response.StringAtOrNull("oAuthTransId");
         }
 
