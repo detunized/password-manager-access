@@ -113,6 +113,9 @@ namespace TrueKey
             }
         }
 
+        // Checks that the OTP info is something we can work with. The Chrome
+        // extension also supports only this subset. They don't validate as much,
+        // just assume the values are what they expect.
         public static void ValidateOtpInfo(OtpInfo otp)
         {
             Action<object, object, string> throwError = (actual, expected, name) =>
