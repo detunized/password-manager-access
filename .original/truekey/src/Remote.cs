@@ -153,14 +153,14 @@ namespace TrueKey
         {
             var response = Post(client,
                                 "https://truekeyapi.intelsecurity.com/sp/pabe/v2/so",
-                                new Dictionary<string, string>
+                                new Dictionary<string, object>
                                 {
                                     {"clientUDID", "truekey-sharp"},
                                     {"deviceName", deviceName},
-                                    {"devicePlatformID", "7"},
-                                    {"deviceType", "5"},
+                                    {"devicePlatformID", 7},
+                                    {"deviceType", 5},
                                     {"oSName", "Unknown"},
-                                    {"oathTokenType", "1"},
+                                    {"oathTokenType", 1},
                                 });
 
             // TODO: Verify results
@@ -168,7 +168,7 @@ namespace TrueKey
                                   response.StringAtOrNull("tkDeviceId"));
         }
 
-        internal static JObject Post(IHttpClient client, string url, Dictionary<string, string> parameters)
+        internal static JObject Post(IHttpClient client, string url, Dictionary<string, object> parameters)
         {
             // TODO: Handle network errors
             var response = client.Post(url, parameters);

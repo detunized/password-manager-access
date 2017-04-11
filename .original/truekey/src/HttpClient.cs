@@ -9,7 +9,7 @@ namespace TrueKey
 {
     public class HttpClient: IHttpClient
     {
-        public string Post(string url, Dictionary<string, string> parameters)
+        public string Post(string url, Dictionary<string, object> parameters)
         {
             using (var client = new WebClient())
             {
