@@ -1,3 +1,4 @@
+*.csproj.user
 /truekey-sharp.v12.suo
 /packages/
 /example/bin/
