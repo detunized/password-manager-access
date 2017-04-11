@@ -1,8 +1,10 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Moq;
 using NUnit.Framework;
 
@@ -35,6 +37,43 @@ namespace TrueKey.Test
             Assert.That(otp.Suite, Is.EqualTo("OCRA-1:HOTP-SHA256-0:QA08".ToBytes()));
             Assert.That(otp.HmacSeed, Is.EqualTo("6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64()));
             Assert.That(otp.Iptmk, Is.EqualTo("HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64()));
+        }
+
+        [Test]
+        public void ValidateOtpInfo_throws_on_invalid_value()
+        {
+            var otp = new Remote.OtpInfo(version: 3,
+                                         otpAlgorithm: 1,
+                                         otpLength: 0,
+                                         hashAlgorithm: 2,
+                                         timeStep: 30,
+                                         startTime: 0,
+                                         suite: "OCRA-1:HOTP-SHA256-0:QA08".ToBytes(),
+                                         hmacSeed: "6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64(),
+                                         iptmk: "HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64());
+
+            Action<string, object, string> check = (name, value, contains) =>
+            {
+                // This is a bit ugly but gets the job done.
+                // We clone the valid object and modify one field to something invalid.
+                var clone = (Remote.OtpInfo)otp.GetType()
+                    .GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Invoke(otp, null);
+                clone.GetType().GetField(name).SetValue(clone, value);
+
+                Assert.That(() => Remote.ValidateOtpInfo(clone),
+                            Throws.ArgumentException.And.Message.Contains(contains));
+            };
+
+            Assert.That(() => Remote.ValidateOtpInfo(otp), Throws.Nothing);
+
+            check("Version", 13, "version");
+            check("OtpAlgorithm", 13, "algorithm");
+            check("OtpLength", 13, "length");
+            check("HashAlgorithm", 13, "hash");
+            check("Suite", "invalid suite".ToBytes(), "suite");
+            check("HmacSeed", "invalid hmac seed".ToBytes(), "HMAC length");
+            check("Iptmk", "invalid iptmk".ToBytes(), "IPTMK length");
         }
 
         //
