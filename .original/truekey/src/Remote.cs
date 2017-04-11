@@ -171,9 +171,9 @@ namespace TrueKey
         // Internal
         //
 
-        internal static DeviceInfo RegisetNewDevice(string deviceName, IHttpClient client)
+        internal static DeviceInfo RegisetNewDevice(string deviceName, IHttpClient http)
         {
-            var response = Post(client,
+            var response = Post(http,
                                 "https://truekeyapi.intelsecurity.com/sp/pabe/v2/so",
                                 new Dictionary<string, object>
                                 {
@@ -228,10 +228,10 @@ namespace TrueKey
             };
         }
 
-        internal static JObject Post(IHttpClient client, string url, Dictionary<string, object> parameters)
+        internal static JObject Post(IHttpClient http, string url, Dictionary<string, object> parameters)
         {
             // TODO: Handle network errors
-            var response = client.Post(url, parameters);
+            var response = http.Post(url, parameters);
             var parsed = JObject.Parse(response);
 
             var success = parsed.AtOrNull("responseResult/isSuccess");
