@@ -18,6 +18,15 @@ namespace Example
             // Step 3: Validate the OTP info to make sure it's got only the
             //         things we support at the moment.
             Remote.ValidateOtpInfo(otpInfo);
+
+            // Bundle up everything in one place
+            var clientInfo = new Remote.ClientInfo("username@example.com", // TODO: Read username from a config file
+                                                   "truekey-sharp",
+                                                   deviceInfo,
+                                                   otpInfo);
+
+            // Step 4: auth step 1 gives us a transaction id to pass along to the next step
+            var transactionId = Remote.AuthStep1(clientInfo);
         }
     }
 }

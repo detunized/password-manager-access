@@ -145,6 +145,28 @@ namespace TrueKey
                 throwError(otp.Suite, suite, "suite");
         }
 
+        public class ClientInfo
+        {
+            public readonly string Username;
+            public readonly string Name;
+            public readonly DeviceInfo DeviceInfo;
+            public readonly OtpInfo OtpInfo;
+
+            public ClientInfo(string username, string name, DeviceInfo deviceInfo, OtpInfo otpInfo)
+            {
+                Username = username;
+                Name = name;
+                DeviceInfo = deviceInfo;
+                OtpInfo = otpInfo;
+            }
+        }
+
+        // Returns OAuth transaction id that is used in the next step
+        public static string AuthStep1(ClientInfo clientInfo)
+        {
+            return AuthStep1(clientInfo, new HttpClient());
+        }
+
         //
         // Internal
         //
@@ -166,6 +188,44 @@ namespace TrueKey
             // TODO: Verify results
             return new DeviceInfo(response.StringAtOrNull("clientToken"),
                                   response.StringAtOrNull("tkDeviceId"));
+        }
+
+        internal static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
+        {
+            var response = Post(http,
+                                "https://truekeyapi.intelsecurity.com/session/auth",
+                                MakeCommonRequest(clientInfo, "session_id_token"));
+
+            return response.StringAtOrNull("oAuthTransId");
+        }
+
+        internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo,
+                                                                     string responseType,
+                                                                     string oAuthTransactionId = "")
+        {
+            return new Dictionary<string, object> {
+                {"data", new Dictionary<string, object> {
+                    {"contextData", new Dictionary<string, object> {
+                        {"deviceInfo", new Dictionary<string, object> {
+                            {"deviceName", clientInfo.Name},
+                            {"devicePlatformID", 7}, // MacOS (see DevicePlatformType)
+                            {"deviceType", 5}, // Mac (see DeviceType)
+                        }}
+                    }},
+                    {"rpData", new Dictionary<string, object> {
+                        {"clientId", "42a01655e65147c3b03721df36b45195"},
+                        {"response_type", responseType},
+                        {"culture", "en-US"},
+                    }},
+                    {"userData", new Dictionary<string, object> {
+                        {"email", clientInfo.Username},
+                        {"oTransId", oAuthTransactionId},
+                    }},
+                    {"ysvcData", new Dictionary<string, object> {
+                        {"deviceId", clientInfo.DeviceInfo.Id},
+                    }},
+                }},
+            };
         }
 
         internal static JObject Post(IHttpClient client, string url, Dictionary<string, object> parameters)

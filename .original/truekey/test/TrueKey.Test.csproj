@@ -56,6 +56,9 @@
     <Compile Include="RemoteTest.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Fixtures\auth-step1-response.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Fixtures\register-new-device-response.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
