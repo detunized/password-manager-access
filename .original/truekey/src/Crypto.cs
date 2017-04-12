@@ -15,10 +15,10 @@ namespace TrueKey
         }
 
         //
-        // private
+        // internal
         //
 
-        private static byte[] Sha256(string data)
+        internal static byte[] Sha256(string data)
         {
             using (var sha = new SHA256Managed())
                 return sha.ComputeHash(data.ToBytes());
