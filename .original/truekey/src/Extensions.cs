@@ -25,6 +25,27 @@ namespace TrueKey
         }
 
         //
+        // byte[]
+        //
+
+        public static string ToHex(this byte[] x)
+        {
+            var hex = new char[x.Length * 2];
+            for (int i = 0, c = 0; i < x.Length; i += 1)
+            {
+                int hi = x[i] >> 4;
+                hex[c] = (char)(hi < 10 ? '0' + hi : 'a' + hi - 10);
+                c += 1;
+
+                int lo = x[i] & 15;
+                hex[c] = (char)(lo < 10 ? '0' + lo : 'a' + lo - 10);
+                c += 1;
+            }
+
+            return new string(hex);
+        }
+
+        //
         // BinaryReader
         //
 

@@ -12,6 +12,8 @@ namespace TrueKey.Test
     class ExtensionsTest
     {
         public const string TestString = "All your base are belong to us";
+        public const string TestHex = "416c6c20796f757220626173652061" +
+                                      "72652062656c6f6e6720746f207573";
         public static readonly byte[] TestBytes = {
             65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
             114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
@@ -36,6 +38,17 @@ namespace TrueKey.Test
             Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
             Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
             Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+        }
+
+        //
+        // byte[]
+        //
+
+        [Test]
+        public void ByteArray_ToHex_returns_hex_string()
+        {
+            Assert.That(new byte[] { }.ToHex(), Is.EqualTo(""));
+            Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
         }
 
         //
