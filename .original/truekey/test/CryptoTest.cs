@@ -22,5 +22,12 @@ namespace TrueKey.Test
             Assert.That(Crypto.Sha256("message"),
                         Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
         }
+
+        [Test]
+        public void Hmac_returns_hashed_message()
+        {
+            Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
+                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+        }
     }
 }
