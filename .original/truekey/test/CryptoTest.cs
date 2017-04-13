@@ -61,6 +61,13 @@ namespace TrueKey.Test
                 Assert.That(Crypto.RandomBytes(size).Length, Is.EqualTo(size));
         }
 
+        [Test]
+        public void ToUnixSeconds_returns_number_of_seconds()
+        {
+            Assert.That(Crypto.ToUnixSeconds(new DateTime(2017, 4, 29, 9, 6, 29, DateTimeKind.Utc)),
+                        Is.EqualTo(1493456789));
+        }
+
         //
         // Data
         //
