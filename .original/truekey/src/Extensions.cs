@@ -46,6 +46,18 @@ namespace TrueKey
         }
 
         //
+        // DateTime
+        //
+
+        public static uint UnixSeconds(this DateTime time)
+        {
+            const long secondsSinceEpoch = 62135596800;
+            long seconds = time.ToUniversalTime().Ticks / TimeSpan.TicksPerSecond - secondsSinceEpoch;
+            // TODO: This will stop working on January 19, 2038 03:14:07. Fix ASAP!
+            return (uint)seconds;
+        }
+
+        //
         // BinaryReader
         //
 

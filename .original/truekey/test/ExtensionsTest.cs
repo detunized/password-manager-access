@@ -52,6 +52,17 @@ namespace TrueKey.Test
         }
 
         //
+        // DateTime
+        //
+
+        [Test]
+        public void DateTime_UnixSeconds_returns_number_of_seconds_since_epoch()
+        {
+            Assert.That(new DateTime(2017, 4, 29, 9, 6, 29, DateTimeKind.Utc).UnixSeconds(),
+                        Is.EqualTo(1493456789));
+        }
+
+        //
         // BinaryReader
         //
 

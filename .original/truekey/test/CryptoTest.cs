@@ -53,13 +53,6 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void ToUnixSeconds_returns_number_of_seconds()
-        {
-            Assert.That(Crypto.ToUnixSeconds(new DateTime(2017, 4, 29, 9, 6, 29, DateTimeKind.Utc)),
-                        Is.EqualTo(1493456789));
-        }
-
-        [Test]
         public void SignChallenge_returns_signature()
         {
             var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();

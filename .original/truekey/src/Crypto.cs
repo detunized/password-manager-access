@@ -38,7 +38,7 @@ namespace TrueKey
             var time = DateTime.UtcNow;
             return new OtpChallenge(challenge,
                                     time,
-                                    SignChallenge(otp, challenge, ToUnixSeconds(time)));
+                                    SignChallenge(otp, challenge, time.UnixSeconds()));
         }
 
         //
@@ -65,15 +65,6 @@ namespace TrueKey
                 random.GetBytes(bytes);
                 return bytes;
             }
-        }
-
-        // TODO: Move to extensions of DateTime
-        internal static uint ToUnixSeconds(DateTime time)
-        {
-            const long secondsSinceEpoch = 62135596800;
-            long seconds = time.ToUniversalTime().Ticks / TimeSpan.TicksPerSecond - secondsSinceEpoch;
-            // TODO: This will stop working on January 19, 2038 03:14:07. Fix ASAP!
-            return (uint)seconds;
         }
 
         internal static byte[] SignChallenge(Remote.OtpInfo otp, byte[] challenge, uint unixSeconds)
