@@ -19,29 +19,6 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void SignChallenge_returns_signature()
-        {
-            var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
-
-            Assert.That(
-                Crypto.SignChallenge(OtpInfo, challege, 1493456789),
-                Is.EqualTo("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64()));
-        }
-
-        [Test]
-        public void SignChallenge_throws_on_invalid_challenge()
-        {
-            foreach (var size in
-                     new[] {0, 1, 1024, 1337, Crypto.ChallengeSize - 1, Crypto.ChallengeSize + 1})
-            {
-                var challenge = Enumerable.Repeat((byte)0, size).ToArray();
-                Assert.That(() => Crypto.SignChallenge(OtpInfo, challenge, 1),
-                            Throws.InstanceOf<ArgumentOutOfRangeException>()
-                                .And.Message.StartsWith("Challenge must be"));
-            }
-        }
-
-        [Test]
         public void Sha256_returns_hashed_message()
         {
             Assert.That(Crypto.Sha256("message"),
@@ -67,6 +44,29 @@ namespace TrueKey.Test
         {
             Assert.That(Crypto.ToUnixSeconds(new DateTime(2017, 4, 29, 9, 6, 29, DateTimeKind.Utc)),
                         Is.EqualTo(1493456789));
+        }
+
+        [Test]
+        public void SignChallenge_returns_signature()
+        {
+            var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
+
+            Assert.That(
+                Crypto.SignChallenge(OtpInfo, challege, 1493456789),
+                Is.EqualTo("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64()));
+        }
+
+        [Test]
+        public void SignChallenge_throws_on_invalid_challenge()
+        {
+            foreach (var size in
+                     new[] { 0, 1, 1024, 1337, Crypto.ChallengeSize - 1, Crypto.ChallengeSize + 1 })
+            {
+                var challenge = Enumerable.Repeat((byte)0, size).ToArray();
+                Assert.That(() => Crypto.SignChallenge(OtpInfo, challenge, 1),
+                            Throws.InstanceOf<ArgumentOutOfRangeException>()
+                                .And.Message.StartsWith("Challenge must be"));
+            }
         }
 
         //
