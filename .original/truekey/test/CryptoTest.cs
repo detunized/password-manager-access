@@ -54,6 +54,13 @@ namespace TrueKey.Test
                         Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
         }
 
+        [Test]
+        public void RandomBytes_returns_array_of_requested_size()
+        {
+            foreach (var size in new[] { 0, 1, 2, 3, 4, 15, 255, 1024, 1337 })
+                Assert.That(Crypto.RandomBytes(size).Length, Is.EqualTo(size));
+        }
+
         //
         // Data
         //

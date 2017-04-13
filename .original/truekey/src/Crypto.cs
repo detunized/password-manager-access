@@ -32,6 +32,16 @@ namespace TrueKey
                 return hmac.ComputeHash(message);
         }
 
+        internal static byte[] RandomBytes(int size)
+        {
+            using (var random = new RNGCryptoServiceProvider())
+            {
+                var bytes = new byte[size];
+                random.GetBytes(bytes);
+                return bytes;
+            }
+        }
+
         internal static byte[] SignChallenge(Remote.OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
             if (challenge.Length != 128)
