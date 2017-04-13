@@ -9,6 +9,8 @@ namespace TrueKey
 {
     internal static class Crypto
     {
+        public const int ChallengeSize = 128;
+
         public static string HashPassword(string username, string password)
         {
             var salt = Sha256(username);
@@ -53,10 +55,11 @@ namespace TrueKey
 
         internal static byte[] SignChallenge(Remote.OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
-            if (challenge.Length != 128)
-                throw new ArgumentOutOfRangeException("challenge",
-                                                      challenge.Length,
-                                                      "Challenge must be 128 bytes long");
+            if (challenge.Length != ChallengeSize)
+                throw new ArgumentOutOfRangeException(
+                    "challenge",
+                    challenge.Length,
+                    string.Format("Challenge must be {0} bytes long", ChallengeSize));
 
             using (var s = new MemoryStream(1024))
             {

@@ -31,7 +31,8 @@ namespace TrueKey.Test
         [Test]
         public void SignChallenge_throws_on_invalid_challenge()
         {
-            foreach (var size in new[] {0, 1, 127, 129, 1024})
+            foreach (var size in
+                     new[] {0, 1, 1024, 1337, Crypto.ChallengeSize - 1, Crypto.ChallengeSize + 1})
             {
                 var challenge = Enumerable.Repeat((byte)0, size).ToArray();
                 Assert.That(() => Crypto.SignChallenge(OtpInfo, challenge, 1),
