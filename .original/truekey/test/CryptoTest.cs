@@ -19,6 +19,19 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void GenerateRandomOtpChallenge_returns_challenge()
+        {
+            var otp = Crypto.GenerateRandomOtpChallenge(OtpInfo);
+
+            // It's not much to verify here as these things are random
+            Assert.That(otp.Challenge.Length, Is.EqualTo(Crypto.ChallengeSize));
+            Assert.That(otp.Signature.Length, Is.EqualTo(32));
+
+            // We assume the test is running less than 10 seconds
+            Assert.That((DateTime.UtcNow - otp.Timestamp).TotalSeconds, Is.LessThan(10));
+        }
+
+        [Test]
         public void Sha256_returns_hashed_message()
         {
             Assert.That(Crypto.Sha256("message"),

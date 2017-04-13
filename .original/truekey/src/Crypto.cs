@@ -18,6 +18,29 @@ namespace TrueKey
             return "tk-v1-" + derived.ToHex();
         }
 
+        public class OtpChallenge
+        {
+            public readonly byte[] Challenge;
+            public readonly DateTime Timestamp;
+            public readonly byte[] Signature;
+
+            public OtpChallenge(byte[] challenge, DateTime timestamp, byte[] signature)
+            {
+                Challenge = challenge;
+                Timestamp = timestamp;
+                Signature = signature;
+            }
+        }
+
+        public static OtpChallenge GenerateRandomOtpChallenge(Remote.OtpInfo otp)
+        {
+            var challenge = RandomBytes(ChallengeSize);
+            var time = DateTime.UtcNow;
+            return new OtpChallenge(challenge,
+                                    time,
+                                    SignChallenge(otp, challenge, ToUnixSeconds(time)));
+        }
+
         //
         // internal
         //
