@@ -1,6 +1,8 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
+using System.Linq;
 using NUnit.Framework;
 
 namespace TrueKey.Test
@@ -17,6 +19,28 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void SignChallenge_returns_signature()
+        {
+            var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
+
+            Assert.That(
+                Crypto.SignChallenge(OtpInfo, challege, 1493456789),
+                Is.EqualTo("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64()));
+        }
+
+        [Test]
+        public void SignChallenge_throws_on_invalid_challenge()
+        {
+            foreach (var size in new[] {0, 1, 127, 129, 1024})
+            {
+                var challenge = Enumerable.Repeat((byte)0, size).ToArray();
+                Assert.That(() => Crypto.SignChallenge(OtpInfo, challenge, 1),
+                            Throws.InstanceOf<ArgumentOutOfRangeException>()
+                                .And.Message.StartsWith("Challenge must be"));
+            }
+        }
+
+        [Test]
         public void Sha256_returns_hashed_message()
         {
             Assert.That(Crypto.Sha256("message"),
@@ -29,5 +53,21 @@ namespace TrueKey.Test
             Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
                         Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
         }
+
+        //
+        // Data
+        //
+
+        // TODO: Remove copy paste
+        private static readonly Remote.OtpInfo OtpInfo = new Remote.OtpInfo(
+            version: 3,
+            otpAlgorithm: 1,
+            otpLength: 0,
+            hashAlgorithm: 2,
+            timeStep: 30,
+            startTime: 0,
+            suite: "OCRA-1:HOTP-SHA256-0:QA08".ToBytes(),
+            hmacSeed: "6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64(),
+            iptmk: "HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64());
     }
 }
