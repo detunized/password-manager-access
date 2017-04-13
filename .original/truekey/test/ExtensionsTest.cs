@@ -258,5 +258,55 @@ namespace TrueKey.Test
             Assert.That(j.StringAtOrNull("k4"), Is.Null);
             Assert.That(j.StringAtOrNull("k5"), Is.Null);
         }
+
+        [Test]
+        public void JToken_IntAt_returns_int()
+        {
+            var j = JObject.Parse(@"{
+                'k1': 13,
+                'k2': {'k22': 42},
+                'k3': {'k33': {'k333': 1337}}
+            }");
+
+            Assert.That(j.IntAt("k1"), Is.EqualTo(13));
+            Assert.That(j.IntAt("k2/k22"), Is.EqualTo(42));
+            Assert.That(j.IntAt("k3/k33/k333"), Is.EqualTo(1337));
+        }
+
+        [Test]
+        public void JToken_IntAt_throws_on_non_ints()
+        {
+            var j = JObject.Parse(@"{
+                'k1': true,
+                'k2': '10',
+                'k3': 10.0,
+                'k4': [],
+                'k5': {},
+            }");
+
+            Assert.That(() => j.IntAt("k1"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.IntAt("k2"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.IntAt("k3"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.IntAt("k4"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.IntAt("k5"), Throws.TypeOf<ArgumentException>());
+        }
+
+        [Test]
+        public void JToken_IntAtOrNull_returns_null_on_non_ints()
+        {
+            var j = JObject.Parse(@"{
+                'k1': true,
+                'k2': '10',
+                'k3': 10.0,
+                'k4': [],
+                'k5': {},
+            }");
+
+            Assert.That(j.IntAtOrNull("k1"), Is.Null);
+            Assert.That(j.IntAtOrNull("k2"), Is.Null);
+            Assert.That(j.IntAtOrNull("k3"), Is.Null);
+            Assert.That(j.IntAtOrNull("k4"), Is.Null);
+            Assert.That(j.IntAtOrNull("k5"), Is.Null);
+        }
     }
 }

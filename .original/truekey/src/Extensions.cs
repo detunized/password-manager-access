@@ -113,6 +113,16 @@ namespace TrueKey
             return StringAtOrNull(j.Root, path);
         }
 
+        public static int IntAt(this JObject j, string path)
+        {
+            return IntAt(j.Root, path);
+        }
+
+        public static int? IntAtOrNull(this JObject j, string path)
+        {
+            return IntAtOrNull(j.Root, path);
+        }
+
         //
         // Case insensitive nested JToken access by path with and without exceptions
         //
@@ -165,6 +175,24 @@ namespace TrueKey
                 return null;
 
             return (string)s;
+        }
+
+        public static int IntAt(this JToken j, string path)
+        {
+            var s = j.At(path);
+            if (s.Type != JTokenType.Integer)
+                throw new ArgumentException("The value is not an integer");
+
+            return (int)s;
+        }
+
+        public static int? IntAtOrNull(this JToken j, string path)
+        {
+            var s = j.AtOrNull(path);
+            if (s == null || s.Type != JTokenType.Integer)
+                return null;
+
+            return (int)s;
         }
     }
 }
