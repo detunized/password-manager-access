@@ -25,8 +25,13 @@ namespace Example
                                                    deviceInfo,
                                                    otpInfo);
 
-            // Step 4: auth step 1 gives us a transaction id to pass along to the next step
+            // Step 4: Auth step 1 gives us a transaction id to pass along to the next step.
             var transactionId = Remote.AuthStep1(clientInfo);
+
+            // Step 5: Auth step 2 gives us the instructions on what to do next. For a new client that
+            //         would be some form of second factor auth. For a known client that would be a
+            //         pair of OAuth tokens.
+            var whatsNext = Remote.AuthStep2(clientInfo, "password", transactionId);
         }
     }
 }

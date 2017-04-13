@@ -167,6 +167,12 @@ namespace TrueKey
             return AuthStep1(clientInfo, new HttpClient());
         }
 
+        // Returns instructions on what to do next
+        public static string AuthStep2(ClientInfo clientInfo, string password, string transactionId)
+        {
+            return AuthStep2(clientInfo, password, transactionId, new HttpClient());
+        }
+
         //
         // Internal
         //
@@ -200,6 +206,30 @@ namespace TrueKey
             return response.StringAtOrNull("oAuthTransId");
         }
 
+        internal static string AuthStep2(ClientInfo clientInfo, string password, string transactionId, IHttpClient http)
+        {
+            var parameters = new Dictionary<string, object> {
+                {"userData", new Dictionary<string, object> {
+                    {"email", clientInfo.Username},
+                    {"oAuthTransId", transactionId},
+                    {"pwd", Crypto.HashPassword(clientInfo.Username, password)},
+                }},
+                {"deviceData", new Dictionary<string, object> {
+                    {"deviceId", clientInfo.DeviceInfo.Id},
+                    {"deviceType", "mac"},
+                    {"devicePlatformType", "macos"},
+                    {"otpData", RandomOtpChallngeAsDictionary(clientInfo.OtpInfo)},
+                }},
+            };
+
+            var response = Post(http,
+                                "https://truekeyapi.intelsecurity.com/mp/auth",
+                                parameters);
+
+            // TODO: Parse the response
+            return response.ToString();
+        }
+
         internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo,
                                                                      string responseType,
                                                                      string oAuthTransactionId = "")
@@ -226,6 +256,16 @@ namespace TrueKey
                         {"deviceId", clientInfo.DeviceInfo.Id},
                     }},
                 }},
+            };
+        }
+
+        internal static Dictionary<string, object> RandomOtpChallngeAsDictionary(OtpInfo otp)
+        {
+            var challenge = Crypto.GenerateRandomOtpChallenge(otp);
+            return new Dictionary<string, object> {
+                {"qn", challenge.Challenge.ToBase64()},
+                {"otpType", "time"},
+                {"otp", challenge.Signature.ToBase64()},
             };
         }
 
