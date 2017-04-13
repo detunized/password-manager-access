@@ -167,8 +167,14 @@ namespace TrueKey
             return AuthStep1(clientInfo, new HttpClient());
         }
 
+        public interface ITwoFactorStep
+        {
+        }
+
         // Returns instructions on what to do next
-        public static string AuthStep2(ClientInfo clientInfo, string password, string transactionId)
+        public static ITwoFactorStep AuthStep2(ClientInfo clientInfo,
+                                               string password,
+                                               string transactionId)
         {
             return AuthStep2(clientInfo, password, transactionId, new HttpClient());
         }
@@ -206,7 +212,10 @@ namespace TrueKey
             return response.StringAtOrNull("oAuthTransId");
         }
 
-        internal static string AuthStep2(ClientInfo clientInfo, string password, string transactionId, IHttpClient http)
+        internal static ITwoFactorStep AuthStep2(ClientInfo clientInfo,
+                                                 string password,
+                                                 string transactionId,
+                                                 IHttpClient http)
         {
             var parameters = new Dictionary<string, object> {
                 {"userData", new Dictionary<string, object> {
@@ -226,8 +235,107 @@ namespace TrueKey
                                 "https://truekeyapi.intelsecurity.com/mp/auth",
                                 parameters);
 
-            // TODO: Parse the response
-            return response.ToString();
+            return ParseAuthStep2Response(response);
+        }
+
+        internal class DoneStep: ITwoFactorStep
+        {
+            public readonly string Token;
+
+            public DoneStep(string token)
+            {
+                Token = token;
+            }
+        }
+
+        internal class OobDevice
+        {
+            public readonly string Name;
+            public readonly string Id;
+
+            public OobDevice(string name, string id)
+            {
+                Name = name;
+                Id = id;
+            }
+        }
+
+        internal class WaitForOobStep: ITwoFactorStep
+        {
+            public readonly OobDevice Device;
+            public readonly string Email;
+            public readonly string TransactionId;
+
+            public WaitForOobStep(OobDevice device, string email, string transactionId)
+            {
+                Device = device;
+                Email = email;
+                TransactionId = transactionId;
+            }
+        }
+
+        internal class ChooseOobStep: ITwoFactorStep
+        {
+            public readonly OobDevice[] Devices;
+            public readonly string Email;
+            public readonly string TransactionId;
+
+            public ChooseOobStep(OobDevice[] devices, string email, string transactionId)
+            {
+                Devices = devices;
+                Email = email;
+                TransactionId = transactionId;
+            }
+        }
+
+        internal class WaitForEmailStep: ITwoFactorStep
+        {
+            public readonly string Email;
+            public readonly string TransactionId;
+
+            public WaitForEmailStep(string email, string transactionId)
+            {
+                Email = email;
+                TransactionId = transactionId;
+            }
+        }
+
+        internal static ITwoFactorStep ParseAuthStep2Response(JObject response)
+        {
+            // TODO: Make JToken.At* throw some custom exception and don't use OrNull
+            //       Catch it and rethrow as invalid response.
+
+            var nextStep = response.IntAtOrNull("riskAnalysisInfo/nextStep");
+            var data = response.AtOrNull("riskAnalysisInfo/nextStepData");
+
+            if (nextStep == null || data == null)
+                throw new InvalidOperationException("Invalid response");
+
+            switch (nextStep.Value)
+            {
+            case 10:
+                return new DoneStep(response.StringAtOrNull("idToken"));
+            case 12:
+                return new WaitForOobStep(ParseOobDevices(data.At("oobDevices"))[0],
+                                          data.StringAt("verificationEmail"),
+                                          response.StringAt("oAuthTransId"));
+            case 13:
+                return new ChooseOobStep(ParseOobDevices(data.At("oobDevices")),
+                                         data.StringAt("verificationEmail"),
+                                         response.StringAt("oAuthTransId"));
+            case 14:
+                return new WaitForEmailStep(data.StringAt("verificationEmail"),
+                                            response.StringAt("oAuthTransId"));
+            }
+
+            throw new InvalidOperationException(
+                string.Format("Next two factor step {0} is not supported", nextStep));
+        }
+
+        internal static OobDevice[] ParseOobDevices(JToken deviceInfo)
+        {
+            return deviceInfo.Select(
+                i => new OobDevice(i.StringAt("deviceName"), i.StringAt("deviceId"))).ToArray();
         }
 
         internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo,
