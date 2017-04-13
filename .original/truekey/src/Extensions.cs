@@ -45,6 +45,11 @@ namespace TrueKey
             return new string(hex);
         }
 
+        public static string ToBase64(this byte[] x)
+        {
+            return Convert.ToBase64String(x);
+        }
+
         //
         // DateTime
         //
