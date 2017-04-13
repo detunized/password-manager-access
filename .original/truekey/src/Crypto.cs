@@ -16,7 +16,23 @@ namespace TrueKey
             return "tk-v1-" + derived.ToHex();
         }
 
-        public static byte[] SignChallenge(Remote.OtpInfo otp, byte[] challenge, uint unixSeconds)
+        //
+        // internal
+        //
+
+        internal static byte[] Sha256(string data)
+        {
+            using (var sha = new SHA256Managed())
+                return sha.ComputeHash(data.ToBytes());
+        }
+
+        internal static byte[] Hmac(byte[] salt, byte[] message)
+        {
+            using (var hmac = new HMACSHA256 {Key = salt})
+                return hmac.ComputeHash(message);
+        }
+
+        internal static byte[] SignChallenge(Remote.OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
             if (challenge.Length != 128)
                 throw new ArgumentOutOfRangeException("challenge",
@@ -40,22 +56,6 @@ namespace TrueKey
 
                 return Hmac(otp.HmacSeed, s.ToArray());
             }
-        }
-
-        //
-        // internal
-        //
-
-        internal static byte[] Sha256(string data)
-        {
-            using (var sha = new SHA256Managed())
-                return sha.ComputeHash(data.ToBytes());
-        }
-
-        internal static byte[] Hmac(byte[] salt, byte[] message)
-        {
-            using (var hmac = new HMACSHA256 {Key = salt})
-                return hmac.ComputeHash(message);
         }
     }
 }
