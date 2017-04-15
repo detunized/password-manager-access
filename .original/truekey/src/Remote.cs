@@ -175,21 +175,6 @@ namespace TrueKey
             return AuthStep2(clientInfo, password, transactionId, new HttpClient());
         }
 
-        public abstract class Gui
-        {
-            public enum Answer
-            {
-                Check,
-                Resend,
-                Email,
-                Device0,
-            }
-
-            public abstract Answer WaitForEmail(string email, Answer[] validAnswers);
-            public abstract Answer WaitForOob(string name, string email, Answer[] validAnswers);
-            public abstract Answer ChooseOob(string[] names, string email, Answer[] validAnswers);
-        }
-
         //
         // Internal
         //
