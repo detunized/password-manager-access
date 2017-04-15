@@ -10,10 +10,10 @@ namespace TrueKey
     {
         public enum Step
         {
-            Done = 10,
-            WaitForOob = 12,
-            ChooseOob = 13,
-            WaitForEmail = 14,
+            Done,
+            WaitForOob,
+            ChooseOob,
+            WaitForEmail,
         }
 
         public class Settings
