@@ -60,9 +60,9 @@ namespace TrueKey
                 Device0,
             }
 
-            public abstract Answer AskWaitForEmail(string email, Answer[] validAnswers);
-            public abstract Answer AskWaitForOob(string name, string email, Answer[] validAnswers);
-            public abstract Answer AskChooseOob(string[] names, string email, Answer[] validAnswers);
+            public abstract Answer AskToWaitForEmail(string email, Answer[] validAnswers);
+            public abstract Answer AskToWaitForOob(string name, string email, Answer[] validAnswers);
+            public abstract Answer AskToChooseOob(string[] names, string email, Answer[] validAnswers);
         }
 
         public static string Start(Remote.ClientInfo clientInfo, Settings settings, Gui gui)
@@ -156,7 +156,7 @@ namespace TrueKey
             public override State Advance(TwoFactorAuth owner)
             {
                 var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend};
-                var answer = owner._gui.AskWaitForEmail(owner._settings.Email, validAnswers);
+                var answer = owner._gui.AskToWaitForEmail(owner._settings.Email, validAnswers);
                 switch (answer)
                 {
                 case Gui.Answer.Check:
@@ -183,7 +183,7 @@ namespace TrueKey
             public override State Advance(TwoFactorAuth owner)
             {
                 var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend, Gui.Answer.Email};
-                var answer = owner._gui.AskWaitForOob(owner._settings.Devices[_deviceIndex].Name,
+                var answer = owner._gui.AskToWaitForOob(owner._settings.Devices[_deviceIndex].Name,
                                                    owner._settings.Email,
                                                    validAnswers);
                 switch (answer)
@@ -219,7 +219,7 @@ namespace TrueKey
                     .Select(i => Gui.Answer.Device0 + i)
                     .Concat(new[] { Gui.Answer.Email })
                     .ToArray();
-                var answer = owner._gui.AskChooseOob(names, owner._settings.Email, validAnswers);
+                var answer = owner._gui.AskToChooseOob(names, owner._settings.Email, validAnswers);
 
                 if (answer == Gui.Answer.Email)
                 {

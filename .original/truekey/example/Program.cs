@@ -9,17 +9,17 @@ namespace Example
     {
         private class Gui: TwoFactorAuth.Gui
         {
-            public override Answer AskWaitForEmail(string email, Answer[] validAnswers)
+            public override Answer AskToWaitForEmail(string email, Answer[] validAnswers)
             {
                 return Answer.Check;
             }
 
-            public override Answer AskWaitForOob(string name, string email, Answer[] validAnswers)
+            public override Answer AskToWaitForOob(string name, string email, Answer[] validAnswers)
             {
                 return Answer.Check;
             }
 
-            public override Answer AskChooseOob(string[] names, string email, Answer[] validAnswers)
+            public override Answer AskToChooseOob(string[] names, string email, Answer[] validAnswers)
             {
                 return Answer.Device0;
             }
