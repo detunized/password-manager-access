@@ -169,6 +169,8 @@ namespace TrueKey
 
         public interface ITwoFactorStep
         {
+            bool IsDone();
+            ITwoFactorStep Advance(Gui gui, IHttpClient http);
         }
 
         // Returns instructions on what to do next
@@ -177,6 +179,29 @@ namespace TrueKey
                                                string transactionId)
         {
             return AuthStep2(clientInfo, password, transactionId, new HttpClient());
+        }
+
+        public abstract class Gui
+        {
+            public enum Answer
+            {
+                Check,
+                Resend,
+                Email,
+                Device0,
+            }
+
+            public abstract Answer WaitForEmail(string email, Answer[] validAnswers);
+            public abstract Answer WaitForOob(string name, string email, Answer[] validAnswers);
+            public abstract Answer ChooseOob(string[] names, string email, Answer[] validAnswers);
+        }
+
+        // Returns OAuth token
+        public static string AuthFiniteStateMachine(ClientInfo clientInfo,
+                                                    ITwoFactorStep start,
+                                                    Gui gui)
+        {
+            return AuthFiniteStateMachine(clientInfo, start, gui, new HttpClient());
         }
 
         //
@@ -238,6 +263,10 @@ namespace TrueKey
             return ParseAuthStep2Response(response);
         }
 
+        //
+        // FSM states
+        //
+
         internal class DoneStep: ITwoFactorStep
         {
             public readonly string Token;
@@ -246,17 +275,15 @@ namespace TrueKey
             {
                 Token = token;
             }
-        }
 
-        internal class OobDevice
-        {
-            public readonly string Name;
-            public readonly string Id;
-
-            public OobDevice(string name, string id)
+            public bool IsDone()
             {
-                Name = name;
-                Id = id;
+                return true;
+            }
+
+            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
+            {
+                throw new InvalidOperationException("Should not be called");
             }
         }
 
@@ -272,6 +299,19 @@ namespace TrueKey
                 Email = email;
                 TransactionId = transactionId;
             }
+
+            public bool IsDone()
+            {
+                return false;
+            }
+
+            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
+            {
+                var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend, Gui.Answer.Email};
+                var answer = gui.WaitForOob(Device.Name, Email, validAnswers);
+
+                throw new NotImplementedException();
+            }
         }
 
         internal class ChooseOobStep: ITwoFactorStep
@@ -286,6 +326,26 @@ namespace TrueKey
                 Email = email;
                 TransactionId = transactionId;
             }
+
+            public bool IsDone()
+            {
+                return false;
+            }
+
+            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
+            {
+                var names = Devices.Select(i => i.Name).ToArray();
+                var validAnswers = Enumerable.Range(0, Devices.Length)
+                    .Select(i => Gui.Answer.Device0 + i)
+                    .Concat(new[] {Gui.Answer.Email})
+                    .ToArray();
+
+                var answer = gui.ChooseOob(names,
+                                           Email,
+                                           validAnswers);
+
+                throw new NotImplementedException();
+            }
         }
 
         internal class WaitForEmailStep: ITwoFactorStep
@@ -297,6 +357,18 @@ namespace TrueKey
             {
                 Email = email;
                 TransactionId = transactionId;
+            }
+
+            public bool IsDone()
+            {
+                return false;
+            }
+
+            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
+            {
+                var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend};
+                var answer = gui.WaitForEmail(Email, validAnswers);
+                throw new NotImplementedException();
             }
         }
 
@@ -332,10 +404,33 @@ namespace TrueKey
                 string.Format("Next two factor step {0} is not supported", nextStep));
         }
 
+        internal class OobDevice
+        {
+            public readonly string Name;
+            public readonly string Id;
+
+            public OobDevice(string name, string id)
+            {
+                Name = name;
+                Id = id;
+            }
+        }
+
         internal static OobDevice[] ParseOobDevices(JToken deviceInfo)
         {
             return deviceInfo.Select(
                 i => new OobDevice(i.StringAt("deviceName"), i.StringAt("deviceId"))).ToArray();
+        }
+
+        internal static string AuthFiniteStateMachine(ClientInfo clientInfo,
+                                                      ITwoFactorStep step,
+                                                      Gui gui,
+                                                      IHttpClient http)
+        {
+            while (!step.IsDone())
+                step = step.Advance(gui, http);
+
+            return "";
         }
 
         internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo,
