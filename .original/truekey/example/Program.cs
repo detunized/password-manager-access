@@ -9,29 +9,11 @@ namespace Example
     {
         static void Main(string[] args)
         {
-            // Step 1: Register a new device and get a token and an id back.
-            var deviceInfo = Remote.RegisetNewDevice("truekey-sharp");
+            // TODO: Read the credentials from a config file
+            var username = "username@example.com";
+            var password = "password";
 
-            // Step 2: Parse the token to decode OTP information.
-            var otpInfo = Remote.ParseClientToken(deviceInfo.Token);
-
-            // Step 3: Validate the OTP info to make sure it's got only the
-            //         things we support at the moment.
-            Remote.ValidateOtpInfo(otpInfo);
-
-            // Bundle up everything in one place
-            var clientInfo = new Remote.ClientInfo("username@example.com", // TODO: Read username from a config file
-                                                   "truekey-sharp",
-                                                   deviceInfo,
-                                                   otpInfo);
-
-            // Step 4: Auth step 1 gives us a transaction id to pass along to the next step.
-            var transactionId = Remote.AuthStep1(clientInfo);
-
-            // Step 5: Auth step 2 gives us the instructions on what to do next. For a new client that
-            //         would be some form of second factor auth. For a known client that would be a
-            //         pair of OAuth tokens.
-            var whatsNext = Remote.AuthStep2(clientInfo, "password", transactionId);
+            var vault = Vault.Open(username, password);
         }
     }
 }

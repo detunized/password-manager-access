@@ -51,6 +51,7 @@
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Remote.cs" />
     <Compile Include="TwoFactorAuth.cs" />
+    <Compile Include="Vault.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
