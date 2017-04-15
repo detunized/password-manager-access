@@ -234,10 +234,20 @@ namespace TrueKey
             return ParseAuthStep2Response(response);
         }
 
-        internal static string AuthCheck(ClientInfo clientInfo, IHttpClient http)
+        internal static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
         {
-            // TODO: Implement this
-            return "OAuthToken";
+            var response = PostNoCheck(http,
+                                       "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
+                                       MakeCommonRequest(clientInfo, "code", transactionId));
+
+            var success = response.At("responseResult/isSuccess");
+            var nextStep = response.IntAt("nextStep");
+
+            if (success != null && (bool?)success == true && nextStep == 10)
+                return response.StringAt("idToken");
+
+            // TODO: Don't throw, rather return a negative result
+            throw new InvalidOperationException("AuthCheck failed");
         }
 
         internal static void AuthSendEmail(ClientInfo clientInfo,
@@ -360,18 +370,27 @@ namespace TrueKey
             };
         }
 
-        internal static JObject Post(IHttpClient http, string url, Dictionary<string, object> parameters)
+        internal static JObject Post(IHttpClient http,
+                                     string url,
+                                     Dictionary<string, object> parameters)
         {
-            // TODO: Handle network errors
-            var response = http.Post(url, parameters);
-            var parsed = JObject.Parse(response);
+            var response = PostNoCheck(http, url, parameters);
 
-            var success = parsed.AtOrNull("responseResult/isSuccess");
+            var success = response.AtOrNull("responseResult/isSuccess");
             if (success == null || (bool?)success != true)
                 // TODO: Use custom exception
                 throw new InvalidOperationException("Operation failed");
 
-            return parsed;
+            return response;
+        }
+
+        internal static JObject PostNoCheck(IHttpClient http,
+                                            string url,
+                                            Dictionary<string, object> parameters)
+        {
+            // TODO: Handle network errors
+            var response = http.Post(url, parameters);
+            return JObject.Parse(response);
         }
     }
 }

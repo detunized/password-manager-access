@@ -104,7 +104,9 @@ namespace TrueKey
             // TODO: Shared code for most states. It's not really good that it's in the base class.
             protected State Check(TwoFactorAuth owner)
             {
-                var result = Remote.AuthCheck(owner._clientInfo, owner._http);
+                var result = Remote.AuthCheck(owner._clientInfo,
+                                              owner._settings.TransactionId,
+                                              owner._http);
                 if (result == null)
                     return new Failure("Failed");
                 return new Done(result);
