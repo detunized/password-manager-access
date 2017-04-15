@@ -65,6 +65,11 @@ namespace TrueKey
             public abstract Answer AskChooseOob(string[] names, string email, Answer[] validAnswers);
         }
 
+        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Gui gui)
+        {
+            return Start(clientInfo, settings, gui, new HttpClient());
+        }
+
         public static string Start(Remote.ClientInfo clientInfo, Settings settings, Gui gui, IHttpClient http)
         {
             return new TwoFactorAuth(clientInfo, settings, gui, http).Run(settings.InitialStep);

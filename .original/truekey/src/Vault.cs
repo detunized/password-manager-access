@@ -5,7 +5,7 @@ namespace TrueKey
 {
     public class Vault
     {
-        public static Vault Open(string username, string password)
+        public static Vault Open(string username, string password, TwoFactorAuth.Gui gui)
         {
             // Step 1: Register a new device and get a token and an id back.
             var deviceInfo = Remote.RegisetNewDevice("truekey-sharp");
@@ -27,6 +27,9 @@ namespace TrueKey
             //         would be some form of second factor auth. For a known client that would be a
             //         pair of OAuth tokens.
             var whatsNext = Remote.AuthStep2(clientInfo, password, transactionId);
+
+            // Step 6: Auth FSM -- walk through all the auth steps until we're done
+            var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, gui);
 
             return new Vault();
         }
