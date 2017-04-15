@@ -263,6 +263,28 @@ namespace TrueKey
             return ParseAuthStep2Response(response);
         }
 
+        internal static string AuthCheck(ClientInfo clientInfo, IHttpClient http)
+        {
+            // TODO: Implement this
+            return "OAuthToken";
+        }
+
+        internal static void AuthSendEmail(ClientInfo clientInfo,
+                                           string email,
+                                           string transactionId,
+                                           IHttpClient http)
+        {
+            // TODO: Implement this
+        }
+
+        internal static void AuthSendPush(ClientInfo clientInfo,
+                                          string deviceId,
+                                          string transactionId,
+                                          IHttpClient http)
+        {
+            // TODO: Implement this
+        }
+
         //
         // FSM states
         //
