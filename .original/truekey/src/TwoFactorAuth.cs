@@ -18,16 +18,19 @@ namespace TrueKey
 
         public class Settings
         {
+            public readonly Step InitialStep;
             public readonly string TransactionId;
             public readonly string Email;
             public readonly OobDevice[] Devices;
             public readonly string OAuthToken;
 
-            public Settings(string transactionId,
+            public Settings(Step initialStep,
+                            string transactionId,
                             string email,
                             OobDevice[] devices,
                             string oAuthToken)
             {
+                InitialStep = initialStep;
                 TransactionId = transactionId;
                 Email = email;
                 Devices = devices;
@@ -62,9 +65,9 @@ namespace TrueKey
             public abstract Answer AskChooseOob(string[] names, string email, Answer[] validAnswers);
         }
 
-        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Step nextStep, Gui gui, IHttpClient http)
+        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Gui gui, IHttpClient http)
         {
-            return new TwoFactorAuth(clientInfo, settings, gui, http).Run(nextStep);
+            return new TwoFactorAuth(clientInfo, settings, gui, http).Run(settings.InitialStep);
         }
 
         //

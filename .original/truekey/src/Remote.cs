@@ -167,16 +167,10 @@ namespace TrueKey
             return AuthStep1(clientInfo, new HttpClient());
         }
 
-        public interface ITwoFactorStep
-        {
-            bool IsDone();
-            ITwoFactorStep Advance(Gui gui, IHttpClient http);
-        }
-
         // Returns instructions on what to do next
-        public static ITwoFactorStep AuthStep2(ClientInfo clientInfo,
-                                               string password,
-                                               string transactionId)
+        public static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
+                                                       string password,
+                                                       string transactionId)
         {
             return AuthStep2(clientInfo, password, transactionId, new HttpClient());
         }
@@ -194,14 +188,6 @@ namespace TrueKey
             public abstract Answer WaitForEmail(string email, Answer[] validAnswers);
             public abstract Answer WaitForOob(string name, string email, Answer[] validAnswers);
             public abstract Answer ChooseOob(string[] names, string email, Answer[] validAnswers);
-        }
-
-        // Returns OAuth token
-        public static string AuthFiniteStateMachine(ClientInfo clientInfo,
-                                                    ITwoFactorStep start,
-                                                    Gui gui)
-        {
-            return AuthFiniteStateMachine(clientInfo, start, gui, new HttpClient());
         }
 
         //
@@ -237,10 +223,10 @@ namespace TrueKey
             return response.StringAtOrNull("oAuthTransId");
         }
 
-        internal static ITwoFactorStep AuthStep2(ClientInfo clientInfo,
-                                                 string password,
-                                                 string transactionId,
-                                                 IHttpClient http)
+        internal static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
+                                                         string password,
+                                                         string transactionId,
+                                                         IHttpClient http)
         {
             var parameters = new Dictionary<string, object> {
                 {"userData", new Dictionary<string, object> {
@@ -285,116 +271,7 @@ namespace TrueKey
             // TODO: Implement this
         }
 
-        //
-        // FSM states
-        //
-
-        internal class DoneStep: ITwoFactorStep
-        {
-            public readonly string Token;
-
-            public DoneStep(string token)
-            {
-                Token = token;
-            }
-
-            public bool IsDone()
-            {
-                return true;
-            }
-
-            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
-            {
-                throw new InvalidOperationException("Should not be called");
-            }
-        }
-
-        internal class WaitForOobStep: ITwoFactorStep
-        {
-            public readonly OobDevice Device;
-            public readonly string Email;
-            public readonly string TransactionId;
-
-            public WaitForOobStep(OobDevice device, string email, string transactionId)
-            {
-                Device = device;
-                Email = email;
-                TransactionId = transactionId;
-            }
-
-            public bool IsDone()
-            {
-                return false;
-            }
-
-            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
-            {
-                var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend, Gui.Answer.Email};
-                var answer = gui.WaitForOob(Device.Name, Email, validAnswers);
-
-                throw new NotImplementedException();
-            }
-        }
-
-        internal class ChooseOobStep: ITwoFactorStep
-        {
-            public readonly OobDevice[] Devices;
-            public readonly string Email;
-            public readonly string TransactionId;
-
-            public ChooseOobStep(OobDevice[] devices, string email, string transactionId)
-            {
-                Devices = devices;
-                Email = email;
-                TransactionId = transactionId;
-            }
-
-            public bool IsDone()
-            {
-                return false;
-            }
-
-            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
-            {
-                var names = Devices.Select(i => i.Name).ToArray();
-                var validAnswers = Enumerable.Range(0, Devices.Length)
-                    .Select(i => Gui.Answer.Device0 + i)
-                    .Concat(new[] {Gui.Answer.Email})
-                    .ToArray();
-
-                var answer = gui.ChooseOob(names,
-                                           Email,
-                                           validAnswers);
-
-                throw new NotImplementedException();
-            }
-        }
-
-        internal class WaitForEmailStep: ITwoFactorStep
-        {
-            public readonly string Email;
-            public readonly string TransactionId;
-
-            public WaitForEmailStep(string email, string transactionId)
-            {
-                Email = email;
-                TransactionId = transactionId;
-            }
-
-            public bool IsDone()
-            {
-                return false;
-            }
-
-            public ITwoFactorStep Advance(Gui gui, IHttpClient http)
-            {
-                var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend};
-                var answer = gui.WaitForEmail(Email, validAnswers);
-                throw new NotImplementedException();
-            }
-        }
-
-        internal static ITwoFactorStep ParseAuthStep2Response(JObject response)
+        internal static TwoFactorAuth.Settings ParseAuthStep2Response(JObject response)
         {
             // TODO: Make JToken.At* throw some custom exception and don't use OrNull
             //       Catch it and rethrow as invalid response.
@@ -408,51 +285,39 @@ namespace TrueKey
             switch (nextStep.Value)
             {
             case 10:
-                return new DoneStep(response.StringAtOrNull("idToken"));
+                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.Done,
+                                                  transactionId: "",
+                                                  email: "",
+                                                  devices: new TwoFactorAuth.OobDevice[0],
+                                                  oAuthToken: response.StringAtOrNull("idToken"));
             case 12:
-                return new WaitForOobStep(ParseOobDevices(data.At("oobDevices"))[0],
-                                          data.StringAt("verificationEmail"),
-                                          response.StringAt("oAuthTransId"));
+                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.WaitForOob,
+                                                  transactionId: response.StringAt("oAuthTransId"),
+                                                  email: data.StringAt("verificationEmail"),
+                                                  devices: ParseOobDevices(data.At("oobDevices")),
+                                                  oAuthToken: "");
             case 13:
-                return new ChooseOobStep(ParseOobDevices(data.At("oobDevices")),
-                                         data.StringAt("verificationEmail"),
-                                         response.StringAt("oAuthTransId"));
+                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.ChooseOob,
+                                                  transactionId: response.StringAt("oAuthTransId"),
+                                                  email: data.StringAt("verificationEmail"),
+                                                  devices: ParseOobDevices(data.At("oobDevices")),
+                                                  oAuthToken: "");
             case 14:
-                return new WaitForEmailStep(data.StringAt("verificationEmail"),
-                                            response.StringAt("oAuthTransId"));
+                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.WaitForEmail,
+                                                  transactionId: response.StringAt("oAuthTransId"),
+                                                  email: data.StringAt("verificationEmail"),
+                                                  devices : new TwoFactorAuth.OobDevice[0],
+                                                  oAuthToken: "");
             }
 
             throw new InvalidOperationException(
                 string.Format("Next two factor step {0} is not supported", nextStep));
         }
 
-        internal class OobDevice
+        internal static TwoFactorAuth.OobDevice[] ParseOobDevices(JToken deviceInfo)
         {
-            public readonly string Name;
-            public readonly string Id;
-
-            public OobDevice(string name, string id)
-            {
-                Name = name;
-                Id = id;
-            }
-        }
-
-        internal static OobDevice[] ParseOobDevices(JToken deviceInfo)
-        {
-            return deviceInfo.Select(
-                i => new OobDevice(i.StringAt("deviceName"), i.StringAt("deviceId"))).ToArray();
-        }
-
-        internal static string AuthFiniteStateMachine(ClientInfo clientInfo,
-                                                      ITwoFactorStep step,
-                                                      Gui gui,
-                                                      IHttpClient http)
-        {
-            while (!step.IsDone())
-                step = step.Advance(gui, http);
-
-            return "";
+            return deviceInfo.Select(i => new TwoFactorAuth.OobDevice(i.StringAt("deviceName"),
+                                                                      i.StringAt("deviceId"))).ToArray();
         }
 
         internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo,
