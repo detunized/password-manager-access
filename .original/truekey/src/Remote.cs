@@ -261,7 +261,15 @@ namespace TrueKey
                                           string transactionId,
                                           IHttpClient http)
         {
-            // TODO: Implement this
+            var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
+            ((Dictionary<string, object>)parameters["data"])["notificationData"]
+                = new Dictionary<string, object>
+            {
+                {"NotificationType", 2},
+                {"RecipientId", deviceId},
+            };
+
+            Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
         }
 
         internal static TwoFactorAuth.Settings ParseAuthStep2Response(JObject response)
