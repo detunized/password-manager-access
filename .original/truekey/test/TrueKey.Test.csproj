@@ -58,6 +58,12 @@
     <Compile Include="RemoteTest.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Fixtures\auth-check-pending-response.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Fixtures\auth-check-success-response.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Fixtures\auth-step1-response.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

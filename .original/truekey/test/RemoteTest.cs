@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Moq;
@@ -44,6 +45,24 @@ namespace TrueKey.Test
             Assert.That(result.Devices.Length, Is.EqualTo(1));
             Assert.That(result.Devices[0].Name, Is.EqualTo("LGE Nexus 5"));
             Assert.That(result.Devices[0].Id, Is.StringStarting("MTU5NjAwMjI3MQP04dNsmSNQ2L"));
+        }
+
+        [Test]
+        public void AuthCheck_returns_oauth_token()
+        {
+            var client = SetupPostWithFixture("auth-check-success-response");
+            var result = Remote.AuthCheck(ClientInfo, "transaction-id", client.Object);
+
+            Assert.That(result, Is.StringStarting("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI"));
+        }
+
+        [Test]
+        public void AuthCheck_throws_on_pending()
+        {
+            var client = SetupPostWithFixture("auth-check-pending-response");
+
+            Assert.That(() => Remote.AuthCheck(ClientInfo, "transaction-id", client.Object),
+                        Throws.TypeOf<InvalidOperationException>());
         }
 
         //
