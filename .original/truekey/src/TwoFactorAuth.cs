@@ -14,6 +14,8 @@ namespace TrueKey
             WaitForOob,
             ChooseOob,
             WaitForEmail,
+            Face,
+            Fingerprint,
         }
 
         public class Settings
@@ -136,6 +138,37 @@ namespace TrueKey
             }
 
             private readonly string _reason;
+        }
+
+        private class SendEmail: State
+        {
+            public override State Advance(TwoFactorAuth owner)
+            {
+                Remote.AuthSendEmail(owner._clientInfo,
+                                     owner._settings.Email,
+                                     owner._settings.TransactionId,
+                                     owner._http);
+                return new WaitForEmail();
+            }
+        }
+
+        private class SendPush: State
+        {
+            public SendPush(int deviceIndex)
+            {
+                _deviceIndex = deviceIndex;
+            }
+
+            public override State Advance(TwoFactorAuth owner)
+            {
+                Remote.AuthSendPush(owner._clientInfo,
+                                    owner._settings.Devices[_deviceIndex].Id,
+                                    owner._settings.TransactionId,
+                                    owner._http);
+                return new WaitForOob(_deviceIndex);
+            }
+
+            private int _deviceIndex;
         }
 
         private class WaitForEmail: State
@@ -261,14 +294,29 @@ namespace TrueKey
             case Step.WaitForEmail:
                 return new WaitForEmail();
             case Step.WaitForOob:
-                return _settings.Devices.Length > 1
-                    ? CreateInitialState(Step.ChooseOob)
-                    : new WaitForOob(0);
+                if (_settings.Devices.Length > 1)
+                    return new ChooseOob();
+                return new WaitForOob(0);
             case Step.ChooseOob:
                 return new ChooseOob();
+            case Step.Face:
+            case Step.Fingerprint:
+                // Face and fingerprint are not really supported but the server sometimes
+                // sends those as a valid next step. The Chrome extension silently ignores
+                // at least some of them. So we here fall back to push or email.
+                switch (_settings.Devices.Length)
+                {
+                case 0:
+                    return new SendEmail();
+                case 1:
+                    return new SendPush(0);
+                default:
+                    return new ChooseOob();
+                }
             }
 
-            throw new InvalidOperationException(string.Format("Two factor auth step {0} is not supported", step));
+            throw new InvalidOperationException(
+                string.Format("Two factor auth step {0} is not supported", step));
         }
 
         private readonly Remote.ClientInfo _clientInfo;

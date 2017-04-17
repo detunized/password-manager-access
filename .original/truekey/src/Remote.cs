@@ -168,40 +168,61 @@ namespace TrueKey
             if (nextStep == null || data == null)
                 throw new InvalidOperationException("Invalid response");
 
-            switch (nextStep.Value)
-            {
-            case 10:
+            // Special case: done
+            if (nextStep.Value == 10)
                 return new TwoFactorAuth.Settings(TwoFactorAuth.Step.Done,
                                                   transactionId: "",
                                                   email: "",
                                                   devices: new TwoFactorAuth.OobDevice[0],
-                                                  oAuthToken: response.StringAtOrNull("idToken"));
-            case 12:
-                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.WaitForOob,
-                                                  transactionId: response.StringAt("oAuthTransId"),
-                                                  email: data.StringAt("verificationEmail"),
-                                                  devices: ParseOobDevices(data.At("oobDevices")),
-                                                  oAuthToken: "");
-            case 13:
-                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.ChooseOob,
-                                                  transactionId: response.StringAt("oAuthTransId"),
-                                                  email: data.StringAt("verificationEmail"),
-                                                  devices: ParseOobDevices(data.At("oobDevices")),
-                                                  oAuthToken: "");
-            case 14:
+                                                  oAuthToken: response.StringAt("idToken"));
+
+            var transactionId = response.StringAt("oAuthTransId");
+            var email = data.StringAt("verificationEmail");
+
+            // Special case: email doesn't need OOB devices
+            if (nextStep.Value == 14)
                 return new TwoFactorAuth.Settings(TwoFactorAuth.Step.WaitForEmail,
-                                                  transactionId: response.StringAt("oAuthTransId"),
-                                                  email: data.StringAt("verificationEmail"),
-                                                  devices : new TwoFactorAuth.OobDevice[0],
+                                                  transactionId: transactionId,
+                                                  email: email,
+                                                  devices: new TwoFactorAuth.OobDevice[0],
                                                   oAuthToken: "");
+
+            var devices = ParseOobDevices(data.At("oobDevices"));
+            if (devices.Length < 1)
+                throw new InvalidOperationException("Invalid response: at least one OOB device is expected");
+
+            TwoFactorAuth.Step step;
+            switch (nextStep.Value)
+            {
+            case 8:
+                step = TwoFactorAuth.Step.Face;
+                break;
+            case 12:
+                step = TwoFactorAuth.Step.WaitForOob;
+                break;
+            case 13:
+                step = TwoFactorAuth.Step.ChooseOob;
+                break;
+            case 15:
+                step = TwoFactorAuth.Step.Fingerprint;
+                break;
+            default:
+                throw new InvalidOperationException(
+                    string.Format("Next two factor step {0} is not supported", nextStep));
             }
 
-            throw new InvalidOperationException(
-                string.Format("Next two factor step {0} is not supported", nextStep));
+            return new TwoFactorAuth.Settings(step,
+                                              transactionId: transactionId,
+                                              email: email,
+                                              devices: devices,
+                                              oAuthToken: "");
         }
 
         internal static TwoFactorAuth.OobDevice[] ParseOobDevices(JToken deviceInfo)
         {
+            if (deviceInfo.Type != JTokenType.Array)
+                return new TwoFactorAuth.OobDevice[0];
+
             return deviceInfo.Select(i => new TwoFactorAuth.OobDevice(i.StringAt("deviceName"),
                                                                       i.StringAt("deviceId"))).ToArray();
         }
