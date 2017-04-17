@@ -30,6 +30,22 @@ namespace TrueKey.Test
             Assert.That(result, Is.EqualTo("6cdfcd43-065c-43a1-aa7a-017de98eefd0"));
         }
 
+        [Test]
+        public void AuthStep2_returns_two_factor_settings()
+        {
+            var client = SetupPostWithFixture("auth-step2-response");
+            var result = Remote.AuthStep2(ClientInfo, "password", "transaction-id", client.Object);
+
+            Assert.That(result.InitialStep, Is.EqualTo(TwoFactorAuth.Step.WaitForOob));
+            Assert.That(result.TransactionId, Is.EqualTo("ae830c59-634b-437c-95b6-58158e85ffae"));
+            Assert.That(result.Email, Is.EqualTo("username@example.com"));
+            Assert.That(result.OAuthToken, Is.EqualTo(""));
+
+            Assert.That(result.Devices.Length, Is.EqualTo(1));
+            Assert.That(result.Devices[0].Name, Is.EqualTo("LGE Nexus 5"));
+            Assert.That(result.Devices[0].Id, Is.StringStarting("MTU5NjAwMjI3MQP04dNsmSNQ2L"));
+        }
+
         //
         // Data
         //

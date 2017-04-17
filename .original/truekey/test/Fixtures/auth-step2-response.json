@@ -1,0 +1,37 @@
+{
+  "refreshTokenExpiry": 0.0,
+  "responseResult": {
+    "isSuccess": true,
+    "errorCode": null,
+    "errorDescription": null,
+    "transactionId": "296264da-50a5-4d32-b9ab-c086f360093b"
+  },
+  "riskAnalysisInfo": {
+    "nextStep": 12,
+    "flowId": null,
+    "nextStepData": {
+      "oobDevices": [
+        {
+          "deviceId": "MTU5NjAwMjI3MQP04dNsmSNQ2LOPWrIepKI6ra8lkjoubkr1B9TMpWSSytkNsFK2n/utQGl+8giXPuzWxS+p9GSPvBQPE2444eZgyDogtwq3vWKX2ayAvmEj1G198GiDmjfjXpkMq41hQYU=",
+          "deviceName": "LGE Nexus 5",
+          "oobPreferred": false
+        }
+      ],
+      "verificationEmail": "username@example.com",
+      "bcaResyncToken": null
+    },
+    "altNextStep": 14,
+    "bcaNextStep": 0,
+    "bcaNextStepData": null
+  },
+  "authCode": null,
+  "redirectUrl": null,
+  "state": null,
+  "cloudKey": null,
+  "idToken": null,
+  "uasTokenInfo": null,
+  "oAuthTransId": "ae830c59-634b-437c-95b6-58158e85ffae",
+  "activeSession": false,
+  "templateCount": 0,
+  "refreshToken": null
+}
