@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
@@ -48,125 +47,14 @@ namespace TrueKey
                                   response.StringAtOrNull("tkDeviceId"));
         }
 
-        public class OtpInfo
-        {
-            public readonly int Version;
-            public readonly int OtpAlgorithm;
-            public readonly int OtpLength;
-            public readonly int HashAlgorithm;
-            public readonly int TimeStep;
-            public readonly uint StartTime;
-            public readonly byte[] Suite;
-            public readonly byte[] HmacSeed;
-            public readonly byte[] Iptmk;
-
-            public OtpInfo(int version,
-                           int otpAlgorithm,
-                           int otpLength,
-                           int hashAlgorithm,
-                           int timeStep,
-                           uint startTime,
-                           byte[] suite,
-                           byte[] hmacSeed,
-                           byte[] iptmk)
-            {
-                Version = version;
-                OtpAlgorithm = otpAlgorithm;
-                OtpLength = otpLength;
-                HashAlgorithm = hashAlgorithm;
-                TimeStep = timeStep;
-                StartTime = startTime;
-                Suite = suite;
-                HmacSeed = hmacSeed;
-                Iptmk = iptmk;
-            }
-        }
-
-        // Parses clientToken field returned by the server. It contains encoded
-        // OCRA/OPT/RFC 6287 information. This is used later on to sign messages.
-        public static OtpInfo ParseClientToken(string encodedToken)
-        {
-            using (var s = new MemoryStream(encodedToken.Decode64()))
-            using (var r = new BinaryReader(s))
-            {
-                var tokenType = r.ReadByte();
-                var tokenLength = r.ReadUInt16BigEndian();
-                var token = r.ReadBytes(tokenLength);
-                var iptmkTag = r.ReadByte();
-                var iptmkLength = r.ReadUInt16BigEndian();
-                var iptmk = r.ReadBytes(iptmkLength);
-
-                using (var ts = new MemoryStream(token))
-                using (var tr = new BinaryReader(ts))
-                {
-                    var version = tr.ReadByte();
-                    var otpAlgorithm = tr.ReadByte();
-                    var otpLength = tr.ReadByte();
-                    var hashAlgorithm = tr.ReadByte();
-                    var timeStep = tr.ReadByte();
-                    var startTime = tr.ReadUInt32BigEndian();
-                    var serverTime = tr.ReadUInt32BigEndian();
-                    var wysOption = tr.ReadByte();
-                    var suiteLength = tr.ReadUInt16BigEndian();
-                    var suite = tr.ReadBytes(suiteLength);
-
-                    ts.Position = 128;
-                    var hmacSeedLength = tr.ReadUInt16BigEndian();
-                    var hmacSeed = tr.ReadBytes(hmacSeedLength);
-
-                    return new OtpInfo(version: version,
-                                       otpAlgorithm: otpAlgorithm,
-                                       otpLength: otpLength,
-                                       hashAlgorithm: hashAlgorithm,
-                                       timeStep: timeStep,
-                                       startTime: startTime,
-                                       suite: suite,
-                                       hmacSeed: hmacSeed,
-                                       iptmk: iptmk);
-                }
-            }
-        }
-
-        // Checks that the OTP info is something we can work with. The Chrome
-        // extension also supports only this subset. They don't validate as much,
-        // just assume the values are what they expect.
-        public static void ValidateOtpInfo(OtpInfo otp)
-        {
-            Action<object, object, string> throwError = (actual, expected, name) =>
-            {
-                throw new ArgumentException(
-                    string.Format("Invalid OTP {0} (expected {1}, got {2})",
-                                  name,
-                                  expected,
-                                  actual));
-            };
-
-            Action<int, int, string> verify = (actual, expected, name) =>
-            {
-                if (actual != expected)
-                    throwError(actual, expected, name);
-            };
-
-            verify(otp.Version, 3, "version");
-            verify(otp.OtpAlgorithm, 1, "algorithm");
-            verify(otp.OtpLength, 0, "length");
-            verify(otp.HashAlgorithm, 2, "hash");
-            verify(otp.HmacSeed.Length, 32, "HMAC length");
-            verify(otp.Iptmk.Length, 32, "IPTMK length");
-
-            const string suite = "OCRA-1:HOTP-SHA256-0:QA08";
-            if (!otp.Suite.SequenceEqual(suite.ToBytes()))
-                throwError(otp.Suite, suite, "suite");
-        }
-
         public class ClientInfo
         {
             public readonly string Username;
             public readonly string Name;
             public readonly DeviceInfo DeviceInfo;
-            public readonly OtpInfo OtpInfo;
+            public readonly Crypto.OtpInfo OtpInfo;
 
-            public ClientInfo(string username, string name, DeviceInfo deviceInfo, OtpInfo otpInfo)
+            public ClientInfo(string username, string name, DeviceInfo deviceInfo, Crypto.OtpInfo otpInfo)
             {
                 Username = username;
                 Name = name;
@@ -343,7 +231,7 @@ namespace TrueKey
             };
         }
 
-        internal static Dictionary<string, object> RandomOtpChallngeAsDictionary(OtpInfo otp)
+        internal static Dictionary<string, object> RandomOtpChallngeAsDictionary(Crypto.OtpInfo otp)
         {
             var challenge = Crypto.GenerateRandomOtpChallenge(otp);
             return new Dictionary<string, object> {
