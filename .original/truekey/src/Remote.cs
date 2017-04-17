@@ -101,6 +101,8 @@ namespace TrueKey
             return ParseAuthStep2Response(response);
         }
 
+        // Check if the second factor has been completed by the user.
+        // The result either a success or pending when everything go normally.
         public static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
         {
             var response = PostNoCheck(http,
@@ -117,6 +119,7 @@ namespace TrueKey
             throw new InvalidOperationException("AuthCheck failed");
         }
 
+        // Send a verification email as a second factor action.
         public static void AuthSendEmail(ClientInfo clientInfo,
                                          string email,
                                          string transactionId,
@@ -133,6 +136,7 @@ namespace TrueKey
             Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
         }
 
+        // Send a push message to a device as a second factor action.
         public static void AuthSendPush(ClientInfo clientInfo,
                                         string deviceId,
                                         string transactionId,
