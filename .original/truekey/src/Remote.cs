@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace TrueKey
 {
-    public static class Remote
+    internal static class Remote
     {
         public class DeviceInfo
         {
@@ -29,9 +29,23 @@ namespace TrueKey
         //
         // `deviceName` is the name of the device registered with the True Key service.
         // For example 'Chrome' or 'Nexus 5'.
-        public static DeviceInfo RegisetNewDevice(string deviceName)
+        public static DeviceInfo RegisetNewDevice(string deviceName, IHttpClient http)
         {
-            return RegisetNewDevice(deviceName, new HttpClient());
+            var response = Post(http,
+                                "https://truekeyapi.intelsecurity.com/sp/pabe/v2/so",
+                                new Dictionary<string, object>
+                                {
+                                    {"clientUDID", "truekey-sharp"},
+                                    {"deviceName", deviceName},
+                                    {"devicePlatformID", 7},
+                                    {"deviceType", 5},
+                                    {"oSName", "Unknown"},
+                                    {"oathTokenType", 1},
+                                });
+
+            // TODO: Verify results
+            return new DeviceInfo(response.StringAtOrNull("clientToken"),
+                                  response.StringAtOrNull("tkDeviceId"));
         }
 
         public class OtpInfo
@@ -162,43 +176,7 @@ namespace TrueKey
         }
 
         // Returns OAuth transaction id that is used in the next step
-        public static string AuthStep1(ClientInfo clientInfo)
-        {
-            return AuthStep1(clientInfo, new HttpClient());
-        }
-
-        // Returns instructions on what to do next
-        public static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
-                                                       string password,
-                                                       string transactionId)
-        {
-            return AuthStep2(clientInfo, password, transactionId, new HttpClient());
-        }
-
-        //
-        // Internal
-        //
-
-        internal static DeviceInfo RegisetNewDevice(string deviceName, IHttpClient http)
-        {
-            var response = Post(http,
-                                "https://truekeyapi.intelsecurity.com/sp/pabe/v2/so",
-                                new Dictionary<string, object>
-                                {
-                                    {"clientUDID", "truekey-sharp"},
-                                    {"deviceName", deviceName},
-                                    {"devicePlatformID", 7},
-                                    {"deviceType", 5},
-                                    {"oSName", "Unknown"},
-                                    {"oathTokenType", 1},
-                                });
-
-            // TODO: Verify results
-            return new DeviceInfo(response.StringAtOrNull("clientToken"),
-                                  response.StringAtOrNull("tkDeviceId"));
-        }
-
-        internal static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
+        public static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
         {
             var response = Post(http,
                                 "https://truekeyapi.intelsecurity.com/session/auth",
@@ -208,10 +186,11 @@ namespace TrueKey
             return response.StringAtOrNull("oAuthTransId");
         }
 
-        internal static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
-                                                         string password,
-                                                         string transactionId,
-                                                         IHttpClient http)
+        // Returns instructions on what to do next
+        public static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
+                                                       string password,
+                                                       string transactionId,
+                                                       IHttpClient http)
         {
             var parameters = new Dictionary<string, object> {
                 {"userData", new Dictionary<string, object> {
@@ -234,7 +213,7 @@ namespace TrueKey
             return ParseAuthStep2Response(response);
         }
 
-        internal static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
+        public static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
         {
             var response = PostNoCheck(http,
                                        "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
@@ -250,10 +229,10 @@ namespace TrueKey
             throw new InvalidOperationException("AuthCheck failed");
         }
 
-        internal static void AuthSendEmail(ClientInfo clientInfo,
-                                           string email,
-                                           string transactionId,
-                                           IHttpClient http)
+        public static void AuthSendEmail(ClientInfo clientInfo,
+                                         string email,
+                                         string transactionId,
+                                         IHttpClient http)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"]
@@ -266,10 +245,10 @@ namespace TrueKey
             Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
         }
 
-        internal static void AuthSendPush(ClientInfo clientInfo,
-                                          string deviceId,
-                                          string transactionId,
-                                          IHttpClient http)
+        public static void AuthSendPush(ClientInfo clientInfo,
+                                        string deviceId,
+                                        string transactionId,
+                                        IHttpClient http)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"]
@@ -281,6 +260,10 @@ namespace TrueKey
 
             Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
         }
+
+        //
+        // Internal
+        //
 
         internal static TwoFactorAuth.Settings ParseAuthStep2Response(JObject response)
         {

@@ -46,6 +46,7 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Crypto.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Gui.cs" />
     <Compile Include="HttpClient.cs" />
     <Compile Include="IHttpClient.cs" />
     <Compile Include="Pbkdf2.cs" />

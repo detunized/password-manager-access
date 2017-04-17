@@ -7,7 +7,7 @@ namespace Example
 {
     class Program
     {
-        private class Gui: TwoFactorAuth.Gui
+        private class Gui: TrueKey.Gui
         {
             public override Answer AskToWaitForEmail(string email, Answer[] validAnswers)
             {

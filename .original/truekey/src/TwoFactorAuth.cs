@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace TrueKey
 {
-    public class TwoFactorAuth
+    internal class TwoFactorAuth
     {
         public enum Step
         {
@@ -48,21 +48,6 @@ namespace TrueKey
                 Name = name;
                 Id = id;
             }
-        }
-
-        public abstract class Gui
-        {
-            public enum Answer
-            {
-                Check,
-                Resend,
-                Email,
-                Device0,
-            }
-
-            public abstract Answer AskToWaitForEmail(string email, Answer[] validAnswers);
-            public abstract Answer AskToWaitForOob(string name, string email, Answer[] validAnswers);
-            public abstract Answer AskToChooseOob(string[] names, string email, Answer[] validAnswers);
         }
 
         public static string Start(Remote.ClientInfo clientInfo, Settings settings, Gui gui)
