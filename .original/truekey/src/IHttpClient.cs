@@ -7,6 +7,7 @@ namespace TrueKey
 {
     public interface IHttpClient
     {
+        string Get(string url, Dictionary<string, string> headers);
         string Post(string url, Dictionary<string, object> parameters);
     }
 }

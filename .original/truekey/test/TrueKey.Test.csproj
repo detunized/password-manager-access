@@ -71,6 +71,9 @@
     <None Include="Fixtures\auth-step2-response.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Fixtures\get-vault-response.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Fixtures\register-new-device-response.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -1,0 +1,62 @@
+{
+  "schema": "tkd0",
+  "customer": {
+    "id": 11522643,
+    "schema": "tkp-s3",
+    "fullname": "John Smith",
+    "email": "username@example.com",
+    "cohort": "{\"distinct_id\":\"TK:9e44feb7-fe4e-4383-ad97-3eafecbd472f\",\"af_status\":\"Organic\",\"signup_date\":\"2016-12-09T17:00:08Z\",\"p\":\"public_2\"}",
+    "salt": "845864cf3692189757f5f276b37c2981bdceefea04905699685ad0541c4f9092",
+    "k_kek": "AARZxaQ5EeiK9GlqAkz+BzTwb1cO+b8yMN+SCt3bzQJO+Fyf4TnlA83Mbl1KrMI09iOd9VQJJlu4ivWMwCYhMB6Mw3LOoyS/2UjqmCnxAUqo6MTSnptgjlWO",
+    "public_key": "{\"n\":\"ec9c8f40232c32cf5fdd8a1fdc7db927387ab7536e22a7c2ca5e610a4fc52f83356165f8219877af7262b8466d3937d7115457dc348ebd4d126a8dd01614926e3cc057cae00e854b31733f769ea29a630be1f8b8a80e6fd7c08592c508958c904106fa5527118dc23a470902471898045e355c4cc73e6c314f38261c7b35b4320634705a858070368c7e6f5fcac6694f50e3ca7ef0c09beccea0141157a4b92e3963a8cde744f010b1e1784bc1d7c5e6ddde7fa8d78252563e8be16d16847635e69fa3080c39cdefb904d17d2fc3d6ef4e2eee35eb65dc79ec66f62ba9f45c356a06827e2893b698684a7733658ad175306cd3b14631cb5a5ad46eb5a0280c49\",\"e\":\"3\"}",
+    "private_key": "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",
+    "dr": "{\"algo\":\"tk-v1_pbkdf2-hmac-sha512\",\"iterations\":10000}",
+    "profile_version": 2,
+    "enrollment_ticket": "b96c116d-3572-458f-af30-47ec49e1349a",
+    "profile_uid": "9e44feb7-fe4e-4383-ad97-3eafecbd472f",
+    "distinct_id": "TK:9e44feb7-fe4e-4383-ad97-3eafecbd472f",
+    "trial": true,
+    "assets_limit": 15,
+    "email_verification": {
+      "verified_at": "2016-12-09T17:00:08Z",
+      "verification_sent_at": null
+    },
+    "settings": null,
+    "data_updated_at": "2017-03-20T11:41:44-04:00"
+  },
+  "data_updated_at": "2017-03-20T15:41:44Z",
+  "assets": [
+    {
+      "id": 50934080,
+      "member_id": 11522643,
+      "name": "Google",
+      "login": "dude@gmail.com",
+      "url": "https://accounts.google.com/ServiceLogin",
+      "domain": "google.com",
+      "memo_k": "AAS2l1XcabgdPTM3CuUZDbT5txJu1ou0gOQ=",
+      "password_k": "AAR24UbLgkHUhsSXB2mndMISE7U5qn+WA3znhgdXex0br6y5",
+      "created_at": "2016-12-09T12:07:53-05:00",
+      "updated_at": "2016-12-09T12:07:53-05:00",
+      "settings": "{\"autologin\":1,\"password_reprompt\":0,\"subdomain_only\":0,\"protectedWithPassword\":0,\"protectedWithFace\":0,\"custom_partner_asset\":0,\"android_package_name\":null,\"allow_deletion\":1,\"always_on_top\":0}"
+    },
+    {
+      "id": 60789074,
+      "member_id": 11522643,
+      "name": "facebook",
+      "login": "mark",
+      "url": "http://facebook.com",
+      "domain": "facebook.com",
+      "memo_k": null,
+      "password_k": "AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw==",
+      "created_at": "2017-03-10T05:28:13-05:00",
+      "updated_at": "2017-03-10T05:28:13-05:00",
+      "settings": "{\"autologin\":\"1\",\"password_reprompt\":\"0\",\"subdomain_only\":\"0\",\"custom_partner_asset\":false}"
+    }
+  ],
+  "documents": [
+
+  ],
+  "blocked_items": [
+
+  ]
+}

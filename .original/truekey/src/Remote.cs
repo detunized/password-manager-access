@@ -153,6 +153,22 @@ namespace TrueKey
             Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
         }
 
+        public static Account[] GetVault(string oauthToken, IHttpClient http)
+        {
+            var response = Get(http,
+                               "https://pm-api.truekey.com/data",
+                               new Dictionary<string, string>
+                               {
+                                   {"Authorization", "Bearer " + oauthToken},
+                                   {"Accept", "application/vnd.tk-pm-api.v1+json"},
+                                   {"X-TK-Client-API", "TK-API-1.1"},
+                                   {"X-TK-Client-Version", "2.6.3820"},
+                                   {"X-TK-Client-Language", "en-US"},
+                                   {"X-TK-Client-Context", "crx-mac"},
+                               });
+            return new Account[0];
+        }
+
         //
         // Internal
         //
@@ -264,6 +280,13 @@ namespace TrueKey
                 {"otpType", "time"},
                 {"otp", challenge.Signature.ToBase64()},
             };
+        }
+
+        internal static JObject Get(IHttpClient http, string url, Dictionary<string, string> headers)
+        {
+            // TODO: Handle network errors
+            var response = http.Get(url, headers);
+            return JObject.Parse(response);
         }
 
         internal static JObject Post(IHttpClient http,

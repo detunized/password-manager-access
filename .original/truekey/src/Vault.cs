@@ -36,8 +36,11 @@ namespace TrueKey
             //         pair of OAuth tokens.
             var whatsNext = Remote.AuthStep2(clientInfo, password, transactionId, http);
 
-            // Step 6: Auth FSM -- walk through all the auth steps until we're done
+            // Step 6: Auth FSM -- walk through all the auth steps until we're done.
             var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, gui, http);
+
+            // Step 7: Get the vault from the server.
+            var accounts = Remote.GetVault(oauthToken, http);
 
             return new Vault();
         }
