@@ -121,6 +121,13 @@ namespace TrueKey.Test
         //
 
         [Test]
+        public void ByteArray_ToUtf8_returns_string()
+        {
+            Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
+            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+        }
+
+        [Test]
         public void ByteArray_ToHex_returns_hex_string()
         {
             Assert.That(new byte[] { }.ToHex(), Is.EqualTo(""));

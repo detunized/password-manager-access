@@ -45,6 +45,11 @@ namespace TrueKey
         // byte[]
         //
 
+        public static string ToUtf8(this byte[] x)
+        {
+            return Encoding.UTF8.GetString(x);
+        }
+
         public static string ToHex(this byte[] x)
         {
             var hex = new char[x.Length * 2];
