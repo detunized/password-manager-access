@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -18,6 +19,81 @@ namespace TrueKey.Test
             65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
             114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
         };
+
+        public static readonly Dictionary<string, byte[]> HexToBytes = new Dictionary<string, byte[]> {
+            {"",
+             new byte[] {}},
+
+            {"00",
+             new byte[] {0}},
+
+            {"00ff",
+             new byte[] {0, 255}},
+
+            {"00010203040506070809",
+             new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
+
+            {"000102030405060708090a0b0c0d0e0f",
+             new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
+
+            {"8af633933e96a3c3550c2734bd814195",
+             new byte[] {0x8A, 0xF6, 0x33, 0x93, 0x3E, 0x96, 0xA3, 0xC3, 0x55, 0x0C, 0x27, 0x34, 0xBD, 0x81, 0x41, 0x95}}
+        };
+
+        //
+        // uint
+        //
+
+        [Test]
+        public void ChangeEndianness_swaps_bytes()
+        {
+            var tests = new Dictionary<uint, uint>
+            {
+                {0x00000000u, 0x00000000u},
+                {0xFF000000u, 0x000000FFu},
+                {0x000000FFu, 0xFF000000u},
+                {0x00FF00FFu, 0xFF00FF00u},
+                {0x12345678u, 0x78563412u},
+                {0xEFBEADDEu, 0xDEADBEEFu},
+            };
+
+            foreach (var i in tests)
+            {
+                Assert.That(i.Key.ChangeEndianness(), Is.EqualTo(i.Value));
+                Assert.That(i.Value.ChangeEndianness(), Is.EqualTo(i.Key));
+            }
+        }
+
+        [Test]
+        public void ChangeEndianness_applied_twice_doesn_change_value()
+        {
+            var tests = new []
+            {
+                0x00000000u,
+                0x000000FFu,
+                0xFF000000u,
+                0xFF00FF00u,
+                0x78563412u,
+                0xDEADBEEFu,
+            };
+
+            foreach (var i in tests)
+                Assert.That(i.ChangeEndianness().ChangeEndianness(), Is.EqualTo(i));
+        }
+
+        [Test]
+        public void FromBigEndian()
+        {
+            var tests = new Dictionary<uint, byte[]>
+            {
+                {0x00000000u, new byte[] {0x00, 0x00, 0x00, 0x00}},
+                {0x12345678u, new byte[] {0x12, 0x34, 0x56, 0x78}},
+                {0xDEADBEEFu, new byte[] {0xde, 0xad, 0xbe, 0xef}},
+            };
+
+            foreach (var i in tests)
+                Assert.That(BitConverter.ToUInt32(i.Value, 0).FromBigEndian(), Is.EqualTo(i.Key));
+        }
 
         //
         // string
@@ -49,6 +125,32 @@ namespace TrueKey.Test
         {
             Assert.That(new byte[] { }.ToHex(), Is.EqualTo(""));
             Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
+        }
+
+        [Test]
+        public void DecodeHex()
+        {
+            foreach (var i in HexToBytes)
+            {
+                Assert.That(i.Key.ToLower().DecodeHex(), Is.EqualTo(i.Value));
+                Assert.That(i.Key.ToUpper().DecodeHex(), Is.EqualTo(i.Value));
+            }
+        }
+
+        [Test]
+        public void DecodeHex_throws_on_odd_length()
+        {
+            Assert.That(() => "0".DecodeHex(),
+                        Throws.TypeOf<ArgumentException>()
+                            .And.Message.EqualTo("Input length must be multple of 2"));
+        }
+
+        [Test]
+        public void DecodeHex_throws_on_non_hex_characters()
+        {
+            Assert.That(() => "xz".DecodeHex(),
+                        Throws.TypeOf<ArgumentException>()
+                            .And.Message.EqualTo("Input contains invalid characters"));
         }
 
         [Test]

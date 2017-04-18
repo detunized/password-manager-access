@@ -8,8 +8,25 @@ using Newtonsoft.Json.Linq;
 
 namespace TrueKey
 {
-    static class Extensions
+    internal static class Extensions
     {
+        //
+        // uint
+        //
+
+        public static uint ChangeEndianness(this uint x)
+        {
+            return ((x & 0x000000FF) << 24) |
+                   ((x & 0x0000FF00) <<  8) |
+                   ((x & 0x00FF0000) >>  8) |
+                   ((x & 0xFF000000) >> 24);
+        }
+
+        public static uint FromBigEndian(this uint x)
+        {
+            return BitConverter.IsLittleEndian ? x.ChangeEndianness() : x;
+        }
+
         //
         // string
         //
@@ -43,6 +60,33 @@ namespace TrueKey
             }
 
             return new string(hex);
+        }
+
+        public static byte[] DecodeHex(this string s)
+        {
+            if (s.Length % 2 != 0)
+                throw new ArgumentException("Input length must be multple of 2");
+
+            var bytes = new byte[s.Length / 2];
+            for (var i = 0; i < s.Length / 2; ++i)
+            {
+                var b = 0;
+                for (var j = 0; j < 2; ++j)
+                {
+                    b <<= 4;
+                    var c = char.ToLower(s[i * 2 + j]);
+                    if (c >= '0' && c <= '9')
+                        b |= c - '0';
+                    else if (c >= 'a' && c <= 'f')
+                        b |= c - 'a' + 10;
+                    else
+                        throw new ArgumentException("Input contains invalid characters");
+                }
+
+                bytes[i] = (byte)b;
+            }
+
+            return bytes;
         }
 
         public static string ToBase64(this byte[] x)

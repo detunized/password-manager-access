@@ -57,6 +57,9 @@
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="Pbkdf2Test.cs" />
     <Compile Include="RemoteTest.cs" />
+    <Compile Include="SjclAesTest.cs" />
+    <Compile Include="SjclCcmTest.cs" />
+    <Compile Include="SjclQuadTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures\auth-check-pending-response.json">
