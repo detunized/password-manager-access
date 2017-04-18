@@ -5,6 +5,8 @@ namespace TrueKey
 {
     public class Vault
     {
+        public readonly Account[] Accounts;
+
         public static Vault Open(string username, string password, Gui gui)
         {
             return Open(username, password, gui, new HttpClient());
@@ -42,7 +44,12 @@ namespace TrueKey
             // Step 7: Get the vault from the server.
             var accounts = Remote.GetVault(oauthToken, http);
 
-            return new Vault();
+            return new Vault(accounts);
+        }
+
+        private Vault(Account[] accounts)
+        {
+            Accounts = accounts;
         }
     }
 }

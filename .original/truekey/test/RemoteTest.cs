@@ -65,6 +65,29 @@ namespace TrueKey.Test
                         Throws.TypeOf<InvalidOperationException>());
         }
 
+        [Test]
+        public void GetVault_returns_accounts()
+        {
+            var client = SetupGetWithFixture("get-vault-response");
+            var accounts = Remote.GetVault("oauth-token", client.Object);
+
+            Assert.That(accounts.Length, Is.EqualTo(2));
+
+            Assert.That(accounts[0].Id, Is.EqualTo(50934080));
+            Assert.That(accounts[0].Name, Is.EqualTo("Google"));
+            Assert.That(accounts[0].Username, Is.EqualTo("dude@gmail.com"));
+            Assert.That(accounts[0].Password, Is.EqualTo("AAR24UbLgkHUhsSXB2mndMISE7U5qn+WA3znhgdXex0br6y5"));
+            Assert.That(accounts[0].Url, Is.EqualTo("https://accounts.google.com/ServiceLogin"));
+            Assert.That(accounts[0].Note, Is.EqualTo("AAS2l1XcabgdPTM3CuUZDbT5txJu1ou0gOQ="));
+
+            Assert.That(accounts[1].Id, Is.EqualTo(60789074));
+            Assert.That(accounts[1].Name, Is.EqualTo("facebook"));
+            Assert.That(accounts[1].Username, Is.EqualTo("mark"));
+            Assert.That(accounts[1].Password, Is.EqualTo("AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw=="));
+            Assert.That(accounts[1].Url, Is.EqualTo("http://facebook.com"));
+            Assert.That(accounts[1].Note, Is.EqualTo(""));
+        }
+
         //
         // Data
         //
@@ -107,6 +130,20 @@ namespace TrueKey.Test
         // Helpers
         //
 
+        private static Mock<IHttpClient> SetupGet(string response)
+        {
+            var mock = new Mock<IHttpClient>();
+            mock.Setup(x => x.Get(It.IsAny<string>(),
+                                  It.IsAny<Dictionary<string, string>>()))
+                .Returns(response);
+            return mock;
+        }
+
+        private static Mock<IHttpClient> SetupGetWithFixture(string name)
+        {
+            return SetupGet(ReadFixture(name));
+        }
+
         private static Mock<IHttpClient> SetupPost(string response)
         {
             var mock = new Mock<IHttpClient>();
@@ -118,7 +155,12 @@ namespace TrueKey.Test
 
         private static Mock<IHttpClient> SetupPostWithFixture(string name)
         {
-            return SetupPost(File.ReadAllText(string.Format("Fixtures/{0}.json", name)));
+            return SetupPost(ReadFixture(name));
+        }
+
+        private static string ReadFixture(string name)
+        {
+            return File.ReadAllText(string.Format("Fixtures/{0}.json", name));
         }
     }
 }

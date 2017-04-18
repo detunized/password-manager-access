@@ -166,7 +166,17 @@ namespace TrueKey
                                    {"X-TK-Client-Language", "en-US"},
                                    {"X-TK-Client-Context", "crx-mac"},
                                });
-            return new Account[0];
+
+            return response
+                .At("assets")
+                .Select(i => new Account(i.IntAt("id"),
+                                         i.StringAtOrNull("name") ?? "",
+                                         i.StringAtOrNull("login") ?? "",
+                                         i.StringAtOrNull("password_k") ??
+                                         "",
+                                         i.StringAtOrNull("url") ?? "",
+                                         i.StringAtOrNull("memo_k") ?? ""))
+                .ToArray();
         }
 
         //
