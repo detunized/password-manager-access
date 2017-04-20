@@ -66,11 +66,15 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void GetVault_returns_encrypted_accounts()
+        public void GetVault_returns_encrypted_vault()
         {
             var client = SetupGetWithFixture("get-vault-response");
-            var accounts = Remote.GetVault("oauth-token", client.Object);
+            var vault = Remote.GetVault("oauth-token", client.Object);
 
+            Assert.That(vault.MasterKeySalt, Is.EqualTo(MasterKeySalt));
+            Assert.That(vault.EncryptedMasterKey, Is.EqualTo(EncryptedMasterKey));
+
+            var accounts = vault.EncryptedAccounts;
             Assert.That(accounts.Length, Is.EqualTo(2));
 
             Assert.That(accounts[0].Id, Is.EqualTo(50934080));
@@ -104,6 +108,18 @@ namespace TrueKey.Test
 
         private const string DeviceId = "d871347bd0a3e7af61f60f511bc7de5e944c5c778705649d4aa8d" +
                                         "c77bcd21489412894";
+
+        // TODO: Remove copy paste
+        private const string MasterPassword = "Password123";
+        private const string MasterKeySaltHex = "845864cf3692189757f5f276b37c2981bdceefea04905" +
+                                                "699685ad0541c4f9092";
+        private const string EncryptedMasterKeyBase64 = "AARZxaQ5EeiK9GlqAkz+BzTwb1cO+b8yMN+SC" +
+                                                        "t3bzQJO+Fyf4TnlA83Mbl1KrMI09iOd9VQJJl" +
+                                                        "u4ivWMwCYhMB6Mw3LOoyS/2UjqmCnxAUqo6MT" +
+                                                        "SnptgjlWO";
+
+        private static readonly byte[] MasterKeySalt = MasterKeySaltHex.DecodeHex();
+        private static readonly byte[] EncryptedMasterKey = EncryptedMasterKeyBase64.Decode64();
 
         private static readonly Remote.DeviceInfo DeviceInfo = new Remote.DeviceInfo(
             token: ClientToken,

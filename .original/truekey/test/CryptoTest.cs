@@ -217,6 +217,7 @@ namespace TrueKey.Test
         private static readonly byte[] Ciphertext = CiphertextBase64.Decode64();
         private static readonly byte[] Plaintext = "password".ToBytes();
 
+        // TODO: Remove copy paste
         private const string MasterPassword = "Password123";
         private const string MasterKeySaltHex = "845864cf3692189757f5f276b37c2981bdceefea04905" +
                                                 "699685ad0541c4f9092";
