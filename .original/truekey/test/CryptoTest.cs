@@ -19,6 +19,13 @@ namespace TrueKey.Test
                 Is.EqualTo("tk-v1-463d82f8e2378ed234ff98a84118636168b76a69cdac5fcb2b9594a0b18ad2ea"));
         }
 
+        [Test]
+        public void DecryptMasterKey_returns_key()
+        {
+            Assert.That(Crypto.DecryptMasterKey(MasterPassword, MasterKeySalt, EncryptedMasterKey),
+                        Is.EqualTo(MasterKey));
+        }
+
         // We don't test DecryptBase64 extensively as it's just a wrapper
         // around Decrypt which is well tested.
         [Test]
@@ -209,6 +216,19 @@ namespace TrueKey.Test
         private static readonly byte[] Key = KeyHex.DecodeHex();
         private static readonly byte[] Ciphertext = CiphertextBase64.Decode64();
         private static readonly byte[] Plaintext = "password".ToBytes();
+
+        private const string MasterPassword = "Password123";
+        private const string MasterKeySaltHex = "845864cf3692189757f5f276b37c2981bdceefea04905" +
+                                                "699685ad0541c4f9092";
+        private const string EncryptedMasterKeyBase64 = "AARZxaQ5EeiK9GlqAkz+BzTwb1cO+b8yMN+SC" +
+                                                        "t3bzQJO+Fyf4TnlA83Mbl1KrMI09iOd9VQJJl" +
+                                                        "u4ivWMwCYhMB6Mw3LOoyS/2UjqmCnxAUqo6MT" +
+                                                        "SnptgjlWO";
+        private const string MasterKeyBase64 = "EWQ91qe9SB9KSqp5L6PiZSTg/CD5phR6LekyBanDyIY=";
+
+        private static readonly byte[] MasterKeySalt = MasterKeySaltHex.DecodeHex();
+        private static readonly byte[] EncryptedMasterKey = EncryptedMasterKeyBase64.Decode64();
+        private static readonly byte[] MasterKey = MasterKeyBase64.Decode64();
 
         // TODO: Remove copy paste
         private const string ClientToken = "AQCmAwEAAh4AAAAAWMajHQAAGU9DUkEtMTpIT1RQLVNIQTI1Ni" +

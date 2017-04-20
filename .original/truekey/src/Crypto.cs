@@ -19,6 +19,13 @@ namespace TrueKey
             return "tk-v1-" + derived.ToHex();
         }
 
+        public static byte[] DecryptMasterKey(string password, byte[] salt, byte[] encryptedKey)
+        {
+            var key = Pbkdf2.Generate(password, salt, 10000, 32);
+            return Decrypt(key, encryptedKey).ToUtf8().DecodeHex();
+        }
+
+        // TODO: Remove this
         public static byte[] DecryptBase64(byte[] key, string encrypted)
         {
             return Decrypt(key, encrypted.Decode64());
