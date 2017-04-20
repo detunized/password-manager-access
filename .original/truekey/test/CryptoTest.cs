@@ -72,6 +72,13 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void DecryptBase64_returns_correct_result()
+        {
+            var decrypted = Crypto.DecryptBase64(Key, CiphertextBase64);
+            Assert.That(decrypted, Is.EqualTo(Plaintext));
+        }
+
+        [Test]
         public void ParseClientToken_returns_otp_info()
         {
             var otp = Crypto.ParseClientToken(ClientToken);

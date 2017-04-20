@@ -51,6 +51,11 @@ namespace TrueKey
             return DecryptAes256Ccm(key, ciphertext, iv);
         }
 
+        public static byte[] DecryptBase64(byte[] key, string encrypted)
+        {
+            return Decrypt(key, encrypted.Decode64());
+        }
+
         // TODO: See how this could be optimized to reuse AES object w/o recreating it every time!
         public static byte[] DecryptAes256Ccm(byte[] key, byte[] ciphertext, byte[] iv)
         {
