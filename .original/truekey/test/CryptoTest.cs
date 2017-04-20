@@ -19,6 +19,15 @@ namespace TrueKey.Test
                 Is.EqualTo("tk-v1-463d82f8e2378ed234ff98a84118636168b76a69cdac5fcb2b9594a0b18ad2ea"));
         }
 
+        // We don't test DecryptBase64 extensively as it's just a wrapper
+        // around Decrypt which is well tested.
+        [Test]
+        public void DecryptBase64_returns_correct_result()
+        {
+            var decrypted = Crypto.DecryptBase64(Key, CiphertextBase64);
+            Assert.That(decrypted, Is.EqualTo(Plaintext));
+        }
+
         [Test]
         public void Decrypt_returns_correct_result()
         {
@@ -71,11 +80,14 @@ namespace TrueKey.Test
                             .And.Message.EqualTo("Unsupported cipher format version (5)"));
         }
 
+        // We don't test DecryptAes256Ccm extensively as it's well tested in SjclCcm.
         [Test]
-        public void DecryptBase64_returns_correct_result()
+        public void DecryptAes256Ccm_returns_plaintext()
         {
-            var decrypted = Crypto.DecryptBase64(Key, CiphertextBase64);
-            Assert.That(decrypted, Is.EqualTo(Plaintext));
+            var ciphertext = Ciphertext.Skip(18).ToArray();
+            var iv = Ciphertext.Skip(2).Take(16).ToArray();
+
+            Assert.That(Crypto.DecryptAes256Ccm(Key, ciphertext, iv), Is.EqualTo(Plaintext));
         }
 
         [Test]

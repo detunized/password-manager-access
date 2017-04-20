@@ -19,6 +19,11 @@ namespace TrueKey
             return "tk-v1-" + derived.ToHex();
         }
 
+        public static byte[] DecryptBase64(byte[] key, string encrypted)
+        {
+            return Decrypt(key, encrypted.Decode64());
+        }
+
         public static byte[] Decrypt(byte[] key, byte[] encrypted)
         {
             if (key.Length < 16)
@@ -49,11 +54,6 @@ namespace TrueKey
             var iv = encrypted.Skip(2).Take(16).ToArray();
 
             return DecryptAes256Ccm(key, ciphertext, iv);
-        }
-
-        public static byte[] DecryptBase64(byte[] key, string encrypted)
-        {
-            return Decrypt(key, encrypted.Decode64());
         }
 
         // TODO: See how this could be optimized to reuse AES object w/o recreating it every time!
