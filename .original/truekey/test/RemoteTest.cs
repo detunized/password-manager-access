@@ -66,7 +66,7 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void GetVault_returns_accounts()
+        public void GetVault_returns_encrypted_accounts()
         {
             var client = SetupGetWithFixture("get-vault-response");
             var accounts = Remote.GetVault("oauth-token", client.Object);
@@ -76,16 +76,16 @@ namespace TrueKey.Test
             Assert.That(accounts[0].Id, Is.EqualTo(50934080));
             Assert.That(accounts[0].Name, Is.EqualTo("Google"));
             Assert.That(accounts[0].Username, Is.EqualTo("dude@gmail.com"));
-            Assert.That(accounts[0].Password, Is.EqualTo("AAR24UbLgkHUhsSXB2mndMISE7U5qn+WA3znhgdXex0br6y5"));
+            Assert.That(accounts[0].EncryptedPassword, Is.EqualTo("AAR24UbLgkHUhsSXB2mndMISE7U5qn+WA3znhgdXex0br6y5".Decode64()));
             Assert.That(accounts[0].Url, Is.EqualTo("https://accounts.google.com/ServiceLogin"));
-            Assert.That(accounts[0].Note, Is.EqualTo("AAS2l1XcabgdPTM3CuUZDbT5txJu1ou0gOQ="));
+            Assert.That(accounts[0].EncryptedNote, Is.EqualTo("AAS2l1XcabgdPTM3CuUZDbT5txJu1ou0gOQ=".Decode64()));
 
             Assert.That(accounts[1].Id, Is.EqualTo(60789074));
             Assert.That(accounts[1].Name, Is.EqualTo("facebook"));
             Assert.That(accounts[1].Username, Is.EqualTo("mark"));
-            Assert.That(accounts[1].Password, Is.EqualTo("AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw=="));
+            Assert.That(accounts[1].EncryptedPassword, Is.EqualTo("AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw==".Decode64()));
             Assert.That(accounts[1].Url, Is.EqualTo("http://facebook.com"));
-            Assert.That(accounts[1].Note, Is.EqualTo(""));
+            Assert.That(accounts[1].EncryptedNote, Is.EqualTo("".Decode64()));
         }
 
         //

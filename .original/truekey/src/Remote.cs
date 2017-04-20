@@ -153,7 +153,7 @@ namespace TrueKey
             Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
         }
 
-        public static Account[] GetVault(string oauthToken, IHttpClient http)
+        public static EncryptedAccount[] GetVault(string oauthToken, IHttpClient http)
         {
             var response = Get(http,
                                "https://pm-api.truekey.com/data",
@@ -169,13 +169,13 @@ namespace TrueKey
 
             return response
                 .At("assets")
-                .Select(i => new Account(i.IntAt("id"),
-                                         i.StringAtOrNull("name") ?? "",
-                                         i.StringAtOrNull("login") ?? "",
-                                         i.StringAtOrNull("password_k") ??
-                                         "",
-                                         i.StringAtOrNull("url") ?? "",
-                                         i.StringAtOrNull("memo_k") ?? ""))
+                .Select(i => new EncryptedAccount(
+                    id: i.IntAt("id"),
+                    name: i.StringAtOrNull("name") ?? "",
+                    username: i.StringAtOrNull("login") ?? "",
+                    encryptedPassword: (i.StringAtOrNull("password_k") ?? "").Decode64(),
+                    url: i.StringAtOrNull("url") ?? "",
+                    encryptedNote: (i.StringAtOrNull("memo_k") ?? "").Decode64()))
                 .ToArray();
         }
 

@@ -42,9 +42,9 @@ namespace TrueKey
             var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, gui, http);
 
             // Step 7: Get the vault from the server.
-            var accounts = Remote.GetVault(oauthToken, http);
+            var encryptedAccounts = Remote.GetVault(oauthToken, http);
 
-            return new Vault(accounts);
+            return new Vault(new Account[0]);
         }
 
         private Vault(Account[] accounts)
