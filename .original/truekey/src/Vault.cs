@@ -1,6 +1,8 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Linq;
+
 namespace TrueKey
 {
     public class Vault
@@ -42,9 +44,25 @@ namespace TrueKey
             var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, gui, http);
 
             // Step 7: Get the vault from the server.
-            var encryptedAccounts = Remote.GetVault(oauthToken, http);
+            var encryptedVault = Remote.GetVault(oauthToken, http);
 
-            return new Vault(new Account[0]);
+            // Step 8: Compute the master key.
+            var masterKey = Crypto.DecryptMasterKey(password,
+                                                    encryptedVault.MasterKeySalt,
+                                                    encryptedVault.EncryptedMasterKey);
+
+            // Step 9: Decrypt the accounts.
+            var accounts = encryptedVault.EncryptedAccounts
+                .Select(i => new Account(
+                            i.Id,
+                            i.Name,
+                            i.Username,
+                            Crypto.Decrypt(masterKey, i.EncryptedPassword).ToUtf8(),
+                            i.Url,
+                            Crypto.Decrypt(masterKey, i.EncryptedNote).ToUtf8()))
+                .ToArray();
+
+            return new Vault(accounts);
         }
 
         private Vault(Account[] accounts)
