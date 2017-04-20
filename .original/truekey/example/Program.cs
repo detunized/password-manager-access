@@ -96,7 +96,22 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
+            // Log in, fetch data, parse it.
             var vault = Vault.Open(username, password, new TextGui());
+
+            // Print all the accounts
+            for (var i = 0; i < vault.Accounts.Length; ++i)
+            {
+                var account = vault.Accounts[i];
+                Console.WriteLine(
+                    "{0}: {1} {2} {3} {4} {5}",
+                    i + 1,
+                    account.Name,
+                    account.Username,
+                    account.Password,
+                    account.Url,
+                    account.Note);
+            }
         }
     }
 }
