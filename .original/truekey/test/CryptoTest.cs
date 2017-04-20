@@ -20,6 +20,58 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void Decrypt_returns_correct_result()
+        {
+            var decrypted = Crypto.Decrypt(Key, Ciphertext);
+            Assert.That(decrypted, Is.EqualTo(Plaintext));
+        }
+
+        [Test]
+        public void Decrypt_returns_empty_on_empty_input()
+        {
+            var decrypted = Crypto.Decrypt(Key, "".ToBytes());
+            Assert.That(decrypted, Is.Empty);
+        }
+
+        [Test]
+        public void Decrypt_uses_first_256_bits_of_key_only()
+        {
+            var key = Key.Concat("0102030405060708".DecodeHex()).ToArray();
+            var decrypted = Crypto.Decrypt(key, Ciphertext);
+            Assert.That(decrypted, Is.EqualTo(Plaintext));
+        }
+
+        public void Decrypt_throws_on_too_short_key()
+        {
+            Assert.That(() => Crypto.Decrypt(new byte[15], Ciphertext),
+                        Throws.TypeOf<CryptoException>()
+                            .And.Message.EqualTo("Encryption key should be at least 16 bytes long"));
+        }
+
+        public void Decrypt_throws_on_missing_format_byte()
+        {
+            Assert.That(() => Crypto.Decrypt(Key, "00".DecodeHex()),
+                        Throws.TypeOf<CryptoException>()
+                            .And.Message.EqualTo("Ciphertext is too short (version byte is missing)"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_missing_iv()
+        {
+            Assert.That(() => Crypto.Decrypt(Key, "0004".DecodeHex()),
+                        Throws.TypeOf<CryptoException>()
+                            .And.Message.EqualTo("Ciphertext is too short (IV is missing)"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_unsupported_version()
+        {
+            Assert.That(() => Crypto.Decrypt(Key, "0005".DecodeHex()),
+                        Throws.TypeOf<CryptoException>()
+                            .And.Message.EqualTo("Unsupported cipher format version (5)"));
+        }
+
+        [Test]
         public void ParseClientToken_returns_otp_info()
         {
             var otp = Crypto.ParseClientToken(ClientToken);
@@ -132,6 +184,12 @@ namespace TrueKey.Test
         //
         // Data
         //
+
+        private const string KeyHex = "bc0d63541710541e493d1077e49e92523a4b7c53af1883266ed6c5be2f1b9562";
+        private const string CiphertextBase64 = "AATXkbQnk41DJzqyfcFtcTaYE+ptuHwtC9TCmVdsK8/uXA==";
+        private static readonly byte[] Key = KeyHex.DecodeHex();
+        private static readonly byte[] Ciphertext = CiphertextBase64.Decode64();
+        private static readonly byte[] Plaintext = "password".ToBytes();
 
         // TODO: Remove copy paste
         private const string ClientToken = "AQCmAwEAAh4AAAAAWMajHQAAGU9DUkEtMTpIT1RQLVNIQTI1Ni" +

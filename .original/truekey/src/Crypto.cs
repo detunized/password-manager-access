@@ -19,6 +19,45 @@ namespace TrueKey
             return "tk-v1-" + derived.ToHex();
         }
 
+        public static byte[] Decrypt(byte[] key, byte[] encrypted)
+        {
+            if (key.Length < 16)
+                throw new CryptoException("Encryption key should be at least 16 bytes long");
+
+            // Use only first 256 bits
+            if (key.Length > 32)
+                key = key.Take(32).ToArray();
+
+            if (encrypted.Length == 0)
+                return new byte[0];
+
+            if (encrypted.Length < 2)
+                throw new CryptoException("Ciphertext is too short (version byte is missing)");
+
+            // Version byte is at offset 1.
+            // We only support version 4 which seems to be the current.
+            var version = encrypted[1];
+            if (version != 4)
+                throw new CryptoException(string.Format("Unsupported cipher format version ({0})",
+                                                        version));
+
+            if (encrypted.Length < 18)
+                throw new CryptoException("Ciphertext is too short (IV is missing)");
+
+            // Split encrypted into IV and cipher
+            var ciphertext = encrypted.Skip(18).ToArray();
+            var iv = encrypted.Skip(2).Take(16).ToArray();
+
+            return DecryptAes256Ccm(key, ciphertext, iv);
+        }
+
+        // TODO: See how this could be optimized to reuse AES object w/o recreating it every time!
+        public static byte[] DecryptAes256Ccm(byte[] key, byte[] ciphertext, byte[] iv)
+        {
+            var aes = new SjclAes(key);
+            return SjclCcm.Decrypt(aes, ciphertext, iv, new byte[0], 8);
+        }
+
         // Contains all the stuff that is needed to generate and verify
         // OTP (one time password) time based challenges.
         public class OtpInfo
