@@ -14,14 +14,17 @@ namespace TrueKey
             return Open(username, password, gui, storage, new HttpClient());
         }
 
+        // TODO: Write a test that runs the whole sequence and checks the result.
         public static Vault Open(string username,
                                  string password,
                                  Gui gui,
                                  ISecureStorage storage,
                                  IHttpClient http)
         {
-            // Step 1: Register a new device and get a token and an id back.
-            var deviceInfo = Remote.RegisetNewDevice("truekey-sharp", http);
+
+            // Step 1: Register a new deice or use the existing one from the previous run.
+            var deviceInfo = LoadDeviceInfo(storage) ??
+                             Remote.RegisetNewDevice("truekey-sharp", http);
 
             // Step 2: Parse the token to decode OTP information.
             var otpInfo = Crypto.ParseClientToken(deviceInfo.Token);
@@ -29,6 +32,9 @@ namespace TrueKey
             // Step 3: Validate the OTP info to make sure it's got only the
             //         things we support at the moment.
             Crypto.ValidateOtpInfo(otpInfo);
+
+            // Store the token and ID for the next time.
+            StoreDeviceInfo(deviceInfo, storage);
 
             // Bundle up everything in one place
             var clientInfo = new Remote.ClientInfo(username, "truekey-sharp", deviceInfo, otpInfo);
@@ -64,6 +70,27 @@ namespace TrueKey
                 .ToArray();
 
             return new Vault(accounts);
+        }
+
+        //
+        // Private
+        //
+
+        private static Remote.DeviceInfo LoadDeviceInfo(ISecureStorage storage)
+        {
+            string token = storage.LoadString("token");
+            string id = storage.LoadString("id");
+
+            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(id))
+                return null;
+
+            return new Remote.DeviceInfo(token, id);
+        }
+
+        private static void StoreDeviceInfo(Remote.DeviceInfo deviceInfo, ISecureStorage storage)
+        {
+            storage.StoreString("token", deviceInfo.Token);
+            storage.StoreString("id", deviceInfo.Id);
         }
 
         private Vault(Account[] accounts)
