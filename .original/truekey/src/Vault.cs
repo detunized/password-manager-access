@@ -9,14 +9,15 @@ namespace TrueKey
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, Gui gui)
+        public static Vault Open(string username, string password, Gui gui, ISecureStorage storage)
         {
-            return Open(username, password, gui, new HttpClient());
+            return Open(username, password, gui, storage, new HttpClient());
         }
 
         public static Vault Open(string username,
                                  string password,
                                  Gui gui,
+                                 ISecureStorage storage,
                                  IHttpClient http)
         {
             // Step 1: Register a new device and get a token and an id back.

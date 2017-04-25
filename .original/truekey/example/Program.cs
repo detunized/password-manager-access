@@ -87,6 +87,18 @@ namespace Example
             }
         }
 
+        private class PlainStorage: ISecureStorage
+        {
+            public void StoreString(string name, string value)
+            {
+            }
+
+            public string LoadString(string name)
+            {
+                return null;
+            }
+        }
+
         static void Main(string[] args)
         {
             // Read True Key credentials from a file
@@ -97,7 +109,7 @@ namespace Example
             var password = credentials[1];
 
             // Log in, fetch data, parse it.
-            var vault = Vault.Open(username, password, new TextGui());
+            var vault = Vault.Open(username, password, new TextGui(), new PlainStorage());
 
             // Print all the accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
