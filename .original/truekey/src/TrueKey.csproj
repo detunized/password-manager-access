@@ -55,7 +55,7 @@
     <Compile Include="IHttpClient.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Remote.cs" />
-    <Compile Include="SecureStorage.cs" />
+    <Compile Include="ISecureStorage.cs" />
     <Compile Include="SjclAes.cs" />
     <Compile Include="SjclCcm.cs" />
     <Compile Include="SjclQuad.cs" />
