@@ -26,15 +26,6 @@ namespace TrueKey.Test
                         Is.EqualTo(MasterKey));
         }
 
-        // We don't test DecryptBase64 extensively as it's just a wrapper
-        // around Decrypt which is well tested.
-        [Test]
-        public void DecryptBase64_returns_correct_result()
-        {
-            var decrypted = Crypto.DecryptBase64(Key, CiphertextBase64);
-            Assert.That(decrypted, Is.EqualTo(Plaintext));
-        }
-
         [Test]
         public void Decrypt_returns_correct_result()
         {

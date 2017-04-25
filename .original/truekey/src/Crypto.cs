@@ -25,12 +25,6 @@ namespace TrueKey
             return Decrypt(key, encryptedKey).ToUtf8().DecodeHex();
         }
 
-        // TODO: Remove this
-        public static byte[] DecryptBase64(byte[] key, string encrypted)
-        {
-            return Decrypt(key, encrypted.Decode64());
-        }
-
         public static byte[] Decrypt(byte[] key, byte[] encrypted)
         {
             if (key.Length < 16)
