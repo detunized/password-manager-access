@@ -87,16 +87,38 @@ namespace Example
             }
         }
 
+        // A primitive not-so-secure secure storage implementation. It stores a dictionary
+        // as a list of strings in a text file. It could be JSON or something but we don't
+        // want any extra dependencies.
         private class PlainStorage: ISecureStorage
         {
+            public PlainStorage(string filename)
+            {
+                _filename = filename;
+
+                var lines = File.Exists(filename) ? File.ReadAllLines(filename) : new string[0];
+                for (var i = 0; i < lines.Length / 2; ++i)
+                    _storage[lines[i * 2]] = lines[i * 2 + 1];
+            }
+
             public void StoreString(string name, string value)
             {
+                _storage[name] = value;
+                Save();
             }
 
             public string LoadString(string name)
             {
-                return null;
+                return _storage.ContainsKey(name) ? _storage[name] : null;
             }
+
+            private void Save()
+            {
+                File.WriteAllLines(_filename, _storage.SelectMany(i => new[] {i.Key, i.Value}));
+            }
+
+            private readonly string _filename;
+            private readonly Dictionary<string, string> _storage = new Dictionary<string, string>();
         }
 
         static void Main(string[] args)
@@ -108,8 +130,11 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
+            // File backed secure storage that keeps things between sessions.
+            var storage = new PlainStorage("../../storage.txt");
+
             // Log in, fetch data, parse it.
-            var vault = Vault.Open(username, password, new TextGui(), new PlainStorage());
+            var vault = Vault.Open(username, password, new TextGui(), storage);
 
             // Print all the accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
