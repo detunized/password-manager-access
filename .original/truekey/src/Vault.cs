@@ -78,8 +78,8 @@ namespace TrueKey
 
         private static Remote.DeviceInfo LoadDeviceInfo(ISecureStorage storage)
         {
-            string token = storage.LoadString("token");
-            string id = storage.LoadString("id");
+            var token = storage.LoadString("token");
+            var id = storage.LoadString("id");
 
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(id))
                 return null;
