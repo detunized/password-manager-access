@@ -5,13 +5,13 @@ using System;
 
 namespace TrueKey
 {
-    public class CryptoException: BaseException
+    public class BaseException: Exception
     {
-        public CryptoException(string message): base(message)
+        public BaseException(string message): base(message)
         {
         }
 
-        public CryptoException(string message, Exception innerException):
+        public BaseException(string message, Exception innerException):
             base(message, innerException)
         {
         }

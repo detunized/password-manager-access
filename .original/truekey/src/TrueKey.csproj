@@ -45,11 +45,13 @@
   <ItemGroup>
     <Compile Include="Account.cs" />
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="BaseException.cs" />
     <Compile Include="Crypto.cs" />
     <Compile Include="CryptoException.cs" />
     <Compile Include="EncryptedAccount.cs" />
     <Compile Include="EncryptedVault.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="FetchException.cs" />
     <Compile Include="Gui.cs" />
     <Compile Include="HttpClient.cs" />
     <Compile Include="IHttpClient.cs" />
