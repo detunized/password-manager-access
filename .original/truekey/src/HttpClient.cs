@@ -20,10 +20,15 @@ namespace TrueKey
             }
         }
 
-        public string Post(string url, Dictionary<string, object> parameters)
+        public string Post(string url,
+                           Dictionary<string, object> parameters,
+                           Dictionary<string, string> headers)
         {
             using (var client = new WebClient())
             {
+                foreach (var header in headers)
+                    client.Headers[header.Key] = header.Value;
+
                 client.Headers[HttpRequestHeader.ContentType] = "application/json; charset=UTF-8";
 
                 // TODO: Handle network errors

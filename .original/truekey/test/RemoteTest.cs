@@ -164,7 +164,8 @@ namespace TrueKey.Test
         {
             var mock = new Mock<IHttpClient>();
             mock.Setup(x => x.Post(It.IsAny<string>(),
-                                   It.IsAny<Dictionary<string, object>>()))
+                                   It.IsAny<Dictionary<string, object>>(),
+                                   It.IsAny<Dictionary<string, string>>()))
                 .Returns(response);
             return mock;
         }

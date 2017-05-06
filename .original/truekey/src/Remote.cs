@@ -307,7 +307,15 @@ namespace TrueKey
                                      string url,
                                      Dictionary<string, object> parameters)
         {
-            var response = PostNoCheck(http, url, parameters);
+            return Post(http, url, parameters, new Dictionary<string, string>());
+        }
+
+        internal static JObject Post(IHttpClient http,
+                                     string url,
+                                     Dictionary<string, object> parameters,
+                                     Dictionary<string, string> headers)
+        {
+            var response = PostNoCheck(http, url, parameters, headers);
 
             var success = response.AtOrNull("responseResult/isSuccess");
             if (success == null || (bool?)success != true)
@@ -321,8 +329,16 @@ namespace TrueKey
                                             string url,
                                             Dictionary<string, object> parameters)
         {
+            return PostNoCheck(http, url, parameters, new Dictionary<string, string>());
+        }
+
+        internal static JObject PostNoCheck(IHttpClient http,
+                                            string url,
+                                            Dictionary<string, object> parameters,
+                                            Dictionary<string, string> headers)
+        {
             // TODO: Handle network errors
-            var response = http.Post(url, parameters);
+            var response = http.Post(url, parameters, headers);
             return JObject.Parse(response);
         }
     }
