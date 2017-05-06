@@ -153,7 +153,7 @@ namespace TrueKey
             Action<object, object, string> throwError = (actual, expected, name) =>
             {
                 throw new ArgumentException(
-                    String.Format("Invalid OTP {0} (expected {1}, got {2})",
+                    string.Format("Invalid OTP {0} (expected {1}, got {2})",
                                   name,
                                   expected,
                                   actual));
@@ -232,7 +232,7 @@ namespace TrueKey
                 throw new ArgumentOutOfRangeException(
                     "challenge",
                     challenge.Length,
-                    String.Format("Challenge must be {0} bytes long", ChallengeSize));
+                    string.Format("Challenge must be {0} bytes long", ChallengeSize));
 
             using (var s = new MemoryStream(1024))
             {

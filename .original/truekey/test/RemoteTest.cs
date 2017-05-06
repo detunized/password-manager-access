@@ -118,7 +118,6 @@ namespace TrueKey.Test
                                         "c77bcd21489412894";
 
         // TODO: Remove copy paste
-        private const string MasterPassword = "Password123";
         private const string MasterKeySaltHex = "845864cf3692189757f5f276b37c2981bdceefea04905" +
                                                 "699685ad0541c4f9092";
         private const string EncryptedMasterKeyBase64 = "AARZxaQ5EeiK9GlqAkz+BzTwb1cO+b8yMN+SC" +

@@ -50,8 +50,10 @@ namespace Example
 
             public override Answer AskToChooseOob(string[] names, string email, Answer[] validAnswers)
             {
-                var text = new List<string>(names.Length + 2);
-                text.Add("Please choose the second factor method:");
+                var text = new List<string>(names.Length + 2)
+                {
+                    "Please choose the second factor method:"
+                };
                 text.AddRange(names.Select((name, index) => string.Format(
                     " - {0}: push message to '{1}'",
                     index + 1,

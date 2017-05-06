@@ -173,7 +173,7 @@ namespace TrueKey
                 return new WaitForOob(_deviceIndex);
             }
 
-            private int _deviceIndex;
+            private readonly int _deviceIndex;
         }
 
         private class WaitForEmail: State

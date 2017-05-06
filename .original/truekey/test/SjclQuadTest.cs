@@ -47,14 +47,14 @@ namespace TrueKey.Test
         [Test]
         public void Constructed_from_a_b_c_d()
         {
-            VerifyQuad(new SjclQuad(A, B, C, D));
+            VerifyDeadBeefQuad(new SjclQuad(A, B, C, D));
         }
 
         [Test]
         public void Constructed_from_abcd()
         {
             var abcd = new uint[] {A, B, C, D};
-            VerifyQuad(new SjclQuad(abcd));
+            VerifyDeadBeefQuad(new SjclQuad(abcd));
         }
 
         [Test]
@@ -62,7 +62,7 @@ namespace TrueKey.Test
         {
             var poison = new uint[] {0xCCCCCCCC, 0xCCCCCCCC, 0xCCCCCCCC};
             var abcd = poison.Concat(Abcd).Concat(poison).ToArray();
-            VerifyQuad(new SjclQuad(abcd, poison.Length));
+            VerifyDeadBeefQuad(new SjclQuad(abcd, poison.Length));
         }
 
         [Test]
@@ -105,7 +105,7 @@ namespace TrueKey.Test
         [Test]
         public void Constructed_from_bytes()
         {
-            VerifyQuad(new SjclQuad(AbcdBytes));
+            VerifyDeadBeefQuad(new SjclQuad(AbcdBytes));
         }
 
         [Test]
@@ -113,7 +113,7 @@ namespace TrueKey.Test
         {
             var poison = new byte[] {0xCC, 0xCC, 0xCC};
             var bytes = poison.Concat(AbcdBytes).Concat(poison).ToArray();
-            VerifyQuad(new SjclQuad(bytes, poison.Length));
+            VerifyDeadBeefQuad(new SjclQuad(bytes, poison.Length));
         }
 
         [Test]
@@ -315,7 +315,7 @@ namespace TrueKey.Test
         // Helpers
         //
 
-        private SjclQuad Quad
+        private static SjclQuad Quad
         {
             get
             {
@@ -328,7 +328,7 @@ namespace TrueKey.Test
             return (uint)b0 << 24 | (uint)b1 << 16 | (uint)b2 << 8 | b3;
         }
 
-        private static void VerifyQuad(SjclQuad quad)
+        private static void VerifyDeadBeefQuad(SjclQuad quad)
         {
             VerifyQuad(quad, A, B, C, D);
         }
