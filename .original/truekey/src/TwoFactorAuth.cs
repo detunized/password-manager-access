@@ -38,6 +38,11 @@ namespace TrueKey
                 Devices = devices;
                 OAuthToken = oAuthToken;
             }
+
+            public bool IsAuthenticated
+            {
+                get { return InitialStep == Step.Done && !string.IsNullOrEmpty(OAuthToken); }
+            }
         }
 
         public class OobDevice

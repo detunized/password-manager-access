@@ -47,18 +47,26 @@ namespace TrueKey
             //         pair of OAuth tokens.
             var whatsNext = Remote.AuthStep2(clientInfo, password, transactionId, http);
 
+            // The device is trusted if it's already authenticated at this point and
+            // no second factor is needed.
+            var isTrusted = whatsNext.IsAuthenticated;
+
             // Step 6: Auth FSM -- walk through all the auth steps until we're done.
             var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, gui, http);
 
-            // Step 7: Get the vault from the server.
+            // Step 7: Save this device as trusted not to repeat the two factor dance next times.
+            if (!isTrusted)
+                Remote.SaveDeviceAsTrusted(clientInfo, transactionId, oauthToken, http);
+
+            // Step 8: Get the vault from the server.
             var encryptedVault = Remote.GetVault(oauthToken, http);
 
-            // Step 8: Compute the master key.
+            // Step 9: Compute the master key.
             var masterKey = Crypto.DecryptMasterKey(password,
                                                     encryptedVault.MasterKeySalt,
                                                     encryptedVault.EncryptedMasterKey);
 
-            // Step 9: Decrypt the accounts.
+            // Step 10: Decrypt the accounts.
             var accounts = encryptedVault.EncryptedAccounts
                 .Select(i => new Account(
                             i.Id,

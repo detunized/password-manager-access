@@ -48,6 +48,14 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void SaveDeviceAsTrusted_works()
+        {
+            // TODO: Write a better test
+            var client = SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}");
+            Remote.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", client.Object);
+        }
+
+        [Test]
         public void AuthCheck_returns_oauth_token()
         {
             var client = SetupPostWithFixture("auth-check-success-response");

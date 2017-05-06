@@ -101,6 +101,26 @@ namespace TrueKey
             return ParseAuthStep2Response(response);
         }
 
+        // Saves the device as trusted. Trusted devices do not need to perform the two
+        // factor authentication and log in non-interactively.
+        public static void SaveDeviceAsTrusted(ClientInfo clientInfo,
+                                               string transactionId,
+                                               string oauthToken,
+                                               IHttpClient http)
+        {
+            var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
+            ((Dictionary<string, object>)parameters["data"])["dashboardData"]
+                = new Dictionary<string, object>
+                {
+                    {"deviceData", new Dictionary<string, object> {{"isTrusted", true}}},
+                };
+
+            Post(http,
+                 "https://truekeyapi.intelsecurity.com/sp/dashboard/v2/udt",
+                 parameters,
+                 new Dictionary<string, string> {{"x-idToken", oauthToken}});
+        }
+
         // Check if the second factor has been completed by the user.
         // The result either a success or pending when everything go normally.
         public static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
