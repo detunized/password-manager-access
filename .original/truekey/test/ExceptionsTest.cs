@@ -65,13 +65,13 @@ namespace TrueKey.Test
         // Helpers
         //
 
-        private void VerifyExceptionMessage(BaseException e)
+        private static void VerifyExceptionMessage(BaseException e)
         {
             Assert.That(e.Message, Is.EqualTo(Message));
             Assert.That(e.InnerException, Is.Null);
         }
 
-        private void VerifyExceptionMessageAndInner(BaseException e)
+        private static void VerifyExceptionMessageAndInner(BaseException e)
         {
             Assert.That(e.Message, Is.EqualTo(Message));
             Assert.That(e.InnerException, Is.SameAs(InnerException));
