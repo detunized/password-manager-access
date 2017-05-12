@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using Moq;
 using NUnit.Framework;
 
@@ -23,12 +24,24 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void RegisetNewDevice_throws_on_network_error()
+        {
+            VerifyNetworkErrorWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
+        }
+
+        [Test]
         public void AuthStep1_returns_transaction_id()
         {
             var client = SetupPostWithFixture("auth-step1-response");
             var result = Remote.AuthStep1(ClientInfo, client.Object);
 
             Assert.That(result, Is.EqualTo("6cdfcd43-065c-43a1-aa7a-017de98eefd0"));
+        }
+
+        [Test]
+        public void AuthStep1_throws_on_network_error()
+        {
+            VerifyNetworkErrorWithPost(http => Remote.AuthStep1(ClientInfo, http));
         }
 
         [Test]
@@ -45,6 +58,13 @@ namespace TrueKey.Test
             Assert.That(result.Devices.Length, Is.EqualTo(1));
             Assert.That(result.Devices[0].Name, Is.EqualTo("LGE Nexus 5"));
             Assert.That(result.Devices[0].Id, Is.StringStarting("MTU5NjAwMjI3MQP04dNsmSNQ2L"));
+        }
+
+        [Test]
+        public void AuthStep2_throws_on_network_error()
+        {
+            VerifyNetworkErrorWithPost(
+                http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
         }
 
         [Test]
@@ -74,6 +94,12 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void AuthCheck_throws_on_network_error()
+        {
+            VerifyNetworkErrorWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
+        }
+
+        [Test]
         public void GetVault_returns_encrypted_vault()
         {
             var client = SetupGetWithFixture("get-vault-response");
@@ -98,6 +124,12 @@ namespace TrueKey.Test
             Assert.That(accounts[1].EncryptedPassword, Is.EqualTo("AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw==".Decode64()));
             Assert.That(accounts[1].Url, Is.EqualTo("http://facebook.com"));
             Assert.That(accounts[1].EncryptedNote, Is.EqualTo("".Decode64()));
+        }
+
+        [Test]
+        public void GetVault_throws_on_network_error()
+        {
+            VerifyNetworkErrorWithGet(http => Remote.GetVault("oauth-token", http));
         }
 
         //
@@ -153,6 +185,24 @@ namespace TrueKey.Test
         // Helpers
         //
 
+        private static void VerifyNetworkErrorWithGet(Action<IHttpClient> f)
+        {
+            VerifyNetworkError(SetupGetWithFailure(), f);
+        }
+
+        private static void VerifyNetworkErrorWithPost(Action<IHttpClient> f)
+        {
+            VerifyNetworkError(SetupPostWithFailure(), f);
+        }
+
+        private static void VerifyNetworkError(Mock<IHttpClient> http, Action<IHttpClient> f)
+        {
+            Assert.That(() => f(http.Object),
+                        Throws.TypeOf<FetchException>()
+                            .And.Property("Reason")
+                            .EqualTo(FetchException.FailureReason.NetworkError));
+        }
+
         private static Mock<IHttpClient> SetupGet(string response)
         {
             var mock = new Mock<IHttpClient>();
@@ -180,6 +230,25 @@ namespace TrueKey.Test
         private static Mock<IHttpClient> SetupPostWithFixture(string name)
         {
             return SetupPost(ReadFixture(name));
+        }
+
+        private static Mock<IHttpClient> SetupGetWithFailure()
+        {
+            var mock = new Mock<IHttpClient>();
+            mock.Setup(x => x.Get(It.IsAny<string>(),
+                                  It.IsAny<Dictionary<string, string>>()))
+                .Throws<WebException>();
+            return mock;
+        }
+
+        private static Mock<IHttpClient> SetupPostWithFailure()
+        {
+            var mock = new Mock<IHttpClient>();
+            mock.Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<Dictionary<string, object>>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Throws<WebException>();
+            return mock;
         }
 
         private static string ReadFixture(string name)

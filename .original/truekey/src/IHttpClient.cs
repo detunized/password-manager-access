@@ -7,6 +7,7 @@ namespace TrueKey
 {
     public interface IHttpClient
     {
+        // System.Net.WebException is expected to be thrown on errors
         string Get(string url, Dictionary<string, string> headers);
         string Post(string url, Dictionary<string, object> parameters, Dictionary<string, string> headers);
     }

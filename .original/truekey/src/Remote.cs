@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Newtonsoft.Json.Linq;
 
 namespace TrueKey
@@ -318,9 +319,19 @@ namespace TrueKey
 
         internal static JObject Get(IHttpClient http, string url, Dictionary<string, string> headers)
         {
-            // TODO: Handle network errors
-            var response = http.Get(url, headers);
-            return JObject.Parse(response);
+            try
+            {
+                var response = http.Get(url, headers);
+
+                // TODO: Handle JSON parse errors
+                return JObject.Parse(response);
+            }
+            catch (WebException e)
+            {
+                throw new FetchException(FetchException.FailureReason.NetworkError,
+                                         string.Format("GET request to {0} failed", url),
+                                         e);
+            }
         }
 
         internal static JObject Post(IHttpClient http,
@@ -357,9 +368,19 @@ namespace TrueKey
                                             Dictionary<string, object> parameters,
                                             Dictionary<string, string> headers)
         {
-            // TODO: Handle network errors
-            var response = http.Post(url, parameters, headers);
-            return JObject.Parse(response);
+            try
+            {
+                var response = http.Post(url, parameters, headers);
+
+                // TODO: Handle JSON parse errors
+                return JObject.Parse(response);
+            }
+            catch (WebException e)
+            {
+                throw new FetchException(FetchException.FailureReason.NetworkError,
+                                         string.Format("POST request to {0} failed", url),
+                                         e);
+            }
         }
     }
 }

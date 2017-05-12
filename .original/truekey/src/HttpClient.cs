@@ -31,7 +31,6 @@ namespace TrueKey
 
                 client.Headers[HttpRequestHeader.ContentType] = "application/json; charset=UTF-8";
 
-                // TODO: Handle network errors
                 return client.UploadString(url, JsonConvert.SerializeObject(parameters));
             }
         }
