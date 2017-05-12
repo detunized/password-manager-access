@@ -172,6 +172,16 @@ namespace TrueKey
             return IntAtOrNull(j.Root, path);
         }
 
+        public static bool BoolAt(this JObject j, string path)
+        {
+            return BoolAt(j.Root, path);
+        }
+
+        public static bool? BoolAtOrNull(this JObject j, string path)
+        {
+            return BoolAtOrNull(j.Root, path);
+        }
+
         //
         // Case insensitive nested JToken access by path with and without exceptions
         //
@@ -228,20 +238,38 @@ namespace TrueKey
 
         public static int IntAt(this JToken j, string path)
         {
-            var s = j.At(path);
-            if (s.Type != JTokenType.Integer)
+            var i = j.At(path);
+            if (i.Type != JTokenType.Integer)
                 throw new ArgumentException("The value is not an integer");
 
-            return (int)s;
+            return (int)i;
         }
 
         public static int? IntAtOrNull(this JToken j, string path)
         {
-            var s = j.AtOrNull(path);
-            if (s == null || s.Type != JTokenType.Integer)
+            var i = j.AtOrNull(path);
+            if (i == null || i.Type != JTokenType.Integer)
                 return null;
 
-            return (int)s;
+            return (int)i;
+        }
+
+        public static bool BoolAt(this JToken j, string path)
+        {
+            var b = j.At(path);
+            if (b.Type != JTokenType.Boolean)
+                throw new ArgumentException("The value is not a boolean");
+
+            return (bool)b;
+        }
+
+        public static bool? BoolAtOrNull(this JToken j, string path)
+        {
+            var b = j.AtOrNull(path);
+            if (b == null || b.Type != JTokenType.Boolean)
+                return null;
+
+            return (bool)b;
         }
     }
 }

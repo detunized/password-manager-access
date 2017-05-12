@@ -417,5 +417,55 @@ namespace TrueKey.Test
             Assert.That(j.IntAtOrNull("k4"), Is.Null);
             Assert.That(j.IntAtOrNull("k5"), Is.Null);
         }
+
+        [Test]
+        public void JToken_BoolAt_returns_bools()
+        {
+            var j = JObject.Parse(@"{
+                'k1': true,
+                'k2': {'k22': false},
+                'k3': {'k33': {'k333': true}}
+            }");
+
+            Assert.That(j.BoolAt("k1"), Is.EqualTo(true));
+            Assert.That(j.BoolAt("k2/k22"), Is.EqualTo(false));
+            Assert.That(j.BoolAt("k3/k33/k333"), Is.EqualTo(true));
+        }
+
+        [Test]
+        public void JToken_BoolAt_throws_on_non_bools()
+        {
+            var j = JObject.Parse(@"{
+                'k1': 10,
+                'k2': '10',
+                'k3': 10.0,
+                'k4': [],
+                'k5': {},
+            }");
+
+            Assert.That(() => j.BoolAt("k1"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.BoolAt("k2"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.BoolAt("k3"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.BoolAt("k4"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.BoolAt("k5"), Throws.TypeOf<ArgumentException>());
+        }
+
+        [Test]
+        public void JToken_BoolAtOrNull_returns_null_on_non_bools()
+        {
+            var j = JObject.Parse(@"{
+                'k1': 10,
+                'k2': '10',
+                'k3': 10.0,
+                'k4': [],
+                'k5': {},
+            }");
+
+            Assert.That(j.BoolAtOrNull("k1"), Is.Null);
+            Assert.That(j.BoolAtOrNull("k2"), Is.Null);
+            Assert.That(j.BoolAtOrNull("k3"), Is.Null);
+            Assert.That(j.BoolAtOrNull("k4"), Is.Null);
+            Assert.That(j.BoolAtOrNull("k5"), Is.Null);
+        }
     }
 }
