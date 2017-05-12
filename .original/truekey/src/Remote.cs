@@ -174,6 +174,7 @@ namespace TrueKey
             Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
         }
 
+        // Fetches the vault data, parses and returns in the encrypted form.
         public static EncryptedVault GetVault(string oauthToken, IHttpClient http)
         {
             var response = Get(http,
