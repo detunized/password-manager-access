@@ -30,6 +30,12 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void RegisetNewDevice_throws_on_invalid_json()
+        {
+            VerifyJsonErrorWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
+        }
+
+        [Test]
         public void AuthStep1_returns_transaction_id()
         {
             var client = SetupPostWithFixture("auth-step1-response");
@@ -42,6 +48,12 @@ namespace TrueKey.Test
         public void AuthStep1_throws_on_network_error()
         {
             VerifyNetworkErrorWithPost(http => Remote.AuthStep1(ClientInfo, http));
+        }
+
+        [Test]
+        public void AuthStep1_throws_on_invalid_json()
+        {
+            VerifyJsonErrorWithPost(http => Remote.AuthStep1(ClientInfo, http));
         }
 
         [Test]
@@ -64,6 +76,13 @@ namespace TrueKey.Test
         public void AuthStep2_throws_on_network_error()
         {
             VerifyNetworkErrorWithPost(
+                http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
+        }
+
+        [Test]
+        public void AuthStep2_throws_on_invalid_json()
+        {
+            VerifyJsonErrorWithPost(
                 http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
         }
 
@@ -100,6 +119,12 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void AuthCheck_throws_on_invalid_json()
+        {
+            VerifyJsonErrorWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
+        }
+
+        [Test]
         public void GetVault_returns_encrypted_vault()
         {
             var client = SetupGetWithFixture("get-vault-response");
@@ -130,6 +155,12 @@ namespace TrueKey.Test
         public void GetVault_throws_on_network_error()
         {
             VerifyNetworkErrorWithGet(http => Remote.GetVault("oauth-token", http));
+        }
+
+        [Test]
+        public void GetVault_throws_on_invalid_json()
+        {
+            VerifyJsonErrorWithGet(http => Remote.GetVault("oauth-token", http));
         }
 
         //
@@ -197,10 +228,30 @@ namespace TrueKey.Test
 
         private static void VerifyNetworkError(Mock<IHttpClient> http, Action<IHttpClient> f)
         {
+            VerifyError(FetchException.FailureReason.NetworkError, http, f);
+        }
+
+        private static void VerifyJsonErrorWithGet(Action<IHttpClient> f)
+        {
+            VerifyJsonError(SetupGet("} invalid json {"), f);
+        }
+
+        private static void VerifyJsonErrorWithPost(Action<IHttpClient> f)
+        {
+            VerifyJsonError(SetupPost("} invalid json {"), f);
+        }
+
+        private static void VerifyJsonError(Mock<IHttpClient> http, Action<IHttpClient> f)
+        {
+            VerifyError(FetchException.FailureReason.InvalidResponse, http, f);
+        }
+
+        private static void VerifyError(FetchException.FailureReason reason,
+                                        Mock<IHttpClient> http,
+                                        Action<IHttpClient> f)
+        {
             Assert.That(() => f(http.Object),
-                        Throws.TypeOf<FetchException>()
-                            .And.Property("Reason")
-                            .EqualTo(FetchException.FailureReason.NetworkError));
+                        Throws.TypeOf<FetchException>().And.Property("Reason").EqualTo(reason));
         }
 
         private static Mock<IHttpClient> SetupGet(string response)

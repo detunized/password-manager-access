@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace TrueKey
@@ -323,14 +324,18 @@ namespace TrueKey
             try
             {
                 var response = http.Get(url, headers);
-
-                // TODO: Handle JSON parse errors
                 return JObject.Parse(response);
             }
             catch (WebException e)
             {
                 throw new FetchException(FetchException.FailureReason.NetworkError,
                                          string.Format("GET request to {0} failed", url),
+                                         e);
+            }
+            catch (JsonException e)
+            {
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                         string.Format("Invalid JSON in response from {0}", url),
                                          e);
             }
         }
@@ -372,14 +377,18 @@ namespace TrueKey
             try
             {
                 var response = http.Post(url, parameters, headers);
-
-                // TODO: Handle JSON parse errors
                 return JObject.Parse(response);
             }
             catch (WebException e)
             {
                 throw new FetchException(FetchException.FailureReason.NetworkError,
                                          string.Format("POST request to {0} failed", url),
+                                         e);
+            }
+            catch (JsonException e)
+            {
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                         string.Format("Invalid JSON in response from {0}", url),
                                          e);
             }
         }
