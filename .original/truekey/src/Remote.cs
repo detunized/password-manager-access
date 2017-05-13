@@ -32,21 +32,19 @@ namespace TrueKey
         // For example 'Chrome' or 'Nexus 5'.
         public static DeviceInfo RegisetNewDevice(string deviceName, IHttpClient http)
         {
-            var response = Post(http,
-                                "https://truekeyapi.intelsecurity.com/sp/pabe/v2/so",
-                                new Dictionary<string, object>
-                                {
-                                    {"clientUDID", "truekey-sharp"},
-                                    {"deviceName", deviceName},
-                                    {"devicePlatformID", 7},
-                                    {"deviceType", 5},
-                                    {"oSName", "Unknown"},
-                                    {"oathTokenType", 1},
-                                });
-
-            // TODO: Verify results
-            return new DeviceInfo(response.StringAtOrNull("clientToken"),
-                                  response.StringAtOrNull("tkDeviceId"));
+            return Post(http,
+                        "https://truekeyapi.intelsecurity.com/sp/pabe/v2/so",
+                        new Dictionary<string, object>
+                        {
+                            {"clientUDID", "truekey-sharp"},
+                            {"deviceName", deviceName},
+                            {"devicePlatformID", 7},
+                            {"deviceType", 5},
+                            {"oSName", "Unknown"},
+                            {"oathTokenType", 1},
+                        },
+                        response => new DeviceInfo(response.StringAt("clientToken"),
+                                                   response.StringAt("tkDeviceId")));
         }
 
         public class ClientInfo
@@ -68,12 +66,10 @@ namespace TrueKey
         // Returns OAuth transaction id that is used in the next step
         public static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
         {
-            var response = Post(http,
-                                "https://truekeyapi.intelsecurity.com/session/auth",
-                                MakeCommonRequest(clientInfo, "session_id_token"));
-
-            // TODO: Verify results
-            return response.StringAtOrNull("oAuthTransId");
+            return Post(http,
+                        "https://truekeyapi.intelsecurity.com/session/auth",
+                        MakeCommonRequest(clientInfo, "session_id_token"),
+                        response => response.StringAt("oAuthTransId"));
         }
 
         // Returns instructions on what to do next
@@ -96,11 +92,10 @@ namespace TrueKey
                 }},
             };
 
-            var response = Post(http,
-                                "https://truekeyapi.intelsecurity.com/mp/auth",
-                                parameters);
-
-            return ParseAuthStep2Response(response);
+            return Post(http,
+                        "https://truekeyapi.intelsecurity.com/mp/auth",
+                        parameters,
+                        ParseAuthStep2Response);
         }
 
         // Saves the device as trusted. Trusted devices do not need to perform the two
@@ -120,22 +115,25 @@ namespace TrueKey
             Post(http,
                  "https://truekeyapi.intelsecurity.com/sp/dashboard/v2/udt",
                  parameters,
-                 new Dictionary<string, string> {{"x-idToken", oauthToken}});
+                 new Dictionary<string, string> {{"x-idToken", oauthToken}},
+                 response => true);
         }
 
         // Check if the second factor has been completed by the user.
         // On success returns an OAuth token.
         public static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
         {
-            var response = Post(http,
-                                "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
-                                MakeCommonRequest(clientInfo, "code", transactionId));
+            return Post(http,
+                        "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
+                        MakeCommonRequest(clientInfo, "code", transactionId),
+                        response =>
+                        {
+                            if (response.IntAt("nextStep") == 10)
+                                return response.StringAt("idToken");
 
-            if (response.IntAt("nextStep") == 10) // 10 means we're done apparently
-                return response.StringAt("idToken");
-
-            throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                     "Invalid response in AuthCheck, expected an OAuth token");
+                            throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                                     "Invalid response in AuthCheck, expected an OAuth token");
+                        });
         }
 
         // Send a verification email as a second factor action.
@@ -152,7 +150,10 @@ namespace TrueKey
                 {"RecipientId", email},
             };
 
-            Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
+            Post(http,
+                 "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                 parameters,
+                 response => true);
         }
 
         // Send a push message to a device as a second factor action.
@@ -169,7 +170,10 @@ namespace TrueKey
                 {"RecipientId", deviceId},
             };
 
-            Post(http, "https://truekeyapi.intelsecurity.com/sp/oob/v1/son", parameters);
+            Post(http,
+                 "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                 parameters,
+                 response => true);
         }
 
         // Fetches the vault data, parses and returns in the encrypted form.
@@ -337,25 +341,29 @@ namespace TrueKey
             }
         }
 
-        internal static JObject Post(IHttpClient http,
-                                     string url,
-                                     Dictionary<string, object> parameters)
+        // Make a JSON POST request and return the result as parsed JSON.
+        // Checks if the operation was successful.
+        internal static T Post<T>(IHttpClient http,
+                                  string url,
+                                  Dictionary<string, object> parameters,
+                                  Func<JObject, T> parse)
         {
-            return Post(http, url, parameters, new Dictionary<string, string>());
+            return Post(http, url, parameters, new Dictionary<string, string>(), parse);
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
         // Checks if the operation was successful.
-        internal static JObject Post(IHttpClient http,
-                                     string url,
-                                     Dictionary<string, object> parameters,
-                                     Dictionary<string, string> headers)
+        internal static T Post<T>(IHttpClient http,
+                                  string url,
+                                  Dictionary<string, object> parameters,
+                                  Dictionary<string, string> headers,
+                                  Func<JObject, T> parse)
         {
             var response = PostNoCheck(http, url, parameters, headers);
 
-            var success = response.BoolAtOrNull("responseResult/isSuccess");
-            if (success != null && success.Value)
-                return response;
+            if (response.BoolAtOrNull("responseResult/isSuccess") == true)
+                // TODO: Handle parsing errors
+                return parse(response);
 
             var code = response.StringAtOrNull("responseResult/errorCode") ?? "";
             var message = response.StringAtOrNull("responseResult/errorDescription") ?? "";
