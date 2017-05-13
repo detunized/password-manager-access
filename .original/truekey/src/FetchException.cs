@@ -12,9 +12,8 @@ namespace TrueKey
             IncorrectUsername,
             IncorrectPassword,
             NetworkError,
-            RespondedWithError,
             InvalidResponse,
-            S3Error,
+            RespondedWithError,
             UnknownError
         }
 

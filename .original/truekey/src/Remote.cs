@@ -124,21 +124,18 @@ namespace TrueKey
         }
 
         // Check if the second factor has been completed by the user.
-        // The result either a success or pending when everything go normally.
+        // On success returns an OAuth token.
         public static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
         {
-            var response = PostNoCheck(http,
-                                       "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
-                                       MakeCommonRequest(clientInfo, "code", transactionId));
+            var response = Post(http,
+                                "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
+                                MakeCommonRequest(clientInfo, "code", transactionId));
 
-            var success = response.At("responseResult/isSuccess");
-            var nextStep = response.IntAt("nextStep");
-
-            if (success != null && (bool?)success == true && nextStep == 10)
+            if (response.IntAt("nextStep") == 10) // 10 means we're done apparently
                 return response.StringAt("idToken");
 
-            // TODO: Don't throw, rather return a negative result
-            throw new InvalidOperationException("AuthCheck failed");
+            throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                     "Invalid response in AuthCheck, expected an OAuth token");
         }
 
         // Send a verification email as a second factor action.
@@ -347,6 +344,8 @@ namespace TrueKey
             return Post(http, url, parameters, new Dictionary<string, string>());
         }
 
+        // Make a JSON POST request and return the result as parsed JSON.
+        // Checks if the operation was successful.
         internal static JObject Post(IHttpClient http,
                                      string url,
                                      Dictionary<string, object> parameters,
@@ -354,14 +353,21 @@ namespace TrueKey
         {
             var response = PostNoCheck(http, url, parameters, headers);
 
-            var success = response.AtOrNull("responseResult/isSuccess");
-            if (success == null || (bool?)success != true)
-                // TODO: Use custom exception
-                throw new InvalidOperationException("Operation failed");
+            var success = response.BoolAtOrNull("responseResult/isSuccess");
+            if (success != null && success.Value)
+                return response;
 
-            return response;
+            var code = response.StringAtOrNull("responseResult/errorCode") ?? "";
+            var message = response.StringAtOrNull("responseResult/errorDescription") ?? "";
+            throw new FetchException(FetchException.FailureReason.RespondedWithError,
+                                     string.Format(
+                                         "POST request to {0} failed with error ({1}: '{2}')",
+                                         url,
+                                         code,
+                                         message));
         }
 
+        // Make a JSON POST request and return the result as parsed JSON.
         internal static JObject PostNoCheck(IHttpClient http,
                                             string url,
                                             Dictionary<string, object> parameters)
@@ -369,6 +375,7 @@ namespace TrueKey
             return PostNoCheck(http, url, parameters, new Dictionary<string, string>());
         }
 
+        // Make a JSON POST request and return the result as parsed JSON.
         internal static JObject PostNoCheck(IHttpClient http,
                                             string url,
                                             Dictionary<string, object> parameters,

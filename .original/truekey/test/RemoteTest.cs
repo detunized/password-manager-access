@@ -24,15 +24,9 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void RegisetNewDevice_throws_on_network_error()
+        public void RegisetNewDevice_throws_on_common_errors()
         {
-            VerifyNetworkErrorWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
-        }
-
-        [Test]
-        public void RegisetNewDevice_throws_on_invalid_json()
-        {
-            VerifyJsonErrorWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
+            VerifyCommonErrorsWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
         }
 
         [Test]
@@ -45,15 +39,9 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void AuthStep1_throws_on_network_error()
+        public void AuthStep1_throws_on_common_errors()
         {
-            VerifyNetworkErrorWithPost(http => Remote.AuthStep1(ClientInfo, http));
-        }
-
-        [Test]
-        public void AuthStep1_throws_on_invalid_json()
-        {
-            VerifyJsonErrorWithPost(http => Remote.AuthStep1(ClientInfo, http));
+            VerifyCommonErrorsWithPost(http => Remote.AuthStep1(ClientInfo, http));
         }
 
         [Test]
@@ -73,16 +61,9 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void AuthStep2_throws_on_network_error()
+        public void AuthStep2_throws_on_common_errors()
         {
-            VerifyNetworkErrorWithPost(
-                http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
-        }
-
-        [Test]
-        public void AuthStep2_throws_on_invalid_json()
-        {
-            VerifyJsonErrorWithPost(
+            VerifyCommonErrorsWithPost(
                 http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
         }
 
@@ -92,6 +73,15 @@ namespace TrueKey.Test
             // TODO: Write a better test
             var client = SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}");
             Remote.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", client.Object);
+        }
+
+        [Test]
+        public void SaveDeviceAsTrusted_throws_on_common_errors()
+        {
+            VerifyCommonErrorsWithPost(http => Remote.SaveDeviceAsTrusted(ClientInfo,
+                                                                          "transaction-id",
+                                                                          "oauth-token",
+                                                                          http));
         }
 
         [Test]
@@ -109,19 +99,15 @@ namespace TrueKey.Test
             var client = SetupPostWithFixture("auth-check-pending-response");
 
             Assert.That(() => Remote.AuthCheck(ClientInfo, "transaction-id", client.Object),
-                        Throws.TypeOf<InvalidOperationException>());
+                        Throws.TypeOf<FetchException>()
+                            .And.Property("Reason")
+                            .EqualTo(FetchException.FailureReason.RespondedWithError));
         }
 
         [Test]
-        public void AuthCheck_throws_on_network_error()
+        public void AuthCheck_throws_on_common_errors()
         {
-            VerifyNetworkErrorWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
-        }
-
-        [Test]
-        public void AuthCheck_throws_on_invalid_json()
-        {
-            VerifyJsonErrorWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
+            VerifyCommonErrorsWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
         }
 
         [Test]
@@ -216,6 +202,13 @@ namespace TrueKey.Test
         // Helpers
         //
 
+        private static void VerifyCommonErrorsWithPost(Action<IHttpClient> f)
+        {
+            VerifyNetworkErrorWithPost(f);
+            VerifyJsonErrorWithPost(f);
+            VerifyReturnedErrorWithPost(f);
+        }
+
         private static void VerifyNetworkErrorWithGet(Action<IHttpClient> f)
         {
             VerifyNetworkError(SetupGetWithFailure(), f);
@@ -244,6 +237,16 @@ namespace TrueKey.Test
         private static void VerifyJsonError(Mock<IHttpClient> http, Action<IHttpClient> f)
         {
             VerifyError(FetchException.FailureReason.InvalidResponse, http, f);
+        }
+
+        private static void VerifyReturnedErrorWithPost(Action<IHttpClient> f)
+        {
+            VerifyReturnedError(SetupPostWithFixture("post-response-with-error"), f);
+        }
+
+        private static void VerifyReturnedError(Mock<IHttpClient> http, Action<IHttpClient> f)
+        {
+            VerifyError(FetchException.FailureReason.RespondedWithError, http, f);
         }
 
         private static void VerifyError(FetchException.FailureReason reason,

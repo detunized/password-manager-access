@@ -1,0 +1,7 @@
+{
+  "ResponseResult": {
+    "IsSuccess": false,
+    "ErrorCode": "E1234",
+    "ErrorDescription": "Serious error, no kidding",
+  }
+}
