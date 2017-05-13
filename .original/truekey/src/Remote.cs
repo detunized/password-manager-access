@@ -320,25 +320,10 @@ namespace TrueKey
             };
         }
 
+        // Make a JSON GET request and return the result as parsed JSON.
         internal static JObject Get(IHttpClient http, string url, Dictionary<string, string> headers)
         {
-            try
-            {
-                var response = http.Get(url, headers);
-                return JObject.Parse(response);
-            }
-            catch (WebException e)
-            {
-                throw new FetchException(FetchException.FailureReason.NetworkError,
-                                         string.Format("GET request to {0} failed", url),
-                                         e);
-            }
-            catch (JsonException e)
-            {
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         string.Format("Invalid JSON in response from {0}", url),
-                                         e);
-            }
+            return MakeRequest(() => http.Get(url, headers), "GET", url);
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
@@ -381,15 +366,20 @@ namespace TrueKey
                                             Dictionary<string, object> parameters,
                                             Dictionary<string, string> headers)
         {
+            return MakeRequest(() => http.Post(url, parameters, headers), "POST", url);
+        }
+
+        // Make a JSON GET/POST request and return the result as parsed JSON.
+        internal static JObject MakeRequest(Func<string> request, string method, string url)
+        {
             try
             {
-                var response = http.Post(url, parameters, headers);
-                return JObject.Parse(response);
+                return JObject.Parse(request());
             }
             catch (WebException e)
             {
                 throw new FetchException(FetchException.FailureReason.NetworkError,
-                                         string.Format("POST request to {0} failed", url),
+                                         string.Format("{0} request to {1} failed", method, url),
                                          e);
             }
             catch (JsonException e)
