@@ -378,14 +378,6 @@ namespace TrueKey
         // Make a JSON POST request and return the result as parsed JSON.
         internal static JObject PostNoCheck(IHttpClient http,
                                             string url,
-                                            Dictionary<string, object> parameters)
-        {
-            return PostNoCheck(http, url, parameters, new Dictionary<string, string>());
-        }
-
-        // Make a JSON POST request and return the result as parsed JSON.
-        internal static JObject PostNoCheck(IHttpClient http,
-                                            string url,
                                             Dictionary<string, object> parameters,
                                             Dictionary<string, string> headers)
         {
