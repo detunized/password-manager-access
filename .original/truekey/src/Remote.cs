@@ -340,7 +340,7 @@ namespace TrueKey
         // Make a JSON GET request and return the result as parsed JSON.
         internal static JObject Get(IHttpClient http, string url, Dictionary<string, string> headers)
         {
-            return MakeRequest(() => http.Get(url, headers), "GET", url);
+            return MakeRequest(() => http.Get(url, headers), url);
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
@@ -389,11 +389,11 @@ namespace TrueKey
                                             Dictionary<string, object> parameters,
                                             Dictionary<string, string> headers)
         {
-            return MakeRequest(() => http.Post(url, parameters, headers), "POST", url);
+            return MakeRequest(() => http.Post(url, parameters, headers), url);
         }
 
         // Make a JSON GET/POST request and return the result as parsed JSON.
-        internal static JObject MakeRequest(Func<string> request, string method, string url)
+        internal static JObject MakeRequest(Func<string> request, string url)
         {
             try
             {
@@ -401,9 +401,7 @@ namespace TrueKey
             }
             catch (WebException e)
             {
-                throw new FetchException(FetchException.FailureReason.NetworkError,
-                                         string.Format("{0} request to {1} failed", method, url),
-                                         e);
+                throw MakeNetworkError(url, e);
             }
             catch (JsonException e)
             {
@@ -411,13 +409,30 @@ namespace TrueKey
             }
         }
 
+        private static FetchException MakeNetworkError(string url, WebException original)
+        {
+            if (original.Status != WebExceptionStatus.ProtocolError)
+                return new FetchException(FetchException.FailureReason.NetworkError,
+                                          string.Format("Request to {0} failed", url),
+                                          original);
+
+
+            var response = (HttpWebResponse)original.Response;
+            return new FetchException(FetchException.FailureReason.NetworkError,
+                                      string.Format("{0} request to {1} failed with HTTP status code {2}",
+                                                    response.Method,
+                                                    url,
+                                                    response.StatusCode),
+                                      original);
+        }
+
         private static FetchException MakeInvalidResponseError(string format,
                                                                string url,
-                                                               Exception innerException)
+                                                               Exception original)
         {
             return new FetchException(FetchException.FailureReason.InvalidResponse,
                                       string.Format(format, url),
-                                      innerException);
+                                      original);
         }
     }
 }
