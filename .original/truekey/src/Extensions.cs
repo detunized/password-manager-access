@@ -192,11 +192,12 @@ namespace TrueKey
             foreach (var i in path.Split('/'))
             {
                 if (c.Type != JTokenType.Object)
-                    throw new ArgumentException("Must be nested objects all the way down");
+                    throw new JTokenAccessException(
+                        string.Format("Expected nested objects at '{0}'", path));
 
                 c = ((JObject)c).GetValue(i, StringComparison.OrdinalIgnoreCase);
                 if (c == null)
-                    throw new ArgumentException("Path doesn't exist", path);
+                    throw new JTokenAccessException(string.Format("Path '{0}' doesn't exist", path));
             }
 
             return c;
@@ -222,7 +223,7 @@ namespace TrueKey
         {
             var s = j.At(path);
             if (s.Type != JTokenType.String)
-                throw new ArgumentException("The value is not a string");
+                throw new JTokenAccessException(string.Format("Expected a string at '{0}'", path));
 
             return (string)s;
         }
@@ -240,7 +241,7 @@ namespace TrueKey
         {
             var i = j.At(path);
             if (i.Type != JTokenType.Integer)
-                throw new ArgumentException("The value is not an integer");
+                throw new JTokenAccessException(string.Format("Expected an integer at '{0}'", path));
 
             return (int)i;
         }
@@ -258,7 +259,7 @@ namespace TrueKey
         {
             var b = j.At(path);
             if (b.Type != JTokenType.Boolean)
-                throw new ArgumentException("The value is not a boolean");
+                throw new JTokenAccessException(string.Format("Expected a boolean at '{0}'", path));
 
             return (bool)b;
         }

@@ -259,15 +259,15 @@ namespace TrueKey.Test
                 'k3': {'k33': {'k333': 'v333'}}
             }");
 
-            Assert.That(() => j.At("i1"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.At("k1/k11"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.At("i1"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.At("k1/k11"), Throws.TypeOf<JTokenAccessException>());
 
-            Assert.That(() => j.At("k2/i2"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.At("k2/k22/i22"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.At("k2/i2"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.At("k2/k22/i22"), Throws.TypeOf<JTokenAccessException>());
 
-            Assert.That(() => j.At("k3/i3"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.At("k3/k33/i33"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.At("k3/k33/k333/i333"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.At("k3/i3"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.At("k3/k33/i33"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.At("k3/k33/k333/i333"), Throws.TypeOf<JTokenAccessException>());
         }
 
         [Test]
@@ -299,9 +299,9 @@ namespace TrueKey.Test
                 'k3': 10
             }");
 
-            Assert.That(() => j.At("k1/0"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.At("k2/k22"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.At("k3/k33/k333"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.At("k1/0"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.At("k2/k22"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.At("k3/k33/k333"), Throws.TypeOf<JTokenAccessException>());
         }
 
         [Test]
@@ -343,11 +343,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(() => j.StringAt("k1"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.StringAt("k2"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.StringAt("k3"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.StringAt("k4"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.StringAt("k5"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.StringAt("k1"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.StringAt("k2"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.StringAt("k3"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.StringAt("k4"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.StringAt("k5"), Throws.TypeOf<JTokenAccessException>());
         }
 
         [Test]
@@ -393,11 +393,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(() => j.IntAt("k1"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.IntAt("k2"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.IntAt("k3"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.IntAt("k4"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.IntAt("k5"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.IntAt("k1"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.IntAt("k2"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.IntAt("k3"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.IntAt("k4"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.IntAt("k5"), Throws.TypeOf<JTokenAccessException>());
         }
 
         [Test]
@@ -443,11 +443,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(() => j.BoolAt("k1"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.BoolAt("k2"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.BoolAt("k3"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.BoolAt("k4"), Throws.TypeOf<ArgumentException>());
-            Assert.That(() => j.BoolAt("k5"), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => j.BoolAt("k1"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.BoolAt("k2"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.BoolAt("k3"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.BoolAt("k4"), Throws.TypeOf<JTokenAccessException>());
+            Assert.That(() => j.BoolAt("k5"), Throws.TypeOf<JTokenAccessException>());
         }
 
         [Test]
