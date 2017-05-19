@@ -179,32 +179,18 @@ namespace TrueKey
         // Fetches the vault data, parses and returns in the encrypted form.
         public static EncryptedVault GetVault(string oauthToken, IHttpClient http)
         {
-            var response = Get(http,
-                               "https://pm-api.truekey.com/data",
-                               new Dictionary<string, string>
-                               {
-                                   {"Authorization", "Bearer " + oauthToken},
-                                   {"Accept", "application/vnd.tk-pm-api.v1+json"},
-                                   {"X-TK-Client-API", "TK-API-1.1"},
-                                   {"X-TK-Client-Version", "2.6.3820"},
-                                   {"X-TK-Client-Language", "en-US"},
-                                   {"X-TK-Client-Context", "crx-mac"},
-                               });
-
-            var salt = response.StringAt("customer/salt").DecodeHex();
-            var key = response.StringAt("customer/k_kek").Decode64();
-            var accounts = response
-                .At("assets")
-                .Select(i => new EncryptedAccount(
-                    id: i.IntAt("id"),
-                    name: i.StringAtOrNull("name") ?? "",
-                    username: i.StringAtOrNull("login") ?? "",
-                    encryptedPassword: (i.StringAtOrNull("password_k") ?? "").Decode64(),
-                    url: i.StringAtOrNull("url") ?? "",
-                    encryptedNote: (i.StringAtOrNull("memo_k") ?? "").Decode64()))
-                .ToArray();
-
-            return new EncryptedVault(salt, key, accounts);
+            return Get(http,
+                       "https://pm-api.truekey.com/data",
+                       new Dictionary<string, string>
+                       {
+                           {"Authorization", "Bearer " + oauthToken},
+                           {"Accept", "application/vnd.tk-pm-api.v1+json"},
+                           {"X-TK-Client-API", "TK-API-1.1"},
+                           {"X-TK-Client-Version", "2.6.3820"},
+                           {"X-TK-Client-Language", "en-US"},
+                           {"X-TK-Client-Context", "crx-mac"},
+                       },
+                       ParseGetVaultResponse);
         }
 
         //
@@ -276,6 +262,24 @@ namespace TrueKey
                                                                       i.StringAt("deviceId"))).ToArray();
         }
 
+        internal static EncryptedVault ParseGetVaultResponse(JObject response)
+        {
+            var salt = response.StringAt("customer/salt").DecodeHex();
+            var key = response.StringAt("customer/k_kek").Decode64();
+            var accounts = response
+                .At("assets")
+                .Select(i => new EncryptedAccount(
+                    id : i.IntAt("id"),
+                    name : i.StringAtOrNull("name") ?? "",
+                    username : i.StringAtOrNull("login") ?? "",
+                    encryptedPassword : (i.StringAtOrNull("password_k") ?? "").Decode64(),
+                    url : i.StringAtOrNull("url") ?? "",
+                    encryptedNote : (i.StringAtOrNull("memo_k") ?? "").Decode64()))
+                .ToArray();
+
+            return new EncryptedVault(salt, key, accounts);
+        }
+
         internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo,
                                                                      string responseType,
                                                                      string oAuthTransactionId = "")
@@ -316,6 +320,24 @@ namespace TrueKey
         }
 
         // Make a JSON GET request and return the result as parsed JSON.
+        internal static T Get<T>(IHttpClient http,
+                                 string url,
+                                 Dictionary<string, string> headers,
+                                 Func<JObject, T> parse)
+        {
+            var response = Get(http, url, headers);
+
+            try
+            {
+                return parse(response);
+            }
+            catch (JTokenAccessException e)
+            {
+                throw MakeInvalidResponseError("Unexpected format in response from '{0}'", url, e);
+            }
+        }
+
+        // Make a JSON GET request and return the result as parsed JSON.
         internal static JObject Get(IHttpClient http, string url, Dictionary<string, string> headers)
         {
             return MakeRequest(() => http.Get(url, headers), "GET", url);
@@ -348,9 +370,7 @@ namespace TrueKey
             }
             catch (JTokenAccessException e)
             {
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         "Unexpected response format",
-                                         e);
+                throw MakeInvalidResponseError("Unexpected format in response from '{0}'", url, e);
             }
 
             var code = response.StringAtOrNull("responseResult/errorCode") ?? "";
@@ -387,10 +407,17 @@ namespace TrueKey
             }
             catch (JsonException e)
             {
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         string.Format("Invalid JSON in response from {0}", url),
-                                         e);
+                throw MakeInvalidResponseError("Invalid JSON in response from '{0}'", url, e);
             }
+        }
+
+        private static FetchException MakeInvalidResponseError(string format,
+                                                               string url,
+                                                               Exception innerException)
+        {
+            return new FetchException(FetchException.FailureReason.InvalidResponse,
+                                      string.Format(format, url),
+                                      innerException);
         }
     }
 }

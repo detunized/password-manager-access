@@ -204,6 +204,7 @@ namespace TrueKey.Test
         {
             VerifyNetworkErrorWithGet(f);
             VerifyJsonErrorWithGet(f);
+            VerifyUnsupportedFormatWithGet(f);
         }
 
         private static void VerifyAllCommonErrorsWithPost(Action<IHttpClient> f)
