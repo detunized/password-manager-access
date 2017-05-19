@@ -26,7 +26,7 @@ namespace TrueKey.Test
         [Test]
         public void RegisetNewDevice_throws_on_common_errors()
         {
-            VerifyCommonErrorsWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
+            VerifyAllCommonErrorsWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
         }
 
         [Test]
@@ -41,12 +41,15 @@ namespace TrueKey.Test
         [Test]
         public void AuthStep1_throws_on_common_errors()
         {
-            VerifyCommonErrorsWithPost(http => Remote.AuthStep1(ClientInfo, http));
+            VerifyAllCommonErrorsWithPost(http => Remote.AuthStep1(ClientInfo, http));
         }
 
         [Test]
         public void AuthStep2_returns_two_factor_settings()
         {
+            // TODO: Test with specifically crafted broken/unsupported responses
+            //       The parsing logic is not trivial and it needs in-depth testing.
+
             var client = SetupPostWithFixture("auth-step2-response");
             var result = Remote.AuthStep2(ClientInfo, "password", "transaction-id", client.Object);
 
@@ -63,7 +66,7 @@ namespace TrueKey.Test
         [Test]
         public void AuthStep2_throws_on_common_errors()
         {
-            VerifyCommonErrorsWithPost(
+            VerifyAllCommonErrorsWithPost(
                 http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
         }
 
@@ -78,10 +81,10 @@ namespace TrueKey.Test
         [Test]
         public void SaveDeviceAsTrusted_throws_on_common_errors()
         {
-            VerifyCommonErrorsWithPost(http => Remote.SaveDeviceAsTrusted(ClientInfo,
-                                                                          "transaction-id",
-                                                                          "oauth-token",
-                                                                          http));
+            VerifyMostCommonErrorsWithPost(http => Remote.SaveDeviceAsTrusted(ClientInfo,
+                                                                              "transaction-id",
+                                                                              "oauth-token",
+                                                                              http));
         }
 
         [Test]
@@ -107,7 +110,8 @@ namespace TrueKey.Test
         [Test]
         public void AuthCheck_throws_on_common_errors()
         {
-            VerifyCommonErrorsWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
+            VerifyAllCommonErrorsWithPost(
+                http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
         }
 
         [Test]
@@ -138,15 +142,9 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void GetVault_throws_on_network_error()
+        public void GetVault_throws_common_errors()
         {
-            VerifyNetworkErrorWithGet(http => Remote.GetVault("oauth-token", http));
-        }
-
-        [Test]
-        public void GetVault_throws_on_invalid_json()
-        {
-            VerifyJsonErrorWithGet(http => Remote.GetVault("oauth-token", http));
+            VerifyCommonErrorsWithGet(http => Remote.GetVault("oauth-token", http));
         }
 
         //
@@ -202,7 +200,19 @@ namespace TrueKey.Test
         // Helpers
         //
 
-        private static void VerifyCommonErrorsWithPost(Action<IHttpClient> f)
+        private static void VerifyCommonErrorsWithGet(Action<IHttpClient> f)
+        {
+            VerifyNetworkErrorWithGet(f);
+            VerifyJsonErrorWithGet(f);
+        }
+
+        private static void VerifyAllCommonErrorsWithPost(Action<IHttpClient> f)
+        {
+            VerifyMostCommonErrorsWithPost(f);
+            VerifyUnsupportedFormatWithPost(f);
+        }
+
+        private static void VerifyMostCommonErrorsWithPost(Action<IHttpClient> f)
         {
             VerifyNetworkErrorWithPost(f);
             VerifyJsonErrorWithPost(f);
@@ -247,6 +257,25 @@ namespace TrueKey.Test
         private static void VerifyReturnedError(Mock<IHttpClient> http, Action<IHttpClient> f)
         {
             VerifyError(FetchException.FailureReason.RespondedWithError, http, f);
+        }
+
+        private static void VerifyUnsupportedFormatWithGet(Action<IHttpClient> f)
+        {
+            VerifyUnsupportedFormat(SetupGet("{}"), f);
+            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}}"), f);
+            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}, \"assets\": {}}"), f);
+        }
+
+        private static void VerifyUnsupportedFormatWithPost(Action<IHttpClient> f)
+        {
+            VerifyUnsupportedFormat(SetupPost("{}"), f);
+            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{}}"), f);
+            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}"), f);
+        }
+
+        private static void VerifyUnsupportedFormat(Mock<IHttpClient> http, Action<IHttpClient> f)
+        {
+            VerifyError(FetchException.FailureReason.InvalidResponse, http, f);
         }
 
         private static void VerifyError(FetchException.FailureReason reason,

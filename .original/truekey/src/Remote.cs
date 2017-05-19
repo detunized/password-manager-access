@@ -213,17 +213,11 @@ namespace TrueKey
 
         internal static TwoFactorAuth.Settings ParseAuthStep2Response(JObject response)
         {
-            // TODO: Make JToken.At* throw some custom exception and don't use OrNull
-            //       Catch it and rethrow as invalid response.
-
-            var nextStep = response.IntAtOrNull("riskAnalysisInfo/nextStep");
-            var data = response.AtOrNull("riskAnalysisInfo/nextStepData");
-
-            if (nextStep == null || data == null)
-                throw new InvalidOperationException("Invalid response");
+            var nextStep = response.IntAt("riskAnalysisInfo/nextStep");
+            var data = response.At("riskAnalysisInfo/nextStepData");
 
             // Special case: done
-            if (nextStep.Value == 10)
+            if (nextStep == 10)
                 return new TwoFactorAuth.Settings(TwoFactorAuth.Step.Done,
                                                   transactionId: "",
                                                   email: "",
@@ -234,7 +228,7 @@ namespace TrueKey
             var email = data.StringAt("verificationEmail");
 
             // Special case: email doesn't need OOB devices
-            if (nextStep.Value == 14)
+            if (nextStep == 14)
                 return new TwoFactorAuth.Settings(TwoFactorAuth.Step.WaitForEmail,
                                                   transactionId: transactionId,
                                                   email: email,
@@ -243,10 +237,11 @@ namespace TrueKey
 
             var devices = ParseOobDevices(data.At("oobDevices"));
             if (devices.Length < 1)
-                throw new InvalidOperationException("Invalid response: at least one OOB device is expected");
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                         "At least one OOB device is expected");
 
             TwoFactorAuth.Step step;
-            switch (nextStep.Value)
+            switch (nextStep)
             {
             case 8:
                 step = TwoFactorAuth.Step.Face;
@@ -261,7 +256,7 @@ namespace TrueKey
                 step = TwoFactorAuth.Step.Fingerprint;
                 break;
             default:
-                throw new InvalidOperationException(
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
                     string.Format("Next two factor step {0} is not supported", nextStep));
             }
 
@@ -346,9 +341,17 @@ namespace TrueKey
         {
             var response = PostNoCheck(http, url, parameters, headers);
 
-            if (response.BoolAtOrNull("responseResult/isSuccess") == true)
-                // TODO: Handle parsing errors
-                return parse(response);
+            try
+            {
+                if (response.BoolAt("responseResult/isSuccess"))
+                    return parse(response);
+            }
+            catch (JTokenAccessException e)
+            {
+                throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                         "Unexpected response format",
+                                         e);
+            }
 
             var code = response.StringAtOrNull("responseResult/errorCode") ?? "";
             var message = response.StringAtOrNull("responseResult/errorDescription") ?? "";
