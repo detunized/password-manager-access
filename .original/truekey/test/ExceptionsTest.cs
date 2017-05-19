@@ -22,6 +22,12 @@ namespace TrueKey.Test
         }
 
         [Test]
+        public void JTokenAccessException_properties_are_set()
+        {
+            VerifyException(new JTokenAccessException(Message, InnerException));
+        }
+
+        [Test]
         public void FetchException_properties_are_set()
         {
             VerifyExceptionWithReason(new FetchException(Reason, Message, InnerException));

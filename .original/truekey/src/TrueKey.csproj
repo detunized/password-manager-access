@@ -55,6 +55,7 @@
     <Compile Include="Gui.cs" />
     <Compile Include="HttpClient.cs" />
     <Compile Include="IHttpClient.cs" />
+    <Compile Include="JTokenAccessException.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Remote.cs" />
     <Compile Include="ISecureStorage.cs" />
