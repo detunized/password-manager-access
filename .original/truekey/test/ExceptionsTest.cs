@@ -10,45 +10,21 @@ namespace TrueKey.Test
     class ExceptionsTest
     {
         [Test]
-        public void BaseException_with_message()
+        public void BaseException_properties_are_set()
         {
-            VerifyExceptionMessage(new BaseException(Message));
+            VerifyException(new BaseException(Message, InnerException));
         }
 
         [Test]
-        public void BaseException_with_message_and_inner_exception()
+        public void CryptoException_properties_are_set()
         {
-            VerifyExceptionMessageAndInner(new BaseException(Message, InnerException));
+            VerifyException(new CryptoException(Message, InnerException));
         }
 
         [Test]
-        public void CryptoException_with_message()
+        public void FetchException_properties_are_set()
         {
-            VerifyExceptionMessage(new CryptoException(Message));
-        }
-
-        [Test]
-        public void CryptoException_with_message_and_inner_exception()
-        {
-            VerifyExceptionMessageAndInner(new BaseException(Message, InnerException));
-        }
-
-        [Test]
-        public void FetchException_with_message()
-        {
-            var e = new FetchException(FetchReason, Message);
-
-            VerifyExceptionMessage(e);
-            Assert.That(e.Reason, Is.EqualTo(FetchReason));
-        }
-
-        [Test]
-        public void FetchException_with_message_and_inner_exception()
-        {
-            var e = new FetchException(FetchReason, Message, InnerException);
-
-            VerifyExceptionMessageAndInner(e);
-            Assert.That(e.Reason, Is.EqualTo(FetchReason));
+            VerifyExceptionWithReason(new FetchException(Reason, Message, InnerException));
         }
 
         //
@@ -58,23 +34,23 @@ namespace TrueKey.Test
         private const string Message = "message";
         private static readonly Exception InnerException = new Exception();
 
-        private const FetchException.FailureReason FetchReason =
+        private const FetchException.FailureReason Reason =
             FetchException.FailureReason.UnknownError;
 
         //
         // Helpers
         //
 
-        private static void VerifyExceptionMessage(BaseException e)
-        {
-            Assert.That(e.Message, Is.EqualTo(Message));
-            Assert.That(e.InnerException, Is.Null);
-        }
-
-        private static void VerifyExceptionMessageAndInner(BaseException e)
+        private static void VerifyException(BaseException e)
         {
             Assert.That(e.Message, Is.EqualTo(Message));
             Assert.That(e.InnerException, Is.SameAs(InnerException));
+        }
+
+        private static void VerifyExceptionWithReason(BaseException e)
+        {
+            VerifyException(e);
+            Assert.That(e, Has.Property("Reason").EqualTo(Reason));
         }
     }
 }
