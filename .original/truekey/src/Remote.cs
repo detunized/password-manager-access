@@ -377,7 +377,7 @@ namespace TrueKey
             var message = response.StringAtOrNull("responseResult/errorDescription") ?? "";
             throw new FetchException(FetchException.FailureReason.RespondedWithError,
                                      string.Format(
-                                         "POST request to {0} failed with error ({1}: '{2}')",
+                                         "POST request to '{0}' failed with error ({1}: '{2}')",
                                          url,
                                          code,
                                          message));
@@ -413,13 +413,38 @@ namespace TrueKey
         {
             if (original.Status != WebExceptionStatus.ProtocolError)
                 return new FetchException(FetchException.FailureReason.NetworkError,
-                                          string.Format("Request to {0} failed", url),
+                                          string.Format("Request to '{0}' failed", url),
                                           original);
 
 
             var response = (HttpWebResponse)original.Response;
+            return MakeSpecialHttpError(url, response, original) ??
+                   MakeGenericHttpError(url, response, original);
+        }
+
+        // Returns null if it's not special.
+        // A special error is the one when the status code has a specific meaning.
+        private static FetchException MakeSpecialHttpError(string url,
+                                                           HttpWebResponse response,
+                                                           WebException original)
+        {
+            if ((int)response.StatusCode != 422)
+                return null;
+
+            return new FetchException(FetchException.FailureReason.IncorrectCredentials,
+                                      string.Format(
+                                          "{0} request to '{1}' failed, most likely username/password are incorrect",
+                                          response.Method,
+                                          url),
+                                      original);
+        }
+
+        private static FetchException MakeGenericHttpError(string url,
+                                                           HttpWebResponse response,
+                                                           WebException original)
+        {
             return new FetchException(FetchException.FailureReason.NetworkError,
-                                      string.Format("{0} request to {1} failed with HTTP status code {2}",
+                                      string.Format("{0} request to '{1}' failed with HTTP status code {2}",
                                                     response.Method,
                                                     url,
                                                     response.StatusCode),

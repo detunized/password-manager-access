@@ -9,8 +9,7 @@ namespace TrueKey
     {
         public enum FailureReason
         {
-            IncorrectUsername,
-            IncorrectPassword,
+            IncorrectCredentials,
             NetworkError,
             InvalidResponse,
             RespondedWithError,
