@@ -259,15 +259,13 @@ namespace TrueKey.Test
                 'k3': {'k33': {'k333': 'v333'}}
             }");
 
-            Assert.That(() => j.At("i1"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.At("k1/k11"), Throws.TypeOf<JTokenAccessException>());
-
-            Assert.That(() => j.At("k2/i2"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.At("k2/k22/i22"), Throws.TypeOf<JTokenAccessException>());
-
-            Assert.That(() => j.At("k3/i3"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.At("k3/k33/i33"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.At("k3/k33/k333/i333"), Throws.TypeOf<JTokenAccessException>());
+            VerifyAtThrows(j, "i1");
+            VerifyAtThrows(j, "k1/k11");
+            VerifyAtThrows(j, "k2/i2");
+            VerifyAtThrows(j, "k2/k22/i22");
+            VerifyAtThrows(j, "k3/i3");
+            VerifyAtThrows(j, "k3/k33/i33");
+            VerifyAtThrows(j, "k3/k33/k333/i333");
         }
 
         [Test]
@@ -299,9 +297,9 @@ namespace TrueKey.Test
                 'k3': 10
             }");
 
-            Assert.That(() => j.At("k1/0"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.At("k2/k22"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.At("k3/k33/k333"), Throws.TypeOf<JTokenAccessException>());
+            VerifyAtThrows(j, "k1/0");
+            VerifyAtThrows(j, "k2/k22");
+            VerifyAtThrows(j, "k3/k33/k333");
         }
 
         [Test]
@@ -343,11 +341,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(() => j.StringAt("k1"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.StringAt("k2"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.StringAt("k3"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.StringAt("k4"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.StringAt("k5"), Throws.TypeOf<JTokenAccessException>());
+            VerifyStringAtThrows(j, "k1");
+            VerifyStringAtThrows(j, "k2");
+            VerifyStringAtThrows(j, "k3");
+            VerifyStringAtThrows(j, "k4");
+            VerifyStringAtThrows(j, "k5");
         }
 
         [Test]
@@ -393,11 +391,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(() => j.IntAt("k1"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.IntAt("k2"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.IntAt("k3"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.IntAt("k4"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.IntAt("k5"), Throws.TypeOf<JTokenAccessException>());
+            VerifyIntAtThrows(j, "k1");
+            VerifyIntAtThrows(j, "k2");
+            VerifyIntAtThrows(j, "k3");
+            VerifyIntAtThrows(j, "k4");
+            VerifyIntAtThrows(j, "k5");
         }
 
         [Test]
@@ -443,11 +441,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(() => j.BoolAt("k1"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.BoolAt("k2"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.BoolAt("k3"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.BoolAt("k4"), Throws.TypeOf<JTokenAccessException>());
-            Assert.That(() => j.BoolAt("k5"), Throws.TypeOf<JTokenAccessException>());
+            VerifyBoolAtThrows(j, "k1");
+            VerifyBoolAtThrows(j, "k2");
+            VerifyBoolAtThrows(j, "k3");
+            VerifyBoolAtThrows(j, "k4");
+            VerifyBoolAtThrows(j, "k5");
         }
 
         [Test]
@@ -466,6 +464,35 @@ namespace TrueKey.Test
             Assert.That(j.BoolAtOrNull("k3"), Is.Null);
             Assert.That(j.BoolAtOrNull("k4"), Is.Null);
             Assert.That(j.BoolAtOrNull("k5"), Is.Null);
+        }
+
+        //
+        // Helpers
+        //
+
+        private static void VerifyAtThrows(JToken token, string path)
+        {
+            VerifyAccessThrows(token, path, (t, p) => t.At(p));
+        }
+
+        private static void VerifyStringAtThrows(JToken token, string path)
+        {
+            VerifyAccessThrows(token, path, (t, p) => t.StringAt(p));
+        }
+
+        private static void VerifyIntAtThrows(JToken token, string path)
+        {
+            VerifyAccessThrows(token, path, (t, p) => t.IntAt(p));
+        }
+
+        private static void VerifyBoolAtThrows(JToken token, string path)
+        {
+            VerifyAccessThrows(token, path, (t, p) => t.BoolAt(p));
+        }
+
+        private static void VerifyAccessThrows(JToken token, string path, Action<JToken, string> access)
+        {
+            Assert.That(() => access(token, path), Throws.TypeOf<JTokenAccessException>());
         }
     }
 }
