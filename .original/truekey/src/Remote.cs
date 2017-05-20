@@ -270,11 +270,11 @@ namespace TrueKey
                 .At("assets")
                 .Select(i => new EncryptedAccount(
                     id : i.IntAt("id"),
-                    name : i.StringAtOrNull("name") ?? "",
-                    username : i.StringAtOrNull("login") ?? "",
-                    encryptedPassword : (i.StringAtOrNull("password_k") ?? "").Decode64(),
-                    url : i.StringAtOrNull("url") ?? "",
-                    encryptedNote : (i.StringAtOrNull("memo_k") ?? "").Decode64()))
+                    name : i.StringAt("name", ""),
+                    username : i.StringAt("login", ""),
+                    encryptedPassword : (i.StringAt("password_k", "")).Decode64(),
+                    url : i.StringAt("url", ""),
+                    encryptedNote : (i.StringAt("memo_k", "")).Decode64()))
                 .ToArray();
 
             return new EncryptedVault(salt, key, accounts);
@@ -373,8 +373,8 @@ namespace TrueKey
                 throw MakeInvalidResponseError("Unexpected format in response from '{0}'", url, e);
             }
 
-            var code = response.StringAtOrNull("responseResult/errorCode") ?? "";
-            var message = response.StringAtOrNull("responseResult/errorDescription") ?? "";
+            var code = response.StringAt("responseResult/errorCode", "");
+            var message = response.StringAt("responseResult/errorDescription", "");
             throw new FetchException(FetchException.FailureReason.RespondedWithError,
                                      string.Format(
                                          "POST request to '{0}' failed with error ({1}: '{2}')",

@@ -147,19 +147,14 @@ namespace TrueKey
             return At(j.Root, path);
         }
 
-        public static JToken AtOrNull(this JObject j, string path)
-        {
-            return AtOrNull(j.Root, path);
-        }
-
         public static string StringAt(this JObject j, string path)
         {
             return StringAt(j.Root, path);
         }
 
-        public static string StringAtOrNull(this JObject j, string path)
+        public static string StringAt(this JObject j, string path, string defaultValue)
         {
-            return StringAtOrNull(j.Root, path);
+            return StringAt(j.Root, path, defaultValue);
         }
 
         public static int IntAt(this JObject j, string path)
@@ -167,9 +162,9 @@ namespace TrueKey
             return IntAt(j.Root, path);
         }
 
-        public static int? IntAtOrNull(this JObject j, string path)
+        public static int IntAt(this JObject j, string path, int defaultValue)
         {
-            return IntAtOrNull(j.Root, path);
+            return IntAt(j.Root, path, defaultValue);
         }
 
         public static bool BoolAt(this JObject j, string path)
@@ -177,9 +172,9 @@ namespace TrueKey
             return BoolAt(j.Root, path);
         }
 
-        public static bool? BoolAtOrNull(this JObject j, string path)
+        public static bool BoolAt(this JObject j, string path, bool defaultValue)
         {
-            return BoolAtOrNull(j.Root, path);
+            return BoolAt(j.Root, path, defaultValue);
         }
 
         //
@@ -203,22 +198,6 @@ namespace TrueKey
             return c;
         }
 
-        public static JToken AtOrNull(this JToken j, string path)
-        {
-            var c = j;
-            foreach (var i in path.Split('/'))
-            {
-                if (c.Type != JTokenType.Object)
-                    return null;
-
-                c = ((JObject)c).GetValue(i, StringComparison.OrdinalIgnoreCase);
-                if (c == null)
-                    return null;
-            }
-
-            return c;
-        }
-
         public static string StringAt(this JToken j, string path)
         {
             var s = j.At(path);
@@ -228,13 +207,16 @@ namespace TrueKey
             return (string)s;
         }
 
-        public static string StringAtOrNull(this JToken j, string path)
+        public static string StringAt(this JToken j, string path, string defaultValue)
         {
-            var s = j.AtOrNull(path);
-            if (s == null || s.Type != JTokenType.String)
-                return null;
-
-            return (string)s;
+            try
+            {
+                return j.StringAt(path);
+            }
+            catch (Exception)
+            {
+                return defaultValue;
+            }
         }
 
         public static int IntAt(this JToken j, string path)
@@ -246,13 +228,16 @@ namespace TrueKey
             return (int)i;
         }
 
-        public static int? IntAtOrNull(this JToken j, string path)
+        public static int IntAt(this JToken j, string path, int defaultValue)
         {
-            var i = j.AtOrNull(path);
-            if (i == null || i.Type != JTokenType.Integer)
-                return null;
-
-            return (int)i;
+            try
+            {
+                return j.IntAt(path);
+            }
+            catch (Exception)
+            {
+                return defaultValue;
+            }
         }
 
         public static bool BoolAt(this JToken j, string path)
@@ -264,13 +249,16 @@ namespace TrueKey
             return (bool)b;
         }
 
-        public static bool? BoolAtOrNull(this JToken j, string path)
+        public static bool BoolAt(this JToken j, string path, bool defaultValue)
         {
-            var b = j.AtOrNull(path);
-            if (b == null || b.Type != JTokenType.Boolean)
-                return null;
-
-            return (bool)b;
+            try
+            {
+                return j.BoolAt(path);
+            }
+            catch (Exception)
+            {
+                return defaultValue;
+            }
         }
     }
 }

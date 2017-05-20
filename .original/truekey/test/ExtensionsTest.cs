@@ -269,26 +269,6 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void JToken_AtOrNull_returns_null_on_invalid_path()
-        {
-            var j = JObject.Parse(@"{
-                'k1': 'v1',
-                'k2': {'k22': 'v22'},
-                'k3': {'k33': {'k333': 'v333'}}
-            }");
-
-            Assert.That(j.AtOrNull("i1"), Is.Null);
-            Assert.That(j.AtOrNull("k1/k11"), Is.Null);
-
-            Assert.That(j.AtOrNull("k2/i2"), Is.Null);
-            Assert.That(j.AtOrNull("k2/k22/i22"), Is.Null);
-
-            Assert.That(j.AtOrNull("k3/i3"), Is.Null);
-            Assert.That(j.AtOrNull("k3/k33/i33"), Is.Null);
-            Assert.That(j.AtOrNull("k3/k33/k333/i333"), Is.Null);
-        }
-
-        [Test]
         public void JToken_At_throws_on_non_objects()
         {
             var j = JObject.Parse(@"{
@@ -300,20 +280,6 @@ namespace TrueKey.Test
             VerifyAtThrows(j, "k1/0");
             VerifyAtThrows(j, "k2/k22");
             VerifyAtThrows(j, "k3/k33/k333");
-        }
-
-        [Test]
-        public void JToken_AtOrNull_returns_null_on_non_objects()
-        {
-            var j = JObject.Parse(@"{
-                'k1': [],
-                'k2': true,
-                'k3': 10
-            }");
-
-            Assert.That(j.AtOrNull("k1/0"), Is.Null);
-            Assert.That(j.AtOrNull("k2/k22"), Is.Null);
-            Assert.That(j.AtOrNull("k3/k33/k333"), Is.Null);
         }
 
         [Test]
@@ -349,7 +315,7 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void JToken_StringAtOrNull_returns_null_on_non_stings()
+        public void JToken_StringAt_returns_default_value_on_non_strings()
         {
             var j = JObject.Parse(@"{
                 'k1': true,
@@ -359,11 +325,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(j.StringAtOrNull("k1"), Is.Null);
-            Assert.That(j.StringAtOrNull("k2"), Is.Null);
-            Assert.That(j.StringAtOrNull("k3"), Is.Null);
-            Assert.That(j.StringAtOrNull("k4"), Is.Null);
-            Assert.That(j.StringAtOrNull("k5"), Is.Null);
+            VerifyStringAtReturnsDefault(j, "k1");
+            VerifyStringAtReturnsDefault(j, "k2");
+            VerifyStringAtReturnsDefault(j, "k3");
+            VerifyStringAtReturnsDefault(j, "k4");
+            VerifyStringAtReturnsDefault(j, "k5");
         }
 
         [Test]
@@ -399,7 +365,7 @@ namespace TrueKey.Test
         }
 
         [Test]
-        public void JToken_IntAtOrNull_returns_null_on_non_ints()
+        public void JToken_IntAtOrNull_returns_default_value_on_non_ints()
         {
             var j = JObject.Parse(@"{
                 'k1': true,
@@ -409,11 +375,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(j.IntAtOrNull("k1"), Is.Null);
-            Assert.That(j.IntAtOrNull("k2"), Is.Null);
-            Assert.That(j.IntAtOrNull("k3"), Is.Null);
-            Assert.That(j.IntAtOrNull("k4"), Is.Null);
-            Assert.That(j.IntAtOrNull("k5"), Is.Null);
+            VerifyIntAtReturnsDefault(j, "k1");
+            VerifyIntAtReturnsDefault(j, "k2");
+            VerifyIntAtReturnsDefault(j, "k3");
+            VerifyIntAtReturnsDefault(j, "k4");
+            VerifyIntAtReturnsDefault(j, "k5");
         }
 
         [Test]
@@ -459,11 +425,11 @@ namespace TrueKey.Test
                 'k5': {},
             }");
 
-            Assert.That(j.BoolAtOrNull("k1"), Is.Null);
-            Assert.That(j.BoolAtOrNull("k2"), Is.Null);
-            Assert.That(j.BoolAtOrNull("k3"), Is.Null);
-            Assert.That(j.BoolAtOrNull("k4"), Is.Null);
-            Assert.That(j.BoolAtOrNull("k5"), Is.Null);
+            VerifyBoolAtReturnsDefault(j, "k1");
+            VerifyBoolAtReturnsDefault(j, "k2");
+            VerifyBoolAtReturnsDefault(j, "k3");
+            VerifyBoolAtReturnsDefault(j, "k4");
+            VerifyBoolAtReturnsDefault(j, "k5");
         }
 
         //
@@ -493,6 +459,22 @@ namespace TrueKey.Test
         private static void VerifyAccessThrows(JToken token, string path, Action<JToken, string> access)
         {
             Assert.That(() => access(token, path), Throws.TypeOf<JTokenAccessException>());
+        }
+
+        private static void VerifyStringAtReturnsDefault(JToken token, string path)
+        {
+            Assert.That(token.StringAt(path, "default"), Is.EqualTo("default"));
+        }
+
+        private static void VerifyIntAtReturnsDefault(JToken token, string path)
+        {
+            Assert.That(token.IntAt(path, 1337), Is.EqualTo(1337));
+        }
+
+        private static void VerifyBoolAtReturnsDefault(JToken token, string path)
+        {
+            Assert.That(token.BoolAt(path, false), Is.EqualTo(false));
+            Assert.That(token.BoolAt(path, true), Is.EqualTo(true));
         }
     }
 }
