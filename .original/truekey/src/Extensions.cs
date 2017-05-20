@@ -139,45 +139,6 @@ namespace TrueKey
         }
 
         //
-        // Case insensitive nested JObject access by path with and without exceptions
-        //
-
-        public static JToken At(this JObject j, string path)
-        {
-            return At(j.Root, path);
-        }
-
-        public static string StringAt(this JObject j, string path)
-        {
-            return StringAt(j.Root, path);
-        }
-
-        public static string StringAt(this JObject j, string path, string defaultValue)
-        {
-            return StringAt(j.Root, path, defaultValue);
-        }
-
-        public static int IntAt(this JObject j, string path)
-        {
-            return IntAt(j.Root, path);
-        }
-
-        public static int IntAt(this JObject j, string path, int defaultValue)
-        {
-            return IntAt(j.Root, path, defaultValue);
-        }
-
-        public static bool BoolAt(this JObject j, string path)
-        {
-            return BoolAt(j.Root, path);
-        }
-
-        public static bool BoolAt(this JObject j, string path, bool defaultValue)
-        {
-            return BoolAt(j.Root, path, defaultValue);
-        }
-
-        //
         // Case insensitive nested JToken access by path with and without exceptions
         //
 
