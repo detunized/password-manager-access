@@ -9,15 +9,15 @@ namespace TrueKey
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, Gui gui, ISecureStorage storage)
+        public static Vault Open(string username, string password, Ui ui, ISecureStorage storage)
         {
-            return Open(username, password, gui, storage, new HttpClient());
+            return Open(username, password, ui, storage, new HttpClient());
         }
 
         // TODO: Write a test that runs the whole sequence and checks the result.
         public static Vault Open(string username,
                                  string password,
-                                 Gui gui,
+                                 Ui ui,
                                  ISecureStorage storage,
                                  IHttpClient http)
         {
@@ -52,7 +52,7 @@ namespace TrueKey
             var isTrusted = whatsNext.IsAuthenticated;
 
             // Step 6: Auth FSM -- walk through all the auth steps until we're done.
-            var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, gui, http);
+            var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, ui, http);
 
             // Step 7: Save this device as trusted not to repeat the two factor dance next times.
             if (!isTrusted)

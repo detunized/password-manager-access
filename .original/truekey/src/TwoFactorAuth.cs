@@ -57,14 +57,14 @@ namespace TrueKey
             }
         }
 
-        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Gui gui)
+        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Ui ui)
         {
-            return Start(clientInfo, settings, gui, new HttpClient());
+            return Start(clientInfo, settings, ui, new HttpClient());
         }
 
-        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Gui gui, IHttpClient http)
+        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
         {
-            return new TwoFactorAuth(clientInfo, settings, gui, http).Run(settings.InitialStep);
+            return new TwoFactorAuth(clientInfo, settings, ui, http).Run(settings.InitialStep);
         }
 
         //
@@ -180,13 +180,13 @@ namespace TrueKey
         {
             public override State Advance(TwoFactorAuth owner)
             {
-                var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend};
-                var answer = owner._gui.AskToWaitForEmail(owner._settings.Email, validAnswers);
+                var validAnswers = new[] {Ui.Answer.Check, Ui.Answer.Resend};
+                var answer = owner._ui.AskToWaitForEmail(owner._settings.Email, validAnswers);
                 switch (answer)
                 {
-                case Gui.Answer.Check:
+                case Ui.Answer.Check:
                     return Check(owner);
-                case Gui.Answer.Resend:
+                case Ui.Answer.Resend:
                     Remote.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
@@ -207,21 +207,21 @@ namespace TrueKey
 
             public override State Advance(TwoFactorAuth owner)
             {
-                var validAnswers = new[] {Gui.Answer.Check, Gui.Answer.Resend, Gui.Answer.Email};
-                var answer = owner._gui.AskToWaitForOob(owner._settings.Devices[_deviceIndex].Name,
+                var validAnswers = new[] {Ui.Answer.Check, Ui.Answer.Resend, Ui.Answer.Email};
+                var answer = owner._ui.AskToWaitForOob(owner._settings.Devices[_deviceIndex].Name,
                                                    owner._settings.Email,
                                                    validAnswers);
                 switch (answer)
                 {
-                case Gui.Answer.Check:
+                case Ui.Answer.Check:
                     return Check(owner);
-                case Gui.Answer.Resend:
+                case Ui.Answer.Resend:
                     Remote.AuthSendPush(owner._clientInfo,
                                         owner._settings.Devices[_deviceIndex].Id,
                                         owner._settings.TransactionId,
                                         owner._http);
                     return this;
-                case Gui.Answer.Email:
+                case Ui.Answer.Email:
                     Remote.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
@@ -241,12 +241,12 @@ namespace TrueKey
             {
                 var names = owner._settings.Devices.Select(i => i.Name).ToArray();
                 var validAnswers = Enumerable.Range(0, owner._settings.Devices.Length)
-                    .Select(i => Gui.Answer.Device0 + i)
-                    .Concat(new[] { Gui.Answer.Email })
+                    .Select(i => Ui.Answer.Device0 + i)
+                    .Concat(new[] { Ui.Answer.Email })
                     .ToArray();
-                var answer = owner._gui.AskToChooseOob(names, owner._settings.Email, validAnswers);
+                var answer = owner._ui.AskToChooseOob(names, owner._settings.Email, validAnswers);
 
-                if (answer == Gui.Answer.Email)
+                if (answer == Ui.Answer.Email)
                 {
                     Remote.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
@@ -255,7 +255,7 @@ namespace TrueKey
                     return new WaitForEmail();
                 }
 
-                var deviceIndex = answer - Gui.Answer.Device0;
+                var deviceIndex = answer - Ui.Answer.Device0;
                 if (deviceIndex >= 0 && deviceIndex < owner._settings.Devices.Length)
                 {
                     Remote.AuthSendPush(owner._clientInfo,
@@ -269,11 +269,11 @@ namespace TrueKey
             }
         }
 
-        private TwoFactorAuth(Remote.ClientInfo clientInfo, Settings settings, Gui gui, IHttpClient http)
+        private TwoFactorAuth(Remote.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
         {
             _clientInfo = clientInfo;
             _settings = settings;
-            _gui = gui;
+            _ui = ui;
             _http = http;
         }
 
@@ -326,7 +326,7 @@ namespace TrueKey
 
         private readonly Remote.ClientInfo _clientInfo;
         private readonly Settings _settings;
-        private readonly Gui _gui;
+        private readonly Ui _ui;
         private readonly IHttpClient _http;
     }
 }

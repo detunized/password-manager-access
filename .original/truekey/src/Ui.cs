@@ -13,7 +13,7 @@ namespace TrueKey
     // on the phone.
     // The only reason this is a class and not an interface is because there's
     // no way to have an enum inside an interface.
-    public abstract class Gui
+    public abstract class Ui
     {
         public enum Answer
         {

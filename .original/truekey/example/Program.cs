@@ -11,7 +11,7 @@ namespace Example
 {
     class Program
     {
-        private class TextGui: Gui
+        private class TextUi: Ui
         {
             public override Answer AskToWaitForEmail(string email, Answer[] validAnswers)
             {
@@ -136,7 +136,7 @@ namespace Example
             var storage = new PlainStorage("../../storage.txt");
 
             // Log in, fetch data, parse it.
-            var vault = Vault.Open(username, password, new TextGui(), storage);
+            var vault = Vault.Open(username, password, new TextUi(), storage);
 
             // Print all the accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
