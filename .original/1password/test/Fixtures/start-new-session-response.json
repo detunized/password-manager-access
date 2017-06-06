@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "sessionID": "TOZVTFIFBZGFDFNE5KSZFY7EZY",
+  "accountKeyFormat": "A3",
+  "accountKeyUuid": "FRN8GF",
+  "userAuth": {
+    "method": "SRPg-4096",
+    "alg": "PBES2g-HS256",
+    "iterations": 100000,
+    "salt": "-JLqTVQLjQg08LWZ0gyuUA"
+  }
+}
