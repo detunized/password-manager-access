@@ -82,7 +82,7 @@ namespace OnePassword
         }
 
         //
-        // Case insensitive nested JToken access by path with and without exceptions
+        // Nested JToken access by path with and without exceptions
         //
 
         public static JToken At(this JToken j, string path)
@@ -94,7 +94,7 @@ namespace OnePassword
                     throw new JTokenAccessException(
                         string.Format("Expected nested objects at '{0}'", path));
 
-                c = ((JObject)c).GetValue(i, StringComparison.OrdinalIgnoreCase);
+                c = c[i];
                 if (c == null)
                     throw new JTokenAccessException(string.Format("Path '{0}' doesn't exist", path));
             }

@@ -110,26 +110,6 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void JToken_At_is_case_insensitive()
-        {
-            var j = JObject.Parse(@"{
-                'keyOne': {'keyTwo': {'keyThree': 'v3'}}
-            }");
-
-            var k1 = j["keyOne"];
-            var k2 = j["keyOne"]["keyTwo"];
-            var k3 = j["keyOne"]["keyTwo"]["keyThree"];
-
-            Assert.That(j.At("KEYone"), Is.EqualTo(k1));
-            Assert.That(j.At("keyONE").At("KEYtwo"), Is.EqualTo(k2));
-            Assert.That(j.At("KEyonE").At("keyTWO").At("KEYthree"), Is.EqualTo(k3));
-
-            Assert.That(j.At("keyone").At("KEYTWO/kEYtHREE"), Is.EqualTo(k3));
-            Assert.That(j.At("KEYONE/keytwo").At("KeyThree"), Is.EqualTo(k3));
-            Assert.That(j.At("keyone/KEYTWO/keyTHREE"), Is.EqualTo(k3));
-        }
-
-        [Test]
         public void JToken_At_throws_on_invalid_path()
         {
             var j = JObject.Parse(@"{
