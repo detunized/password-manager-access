@@ -174,7 +174,7 @@ namespace TrueKey
             {
                 return j.StringAt(path);
             }
-            catch (Exception)
+            catch (JTokenAccessException)
             {
                 return defaultValue;
             }
@@ -195,7 +195,7 @@ namespace TrueKey
             {
                 return j.IntAt(path);
             }
-            catch (Exception)
+            catch (JTokenAccessException)
             {
                 return defaultValue;
             }
@@ -216,7 +216,7 @@ namespace TrueKey
             {
                 return j.BoolAt(path);
             }
-            catch (Exception)
+            catch (JTokenAccessException)
             {
                 return defaultValue;
             }
