@@ -14,7 +14,7 @@ namespace OnePassword
             _http = new JsonHttpClient(http, ApiUrl);
         }
 
-        public Remote.Session StartNewSession(Remote.ClientInfo clientInfo)
+        public Session StartNewSession(Remote.ClientInfo clientInfo)
         {
             var endpoint = string.Join("/", "auth", clientInfo.Username, clientInfo.Uuid, "-");
             var response = _http.Get(endpoint);
@@ -22,7 +22,7 @@ namespace OnePassword
             switch (status)
             {
             case "ok":
-                return new Remote.Session(response["sessionID"].ToString());
+                return new Session(response["sessionID"].ToString());
             default:
                 // TODO: Use custom exception
                 throw new InvalidOperationException(

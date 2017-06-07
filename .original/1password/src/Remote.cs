@@ -25,16 +25,6 @@ namespace OnePassword
             }
         }
 
-        public class Session
-        {
-            public readonly string Id;
-
-            public Session(string id)
-            {
-                Id = id;
-            }
-        }
-
         public static Session StartNewSession(ClientInfo clientInfo, IHttpClient http)
         {
             var response = Get(http, new[] {"auth", clientInfo.Username, clientInfo.Uuid, "-"});
