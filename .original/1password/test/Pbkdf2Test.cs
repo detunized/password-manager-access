@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace OnePassword.Test
 {
     [TestFixture]
-    class Pbkdf2Test
+    public class Pbkdf2Test
     {
         [Test]
         public void Generate_sha_1_returns_correct_result()

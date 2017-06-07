@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace OnePassword.Test
 {
     [TestFixture]
-    class ExtensionsTest
+    public class ExtensionsTest
     {
         //
         // string

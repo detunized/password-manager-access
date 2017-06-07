@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace OnePassword.Test
 {
     [TestFixture]
-    class ExceptionsTest
+    public class ExceptionsTest
     {
         [Test]
         public void BaseException_properties_are_set()
