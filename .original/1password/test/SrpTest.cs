@@ -3,7 +3,6 @@
 
 using System;
 using System.Numerics;
-using Moq;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -45,9 +44,7 @@ namespace OnePassword.Test
         [Test]
         public void ExchangeAForB_returns_B()
         {
-            var http = JsonHttpClientTest.SetupPostWithFixture("exchange-a-for-b-response");
-            var srp = new Srp(new JsonHttpClient(http.Object, ""));
-            var b = srp.ExchangeAForB(0, new Session("TOZVTFIFBZGFDFNE5KSZFY7EZY"));
+            var b = PerformExchange("exchange-a-for-b-response");
 
             Assert.That(b, Is.GreaterThan(BigInteger.Zero));
             Assert.That(b.ToByteArray().Length, Is.AtLeast(20));
@@ -56,9 +53,7 @@ namespace OnePassword.Test
         [Test]
         public void ExchangeAForB_handles_number_with_leading_ff()
         {
-            var http = JsonHttpClientTest.SetupPostWithFixture("exchange-a-for-b-with-ff-response");
-            var srp = new Srp(new JsonHttpClient(http.Object, ""));
-            var b = srp.ExchangeAForB(0, new Session("TOZVTFIFBZGFDFNE5KSZFY7EZY"));
+            var b = PerformExchange("exchange-a-for-b-with-ff-response");
 
             Assert.That(b, Is.GreaterThan(BigInteger.Zero));
             Assert.That(b.ToByteArray().Length, Is.AtLeast(20));
@@ -67,11 +62,30 @@ namespace OnePassword.Test
         [Test]
         public void ExchangeAForB_throws_on_mismatching_session_id()
         {
-            var http = JsonHttpClientTest.SetupPostWithFixture("exchange-a-for-b-response");
-            var srp = new Srp(new JsonHttpClient(http.Object, ""));
-
-            Assert.That(() => srp.ExchangeAForB(0, new Session("incorrect-session-id")),
+            Assert.That(() => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"),
                         Throws.TypeOf<InvalidOperationException>());
+        }
+
+        //
+        // Data
+        //
+
+        private const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
+
+
+        //
+        // Helpers
+        //
+
+        private static BigInteger PerformExchange(string fixture, string sessionId = SessionId)
+        {
+            return SetupSrpForExchange(fixture).ExchangeAForB(0, new Session(sessionId));
+        }
+
+        private static Srp SetupSrpForExchange(string fixture)
+        {
+            var http = JsonHttpClientTest.SetupPostWithFixture(fixture);
+            return new Srp(new JsonHttpClient(http.Object, ""));
         }
     }
 }
