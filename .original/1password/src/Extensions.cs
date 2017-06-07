@@ -117,7 +117,7 @@ namespace OnePassword
             {
                 return j.StringAt(path);
             }
-            catch (Exception)
+            catch (JTokenAccessException)
             {
                 return defaultValue;
             }
@@ -138,7 +138,7 @@ namespace OnePassword
             {
                 return j.IntAt(path);
             }
-            catch (Exception)
+            catch (JTokenAccessException)
             {
                 return defaultValue;
             }
@@ -159,7 +159,7 @@ namespace OnePassword
             {
                 return j.BoolAt(path);
             }
-            catch (Exception)
+            catch (JTokenAccessException)
             {
                 return defaultValue;
             }
