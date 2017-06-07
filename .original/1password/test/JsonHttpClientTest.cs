@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -87,7 +88,12 @@ namespace OnePassword.Test
             {"Header3", "Blah-blah-blah-blah, blah, blah!"},
         };
 
-        private Mock<IHttpClient> SetupGet(string response = Response)
+        //
+        // Public helpers
+        //
+
+        // TODO: Remove copy paste and factor out network testing helpers
+        public static Mock<IHttpClient> SetupGet(string response = Response)
         {
             var mock = new Mock<IHttpClient>();
             mock.Setup(x => x.Get(It.IsAny<string>(),
@@ -96,7 +102,12 @@ namespace OnePassword.Test
             return mock;
         }
 
-        private Mock<IHttpClient> SetupPost(string response = Response)
+        public static Mock<IHttpClient> SetupPostWithFixture(string name)
+        {
+            return SetupPost(ReadFixture(name));
+        }
+
+        public static Mock<IHttpClient> SetupPost(string response = Response)
         {
             var mock = new Mock<IHttpClient>();
             mock.Setup(x => x.Post(It.IsAny<string>(),
@@ -104,6 +115,15 @@ namespace OnePassword.Test
                                    It.IsAny<Dictionary<string, string>>()))
                 .Returns(response);
             return mock;
+        }
+
+        //
+        // Private
+        //
+
+        private static string ReadFixture(string name)
+        {
+            return File.ReadAllText(string.Format("Fixtures/{0}.json", name));
         }
 
         private static bool AreEqual<TK, TV>(Dictionary<TK, TV> a, Dictionary<TK, TV> b)
