@@ -7,6 +7,8 @@ namespace OnePassword
 {
     public interface IHttpClient
     {
+        // System.Net.WebException is expected to be thrown on errors
         string Get(string url, Dictionary<string, string> headers);
+        string Post(string url, string content, Dictionary<string, string> headers);
     }
 }

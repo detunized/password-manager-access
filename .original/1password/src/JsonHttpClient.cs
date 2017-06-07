@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace OnePassword
@@ -14,6 +15,10 @@ namespace OnePassword
             _http = http;
         }
 
+        //
+        // Get
+        //
+
         public JObject Get(string[] url)
         {
             return Get(url, new Dictionary<string, string>());
@@ -21,7 +26,6 @@ namespace OnePassword
 
         public JObject Get(string[] url, Dictionary<string, string> headers)
         {
-            // TODO: Escape url components
             return Get(string.Join("/", url), headers);
         }
 
@@ -45,6 +49,27 @@ namespace OnePassword
                         Func<JObject, T> parse)
         {
             return parse(Get(url, headers));
+        }
+
+        //
+        // Post
+        //
+
+        public JObject Post(string url, Dictionary<string, object> parameters)
+        {
+            return Post(url, parameters, new Dictionary<string, string>());
+        }
+
+        public JObject Post(string url,
+                            Dictionary<string, object> parameters,
+                            Dictionary<string, string> headers)
+        {
+            var jsonHeaders = new Dictionary<string, string>(headers);
+            jsonHeaders["Content-Type"] = "application/json; charset=UTF-8";
+
+            return JObject.Parse(_http.Post(url,
+                                            JsonConvert.SerializeObject(parameters),
+                                            jsonHeaders));
         }
 
         private readonly IHttpClient _http;
