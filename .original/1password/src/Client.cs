@@ -7,14 +7,17 @@ namespace OnePassword
 {
     internal class Client
     {
+        public const string ApiUrl = "https://my.1password.com/api/v1";
+
         public Client(IHttpClient http)
         {
-            _http = new JsonHttpClient(http);
+            _http = new JsonHttpClient(http, ApiUrl);
         }
 
         public Remote.Session StartNewSession(Remote.ClientInfo clientInfo)
         {
-            var response = _http.Get(new[] {"auth", clientInfo.Username, clientInfo.Uuid, "-"});
+            var endpoint = string.Join("/", "auth", clientInfo.Username, clientInfo.Uuid, "-");
+            var response = _http.Get(endpoint);
             var status = response["status"].ToString();
             switch (status)
             {

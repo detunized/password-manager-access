@@ -16,19 +16,7 @@ namespace OnePassword.Test
         public void Get_makes_GET_request_with_headers()
         {
             var http = SetupGet();
-            var response = new JsonHttpClient(http.Object).Get(Url, Headers);
-
-            http.Verify(x => x.Get(It.Is<string>(s => s == Url),
-                                   It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
-
-            Assert.That(JToken.DeepEquals(response, ResponseJson));
-        }
-
-        [Test]
-        public void Get_makes_GET_request_with_join_url_and_headers()
-        {
-            var http = SetupGet();
-            var response = new JsonHttpClient(http.Object).Get(UrlComponents, Headers);
+            var response = new JsonHttpClient(http.Object, BaseUrl).Get(Endpoint, Headers);
 
             http.Verify(x => x.Get(It.Is<string>(s => s == Url),
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
@@ -50,7 +38,7 @@ namespace OnePassword.Test
             var encodedData = "{'number':13,'string':'hi','array':[null,1.0,2,'three'],'object':{'a':1,'b':'two'}}"
                 .Replace('\'', '"');
 
-            var response = new JsonHttpClient(http.Object).Post(Url, data, Headers);
+            var response = new JsonHttpClient(http.Object, BaseUrl).Post(Endpoint, data, Headers);
 
             http.Verify(x => x.Post(It.Is<string>(s => s == Url),
                                     It.Is<string>(s => s == encodedData),
@@ -59,10 +47,24 @@ namespace OnePassword.Test
             Assert.That(JToken.DeepEquals(response, ResponseJson));
         }
 
+        [Test]
+        public void MakeUrl_joins_url_with_slashes()
+        {
+            string[] bases = {"http://all.your.base", "http://all.your.base/"};
+            string[] endpoints = {"are/belong/to/us", "/are/belong/to/us"};
+
+            foreach (var b in bases)
+                foreach (var e in endpoints)
+                    Assert.That(new JsonHttpClient(null, b).MakeUrl(e),
+                                Is.EqualTo("http://all.your.base/are/belong/to/us"));
+        }
+
         //
         // Helper
         //
 
+        private const string BaseUrl = "https://whats.up";
+        private const string Endpoint = "one/two/three";
         private const string Url = "https://whats.up/one/two/three";
         private static readonly string[] UrlComponents = {"https://whats.up", "one", "two", "three"};
 
@@ -71,6 +73,7 @@ namespace OnePassword.Test
 
         private static readonly Dictionary<string, string> Headers = new Dictionary<string, string>()
         {
+            {"Content-Type", "Should be overwritten"},
             {"Header1", "Blah-blah"},
             {"Header2", "Blah-blah-blah"},
             {"Header3", "Blah-blah-blah-blah, blah, blah!"},
