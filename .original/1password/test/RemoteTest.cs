@@ -31,11 +31,10 @@ namespace OnePassword.Test
 
         private const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
 
-        private static readonly Remote.ClientInfo ClientInfo =
-            new Remote.ClientInfo(username: Username,
-                                  password: Password,
-                                  accountKey: AccountKey,
-                                  uuid: Uuid);
+        private static readonly ClientInfo ClientInfo = new ClientInfo(username: Username,
+                                                                       password: Password,
+                                                                       accountKey: AccountKey,
+                                                                       uuid: Uuid);
 
         //
         // Helpers

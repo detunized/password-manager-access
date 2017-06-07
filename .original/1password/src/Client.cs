@@ -14,7 +14,7 @@ namespace OnePassword
             _http = new JsonHttpClient(http, ApiUrl);
         }
 
-        public Session StartNewSession(Remote.ClientInfo clientInfo)
+        public Session StartNewSession(ClientInfo clientInfo)
         {
             var endpoint = string.Join("/", "auth", clientInfo.Username, clientInfo.Uuid, "-");
             var response = _http.Get(endpoint);

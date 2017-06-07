@@ -9,22 +9,6 @@ namespace OnePassword
 {
     internal static class Remote
     {
-        public class ClientInfo
-        {
-            public readonly string Username;
-            public readonly string Password;
-            public readonly string AccountKey;
-            public readonly string Uuid;
-
-            public ClientInfo(string username, string password, string accountKey, string uuid)
-            {
-                Username = username;
-                Password = password;
-                AccountKey = accountKey;
-                Uuid = uuid;
-            }
-        }
-
         public static Session StartNewSession(ClientInfo clientInfo, IHttpClient http)
         {
             var response = Get(http, new[] {"auth", clientInfo.Username, clientInfo.Uuid, "-"});
