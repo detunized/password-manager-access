@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace OnePassword.Test
 {
     [TestFixture]
-    class RemoteTest
+    public class RemoteTest
     {
         [Test]
         public void StartNewSession_returns_session()

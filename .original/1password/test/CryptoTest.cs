@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace OnePassword.Test
 {
     [TestFixture]
-    internal class CryptoTest
+    public class CryptoTest
     {
         [Test]
         public void RandomBytes_returns_array_of_requested_size()
