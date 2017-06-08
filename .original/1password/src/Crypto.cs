@@ -16,5 +16,11 @@ namespace OnePassword
                 return bytes;
             }
         }
+
+        internal static byte[] Sha256(string message)
+        {
+            using (var sha = new SHA256Managed())
+                return sha.ComputeHash(message.ToBytes());
+        }
     }
 }
