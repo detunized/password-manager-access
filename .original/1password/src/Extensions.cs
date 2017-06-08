@@ -18,9 +18,29 @@ namespace OnePassword
             return Encoding.UTF8.GetBytes(s);
         }
 
+        // Handles URL-safe, regular and mixed Base64 with or without padding.
         public static byte[] Decode64(this string s)
         {
-            return Convert.FromBase64String(s);
+            // Remove any padding.
+            var withoutPadding = s.TrimEnd('=');
+
+            // Re-pad correctly
+            var withPadding = withoutPadding;
+            switch (withoutPadding.Length % 4)
+            {
+            case 2:
+                withPadding += "==";
+                break;
+            case 3:
+                withPadding += "=";
+                break;
+            }
+
+            // Convert to regular Base64
+            var regularBase64 = withPadding.Replace('-', '+').Replace('_', '/');
+
+            // Shouldn't fail anymore base of the padding or URL-safe.
+            return Convert.FromBase64String(regularBase64);
         }
 
         //

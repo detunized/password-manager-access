@@ -32,6 +32,35 @@ namespace OnePassword.Test
             Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
         }
 
+        [Test]
+        public void String_Decode64_decodes_base64_without_padding()
+        {
+            Assert.That("".Decode64(), Is.EqualTo(new byte[] { }));
+            Assert.That("YQ".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
+            Assert.That("YWI".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
+            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
+            Assert.That("YWJjZA".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+        }
+
+        [Test]
+        public void String_Decode64_decodes_incorrectly_padded_base64()
+        {
+            Assert.That("==".Decode64(), Is.EqualTo(new byte[] { }));
+            Assert.That("YQ=".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
+            Assert.That("YWI==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
+            Assert.That("YWJj=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
+            Assert.That("YWJjZA===".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+        }
+
+        [Test]
+        public void String_Decode64_decodes_url_safe_base64()
+        {
+            Assert.That("++__".Decode64(), Is.EqualTo(new byte[] { 0xFB, 0xEF, 0xFF }));
+            Assert.That("+-_/".Decode64(), Is.EqualTo(new byte[] { 0xFB, 0xEF, 0xFF }));
+            Assert.That("++--".Decode64(), Is.EqualTo(new byte[] { 0xFB, 0xEF, 0xBE }));
+            Assert.That("+a_c".Decode64(), Is.EqualTo(new byte[] { 0xF9, 0xAF, 0xDC }));
+        }
+
         //
         // byte[]
         //
