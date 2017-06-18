@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -22,6 +23,29 @@ namespace OnePassword.Test
             // Only to see we didn't mess something simple up.
             Assert.That(Crypto.Sha256("message"),
                         Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
+        }
+
+        [Test]
+        public void Hkdf_returns_derived_key()
+        {
+            Assert.That(Crypto.Hkdf("PBES2g-HS256", "ikm".ToBytes(), "salt".ToBytes()),
+                        Is.EqualTo("UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64()));
+        }
+
+        [Test]
+        public void Pbes2_returns_derived_key()
+        {
+            Assert.That(Crypto.Pbes2("PBES2g-HS256", "password", "salt".ToBytes(), 100),
+                        Is.EqualTo("B-aZcYDPfxKQTwQQDUBdNIiP32KvbVBqDswjsZb-mdg".Decode64()));
+            Assert.That(Crypto.Pbes2("PBES2g-HS512", "password", "salt".ToBytes(), 100),
+                        Is.EqualTo("_vcnaxBwQKCnE7y-yf0-GRzGFTJJ4kWj4aIgh9vmFgY".Decode64()));
+        }
+
+        [Test]
+        public void Pbes2_throws_on_unsupported_method()
+        {
+            Assert.That(() => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
+                        Throws.TypeOf<InvalidOperationException>());
         }
     }
 }
