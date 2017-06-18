@@ -12,7 +12,7 @@ namespace OnePassword
         public static Session StartNewSession(ClientInfo clientInfo, IHttpClient http)
         {
             var response = Get(http, new[] {"auth", clientInfo.Username, clientInfo.Uuid, "-"});
-            var status = response["status"].ToString();
+            var status = response.StringAt("status");
             switch (status)
             {
             case "ok":

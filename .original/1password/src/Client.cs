@@ -18,7 +18,7 @@ namespace OnePassword
         {
             var endpoint = string.Join("/", "auth", clientInfo.Username, clientInfo.Uuid, "-");
             var response = _http.Get(endpoint);
-            var status = response["status"].ToString();
+            var status = response.StringAt("status");
             switch (status)
             {
             case "ok":

@@ -60,13 +60,13 @@ namespace OnePassword
                                           {"userA", sharedA.ToString("x")}
                                       });
 
-            if (response["sessionID"].ToString() != session.Id)
+            if (response.StringAt("sessionID") != session.Id)
                 throw new InvalidOperationException("Invalid response: session ID doesn't match");
 
             // Adding leading '0' is important to trick .NET into treating any number
             // as positive, like OpenSSL does. Otherwise if the number starts with a 
             // byte greater or equal to 0x80 it will be negative.
-            return BigInteger.Parse('0' + response["userB"].ToString(), NumberStyles.HexNumber);
+            return BigInteger.Parse('0' + response.StringAt("userB"), NumberStyles.HexNumber);
         }
 
         internal void ValidateB(BigInteger sharedB)
