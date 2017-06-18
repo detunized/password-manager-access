@@ -3,6 +3,7 @@
 
 using System;
 using System.Numerics;
+using Newtonsoft.Json;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -71,7 +72,13 @@ namespace OnePassword.Test
         //
 
         private const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
-
+        private static readonly Session Session = new Session(id: SessionId,
+                                                              keyFormat: "A3",
+                                                              keyUuid: "FRN8GF",
+                                                              srpMethod: "SRPg-4096",
+                                                              keyMethod: "PBES2g-HS256",
+                                                              iterations: 100000,
+                                                              salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64());
 
         //
         // Helpers
@@ -79,7 +86,7 @@ namespace OnePassword.Test
 
         private static BigInteger PerformExchange(string fixture, string sessionId = SessionId)
         {
-            return SetupSrpForExchange(fixture).ExchangeAForB(0, new Session(sessionId));
+            return SetupSrpForExchange(fixture).ExchangeAForB(0, Session);
         }
 
         private static Srp SetupSrpForExchange(string fixture)

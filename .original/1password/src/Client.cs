@@ -22,7 +22,7 @@ namespace OnePassword
             switch (status)
             {
             case "ok":
-                return new Session(response["sessionID"].ToString());
+                return Session.Parse(response);
             default:
                 // TODO: Use custom exception
                 throw new InvalidOperationException(
