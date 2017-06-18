@@ -72,13 +72,6 @@ namespace OnePassword.Test
         //
 
         private const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
-        private static readonly Session Session = new Session(id: SessionId,
-                                                              keyFormat: "A3",
-                                                              keyUuid: "FRN8GF",
-                                                              srpMethod: "SRPg-4096",
-                                                              keyMethod: "PBES2g-HS256",
-                                                              iterations: 100000,
-                                                              salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64());
 
         //
         // Helpers
@@ -86,13 +79,24 @@ namespace OnePassword.Test
 
         private static BigInteger PerformExchange(string fixture, string sessionId = SessionId)
         {
-            return SetupSrpForExchange(fixture).ExchangeAForB(0, Session);
+            return SetupSrpForExchange(fixture).ExchangeAForB(0, MakeSession(sessionId));
         }
 
         private static Srp SetupSrpForExchange(string fixture)
         {
             var http = JsonHttpClientTest.SetupPostWithFixture(fixture);
             return new Srp(new JsonHttpClient(http.Object, ""));
+        }
+
+        private static Session MakeSession(string id)
+        {
+            return new Session(id: id,
+                               keyFormat: "A3",
+                               keyUuid: "FRN8GF",
+                               srpMethod: "SRPg-4096",
+                               keyMethod: "PBES2g-HS256",
+                               iterations: 100000,
+                               salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64());
         }
     }
 }
