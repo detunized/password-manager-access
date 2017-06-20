@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Linq;
+using System.Numerics;
 using System.Text;
 using Newtonsoft.Json.Linq;
 
@@ -99,6 +101,13 @@ namespace OnePassword
         public static string ToBase64(this byte[] x)
         {
             return Convert.ToBase64String(x);
+        }
+
+        public static BigInteger ToBigInt(this byte[] x)
+        {
+            // Append a zero to prevent .NET treating this number as negative when
+            // the last byte is >= 0x80.
+            return new BigInteger(x.Concat(new byte[] { 0 }).ToArray());
         }
 
         //

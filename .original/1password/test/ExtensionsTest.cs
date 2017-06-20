@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -113,6 +114,16 @@ namespace OnePassword.Test
             Assert.That(new byte[] { 0x61, 0x62 }.ToBase64(), Is.EqualTo("YWI="));
             Assert.That(new byte[] { 0x61, 0x62, 0x63 }.ToBase64(), Is.EqualTo("YWJj"));
             Assert.That(new byte[] { 0x61, 0x62, 0x63, 0x64 }.ToBase64(), Is.EqualTo("YWJjZA=="));
+        }
+
+        [Test]
+        public void ByteArray_ToBigInt_returns_BigInteger()
+        {
+            Assert.That(new byte[] {}.ToBigInt(), Is.EqualTo(BigInteger.Zero));
+            Assert.That(new byte[] {0}.ToBigInt(), Is.EqualTo(BigInteger.Zero));
+            Assert.That(new byte[] {0xFF}.ToBigInt(), Is.EqualTo(new BigInteger(255)));
+            Assert.That(new byte[] {0xEF, 0xBE, 0xAD, 0xDE}.ToBigInt(),
+                        Is.EqualTo(new BigInteger(0xDEADBEEF)));
         }
 
         //
