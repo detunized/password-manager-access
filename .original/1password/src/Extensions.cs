@@ -20,6 +20,33 @@ namespace OnePassword
             return Encoding.UTF8.GetBytes(s);
         }
 
+        public static byte[] DecodeHex(this string s)
+        {
+            if (s.Length % 2 != 0)
+                throw new ArgumentException("Input length must be multiple of 2");
+
+            var bytes = new byte[s.Length / 2];
+            for (var i = 0; i < s.Length / 2; ++i)
+            {
+                var b = 0;
+                for (var j = 0; j < 2; ++j)
+                {
+                    b <<= 4;
+                    var c = char.ToLower(s[i * 2 + j]);
+                    if (c >= '0' && c <= '9')
+                        b |= c - '0';
+                    else if (c >= 'a' && c <= 'f')
+                        b |= c - 'a' + 10;
+                    else
+                        throw new ArgumentException("Input contains invalid characters");
+                }
+
+                bytes[i] = (byte)b;
+            }
+
+            return bytes;
+        }
+
         // Handles URL-safe, regular and mixed Base64 with or without padding.
         public static byte[] Decode64(this string s)
         {
@@ -69,33 +96,6 @@ namespace OnePassword
             }
 
             return new string(hex);
-        }
-
-        public static byte[] DecodeHex(this string s)
-        {
-            if (s.Length % 2 != 0)
-                throw new ArgumentException("Input length must be multple of 2");
-
-            var bytes = new byte[s.Length / 2];
-            for (var i = 0; i < s.Length / 2; ++i)
-            {
-                var b = 0;
-                for (var j = 0; j < 2; ++j)
-                {
-                    b <<= 4;
-                    var c = char.ToLower(s[i * 2 + j]);
-                    if (c >= '0' && c <= '9')
-                        b |= c - '0';
-                    else if (c >= 'a' && c <= 'f')
-                        b |= c - 'a' + 10;
-                    else
-                        throw new ArgumentException("Input contains invalid characters");
-                }
-
-                bytes[i] = (byte)b;
-            }
-
-            return bytes;
         }
 
         public static string ToBase64(this byte[] x)

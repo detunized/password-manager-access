@@ -24,7 +24,33 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void String_Decode64_decodes_base64()
+        public void String_DecodeHex()
+        {
+            foreach (var i in HexToBytes)
+            {
+                Assert.That(i.Key.ToLower().DecodeHex(), Is.EqualTo(i.Value));
+                Assert.That(i.Key.ToUpper().DecodeHex(), Is.EqualTo(i.Value));
+            }
+        }
+
+        [Test]
+        public void String_DecodeHex_throws_on_odd_length()
+        {
+            Assert.That(() => "0".DecodeHex(),
+                        Throws.TypeOf<ArgumentException>()
+                            .And.Message.EqualTo("Input length must be multiple of 2"));
+        }
+
+        [Test]
+        public void String_DecodeHex_throws_on_non_hex_characters()
+        {
+            Assert.That(() => "xz".DecodeHex(),
+                        Throws.TypeOf<ArgumentException>()
+                            .And.Message.EqualTo("Input contains invalid characters"));
+        }
+
+        [Test]
+        public void String_String_Decode64_decodes_base64()
         {
             Assert.That("".Decode64(), Is.EqualTo(new byte[] { }));
             Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
@@ -78,32 +104,6 @@ namespace OnePassword.Test
         {
             Assert.That(new byte[] { }.ToHex(), Is.EqualTo(""));
             Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
-        }
-
-        [Test]
-        public void DecodeHex()
-        {
-            foreach (var i in HexToBytes)
-            {
-                Assert.That(i.Key.ToLower().DecodeHex(), Is.EqualTo(i.Value));
-                Assert.That(i.Key.ToUpper().DecodeHex(), Is.EqualTo(i.Value));
-            }
-        }
-
-        [Test]
-        public void DecodeHex_throws_on_odd_length()
-        {
-            Assert.That(() => "0".DecodeHex(),
-                        Throws.TypeOf<ArgumentException>()
-                            .And.Message.EqualTo("Input length must be multple of 2"));
-        }
-
-        [Test]
-        public void DecodeHex_throws_on_non_hex_characters()
-        {
-            Assert.That(() => "xz".DecodeHex(),
-                        Throws.TypeOf<ArgumentException>()
-                            .And.Message.EqualTo("Input contains invalid characters"));
         }
 
         [Test]
