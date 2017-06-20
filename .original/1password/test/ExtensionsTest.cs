@@ -88,6 +88,24 @@ namespace OnePassword.Test
             Assert.That("+a_c".Decode64(), Is.EqualTo(new byte[] { 0xF9, 0xAF, 0xDC }));
         }
 
+        [Test]
+        public void String_ToBigInt_returns_BigInteger()
+        {
+            Assert.That("".ToBigInt(), Is.EqualTo(BigInteger.Zero));
+            Assert.That("0".ToBigInt(), Is.EqualTo(BigInteger.Zero));
+            Assert.That("0FF".ToBigInt(), Is.EqualTo(new BigInteger(255)));
+            Assert.That("0DEADBEEF".ToBigInt(), Is.EqualTo(new BigInteger(0xDEADBEEF)));
+        }
+
+        [Test]
+        public void String_ToBigInt_returns_positive_BigInteger()
+        {
+            Assert.That("7F".ToBigInt(), Is.EqualTo(new BigInteger(127)));
+            Assert.That("80".ToBigInt(), Is.EqualTo(new BigInteger(128)));
+            Assert.That("FF".ToBigInt(), Is.EqualTo(new BigInteger(255)));
+            Assert.That("DEADBEEF".ToBigInt(), Is.EqualTo(new BigInteger(0xDEADBEEF)));
+        }
+
         //
         // byte[]
         //

@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -72,6 +73,14 @@ namespace OnePassword
             return Convert.FromBase64String(regularBase64);
         }
 
+        public static BigInteger ToBigInt(this string s)
+        {
+            // Adding a leading '0' is important to trick .NET into treating any number
+            // as positive, like OpenSSL does. Otherwise if the number starts with a
+            // byte greater or equal to 0x80 it will be negative.
+            return BigInteger.Parse('0' + s, NumberStyles.HexNumber);
+        }
+
         //
         // byte[]
         //
@@ -105,8 +114,9 @@ namespace OnePassword
 
         public static BigInteger ToBigInt(this byte[] x)
         {
-            // Append a zero to prevent .NET treating this number as negative when
-            // the last byte is >= 0x80.
+            // Adding a trailing 0 is important to trick .NET into treating any number
+            // as positive, like OpenSSL does. Otherwise if the last byte is greater or
+            // equal to 0x80 it will be negative.
             return new BigInteger(x.Concat(new byte[] { 0 }).ToArray());
         }
 
