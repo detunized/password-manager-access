@@ -114,10 +114,11 @@ namespace OnePassword
 
         public static BigInteger ToBigInt(this byte[] x)
         {
+            // Need to reverse, since we're trying to match OpenSSL conventions.
             // Adding a trailing 0 is important to trick .NET into treating any number
             // as positive, like OpenSSL does. Otherwise if the last byte is greater or
             // equal to 0x80 it will be negative.
-            return new BigInteger(x.Concat(new byte[] { 0 }).ToArray());
+            return new BigInteger(x.Reverse().Concat(new byte[] { 0 }).ToArray());
         }
 
         //

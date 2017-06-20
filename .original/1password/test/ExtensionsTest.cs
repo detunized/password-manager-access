@@ -140,7 +140,7 @@ namespace OnePassword.Test
             Assert.That(new byte[] {}.ToBigInt(), Is.EqualTo(BigInteger.Zero));
             Assert.That(new byte[] {0}.ToBigInt(), Is.EqualTo(BigInteger.Zero));
             Assert.That(new byte[] {0xFF}.ToBigInt(), Is.EqualTo(new BigInteger(255)));
-            Assert.That(new byte[] {0xEF, 0xBE, 0xAD, 0xDE}.ToBigInt(),
+            Assert.That(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}.ToBigInt(),
                         Is.EqualTo(new BigInteger(0xDEADBEEF)));
         }
 
