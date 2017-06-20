@@ -51,15 +51,6 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void ExchangeAForB_handles_number_with_leading_ff()
-        {
-            var b = PerformExchange("exchange-a-for-b-with-ff-response");
-
-            Assert.That(b, Is.GreaterThan(BigInteger.Zero));
-            Assert.That(b.ToByteArray().Length, Is.AtLeast(20));
-        }
-
-        [Test]
         public void ExchangeAForB_throws_on_mismatching_session_id()
         {
             Assert.That(() => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"),
