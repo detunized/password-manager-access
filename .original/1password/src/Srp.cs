@@ -17,9 +17,9 @@ namespace OnePassword
     internal class Srp
     {
         // Returns the session encryption key
-        public static byte[] Perform(JsonHttpClient http, Session session)
+        public static byte[] Perform(JsonHttpClient http, Session session, ClientInfo clientInfo)
         {
-            return new Srp(http).Perform(session);
+            return new Srp(http).Perform(session, clientInfo);
         }
 
         internal Srp(JsonHttpClient http)
@@ -27,22 +27,22 @@ namespace OnePassword
             _http = http;
         }
 
-        internal byte[] Perform(Session session)
+        internal byte[] Perform(Session session, ClientInfo clientInfo)
         {
-            return Perform(session, GenerateSecretA());
+            return Perform(GenerateSecretA(), session, clientInfo);
         }
 
-        internal byte[] Perform(Session session, BigInteger secretA)
+        internal byte[] Perform(BigInteger secretA, Session session, ClientInfo clientInfo)
         {
             var sharedA = ComputeSharedA(secretA);
             var sharedB = ExchangeAForB(sharedA, session);
             ValidateB(sharedB);
-            return ComputeKey();
+            return ComputeKey(secretA, sharedA, sharedB, session, clientInfo);
         }
 
         internal BigInteger GenerateSecretA()
         {
-            return new BigInteger(Crypto.RandomBytes(32));
+            return Crypto.RandomBytes(32).ToBigInt();
         }
 
         internal BigInteger ComputeSharedA(BigInteger secretA)
@@ -53,7 +53,7 @@ namespace OnePassword
         internal BigInteger ExchangeAForB(BigInteger sharedA, Session session)
         {
             var response = _http.Post("userB",
-                                      new Dictionary<string, object>()
+                                      new Dictionary<string, object>
                                       {
                                           {"sessionID", session.Id},
                                           {"userA", sharedA.ToString("x")}
@@ -71,10 +71,45 @@ namespace OnePassword
                 throw new InvalidOperationException("B validation failed");
         }
 
-        internal byte[] ComputeKey()
+        internal byte[] ComputeKey(BigInteger secretA,
+                                   BigInteger sharedA,
+                                   BigInteger sharedB,
+                                   Session session,
+                                   ClientInfo clientInfo)
         {
-            // TODO: Implement this
-            return new byte[0];
+            // Some arbitrary crypto computation, variable names don't have much meaning
+            var ab = sharedA.ToString("x") + sharedB.ToString("x");
+            var hashAb = Crypto.Sha256(ab).ToBigInt();
+            var s = session.Id.ToBytes().ToBigInt();
+            var x = ComputeX(session, clientInfo);
+            var y = sharedB - BigInteger.ModPow(SirpG, x, SirpN) * s;
+            var z = BigInteger.ModPow(y, secretA + hashAb * x, SirpN);
+
+            return Crypto.Sha256(z.ToString("x"));
+        }
+
+        internal BigInteger ComputeX(Session session, ClientInfo clientInfo)
+        {
+            var method = session.SrpMethod;
+            var iterations = session.Iterations;
+
+            if (iterations == 0)
+                throw new InvalidOperationException("Not supported yet: 0 iterations");
+
+            if (!method.StartsWith("SRPg-"))
+                throw new InvalidOperationException(
+                    string.Format("Not supported yet: method = '{0}'", method));
+
+            var k1 = Crypto.Hkdf(method: method,
+                                 ikm: session.Salt,
+                                 salt: clientInfo.Username.ToBytes());
+            var k2 = Crypto.Pbes2(method: session.KeyMethod,
+                                  password: clientInfo.Password,
+                                  salt: k1,
+                                  iterations: iterations);
+            var x = AccountKey.Parse(clientInfo.AccountKey).CombineWith(k2);
+
+            return x.ToBigInt();
         }
 
         //
