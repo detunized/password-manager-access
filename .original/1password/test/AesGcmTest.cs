@@ -1,6 +1,8 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
+using System.ComponentModel;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -8,6 +10,10 @@ namespace OnePassword.Test
     [TestFixture]
     public class AesGcmTest
     {
+        //
+        // Encrypt
+        //
+
         [Test]
         public void Encrypt_returns_ciphertext()
         {
@@ -19,6 +25,32 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void Encrypt_throws_on_invalid_key_length()
+        {
+            Assert.That(
+                () => AesGcm.Encrypt(key: new byte[13],
+                                     plaintext: new byte[16],
+                                     iv: new byte[12],
+                                     authData: new byte[0]),
+                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("key must"));
+        }
+
+        [Test]
+        public void Encrypt_throws_on_invalid_iv_length()
+        {
+            Assert.That(
+                () => AesGcm.Encrypt(key: new byte[32],
+                                     plaintext: new byte[16],
+                                     iv: new byte[13],
+                                     authData: new byte[0]),
+                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("iv must"));
+        }
+
+        //
+        // Decrypt
+        //
+
+        [Test]
         public void Decrypt_returns_plaintext()
         {
             foreach (var i in TestCases)
@@ -27,6 +59,67 @@ namespace OnePassword.Test
                 Assert.That(decrypted, Is.EqualTo(i.Plaintext));
             }
         }
+
+        [Test]
+        public void Decrypt_throws_on_invalid_key_length()
+        {
+            Assert.That(
+                () => AesGcm.Decrypt(key: new byte[13],
+                                     ciphertext: new byte[16],
+                                     iv: new byte[12],
+                                     authData: new byte[0]),
+                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("key must"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_invalid_ciphertext_length()
+        {
+            Assert.That(
+                () => AesGcm.Decrypt(key: new byte[32],
+                                     ciphertext: new byte[13],
+                                     iv: new byte[12],
+                                     authData: new byte[0]),
+                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("ciphertext must"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_invalid_iv_length()
+        {
+            Assert.That(
+                () => AesGcm.Decrypt(key: new byte[32],
+                                     ciphertext: new byte[16],
+                                     iv: new byte[13],
+                                     authData: new byte[0]),
+                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("iv must"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_modified_ciphertext()
+        {
+            foreach (var i in TestCases)
+            {
+                // Change the first byte of the ciphertext
+                var modified = Modified(i.CiphertextWithTag, 0);
+                Assert.That(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData),
+                            Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("Auth tag"));
+            }
+        }
+
+        [Test]
+        public void Decrypt_throws_on_modified_tag()
+        {
+            foreach (var i in TestCases)
+            {
+                // Change the last byte in the tag
+                var modified = Modified(i.CiphertextWithTag, -1);
+                Assert.That(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData),
+                            Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("Auth tag"));
+            }
+        }
+
+        //
+        // GHash
+        //
 
         [Test]
         public void GHash_returns_hash()
@@ -163,5 +256,19 @@ namespace OnePassword.Test
                 hashKey: "9a5e559a96459c21e43c0dff0fa426f3",
                 gHash: "177e93a6a2287a8e2d2ec236372101b8"),
         };
+
+        //
+        // Helpers
+        //
+
+        // Negative index to start from the back
+        private static byte[] Modified(byte[] data, int index)
+        {
+            var modified = new byte[data.Length];
+            data.CopyTo(modified, 0);
+            ++modified[index < 0 ? data.Length + index : index];
+
+            return modified;
+        }
     }
 }

@@ -133,6 +133,9 @@ namespace OnePassword
 
         public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] authData)
         {
+            if (key.Length != 32)
+                throw new InvalidOperationException("key must be 32 bytes long");
+
             if (ciphertext.Length < 16)
                 throw new InvalidOperationException("ciphertext must be at least 16 bytes long");
 
