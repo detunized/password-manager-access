@@ -19,14 +19,12 @@ namespace OnePassword
 
         public byte[] Encrypt(byte[] plaintext, byte[] iv)
         {
-            // TODO: Implement this
-            return plaintext;
+            return AesGcm.Encrypt(Key, plaintext, iv, new byte[0]);
         }
 
         public byte[] Decrypt(byte[] ciphertext, byte[] iv)
         {
-            // TODO: Implement this
-            return ciphertext;
+            return AesGcm.Decrypt(Key, ciphertext, iv, new byte[0]);
         }
     }
 }
