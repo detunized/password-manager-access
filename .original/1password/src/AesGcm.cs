@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 
 namespace OnePassword
 {
+    // TODO: Write some comments here. Nothing is obvious in this file.
     class AesGcm
     {
         public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] authData)
