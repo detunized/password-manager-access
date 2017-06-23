@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -11,75 +12,73 @@ namespace OnePassword
     {
         public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] authData)
         {
-            if (key.Length != 32)
-                throw new InvalidOperationException("key must be 32 bytes long");
-
-            if (iv.Length != 12)
-                throw new InvalidOperationException("iv must be 12 bytes long");
-
-            var counter = new byte[16];
-            iv.CopyTo(counter, 0);
-            counter[15] = 1;
-
-            var ciphertext = new byte[plaintext.Length + 16];
-            plaintext.CopyTo(ciphertext, 0);
-
+            var length = plaintext.Length;
+            var ciphertext = new byte[length + 16];
             var hashKey = new byte[16];
             var hashSalt = new byte[16];
 
-            using (var aes = Aes.Create())
-            {
-                aes.Mode = CipherMode.ECB;
-                aes.Key = key;
+            Crypt(key, plaintext, length, iv, authData, ciphertext, hashKey, hashSalt);
 
-                using (var aesEnc = aes.CreateEncryptor())
-                {
-                    aesEnc.TransformBlock(new byte[16], 0, 16, hashKey, 0);
-                    aesEnc.TransformBlock(counter, 0, 16, hashSalt, 0);
-
-                    var block = new byte[16];
-                    for (int i = 0; i < (plaintext.Length + 15) / 16; ++i)
-                    {
-                        IncrementCounter(counter);
-                        aesEnc.TransformBlock(counter, 0, 16, block, 0);
-
-                        for (int j = 0; j < 16; ++j)
-                            ciphertext[i * 16 + j] ^= block[j];
-                    }
-                }
-            }
-
-            for (int i = 0; i < 16; ++i)
-                ciphertext[plaintext.Length + i] = 0;
-
-            var hash = GHash(hashKey, authData, authData.Length, ciphertext, plaintext.Length);
-            hash.CopyTo(ciphertext, plaintext.Length);
-
-            for (int i = 0; i < 16; ++i)
-                ciphertext[plaintext.Length + i] ^= hashSalt[i];
+            // Put the tag at the end of the ciphertext
+            var tag = ComputeTag(hashKey, hashSalt, authData, ciphertext, length);
+            tag.CopyTo(ciphertext, length);
 
             return ciphertext;
         }
 
         public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] authData)
         {
-            if (key.Length != 32)
-                throw new InvalidOperationException("key must be 32 bytes long");
-
             if (ciphertext.Length < 16)
                 throw new InvalidOperationException("ciphertext must be at least 16 bytes long");
+
+            var length = ciphertext.Length - 16;
+            var plaintext = new byte[length];
+            var hashKey = new byte[16];
+            var hashSalt = new byte[16];
+
+            Crypt(key, ciphertext, length, iv, authData, plaintext, hashKey, hashSalt);
+            var tag = ComputeTag(hashKey, hashSalt, authData, ciphertext, length);
+
+            // Timing attack resistant (not that anyone cares in this case) array comparison.
+            // XOR two arrays and bitwise sum up all the bytes. Should evaluate to 0 when
+            // and only when the arrays are the same.
+            int sum = 0;
+            for (int i = 0; i < 16; ++i)
+                sum |= tag[i] ^ ciphertext[length + i];
+
+            if (sum != 0)
+                throw new InvalidOperationException("Auth tag doesn't match");
+
+            return plaintext;
+        }
+
+        //
+        // Internal
+        //
+
+        internal static void Crypt(byte[] key,
+                                   byte[] input,
+                                   int length,
+                                   byte[] iv,
+                                   byte[] authData,
+
+                                   // output
+                                   byte[] output,
+                                   byte[] hashKey,
+                                   byte[] hashSalt)
+        {
+            if (key.Length != 32)
+                throw new InvalidOperationException("key must be 32 bytes long");
 
             if (iv.Length != 12)
                 throw new InvalidOperationException("iv must be 12 bytes long");
 
-            var length = ciphertext.Length - 16;
-            var plaintext = new byte[length];
-            Array.Copy(ciphertext, plaintext, length);
+            Debug.Assert(input.Length >= length);
+            Debug.Assert(output.Length >= length);
+            Debug.Assert(hashKey.Length == 16);
+            Debug.Assert(hashSalt.Length == 16);
 
             var counter = InitializeCounter(iv);
-            var hashKey = new byte[16];
-            var hashSalt = new byte[16];
-
             using (var aes = Aes.Create())
             {
                 aes.Mode = CipherMode.ECB;
@@ -97,24 +96,25 @@ namespace OnePassword
                         aesEnc.TransformBlock(counter, 0, 16, block, 0);
 
                         for (int j = 0; j < Math.Min(length - i, 16); ++j)
-                            plaintext[i + j] ^= block[j];
+                            output[i + j] = (byte)(input[i + j] ^ block[j]);
                     }
                 }
             }
+        }
 
-            var tag = GHash(hashKey, authData, authData.Length, ciphertext, length);
+        internal static byte[] ComputeTag(byte[] hashKey,
+                                          byte[] hashSalt,
+                                          byte[] authData,
+                                          byte[] ciphertext,
+                                          int ciphertextLength)
+        {
+            var tag = GHash(hashKey, authData, authData.Length, ciphertext, ciphertextLength);
+
             for (int i = 0; i < 16; ++i)
                 tag[i] ^= hashSalt[i];
 
-            if (!tag.SequenceEqual(ciphertext.Skip(length).Take(16)))
-                throw new InvalidOperationException("Auth tag doesn't match");
-
-            return plaintext;
+            return tag;
         }
-
-        //
-        // Internal
-        //
 
         internal static byte[] InitializeCounter(byte[] iv)
         {
@@ -127,17 +127,10 @@ namespace OnePassword
 
         internal static void IncrementCounter(byte[] counter)
         {
-            ++counter[15];
-            if (counter[15] == 0)
-            {
-                ++counter[14];
-                if (counter[14] == 0)
-                {
-                    ++counter[13];
-                    if (counter[13] == 0)
-                        ++counter[12];
-                }
-            }
+            if (++counter[15] != 0) return;
+            if (++counter[14] != 0) return;
+            if (++counter[13] != 0) return;
+            ++counter[12];
         }
 
         internal static byte[] GHash(byte[] key,
