@@ -9,7 +9,7 @@ namespace OnePassword.Test
     public class AesGcmTest
     {
         [Test]
-        public void Encrypt()
+        public void Encrypt_returns_ciphertext()
         {
             foreach (var i in TestCases)
             {
@@ -19,7 +19,7 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void Decrypt()
+        public void Decrypt_returns_plaintext()
         {
             foreach (var i in TestCases)
             {
@@ -29,7 +29,7 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void GHash()
+        public void GHash_returns_hash()
         {
             foreach (var i in TestCases)
             {
