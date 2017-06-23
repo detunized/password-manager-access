@@ -2,7 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.ComponentModel;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -132,6 +132,26 @@ namespace OnePassword.Test
                                         i.Ciphertext,
                                         i.Ciphertext.Length);
                 Assert.That(hash, Is.EqualTo(i.GHash));
+            }
+        }
+
+        [Test]
+        public void IncrementCounter_overflows_into_next_byte()
+        {
+            var testCases = new Dictionary<string, string>
+            {
+                {"000000000000000000000000" + "000000ff", "000000000000000000000000" + "00000100"},
+                {"000000000000000000000000" + "0000ffff", "000000000000000000000000" + "00010000"},
+                {"000000000000000000000000" + "00ffffff", "000000000000000000000000" + "01000000"},
+                {"000000000000000000000000" + "ffffffff", "000000000000000000000000" + "00000000"},
+            };
+
+            foreach (var i in testCases)
+            {
+                var counter = i.Key.DecodeHex();
+                AesGcm.IncrementCounter(counter);
+
+                Assert.That(counter, Is.EqualTo(i.Value.DecodeHex()));
             }
         }
 
