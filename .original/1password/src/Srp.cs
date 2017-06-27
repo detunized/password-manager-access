@@ -17,7 +17,7 @@ namespace OnePassword
     internal class Srp
     {
         // Returns the session encryption key
-        public static byte[] Perform(JsonHttpClient http, Session session, ClientInfo clientInfo)
+        public static byte[] Perform(ClientInfo clientInfo, Session session, JsonHttpClient http)
         {
             return new Srp(http).Perform(session, clientInfo);
         }

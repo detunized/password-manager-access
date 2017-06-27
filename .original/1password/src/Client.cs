@@ -20,7 +20,7 @@ namespace OnePassword
             var session = StartNewSession(clientInfo);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(_http, session, clientInfo);
+            var sessionKey = Srp.Perform(clientInfo, session, _http);
 
             return new Vault();
         }
