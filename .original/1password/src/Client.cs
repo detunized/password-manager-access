@@ -14,7 +14,7 @@ namespace OnePassword
             _http = new JsonHttpClient(http, ApiUrl);
         }
 
-        public Vault OpenVault(ClientInfo clientInfo, IHttpClient http)
+        public Vault OpenVault(ClientInfo clientInfo)
         {
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo);
