@@ -78,26 +78,22 @@ namespace OnePassword
             Debug.Assert(hashKey.Length == 16);
             Debug.Assert(hashSalt.Length == 16);
 
-            var counter = InitializeCounter(iv);
-            using (var aes = Aes.Create())
+            using (var aes = new AesManaged { Mode = CipherMode.ECB, Key = key })
+            using (var aesEnc = aes.CreateEncryptor())
             {
-                aes.Mode = CipherMode.ECB;
-                aes.Key = key;
+                var counter = InitializeCounter(iv);
 
-                using (var aesEnc = aes.CreateEncryptor())
+                aesEnc.TransformBlock(new byte[16], 0, 16, hashKey, 0);
+                aesEnc.TransformBlock(counter, 0, 16, hashSalt, 0);
+
+                var block = new byte[16];
+                for (int i = 0; i < length; i += 16)
                 {
-                    aesEnc.TransformBlock(new byte[16], 0, 16, hashKey, 0);
-                    aesEnc.TransformBlock(counter, 0, 16, hashSalt, 0);
+                    IncrementCounter(counter);
+                    aesEnc.TransformBlock(counter, 0, 16, block, 0);
 
-                    var block = new byte[16];
-                    for (int i = 0; i < length; i += 16)
-                    {
-                        IncrementCounter(counter);
-                        aesEnc.TransformBlock(counter, 0, 16, block, 0);
-
-                        for (int j = 0; j < Math.Min(length - i, 16); ++j)
-                            output[i + j] = (byte)(input[i + j] ^ block[j]);
-                    }
+                    for (int j = 0; j < Math.Min(length - i, 16); ++j)
+                        output[i + j] = (byte)(input[i + j] ^ block[j]);
                 }
             }
         }
