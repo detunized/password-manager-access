@@ -3,7 +3,7 @@
 
 namespace OnePassword
 {
-    internal class ClientInfo
+    public class ClientInfo
     {
         public readonly string Username;
         public readonly string Password;

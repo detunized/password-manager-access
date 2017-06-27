@@ -14,7 +14,22 @@ namespace OnePassword
             _http = new JsonHttpClient(http, ApiUrl);
         }
 
-        public Session StartNewSession(ClientInfo clientInfo)
+        public Vault OpenVault(ClientInfo clientInfo, IHttpClient http)
+        {
+            // Step 1: Request to initiate a new session
+            var session = StartNewSession(clientInfo);
+
+            // Step 2: Perform SRP exchange
+            var sessionKey = Srp.Perform(_http, session, clientInfo);
+
+            return new Vault();
+        }
+
+        //
+        // Internal
+        //
+
+        internal Session StartNewSession(ClientInfo clientInfo)
         {
             var endpoint = string.Join("/", "auth", clientInfo.Username, clientInfo.Uuid, "-");
             var response = _http.Get(endpoint);
