@@ -17,7 +17,7 @@ namespace OnePassword.Test
             var client = SetupGetWithFixture("start-new-session-response");
             var session = Remote.StartNewSession(ClientInfo, client.Object);
 
-            Assert.That(session.Id, Is.EqualTo(SessionId));
+            Assert.That(session.Id, Is.EqualTo(TestData.SessionId));
         }
 
         //
@@ -28,8 +28,6 @@ namespace OnePassword.Test
         private const string Password = "password";
         private const string AccountKey = "account-key";
         private const string Uuid = "uuid";
-
-        private const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
 
         private static readonly ClientInfo ClientInfo = new ClientInfo(username: Username,
                                                                        password: Password,

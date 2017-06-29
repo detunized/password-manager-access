@@ -113,7 +113,11 @@ namespace OnePassword.Test
                            "241A3F1BD0A76ACF32F07ADFAB36A4784781DA7E87FA6EBDF2C008DF3C55F9E002" +
                            "4D275C4D5C55A866D888E7AD4DE67D1E77").ToBigInt();
 
-            var key = new Srp(null).ComputeKey(secretA, sharedA, sharedB, MakeSession(), ClientInfo);
+            var key = new Srp(null).ComputeKey(secretA,
+                                               sharedA,
+                                               sharedB,
+                                               TestData.MakeSession(),
+                                               ClientInfo);
 
             Assert.That(key, Is.EqualTo("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64()));
         }
@@ -123,7 +127,7 @@ namespace OnePassword.Test
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
-            var x = new Srp(null).ComputeX(MakeSession(), ClientInfo);
+            var x = new Srp(null).ComputeX(TestData.MakeSession(), ClientInfo);
 
             Assert.That(x.ToString(), Is.EqualTo(expected));
         }
@@ -131,8 +135,6 @@ namespace OnePassword.Test
         //
         // Data
         //
-
-        private const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
 
         private static readonly ClientInfo ClientInfo = new ClientInfo("username",
                                                                        "password",
@@ -143,26 +145,15 @@ namespace OnePassword.Test
         // Helpers
         //
 
-        private static BigInteger PerformExchange(string fixture, string sessionId = SessionId)
+        private static BigInteger PerformExchange(string fixture, string sessionId = TestData.SessionId)
         {
-            return SetupSrpForExchange(fixture).ExchangeAForB(0, MakeSession(sessionId));
+            return SetupSrpForExchange(fixture).ExchangeAForB(0, TestData.MakeSession(sessionId));
         }
 
         private static Srp SetupSrpForExchange(string fixture)
         {
             var http = JsonHttpClientTest.SetupPostWithFixture(fixture);
             return new Srp(new JsonHttpClient(http.Object, ""));
-        }
-
-        private static Session MakeSession(string id = SessionId)
-        {
-            return new Session(id: id,
-                               keyFormat: "A3",
-                               keyUuid: "FRN8GF",
-                               srpMethod: "SRPg-4096",
-                               keyMethod: "PBES2g-HS256",
-                               iterations: 100000,
-                               salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64());
         }
     }
 }
