@@ -17,10 +17,15 @@ namespace OnePassword
     internal class Srp
     {
         // Returns the session encryption key
-        public static byte[] Perform(ClientInfo clientInfo, Session session, JsonHttpClient http)
+        public static AesKey Perform(ClientInfo clientInfo, Session session, JsonHttpClient http)
         {
-            return new Srp(http).Perform(session, clientInfo);
+            var key = new Srp(http).Perform(session, clientInfo);
+            return new AesKey(session.Id, key);
         }
+
+        //
+        // Internal
+        //
 
         internal Srp(JsonHttpClient http)
         {
