@@ -116,7 +116,7 @@ namespace OnePassword.Test
             var key = new Srp(null).ComputeKey(secretA,
                                                sharedA,
                                                sharedB,
-                                               TestData.MakeSession(),
+                                               TestData.Session,
                                                ClientInfo);
 
             Assert.That(key, Is.EqualTo("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64()));
@@ -127,7 +127,7 @@ namespace OnePassword.Test
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
-            var x = new Srp(null).ComputeX(TestData.MakeSession(), ClientInfo);
+            var x = new Srp(null).ComputeX(TestData.Session, ClientInfo);
 
             Assert.That(x.ToString(), Is.EqualTo(expected));
         }

@@ -6,6 +6,7 @@ namespace OnePassword.Test
     internal class TestData
     {
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
+        public static readonly Session Session = MakeSession();
 
         public static Session MakeSession(string id = SessionId)
         {
