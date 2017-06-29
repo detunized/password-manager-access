@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -30,6 +31,9 @@ namespace OnePassword
             // Step 4: Get account info. It contains users, keys, groups, vault info and other stuff.
             //         Not the actual vault data though. That is requested separately.
             var accountInfo = GetAccountInfo(sessionKey);
+
+            // Step 5: Derive and decrypt keys
+            DecryptKeysets(accountInfo.At("user/keysets"), clientInfo);
 
             return new Vault();
         }
@@ -75,6 +79,42 @@ namespace OnePassword
             return GetJson("accountpanel", sessionKey);
         }
 
+        internal void DecryptKeysets(JToken keysets, ClientInfo clientInfo)
+        {
+            var sorted = keysets.OrderBy(i => i.IntAt("sn")).Reverse().ToArray();
+            if (sorted[0].StringAt("encryptedBy") != MasterKeyId)
+                throw new InvalidOperationException(
+                    string.Format("Invalid keyset (key must be encrypted by '{0}')", MasterKeyId));
+
+            var keyInfo = sorted[0].At("encSymKey");
+            var masterKey = DeriveMasterKey(algorithm: keyInfo.StringAt("alg"),
+                                            iterations: keyInfo.IntAt("p2c"),
+                                            salt: keyInfo.StringAt("p2s").Decode64(),
+                                            clientInfo: clientInfo);
+        }
+
+        internal static AesKey DeriveMasterKey(string algorithm,
+                                               int iterations,
+                                               byte[] salt,
+                                               ClientInfo clientInfo)
+        {
+            if (!algorithm.StartsWith("PBES2g-"))
+                throw new InvalidOperationException(
+                    string.Format("Key derivation algorithm '{0}' is not supported", algorithm));
+
+            // TODO: Check if the Unicode normalization is the correct one.
+
+            var k1 = Crypto.Hkdf(algorithm, salt, clientInfo.Username.ToLower().ToBytes());
+            var k2 = Crypto.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
+            var key = AccountKey.Parse(clientInfo.AccountKey).CombineWith(k2);
+
+            return new AesKey(MasterKeyId, key);
+        }
+
+        //
+        // HTTP
+        //
+
         internal JObject GetJson(string endpoint, AesKey sessionKey)
         {
             // TODO: Set X-AgileBits-* headers
@@ -114,6 +154,8 @@ namespace OnePassword
         //
         // Private
         //
+
+        private const string MasterKeyId = "mp";
 
         private readonly JsonHttpClient _http;
     }
