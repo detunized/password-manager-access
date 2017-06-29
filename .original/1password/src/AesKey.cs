@@ -19,6 +19,11 @@ namespace OnePassword
             Key = key;
         }
 
+        public Encrypted Encrypt(byte[] plaintext)
+        {
+            return Encrypt(plaintext, Crypto.RandomBytes(12));
+        }
+
         public Encrypted Encrypt(byte[] plaintext, byte[] iv)
         {
             return new Encrypted(keyId: Id,
