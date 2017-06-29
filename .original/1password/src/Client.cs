@@ -27,6 +27,10 @@ namespace OnePassword
             // Step 3: Verify the key with the server
             VerifySessionKey(session, sessionKey);
 
+            // Step 4: Get account info. It contains users, keys, groups, vault info and other stuff.
+            //         Not the actual vault data though. That is requested separately.
+            var accountInfo = GetAccountInfo(sessionKey);
+
             return new Vault();
         }
 
@@ -66,11 +70,23 @@ namespace OnePassword
             response.StringAt("userUuid");
         }
 
+        internal JObject GetAccountInfo(AesKey sessionKey)
+        {
+            return GetJson("accountpanel", sessionKey);
+        }
+
+        internal JObject GetJson(string endpoint, AesKey sessionKey)
+        {
+            // TODO: Set X-AgileBits-* headers
+            return DecryptAndParse(_http.Get(endpoint), sessionKey);
+        }
+
         internal JObject PostJson(string endpoint, object parameters, AesKey sessionKey)
         {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
 
+            // TODO: Set X-AgileBits-* headers
             var response = _http.Post(endpoint, new Dictionary<string, object>
             {
                 {"kid", encryptedPayload.KeyId},

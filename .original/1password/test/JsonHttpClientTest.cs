@@ -92,6 +92,11 @@ namespace OnePassword.Test
         // Public helpers
         //
 
+        public static Mock<IHttpClient> SetupGetWithFixture(string name)
+        {
+            return SetupGet(ReadFixture(name));
+        }
+
         // TODO: Remove copy paste and factor out network testing helpers
         public static Mock<IHttpClient> SetupGet(string response = Response)
         {
