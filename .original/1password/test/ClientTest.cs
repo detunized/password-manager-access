@@ -11,23 +11,15 @@ namespace OnePassword.Test
         [Test]
         public void VerifySessionKey_works()
         {
-            var sessionKey = new AesKey(
-                TestData.SessionId,
-                "1c45a129b9e96b2f2eae330e8fd3c2dbb9dbe71b696d19823f3fa031b3218aad".DecodeHex());
-
             var http = JsonHttpClientTest.SetupPostWithFixture("verify-key-response");
-            new Client(http.Object).VerifySessionKey(TestData.Session, sessionKey);
+            new Client(http.Object).VerifySessionKey(TestData.Session, TestData.SesionKey);
         }
 
         [Test]
         public void GetAccountInfo_works()
         {
-            var sessionKey = new AesKey(
-                TestData.SessionId,
-                "1c45a129b9e96b2f2eae330e8fd3c2dbb9dbe71b696d19823f3fa031b3218aad".DecodeHex());
-
             var http = JsonHttpClientTest.SetupGetWithFixture("get-account-info-response");
-            new Client(http.Object).GetAccountInfo(sessionKey);
+            new Client(http.Object).GetAccountInfo(TestData.SesionKey);
         }
     }
 }
