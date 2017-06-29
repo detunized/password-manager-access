@@ -5,6 +5,16 @@ namespace OnePassword.Test
 {
     internal class TestData
     {
+        public const string Username = "username";
+        public const string Password = "password";
+        public const string AccountKey = "A3-RTN9SA-DY9445Y5FF96X6E7B5GPFA95R9";
+        public const string Uuid = "rz64r4uhyvgew672nm4ncaqonq";
+
+        public static readonly ClientInfo ClientInfo = new ClientInfo(username: Username,
+                                                                      password: Password,
+                                                                      accountKey: AccountKey,
+                                                                      uuid: Uuid);
+
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
         public static readonly Session Session = MakeSession();
 

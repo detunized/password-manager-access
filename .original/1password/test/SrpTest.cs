@@ -117,7 +117,7 @@ namespace OnePassword.Test
                                                sharedA,
                                                sharedB,
                                                TestData.Session,
-                                               ClientInfo);
+                                               TestData.ClientInfo);
 
             Assert.That(key, Is.EqualTo("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64()));
         }
@@ -127,19 +127,10 @@ namespace OnePassword.Test
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
-            var x = new Srp(null).ComputeX(TestData.Session, ClientInfo);
+            var x = new Srp(null).ComputeX(TestData.Session, TestData.ClientInfo);
 
             Assert.That(x.ToString(), Is.EqualTo(expected));
         }
-
-        //
-        // Data
-        //
-
-        private static readonly ClientInfo ClientInfo = new ClientInfo("username",
-                                                                       "password",
-                                                                       "A3-RTN9SA-DY9445Y5FF96X6E7B5GPFA95R9",
-                                                                       "rz64r4uhyvgew672nm4ncaqonq");
 
         //
         // Helpers
