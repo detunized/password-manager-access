@@ -19,11 +19,14 @@ namespace OnePassword
 
         public Vault OpenVault(ClientInfo clientInfo)
         {
+            var keychain = new Keychain();
+
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo);
 
             // Step 2: Perform SRP exchange
             var sessionKey = Srp.Perform(clientInfo, session, _http);
+            keychain.Add(sessionKey);
 
             // Step 3: Verify the key with the server
             VerifySessionKey(session, sessionKey);
@@ -33,7 +36,7 @@ namespace OnePassword
             var accountInfo = GetAccountInfo(sessionKey);
 
             // Step 5: Derive and decrypt keys
-            DecryptKeysets(accountInfo.At("user/keysets"), clientInfo);
+            DecryptKeysets(accountInfo.At("user/keysets"), clientInfo, keychain);
 
             return new Vault();
         }
@@ -79,7 +82,7 @@ namespace OnePassword
             return GetJson("accountpanel", sessionKey);
         }
 
-        internal void DecryptKeysets(JToken keysets, ClientInfo clientInfo)
+        internal static void DecryptKeysets(JToken keysets, ClientInfo clientInfo, Keychain keychain)
         {
             var sorted = keysets.OrderBy(i => i.IntAt("sn")).Reverse().ToArray();
             if (sorted[0].StringAt("encryptedBy") != MasterKeyId)
@@ -91,6 +94,16 @@ namespace OnePassword
                                             iterations: keyInfo.IntAt("p2c"),
                                             salt: keyInfo.StringAt("p2s").Decode64(),
                                             clientInfo: clientInfo);
+            keychain.Add(masterKey);
+
+            foreach (var i in sorted)
+                DecryptKeyset(i, keychain);
+        }
+
+        internal static void DecryptKeyset(JToken keyset, Keychain keychain)
+        {
+            keychain.Add(AesKey.Parse(Decrypt(keyset.At("encSymKey"), keychain)));
+            // TODO: Parse RSA key
         }
 
         internal static AesKey DeriveMasterKey(string algorithm,
@@ -118,7 +131,7 @@ namespace OnePassword
         internal JObject GetJson(string endpoint, AesKey sessionKey)
         {
             // TODO: Set X-AgileBits-* headers
-            return DecryptAndParse(_http.Get(endpoint), sessionKey);
+            return Decrypt(_http.Get(endpoint), sessionKey);
         }
 
         internal JObject PostJson(string endpoint, object parameters, AesKey sessionKey)
@@ -127,29 +140,22 @@ namespace OnePassword
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
 
             // TODO: Set X-AgileBits-* headers
-            var response = _http.Post(endpoint, new Dictionary<string, object>
-            {
-                {"kid", encryptedPayload.KeyId},
-                {"enc", encryptedPayload.Scheme},
-                {"cty", encryptedPayload.Container},
-                {"iv", encryptedPayload.Iv.ToBase64()},
-                {"data", encryptedPayload.Ciphertext.ToBase64()},
-            });
+            var response = _http.Post(endpoint, encryptedPayload.ToDictionary());
 
-            return DecryptAndParse(response, sessionKey);
+            return Decrypt(response, sessionKey);
         }
 
-        internal JObject DecryptAndParse(JObject response, AesKey sessionKey)
+        internal static JObject Decrypt(JToken response, AesKey sessionKey)
         {
-            var encrypted = new Encrypted(keyId: response.StringAt("kid"),
-                                          scheme: response.StringAt("enc"),
-                                          container: response.StringAt("cty"),
-                                          iv: response.StringAt("iv").Decode64(),
-                                          ciphertext: response.StringAt("data").Decode64());
-            var decrypted = sessionKey.Decrypt(encrypted);
-
-            return JObject.Parse(decrypted.ToUtf8());
+            return JObject.Parse(sessionKey.Decrypt(Encrypted.Parse(response)).ToUtf8());
         }
+
+        internal static JObject Decrypt(JToken response, Keychain keychain)
+        {
+            return JObject.Parse(keychain.Decrypt(Encrypted.Parse(response)).ToUtf8());
+        }
+
+
 
         //
         // Private

@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using Newtonsoft.Json.Linq;
 
 namespace OnePassword
 {
@@ -12,6 +13,12 @@ namespace OnePassword
 
         public readonly string Id;
         public readonly byte[] Key;
+
+        public static AesKey Parse(JToken json)
+        {
+            return new AesKey(id: json.StringAt("kid"),
+                              key: json.StringAt("k").Decode64());
+        }
 
         public AesKey(string id, byte[] key)
         {

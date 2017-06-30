@@ -23,13 +23,16 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void DecryptKeysets_works()
+        public void DecryptKeysets_stores_keys_in_keychain()
         {
             var http = JsonHttpClientTest.SetupGetWithFixture("get-account-info-response");
-            var client = new Client(http.Object);
-            var accountInfo = client.GetAccountInfo(TestData.SesionKey);
+            var accountInfo = new Client(http.Object).GetAccountInfo(TestData.SesionKey);
+            var keychain = new Keychain();
 
-            client.DecryptKeysets(accountInfo.At("user/keysets"), TestData.ClientInfo);
+            Client.DecryptKeysets(accountInfo.At("user/keysets"), ClientInfo, keychain);
+
+            Assert.That(keychain.GetAes("mp"), Is.Not.Null);
+            Assert.That(keychain.GetAes("szerdhg2ww2ahjo4ilz57x7cce"), Is.Not.Null);
         }
 
         [Test]
@@ -44,5 +47,20 @@ namespace OnePassword.Test
             Assert.That(key.Id, Is.EqualTo("mp"));
             Assert.That(key.Key, Is.EqualTo(expected));
         }
+
+        //
+        // Data
+        //
+
+        // TODO: All the tests here use the data from this account. I don't care about the account
+        //       or exposing its credentials, but I don't want to have inconsistent test data.
+        //       Everything should be either re-encrypted or somehow harmonized across all the tests
+        //       to use the same username, password and account key.
+        private static readonly ClientInfo ClientInfo = new ClientInfo(
+            username: "detunized@gmail.com",
+            password: "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
+            accountKey: "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
+            uuid: "rz64r4uhyvgew672nm4ncaqonq");
+
     }
 }
