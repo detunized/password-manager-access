@@ -20,20 +20,32 @@ namespace OnePassword
 
         public AesKey GetAes(string id)
         {
+            if (!_aes.ContainsKey(id))
+                throw new InvalidOperationException(string.Format("AES key '{0}' not found", id));
+
             return _aes[id];
         }
 
         public RsaKey GetRsa(string id)
         {
+            if (!_rsa.ContainsKey(id))
+                throw new InvalidOperationException(string.Format("RSA key '{0}' not found", id));
+
             return _rsa[id];
         }
 
         public byte[] Decrypt(Encrypted encrypted)
         {
-            if (!_aes.ContainsKey(encrypted.KeyId))
-                throw new InvalidOperationException(string.Format("Key '{0}' not found", encrypted.KeyId));
+            switch (encrypted.Scheme)
+            {
+            case AesKey.EncryptionScheme:
+                return GetAes(encrypted.KeyId).Decrypt(encrypted);
+            case RsaKey.EncryptionScheme:
+                return GetRsa(encrypted.KeyId).Decrypt(encrypted);
+            }
 
-            return _aes[encrypted.KeyId].Decrypt(encrypted);
+            throw new InvalidOperationException(string.Format("Unsupported encryption scheme '{0}'",
+                                                              encrypted.Scheme));
         }
 
         private readonly Dictionary<string, AesKey> _aes = new Dictionary<string, AesKey>();
