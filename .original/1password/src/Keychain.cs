@@ -10,12 +10,12 @@ namespace OnePassword
     {
         public void Add(AesKey key)
         {
-            _aes.Add(key.Id, key);
+            _aes[key.Id] = key;
         }
 
         public void Add(RsaKey key)
         {
-            _rsa.Add(key.Id, key);
+            _rsa[key.Id] = key;
         }
 
         public AesKey GetAes(string id)

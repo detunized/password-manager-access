@@ -37,8 +37,7 @@ namespace OnePassword
             var accountInfo = GetAccountInfo(sessionKey);
 
             // Step 5: Derive and decrypt keys
-            DecryptKeysets(accountInfo.At("user/keysets"), clientInfo, keychain);
-            DecryptGroupKeys(accountInfo.At("groups"), keychain);
+            DecryptKeys(accountInfo, clientInfo, keychain);
 
             return new Vault();
         }
@@ -84,6 +83,13 @@ namespace OnePassword
             return GetJson("accountpanel", sessionKey);
         }
 
+        internal static void DecryptKeys(JToken accountInfo, ClientInfo clientInfo, Keychain keychain)
+        {
+            DecryptKeysets(accountInfo.At("user/keysets"), clientInfo, keychain);
+            DecryptGroupKeys(accountInfo.At("groups"), keychain);
+            DecryptVaultKeys(accountInfo.At("user/vaultAccess"), keychain);
+        }
+
         internal static void DecryptKeysets(JToken keysets, ClientInfo clientInfo, Keychain keychain)
         {
             var sorted = keysets.OrderBy(i => i.IntAt("sn")).Reverse().ToArray();
@@ -104,14 +110,30 @@ namespace OnePassword
 
         internal static void DecryptGroupKeys(JToken groups, Keychain keychain)
         {
-            foreach (var group in groups)
-                DecryptKeyset(group.At("userMembership/keyset"), keychain);
+            foreach (var i in groups)
+                DecryptKeyset(i.At("userMembership/keyset"), keychain);
+        }
+
+        internal static void DecryptVaultKeys(JToken vaults, Keychain keychain)
+        {
+            foreach (var i in vaults)
+                DecryptAesKey(i.At("encVaultKey"), keychain);
         }
 
         internal static void DecryptKeyset(JToken keyset, Keychain keychain)
         {
-            keychain.Add(AesKey.Parse(Decrypt(keyset.At("encSymKey"), keychain)));
-            keychain.Add(RsaKey.Parse(Decrypt(keyset.At("encPriKey"), keychain)));
+            DecryptAesKey(keyset.At("encSymKey"), keychain);
+            DecryptRsaKey(keyset.At("encPriKey"), keychain);
+        }
+
+        internal static void DecryptAesKey(JToken key, Keychain keychain)
+        {
+            keychain.Add(AesKey.Parse(Decrypt(key, keychain)));
+        }
+
+        internal static void DecryptRsaKey(JToken key, Keychain keychain)
+        {
+            keychain.Add(RsaKey.Parse(Decrypt(key, keychain)));
         }
 
         internal static AesKey DeriveMasterKey(string algorithm,
