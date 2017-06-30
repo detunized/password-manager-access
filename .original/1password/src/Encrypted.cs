@@ -19,7 +19,7 @@ namespace OnePassword
             return new Encrypted(keyId: json.StringAt("kid"),
                                  scheme: json.StringAt("enc"),
                                  container: json.StringAt("cty"),
-                                 iv: json.StringAt("iv").Decode64(),
+                                 iv: json.StringAt("iv", "").Decode64(),
                                  ciphertext: json.StringAt("data").Decode64());
         }
 
