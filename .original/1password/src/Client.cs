@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -103,7 +104,7 @@ namespace OnePassword
         internal static void DecryptKeyset(JToken keyset, Keychain keychain)
         {
             keychain.Add(AesKey.Parse(Decrypt(keyset.At("encSymKey"), keychain)));
-            // TODO: Parse RSA key
+            keychain.Add(RsaKey.Parse(Decrypt(keyset.At("encPriKey"), keychain)));
         }
 
         internal static AesKey DeriveMasterKey(string algorithm,

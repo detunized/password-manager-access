@@ -33,6 +33,7 @@ namespace OnePassword.Test
 
             Assert.That(keychain.GetAes("mp"), Is.Not.Null);
             Assert.That(keychain.GetAes("szerdhg2ww2ahjo4ilz57x7cce"), Is.Not.Null);
+            Assert.That(keychain.GetRsa("szerdhg2ww2ahjo4ilz57x7cce"), Is.Not.Null);
         }
 
         [Test]

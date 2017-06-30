@@ -13,9 +13,19 @@ namespace OnePassword
             _aes.Add(key.Id, key);
         }
 
+        public void Add(RsaKey key)
+        {
+            _rsa.Add(key.Id, key);
+        }
+
         public AesKey GetAes(string id)
         {
             return _aes[id];
+        }
+
+        public RsaKey GetRsa(string id)
+        {
+            return _rsa[id];
         }
 
         public byte[] Decrypt(Encrypted encrypted)
@@ -27,5 +37,6 @@ namespace OnePassword
         }
 
         private readonly Dictionary<string, AesKey> _aes = new Dictionary<string, AesKey>();
+        private readonly Dictionary<string, RsaKey> _rsa = new Dictionary<string, RsaKey>();
     }
 }
