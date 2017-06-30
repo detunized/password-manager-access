@@ -38,6 +38,7 @@ namespace OnePassword
 
             // Step 5: Derive and decrypt keys
             DecryptKeysets(accountInfo.At("user/keysets"), clientInfo, keychain);
+            DecryptGroupKeys(accountInfo.At("groups"), keychain);
 
             return new Vault();
         }
@@ -101,6 +102,12 @@ namespace OnePassword
                 DecryptKeyset(i, keychain);
         }
 
+        internal static void DecryptGroupKeys(JToken groups, Keychain keychain)
+        {
+            foreach (var group in groups)
+                DecryptKeyset(group.At("userMembership/keyset"), keychain);
+        }
+
         internal static void DecryptKeyset(JToken keyset, Keychain keychain)
         {
             keychain.Add(AesKey.Parse(Decrypt(keyset.At("encSymKey"), keychain)));
@@ -153,7 +160,7 @@ namespace OnePassword
 
         internal static JObject Decrypt(JToken response, Keychain keychain)
         {
-            return JObject.Parse(keychain.Decrypt(Encrypted.Parse(response)).ToUtf8());
+             return JObject.Parse(keychain.Decrypt(Encrypted.Parse(response)).ToUtf8());
         }
 
 

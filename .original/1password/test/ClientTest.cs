@@ -23,17 +23,30 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void DecryptKeysets_stores_keys_in_keychain()
+        public void DecryptKeys_stores_keys_in_keychain()
         {
             var http = JsonHttpClientTest.SetupGetWithFixture("get-account-info-response");
             var accountInfo = new Client(http.Object).GetAccountInfo(TestData.SesionKey);
             var keychain = new Keychain();
 
             Client.DecryptKeysets(accountInfo.At("user/keysets"), ClientInfo, keychain);
+            Client.DecryptGroupKeys(accountInfo.At("groups"), keychain);
 
             Assert.That(keychain.GetAes("mp"), Is.Not.Null);
-            Assert.That(keychain.GetAes("szerdhg2ww2ahjo4ilz57x7cce"), Is.Not.Null);
-            Assert.That(keychain.GetRsa("szerdhg2ww2ahjo4ilz57x7cce"), Is.Not.Null);
+
+            var keys = new[]
+            {
+                "szerdhg2ww2ahjo4ilz57x7cce",
+                "yf2ji37vkqdow7pnbo3y37b3lu",
+                "srkx3r5c3qgyzsdswfc4awgh2m",
+                "sm5hkw3mxwdcwcgljf4kyplwea"
+            };
+
+            foreach (var i in keys)
+            {
+                Assert.That(keychain.GetAes(i), Is.Not.Null);
+                Assert.That(keychain.GetRsa(i), Is.Not.Null);
+            }
         }
 
         [Test]
