@@ -11,7 +11,7 @@ namespace OnePassword.Test
         [Test]
         public void Account_properties_are_set()
         {
-            var id = 1337;
+            var id = "id";
             var name = "name";
             var username = "username";
             var password = "password";
