@@ -18,6 +18,17 @@ namespace OnePassword
             }
         }
 
+        public static string RandomUuid()
+        {
+            var random = new Random();
+            var uuid = new char[26];
+
+            for (int i = 0; i < uuid.Length; ++i)
+                uuid[i] = Base32Alphabet[random.Next(Base32Alphabet.Length)];
+
+            return new string(uuid);
+        }
+
         public static byte[] Sha256(string message)
         {
             using (var sha = new SHA256Managed())
@@ -47,5 +58,7 @@ namespace OnePassword
             throw new InvalidOperationException(string.Format("Unsupported PBES2 method: '{0}'",
                                                               method));
         }
+
+        private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();
     }
 }

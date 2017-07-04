@@ -12,8 +12,14 @@ namespace OnePassword.Test
         [Test]
         public void RandomBytes_returns_array_of_requested_size()
         {
-            foreach (var size in new[] { 0, 1, 2, 3, 4, 15, 255, 1024, 1337 })
+            foreach (var size in new[] {0, 1, 2, 3, 4, 15, 255, 1024, 1337})
                 Assert.That(Crypto.RandomBytes(size).Length, Is.EqualTo(size));
+        }
+
+        [Test]
+        public void RandomUuid_returns_string_of_26_characters()
+        {
+            Assert.That(Crypto.RandomUuid().Length, Is.EqualTo(26));
         }
 
         [Test]
