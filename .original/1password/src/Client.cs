@@ -9,15 +9,43 @@ using Newtonsoft.Json.Linq;
 
 namespace OnePassword
 {
-    internal class Client
+    public class Client
     {
         public const string ApiUrl = "https://my.1password.com/api/v1";
 
-        public Client(IHttpClient http): this(new JsonHttpClient(http, ApiUrl))
+        // Public entry point to the library.
+        // We try to mimic the remote structure, that's why there's an array of vaults.
+        // We open all the ones we can.
+        public static Vault[] OpenAllVaults(string username,
+                                            string password,
+                                            string accountKey,
+                                            string uuid)
         {
+            return OpenAllVaults(username, password, accountKey, uuid, new HttpClient());
         }
 
-        public Vault[] OpenAllVaults(ClientInfo clientInfo)
+        public static Vault[] OpenAllVaults(string username,
+                                            string password,
+                                            string accountKey,
+                                            string uuid,
+                                            IHttpClient http)
+        {
+            return new Client(http).OpenAllVaults(new ClientInfo(username,
+                                                                 password,
+                                                                 accountKey,
+                                                                 uuid));
+        }
+
+        //
+        // Internal
+        //
+
+        internal Client(IHttpClient http)
+        {
+            _http = new JsonHttpClient(http, ApiUrl);
+        }
+
+        internal Vault[] OpenAllVaults(ClientInfo clientInfo)
         {
             var keychain = new Keychain();
 
@@ -50,15 +78,6 @@ namespace OnePassword
                 // Last step: Make sure to sign out in any case
                 SignOut(session);
             }
-        }
-
-        //
-        // Internal
-        //
-
-        internal Client(JsonHttpClient http)
-        {
-            _http = http;
         }
 
         internal Session StartNewSession(ClientInfo clientInfo)
