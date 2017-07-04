@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -62,8 +63,9 @@ namespace OnePassword
 
         internal Session StartNewSession(ClientInfo clientInfo)
         {
-            var endpoint = string.Join("/", "auth", clientInfo.Username, clientInfo.Uuid, "-");
-            var response = _http.Get(endpoint);
+            var response = GetJson(string.Format("auth/{0}/{1}/-",
+                                                 clientInfo.Username,
+                                                 clientInfo.Uuid));
             var status = response.StringAt("status");
             switch (status)
             {
@@ -80,7 +82,7 @@ namespace OnePassword
 
         internal void VerifySessionKey(Session session, AesKey sessionKey)
         {
-            var response = PostJson("auth/verify", new {sessionID = session.Id}, sessionKey);
+            var response = PostEncryptedJson("auth/verify", new {sessionID = session.Id}, sessionKey);
 
             // Just to verify that it's a valid JSON and it has some keys.
             // Technically it should have failed by now either in decrypt or JSON parse
@@ -89,7 +91,7 @@ namespace OnePassword
 
         internal JObject GetAccountInfo(AesKey sessionKey)
         {
-            return GetJson("accountpanel", sessionKey);
+            return GetEncryptedJson("accountpanel", sessionKey);
         }
 
         internal Vault[] GetVaults(JToken accountInfo, AesKey sessionKey, Keychain keychain)
@@ -110,7 +112,7 @@ namespace OnePassword
 
         internal Account[] GetVaultAccounts(string id, AesKey sessionKey, Keychain keychain)
         {
-            var response = GetJson(string.Format("vault/{0}/0/items", id), sessionKey);
+            var response = GetEncryptedJson(string.Format("vault/{0}/0/items", id), sessionKey);
             return response.At("items").Select(i => ParseAccount(i, keychain)).ToArray();
         }
 
@@ -219,23 +221,30 @@ namespace OnePassword
         // HTTP
         //
 
-        // TODO: Rename to GetEncryptedJson
-        internal JObject GetJson(string endpoint, AesKey sessionKey)
+        internal JObject GetEncryptedJson(string endpoint, AesKey sessionKey)
         {
-            // TODO: Set X-AgileBits-* headers
-            return Decrypt(_http.Get(endpoint), sessionKey);
+            return Decrypt(GetJson(endpoint), sessionKey);
         }
 
-        // TODO: Rename to PostEncryptedJson
-        internal JObject PostJson(string endpoint, object parameters, AesKey sessionKey)
+        internal JObject PostEncryptedJson(string endpoint, object parameters, AesKey sessionKey)
         {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
-
-            // TODO: Set X-AgileBits-* headers
-            var response = _http.Post(endpoint, encryptedPayload.ToDictionary());
+            var response = PostJson(endpoint, encryptedPayload.ToDictionary());
 
             return Decrypt(response, sessionKey);
+        }
+
+        internal JObject GetJson(string endpoint)
+        {
+            // TODO: Set X-AgileBits-* headers
+            return _http.Get(endpoint);
+        }
+
+        internal JObject PostJson(string endpoint, Dictionary<string, object> parameters)
+        {
+            // TODO: Set X-AgileBits-* headers
+            return _http.Post(endpoint, parameters);
         }
 
         internal JObject PutJson(string endpoint)
