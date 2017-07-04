@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -31,6 +32,23 @@ namespace OnePassword.Test
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
             new Client(http.Object).GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain);
+        }
+
+        [Test]
+        public void SignOut_works()
+        {
+            var http = JsonHttpClientTest.SetupPut("{'success': 1}");
+            new Client(http.Object).SignOut(TestData.Session);
+        }
+
+        [Test]
+        public void SignOut_throws_on_bad_response()
+        {
+            var http = JsonHttpClientTest.SetupPut("{'success': 0}");
+            var client = new Client(http.Object);
+
+            Assert.That(() => client.SignOut(TestData.Session),
+                        Throws.TypeOf<InvalidOperationException>());
         }
 
         [Test]

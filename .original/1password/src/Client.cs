@@ -23,27 +23,32 @@ namespace OnePassword
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo);
 
-            // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(clientInfo, session, _http);
-            keychain.Add(sessionKey);
+            try
+            {
+                // Step 2: Perform SRP exchange
+                var sessionKey = Srp.Perform(clientInfo, session, _http);
 
-            // Step 3: Verify the key with the server
-            VerifySessionKey(session, sessionKey);
+                // Step 3: Verify the key with the server
+                VerifySessionKey(session, sessionKey);
 
-            // Step 4: Get account info. It contains users, keys, groups, vault info and other stuff.
-            //         Not the actual vault data though. That is requested separately.
-            var accountInfo = GetAccountInfo(sessionKey);
+                // Step 4: Get account info. It contains users, keys, groups, vault info and other stuff.
+                //         Not the actual vault data though. That is requested separately.
+                var accountInfo = GetAccountInfo(sessionKey);
 
-            // Step 5: Derive and decrypt keys
-            DecryptKeys(accountInfo, clientInfo, keychain);
+                // Step 5: Derive and decrypt keys
+                DecryptKeys(accountInfo, clientInfo, keychain);
 
-            // Step 6: Get and decrypt vaults
-            var vaults = GetVaults(accountInfo, sessionKey, keychain);
+                // Step 6: Get and decrypt vaults
+                var vaults = GetVaults(accountInfo, sessionKey, keychain);
 
-            // Step 7: Sing out
-            // TODO: Implement
-
-            return vaults;
+                // Done
+                return vaults;
+            }
+            finally
+            {
+                // Last step: Make sure to sign out in any case
+                SignOut(session);
+            }
         }
 
         //
@@ -132,6 +137,13 @@ namespace OnePassword
             return "";
         }
 
+        internal void SignOut(Session session)
+        {
+            var response = PutJson("session/signout");
+            if (response.IntAt("success") != 1)
+                throw new InvalidOperationException("Failed to sign out");
+        }
+
         internal static void DecryptKeys(JToken accountInfo, ClientInfo clientInfo, Keychain keychain)
         {
             DecryptKeysets(accountInfo.At("user/keysets"), clientInfo, keychain);
@@ -207,12 +219,14 @@ namespace OnePassword
         // HTTP
         //
 
+        // TODO: Rename to GetEncryptedJson
         internal JObject GetJson(string endpoint, AesKey sessionKey)
         {
             // TODO: Set X-AgileBits-* headers
             return Decrypt(_http.Get(endpoint), sessionKey);
         }
 
+        // TODO: Rename to PostEncryptedJson
         internal JObject PostJson(string endpoint, object parameters, AesKey sessionKey)
         {
             var payload = JsonConvert.SerializeObject(parameters);
@@ -222,6 +236,12 @@ namespace OnePassword
             var response = _http.Post(endpoint, encryptedPayload.ToDictionary());
 
             return Decrypt(response, sessionKey);
+        }
+
+        internal JObject PutJson(string endpoint)
+        {
+            // TODO: Set X-AgileBits-* headers
+            return _http.Put(endpoint);
         }
 
         internal static JObject Decrypt(JToken response, AesKey sessionKey)
