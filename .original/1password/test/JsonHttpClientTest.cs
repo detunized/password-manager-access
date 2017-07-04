@@ -49,6 +49,18 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void Put_makes_PUT_request_with_headers()
+        {
+            var http = SetupPut();
+            var response = new JsonHttpClient(http.Object, BaseUrl).Put(Endpoint, Headers);
+
+            http.Verify(x => x.Put(It.Is<string>(s => s == Url),
+                                   It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
+
+            Assert.That(JToken.DeepEquals(response, ResponseJson));
+        }
+
+        [Test]
         public void MakeUrl_joins_url_with_slashes()
         {
             string[] bases = {"http://all.your.base", "http://all.your.base/"};
@@ -118,6 +130,15 @@ namespace OnePassword.Test
             mock.Setup(x => x.Post(It.IsAny<string>(),
                                    It.IsAny<string>(),
                                    It.IsAny<Dictionary<string, string>>()))
+                .Returns(response);
+            return mock;
+        }
+
+        public static Mock<IHttpClient> SetupPut(string response = Response)
+        {
+            var mock = new Mock<IHttpClient>();
+            mock.Setup(x => x.Put(It.IsAny<string>(),
+                                  It.IsAny<Dictionary<string, string>>()))
                 .Returns(response);
             return mock;
         }

@@ -65,6 +65,20 @@ namespace OnePassword
         }
 
         //
+        // Put
+        //
+
+        public JObject Put(string endpoint)
+        {
+            return Put(endpoint, new Dictionary<string, string>());
+        }
+
+        public JObject Put(string endpoint, Dictionary<string, string> headers)
+        {
+            return JObject.Parse(_http.Put(MakeUrl(endpoint), headers));
+        }
+
+        //
         // Private
         //
 
