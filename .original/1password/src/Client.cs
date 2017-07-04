@@ -2,8 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -18,7 +16,7 @@ namespace OnePassword
         {
         }
 
-        public Vault OpenVault(ClientInfo clientInfo)
+        public Vault[] OpenAllVaults(ClientInfo clientInfo)
         {
             var keychain = new Keychain();
 
@@ -39,7 +37,13 @@ namespace OnePassword
             // Step 5: Derive and decrypt keys
             DecryptKeys(accountInfo, clientInfo, keychain);
 
-            return new Vault();
+            // Step 6: Get and decrypt vaults
+            var vaults = GetVaults(accountInfo, sessionKey, keychain);
+
+            // Step 7: Sing out
+            // TODO: Implement
+
+            return vaults;
         }
 
         //
@@ -81,6 +85,51 @@ namespace OnePassword
         internal JObject GetAccountInfo(AesKey sessionKey)
         {
             return GetJson("accountpanel", sessionKey);
+        }
+
+        internal Vault[] GetVaults(JToken accountInfo, AesKey sessionKey, Keychain keychain)
+        {
+            return accountInfo.At("vaults").Select(i => GetVault(i, sessionKey, keychain)).ToArray();
+        }
+
+        internal Vault GetVault(JToken json, AesKey sessionKey, Keychain keychain)
+        {
+            var id = json.StringAt("uuid");
+            var attributes = Decrypt(json.At("encAttrs"), keychain);
+
+            return new Vault(id: id,
+                             name: attributes.StringAt("name", ""),
+                             description: attributes.StringAt("desc", ""),
+                             accounts: GetVaultAccounts(id, sessionKey, keychain));
+        }
+
+        internal Account[] GetVaultAccounts(string id, AesKey sessionKey, Keychain keychain)
+        {
+            var response = GetJson(string.Format("vault/{0}/0/items", id), sessionKey);
+            return response.At("items").Select(i => ParseAccount(i, keychain)).ToArray();
+        }
+
+        internal static Account ParseAccount(JToken json, Keychain keychain)
+        {
+            var overview = Decrypt(json.At("encOverview"), keychain);
+            var details = Decrypt(json.At("encDetails"), keychain);
+            var fields = details.At("fields");
+
+            return new Account(json.StringAt("uuid", ""),
+                               overview.StringAt("title", ""),
+                               FindAccountField(fields, "username"),
+                               FindAccountField(fields, "password"),
+                               overview.StringAt("url", ""),
+                               details.StringAt("notesPlain", ""));
+        }
+
+        internal static string FindAccountField(JToken json, string name)
+        {
+            foreach (var i in json)
+                if (i.StringAt("designation", "") == name)
+                    return i.StringAt("value", "");
+
+            return "";
         }
 
         internal static void DecryptKeys(JToken accountInfo, ClientInfo clientInfo, Keychain keychain)

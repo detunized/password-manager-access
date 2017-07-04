@@ -23,6 +23,17 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void GetVaultAccounts_work()
+        {
+            var http = JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response");
+            var keychain = new Keychain();
+            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
+                                    "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+
+            new Client(http.Object).GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain);
+        }
+
+        [Test]
         public void DecryptKeys_stores_keys_in_keychain()
         {
             var http = JsonHttpClientTest.SetupGetWithFixture("get-account-info-response");
