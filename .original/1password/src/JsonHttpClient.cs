@@ -8,8 +8,7 @@ using Newtonsoft.Json.Linq;
 
 namespace OnePassword
 {
-    // TODO: Make internal
-    public class JsonHttpClient
+    internal class JsonHttpClient
     {
         public JsonHttpClient(IHttpClient http, string baseUrl)
         {
