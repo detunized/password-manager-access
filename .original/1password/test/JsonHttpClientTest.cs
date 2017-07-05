@@ -17,7 +17,8 @@ namespace OnePassword.Test
         public void Get_makes_GET_request_with_headers()
         {
             var http = SetupGet();
-            var response = new JsonHttpClient(http.Object, BaseUrl).Get(Endpoint, Headers);
+            var client = new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+            var response = client.Get(Endpoint);
 
             http.Verify(x => x.Get(It.Is<string>(s => s == Url),
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
@@ -39,7 +40,8 @@ namespace OnePassword.Test
             var encodedData = "{'number':13,'string':'hi','array':[null,1.0,2,'three'],'object':{'a':1,'b':'two'}}"
                 .Replace('\'', '"');
 
-            var response = new JsonHttpClient(http.Object, BaseUrl).Post(Endpoint, data, Headers);
+            var client = new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+            var response = client.Post(Endpoint, data);
 
             http.Verify(x => x.Post(It.Is<string>(s => s == Url),
                                     It.Is<string>(s => s == encodedData),
@@ -52,7 +54,8 @@ namespace OnePassword.Test
         public void Put_makes_PUT_request_with_headers()
         {
             var http = SetupPut();
-            var response = new JsonHttpClient(http.Object, BaseUrl).Put(Endpoint, Headers);
+            var client = new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+            var response = client.Put(Endpoint);
 
             http.Verify(x => x.Put(It.Is<string>(s => s == Url),
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
@@ -79,7 +82,6 @@ namespace OnePassword.Test
         private const string BaseUrl = "https://whats.up";
         private const string Endpoint = "one/two/three";
         private const string Url = "https://whats.up/one/two/three";
-        private static readonly string[] UrlComponents = {"https://whats.up", "one", "two", "three"};
 
         private const string Response = "{'status': 'ok'}";
         private static readonly JObject ResponseJson = JObject.Parse(Response);

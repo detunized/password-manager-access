@@ -14,7 +14,11 @@ namespace OnePassword
         {
             _http = http;
             _baseUrl = baseUrl.TrimEnd('/');
+
+            Headers = new Dictionary<string, string>();
         }
+
+        public Dictionary<string, string> Headers { get; set; }
 
         //
         // Get
@@ -22,24 +26,12 @@ namespace OnePassword
 
         public JObject Get(string endpoint)
         {
-            return Get(endpoint, new Dictionary<string, string>());
-        }
-
-        public JObject Get(string endpoint, Dictionary<string, string> headers)
-        {
-            return JObject.Parse(_http.Get(MakeUrl(endpoint), headers));
+            return JObject.Parse(_http.Get(MakeUrl(endpoint), Headers));
         }
 
         public T Get<T>(string endpoint, Func<JObject, T> parse)
         {
-            return Get(endpoint, new Dictionary<string, string>(), parse);
-        }
-
-        public T Get<T>(string endpoint,
-                        Dictionary<string, string> headers,
-                        Func<JObject, T> parse)
-        {
-            return parse(Get(endpoint, headers));
+            return parse(Get(endpoint));
         }
 
         //
@@ -48,14 +40,7 @@ namespace OnePassword
 
         public JObject Post(string endpoint, Dictionary<string, object> parameters)
         {
-            return Post(endpoint, parameters, new Dictionary<string, string>());
-        }
-
-        public JObject Post(string endpoint,
-                            Dictionary<string, object> parameters,
-                            Dictionary<string, string> headers)
-        {
-            var jsonHeaders = new Dictionary<string, string>(headers);
+            var jsonHeaders = new Dictionary<string, string>(Headers);
             jsonHeaders["Content-Type"] = "application/json; charset=UTF-8";
 
             return JObject.Parse(_http.Post(MakeUrl(endpoint),
@@ -69,12 +54,7 @@ namespace OnePassword
 
         public JObject Put(string endpoint)
         {
-            return Put(endpoint, new Dictionary<string, string>());
-        }
-
-        public JObject Put(string endpoint, Dictionary<string, string> headers)
-        {
-            return JObject.Parse(_http.Put(MakeUrl(endpoint), headers));
+            return JObject.Parse(_http.Put(MakeUrl(endpoint), Headers));
         }
 
         //
