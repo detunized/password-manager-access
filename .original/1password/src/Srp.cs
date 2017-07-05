@@ -57,7 +57,7 @@ namespace OnePassword
 
         internal BigInteger ExchangeAForB(BigInteger sharedA, Session session)
         {
-            var response = _http.Post("userB",
+            var response = _http.Post("auth",
                                       new Dictionary<string, object>
                                       {
                                           {"sessionID", session.Id},
