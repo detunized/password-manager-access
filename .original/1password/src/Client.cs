@@ -263,19 +263,16 @@ namespace OnePassword
 
         internal JObject GetJson(string endpoint)
         {
-            // TODO: Set X-AgileBits-* headers
             return _http.Get(endpoint);
         }
 
         internal JObject PostJson(string endpoint, Dictionary<string, object> parameters)
         {
-            // TODO: Set X-AgileBits-* headers
             return _http.Post(endpoint, parameters);
         }
 
         internal JObject PutJson(string endpoint)
         {
-            // TODO: Set X-AgileBits-* headers
             return _http.Put(endpoint);
         }
 
