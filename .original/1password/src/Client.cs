@@ -49,8 +49,15 @@ namespace OnePassword
         {
             var keychain = new Keychain();
 
+            // Make sure required custom headers are set
+            _http.Headers["X-AgileBits-Client"] = "1Password for Web/348";
+
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo);
+
+            // After a new session has been initiated, all the subsequent requests must be
+            // signed with the session ID.
+            _http.Headers["X-AgileBits-Session-ID"] = session.Id;
 
             try
             {
@@ -281,8 +288,6 @@ namespace OnePassword
         {
              return JObject.Parse(keychain.Decrypt(Encrypted.Parse(response)).ToUtf8());
         }
-
-
 
         //
         // Private
