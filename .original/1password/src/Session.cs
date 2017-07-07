@@ -15,8 +15,6 @@ namespace OnePassword
         public readonly int Iterations;
         public readonly byte[] Salt;
 
-        // TODO: Consider moving this out of here and just parse where we parse the response.
-        //       JSON encoding is specific to a certain response and should be handled there.
         public static Session Parse(JToken json)
         {
             return new Session(id: json.StringAt("sessionID"),
