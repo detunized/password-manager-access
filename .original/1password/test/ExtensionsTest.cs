@@ -125,13 +125,12 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void ByteArray_ToBase64_returns_base64()
+        public void ByteArray_ToBase64_returns_urlsafe_base64_without_padding()
         {
             Assert.That(new byte[] { }.ToBase64(), Is.EqualTo(""));
-            Assert.That(new byte[] { 0x61 }.ToBase64(), Is.EqualTo("YQ=="));
-            Assert.That(new byte[] { 0x61, 0x62 }.ToBase64(), Is.EqualTo("YWI="));
-            Assert.That(new byte[] { 0x61, 0x62, 0x63 }.ToBase64(), Is.EqualTo("YWJj"));
-            Assert.That(new byte[] { 0x61, 0x62, 0x63, 0x64 }.ToBase64(), Is.EqualTo("YWJjZA=="));
+            Assert.That(new byte[] { 0xFB }.ToBase64(), Is.EqualTo("-w"));
+            Assert.That(new byte[] { 0xFB, 0xEF }.ToBase64(), Is.EqualTo("--8"));
+            Assert.That(new byte[] { 0xFB, 0xEF, 0xFF }.ToBase64(), Is.EqualTo("--__"));
         }
 
         [Test]

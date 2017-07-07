@@ -107,9 +107,10 @@ namespace OnePassword
             return new string(hex);
         }
 
+        // URL-safe Base64
         public static string ToBase64(this byte[] x)
         {
-            return Convert.ToBase64String(x);
+            return Convert.ToBase64String(x).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         }
 
         public static BigInteger ToBigInt(this byte[] x)
