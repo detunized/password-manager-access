@@ -174,6 +174,24 @@ namespace OnePassword.Test
                 Assert.That(new BigInteger(i.Key).ToHex(), Is.EqualTo(i.Value));
         }
 
+        [Test]
+        public void BigInteger_ModExp_returns_positive_result()
+        {
+            var testCases = new[]
+            {
+                new []{-3, 3, 10, 3},
+                new []{-4, 3, 100, 36},
+                new []{-4, 3, 1000, 936},
+                new []{-1337, 19, 1000000, 594327},
+            };
+
+            foreach (var i in testCases)
+            {
+                var r = new BigInteger(i[0]).ModExp(new BigInteger(i[1]), new BigInteger(i[2]));
+                Assert.That(r, Is.EqualTo(new BigInteger(i[3])));
+            }
+        }
+
         //
         // JToken
         //

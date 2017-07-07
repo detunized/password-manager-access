@@ -52,7 +52,7 @@ namespace OnePassword
 
         internal BigInteger ComputeSharedA(BigInteger secretA)
         {
-            return BigInteger.ModPow(SirpG, secretA, SirpN);
+            return SirpG.ModExp(secretA, SirpN);
         }
 
         internal BigInteger ExchangeAForB(BigInteger sharedA, Session session)
@@ -87,8 +87,8 @@ namespace OnePassword
             var hashAb = Crypto.Sha256(ab).ToBigInt();
             var s = session.Id.ToBytes().ToBigInt();
             var x = ComputeX(session, clientInfo);
-            var y = sharedB - BigInteger.ModPow(SirpG, x, SirpN) * s;
-            var z = BigInteger.ModPow(y, secretA + hashAb * x, SirpN);
+            var y = sharedB - SirpG.ModExp(x, SirpN) * s;
+            var z = y.ModExp(secretA + hashAb * x, SirpN);
 
             return Crypto.Sha256(z.ToHex());
         }

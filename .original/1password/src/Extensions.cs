@@ -137,6 +137,15 @@ namespace OnePassword
             return "0";
         }
 
+        // Calculates (b ^ e) % m in a way that is compatible with 1Password.
+        // Specifically the result is never negative. .NET BigInteger.ModPow returns
+        // negative mod when b is negative.
+        public static BigInteger ModExp(this BigInteger b, BigInteger e, BigInteger m)
+        {
+            var r = BigInteger.ModPow(b, e, m);
+            return r >= 0 ? r : r + m;
+        }
+
         //
         // Nested JToken access by path with and without exceptions
         //
