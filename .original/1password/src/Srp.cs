@@ -61,7 +61,7 @@ namespace OnePassword
                                       new Dictionary<string, object>
                                       {
                                           {"sessionID", session.Id},
-                                          {"userA", sharedA.ToString("x")}
+                                          {"userA", sharedA.ToHex()}
                                       });
 
             if (response.StringAt("sessionID") != session.Id)
@@ -83,14 +83,14 @@ namespace OnePassword
                                    ClientInfo clientInfo)
         {
             // Some arbitrary crypto computation, variable names don't have much meaning
-            var ab = sharedA.ToString("x") + sharedB.ToString("x");
+            var ab = sharedA.ToHex() + sharedB.ToHex();
             var hashAb = Crypto.Sha256(ab).ToBigInt();
             var s = session.Id.ToBytes().ToBigInt();
             var x = ComputeX(session, clientInfo);
             var y = sharedB - BigInteger.ModPow(SirpG, x, SirpN) * s;
             var z = BigInteger.ModPow(y, secretA + hashAb * x, SirpN);
 
-            return Crypto.Sha256(z.ToString("x"));
+            return Crypto.Sha256(z.ToHex());
         }
 
         internal BigInteger ComputeX(Session session, ClientInfo clientInfo)

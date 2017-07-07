@@ -145,6 +145,36 @@ namespace OnePassword.Test
         }
 
         //
+        // BigInteger
+        //
+
+        [Test]
+        public void BigInteger_ToHex_returns_hex_string()
+        {
+            var testCases = new Dictionary<int, string>
+            {
+                {0, "0"},
+                {1, "1"},
+                {0xD, "d"},
+                {0xDE, "de"},
+                {0xDEA, "dea"},
+                {0xDEAD, "dead"},
+                {0x80, "80"},
+                {0xFF, "ff"},
+                {-1, "-1"},
+                {-0xD, "-d"},
+                {-0xDE, "-de"},
+                {-0xDEA, "-dea"},
+                {-0xDEAD, "-dead"},
+                {-0x80, "-80"},
+                {-0xFF, "-ff"},
+            };
+
+            foreach (var i in testCases)
+                Assert.That(new BigInteger(i.Key).ToHex(), Is.EqualTo(i.Value));
+        }
+
+        //
         // JToken
         //
 

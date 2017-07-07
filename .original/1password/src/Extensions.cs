@@ -122,6 +122,22 @@ namespace OnePassword
         }
 
         //
+        // BigInteger
+        //
+
+        public static string ToHex(this BigInteger i)
+        {
+            // Strip out leading zeros to mimic 1Password behavior.
+            if (i > 0)
+                return i.ToString("x").TrimStart('0');
+
+            if (i < 0)
+                return "-" + (-i).ToHex();
+
+            return "0";
+        }
+
+        //
         // Nested JToken access by path with and without exceptions
         //
 
