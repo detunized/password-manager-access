@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using Moq;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -12,50 +13,51 @@ namespace OnePassword.Test
         [Test]
         public void VerifySessionKey_works()
         {
-            var http = JsonHttpClientTest.SetupPostWithFixture("verify-key-response");
-            new Client(http.Object).VerifySessionKey(TestData.Session, TestData.SesionKey);
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
+            Client.VerifySessionKey(TestData.Session, TestData.SesionKey, http);
         }
 
         [Test]
         public void GetAccountInfo_works()
         {
-            var http = JsonHttpClientTest.SetupGetWithFixture("get-account-info-response");
-            new Client(http.Object).GetAccountInfo(TestData.SesionKey);
+            var http =
+                MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
+            Client.GetAccountInfo(TestData.SesionKey, http);
         }
 
         [Test]
         public void GetVaultAccounts_work()
         {
-            var http = JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response");
+            var http =
+                MakeJsonHttp(
+                    JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            new Client(http.Object).GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain);
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http);
         }
 
         [Test]
         public void SignOut_works()
         {
-            var http = JsonHttpClientTest.SetupPut("{'success': 1}");
-            new Client(http.Object).SignOut(TestData.Session);
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
+            Client.SignOut(http);
         }
 
         [Test]
         public void SignOut_throws_on_bad_response()
         {
-            var http = JsonHttpClientTest.SetupPut("{'success': 0}");
-            var client = new Client(http.Object);
-
-            Assert.That(() => client.SignOut(TestData.Session),
-                        Throws.TypeOf<InvalidOperationException>());
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
+            Assert.That(() => Client.SignOut(http), Throws.TypeOf<InvalidOperationException>());
         }
 
         [Test]
         public void DecryptKeys_stores_keys_in_keychain()
         {
-            var http = JsonHttpClientTest.SetupGetWithFixture("get-account-info-response");
-            var accountInfo = new Client(http.Object).GetAccountInfo(TestData.SesionKey);
+            var http =
+                MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
+            var accountInfo = Client.GetAccountInfo(TestData.SesionKey, http);
             var keychain = new Keychain();
 
             Client.DecryptKeys(accountInfo, ClientInfo, keychain);
@@ -88,7 +90,8 @@ namespace OnePassword.Test
         [Test]
         public void DeriveMasterKey_returns_master_key()
         {
-            var expected = "09f6cf6acc4f64f2ac6af5d912427253c4dd5e1a48dfc6bfea21df8f6d3a701e".DecodeHex();
+            var expected =
+                "09f6cf6acc4f64f2ac6af5d912427253c4dd5e1a48dfc6bfea21df8f6d3a701e".DecodeHex();
             var key = Client.DeriveMasterKey("PBES2g-HS256",
                                              100000,
                                              "i2enf0xq-XPKCFFf5UZqNQ".Decode64(),
@@ -112,5 +115,13 @@ namespace OnePassword.Test
             accountKey: "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
             uuid: "rz64r4uhyvgew672nm4ncaqonq");
 
+        //
+        // Helpers
+        //
+
+        private static JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
+        {
+            return new JsonHttpClient(http.Object, Client.ApiUrl);
+        }
     }
 }
