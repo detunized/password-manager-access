@@ -258,7 +258,7 @@ namespace OnePassword
 
             var k1 = Crypto.Hkdf(algorithm, salt, clientInfo.Username.ToLower().ToBytes());
             var k2 = Crypto.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
-            var key = AccountKey.Parse(clientInfo.AccountKey).CombineWith(k2);
+            var key = clientInfo.AccountKey.CombineWith(k2);
 
             return new AesKey(MasterKeyId, key);
         }

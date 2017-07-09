@@ -3,18 +3,18 @@
 
 namespace OnePassword
 {
-    public class ClientInfo
+    internal class ClientInfo
     {
         public readonly string Username;
         public readonly string Password;
-        public readonly string AccountKey;
+        public readonly AccountKey AccountKey;
         public readonly string Uuid;
 
         public ClientInfo(string username, string password, string accountKey, string uuid)
         {
             Username = username;
             Password = password;
-            AccountKey = accountKey;
+            AccountKey = AccountKey.Parse(accountKey);
             Uuid = uuid;
         }
     }

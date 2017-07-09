@@ -112,7 +112,7 @@ namespace OnePassword
                                   password: clientInfo.Password,
                                   salt: k1,
                                   iterations: iterations);
-            var x = AccountKey.Parse(clientInfo.AccountKey).CombineWith(k2);
+            var x = clientInfo.AccountKey.CombineWith(k2);
 
             return x.ToBigInt();
         }
