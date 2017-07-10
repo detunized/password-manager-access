@@ -109,6 +109,9 @@ namespace OnePassword
             case "device-not-registered":
                 RegisterDevice(clientInfo, MakeJsonClient(jsonHttp, response.StringAt("sessionID")));
                 break;
+            case "device-deleted":
+                ReauthorizeDevice(clientInfo, MakeJsonClient(jsonHttp, response.StringAt("sessionID")));
+                break;
             default:
                 // TODO: Use custom exception
                 throw new InvalidOperationException(
@@ -132,7 +135,16 @@ namespace OnePassword
 
             if (response.IntAt("success") != 1)
                 throw new InvalidOperationException(
-                    string.Format("Failed to register device '{0}'", clientInfo.Uuid));
+                    string.Format("Failed to register the device '{0}'", clientInfo.Uuid));
+        }
+
+        internal static void ReauthorizeDevice(ClientInfo clientInfo, JsonHttpClient jsonHttp)
+        {
+            var response = jsonHttp.Put(string.Format("device/{0}/reauthorize", clientInfo.Uuid));
+
+            if (response.IntAt("success") != 1)
+                throw new InvalidOperationException(
+                    string.Format("Failed to reauthorize the device '{0}'", clientInfo.Uuid));
         }
 
         internal static void VerifySessionKey(Session session,
