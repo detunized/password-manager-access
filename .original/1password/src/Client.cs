@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -49,7 +50,7 @@ namespace OnePassword
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
-            jsonHttp.Headers["X-AgileBits-Session-ID"] = session.Id;
+            jsonHttp = MakeJsonClient(http, session.Id);
 
             try
             {
@@ -79,12 +80,20 @@ namespace OnePassword
             }
         }
 
-        internal static JsonHttpClient MakeJsonClient(IHttpClient http)
+        internal static JsonHttpClient MakeJsonClient(IHttpClient http, string sessionId = null)
         {
-            var json = new JsonHttpClient(http, ApiUrl);
-            json.Headers["X-AgileBits-Client"] = ClientId;
+            var jsonHttp = new JsonHttpClient(http, ApiUrl);
+            jsonHttp.Headers["X-AgileBits-Client"] = ClientId;
 
-            return json;
+            if (sessionId != null)
+                jsonHttp.Headers["X-AgileBits-Session-ID"] = sessionId;
+
+            return jsonHttp;
+        }
+
+        internal static JsonHttpClient MakeJsonClient(JsonHttpClient jsonHttp, string sessionId = null)
+        {
+            return MakeJsonClient(jsonHttp.Http, sessionId);
         }
 
         internal static Session StartNewSession(ClientInfo clientInfo, JsonHttpClient jsonHttp)
@@ -97,6 +106,9 @@ namespace OnePassword
             {
             case "ok":
                 return Session.Parse(response);
+            case "device-not-registered":
+                RegisterDevice(clientInfo, MakeJsonClient(jsonHttp, response.StringAt("sessionID")));
+                break;
             default:
                 // TODO: Use custom exception
                 throw new InvalidOperationException(
@@ -104,6 +116,23 @@ namespace OnePassword
                         "Failed to start a new session, unsupported response status '{0}'",
                         status));
             }
+
+            return StartNewSession(clientInfo, jsonHttp);
+        }
+
+        internal static void RegisterDevice(ClientInfo clientInfo, JsonHttpClient jsonHttp)
+        {
+            var response = jsonHttp.Post("device",
+                                         new Dictionary<string, object>
+                                         {
+                                             {"uuid", clientInfo.Uuid},
+                                             {"clientName", ClientName},
+                                             {"clientVersion", ClientVersion},
+                                         });
+
+            if (response.IntAt("success") != 1)
+                throw new InvalidOperationException(
+                    string.Format("Failed to register device '{0}'", clientInfo.Uuid));
         }
 
         internal static void VerifySessionKey(Session session,
