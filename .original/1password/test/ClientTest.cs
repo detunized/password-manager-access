@@ -11,6 +11,31 @@ namespace OnePassword.Test
     public class ClientTest
     {
         [Test]
+        public void StartNewSession_returns_session_on_ok()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("start-new-session-response"));
+            var session = Client.StartNewSession(TestData.ClientInfo, http);
+
+            Assert.That(session.Id, Is.EqualTo(TestData.Session.Id));
+            Assert.That(session.KeyFormat, Is.EqualTo(TestData.Session.KeyFormat));
+            Assert.That(session.KeyUuid, Is.EqualTo(TestData.Session.KeyUuid));
+            Assert.That(session.SrpMethod, Is.EqualTo(TestData.Session.SrpMethod));
+            Assert.That(session.KeyMethod, Is.EqualTo(TestData.Session.KeyMethod));
+            Assert.That(session.Iterations, Is.EqualTo(TestData.Session.Iterations));
+            Assert.That(session.Salt, Is.EqualTo(TestData.Session.Salt));
+        }
+
+        [Test]
+        public void StartNewSession_throws_on_unknown_status()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet("{'status': 'unknown'}"));
+            Assert.That(() => Client.StartNewSession(TestData.ClientInfo, http),
+                        Throws.TypeOf<InvalidOperationException>()
+                            .And.Message.StartsWith("Failed to start a new session")
+                            .And.Message.Contains("'unknown'"));
+        }
+
+        [Test]
         public void VerifySessionKey_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
@@ -55,8 +80,7 @@ namespace OnePassword.Test
         [Test]
         public void DecryptKeys_stores_keys_in_keychain()
         {
-            var http =
-                MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
             var accountInfo = Client.GetAccountInfo(TestData.SesionKey, http);
             var keychain = new Keychain();
 
