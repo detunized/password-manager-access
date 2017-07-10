@@ -36,6 +36,12 @@ namespace OnePassword
             return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid), http);
         }
 
+        // Use this function to generate a unique random identifier for each new client.
+        public static string GenerateRandomUuid()
+        {
+            return Crypto.RandomUuid();
+        }
+
         //
         // Internal
         //
