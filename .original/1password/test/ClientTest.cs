@@ -36,6 +36,40 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void RegisterDevice_works()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 1}"));
+            Client.RegisterDevice(TestData.ClientInfo, http);
+        }
+
+        [Test]
+        public void RegisterDevice_throws_on_error()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 0}"));
+            Assert.That(() => Client.RegisterDevice(TestData.ClientInfo, http),
+                        Throws.TypeOf<InvalidOperationException>()
+                            .And.Message.StartsWith("Failed to register")
+                            .And.Message.Contains(TestData.Uuid));
+        }
+
+        [Test]
+        public void ReauthorizeDevice_works()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
+            Client.ReauthorizeDevice(TestData.ClientInfo, http);
+        }
+
+        [Test]
+        public void ReauthorizeDevice_throws_on_error()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
+            Assert.That(() => Client.ReauthorizeDevice(TestData.ClientInfo, http),
+                        Throws.TypeOf<InvalidOperationException>()
+                            .And.Message.StartsWith("Failed to reauthorize")
+                            .And.Message.Contains(TestData.Uuid));
+        }
+
+        [Test]
         public void VerifySessionKey_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
