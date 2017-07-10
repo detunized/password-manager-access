@@ -12,12 +12,13 @@ namespace OnePassword
     {
         public JsonHttpClient(IHttpClient http, string baseUrl)
         {
-            _http = http;
-            _baseUrl = baseUrl.TrimEnd('/');
-
+            Http = http;
+            BaseUrl = baseUrl.TrimEnd('/');
             Headers = new Dictionary<string, string>();
         }
 
+        public IHttpClient Http { get; private set; }
+        public string BaseUrl { get; private set; }
         public Dictionary<string, string> Headers { get; set; }
 
         //
@@ -26,7 +27,7 @@ namespace OnePassword
 
         public JObject Get(string endpoint)
         {
-            return JObject.Parse(_http.Get(MakeUrl(endpoint), Headers));
+            return JObject.Parse(Http.Get(MakeUrl(endpoint), Headers));
         }
 
         public T Get<T>(string endpoint, Func<JObject, T> parse)
@@ -43,7 +44,7 @@ namespace OnePassword
             var jsonHeaders = new Dictionary<string, string>(Headers);
             jsonHeaders["Content-Type"] = "application/json; charset=UTF-8";
 
-            return JObject.Parse(_http.Post(MakeUrl(endpoint),
+            return JObject.Parse(Http.Post(MakeUrl(endpoint),
                                             JsonConvert.SerializeObject(parameters),
                                             jsonHeaders));
         }
@@ -54,7 +55,7 @@ namespace OnePassword
 
         public JObject Put(string endpoint)
         {
-            return JObject.Parse(_http.Put(MakeUrl(endpoint), Headers));
+            return JObject.Parse(Http.Put(MakeUrl(endpoint), Headers));
         }
 
         //
@@ -63,10 +64,7 @@ namespace OnePassword
 
         internal string MakeUrl(string endpoint)
         {
-            return _baseUrl + '/' + endpoint.TrimStart('/');
+            return BaseUrl + '/' + endpoint.TrimStart('/');
         }
-
-        private readonly IHttpClient _http;
-        private readonly string _baseUrl;
     }
 }
