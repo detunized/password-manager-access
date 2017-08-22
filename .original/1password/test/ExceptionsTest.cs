@@ -27,6 +27,16 @@ namespace OnePassword.Test
             VerifyException(new JTokenAccessException(Message, InnerException));
         }
 
+        [Test]
+        public void ClientException_properties_are_set()
+        {
+            var e = new ClientException(ClientException.FailureReason.UnknownError,
+                                        Message,
+                                        InnerException);
+            VerifyException(e);
+            Assert.That(e.Reason, Is.EqualTo(ClientException.FailureReason.UnknownError));
+        }
+
         //
         // Data
         //
