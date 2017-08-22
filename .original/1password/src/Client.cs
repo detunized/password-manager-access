@@ -301,7 +301,9 @@ namespace OnePassword
                 throw new InvalidOperationException(
                     string.Format("Key derivation algorithm '{0}' is not supported", algorithm));
 
-            // TODO: Check if the Unicode normalization is the correct one.
+            // TODO: Check if the Unicode normalization is the correct one. This could be done
+            //       by either trying to call the original JS functions in the browser console
+            //       or by changing to some really weird password and trying to log in.
 
             var k1 = Crypto.Hkdf(algorithm, salt, clientInfo.Username.ToLower().ToBytes());
             var k2 = Crypto.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
