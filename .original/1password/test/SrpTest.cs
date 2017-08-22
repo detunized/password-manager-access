@@ -13,7 +13,7 @@ namespace OnePassword.Test
         [Test]
         public void GenerateSecretA_returns_a_large_number()
         {
-            var a = new Srp(null).GenerateSecretA();
+            var a = Srp.GenerateSecretA();
             Assert.That(a.ToByteArray().Length, Is.AtLeast(20));
         }
 
@@ -37,7 +37,7 @@ namespace OnePassword.Test
                                     "781921655911450853546924160841246493678732375446547730518" +
                                     "918881443743873444606149630727602090800656964297843387612" +
                                     "37449944019317626953125";
-            var a = new Srp(null).ComputeSharedA(1337);
+            var a = Srp.ComputeSharedA(1337);
             Assert.That(a.ToString(), Is.EqualTo(expected));
         }
 
@@ -76,7 +76,7 @@ namespace OnePassword.Test
                      "62170481CD0069127D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C93406319" +
                      "9FFFFFFFFFFFFFFFF").ToBigInt();
 
-            Assert.That(() => new Srp(null).ValidateB(b), Throws.TypeOf<InvalidOperationException>());
+            Assert.That(() => Srp.ValidateB(b), Throws.TypeOf<InvalidOperationException>());
         }
 
         [Test]
@@ -113,11 +113,11 @@ namespace OnePassword.Test
                            "241A3F1BD0A76ACF32F07ADFAB36A4784781DA7E87FA6EBDF2C008DF3C55F9E002" +
                            "4D275C4D5C55A866D888E7AD4DE67D1E77").ToBigInt();
 
-            var key = new Srp(null).ComputeKey(secretA,
-                                               sharedA,
-                                               sharedB,
-                                               TestData.Session,
-                                               TestData.ClientInfo);
+            var key = Srp.ComputeKey(secretA,
+                                     sharedA,
+                                     sharedB,
+                                     TestData.ClientInfo,
+                                     TestData.Session);
 
             Assert.That(key, Is.EqualTo("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64()));
         }
@@ -127,7 +127,7 @@ namespace OnePassword.Test
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
-            var x = new Srp(null).ComputeX(TestData.Session, TestData.ClientInfo);
+            var x = Srp.ComputeX(TestData.ClientInfo, TestData.Session);
 
             Assert.That(x.ToString(), Is.EqualTo(expected));
         }
@@ -136,15 +136,15 @@ namespace OnePassword.Test
         // Helpers
         //
 
-        private static BigInteger PerformExchange(string fixture, string sessionId = TestData.SessionId)
+        private static BigInteger PerformExchange(string fixture,
+                                                  string sessionId = TestData.SessionId)
         {
-            return SetupSrpForExchange(fixture).ExchangeAForB(0, TestData.MakeSession(sessionId));
+            return Srp.ExchangeAForB(0, TestData.MakeSession(sessionId), SetupJsonHttp(fixture));
         }
 
-        private static Srp SetupSrpForExchange(string fixture)
+        private static JsonHttpClient SetupJsonHttp(string fixture)
         {
-            var http = JsonHttpClientTest.SetupPostWithFixture(fixture);
-            return new Srp(new JsonHttpClient(http.Object, ""));
+            return new JsonHttpClient(JsonHttpClientTest.SetupPostWithFixture(fixture).Object, "");
         }
     }
 }

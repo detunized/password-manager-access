@@ -7,19 +7,16 @@ using System.Numerics;
 
 namespace OnePassword
 {
-    // TODO: See if we need all that state here. It's easier to test a bunch
-    //       of static functions than a class with state.
-
     // Performs a secure password exchange and generates a secret symmetric
     // session encryption key that couldn't be seen by a man in the middle.
     // See https://en.wikipedia.org/wiki/Secure_Remote_Password_protocol
     // It's slightly modified so we have to roll our own.
-    internal class Srp
+    internal static class Srp
     {
         // Returns the session encryption key
         public static AesKey Perform(ClientInfo clientInfo, Session session, JsonHttpClient http)
         {
-            var key = new Srp(http).Perform(session, clientInfo);
+            var key = Perform(GenerateSecretA(), clientInfo, session, http);
             return new AesKey(session.Id, key);
         }
 
@@ -27,42 +24,34 @@ namespace OnePassword
         // Internal
         //
 
-        internal Srp(JsonHttpClient http)
-        {
-            _http = http;
-        }
-
-        internal byte[] Perform(Session session, ClientInfo clientInfo)
-        {
-            return Perform(GenerateSecretA(), session, clientInfo);
-        }
-
-        internal byte[] Perform(BigInteger secretA, Session session, ClientInfo clientInfo)
+        internal static byte[] Perform(BigInteger secretA, ClientInfo clientInfo, Session session, JsonHttpClient http)
         {
             var sharedA = ComputeSharedA(secretA);
-            var sharedB = ExchangeAForB(sharedA, session);
+            var sharedB = ExchangeAForB(sharedA, session, http);
             ValidateB(sharedB);
-            return ComputeKey(secretA, sharedA, sharedB, session, clientInfo);
+            return ComputeKey(secretA, sharedA, sharedB, clientInfo, session);
         }
 
-        internal BigInteger GenerateSecretA()
+        internal static BigInteger GenerateSecretA()
         {
             return Crypto.RandomBytes(32).ToBigInt();
         }
 
-        internal BigInteger ComputeSharedA(BigInteger secretA)
+        internal static BigInteger ComputeSharedA(BigInteger secretA)
         {
             return SirpG.ModExp(secretA, SirpN);
         }
 
-        internal BigInteger ExchangeAForB(BigInteger sharedA, Session session)
+        internal static BigInteger ExchangeAForB(BigInteger sharedA,
+                                                 Session session,
+                                                 JsonHttpClient http)
         {
-            var response = _http.Post("auth",
-                                      new Dictionary<string, object>
-                                      {
-                                          {"sessionID", session.Id},
-                                          {"userA", sharedA.ToHex()}
-                                      });
+            var response = http.Post("auth",
+                                     new Dictionary<string, object>
+                                     {
+                                         {"sessionID", session.Id},
+                                         {"userA", sharedA.ToHex()}
+                                     });
 
             if (response.StringAt("sessionID") != session.Id)
                 throw new InvalidOperationException("Invalid response: session ID doesn't match");
@@ -70,30 +59,30 @@ namespace OnePassword
             return response.StringAt("userB").ToBigInt();
         }
 
-        internal void ValidateB(BigInteger sharedB)
+        internal static void ValidateB(BigInteger sharedB)
         {
             if (sharedB % SirpN == 0)
                 throw new InvalidOperationException("B validation failed");
         }
 
-        internal byte[] ComputeKey(BigInteger secretA,
-                                   BigInteger sharedA,
-                                   BigInteger sharedB,
-                                   Session session,
-                                   ClientInfo clientInfo)
+        internal static byte[] ComputeKey(BigInteger secretA,
+                                          BigInteger sharedA,
+                                          BigInteger sharedB,
+                                          ClientInfo clientInfo,
+                                          Session session)
         {
             // Some arbitrary crypto computation, variable names don't have much meaning
             var ab = sharedA.ToHex() + sharedB.ToHex();
             var hashAb = Crypto.Sha256(ab).ToBigInt();
             var s = session.Id.ToBytes().ToBigInt();
-            var x = ComputeX(session, clientInfo);
+            var x = ComputeX(clientInfo, session);
             var y = sharedB - SirpG.ModExp(x, SirpN) * s;
             var z = y.ModExp(secretA + hashAb * x, SirpN);
 
             return Crypto.Sha256(z.ToHex());
         }
 
-        internal BigInteger ComputeX(Session session, ClientInfo clientInfo)
+        internal static BigInteger ComputeX(ClientInfo clientInfo, Session session)
         {
             var method = session.SrpMethod;
             var iterations = session.Iterations;
@@ -137,7 +126,5 @@ namespace OnePassword
              "93B4EA988D8FDDC186FFB7DC90A6C08F4DF435C934063199FFFFFFFFFFFFFFFF").ToBigInt();
 
         private static readonly BigInteger SirpG = new BigInteger(5);
-
-        private readonly JsonHttpClient _http;
     }
 }
