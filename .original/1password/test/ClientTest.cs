@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
+using System.Net;
 using Moq;
 using NUnit.Framework;
 
@@ -33,6 +35,30 @@ namespace OnePassword.Test
                         Throws.TypeOf<InvalidOperationException>()
                             .And.Message.StartsWith("Failed to start a new session")
                             .And.Message.Contains("'unknown'"));
+        }
+
+        [Test]
+        public void StartNewSession_throws_on_network_error()
+        {
+            var jsonHttp = new JsonHttpClient(JsonHttpClientTest.SetupGetWithFailure().Object, "");
+
+            Assert.That(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp),
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.NetworkError));
+        }
+
+        [Test]
+        public void StartNewSession_throws_on_invalid_json()
+        {
+            var jsonHttp = new JsonHttpClient(
+                JsonHttpClientTest.SetupGet("} invalid json {").Object,
+                "");
+
+            Assert.That(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp),
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.InvalidResponse));
         }
 
         [Test]

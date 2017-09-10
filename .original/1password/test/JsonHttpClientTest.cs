@@ -1,9 +1,11 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using Moq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -35,7 +37,7 @@ namespace OnePassword.Test
                 {"number", 13},
                 {"string", "hi"},
                 {"array", new object[] {null, 1.0, 2, "three"}},
-                {"object", new Dictionary<string, object>{{"a", 1}, {"b", "two"}}},
+                {"object", new Dictionary<string, object> {{"a", 1}, {"b", "two"}}},
             };
             var encodedData = "{'number':13,'string':'hi','array':[null,1.0,2,'three'],'object':{'a':1,'b':'two'}}"
                 .Replace('\'', '"');
@@ -106,6 +108,10 @@ namespace OnePassword.Test
         // Public helpers
         //
 
+        //
+        // - GET
+        //
+
         public static Mock<IHttpClient> SetupGetWithFixture(string name)
         {
             return SetupGet(ReadFixture(name));
@@ -120,6 +126,18 @@ namespace OnePassword.Test
                 .Returns(response);
             return mock;
         }
+
+        public static Mock<IHttpClient> SetupGetWithFailure()
+        {
+            var mock = new Mock<IHttpClient>();
+            mock.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Throws<WebException>();
+            return mock;
+        }
+
+        //
+        // - POST
+        //
 
         public static Mock<IHttpClient> SetupPostWithFixture(string name)
         {
@@ -136,6 +154,20 @@ namespace OnePassword.Test
             return mock;
         }
 
+        public static Mock<IHttpClient> SetupPostWithFailure()
+        {
+            var mock = new Mock<IHttpClient>();
+            mock.Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<string>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Throws<WebException>();
+            return mock;
+        }
+
+        //
+        // - PUT
+        //
+
         public static Mock<IHttpClient> SetupPut(string response = Response)
         {
             var mock = new Mock<IHttpClient>();
@@ -151,7 +183,7 @@ namespace OnePassword.Test
 
         private static string ReadFixture(string name)
         {
-            return File.ReadAllText(string.Format("Fixtures/{0}.json", name));
+            return File.ReadAllText(String.Format("Fixtures/{0}.json", name));
         }
 
         private static bool AreEqual<TK, TV>(Dictionary<TK, TV> a, Dictionary<TK, TV> b)
