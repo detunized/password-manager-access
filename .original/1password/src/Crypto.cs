@@ -75,6 +75,13 @@ namespace OnePassword
                                                               method));
         }
 
+        public static byte[] CalculateSessionHmacSalt(AesKey sessionKey)
+        {
+            return Hmac256(sessionKey.Key, SessionHmacSecret);
+        }
+
         private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();
+        private const string SessionHmacSecret =
+            "He never wears a Mac, in the pouring rain. Very strange.";
     }
 }

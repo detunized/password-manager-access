@@ -72,5 +72,15 @@ namespace OnePassword.Test
             Assert.That(() => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
                         Throws.TypeOf<InvalidOperationException>());
         }
+
+        [Test]
+        public void CalculateSessionHmacSalt_returns_salt()
+        {
+            var key = new AesKey("", "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64());
+            var expected =
+                "cce080cc9b3eaeaa9b6e621e1b4c4d2048babe16e40b0576fc2520c26473b9ac".DecodeHex();
+
+            Assert.That(Crypto.CalculateSessionHmacSalt(key), Is.EqualTo(expected));
+        }
     }
 }
