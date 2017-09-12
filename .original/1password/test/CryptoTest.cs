@@ -23,11 +23,16 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void Sha256_returns_hashed_message()
+        public void Sha256_string_returns_hashed_message()
         {
-            // Just a simple smoke test. Don't need to test SHA extensively.
-            // Only to see we didn't mess something simple up.
             Assert.That(Crypto.Sha256("message"),
+                        Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
+        }
+
+        [Test]
+        public void Sha256_bytes_returns_hashed_message()
+        {
+            Assert.That(Crypto.Sha256("message".ToBytes()),
                         Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
         }
 

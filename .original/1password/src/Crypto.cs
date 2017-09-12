@@ -31,8 +31,13 @@ namespace OnePassword
 
         public static byte[] Sha256(string message)
         {
+            return Sha256(message.ToBytes());
+        }
+
+        public static byte[] Sha256(byte[] message)
+        {
             using (var sha = new SHA256Managed())
-                return sha.ComputeHash(message.ToBytes());
+                return sha.ComputeHash(message);
         }
 
         public static byte[] Hkdf(string method, byte[] ikm, byte[] salt)
