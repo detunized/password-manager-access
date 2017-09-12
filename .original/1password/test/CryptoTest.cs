@@ -37,6 +37,20 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void Hamc256_string_returns_hashed_message()
+        {
+            Assert.That(Crypto.Hmac256("salt".ToBytes(), "message"),
+                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+        }
+
+        [Test]
+        public void Hmac256_bytes_returns_hashed_message()
+        {
+            Assert.That(Crypto.Hmac256("salt".ToBytes(), "message".ToBytes()),
+                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+        }
+
+        [Test]
         public void Hkdf_returns_derived_key()
         {
             Assert.That(Crypto.Hkdf("PBES2g-HS256", "ikm".ToBytes(), "salt".ToBytes()),

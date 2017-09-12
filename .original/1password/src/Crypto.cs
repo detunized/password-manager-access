@@ -40,6 +40,17 @@ namespace OnePassword
                 return sha.ComputeHash(message);
         }
 
+        public static byte[] Hmac256(byte[] salt, string message)
+        {
+            return Hmac256(salt, message.ToBytes());
+        }
+
+        public static byte[] Hmac256(byte[] salt, byte[] message)
+        {
+            using (var hmac = new HMACSHA256 { Key = salt })
+                return hmac.ComputeHash(message);
+        }
+
         public static byte[] Hkdf(string method, byte[] ikm, byte[] salt)
         {
             return OnePassword.Hkdf.Generate(ikm: ikm,
