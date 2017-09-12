@@ -13,7 +13,7 @@ namespace OnePassword
     {
         public const string ApiUrl = "https://my.1password.com/api/v1";
         public const string ClientName = "1Password for Web";
-        public const string ClientVersion = "348"; // TODO: This needs to be updated every now and then.
+        public const string ClientVersion = "393"; // TODO: This needs to be updated every now and then.
         public const string ClientId = ClientName + "/" + ClientVersion;
 
         // Public entry point to the library.
