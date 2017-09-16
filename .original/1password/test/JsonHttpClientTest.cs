@@ -19,7 +19,7 @@ namespace OnePassword.Test
         public void Get_makes_GET_request_with_headers()
         {
             var http = SetupGet();
-            var client = new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+            var client = SetupClient(http);
             var response = client.Get(Endpoint);
 
             http.Verify(x => x.Get(It.Is<string>(s => s == Url),
@@ -32,7 +32,7 @@ namespace OnePassword.Test
         public void Get_sets_headers_with_signature()
         {
             var http = SetupGet();
-            var client = new JsonHttpClient(http.Object, BaseUrl) { Headers = Headers, Signer = Signer };
+            var client = SetupSigningClient(http);
             client.Get(Endpoint);
 
             http.Verify(x => x.Get(It.IsAny<string>(),
@@ -53,7 +53,7 @@ namespace OnePassword.Test
             var encodedData = "{'number':13,'string':'hi','array':[null,1.0,2,'three'],'object':{'a':1,'b':'two'}}"
                 .Replace('\'', '"');
 
-            var client = new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+            var client = SetupClient(http);
             var response = client.Post(Endpoint, data);
 
             http.Verify(x => x.Post(It.Is<string>(s => s == Url),
@@ -67,7 +67,7 @@ namespace OnePassword.Test
         public void Post_sets_headers_with_signature()
         {
             var http = SetupPost();
-            var client = new JsonHttpClient(http.Object, BaseUrl) { Headers = Headers, Signer = Signer };
+            var client = SetupSigningClient(http);
             client.Post(Endpoint, new Dictionary<string, object>());
 
             http.Verify(x => x.Post(It.IsAny<string>(),
@@ -79,7 +79,7 @@ namespace OnePassword.Test
         public void Put_makes_PUT_request_with_headers()
         {
             var http = SetupPut();
-            var client = new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+            var client = SetupClient(http);
             var response = client.Put(Endpoint);
 
             http.Verify(x => x.Put(It.Is<string>(s => s == Url),
@@ -92,7 +92,7 @@ namespace OnePassword.Test
         public void Put_sets_headers_with_signature()
         {
             var http = SetupPut();
-            var client = new JsonHttpClient(http.Object, BaseUrl) { Headers = Headers, Signer = Signer };
+            var client = SetupSigningClient(http);
             client.Put(Endpoint);
 
             http.Verify(x => x.Put(It.IsAny<string>(),
@@ -223,6 +223,16 @@ namespace OnePassword.Test
         //
         // Private
         //
+
+        private static JsonHttpClient SetupClient(Mock<IHttpClient> http)
+        {
+            return new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+        }
+
+        private static JsonHttpClient SetupSigningClient(Mock<IHttpClient> http)
+        {
+            return new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers, Signer = Signer};
+        }
 
         private static bool AreEqual<TK, TV>(Dictionary<TK, TV> a, Dictionary<TK, TV> b)
         {
