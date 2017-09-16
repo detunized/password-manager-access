@@ -2,9 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
-using System.Net;
 using Moq;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace OnePassword.Test
@@ -140,8 +139,7 @@ namespace OnePassword.Test
         [Test]
         public void DecryptKeys_stores_keys_in_keychain()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
-            var accountInfo = Client.GetAccountInfo(TestData.SesionKey, http);
+            var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
             var keychain = new Keychain();
 
             Client.DecryptKeys(accountInfo, ClientInfo, keychain);

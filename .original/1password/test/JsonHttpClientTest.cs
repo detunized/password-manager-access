@@ -215,14 +215,14 @@ namespace OnePassword.Test
             return mock;
         }
 
-        //
-        // Private
-        //
-
-        private static string ReadFixture(string name)
+        public static string ReadFixture(string name)
         {
             return File.ReadAllText(String.Format("Fixtures/{0}.json", name));
         }
+
+        //
+        // Private
+        //
 
         private static bool AreEqual<TK, TV>(Dictionary<TK, TV> a, Dictionary<TK, TV> b)
         {
