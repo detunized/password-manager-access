@@ -7,14 +7,14 @@ using System.Linq;
 
 namespace OnePassword
 {
-    internal class RequestSigner: IRequestSigner
+    internal class MacRequestSigner: IRequestSigner
     {
-        public RequestSigner(Session session, AesKey sessionKey)
+        public MacRequestSigner(Session session, AesKey sessionKey)
             : this(session, sessionKey, Crypto.RandonUInt32())
         {
         }
 
-        public RequestSigner(Session session, AesKey sessionKey, uint seed)
+        public MacRequestSigner(Session session, AesKey sessionKey, uint seed)
         {
             _sessionId = session.Id;
             _salt = Crypto.CalculateSessionHmacSalt(sessionKey);

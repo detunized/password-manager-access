@@ -65,7 +65,7 @@ namespace OnePassword
 
                 // Assign a request signer now that we have a key.
                 // All the following requests are expected to be signed with the MAC.
-                jsonHttp.Signer = new RequestSigner(session, sessionKey);
+                jsonHttp.Signer = new MacRequestSigner(session, sessionKey);
 
                 // Step 3: Verify the key with the server
                 VerifySessionKey(clientInfo, session, sessionKey, jsonHttp);

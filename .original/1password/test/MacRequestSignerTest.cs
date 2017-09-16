@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace OnePassword.Test
 {
     [TestFixture]
-    public class RequestSignerTest
+    public class MacRequestSignerTest
     {
         [Test]
         public void Sign_returns_signature()
@@ -67,7 +67,7 @@ namespace OnePassword.Test
         // Helpers
         //
 
-        private static RequestSigner MakeSigner()
+        private static MacRequestSigner MakeSigner()
         {
             // The test data is generated with the actual web page JS.
             var session = TestData.MakeSession("PBXONDZUWVCJFAV25C7XR7IYDQ");
@@ -75,7 +75,7 @@ namespace OnePassword.Test
                                  "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64());
             var seed = 842346063u;
 
-            return new RequestSigner(session, key, seed);
+            return new MacRequestSigner(session, key, seed);
         }
     }
 }

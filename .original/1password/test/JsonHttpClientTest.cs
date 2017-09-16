@@ -138,9 +138,9 @@ namespace OnePassword.Test
             {"Header3", "Blah-blah-blah-blah, blah, blah!"},
         };
 
-        private static readonly RequestSigner Signer = new RequestSigner(TestData.Session,
-                                                                         TestData.SesionKey,
-                                                                         12345678);
+        private static readonly MacRequestSigner Signer = new MacRequestSigner(TestData.Session,
+                                                                               TestData.SesionKey,
+                                                                               12345678);
 
         //
         // Public helpers
