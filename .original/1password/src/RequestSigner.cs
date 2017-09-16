@@ -9,6 +9,11 @@ namespace OnePassword
 {
     internal class RequestSigner: IRequestSigner
     {
+        public RequestSigner(Session session, AesKey sessionKey)
+            : this(session, sessionKey, Crypto.RandonUInt32())
+        {
+        }
+
         public RequestSigner(Session session, AesKey sessionKey, uint seed)
         {
             _sessionId = session.Id;
