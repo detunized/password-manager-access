@@ -82,5 +82,12 @@ namespace OnePassword.Test
 
             Assert.That(Crypto.CalculateSessionHmacSalt(key), Is.EqualTo(expected));
         }
+
+        [Test]
+        public void CalculateClientHash_returns_hash()
+        {
+            Assert.That(Crypto.CalculateClientHash(TestData.ClientInfo, TestData.Session),
+                        Is.EqualTo("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA"));
+        }
     }
 }

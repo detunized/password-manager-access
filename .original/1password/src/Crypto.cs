@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace OnePassword
@@ -83,6 +84,13 @@ namespace OnePassword
         public static byte[] CalculateSessionHmacSalt(AesKey sessionKey)
         {
             return Hmac256(sessionKey.Key, SessionHmacSecret);
+        }
+
+        public static string CalculateClientHash(ClientInfo clientInfo, Session session)
+        {
+            var a = Sha256(clientInfo.AccountKey.Uuid);
+            var b = Sha256(session.Id);
+            return Sha256(a.Concat(b).ToArray()).ToBase64();
         }
 
         private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();

@@ -170,7 +170,7 @@ namespace OnePassword
                 {
                     sessionID = session.Id,
                     client = ClientId,
-                    clientVerifyHash = CalculateClientHash(clientInfo, session)
+                    clientVerifyHash = Crypto.CalculateClientHash(clientInfo, session)
                 },
                 sessionKey,
                 jsonHttp);
@@ -178,13 +178,6 @@ namespace OnePassword
             // Just to verify that it's a valid JSON and it has some keys.
             // Technically it should have failed by now either in decrypt or JSON parse
             response.StringAt("userUuid");
-        }
-
-        internal static string CalculateClientHash(ClientInfo clientInfo, Session session)
-        {
-            var a = Crypto.Sha256(clientInfo.AccountKey.Uuid);
-            var b = Crypto.Sha256(session.Id);
-            return Crypto.Sha256(a.Concat(b).ToArray()).ToBase64();
         }
 
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
