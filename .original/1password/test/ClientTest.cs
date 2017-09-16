@@ -99,7 +99,7 @@ namespace OnePassword.Test
         public void VerifySessionKey_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
-            Client.VerifySessionKey(TestData.Session, TestData.SesionKey, http);
+            Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
         }
 
         [Test]

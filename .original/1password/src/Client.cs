@@ -63,8 +63,12 @@ namespace OnePassword
                 // Step 2: Perform SRP exchange
                 var sessionKey = Srp.Perform(clientInfo, session, jsonHttp);
 
+                // Assign a request signer now that we have a key.
+                // All the following requests are expected to be signed with the MAC.
+                jsonHttp.Signer = new RequestSigner(session, sessionKey);
+
                 // Step 3: Verify the key with the server
-                VerifySessionKey(session, sessionKey, jsonHttp);
+                VerifySessionKey(clientInfo, session, sessionKey, jsonHttp);
 
                 // Step 4: Get account info. It contains users, keys, groups, vault info and other stuff.
                 //         Not the actual vault data though. That is requested separately.
@@ -91,6 +95,8 @@ namespace OnePassword
             var jsonHttp = new JsonHttpClient(http, ApiUrl);
             jsonHttp.Headers["X-AgileBits-Client"] = ClientId;
 
+            // TODO: Turn this user header into a request signer as well.
+            //       This way we can get rid of the headers all together.
             if (sessionId != null)
                 jsonHttp.Headers["X-AgileBits-Session-ID"] = sessionId;
 
@@ -153,23 +159,37 @@ namespace OnePassword
                     string.Format("Failed to reauthorize the device '{0}'", clientInfo.Uuid));
         }
 
-        internal static void VerifySessionKey(Session session,
+        internal static void VerifySessionKey(ClientInfo clientInfo,
+                                              Session session,
                                               AesKey sessionKey,
                                               JsonHttpClient jsonHttp)
         {
-            var response = PostEncryptedJson("auth/verify",
-                                             new {sessionID = session.Id},
-                                             sessionKey,
-                                             jsonHttp);
+            var response = PostEncryptedJson(
+                "auth/verify",
+                new
+                {
+                    sessionID = session.Id,
+                    client = ClientId,
+                    clientVerifyHash = CalculateClientHash(clientInfo, session)
+                },
+                sessionKey,
+                jsonHttp);
 
             // Just to verify that it's a valid JSON and it has some keys.
             // Technically it should have failed by now either in decrypt or JSON parse
             response.StringAt("userUuid");
         }
 
+        internal static string CalculateClientHash(ClientInfo clientInfo, Session session)
+        {
+            var a = Crypto.Sha256(clientInfo.AccountKey.Uuid);
+            var b = Crypto.Sha256(session.Id);
+            return Crypto.Sha256(a.Concat(b).ToArray()).ToBase64();
+        }
+
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
         {
-            return GetEncryptedJson("accountpanel", sessionKey, jsonHttp);
+            return GetEncryptedJson("account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults", sessionKey, jsonHttp);
         }
 
         internal static Vault[] GetVaults(JToken accountInfo,
@@ -241,9 +261,9 @@ namespace OnePassword
                                          ClientInfo clientInfo,
                                          Keychain keychain)
         {
-            DecryptKeysets(accountInfo.At("user/keysets"), clientInfo, keychain);
+            DecryptKeysets(accountInfo.At("me/keysets"), clientInfo, keychain);
             DecryptGroupKeys(accountInfo.At("groups"), keychain);
-            DecryptVaultKeys(accountInfo.At("user/vaultAccess"), keychain);
+            DecryptVaultKeys(accountInfo.At("me/vaultAccess"), keychain);
         }
 
         internal static void DecryptKeysets(JToken keysets, ClientInfo clientInfo, Keychain keychain)
