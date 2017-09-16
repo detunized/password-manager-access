@@ -29,6 +29,17 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void Get_sets_headers_with_signature()
+        {
+            var http = SetupGet();
+            var client = new JsonHttpClient(http.Object, BaseUrl) { Headers = Headers, Signer = Signer };
+            client.Get(Endpoint);
+
+            http.Verify(x => x.Get(It.IsAny<string>(),
+                                   It.Is<Dictionary<string, string>>(d => d.ContainsKey("X-AgileBits-MAC"))));
+        }
+
+        [Test]
         public void Post_makes_POST_request_with_data_and_headers()
         {
             var http = SetupPost();
@@ -53,6 +64,18 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void Post_sets_headers_with_signature()
+        {
+            var http = SetupPost();
+            var client = new JsonHttpClient(http.Object, BaseUrl) { Headers = Headers, Signer = Signer };
+            client.Post(Endpoint, new Dictionary<string, object>());
+
+            http.Verify(x => x.Post(It.IsAny<string>(),
+                                    It.IsAny<string>(),
+                                    It.Is<Dictionary<string, string>>(d => d.ContainsKey("X-AgileBits-MAC"))));
+        }
+
+        [Test]
         public void Put_makes_PUT_request_with_headers()
         {
             var http = SetupPut();
@@ -63,6 +86,17 @@ namespace OnePassword.Test
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
 
             Assert.That(JToken.DeepEquals(response, ResponseJson));
+        }
+
+        [Test]
+        public void Put_sets_headers_with_signature()
+        {
+            var http = SetupPut();
+            var client = new JsonHttpClient(http.Object, BaseUrl) { Headers = Headers, Signer = Signer };
+            client.Put(Endpoint);
+
+            http.Verify(x => x.Put(It.IsAny<string>(),
+                                   It.Is<Dictionary<string, string>>(d => d.ContainsKey("X-AgileBits-MAC"))));
         }
 
         [Test]
@@ -103,6 +137,10 @@ namespace OnePassword.Test
             {"Header2", "Blah-blah-blah"},
             {"Header3", "Blah-blah-blah-blah, blah, blah!"},
         };
+
+        private static readonly RequestSigner Signer = new RequestSigner(TestData.Session,
+                                                                         TestData.SesionKey,
+                                                                         12345678);
 
         //
         // Public helpers

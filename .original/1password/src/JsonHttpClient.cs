@@ -21,6 +21,7 @@ namespace OnePassword
         public IHttpClient Http { get; private set; }
         public string BaseUrl { get; private set; }
         public Dictionary<string, string> Headers { get; set; }
+        public IRequestSigner Signer { get; set; }
 
         //
         // Get
@@ -28,7 +29,7 @@ namespace OnePassword
 
         public JObject Get(string endpoint)
         {
-            return MakeRequest(endpoint, url => Http.Get(url, Headers));
+            return MakeRequest("GET", endpoint, Headers, (url, headers) => Http.Get(url, headers));
         }
 
         //
@@ -40,10 +41,12 @@ namespace OnePassword
             var jsonHeaders = new Dictionary<string, string>(Headers);
             jsonHeaders["Content-Type"] = "application/json; charset=UTF-8";
 
-            return MakeRequest(endpoint,
-                               url => Http.Post(url,
-                                                JsonConvert.SerializeObject(parameters),
-                                                jsonHeaders));
+            return MakeRequest("POST",
+                               endpoint,
+                               jsonHeaders,
+                               (url, headers) => Http.Post(url,
+                                                           JsonConvert.SerializeObject(parameters),
+                                                           headers));
         }
 
         //
@@ -52,23 +55,38 @@ namespace OnePassword
 
         public JObject Put(string endpoint)
         {
-            return MakeRequest(endpoint, url => Http.Put(url, Headers));
+            return MakeRequest("PUT", endpoint, Headers, (url, headers) => Http.Put(url, headers));
         }
 
         //
         // Private
         //
 
-        internal JObject MakeRequest(string endpoint, Func<string, string> request)
+        internal JObject MakeRequest(string method,
+                                     string endpoint,
+                                     Dictionary<string, string> headers,
+                                     Func<string, Dictionary<string, string>, string> request)
         {
             var url = MakeUrl(endpoint);
             try
             {
-                return JObject.Parse(request(url));
+                var requestHeaders = headers;
+
+                // Sign the request
+                if (Signer != null)
+                {
+                    var signature = Signer.Sign(url, method);
+
+                    // Create a copy before updating
+                    requestHeaders = new Dictionary<string, string>(requestHeaders);
+                    requestHeaders[signature.Key] = signature.Value;
+                }
+
+                return JObject.Parse(request(url, requestHeaders));
             }
             catch (WebException e)
             {
-                throw MakeNetworkError(url, e);
+                throw MakeNetworkError(method, url, e);
             }
             catch (JsonException e)
             {
@@ -81,24 +99,27 @@ namespace OnePassword
             return BaseUrl + '/' + endpoint.TrimStart('/');
         }
 
-        internal static ClientException MakeNetworkError(string url, WebException original)
+        internal static ClientException MakeNetworkError(string method,
+                                                         string url,
+                                                         WebException original)
         {
             if (original.Status == WebExceptionStatus.ProtocolError)
-                return MakeHttpError(url, (HttpWebResponse)original.Response, original);
+                return MakeHttpError(method, url, (HttpWebResponse)original.Response, original);
 
             return new ClientException(ClientException.FailureReason.NetworkError,
-                                       string.Format("Request to '{0}' failed", url),
+                                       string.Format("{0} request to '{1}' failed", method, url),
                                        original);
         }
 
-        private static ClientException MakeHttpError(string url,
+        private static ClientException MakeHttpError(string method,
+                                                     string url,
                                                      HttpWebResponse response,
                                                      WebException original)
         {
             return new ClientException(ClientException.FailureReason.NetworkError,
                                        string.Format(
                                            "{0} request to '{1}' failed with HTTP status code {2}",
-                                           response.Method,
+                                           method,
                                            url,
                                            response.StatusCode),
                                        original);
