@@ -18,6 +18,11 @@ namespace OnePassword
             }
         }
 
+        public static uint RandonUInt32()
+        {
+            return BitConverter.ToUInt32(RandomBytes(sizeof (uint)), 0);
+        }
+
         public static string RandomUuid()
         {
             var random = new Random();
