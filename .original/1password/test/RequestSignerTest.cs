@@ -18,6 +18,17 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void Sign_returns_signature_for_url_with_query()
+        {
+            var signature = MakeSigner().Sign(
+                "https://my.1password.com/api/v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
+                "get");
+
+            Assert.That(signature.Key, Is.EqualTo("X-AgileBits-MAC"));
+            Assert.That(signature.Value, Is.EqualTo("v1|842346063|UyjKq0HAmjB5j7kF"));
+        }
+
+        [Test]
         public void Sign_ignores_case_on_method()
         {
             var signature1 = MakeSigner().Sign("https://my.1password.com/api/v1/auth/verify", "post");

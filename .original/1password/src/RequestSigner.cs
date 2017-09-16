@@ -41,12 +41,12 @@ namespace OnePassword
         internal string CalculateAuthMessage(string url, string method, uint requestId)
         {
             var uri = new Uri(url);
-            return string.Format("{0}|{1}|{2}{3}?{4}|v1|{5}",
+            return string.Format("{0}|{1}|{2}/{3}?{4}|v1|{5}",
                                  _sessionId,
                                  method.ToUpperInvariant(),
                                  uri.Host,
-                                 uri.AbsolutePath,
-                                 uri.Query,
+                                 uri.AbsolutePath.TrimStart('/'),
+                                 uri.Query.TrimStart('?'),
                                  requestId);
         }
 
