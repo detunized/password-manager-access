@@ -95,8 +95,6 @@ namespace OnePassword
             var jsonHttp = new JsonHttpClient(http, ApiUrl);
             jsonHttp.Headers["X-AgileBits-Client"] = ClientId;
 
-            // TODO: Turn this user header into a request signer as well.
-            //       This way we can get rid of the headers all together.
             if (sessionId != null)
                 jsonHttp.Headers["X-AgileBits-Session-ID"] = sessionId;
 
