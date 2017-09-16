@@ -31,11 +31,6 @@ namespace OnePassword
             return MakeRequest(endpoint, url => Http.Get(url, Headers));
         }
 
-        public T Get<T>(string endpoint, Func<JObject, T> parse)
-        {
-            return parse(Get(endpoint));
-        }
-
         //
         // Post
         //
