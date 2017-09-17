@@ -57,7 +57,7 @@ namespace OnePassword
                                      });
 
             if (response.StringAt("sessionID") != session.Id)
-                throw new InvalidOperationException("Invalid response: session ID doesn't match");
+                throw ExceptionFactory.MakeInvalidOperation("SRP: session ID doesn't match");
 
             return response.StringAt("userB").ToBigInt();
         }
@@ -65,7 +65,7 @@ namespace OnePassword
         internal static void ValidateB(BigInteger sharedB)
         {
             if (sharedB % SirpN == 0)
-                throw new InvalidOperationException("B validation failed");
+                throw ExceptionFactory.MakeInvalidOperation("SRP: B validation failed");
         }
 
         internal static byte[] ComputeKey(BigInteger secretA,
@@ -91,11 +91,12 @@ namespace OnePassword
             var iterations = session.Iterations;
 
             if (iterations == 0)
-                throw new InvalidOperationException("Not supported yet: 0 iterations");
+                throw ExceptionFactory.MakeUnsupported("SRP: 0 iterations is not supported");
 
-            if (!method.StartsWith("SRPg-"))
-                throw new InvalidOperationException(
-                    string.Format("Not supported yet: method = '{0}'", method));
+            // TODO: Add constants for 1024, 6144 and 8192
+            if (method != "SRPg-4096")
+                throw ExceptionFactory.MakeUnsupported(
+                    string.Format("SRP: method '{0}' is not supported", method));
 
             var k1 = Crypto.Hkdf(method: method,
                                  ikm: session.Salt,

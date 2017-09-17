@@ -54,7 +54,10 @@ namespace OnePassword.Test
         public void ExchangeAForB_throws_on_mismatching_session_id()
         {
             Assert.That(() => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"),
-                        Throws.TypeOf<InvalidOperationException>());
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.InvalidOperation)
+                            .And.Message.Contains("ID doesn't match"));
         }
 
         [Test]
@@ -76,7 +79,11 @@ namespace OnePassword.Test
                      "62170481CD0069127D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C93406319" +
                      "9FFFFFFFFFFFFFFFF").ToBigInt();
 
-            Assert.That(() => Srp.ValidateB(b), Throws.TypeOf<InvalidOperationException>());
+            Assert.That(() => Srp.ValidateB(b),
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.InvalidOperation)
+                            .And.Message.Contains("validation failed"));
         }
 
         [Test]
