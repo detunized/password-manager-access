@@ -1,7 +1,6 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 
@@ -40,11 +39,11 @@ namespace OnePassword
         public byte[] Decrypt(Encrypted e)
         {
             if (e.KeyId != Id)
-                throw new InvalidOperationException("Mismatching key id");
+                throw ExceptionFactory.MakeInvalidOperation("RSA key: mismatching key id");
 
             if (e.Scheme != EncryptionScheme)
-                throw new InvalidOperationException(
-                    string.Format("Invalid encryption scheme '{0}', expected '{1}'",
+                throw ExceptionFactory.MakeInvalidOperation(
+                    string.Format("RSA key: invalid encryption scheme '{0}', expected '{1}'",
                                   e.Scheme,
                                   EncryptionScheme));
 

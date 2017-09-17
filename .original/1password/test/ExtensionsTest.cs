@@ -37,16 +37,16 @@ namespace OnePassword.Test
         public void String_DecodeHex_throws_on_odd_length()
         {
             Assert.That(() => "0".DecodeHex(),
-                        Throws.TypeOf<ArgumentException>()
-                            .And.Message.EqualTo("Input length must be multiple of 2"));
+                        ExceptionsTest.ThrowsInvalidOpeationWithMessage(
+                            "input length must be multiple of 2"));
         }
 
         [Test]
         public void String_DecodeHex_throws_on_non_hex_characters()
         {
             Assert.That(() => "xz".DecodeHex(),
-                        Throws.TypeOf<ArgumentException>()
-                            .And.Message.EqualTo("Input contains invalid characters"));
+                        ExceptionsTest.ThrowsInvalidOpeationWithMessage(
+                            "input contains invalid characters"));
         }
 
         [Test]

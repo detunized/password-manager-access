@@ -24,7 +24,8 @@ namespace OnePassword
         public static byte[] DecodeHex(this string s)
         {
             if (s.Length % 2 != 0)
-                throw new ArgumentException("Input length must be multiple of 2");
+                throw ExceptionFactory.MakeInvalidOperation(
+                    "DecodeHex: input length must be multiple of 2");
 
             var bytes = new byte[s.Length / 2];
             for (var i = 0; i < s.Length / 2; ++i)
@@ -39,7 +40,8 @@ namespace OnePassword
                     else if (c >= 'a' && c <= 'f')
                         b |= c - 'a' + 10;
                     else
-                        throw new ArgumentException("Input contains invalid characters");
+                        throw ExceptionFactory.MakeInvalidOperation(
+                            "DecodeHex: input contains invalid characters");
                 }
 
                 bytes[i] = (byte)b;

@@ -1,7 +1,6 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 
 namespace OnePassword
@@ -21,7 +20,8 @@ namespace OnePassword
         public AesKey GetAes(string id)
         {
             if (!_aes.ContainsKey(id))
-                throw new InvalidOperationException(string.Format("AES key '{0}' not found", id));
+                throw ExceptionFactory.MakeInvalidOperation(
+                    string.Format("Keychain: AES key '{0}' not found", id));
 
             return _aes[id];
         }
@@ -29,7 +29,8 @@ namespace OnePassword
         public RsaKey GetRsa(string id)
         {
             if (!_rsa.ContainsKey(id))
-                throw new InvalidOperationException(string.Format("RSA key '{0}' not found", id));
+                throw ExceptionFactory.MakeInvalidOperation(
+                    string.Format("Keychain: RSA key '{0}' not found", id));
 
             return _rsa[id];
         }
@@ -44,8 +45,8 @@ namespace OnePassword
                 return GetRsa(encrypted.KeyId).Decrypt(encrypted);
             }
 
-            throw new InvalidOperationException(string.Format("Unsupported encryption scheme '{0}'",
-                                                              encrypted.Scheme));
+            throw ExceptionFactory.MakeInvalidOperation(
+                string.Format("Keychain: Unsupported encryption scheme '{0}'", encrypted.Scheme));
         }
 
         private readonly Dictionary<string, AesKey> _aes = new Dictionary<string, AesKey>();
