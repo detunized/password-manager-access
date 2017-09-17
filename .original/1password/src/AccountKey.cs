@@ -15,23 +15,23 @@ namespace OnePassword
         {
             var s = str.ToUpperInvariant().Replace("-", "");
             if (s.Length < 2)
-                throw new InvalidOperationException("Invalid account key: too short");
+                throw ExceptionFactory.MakeInvalidOperation("Invalid account key: too short");
 
             var format = s.Substring(0, 2);
             switch (format)
             {
             case "A2":
                 if (s.Length != 33)
-                    throw new InvalidOperationException(
+                    throw ExceptionFactory.MakeInvalidOperation(
                         "Invalid account key: incorrect length for 'A2' format");
                 break;
             case "A3":
                 if (s.Length != 34)
-                    throw new InvalidOperationException(
+                    throw ExceptionFactory.MakeInvalidOperation(
                         "Invalid account key: incorrect length for 'A3' format");
                 break;
             default:
-                throw new InvalidOperationException(
+                throw ExceptionFactory.MakeInvalidOperation(
                     string.Format("Invalid account key: unknown format '{0}'", format));
             }
 
@@ -58,7 +58,7 @@ namespace OnePassword
         {
             var h = Hash();
             if (h.Length != bytes.Length)
-                throw new InvalidOperationException("Size doesn't match hash function");
+                throw ExceptionFactory.MakeInvalidOperation("Size doesn't match hash function");
 
             for (int i = 0; i < h.Length; ++i)
                 h[i] ^= bytes[i];

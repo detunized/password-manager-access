@@ -47,7 +47,8 @@ namespace OnePassword.Test
             };
 
             foreach (var key in keys)
-                Assert.That(() => AccountKey.Parse(key), Throws.TypeOf<InvalidOperationException>());
+                Assert.That(() => AccountKey.Parse(key),
+                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("Invalid account key"));
         }
 
         [Test]
@@ -78,7 +79,7 @@ namespace OnePassword.Test
 
             foreach (var b in bytes)
                 Assert.That(() => Key.CombineWith(b.ToBytes()),
-                            Throws.TypeOf<InvalidOperationException>());
+                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("hash function"));
         }
 
         //

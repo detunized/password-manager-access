@@ -3,6 +3,7 @@
 
 using System;
 using NUnit.Framework;
+using NUnit.Framework.Constraints;
 
 namespace OnePassword.Test
 {
@@ -47,6 +48,14 @@ namespace OnePassword.Test
         //
         // Helpers
         //
+
+        public static Constraint ThrowsInvalidOpeationWithMessage(string message)
+        {
+            return Throws.TypeOf<ClientException>()
+                .And.Property("Reason")
+                .EqualTo(ClientException.FailureReason.InvalidOperation)
+                .And.Message.Contains(message);
+        }
 
         private static void VerifyException(BaseException e)
         {
