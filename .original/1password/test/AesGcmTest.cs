@@ -32,7 +32,7 @@ namespace OnePassword.Test
                                      plaintext: new byte[16],
                                      iv: new byte[12],
                                      authData: new byte[0]),
-                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("key must"));
+                ExceptionsTest.ThrowsInvalidOpeationWithMessage("key must"));
         }
 
         [Test]
@@ -43,7 +43,7 @@ namespace OnePassword.Test
                                      plaintext: new byte[16],
                                      iv: new byte[13],
                                      authData: new byte[0]),
-                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("iv must"));
+                ExceptionsTest.ThrowsInvalidOpeationWithMessage("iv must"));
         }
 
         //
@@ -68,7 +68,7 @@ namespace OnePassword.Test
                                      ciphertext: new byte[16],
                                      iv: new byte[12],
                                      authData: new byte[0]),
-                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("key must"));
+                ExceptionsTest.ThrowsInvalidOpeationWithMessage("key must"));
         }
 
         [Test]
@@ -79,7 +79,7 @@ namespace OnePassword.Test
                                      ciphertext: new byte[13],
                                      iv: new byte[12],
                                      authData: new byte[0]),
-                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("ciphertext must"));
+                ExceptionsTest.ThrowsInvalidOpeationWithMessage("ciphertext must"));
         }
 
         [Test]
@@ -90,7 +90,7 @@ namespace OnePassword.Test
                                      ciphertext: new byte[16],
                                      iv: new byte[13],
                                      authData: new byte[0]),
-                Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("iv must"));
+                ExceptionsTest.ThrowsInvalidOpeationWithMessage("iv must"));
         }
 
         [Test]
@@ -101,7 +101,7 @@ namespace OnePassword.Test
                 // Change the first byte of the ciphertext
                 var modified = Modified(i.CiphertextWithTag, 0);
                 Assert.That(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData),
-                            Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("Auth tag"));
+                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("auth tag"));
             }
         }
 
@@ -113,7 +113,7 @@ namespace OnePassword.Test
                 // Change the last byte in the tag
                 var modified = Modified(i.CiphertextWithTag, -1);
                 Assert.That(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData),
-                            Throws.TypeOf<InvalidOperationException>().And.Message.StartsWith("Auth tag"));
+                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("auth tag"));
             }
         }
 

@@ -29,7 +29,8 @@ namespace OnePassword
         public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] authData)
         {
             if (ciphertext.Length < 16)
-                throw new InvalidOperationException("ciphertext must be at least 16 bytes long");
+                throw ExceptionFactory.MakeInvalidOperation(
+                    "AES-GCM: ciphertext must be at least 16 bytes long");
 
             var length = ciphertext.Length - 16;
             var plaintext = new byte[length];
@@ -47,7 +48,7 @@ namespace OnePassword
                 sum |= tag[i] ^ ciphertext[length + i];
 
             if (sum != 0)
-                throw new InvalidOperationException("Auth tag doesn't match");
+                throw ExceptionFactory.MakeInvalidOperation("AES-GCM: auth tag doesn't match");
 
             return plaintext;
         }
@@ -68,10 +69,10 @@ namespace OnePassword
                                    byte[] hashSalt)
         {
             if (key.Length != 32)
-                throw new InvalidOperationException("key must be 32 bytes long");
+                throw ExceptionFactory.MakeInvalidOperation("AES-GCM: key must be 32 bytes long");
 
             if (iv.Length != 12)
-                throw new InvalidOperationException("iv must be 12 bytes long");
+                throw ExceptionFactory.MakeInvalidOperation("AES-GCM: iv must be 12 bytes long");
 
             Debug.Assert(input.Length >= length);
             Debug.Assert(output.Length >= length);
@@ -136,7 +137,7 @@ namespace OnePassword
                                      int ciphertextLength)
         {
             if (key.Length != 16)
-                throw new InvalidOperationException("key must be 16 bytes long");
+                throw ExceptionFactory.MakeInvalidOperation("AES-GCM: key must be 16 bytes long");
 
             var key128 = new UInt128(key);
             var x = new UInt128();

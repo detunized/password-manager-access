@@ -43,11 +43,11 @@ namespace OnePassword
         public byte[] Decrypt(Encrypted e)
         {
             if (e.KeyId != Id)
-                throw new InvalidOperationException("Mismatching key id");
+                throw ExceptionFactory.MakeInvalidOperation("AES key: mismatching key id");
 
             if (e.Scheme != EncryptionScheme)
-                throw new InvalidOperationException(
-                    string.Format("Invalid encryption scheme '{0}', expected '{1}'",
+                throw ExceptionFactory.MakeInvalidOperation(
+                    string.Format("AES key: invalid encryption scheme '{0}', expected '{1}'",
                                   e.Scheme,
                                   EncryptionScheme));
 
