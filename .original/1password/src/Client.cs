@@ -311,9 +311,7 @@ namespace OnePassword
                                                byte[] salt,
                                                ClientInfo clientInfo)
         {
-            if (!algorithm.StartsWith("PBES2g-"))
-                throw new InvalidOperationException(
-                    string.Format("Key derivation algorithm '{0}' is not supported", algorithm));
+            // TODO: Catch a crypto exception and rethrow as a client one. Maybe?
 
             // TODO: Check if the Unicode normalization is the correct one. This could be done
             //       by either trying to call the original JS functions in the browser console
