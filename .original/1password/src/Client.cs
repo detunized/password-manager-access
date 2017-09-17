@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -164,25 +165,57 @@ namespace OnePassword
                                               AesKey sessionKey,
                                               JsonHttpClient jsonHttp)
         {
-            // TODO: When the credentials are incorrect it fails here. It's not very obvious
-            // how to detect it and not to give a generic error. We need to parse the response
-            // body and look inside. There might be some error codes. Currently JsonHttp thing
-            // takes care of HTTP errors. So we don't even get it here. Look into that.
+            try
+            {
+                var response = PostEncryptedJson(
+                    "auth/verify",
+                    new
+                    {
+                        sessionID = session.Id,
+                        client = ClientId,
+                        clientVerifyHash = Crypto.CalculateClientHash(clientInfo, session)
+                    },
+                    sessionKey,
+                    jsonHttp);
 
-            var response = PostEncryptedJson(
-                "auth/verify",
-                new
-                {
-                    sessionID = session.Id,
-                    client = ClientId,
-                    clientVerifyHash = Crypto.CalculateClientHash(clientInfo, session)
-                },
-                sessionKey,
-                jsonHttp);
+                // Just to verify that it's a valid JSON and it has some keys.
+                // Technically it should have failed by now either in decrypt or JSON parse
+                response.StringAt("userUuid");
+            }
+            catch (ClientException e)
+            {
+                // This is a quite ugly attempt at handling a very special case.
+                // When this specific request fails with 400, the response contains
+                // the error code. It seems 100 means invalid credentials.
 
-            // Just to verify that it's a valid JSON and it has some keys.
-            // Technically it should have failed by now either in decrypt or JSON parse
-            response.StringAt("userUuid");
+                // TODO: Write a test for this case.
+
+                if (e.Reason != ClientException.FailureReason.NetworkError)
+                    throw;
+
+                var web = e.InnerException as WebException;
+                if (web == null)
+                    throw;
+
+                var response = web.Response as HttpWebResponse;
+                if (response == null)
+                    throw;
+
+                var stream = response.GetResponseStream();
+                if (stream == null)
+                    throw;
+
+                stream.Position = 0;
+                var text = new System.IO.StreamReader(stream).ReadToEnd();
+
+                var json = JObject.Parse(text);
+                if (json.IntAt("errorCode", 0) == 100)
+                    throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
+                                              "Username and/or password is incorrect",
+                                              e);
+
+                throw;
+            }
         }
 
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
