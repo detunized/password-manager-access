@@ -164,6 +164,11 @@ namespace OnePassword
                                               AesKey sessionKey,
                                               JsonHttpClient jsonHttp)
         {
+            // TODO: When the credentials are incorrect it fails here. It's not very obvious
+            // how to detect it and not to give a generic error. We need to parse the response
+            // body and look inside. There might be some error codes. Currently JsonHttp thing
+            // takes care of HTTP errors. So we don't even get it here. Look into that.
+
             var response = PostEncryptedJson(
                 "auth/verify",
                 new
