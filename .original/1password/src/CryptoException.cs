@@ -5,6 +5,7 @@ using System;
 
 namespace OnePassword
 {
+    // TODO: Remove this if not used
     public class CryptoException: BaseException
     {
         public CryptoException(string message): base(message)

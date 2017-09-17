@@ -13,6 +13,7 @@ namespace OnePassword
             NetworkError,
             InvalidResponse,
             RespondedWithError,
+            UnsupportedFeature,
             UnknownError
         }
 
