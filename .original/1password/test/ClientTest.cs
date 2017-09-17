@@ -31,7 +31,9 @@ namespace OnePassword.Test
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGet("{'status': 'unknown'}"));
             Assert.That(() => Client.StartNewSession(TestData.ClientInfo, http),
-                        Throws.TypeOf<InvalidOperationException>()
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.InvalidResponse)
                             .And.Message.StartsWith("Failed to start a new session")
                             .And.Message.Contains("'unknown'"));
         }
@@ -72,7 +74,9 @@ namespace OnePassword.Test
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 0}"));
             Assert.That(() => Client.RegisterDevice(TestData.ClientInfo, http),
-                        Throws.TypeOf<InvalidOperationException>()
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.RespondedWithError)
                             .And.Message.StartsWith("Failed to register")
                             .And.Message.Contains(TestData.Uuid));
         }
@@ -89,7 +93,9 @@ namespace OnePassword.Test
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
             Assert.That(() => Client.ReauthorizeDevice(TestData.ClientInfo, http),
-                        Throws.TypeOf<InvalidOperationException>()
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.RespondedWithError)
                             .And.Message.StartsWith("Failed to reauthorize")
                             .And.Message.Contains(TestData.Uuid));
         }
@@ -133,7 +139,11 @@ namespace OnePassword.Test
         public void SignOut_throws_on_bad_response()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
-            Assert.That(() => Client.SignOut(http), Throws.TypeOf<InvalidOperationException>());
+            Assert.That(() => Client.SignOut(http),
+                        Throws.TypeOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.RespondedWithError)
+                            .And.Message.Contains("Failed to sign out"));
         }
 
         [Test]

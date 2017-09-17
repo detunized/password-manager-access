@@ -123,8 +123,8 @@ namespace OnePassword
                 ReauthorizeDevice(clientInfo, MakeJsonClient(jsonHttp, response.StringAt("sessionID")));
                 break;
             default:
-                // TODO: Use custom exception
-                throw new InvalidOperationException(
+                throw new ClientException(
+                    ClientException.FailureReason.InvalidResponse,
                     string.Format(
                         "Failed to start a new session, unsupported response status '{0}'",
                         status));
@@ -144,8 +144,9 @@ namespace OnePassword
                                          });
 
             if (response.IntAt("success") != 1)
-                throw new InvalidOperationException(
-                    string.Format("Failed to register the device '{0}'", clientInfo.Uuid));
+                throw new ClientException(ClientException.FailureReason.RespondedWithError,
+                                          string.Format("Failed to register the device '{0}'",
+                                                        clientInfo.Uuid));
         }
 
         internal static void ReauthorizeDevice(ClientInfo clientInfo, JsonHttpClient jsonHttp)
@@ -153,8 +154,9 @@ namespace OnePassword
             var response = jsonHttp.Put(string.Format("device/{0}/reauthorize", clientInfo.Uuid));
 
             if (response.IntAt("success") != 1)
-                throw new InvalidOperationException(
-                    string.Format("Failed to reauthorize the device '{0}'", clientInfo.Uuid));
+                throw new ClientException(ClientException.FailureReason.RespondedWithError,
+                                          string.Format("Failed to reauthorize the device '{0}'",
+                                                        clientInfo.Uuid));
         }
 
         internal static void VerifySessionKey(ClientInfo clientInfo,
@@ -245,7 +247,8 @@ namespace OnePassword
         {
             var response = jsonHttp.Put("session/signout");
             if (response.IntAt("success") != 1)
-                throw new InvalidOperationException("Failed to sign out");
+                throw new ClientException(ClientException.FailureReason.RespondedWithError,
+                                          "Failed to sign out");
         }
 
         internal static void DecryptKeys(JToken accountInfo,
