@@ -69,10 +69,7 @@ namespace OnePassword.Test
         public void Pbes2_throws_on_unsupported_method()
         {
             Assert.That(() => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
-                        Throws.TypeOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.UnsupportedFeature)
-                            .And.Message.Contains("Unsupported"));
+                        ExceptionsTest.ThrowsUnsupportedFeatureWithMessage("method"));
         }
 
         [Test]

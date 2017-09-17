@@ -30,11 +30,8 @@ namespace OnePassword.Test
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGet("{'status': 'unknown'}"));
             Assert.That(() => Client.StartNewSession(TestData.ClientInfo, http),
-                        Throws.TypeOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.InvalidResponse)
-                            .And.Message.StartsWith("Failed to start a new session")
-                            .And.Message.Contains("'unknown'"));
+                        ExceptionsTest.ThrowsInvalidResponseWithMessage("'unknown'")
+                            .And.Message.StartsWith("Failed to start a new session"));
         }
 
         [Test]
@@ -43,9 +40,9 @@ namespace OnePassword.Test
             var jsonHttp = new JsonHttpClient(JsonHttpClientTest.SetupGetWithFailure().Object, "");
 
             Assert.That(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp),
-                        Throws.TypeOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.NetworkError));
+                        ExceptionsTest.ThrowsReasonWithMessage(
+                            ClientException.FailureReason.NetworkError,
+                            "request"));
         }
 
         [Test]
@@ -56,9 +53,7 @@ namespace OnePassword.Test
                 "");
 
             Assert.That(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp),
-                        Throws.TypeOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.InvalidResponse));
+                        ExceptionsTest.ThrowsInvalidResponseWithMessage("Invalid JSON"));
         }
 
         [Test]
@@ -73,11 +68,8 @@ namespace OnePassword.Test
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 0}"));
             Assert.That(() => Client.RegisterDevice(TestData.ClientInfo, http),
-                        Throws.TypeOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.RespondedWithError)
-                            .And.Message.StartsWith("Failed to register")
-                            .And.Message.Contains(TestData.Uuid));
+                        ExceptionsTest.ThrowsRespondedWithErrorWithMessage(TestData.Uuid)
+                            .And.Message.StartsWith("Failed to register"));
         }
 
         [Test]
@@ -92,11 +84,8 @@ namespace OnePassword.Test
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
             Assert.That(() => Client.ReauthorizeDevice(TestData.ClientInfo, http),
-                        Throws.TypeOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.RespondedWithError)
-                            .And.Message.StartsWith("Failed to reauthorize")
-                            .And.Message.Contains(TestData.Uuid));
+                        ExceptionsTest.ThrowsRespondedWithErrorWithMessage(TestData.Uuid)
+                            .And.Message.StartsWith("Failed to reauthorize"));
         }
 
         [Test]
@@ -139,10 +128,7 @@ namespace OnePassword.Test
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
             Assert.That(() => Client.SignOut(http),
-                        Throws.TypeOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.RespondedWithError)
-                            .And.Message.Contains("Failed to sign out"));
+                        ExceptionsTest.ThrowsRespondedWithErrorWithMessage("Failed to sign out"));
         }
 
         [Test]

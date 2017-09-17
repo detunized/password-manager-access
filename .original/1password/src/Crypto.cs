@@ -77,8 +77,8 @@ namespace OnePassword
                 return Pbkdf2.GenerateSha512(password.ToBytes(), salt, iterations, 32);
             }
 
-            throw ExceptionFactory.MakeUnsupported(string.Format("Unsupported PBES2 method: '{0}'",
-                                                                 method));
+            throw ExceptionFactory.MakeUnsupported(
+                string.Format("PBES2: method '{0}' is not supported", method));
         }
 
         public static byte[] CalculateSessionHmacSalt(AesKey sessionKey)

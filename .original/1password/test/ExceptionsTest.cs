@@ -49,11 +49,30 @@ namespace OnePassword.Test
         // Helpers
         //
 
+        public static Constraint ThrowsInvalidResponseWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ClientException.FailureReason.InvalidResponse, message);
+        }
+
+        public static Constraint ThrowsRespondedWithErrorWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ClientException.FailureReason.RespondedWithError, message);
+        }
+
+        public static Constraint ThrowsUnsupportedFeatureWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ClientException.FailureReason.UnsupportedFeature, message);
+        }
+
         public static Constraint ThrowsInvalidOpeationWithMessage(string message)
         {
+            return ThrowsReasonWithMessage(ClientException.FailureReason.InvalidOperation, message);
+        }
+
+        public static Constraint ThrowsReasonWithMessage(ClientException.FailureReason reason, string message)
+        {
             return Throws.TypeOf<ClientException>()
-                .And.Property("Reason")
-                .EqualTo(ClientException.FailureReason.InvalidOperation)
+                .And.Property("Reason").EqualTo(reason)
                 .And.Message.Contains(message);
         }
 
