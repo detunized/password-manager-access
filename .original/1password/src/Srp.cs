@@ -24,7 +24,10 @@ namespace OnePassword
         // Internal
         //
 
-        internal static byte[] Perform(BigInteger secretA, ClientInfo clientInfo, Session session, JsonHttpClient http)
+        internal static byte[] Perform(BigInteger secretA,
+                                       ClientInfo clientInfo,
+                                       Session session,
+                                       JsonHttpClient http)
         {
             var sharedA = ComputeSharedA(secretA);
             var sharedB = ExchangeAForB(sharedA, session, http);
