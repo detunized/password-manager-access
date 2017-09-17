@@ -17,12 +17,6 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void CryptoException_properties_are_set()
-        {
-            VerifyException(new CryptoException(Message, InnerException));
-        }
-
-        [Test]
         public void JTokenAccessException_properties_are_set()
         {
             VerifyException(new JTokenAccessException(Message, InnerException));

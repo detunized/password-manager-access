@@ -311,8 +311,6 @@ namespace OnePassword
                                                byte[] salt,
                                                ClientInfo clientInfo)
         {
-            // TODO: Catch a crypto exception and rethrow as a client one. Maybe?
-
             // TODO: Check if the Unicode normalization is the correct one. This could be done
             //       by either trying to call the original JS functions in the browser console
             //       or by changing to some really weird password and trying to log in.
