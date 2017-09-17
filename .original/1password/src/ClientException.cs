@@ -14,6 +14,7 @@ namespace OnePassword
             InvalidResponse,
             RespondedWithError,
             UnsupportedFeature,
+            InvalidOperation,
             UnknownError
         }
 
