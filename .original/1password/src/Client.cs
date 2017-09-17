@@ -264,7 +264,7 @@ namespace OnePassword
         {
             var sorted = keysets.OrderBy(i => i.IntAt("sn")).Reverse().ToArray();
             if (sorted[0].StringAt("encryptedBy") != MasterKeyId)
-                throw new InvalidOperationException(
+                throw ExceptionFactory.MakeInvalidOperation(
                     string.Format("Invalid keyset (key must be encrypted by '{0}')", MasterKeyId));
 
             var keyInfo = sorted[0].At("encSymKey");
