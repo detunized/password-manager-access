@@ -7,6 +7,9 @@ using SystemHttp = System.Net.Http.HttpClient;
 
 namespace RoboForm
 {
+    // TODO: Reuse HttpClient, it's not supposed to be instantiated for every request.
+    // See https://docs.microsoft.com/en-us/dotnet/api/system.net.http.httpclient?view=netframework-4.5
+
     public class HttpClient: IHttpClient
     {
         public HttpResponseMessage Get(string url, Dictionary<string, string> headers)
