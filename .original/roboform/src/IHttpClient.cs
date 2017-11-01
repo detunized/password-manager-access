@@ -2,13 +2,13 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace RoboForm
 {
     public interface IHttpClient
     {
-        // System.Net.WebException is expected to be thrown on errors
-        byte[] Get(string url, Dictionary<string, string> headers);
-        byte[] Post(string url, Dictionary<string, string> headers);
+        HttpResponseMessage Get(string url, Dictionary<string, string> headers);
+        HttpResponseMessage Post(string url, Dictionary<string, string> headers);
     }
 }

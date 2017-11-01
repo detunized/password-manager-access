@@ -2,32 +2,33 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using System.Net;
+using System.Net.Http;
+using SystemHttp = System.Net.Http.HttpClient;
 
 namespace RoboForm
 {
     public class HttpClient: IHttpClient
     {
-        public byte[] Get(string url, Dictionary<string, string> headers)
+        public HttpResponseMessage Get(string url, Dictionary<string, string> headers)
         {
-            using (var client = new WebClient())
-                return SetHeaders(client, headers).DownloadData(url);
+            using (var http = new SystemHttp())
+                return SetHeaders(http, headers).GetAsync(url).Result;
         }
 
-        public byte[] Post(string url, Dictionary<string, string> headers)
+        public HttpResponseMessage Post(string url, Dictionary<string, string> headers)
         {
-            using (var client = new WebClient())
-                return SetHeaders(client, headers).UploadData(url, new byte[] {});
+            using (var http = new SystemHttp())
+                return SetHeaders(http, headers).PostAsync(url, new StringContent("")).Result;
         }
 
         //
         // Private
         //
 
-        private static WebClient SetHeaders(WebClient client, Dictionary<string, string> headers)
+        private static SystemHttp SetHeaders(SystemHttp client, Dictionary<string, string> headers)
         {
             foreach (var i in headers)
-                client.Headers[i.Key] = i.Value;
+                client.DefaultRequestHeaders.Add(i.Key, i.Value);
 
             return client;
         }
