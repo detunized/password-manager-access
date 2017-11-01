@@ -32,7 +32,8 @@ namespace RoboForm
 
         private static string LoginUrl(string username)
         {
-            return string.Format("https://online.roboform.com/rf-api/{0}?login", username);
+            return string.Format("https://online.roboform.com/rf-api/{0}?login",
+                                 username.EncodeUri());
         }
     }
 }
