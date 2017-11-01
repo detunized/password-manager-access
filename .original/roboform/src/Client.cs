@@ -1,7 +1,9 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
+using System.Net;
 
 namespace RoboForm
 {
@@ -14,10 +16,13 @@ namespace RoboForm
 
         private static void Step1(string username, string nonce, IHttpClient http)
         {
-            http.Post(LoginUrl(username), new Dictionary<string, string>
+            var responose = http.Post(LoginUrl(username), new Dictionary<string, string>
             {
                 {"Authorization", Step1AuthorizationHeader(username, nonce)}
             });
+
+            if (responose.StatusCode != HttpStatusCode.Unauthorized)
+                throw new InvalidOperationException("Expected 401"); // TODO: Custom exception
         }
 
         private static string Step1AuthorizationHeader(string username, string nonce)
