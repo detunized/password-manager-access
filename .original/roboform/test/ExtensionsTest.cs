@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using RoboForm;
 using NUnit.Framework;
 
 namespace RoboForm.Test
@@ -71,6 +70,5 @@ namespace RoboForm.Test
             65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
             114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
         };
-
     }
 }
