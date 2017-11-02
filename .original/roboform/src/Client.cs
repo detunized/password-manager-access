@@ -14,7 +14,7 @@ namespace RoboForm
             Step1(username, "-DeHRrZjC8DZ_0e8RGsisg", http);
         }
 
-        private static void Step1(string username, string nonce, IHttpClient http)
+        internal static void Step1(string username, string nonce, IHttpClient http)
         {
             var responose = http.Post(LoginUrl(username), new Dictionary<string, string>
             {
@@ -25,12 +25,14 @@ namespace RoboForm
                 throw new InvalidOperationException("Expected 401"); // TODO: Custom exception
         }
 
-        private static string Step1AuthorizationHeader(string username, string nonce)
+        internal static string Step1AuthorizationHeader(string username, string nonce)
         {
-            return string.Format("TODO: {0} {1}", username, nonce);
+            var data = string.Format("n,,n={0},r={1}", username.EncodeUri(), nonce);
+            return string.Format("SibAuth realm=\"RoboForm Online Server\",data=\"{0}\"",
+                                 data.ToBase64());
         }
 
-        private static string LoginUrl(string username)
+        internal static string LoginUrl(string username)
         {
             return string.Format("https://online.roboform.com/rf-api/{0}?login",
                                  username.EncodeUri());
