@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Text;
 
 namespace RoboForm
 {
@@ -10,6 +11,11 @@ namespace RoboForm
         //
         // string
         //
+
+        public static byte[] ToBytes(this string s)
+        {
+            return Encoding.UTF8.GetBytes(s);
+        }
 
         public static string EncodeUri(this string s)
         {
