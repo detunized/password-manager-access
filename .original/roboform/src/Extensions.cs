@@ -17,6 +17,11 @@ namespace RoboForm
             return Encoding.UTF8.GetBytes(s);
         }
 
+        public static string ToBase64(this string s)
+        {
+            return s.ToBytes().ToBase64();
+        }
+
         public static string EncodeUri(this string s)
         {
             return Uri.EscapeUriString(s);

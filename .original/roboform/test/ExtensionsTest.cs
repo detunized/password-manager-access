@@ -22,6 +22,16 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void String_ToBase64_returns_base64()
+        {
+            Assert.That("".ToBase64(), Is.EqualTo(""));
+            Assert.That("a".ToBase64(), Is.EqualTo("YQ=="));
+            Assert.That("ab".ToBase64(), Is.EqualTo("YWI="));
+            Assert.That("abc".ToBase64(), Is.EqualTo("YWJj"));
+            Assert.That("abcd".ToBase64(), Is.EqualTo("YWJjZA=="));
+        }
+
+        [Test]
         public void String_EscapeUri_escapes_special_characters()
         {
             var testCases = new Dictionary<string, string>
