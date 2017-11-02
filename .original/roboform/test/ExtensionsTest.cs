@@ -29,5 +29,19 @@ namespace RoboForm.Test
             foreach (var i in testCases)
                 Assert.That(i.Key.EncodeUri(), Is.EqualTo(i.Value));
         }
+
+        //
+        // byte[]
+        //
+
+        [Test]
+        public void ByteArray_ToBase64_returns_base64()
+        {
+            Assert.That(new byte[] { }.ToBase64(), Is.EqualTo(""));
+            Assert.That(new byte[] { 0x61 }.ToBase64(), Is.EqualTo("YQ=="));
+            Assert.That(new byte[] { 0x61, 0x62 }.ToBase64(), Is.EqualTo("YWI="));
+            Assert.That(new byte[] { 0x61, 0x62, 0x63 }.ToBase64(), Is.EqualTo("YWJj"));
+            Assert.That(new byte[] { 0x61, 0x62, 0x63, 0x64 }.ToBase64(), Is.EqualTo("YWJjZA=="));
+        }
     }
 }

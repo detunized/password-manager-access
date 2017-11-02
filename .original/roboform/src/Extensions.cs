@@ -15,5 +15,14 @@ namespace RoboForm
         {
             return Uri.EscapeUriString(s);
         }
+
+        //
+        // byte[]
+        //
+
+        public static string ToBase64(this byte[] x)
+        {
+            return Convert.ToBase64String(x);
+        }
     }
 }
