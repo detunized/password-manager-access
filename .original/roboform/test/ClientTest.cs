@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Moq;
@@ -53,6 +54,14 @@ namespace RoboForm.Test
             Assert.That(Client.Step1(Username, Nonce, http.Object), Is.EqualTo(Step1Header));
         }
 
+        [Test]
+        public void Step1_throws_on_missing_WWW_Authenticate_header()
+        {
+            var http = SetupStep1(null);
+            Assert.That(() => Client.Step1(Username, Nonce, http.Object),
+                        Throws.TypeOf<InvalidOperationException>());
+        }
+
         //
         // Helpers
         //
@@ -64,13 +73,14 @@ namespace RoboForm.Test
             return http;
         }
 
-        public static Mock<IHttpClient> SetupStep1()
+        public static Mock<IHttpClient> SetupStep1(string header = Step1Header)
         {
             var http = SetupPost(HttpStatusCode.Unauthorized,
-                                 new Dictionary<string, string> {{"WWW-Authenticate", Step1Header}});
+                                 new Dictionary<string, string> {{"WWW-Authenticate", header}});
             return http;
         }
 
+        // TODO: Could be removed
         private static Mock<IHttpClient> SetupPost(HttpStatusCode status)
         {
             return SetupPost(status, new Dictionary<string, string>());
