@@ -16,6 +16,7 @@ namespace RoboForm
 
         internal static void Step1(string username, string nonce, IHttpClient http)
         {
+            // TODO: Wrap in using when done
             var responose = http.Post(LoginUrl(username), new Dictionary<string, string>
             {
                 {"Authorization", Step1AuthorizationHeader(username, nonce)}
