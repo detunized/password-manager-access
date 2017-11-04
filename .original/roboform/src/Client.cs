@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
 
 namespace RoboForm
 {
@@ -14,16 +16,22 @@ namespace RoboForm
             Step1(username, "-DeHRrZjC8DZ_0e8RGsisg", http);
         }
 
-        internal static void Step1(string username, string nonce, IHttpClient http)
+        internal static string Step1(string username, string nonce, IHttpClient http)
         {
             // TODO: Wrap in using when done
-            var responose = http.Post(LoginUrl(username), new Dictionary<string, string>
+            var response = http.Post(LoginUrl(username), new Dictionary<string, string>
             {
                 {"Authorization", Step1AuthorizationHeader(username, nonce)}
             });
 
-            if (responose.StatusCode != HttpStatusCode.Unauthorized)
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
                 throw new InvalidOperationException("Expected 401"); // TODO: Custom exception
+
+            var header = GetHeader(response, "WWW-Authenticate");
+            if (header == null)
+                throw new InvalidOperationException("WWW-Authenticate header expected"); // TODO: Custom exception
+
+            return header;
         }
 
         internal static string Step1AuthorizationHeader(string username, string nonce)
@@ -37,6 +45,15 @@ namespace RoboForm
         {
             return string.Format("https://online.roboform.com/rf-api/{0}?login",
                                  username.EncodeUri());
+        }
+
+        internal static string GetHeader(HttpResponseMessage response, string name)
+        {
+            IEnumerable<string> header;
+            if (response.Headers.TryGetValues(name, out header))
+                return header.FirstOrDefault();
+
+            return null;
         }
     }
 }

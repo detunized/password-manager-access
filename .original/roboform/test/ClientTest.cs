@@ -46,23 +46,47 @@ namespace RoboForm.Test
                          d["Authorization"].StartsWith("SibAuth realm="))));
         }
 
+        [Test]
+        public void Step1_returns_WWW_Authenticate_header()
+        {
+            var http = SetupStep1();
+            Assert.That(Client.Step1(Username, Nonce, http.Object), Is.EqualTo(Step1Header));
+        }
+
         //
         // Helpers
         //
 
         public static Mock<IHttpClient> MakeStep1()
         {
-            var http = SetupPost(HttpStatusCode.Unauthorized);
+            var http = SetupStep1();
             Client.Step1(Username, Nonce, http.Object);
+            return http;
+        }
+
+        public static Mock<IHttpClient> SetupStep1()
+        {
+            var http = SetupPost(HttpStatusCode.Unauthorized,
+                                 new Dictionary<string, string> {{"WWW-Authenticate", Step1Header}});
             return http;
         }
 
         private static Mock<IHttpClient> SetupPost(HttpStatusCode status)
         {
+            return SetupPost(status, new Dictionary<string, string>());
+        }
+
+        private static Mock<IHttpClient> SetupPost(HttpStatusCode status,
+                                                   Dictionary<string, string> headers)
+        {
+            var response = new HttpResponseMessage(status);
+            foreach (var i in headers)
+                response.Headers.Add(i.Key, i.Value);
+
             var http = new Mock<IHttpClient>();
             http
                 .Setup(x => x.Post(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
-                .Returns(new HttpResponseMessage(status));
+                .Returns(response);
 
             return http;
         }
@@ -73,5 +97,6 @@ namespace RoboForm.Test
 
         private const string Username = "lastpass.ruby@gmail.com";
         private const string Nonce = "-DeHRrZjC8DZ_0e8RGsisg";
+        private const string Step1Header = "WWW-Authenticate-step1";
     }
 }
