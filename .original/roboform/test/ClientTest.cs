@@ -79,6 +79,70 @@ namespace RoboForm.Test
             Assert.That(info.IsMd5, Is.False);
         }
 
+        [Test]
+        public void ParseAuthInfo_throws_on_missing_parts()
+        {
+            Assert.That(() => Client.ParseAuthInfo("SibAuth"),
+                        Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public void ParseAuthInfo_throws_on_invalid_realm()
+        {
+            Assert.That(() => Client.ParseAuthInfo("Realm sid=\"\",data=\"\""),
+                        Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public void ParseAuthInfo_throws_on_invalid_parameters_format()
+        {
+            Assert.That(() => Client.ParseAuthInfo("SibAuth sid=,data="),
+                        Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public void ParseAuthInfo_throws_on_missing_sid()
+        {
+            Assert.That(() => Client.ParseAuthInfo("SibAuth data=\"\""),
+                        Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public void ParseAuthInfo_throws_on_missing_data()
+        {
+            Assert.That(() => Client.ParseAuthInfo("SibAuth sid=\"\""),
+                        Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public void ParseAuthInfo_throws_on_invalid_data()
+        {
+            var testCases = new[]
+            {
+                "",
+                ",,,",
+                "s=c2FsdA==,i=1337",
+                "r=nonce,i=1337",
+                "r=nonce,s=c2FsdA==",
+            };
+
+            foreach (var data in testCases)
+                Assert.That(
+                    () => Client.ParseAuthInfo(string.Format("SibAuth sid=\"sid\",data=\"{0}\"",
+                                                             data.ToBase64())),
+                    Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public void ParseAuthInfo_sets_is_md5_flag()
+        {
+            var data = "r=nonce,s=c2FsdA==,i=1337,o=pwdMD5";
+            var info = Client.ParseAuthInfo(string.Format("SibAuth sid=\"sid\",data=\"{0}\"",
+                                                          data.ToBase64()));
+
+            Assert.That(info.IsMd5, Is.True);
+        }
+
         //
         // Helpers
         //

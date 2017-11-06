@@ -70,39 +70,46 @@ namespace RoboForm
 
         internal static AuthInfo ParseAuthInfo(string encoded)
         {
-            var splitHeader = encoded.Split(' ');
-            if (splitHeader.Length < 2)
-                throw new InvalidOperationException("Invalid format");
+            try
+            {
+                var splitHeader = encoded.Split(' ');
+                if (splitHeader.Length < 2)
+                    throw new InvalidOperationException("Invalid auth info format");
 
-            var realm = splitHeader[0];
-            var parameters = splitHeader[1];
+                var realm = splitHeader[0];
+                var parameters = splitHeader[1];
 
-            if (realm != "SibAuth")
-                throw new InvalidOperationException(string.Format("Invalid realm '{0}'", realm));
+                if (realm != "SibAuth")
+                    throw new InvalidOperationException(string.Format("Invalid auth info realm '{0}'", realm));
 
-            var parsedParameters = parameters
-                .Split(',')
-                .Select(ParseAuthInfoQuotedParam)
-                .ToDictionary(i => i.Key, i => i.Value);
+                var parsedParameters = parameters
+                    .Split(',')
+                    .Select(ParseAuthInfoQuotedParam)
+                    .ToDictionary(i => i.Key, i => i.Value);
 
-            var sid = parsedParameters["sid"];
-            var data = parsedParameters["data"].Decode64().ToUtf8();
+                var sid = parsedParameters["sid"];
+                var data = parsedParameters["data"].Decode64().ToUtf8();
 
-            var parsedData = data
-                .Split(',')
-                .Select(ParseAuthInfoParam)
-                .ToDictionary(i => i.Key, i => i.Value);
+                var parsedData = data
+                    .Split(',')
+                    .Select(ParseAuthInfoParam)
+                    .ToDictionary(i => i.Key, i => i.Value);
 
-            var isMd5 = false;
-            if (parsedData.ContainsKey("o"))
-                isMd5 = parsedData["o"].Contains("pwdMD5");
+                var isMd5 = false;
+                if (parsedData.ContainsKey("o"))
+                    isMd5 = parsedData["o"].Contains("pwdMD5");
 
-            return new AuthInfo(sid: sid,
-                                data: data,
-                                nonce: parsedData["r"],
-                                salt: parsedData["s"].Decode64(),
-                                iterationCount: int.Parse(parsedData["i"]),
-                                isMd5: isMd5);
+                return new AuthInfo(sid: sid,
+                                    data: data,
+                                    nonce: parsedData["r"],
+                                    salt: parsedData["s"].Decode64(),
+                                    iterationCount: int.Parse(parsedData["i"]),
+                                    isMd5: isMd5);
+            }
+            catch (KeyNotFoundException e)
+            {
+                throw new InvalidOperationException("Invalid auth info format", e);
+            }
         }
 
         // Parse name=value
@@ -121,7 +128,7 @@ namespace RoboForm
         {
             var m = regex.Match(encoded);
             if (!m.Success || m.Groups.Count < 3)
-                throw new InvalidOperationException("Invalid format");
+                throw new InvalidOperationException("Invalid auth info parameter format");
 
             return new KeyValuePair<string, string>(m.Groups[1].Value, m.Groups[2].Value);
         }
