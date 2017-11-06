@@ -61,6 +61,13 @@ namespace RoboForm.Test
         //
 
         [Test]
+        public void ByteArray_ToUtf8_returns_string()
+        {
+            Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
+            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+        }
+
+        [Test]
         public void ByteArray_ToBase64_returns_base64()
         {
             Assert.That(new byte[] { }.ToBase64(), Is.EqualTo(""));

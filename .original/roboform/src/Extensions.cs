@@ -36,6 +36,11 @@ namespace RoboForm
         // byte[]
         //
 
+        public static string ToUtf8(this byte[] x)
+        {
+            return Encoding.UTF8.GetString(x);
+        }
+
         public static string ToBase64(this byte[] x)
         {
             return Convert.ToBase64String(x);
