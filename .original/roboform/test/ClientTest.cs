@@ -62,6 +62,23 @@ namespace RoboForm.Test
                         Throws.TypeOf<InvalidOperationException>());
         }
 
+        [Test]
+        public void ParseAuthInfo_returns_AuthInfo()
+        {
+            var encoded = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"cj0tRGVIUnJaakM4RFpfM" +
+                          "GU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ4VU02NzRPWk9PalVq" +
+                          "WENkYnc9PSxpPTQwOTY=\"";
+            var info = Client.ParseAuthInfo(encoded);
+
+            Assert.That(info.Sid, Is.EqualTo("6Ag93Y02vihucO9IQl1fbg"));
+            Assert.That(info.Data, Is.EqualTo("r=-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg," +
+                                              "s=A+Ft8UM674OZOOjUjXCdbw==,i=4096"));
+            Assert.That(info.Nonce, Is.EqualTo("-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg"));
+            Assert.That(info.Salt, Is.EqualTo("A+Ft8UM674OZOOjUjXCdbw==".Decode64()));
+            Assert.That(info.IterationCount, Is.EqualTo(4096));
+            Assert.That(info.IsMd5, Is.False);
+        }
+
         //
         // Helpers
         //
