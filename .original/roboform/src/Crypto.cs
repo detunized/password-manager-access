@@ -12,7 +12,17 @@ namespace RoboForm
             return Hmac(HashPassword(password, authInfo), "Client Key".ToBytes());
         }
 
-        public static byte[] HashPassword(string password, Client.AuthInfo authInfo)
+        public static byte[] Hmac(byte[] salt, byte[] message)
+        {
+            using (var hmac = new HMACSHA256 {Key = salt})
+                return hmac.ComputeHash(message);
+        }
+
+        //
+        // Internal
+        //
+
+        internal static byte[] HashPassword(string password, Client.AuthInfo authInfo)
         {
             var passwordBytes = password.ToBytes();
             if (authInfo.IsMd5)
@@ -21,22 +31,16 @@ namespace RoboForm
             return Pbkdf2.Generate(passwordBytes, authInfo.Salt, authInfo.IterationCount, 32);
         }
 
-        public static byte[] Md5(byte[] data)
+        internal static byte[] Md5(byte[] data)
         {
             using (var md5 = MD5.Create())
                 return md5.ComputeHash(data);
         }
 
-        public static byte[] Sha256(byte[] data)
+        internal static byte[] Sha256(byte[] data)
         {
             using (var sha = new SHA256Managed())
                 return sha.ComputeHash(data);
-        }
-
-        public static byte[] Hmac(byte[] salt, byte[] message)
-        {
-            using (var hmac = new HMACSHA256 {Key = salt})
-                return hmac.ComputeHash(message);
         }
     }
 }

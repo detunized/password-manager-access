@@ -17,6 +17,15 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void Hmac_returns_hashed_message()
+        {
+            // Generated with OpenSSL (just a smoke test, we're not implementing HMAC here)
+            // $ echo -n message | openssl dgst -sha256 -binary -hmac "salt" | openssl base64
+            Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
+                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+        }
+
+        [Test]
         public void HashPassword_returns_hashed_password()
         {
             // Generated with the original JavaScript code
@@ -27,9 +36,10 @@ namespace RoboForm.Test
         [Test]
         public void Md5_returns_hashed_message()
         {
-            // From https://www.nist.gov/itl/ssd/software-quality-group/nsrl-test-data
-            Assert.That(Crypto.Md5("abc".ToBytes()),
-                        Is.EqualTo("kAFQmDzST7DWlj99KOF/cg==".Decode64()));
+            // Generated with OpenSSL (just a smoke test, we're not implementing MD5 here)
+            // $ echo -n message | openssl dgst -md5 -binary | openssl base64
+            Assert.That(Crypto.Md5("message".ToBytes()),
+                        Is.EqualTo("eOcxAn2P1Q7WQjQLfJpjsw==".Decode64()));
         }
 
         [Test]
@@ -39,15 +49,6 @@ namespace RoboForm.Test
             // $ echo -n message | openssl dgst -sha256 -binary | openssl base64
             Assert.That(Crypto.Sha256("message".ToBytes()),
                         Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
-        }
-
-        [Test]
-        public void Hmac_returns_hashed_message()
-        {
-            // Generated with OpenSSL (just a smoke test, we're not implementing HMAC here)
-            // $ echo -n message | openssl dgst -sha256 -binary -hmac "salt" | openssl base64
-            Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
-                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
         }
 
         //
