@@ -14,8 +14,10 @@ namespace RoboForm
     {
         public static void Login(string username, string password, IHttpClient http)
         {
-            var header = Step1(username, "-DeHRrZjC8DZ_0e8RGsisg", http);
+            var nonce = "-DeHRrZjC8DZ_0e8RGsisg";
+            var header = Step1(username, nonce, http);
             var authInfo = ParseAuthInfo(header);
+            var response = Step2(username, password, nonce, authInfo, http);
         }
 
         internal static string Step1(string username, string nonce, IHttpClient http)
@@ -30,10 +32,24 @@ namespace RoboForm
                 throw new InvalidOperationException("Expected 401"); // TODO: Custom exception
 
             var header = GetHeader(response, "WWW-Authenticate");
-            if (header == null)
+            if (string.IsNullOrWhiteSpace(header))
                 throw new InvalidOperationException("WWW-Authenticate header expected"); // TODO: Custom exception
 
             return header;
+        }
+
+        internal static string Step2(string username, string password, string nonce, AuthInfo authInfo, IHttpClient http)
+        {
+            var response = http.Post(LoginUrl(username), new Dictionary<string, string>
+            {
+                {"Authorization", Step2AuthorizationHeader(username, password, nonce, authInfo)}
+            });
+
+            var cookie = GetHeader(response, "Set-Cookie");
+            if (string.IsNullOrWhiteSpace(cookie))
+                throw new InvalidOperationException("Auth cookie expected"); // TODO: Custom exception
+
+            return cookie;
         }
 
         internal static string Step1AuthorizationHeader(string username, string nonce)
@@ -41,6 +57,11 @@ namespace RoboForm
             var data = string.Format("n,,n={0},r={1}", username.EncodeUri(), nonce);
             return string.Format("SibAuth realm=\"RoboForm Online Server\",data=\"{0}\"",
                                  data.ToBase64());
+        }
+
+        internal static string Step2AuthorizationHeader(string username, string password, string nonce, AuthInfo authInfo)
+        {
+            return "TODO: step2-auth-header";
         }
 
         internal class AuthInfo
