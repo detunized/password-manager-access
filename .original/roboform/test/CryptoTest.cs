@@ -9,6 +9,14 @@ namespace RoboForm.Test
     class CryptoTest
     {
         [Test]
+        public void ComputeClientKey_returns_key()
+        {
+            // Generated with the original JavaScript code
+            Assert.That(Crypto.ComputeClientKey(Password, AuthInfo),
+                        Is.EqualTo("8sbDhSTLwbl0FhiHAxFxGUQvQwcr4JIbpExO64+Jj8o=".Decode64()));
+        }
+
+        [Test]
         public void HashPassword_returns_hashed_password()
         {
             // Generated with the original JavaScript code

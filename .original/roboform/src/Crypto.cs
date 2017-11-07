@@ -7,6 +7,11 @@ namespace RoboForm
 {
     internal static class Crypto
     {
+        public static byte[] ComputeClientKey(string password, Client.AuthInfo authInfo)
+        {
+            return Hmac(HashPassword(password, authInfo), "Client Key".ToBytes());
+        }
+
         public static byte[] HashPassword(string password, Client.AuthInfo authInfo)
         {
             var passwordBytes = password.ToBytes();
