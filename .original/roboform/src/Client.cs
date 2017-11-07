@@ -68,7 +68,20 @@ namespace RoboForm
                                                         string nonce,
                                                         AuthInfo authInfo)
         {
-            return "TODO: step2-auth-header";
+            var clientKey = Crypto.ComputeClientKey(password, authInfo);
+            var clientHash = Crypto.Sha256(clientKey);
+
+            var hashingMaterial = string.Format("n={0},r={1},{2},c=biws,r={3}",
+                                                username.EncodeUri(),
+                                                nonce,
+                                                authInfo.Data,
+                                                authInfo.Nonce);
+
+            var hashed = Crypto.Hmac(clientHash, hashingMaterial.ToBytes());
+            var proof = clientKey.Zip(hashed, (a, b) => (byte)(a ^ b)).ToArray();
+            var data = string.Format("c=biws,r={0},p={1}", authInfo.Nonce, proof.ToBase64());
+
+            return string.Format("SibAuth sid=\"{0}\",data=\"{1}\"", authInfo.Sid, data.ToBase64());
         }
 
         // TODO: Move out to separate file

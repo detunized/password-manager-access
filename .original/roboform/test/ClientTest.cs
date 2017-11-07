@@ -85,7 +85,7 @@ namespace RoboForm.Test
                 It.IsAny<string>(),
                 It.Is<Dictionary<string, string>>(
                     d => d.ContainsKey("Authorization") &&
-                         d["Authorization"].StartsWith("TODO: step2-auth-header"))));
+                         d["Authorization"].StartsWith("SibAuth sid="))));
         }
 
         [Test]
@@ -107,8 +107,22 @@ namespace RoboForm.Test
         [Test]
         public void Step2AuthorizationHeader_returns_header()
         {
-            var expected = "TODO: step2-auth-header";
-            var header = Client.Step2AuthorizationHeader(Username, Password, Nonce, AuthInfo);
+            var expected = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJy" +
+                           "WmpDOERaXzBlOFJHc2lzZ00yLXRqZ2YtNjBtLS1GQmhMUTI2dGcscD1VdGQvV3FCSm" +
+                           "5SU2pyeTBRTCswa3owUCtDUk5rcXRCYytySHVmRHllaUhrPQ==\"";
+            var authInfo = new Client.AuthInfo(
+                sid: "6Ag93Y02vihucO9IQl1fbg",
+                data: "cj0tRGVIUnJaakM4RFpfMGU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ" +
+                      "4VU02NzRPWk9PalVqWENkYnc9PSxpPTQwOTY=",
+                nonce: "-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg",
+                salt: "A+Ft8UM674OZOOjUjXCdbw==".Decode64(),
+                iterationCount: 4096,
+                isMd5: false);
+            var header = Client.Step2AuthorizationHeader(
+                Username,
+                "h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk",
+                Nonce,
+                authInfo);
 
             Assert.That(header, Is.EqualTo(expected));
         }
