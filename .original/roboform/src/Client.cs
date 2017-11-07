@@ -131,9 +131,9 @@ namespace RoboForm
                     .ToDictionary(i => i.Key, i => i.Value);
 
                 var sid = parsedParameters["sid"];
-                var data = parsedParameters["data"].Decode64().ToUtf8();
+                var data = parsedParameters["data"];
 
-                var parsedData = data
+                var parsedData = data.Decode64().ToUtf8()
                     .Split(',')
                     .Select(ParseAuthInfoParam)
                     .ToDictionary(i => i.Key, i => i.Value);

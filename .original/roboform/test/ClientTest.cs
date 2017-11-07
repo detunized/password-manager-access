@@ -24,7 +24,7 @@ namespace RoboForm.Test
         [Test]
         public void Step1_POST_request_url_contains_username()
         {
-            MakeStep1().Verify(x => x.Post(It.Is<string>(s => s.Contains(Username)),
+            MakeStep1().Verify(x => x.Post(It.Is<string>(s => s.Contains(TestData.Username)),
                                            It.IsAny<Dictionary<string, string>>()));
         }
 
@@ -42,14 +42,15 @@ namespace RoboForm.Test
         public void Step1_returns_WWW_Authenticate_header()
         {
             var http = SetupStep1();
-            Assert.That(Client.Step1(Username, Nonce, http.Object), Is.EqualTo(Step1Header));
+            Assert.That(Client.Step1(TestData.Username, TestData.Nonce, http.Object),
+                        Is.EqualTo(Step1Header));
         }
 
         [Test]
         public void Step1_throws_on_missing_WWW_Authenticate_header()
         {
             var http = SetupStep1(null);
-            Assert.That(() => Client.Step1(Username, Nonce, http.Object),
+            Assert.That(() => Client.Step1(TestData.Username, TestData.Nonce, http.Object),
                         Throws.TypeOf<InvalidOperationException>());
         }
 
@@ -58,7 +59,7 @@ namespace RoboForm.Test
         {
             var expected = "SibAuth realm=\"RoboForm Online Server\",data=\"biwsbj1sYXN0cGFzcy" +
                            "5ydWJ5QGdtYWlsLmNvbSxyPS1EZUhSclpqQzhEWl8wZThSR3Npc2c=\"";
-            var header = Client.Step1AuthorizationHeader(Username, Nonce);
+            var header = Client.Step1AuthorizationHeader(TestData.Username, TestData.Nonce);
 
             Assert.That(header, Is.EqualTo(expected));
         }
@@ -74,7 +75,7 @@ namespace RoboForm.Test
         [Test]
         public void Step2_POST_request_url_contains_username()
         {
-            MakeStep2().Verify(x => x.Post(It.Is<string>(s => s.Contains(Username)),
+            MakeStep2().Verify(x => x.Post(It.Is<string>(s => s.Contains(TestData.Username)),
                                            It.IsAny<Dictionary<string, string>>()));
         }
 
@@ -92,7 +93,11 @@ namespace RoboForm.Test
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
-            Assert.That(Client.Step2(Username, Password, Nonce, AuthInfo, http.Object),
+            Assert.That(Client.Step2(TestData.Username,
+                                     TestData.Password,
+                                     TestData.Nonce,
+                                     TestData.AuthInfo,
+                                     http.Object),
                         Is.EqualTo(Step2Cookie));
         }
 
@@ -100,7 +105,11 @@ namespace RoboForm.Test
         public void Step2_throws_on_missing_cookies()
         {
             var http = SetupStep2(null);
-            Assert.That(() => Client.Step2(Username, Password, Nonce, AuthInfo, http.Object),
+            Assert.That(() => Client.Step2(TestData.Username,
+                                           TestData.Password,
+                                           TestData.Nonce,
+                                           TestData.AuthInfo,
+                                           http.Object),
                         Throws.TypeOf<InvalidOperationException>());
         }
 
@@ -110,19 +119,10 @@ namespace RoboForm.Test
             var expected = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJy" +
                            "WmpDOERaXzBlOFJHc2lzZ00yLXRqZ2YtNjBtLS1GQmhMUTI2dGcscD1VdGQvV3FCSm" +
                            "5SU2pyeTBRTCswa3owUCtDUk5rcXRCYytySHVmRHllaUhrPQ==\"";
-            var authInfo = new Client.AuthInfo(
-                sid: "6Ag93Y02vihucO9IQl1fbg",
-                data: "cj0tRGVIUnJaakM4RFpfMGU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ" +
-                      "4VU02NzRPWk9PalVqWENkYnc9PSxpPTQwOTY=",
-                nonce: "-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg",
-                salt: "A+Ft8UM674OZOOjUjXCdbw==".Decode64(),
-                iterationCount: 4096,
-                isMd5: false);
-            var header = Client.Step2AuthorizationHeader(
-                Username,
-                "h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk",
-                Nonce,
-                authInfo);
+            var header = Client.Step2AuthorizationHeader(TestData.Username,
+                                                         TestData.Password,
+                                                         TestData.Nonce,
+                                                         TestData.AuthInfo);
 
             Assert.That(header, Is.EqualTo(expected));
         }
@@ -135,13 +135,12 @@ namespace RoboForm.Test
                           "WENkYnc9PSxpPTQwOTY=\"";
             var info = Client.ParseAuthInfo(encoded);
 
-            Assert.That(info.Sid, Is.EqualTo("6Ag93Y02vihucO9IQl1fbg"));
-            Assert.That(info.Data, Is.EqualTo("r=-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg," +
-                                              "s=A+Ft8UM674OZOOjUjXCdbw==,i=4096"));
-            Assert.That(info.Nonce, Is.EqualTo("-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg"));
-            Assert.That(info.Salt, Is.EqualTo("A+Ft8UM674OZOOjUjXCdbw==".Decode64()));
-            Assert.That(info.IterationCount, Is.EqualTo(4096));
-            Assert.That(info.IsMd5, Is.False);
+            Assert.That(info.Sid, Is.EqualTo(TestData.AuthInfo.Sid));
+            Assert.That(info.Data, Is.EqualTo(TestData.AuthInfo.Data));
+            Assert.That(info.Nonce, Is.EqualTo(TestData.AuthInfo.Nonce));
+            Assert.That(info.Salt, Is.EqualTo(TestData.AuthInfo.Salt));
+            Assert.That(info.IterationCount, Is.EqualTo(TestData.AuthInfo.IterationCount));
+            Assert.That(info.IsMd5, Is.EqualTo(TestData.AuthInfo.IsMd5));
         }
 
         [Test]
@@ -215,7 +214,7 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> MakeStep1()
         {
             var http = SetupStep1();
-            Client.Step1(Username, Nonce, http.Object);
+            Client.Step1(TestData.Username, TestData.Nonce, http.Object);
             return http;
         }
 
@@ -229,7 +228,11 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> MakeStep2()
         {
             var http = SetupStep2();
-            Client.Step2(Username, Password, Nonce, AuthInfo, http.Object);
+            Client.Step2(TestData.Username,
+                         TestData.Password,
+                         TestData.Nonce,
+                         TestData.AuthInfo,
+                         http.Object);
             return http;
         }
 
@@ -265,18 +268,7 @@ namespace RoboForm.Test
         // Data
         //
 
-        private const string Username = "lastpass.ruby@gmail.com";
-        private const string Password = "password";
-        private const string Nonce = "-DeHRrZjC8DZ_0e8RGsisg";
         private const string Step1Header = "WWW-Authenticate-step1";
         private const string Step2Cookie = "step2-cookie";
-
-        private static readonly Client.AuthInfo AuthInfo =
-            new Client.AuthInfo(sid: "sid",
-                                data: "data",
-                                nonce: "nonce",
-                                salt: "salt".ToBytes(),
-                                iterationCount: 1337,
-                                isMd5: false);
     }
 }

@@ -12,7 +12,7 @@ namespace RoboForm.Test
         public void ComputeClientKey_returns_key()
         {
             // Generated with the original JavaScript code
-            Assert.That(Crypto.ComputeClientKey(Password, AuthInfo),
+            Assert.That(Crypto.ComputeClientKey(TestData.Password, TestData.AuthInfo),
                         Is.EqualTo("8sbDhSTLwbl0FhiHAxFxGUQvQwcr4JIbpExO64+Jj8o=".Decode64()));
         }
 
@@ -28,8 +28,10 @@ namespace RoboForm.Test
         [Test]
         public void HashPassword_returns_hashed_password()
         {
+            // TODO: Generate a test case with MD5
+
             // Generated with the original JavaScript code
-            Assert.That(Crypto.HashPassword(Password, AuthInfo),
+            Assert.That(Crypto.HashPassword(TestData.Password, TestData.AuthInfo),
                         Is.EqualTo("b+rd7TUt65+hdE7+lHCBPPWHjxbq6qs0y7zufYfqHto=".Decode64()));
         }
 
@@ -50,20 +52,5 @@ namespace RoboForm.Test
             Assert.That(Crypto.Sha256("message".ToBytes()),
                         Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
         }
-
-        //
-        // Data
-        //
-
-        private const string Password = "h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk";
-
-        // TODO: Generate a test case with MD5
-        private static readonly Client.AuthInfo AuthInfo =
-            new Client.AuthInfo(sid: "",
-                                data: "",
-                                nonce: "",
-                                salt: "A+Ft8UM674OZOOjUjXCdbw==".Decode64(),
-                                iterationCount: 4096,
-                                isMd5: false);
     }
 }
