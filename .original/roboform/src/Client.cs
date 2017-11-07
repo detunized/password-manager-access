@@ -38,7 +38,11 @@ namespace RoboForm
             return header;
         }
 
-        internal static string Step2(string username, string password, string nonce, AuthInfo authInfo, IHttpClient http)
+        internal static string Step2(string username,
+                                     string password,
+                                     string nonce,
+                                     AuthInfo authInfo,
+                                     IHttpClient http)
         {
             var response = http.Post(LoginUrl(username), new Dictionary<string, string>
             {
@@ -59,7 +63,10 @@ namespace RoboForm
                                  data.ToBase64());
         }
 
-        internal static string Step2AuthorizationHeader(string username, string password, string nonce, AuthInfo authInfo)
+        internal static string Step2AuthorizationHeader(string username,
+                                                        string password,
+                                                        string nonce,
+                                                        AuthInfo authInfo)
         {
             return "TODO: step2-auth-header";
         }
@@ -101,7 +108,8 @@ namespace RoboForm
                 var parameters = splitHeader[1];
 
                 if (realm != "SibAuth")
-                    throw new InvalidOperationException(string.Format("Invalid auth info realm '{0}'", realm));
+                    throw new InvalidOperationException(
+                        string.Format("Invalid auth info realm '{0}'", realm));
 
                 var parsedParameters = parameters
                     .Split(',')
