@@ -21,5 +21,11 @@ namespace RoboForm
             using (var md5 = MD5.Create())
                 return md5.ComputeHash(data);
         }
+
+        public static byte[] Hmac(byte[] salt, byte[] message)
+        {
+            using (var hmac = new HMACSHA256 {Key = salt})
+                return hmac.ComputeHash(message);
+        }
     }
 }

@@ -12,18 +12,25 @@ namespace RoboForm.Test
         public void HashPassword_returns_hashed_password()
         {
             // Generated with the original JavaScript code
-            Assert.That(
-                Crypto.HashPassword(Password, AuthInfo),
-                Is.EqualTo("b+rd7TUt65+hdE7+lHCBPPWHjxbq6qs0y7zufYfqHto=".Decode64()));
+            Assert.That(Crypto.HashPassword(Password, AuthInfo),
+                        Is.EqualTo("b+rd7TUt65+hdE7+lHCBPPWHjxbq6qs0y7zufYfqHto=".Decode64()));
         }
 
         [Test]
         public void Md5_returns_hashed_message()
         {
             // From https://www.nist.gov/itl/ssd/software-quality-group/nsrl-test-data
-            Assert.That(
-                Crypto.Md5("abc".ToBytes()),
-                Is.EqualTo("kAFQmDzST7DWlj99KOF/cg==".Decode64()));
+            Assert.That(Crypto.Md5("abc".ToBytes()),
+                        Is.EqualTo("kAFQmDzST7DWlj99KOF/cg==".Decode64()));
+        }
+
+        [Test]
+        public void Hmac_returns_hashed_message()
+        {
+            // Generated with OpenSSL (just a smoke test, we're not implementing HMAC here)
+            // $ echo -n message | openssl dgst -sha256 -binary -hmac "salt" | openssl base64
+            Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
+                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
         }
 
         //
