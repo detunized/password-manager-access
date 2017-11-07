@@ -25,6 +25,15 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void Sha256_returns_hashed_message()
+        {
+            // Generated with OpenSSL (just a smoke test, we're not implementing SHA here)
+            // $ echo -n message | openssl dgst -sha256 -binary | openssl base64
+            Assert.That(Crypto.Sha256("message".ToBytes()),
+                        Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
+        }
+
+        [Test]
         public void Hmac_returns_hashed_message()
         {
             // Generated with OpenSSL (just a smoke test, we're not implementing HMAC here)

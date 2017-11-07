@@ -22,6 +22,12 @@ namespace RoboForm
                 return md5.ComputeHash(data);
         }
 
+        public static byte[] Sha256(byte[] data)
+        {
+            using (var sha = new SHA256Managed())
+                return sha.ComputeHash(data);
+        }
+
         public static byte[] Hmac(byte[] salt, byte[] message)
         {
             using (var hmac = new HMACSHA256 {Key = salt})
