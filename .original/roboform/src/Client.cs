@@ -71,6 +71,7 @@ namespace RoboForm
             return "TODO: step2-auth-header";
         }
 
+        // TODO: Move out to separate file
         internal class AuthInfo
         {
             public AuthInfo(string sid,
