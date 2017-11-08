@@ -99,7 +99,19 @@ namespace RoboForm.Test
                                      TestData.Nonce,
                                      TestData.AuthInfo,
                                      http.Object),
-                        Is.EqualTo("sib-auth=AQAUABAAdN_MjkCW;sib-deviceid=B972fc9818e7"));
+                        Is.EqualTo(Step2Header));
+        }
+
+        [Test]
+        public void Step2_ignores_extra_cookies()
+        {
+            var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
+            Assert.That(Client.Step2(TestData.Username,
+                                     TestData.Password,
+                                     TestData.Nonce,
+                                     TestData.AuthInfo,
+                                     http.Object),
+                        Is.EqualTo(Step2Header));
         }
 
         [Test]
@@ -109,7 +121,9 @@ namespace RoboForm.Test
             {
                 new string[] {},
                 new[] {"sib-auth=auth"},
-                new[] {"sib-deviceid=deviceid"}
+                new[] {"sib-deviceid=deviceid"},
+                new[] {"blah=blah-blah"},
+                new[] {"sib-auth=auth", "blah=blah-blah"},
             };
 
             foreach (var testCase in testCases)
@@ -287,6 +301,7 @@ namespace RoboForm.Test
         //
 
         private const string Step1Header = "WWW-Authenticate-step1";
+        private const string Step2Header = "sib-auth=AQAUABAAdN_MjkCW; sib-deviceid=B972fc9818e7";
         private static readonly string[] Step2Cookies =
         {
             "sib-auth=AQAUABAAdN_MjkCW; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure",
