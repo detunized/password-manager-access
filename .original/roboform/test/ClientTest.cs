@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Moq;
 using NUnit.Framework;
@@ -98,19 +99,29 @@ namespace RoboForm.Test
                                      TestData.Nonce,
                                      TestData.AuthInfo,
                                      http.Object),
-                        Is.EqualTo(Step2Cookie));
+                        Is.EqualTo("sib-auth=AQAUABAAdN_MjkCW;sib-deviceid=B972fc9818e7"));
         }
 
         [Test]
         public void Step2_throws_on_missing_cookies()
         {
-            var http = SetupStep2(null);
-            Assert.That(() => Client.Step2(TestData.Username,
-                                           TestData.Password,
-                                           TestData.Nonce,
-                                           TestData.AuthInfo,
-                                           http.Object),
-                        Throws.TypeOf<InvalidOperationException>());
+            var testCases = new[]
+            {
+                new string[] {},
+                new[] {"sib-auth=auth"},
+                new[] {"sib-deviceid=deviceid"}
+            };
+
+            foreach (var testCase in testCases)
+            {
+                var http = SetupStep2(testCase);
+                Assert.That(() => Client.Step2(TestData.Username,
+                                               TestData.Password,
+                                               TestData.Nonce,
+                                               TestData.AuthInfo,
+                                               http.Object),
+                            Throws.TypeOf<InvalidOperationException>());
+            }
         }
 
         [Test]
@@ -221,7 +232,7 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> SetupStep1(string header = Step1Header)
         {
             var http = SetupPost(HttpStatusCode.Unauthorized,
-                                 new Dictionary<string, string> {{"WWW-Authenticate", header}});
+                                 new KeyValuePair<string, string>("WWW-Authenticate", header));
             return http;
         }
 
@@ -236,21 +247,28 @@ namespace RoboForm.Test
             return http;
         }
 
-        public static Mock<IHttpClient> SetupStep2(string cookie = Step2Cookie)
+        public static Mock<IHttpClient> SetupStep2()
+        {
+            return SetupStep2(Step2Cookies);
+        }
+
+        public static Mock<IHttpClient> SetupStep2(string[] cookies)
         {
             var http = SetupPost(HttpStatusCode.OK,
-                                 new Dictionary<string, string> {{"Set-Cookie", cookie}});
+                                 cookies
+                                     .Select(i => new KeyValuePair<string, string>("Set-Cookie", i))
+                                     .ToArray());
             return http;
         }
 
         // TODO: Could be removed
         private static Mock<IHttpClient> SetupPost(HttpStatusCode status)
         {
-            return SetupPost(status, new Dictionary<string, string>());
+            return SetupPost(status, new KeyValuePair<string, string>[] {});
         }
 
         private static Mock<IHttpClient> SetupPost(HttpStatusCode status,
-                                                   Dictionary<string, string> headers)
+                                                   params KeyValuePair<string, string>[] headers)
         {
             var response = new HttpResponseMessage(status);
             foreach (var i in headers)
@@ -269,6 +287,10 @@ namespace RoboForm.Test
         //
 
         private const string Step1Header = "WWW-Authenticate-step1";
-        private const string Step2Cookie = "step2-cookie";
+        private static readonly string[] Step2Cookies =
+        {
+            "sib-auth=AQAUABAAdN_MjkCW; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure",
+            "sib-deviceid=B972fc9818e7; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure"
+        };
     }
 }

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -49,11 +50,35 @@ namespace RoboForm
                 {"Authorization", Step2AuthorizationHeader(username, password, nonce, authInfo)}
             });
 
-            var cookie = GetHeader(response, "Set-Cookie");
-            if (string.IsNullOrWhiteSpace(cookie))
+            // Step2 is supposed to succeed
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new InvalidOperationException("Network request failed");
+
+            // The server is supposed to return some cookies
+            if (!response.Headers.Contains("Set-Cookie"))
                 throw new InvalidOperationException("Auth cookie expected"); // TODO: Custom exception
 
-            return cookie;
+            // Any URL will do. It's just a key in a hash.
+            var cookieUri = new Uri("https://detunized.net");
+
+            // Parse all the cookies and put them in a jar
+            var cookieJar = new CookieContainer();
+            foreach (var cookie in response.Headers.GetValues("Set-Cookie"))
+                cookieJar.SetCookies(cookieUri, cookie);
+
+            // Extract the cookies we're interested in
+            var cookies = cookieJar.GetCookies(cookieUri);
+
+            var auth = cookies["sib-auth"];
+            if (auth == null)
+                throw new InvalidOperationException("sib-auth cookie not found");
+
+            var device = cookies["sib-deviceid"];
+            if (device == null)
+                throw new InvalidOperationException("sib-deviceid cookie not found");
+
+            // Join the cookies together into one header. That's what the browsers do.
+            return string.Join("; ", auth, device);
         }
 
         internal static string Step1AuthorizationHeader(string username, string nonce)
