@@ -298,7 +298,7 @@ namespace RoboForm.Test
             return http;
         }
 
-        private static void AssertEqual(Client.Session a, Client.Session b)
+        private static void AssertEqual(Session a, Session b)
         {
             Assert.That(a.Token, Is.EqualTo(b.Token));
             Assert.That(a.DeviceId, Is.EqualTo(b.DeviceId));
@@ -315,7 +315,6 @@ namespace RoboForm.Test
             "sib-auth=AQAUABAAdN_MjkCW; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure",
             "sib-deviceid=B972fc9818e7; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure"
         };
-        private static readonly Client.Session Session = new Client.Session("AQAUABAAdN_MjkCW",
-                                                                            "B972fc9818e7");
+        private static readonly Session Session = new Session("AQAUABAAdN_MjkCW", "B972fc9818e7");
     }
 }

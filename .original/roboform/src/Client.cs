@@ -12,23 +12,6 @@ namespace RoboForm
 {
     public static class Client
     {
-        // TODO: Move out
-        public class Session
-        {
-            public readonly string Token;
-            public readonly string DeviceId;
-            public readonly string Header;
-
-            public Session(string token, string deviceId)
-            {
-                Token = token;
-                DeviceId = deviceId;
-
-                // Join the cookies together into one header. That's what the browsers do.
-                Header = string.Join("; ", token, deviceId);
-            }
-        }
-
         public static Session Login(string username, string password, IHttpClient http)
         {
             var nonce = "-DeHRrZjC8DZ_0e8RGsisg";
