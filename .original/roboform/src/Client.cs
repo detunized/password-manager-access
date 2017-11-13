@@ -22,6 +22,15 @@ namespace RoboForm
             return session;
         }
 
+        public static void Logout(string username, Session session, IHttpClient http)
+        {
+            var response = http.Post(ApiUrl(username, "logout"),
+                                     new Dictionary<string, string> {{"Cookie", session.Header}});
+
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new InvalidOperationException("Network request failed");
+        }
+
         internal static string Step1(string username, string nonce, IHttpClient http)
         {
             // TODO: Wrap in using when done
@@ -203,8 +212,17 @@ namespace RoboForm
 
         internal static string LoginUrl(string username)
         {
-            return string.Format("https://online.roboform.com/rf-api/{0}?login",
-                                 username.EncodeUri());
+            return ApiUrl(username, "login");
+        }
+
+        internal static string ApiUrl(string username, string endpoint)
+        {
+            return string.Format("{0}?{1}", ApiBaseUrl(username), endpoint);
+        }
+
+        internal static string ApiBaseUrl(string username)
+        {
+            return string.Format("https://online.roboform.com/rf-api/{0}", username.EncodeUri());
         }
 
         internal static string GetHeader(HttpResponseMessage response, string name)

@@ -15,6 +15,23 @@ namespace RoboForm.Test
     public class ClientTest
     {
         [Test]
+        public void Logout_makes_POST_request_to_specific_url()
+        {
+            var expected = string.Format("https://online.roboform.com/rf-api/{0}?logout",
+                                         TestData.Username);
+
+            Logout(HttpStatusCode.OK).Verify(x => x.Post(It.Is<string>(s => s == expected),
+                                                         It.IsAny<Dictionary<string, string>>()));
+        }
+
+        [Test]
+        public void Logout_throws_on_not_HTTP_OK()
+        {
+            Assert.That(() => Logout(HttpStatusCode.NotFound),
+                        Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
         public void Step1_makes_POST_request_to_specific_server()
         {
             MakeStep1().Verify(x => x.Post(
@@ -237,6 +254,13 @@ namespace RoboForm.Test
         //
         // Helpers
         //
+
+        public static Mock<IHttpClient> Logout(HttpStatusCode status)
+        {
+            var http = SetupPost(status);
+            Client.Logout(TestData.Username, Session, http.Object);
+            return http;
+        }
 
         public static Mock<IHttpClient> MakeStep1()
         {
