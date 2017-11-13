@@ -94,24 +94,26 @@ namespace RoboForm.Test
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
-            Assert.That(Client.Step2(TestData.Username,
-                                     TestData.Password,
-                                     TestData.Nonce,
-                                     TestData.AuthInfo,
-                                     http.Object),
-                        Is.EqualTo(Step2Header));
+            var session = Client.Step2(TestData.Username,
+                                       TestData.Password,
+                                       TestData.Nonce,
+                                       TestData.AuthInfo,
+                                       http.Object);
+
+            AssertEqual(session, Session);
         }
 
         [Test]
         public void Step2_ignores_extra_cookies()
         {
             var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
-            Assert.That(Client.Step2(TestData.Username,
-                                     TestData.Password,
-                                     TestData.Nonce,
-                                     TestData.AuthInfo,
-                                     http.Object),
-                        Is.EqualTo(Step2Header));
+            var session = Client.Step2(TestData.Username,
+                                       TestData.Password,
+                                       TestData.Nonce,
+                                       TestData.AuthInfo,
+                                       http.Object);
+
+            AssertEqual(session, Session);
         }
 
         [Test]
@@ -296,16 +298,24 @@ namespace RoboForm.Test
             return http;
         }
 
+        private static void AssertEqual(Client.Session a, Client.Session b)
+        {
+            Assert.That(a.Token, Is.EqualTo(b.Token));
+            Assert.That(a.DeviceId, Is.EqualTo(b.DeviceId));
+            Assert.That(a.Header, Is.EqualTo(b.Header));
+        }
+
         //
         // Data
         //
 
         private const string Step1Header = "WWW-Authenticate-step1";
-        private const string Step2Header = "sib-auth=AQAUABAAdN_MjkCW; sib-deviceid=B972fc9818e7";
         private static readonly string[] Step2Cookies =
         {
             "sib-auth=AQAUABAAdN_MjkCW; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure",
             "sib-deviceid=B972fc9818e7; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure"
         };
+        private static readonly Client.Session Session = new Client.Session("AQAUABAAdN_MjkCW",
+                                                                            "B972fc9818e7");
     }
 }

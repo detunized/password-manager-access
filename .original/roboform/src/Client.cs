@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -13,12 +12,31 @@ namespace RoboForm
 {
     public static class Client
     {
-        public static void Login(string username, string password, IHttpClient http)
+        // TODO: Move out
+        public class Session
+        {
+            public readonly string Token;
+            public readonly string DeviceId;
+            public readonly string Header;
+
+            public Session(string token, string deviceId)
+            {
+                Token = token;
+                DeviceId = deviceId;
+
+                // Join the cookies together into one header. That's what the browsers do.
+                Header = string.Join("; ", token, deviceId);
+            }
+        }
+
+        public static Session Login(string username, string password, IHttpClient http)
         {
             var nonce = "-DeHRrZjC8DZ_0e8RGsisg";
             var header = Step1(username, nonce, http);
             var authInfo = ParseAuthInfo(header);
-            var response = Step2(username, password, nonce, authInfo, http);
+            var session = Step2(username, password, nonce, authInfo, http);
+
+            return session;
         }
 
         internal static string Step1(string username, string nonce, IHttpClient http)
@@ -39,11 +57,11 @@ namespace RoboForm
             return header;
         }
 
-        internal static string Step2(string username,
-                                     string password,
-                                     string nonce,
-                                     AuthInfo authInfo,
-                                     IHttpClient http)
+        internal static Session Step2(string username,
+                                      string password,
+                                      string nonce,
+                                      AuthInfo authInfo,
+                                      IHttpClient http)
         {
             var response = http.Post(LoginUrl(username), new Dictionary<string, string>
             {
@@ -77,8 +95,7 @@ namespace RoboForm
             if (device == null)
                 throw new InvalidOperationException("sib-deviceid cookie not found");
 
-            // Join the cookies together into one header. That's what the browsers do.
-            return string.Join("; ", auth, device);
+            return new Session(auth.Value, device.Value);
         }
 
         internal static string Step1AuthorizationHeader(string username, string nonce)
