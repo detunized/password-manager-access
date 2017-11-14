@@ -17,7 +17,7 @@ namespace RoboForm
             var session = Login(username, password, http);
             try
             {
-                var blob = GetUserData(username, session, http);
+                var blob = GetBlob(username, session, http);
                 return new Vault();
             }
             finally
@@ -51,7 +51,7 @@ namespace RoboForm
                 throw new InvalidOperationException("Network request failed");
         }
 
-        internal static byte[] GetUserData(string username, Session session, IHttpClient http)
+        internal static byte[] GetBlob(string username, Session session, IHttpClient http)
         {
             // TODO: Make this random
             var url = string.Format("{0}/user-data.rfo?_{1}", ApiBaseUrl(username), 1337);

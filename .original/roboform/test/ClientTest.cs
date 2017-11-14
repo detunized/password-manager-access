@@ -32,11 +32,11 @@ namespace RoboForm.Test
         }
 
         [Test]
-        public void GetUserData_returns_received_bytes()
+        public void GetBlob_returns_received_bytes()
         {
             var expected = "Blah, blah, blah...".ToBytes();
             var http = SetupGet(HttpStatusCode.OK, expected);
-            var response = Client.GetUserData(TestData.Username, Session, http.Object);
+            var response = Client.GetBlob(TestData.Username, Session, http.Object);
 
             Assert.That(response, Is.EqualTo(expected));
         }
