@@ -9,7 +9,7 @@ namespace RoboForm.Test
         public const string Password = "h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk";
         public const string Nonce = "-DeHRrZjC8DZ_0e8RGsisg";
 
-        public static readonly Client.AuthInfo AuthInfo = new Client.AuthInfo(
+        public static readonly AuthInfo AuthInfo = new AuthInfo(
             sid: "6Ag93Y02vihucO9IQl1fbg",
             data: "cj0tRGVIUnJaakM4RFpfMGU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ4VU0" +
                   "2NzRPWk9PalVqWENkYnc9PSxpPTQwOTY=",
