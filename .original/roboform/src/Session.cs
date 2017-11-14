@@ -3,7 +3,7 @@
 
 namespace RoboForm
 {
-    public class Session
+    internal class Session
     {
         public readonly string Token;
         public readonly string DeviceId;

@@ -10,9 +10,28 @@ using System.Text.RegularExpressions;
 
 namespace RoboForm
 {
-    public static class Client
+    internal static class Client
     {
-        public static Session Login(string username, string password, IHttpClient http)
+        public static Vault OpenVault(string username, string password, IHttpClient http)
+        {
+            var session = Login(username, password, http);
+            try
+            {
+                var blob = GetUserData(username, session, http);
+                return new Vault();
+            }
+            finally
+            {
+
+                Logout(username, session, http);
+            }
+        }
+
+        //
+        // Internal
+        //
+
+        internal static Session Login(string username, string password, IHttpClient http)
         {
             var nonce = "-DeHRrZjC8DZ_0e8RGsisg"; // TODO: Make this random
             var header = Step1(username, nonce, http);
@@ -22,7 +41,7 @@ namespace RoboForm
             return session;
         }
 
-        public static void Logout(string username, Session session, IHttpClient http)
+        internal static void Logout(string username, Session session, IHttpClient http)
         {
             // TODO: Wrap in using when done
             var response = http.Post(ApiUrl(username, "logout"),
@@ -32,7 +51,7 @@ namespace RoboForm
                 throw new InvalidOperationException("Network request failed");
         }
 
-        public static byte[] GetUserData(string username, Session session, IHttpClient http)
+        internal static byte[] GetUserData(string username, Session session, IHttpClient http)
         {
             // TODO: Make this random
             var url = string.Format("{0}/user-data.rfo?_{1}", ApiBaseUrl(username), 1337);

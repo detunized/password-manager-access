@@ -51,6 +51,7 @@
     <Compile Include="IHttpClient.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Session.cs" />
+    <Compile Include="Vault.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
