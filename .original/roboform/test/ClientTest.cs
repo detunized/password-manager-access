@@ -32,6 +32,16 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void GetUserData_returns_received_bytes()
+        {
+            var expected = "Blah, blah, blah...".ToBytes();
+            var http = SetupGet(HttpStatusCode.OK, expected);
+            var response = Client.GetUserData(TestData.Username, Session, http.Object);
+
+            Assert.That(response, Is.EqualTo(expected));
+        }
+
+        [Test]
         public void Step1_makes_POST_request_to_specific_server()
         {
             MakeStep1().Verify(x => x.Post(
@@ -301,7 +311,21 @@ namespace RoboForm.Test
             return http;
         }
 
-        // TODO: Could be removed
+        private static Mock<IHttpClient> SetupGet(HttpStatusCode status, byte[] responseContent)
+        {
+            var response = new HttpResponseMessage(status)
+            {
+                Content = new ByteArrayContent(responseContent)
+            };
+
+            var http = new Mock<IHttpClient>();
+            http
+                .Setup(x => x.Get(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Returns(response);
+
+            return http;
+        }
+
         private static Mock<IHttpClient> SetupPost(HttpStatusCode status)
         {
             return SetupPost(status, new KeyValuePair<string, string>[] {});

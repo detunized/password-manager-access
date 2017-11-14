@@ -14,7 +14,7 @@ namespace RoboForm
     {
         public static Session Login(string username, string password, IHttpClient http)
         {
-            var nonce = "-DeHRrZjC8DZ_0e8RGsisg";
+            var nonce = "-DeHRrZjC8DZ_0e8RGsisg"; // TODO: Make this random
             var header = Step1(username, nonce, http);
             var authInfo = ParseAuthInfo(header);
             var session = Step2(username, password, nonce, authInfo, http);
@@ -24,11 +24,26 @@ namespace RoboForm
 
         public static void Logout(string username, Session session, IHttpClient http)
         {
+            // TODO: Wrap in using when done
             var response = http.Post(ApiUrl(username, "logout"),
                                      new Dictionary<string, string> {{"Cookie", session.Header}});
 
             if (response.StatusCode != HttpStatusCode.OK)
                 throw new InvalidOperationException("Network request failed");
+        }
+
+        public static byte[] GetUserData(string username, Session session, IHttpClient http)
+        {
+            // TODO: Make this random
+            var url = string.Format("{0}/user-data.rfo?_{1}", ApiBaseUrl(username), 1337);
+
+            // TODO: Wrap in using when done
+            var response = http.Get(url, new Dictionary<string, string> {{"Cookie", session.Header}});
+
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new InvalidOperationException("Network request failed");
+
+            return response.Content.ReadAsByteArrayAsync().Result;
         }
 
         internal static string Step1(string username, string nonce, IHttpClient http)
