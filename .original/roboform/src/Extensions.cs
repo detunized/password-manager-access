@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.IO;
 using System.Text;
 
 namespace RoboForm
@@ -44,6 +45,23 @@ namespace RoboForm
         public static string ToBase64(this byte[] x)
         {
             return Convert.ToBase64String(x);
+        }
+
+        //
+        // BinaryReader
+        //
+
+        public static uint ReadUInt32LittleEndian(this BinaryReader r)
+        {
+            var result = r.ReadUInt32();
+
+            if (!BitConverter.IsLittleEndian)
+                result = ((result & 0x000000FF) << 24) |
+                         ((result & 0x0000FF00) << 8) |
+                         ((result & 0x00FF0000) >> 8) |
+                         ((result & 0xFF000000) >> 24);
+
+            return result;
         }
     }
 }

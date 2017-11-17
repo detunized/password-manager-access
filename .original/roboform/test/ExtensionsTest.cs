@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 
 namespace RoboForm.Test
@@ -75,6 +76,21 @@ namespace RoboForm.Test
             Assert.That(new byte[] { 0x61, 0x62 }.ToBase64(), Is.EqualTo("YWI="));
             Assert.That(new byte[] { 0x61, 0x62, 0x63 }.ToBase64(), Is.EqualTo("YWJj"));
             Assert.That(new byte[] { 0x61, 0x62, 0x63, 0x64 }.ToBase64(), Is.EqualTo("YWJjZA=="));
+        }
+
+        //
+        // BinaryReader
+        //
+
+        [Test]
+        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
+        {
+            using (var s = new MemoryStream(new byte[] {0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE}))
+            using (var r = new BinaryReader(s))
+            {
+                Assert.That(r.ReadUInt32LittleEndian(), Is.EqualTo(0xDEADBEEF));
+                Assert.That(r.ReadUInt32LittleEndian(), Is.EqualTo(0xFEEDF00D));
+            }
         }
 
         //
