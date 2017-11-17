@@ -26,6 +26,15 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void Md5_returns_hashed_message()
+        {
+            // Generated with OpenSSL (just a smoke test, we're not implementing MD5 here)
+            // $ echo -n message | openssl dgst -md5 -binary | openssl base64
+            Assert.That(Crypto.Md5("message".ToBytes()),
+                        Is.EqualTo("eOcxAn2P1Q7WQjQLfJpjsw==".Decode64()));
+        }
+
+        [Test]
         public void HashPassword_returns_hashed_password()
         {
             // TODO: Generate a test case with MD5
@@ -33,15 +42,6 @@ namespace RoboForm.Test
             // Generated with the original JavaScript code
             Assert.That(Crypto.HashPassword(TestData.Password, TestData.AuthInfo),
                         Is.EqualTo("b+rd7TUt65+hdE7+lHCBPPWHjxbq6qs0y7zufYfqHto=".Decode64()));
-        }
-
-        [Test]
-        public void Md5_returns_hashed_message()
-        {
-            // Generated with OpenSSL (just a smoke test, we're not implementing MD5 here)
-            // $ echo -n message | openssl dgst -md5 -binary | openssl base64
-            Assert.That(Crypto.Md5("message".ToBytes()),
-                        Is.EqualTo("eOcxAn2P1Q7WQjQLfJpjsw==".Decode64()));
         }
 
         [Test]

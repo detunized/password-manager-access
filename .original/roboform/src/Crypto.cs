@@ -18,6 +18,12 @@ namespace RoboForm
                 return hmac.ComputeHash(message);
         }
 
+        public static byte[] Md5(byte[] data)
+        {
+            using (var md5 = MD5.Create())
+                return md5.ComputeHash(data);
+        }
+
         //
         // Internal
         //
@@ -29,12 +35,6 @@ namespace RoboForm
                 passwordBytes = Md5(passwordBytes);
 
             return Pbkdf2.Generate(passwordBytes, authInfo.Salt, authInfo.IterationCount, 32);
-        }
-
-        internal static byte[] Md5(byte[] data)
-        {
-            using (var md5 = MD5.Create())
-                return md5.ComputeHash(data);
         }
 
         internal static byte[] Sha256(byte[] data)
