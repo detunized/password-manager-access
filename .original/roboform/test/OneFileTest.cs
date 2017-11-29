@@ -11,6 +11,12 @@ namespace RoboForm.Test
     class OneFileTest
     {
         [Test]
+        public void Parse_returns_parsed_object()
+        {
+            Assert.That(() => OneFile.Parse(TestData.Blob, TestData.Password), Throws.Nothing);
+        }
+
+        [Test]
         public void Parse_throws_on_no_content()
         {
             Assert.That(Parse("too short".ToBytes()),
