@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Security.Cryptography;
 using NUnit.Framework;
 
 namespace RoboForm.Test
@@ -32,6 +33,26 @@ namespace RoboForm.Test
             // $ echo -n message | openssl dgst -md5 -binary | openssl base64
             Assert.That(Crypto.Md5("message".ToBytes()),
                         Is.EqualTo("eOcxAn2P1Q7WQjQLfJpjsw==".Decode64()));
+        }
+
+        [Test]
+        public void DecryptAes256_returns_plaintext_without_padding()
+        {
+            // Generated with Ruby/openssl
+            Assert.That(Crypto.DecryptAes256("oiX9OSEoMMXizsPz6XM15g==".Decode64(),
+                                             "this is a very secure password!!".ToBytes(),
+                                             PaddingMode.None),
+                        Is.EqualTo("decrypted data!!".ToBytes()));
+        }
+
+        [Test]
+        public void DecryptAes256_returns_ciphertext_with_padding()
+        {
+            // Generated with Ruby/openssl
+            Assert.That(Crypto.DecryptAes256("BwhwrWXJmDUFR30GJT5fjw==".Decode64(),
+                                             "this is a very secure password!!".ToBytes(),
+                                             PaddingMode.PKCS7),
+                        Is.EqualTo("decrypted data!".ToBytes()));
         }
 
         [Test]

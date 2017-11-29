@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.IO;
 using System.Security.Cryptography;
 
 namespace RoboForm
@@ -24,6 +25,19 @@ namespace RoboForm
                 return md5.ComputeHash(data);
         }
 
+        public static byte[] DecryptAes256(byte[] ciphertext, byte[] key, PaddingMode padding)
+        {
+            using (var aes = CreateAes256Cbc(key, padding))
+            using (var decryptor = aes.CreateDecryptor())
+            using (var ciphertextStream = new MemoryStream(ciphertext, false))
+            using (var cryptoStream = new CryptoStream(ciphertextStream, decryptor, CryptoStreamMode.Read))
+            using (var plaintextStream = new MemoryStream())
+            {
+                cryptoStream.CopyTo(plaintextStream);
+                return plaintextStream.ToArray();
+            }
+        }
+
         //
         // Internal
         //
@@ -41,6 +55,19 @@ namespace RoboForm
         {
             using (var sha = new SHA256Managed())
                 return sha.ComputeHash(data);
+        }
+
+        internal static AesManaged CreateAes256Cbc(byte[] key, PaddingMode padding)
+        {
+            return new AesManaged
+            {
+                BlockSize = 128,
+                KeySize = 256,
+                Key = key,
+                IV = new byte[16],
+                Mode = CipherMode.CBC,
+                Padding = padding
+            };
         }
     }
 }
