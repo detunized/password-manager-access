@@ -25,9 +25,9 @@ namespace RoboForm
                 return md5.ComputeHash(data);
         }
 
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] key, PaddingMode padding)
+        public static byte[] DecryptAes256(byte[] ciphertext, byte[] key, byte[] iv, PaddingMode padding)
         {
-            using (var aes = CreateAes256Cbc(key, padding))
+            using (var aes = CreateAes256Cbc(key, iv, padding))
             using (var decryptor = aes.CreateDecryptor())
             using (var ciphertextStream = new MemoryStream(ciphertext, false))
             using (var cryptoStream = new CryptoStream(ciphertextStream, decryptor, CryptoStreamMode.Read))
@@ -57,14 +57,14 @@ namespace RoboForm
                 return sha.ComputeHash(data);
         }
 
-        internal static AesManaged CreateAes256Cbc(byte[] key, PaddingMode padding)
+        internal static AesManaged CreateAes256Cbc(byte[] key, byte[] iv, PaddingMode padding)
         {
             return new AesManaged
             {
                 BlockSize = 128,
                 KeySize = 256,
                 Key = key,
-                IV = new byte[16],
+                IV = iv,
                 Mode = CipherMode.CBC,
                 Padding = padding
             };

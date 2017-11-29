@@ -39,8 +39,9 @@ namespace RoboForm.Test
         public void DecryptAes256_returns_plaintext_without_padding()
         {
             // Generated with Ruby/openssl
-            Assert.That(Crypto.DecryptAes256("oiX9OSEoMMXizsPz6XM15g==".Decode64(),
+            Assert.That(Crypto.DecryptAes256("XOUQiNfzQHLMHYJzo8jvaw==".Decode64(),
                                              "this is a very secure password!!".ToBytes(),
+                                             "iviviviviviviviv".ToBytes(),
                                              PaddingMode.None),
                         Is.EqualTo("decrypted data!!".ToBytes()));
         }
@@ -49,8 +50,9 @@ namespace RoboForm.Test
         public void DecryptAes256_returns_ciphertext_with_padding()
         {
             // Generated with Ruby/openssl
-            Assert.That(Crypto.DecryptAes256("BwhwrWXJmDUFR30GJT5fjw==".Decode64(),
+            Assert.That(Crypto.DecryptAes256("snfIB8VWKBn7p869FXAfrw==".Decode64(),
                                              "this is a very secure password!!".ToBytes(),
+                                             "iviviviviviviviv".ToBytes(),
                                              PaddingMode.PKCS7),
                         Is.EqualTo("decrypted data!".ToBytes()));
         }
