@@ -34,7 +34,7 @@ namespace RoboForm
             if (authInfo.IsMd5)
                 passwordBytes = Md5(passwordBytes);
 
-            return Pbkdf2.Generate(passwordBytes, authInfo.Salt, authInfo.IterationCount, 32);
+            return Pbkdf2.GenerateSha256(passwordBytes, authInfo.Salt, authInfo.IterationCount, 32);
         }
 
         internal static byte[] Sha256(byte[] data)

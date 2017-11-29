@@ -8,30 +8,44 @@ namespace RoboForm
 {
     internal static class Pbkdf2
     {
-        public static byte[] Generate(string password, string salt, int iterationCount, int byteCount)
+        public static byte[] GenerateSha1(byte[] password,
+                                          byte[] salt,
+                                          int iterationCount,
+                                          int byteCount)
         {
-            return Generate(password.ToBytes(), salt.ToBytes(), iterationCount, byteCount);
+            return Generate<HMACSHA1>(password, salt, iterationCount, byteCount);
         }
 
-        public static byte[] Generate(string password, byte[] salt, int iterationCount, int byteCount)
+        public static byte[] GenerateSha256(byte[] password,
+                                            byte[] salt,
+                                            int iterationCount,
+                                            int byteCount)
         {
-            return Generate(password.ToBytes(), salt, iterationCount, byteCount);
+            return Generate<HMACSHA256>(password, salt, iterationCount, byteCount);
         }
 
-        public static byte[] Generate(byte[] password, string salt, int iterationCount, int byteCount)
+        public static byte[] GenerateSha512(byte[] password,
+                                            byte[] salt,
+                                            int iterationCount,
+                                            int byteCount)
         {
-            return Generate(password, salt.ToBytes(), iterationCount, byteCount);
+            return Generate<HMACSHA512>(password, salt, iterationCount, byteCount);
         }
 
-        public static byte[] Generate(byte[] password, byte[] salt, int iterationCount, int byteCount)
+        public static byte[] Generate<T>(byte[] password,
+                                         byte[] salt,
+                                         int iterationCount,
+                                         int byteCount) where T : HMAC, new()
         {
             if (iterationCount <= 0)
-                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be positive");
+                throw new ArgumentOutOfRangeException("iterationCount",
+                                                      "Iteration count should be positive");
 
             if (byteCount < 0)
-                throw new ArgumentOutOfRangeException("byteCount", "Byte count should be nonnegative");
+                throw new ArgumentOutOfRangeException("byteCount",
+                                                      "Byte count should be nonnegative");
 
-            using (var hmac = new HMACSHA256())
+            using (var hmac = new T())
             {
                 hmac.Key = password;
 
