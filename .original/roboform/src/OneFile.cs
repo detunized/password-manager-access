@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -71,7 +72,7 @@ namespace RoboForm
                     throw new InvalidOperationException("Onefile: Checksum doesn't match");
 
                 var compressed = Decrypt(content, password);
-                var raw = isCompressed ? DecompressContent(compressed) : compressed;
+                var raw = isCompressed ? Decompress(compressed) : compressed;
 
                 // TODO: Parse raw into JSON
             }
@@ -168,9 +169,16 @@ namespace RoboForm
             }
         }
 
-        internal static byte[] DecompressContent(byte[] content)
+        internal static byte[] Decompress(byte[] content)
         {
-            return content;
+            using (var inputStream = new MemoryStream(content, false))
+            using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            using (var outputStream = new MemoryStream())
+            {
+                // TODO: Handle exceptions in case of corruption
+                gzipStream.CopyTo(outputStream);
+                return outputStream.ToArray();
+            }
         }
 
         //

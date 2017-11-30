@@ -123,6 +123,16 @@ namespace RoboForm.Test
                         ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
         }
 
+        [Test]
+        public void Decompress_returns_decompressed_data()
+        {
+            // Generated with bash
+            // $ echo -n decompressed | gzip -c - | base64
+            Assert.That(
+                OneFile.Decompress("H4sIANRVH1oAA0tJTc7PLShKLS5OTQEACojeBQwAAAA=".Decode64()),
+                Is.EqualTo("decompressed".ToBytes()));
+        }
+
         //
         // Helpers
         //
