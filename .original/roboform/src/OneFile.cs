@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace RoboForm
 {
@@ -69,7 +70,7 @@ namespace RoboForm
                 if (!actualChecksum.SequenceEqual(storedChecksum))
                     throw new InvalidOperationException("Onefile: Checksum doesn't match");
 
-                var compressed = DecryptContent(content, password);
+                var compressed = Decrypt(content, password);
                 var raw = isCompressed ? DecompressContent(compressed) : compressed;
 
                 // TODO: Parse raw into JSON
@@ -80,9 +81,91 @@ namespace RoboForm
         // Internal
         //
 
-        internal static byte[] DecryptContent(byte[] content, string password)
+        internal static byte[] Decrypt(byte[] content, string password)
         {
-            return content;
+            if (content.Length < 15) // magic(8) + extra(1) + kdf(1) + iterations(4) + salt(1)
+                throw ParseError("Content is too short");
+
+            using (var stream = new MemoryStream(content))
+            using (var io = new BinaryReader(stream))
+            {
+                // 00-07 (8): magic ("gsencst1")
+                var magic = io.ReadBytes(8);
+                if (!magic.SequenceEqual("gsencst1".ToBytes()))
+                    throw ParseError("Invalid signature: [{0}]", PrintBytes(magic));
+
+                // 08 (1): extra header length
+                var extraLength = io.ReadByte();
+
+                // 09 (1): key derivation function / encryption type
+                //     - 0: PBKDF1_AES_SHA1 / AES-256-CBC
+                //     - 1: PBKDF2_HMAC_SHA1 / AES-256-CBC
+                //     - 2: PBKDF2_HMAC_SHA256 / AES-256-CBC
+                //     - 3: PBKDF2_HMAC_SHA512 / AES-256-CBC
+                //     - 4: PBKDF2_HMAC_SHA512 / AES-256-GCM
+                var encryptionType = io.ReadByte();
+
+                Func<byte[], byte[], int, int, byte[]> kdf;
+                switch (encryptionType)
+                {
+                case 0:
+                case 1:
+                    throw UnsupportedError("SHA-1 based KDF is not supported");
+                case 2:
+                    kdf = Pbkdf2.GenerateSha256;
+                    break;
+                case 3:
+                case 4:
+                    kdf = Pbkdf2.GenerateSha512;
+                    break;
+                default:
+                    throw ParseError("KDF/encryption type {0} is invalid", encryptionType);
+                }
+
+                // 10-13 (4): KDF iterations
+                var iterations = io.ReadUInt32LittleEndian();
+                if (iterations == 0 || iterations > 512 * 1024)
+                    throw ParseError("KDF iteration count is invalid {0}", iterations);
+
+                // 14 (1): salt length
+                var saltLength = io.ReadByte();
+
+                // 15-...: salt and extra header
+                var salt = io.ReadBytes(saltLength);
+                var extra = io.ReadBytes(extraLength);
+
+                if (salt.Length != saltLength || extra.Length != extraLength)
+                    throw ParseError("Content is too short");
+
+                // Default is PKCS7 padding
+                var padding = extra.Length > 0 && (extra[0] & 1) != 0
+                    ? PaddingMode.None
+                    : PaddingMode.PKCS7;
+
+                // KDF produces both the key and IVs
+                var keyIv = kdf(password.ToBytes(), salt, (int)iterations, 64);
+                var key = keyIv.Take(32).ToArray();
+                var iv = keyIv.Skip(32).Take(16).ToArray();
+
+                // The rest is encrypted
+                var ciphertext = io.ReadBytes((int)(stream.Length - stream.Position));
+
+                // With AES-256-CBC there's no way to know if decrypted correctly.
+                // It will later fail in decompression/JSON parsing.
+                // TODO: Check for CryptographicException
+                var plaintext = Crypto.DecryptAes256(ciphertext, key, iv, padding);
+
+                // Skip garbage (something strange, but that's what they do)
+                var xor = 0xAA;
+                var garbageLength = 0;
+                for (var i = 0; i < plaintext.Length && xor != 0; ++i)
+                {
+                    ++garbageLength;
+                    xor ^= plaintext[i];
+                }
+
+                return plaintext.Skip(garbageLength).ToArray();
+            }
         }
 
         internal static byte[] DecompressContent(byte[] content)
@@ -90,9 +173,25 @@ namespace RoboForm
             return content;
         }
 
-        internal static string PrintBytes(byte[] bytes)
+        //
+        // Private
+        //
+
+        private static string PrintBytes(byte[] bytes)
         {
             return string.Join(", ", bytes.Select(i => i.ToString("x2")));
+        }
+
+        private static ClientException ParseError(string format, params object[] args)
+        {
+            return new ClientException(ClientException.FailureReason.ParseError,
+                                       string.Format("Onefile: " + format, args));
+        }
+
+        private static ClientException UnsupportedError(string format, params object[] args)
+        {
+            return new ClientException(ClientException.FailureReason.UnsupportedFeature,
+                                       string.Format("Onefile: " + format, args));
         }
     }
 }

@@ -70,6 +70,59 @@ namespace RoboForm.Test
                         Throws.TypeOf<InvalidOperationException>().And.Message.Contains("too short"));
         }
 
+        [Test]
+        public void Decrypt_throws_on_no_content()
+        {
+            Assert.That(Decrypt("too short".ToBytes()),
+                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_invalid_signature()
+        {
+            Assert.That(DecryptPad("invalid!"),
+                        ExceptionsTest.ThrowsParseErrorWithMessage("signature"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_unsupported_sha1_kdf()
+        {
+            Assert.That(DecryptPad("gsencst1\x00" + "\x01"),
+                        ExceptionsTest.ThrowsUnsupportedFeatureWithMessage("SHA-1"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_unsupported_invalid_kdf()
+        {
+            Assert.That(DecryptPad("gsencst1\x00" + "\x05"),
+                        ExceptionsTest.ThrowsParseErrorWithMessage("KDF/encryption type"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_invalid_iteration_count()
+        {
+            var iterations = new[] {new byte[] {0, 0, 0, 0}, new byte[] {0, 0x08, 0, 1}};
+            foreach (var i in iterations)
+            {
+                Assert.That(DecryptPad("gsencst1\x00\x02".ToBytes().Concat(i).ToArray()),
+                            ExceptionsTest.ThrowsParseErrorWithMessage("iteration count"));
+            }
+        }
+
+        [Test]
+        public void Decrypt_throws_on_too_short_salt()
+        {
+            Assert.That(DecryptPad("gsencst1\x00\x02\x00\x10\x00\x00\x10" + "salt..."),
+                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+        }
+
+        [Test]
+        public void Decrypt_throws_on_too_short_extra()
+        {
+            Assert.That(DecryptPad("gsencst1\x10\x02\x00\x10\x00\x00\x10saltsaltsaltsalt" + "extra..."),
+                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+        }
+
         //
         // Helpers
         //
@@ -81,18 +134,35 @@ namespace RoboForm.Test
 
         private static TestDelegate ParsePad(byte[] content)
         {
-            const int minLength = 30;
-
-            // Pad to prevent "too short" error
-            if (content.Length < minLength)
-                content = content.Concat(new byte[minLength - content.Length]).ToArray();
-
-            return Parse(content);
+            return Parse(Pad(content, 30));
         }
 
         private static TestDelegate Parse(byte[] content)
         {
             return () => OneFile.Parse(content, "password");
+        }
+
+        private static TestDelegate DecryptPad(string content)
+        {
+            return DecryptPad(content.ToBytes());
+        }
+
+        private static TestDelegate DecryptPad(byte[] content)
+        {
+            return Decrypt(Pad(content, 15));
+        }
+
+        private static TestDelegate Decrypt(byte[] content)
+        {
+            return () => OneFile.Decrypt(content, "password");
+        }
+
+        private static byte[] Pad(byte[] content, int minLength)
+        {
+            if (content.Length >= minLength)
+                return content;
+
+            return content.Concat(new byte[minLength - content.Length]).ToArray();
         }
     }
 }
