@@ -20,28 +20,28 @@ namespace RoboForm.Test
         public void Parse_throws_on_no_content()
         {
             Assert.That(Parse("too short".ToBytes()),
-                        Throws.TypeOf<InvalidOperationException>().And.Message.Contains("too short"));
+                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
         }
 
         [Test]
         public void Parse_throws_on_invalid_signature()
         {
             Assert.That(ParsePad("invalid!"),
-                        Throws.TypeOf<InvalidOperationException>().And.Message.Contains("signature"));
+                        ExceptionsTest.ThrowsParseErrorWithMessage("signature"));
         }
 
         [Test]
         public void Parse_throws_unencrypted_content()
         {
             Assert.That(ParsePad("onefile1"+ "\x05"),
-                        Throws.TypeOf<InvalidOperationException>().And.Message.Contains("Unencrypted"));
+                        ExceptionsTest.ThrowsUnsupportedFeatureWithMessage("Unencrypted"));
         }
 
         [Test]
         public void Parse_throws_on_invalid_checksum_type()
         {
             Assert.That(ParsePad("onefile1\x07" + "\x13"),
-                        Throws.TypeOf<InvalidOperationException>().And.Message.Contains("checksum"));
+                        ExceptionsTest.ThrowsParseErrorWithMessage("checksum"));
         }
 
         [Test]
@@ -51,8 +51,7 @@ namespace RoboForm.Test
             foreach (var i in lengths)
             {
                 Assert.That(ParsePad("onefile1\x07\x01".ToBytes().Concat(i).ToArray()),
-                            Throws.TypeOf<InvalidOperationException>()
-                                .And.Message.Contains("negative"));
+                            ExceptionsTest.ThrowsParseErrorWithMessage("negative"));
             }
         }
 
@@ -60,14 +59,14 @@ namespace RoboForm.Test
         public void Parse_throws_on_invalid_checksum()
         {
             Assert.That(ParsePad("onefile1\x07\x01\x01\x00\x00\x00" + "invalid checksum" + "!"),
-                        Throws.TypeOf<InvalidOperationException>().And.Message.Contains("Checksum"));
+                        ExceptionsTest.ThrowsParseErrorWithMessage("Checksum"));
         }
 
         [Test]
         public void Parse_throws_on_too_short_content()
         {
             Assert.That(ParsePad("onefile1\x07\x01\x02\x00\x00\x00" + "invalid checksum" + "!"),
-                        Throws.TypeOf<InvalidOperationException>().And.Message.Contains("too short"));
+                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
         }
 
         [Test]

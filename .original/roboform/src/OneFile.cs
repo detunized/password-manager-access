@@ -14,7 +14,7 @@ namespace RoboForm
         public static void Parse(byte[] blob, string password)
         {
             if (blob.Length < 30) // magic(8) + flags(1) + checksum-type(1) + length(4) + md5(16)
-                throw new InvalidOperationException("Onefile: File is too short");
+                throw ParseError("File is too short");
 
             using (var stream = new MemoryStream(blob))
             using (var io = new BinaryReader(stream))
@@ -22,8 +22,7 @@ namespace RoboForm
                 // 00-07 (8): magic ("onefile1")
                 var magic = io.ReadBytes(8);
                 if (!magic.SequenceEqual("onefile1".ToBytes()))
-                    throw new InvalidOperationException(
-                        string.Format("Onefile: Invalid signature: [{0}]", PrintBytes(magic)));
+                    throw ParseError("Invalid signature: [{0}]", PrintBytes(magic));
 
                 // 08 (1): flags
                 //     - bit 0: set if the checksum is written into the file
@@ -36,13 +35,11 @@ namespace RoboForm
 
                 // Doesn't fail in the original code, but they always check MD5 of the content
                 if (!hasChecksum)
-                    throw new InvalidOperationException(
-                        "Onefile: Unchecked content is not supported");
+                    throw UnsupportedError("Unchecked content is not supported");
 
                 // Fails in the original JavaScript code when not encrypted
                 if (!isEncrypted)
-                    throw new InvalidOperationException(
-                        "Onefile: Unencrypted content is not supported");
+                    throw UnsupportedError("Unencrypted content is not supported");
 
                 // 09 (1): integrity check algorithm
                 //     - 0: CRC32
@@ -51,13 +48,12 @@ namespace RoboForm
                 //     - 3: SHA-256
                 var checksumType = io.ReadByte();
                 if (checksumType != 1)
-                    throw new InvalidOperationException(
-                            string.Format("Onefile: Invalid checksum type: {0}", checksumType));
+                    throw ParseError("Invalid checksum type: {0}", checksumType);
 
                 // 10-13 (4): encrypted content length (LE)
                 var contentLength = (int)io.ReadUInt32LittleEndian();
                 if (contentLength < 0)
-                    throw new InvalidOperationException("Onefile: Content length is negative");
+                    throw ParseError("Content length is negative");
 
                 // 14-29: (16) MD5 checksum
                 var storedChecksum = io.ReadBytes(16);
@@ -65,11 +61,11 @@ namespace RoboForm
                 // 30-end: (contentLength): encrypted content
                 var content = io.ReadBytes(contentLength);
                 if (content.Length != contentLength)
-                    throw new InvalidOperationException("Onefile: Content is too short");
+                    throw ParseError("Content is too short");
 
                 var actualChecksum = Crypto.Md5(content);
                 if (!actualChecksum.SequenceEqual(storedChecksum))
-                    throw new InvalidOperationException("Onefile: Checksum doesn't match");
+                    throw ParseError("Checksum doesn't match");
 
                 var compressed = Decrypt(content, password);
                 var raw = isCompressed ? Decompress(compressed) : compressed;
