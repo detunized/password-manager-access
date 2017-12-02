@@ -21,7 +21,6 @@ namespace RoboForm
             }
             finally
             {
-
                 Logout(username, session, http);
             }
         }
