@@ -1,7 +1,6 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Linq;
 using NUnit.Framework;
 
@@ -13,7 +12,9 @@ namespace RoboForm.Test
         [Test]
         public void Parse_returns_parsed_object()
         {
-            Assert.That(() => OneFile.Parse(TestData.Blob, TestData.Password), Throws.Nothing);
+            var json = OneFile.Parse(TestData.Blob, TestData.Password);
+            Assert.That(json["i"], Is.Not.Null);
+            Assert.That(json["c"], Is.Not.Null);
         }
 
         [Test]
@@ -130,6 +131,19 @@ namespace RoboForm.Test
             Assert.That(
                 OneFile.Decompress("H4sIANRVH1oAA0tJTc7PLShKLS5OTQEACojeBQwAAAA=".Decode64()),
                 Is.EqualTo("decompressed".ToBytes()));
+        }
+
+        [Test]
+        public void ParseJson_returns_parsed_json()
+        {
+            Assert.That(OneFile.ParseJson("{}".ToBytes()), Is.Not.Null);
+        }
+
+        [Test]
+        public void ParseJson_throws_on_invalid_json()
+        {
+            Assert.That(() => OneFile.ParseJson("}{".ToBytes()),
+                        ExceptionsTest.ThrowsParseErrorWithMessage("Corrupted"));
         }
 
         //

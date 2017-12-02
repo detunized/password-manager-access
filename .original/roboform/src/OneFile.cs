@@ -6,12 +6,14 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace RoboForm
 {
     internal static class OneFile
     {
-        public static void Parse(byte[] blob, string password)
+        public static JObject Parse(byte[] blob, string password)
         {
             if (blob.Length < 30) // magic(8) + flags(1) + checksum-type(1) + length(4) + md5(16)
                 throw ParseError("File is too short");
@@ -70,7 +72,7 @@ namespace RoboForm
                 var compressed = Decrypt(content, password);
                 var raw = isCompressed ? Decompress(compressed) : compressed;
 
-                // TODO: Parse raw into JSON
+                return ParseJson(raw);
             }
         }
 
@@ -177,6 +179,18 @@ namespace RoboForm
             }
         }
 
+        internal static JObject ParseJson(byte[] content)
+        {
+            try
+            {
+                return JObject.Parse(content.ToUtf8());
+            }
+            catch (JsonException e)
+            {
+                throw ParseError(e, "Corrupted content or decryption failed due to invalid password");
+            }
+        }
+
         //
         // Private
         //
@@ -188,14 +202,30 @@ namespace RoboForm
 
         private static ClientException ParseError(string format, params object[] args)
         {
-            return new ClientException(ClientException.FailureReason.ParseError,
-                                       string.Format("Onefile: " + format, args));
+            return ParseError(null, format, args);
+        }
+
+        private static ClientException ParseError(Exception inner,
+                                                  string format,
+                                                  params object[] args)
+        {
+            return CreateException(inner, ClientException.FailureReason.ParseError, format, args);
         }
 
         private static ClientException UnsupportedError(string format, params object[] args)
         {
-            return new ClientException(ClientException.FailureReason.UnsupportedFeature,
-                                       string.Format("Onefile: " + format, args));
+            return CreateException(null,
+                                   ClientException.FailureReason.UnsupportedFeature,
+                                   format,
+                                   args);
+        }
+
+        private static ClientException CreateException(Exception inner,
+                                                       ClientException.FailureReason reason,
+                                                       string format,
+                                                       params object[] args)
+        {
+            return new ClientException(reason, string.Format("Onefile: " + format, args), inner);
         }
     }
 }
