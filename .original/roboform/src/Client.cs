@@ -17,7 +17,8 @@ namespace RoboForm
             try
             {
                 var blob = GetBlob(username, session, http);
-                return new Vault();
+                var json = OneFile.Parse(blob, password);
+                return VaultParser.Parse(json);
             }
             finally
             {

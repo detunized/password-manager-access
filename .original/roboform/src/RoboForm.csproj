@@ -62,6 +62,7 @@
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Session.cs" />
     <Compile Include="Vault.cs" />
+    <Compile Include="VaultParser.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
