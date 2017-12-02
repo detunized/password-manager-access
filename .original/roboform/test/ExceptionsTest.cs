@@ -17,6 +17,12 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void JTokenAccessException_properties_are_set()
+        {
+            VerifyException(new JTokenAccessException(Message, InnerException));
+        }
+
+        [Test]
         public void ClientException_properties_are_set()
         {
             var e = new ClientException(ClientException.FailureReason.UnknownError,
