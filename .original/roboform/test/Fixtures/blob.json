@@ -1,0 +1,72 @@
+{
+  "i": {
+    "F": true
+  },
+  "c": [
+    {
+      "b": "-----BEGIN RSA PRIVATE KEY-----\nMIICWwIBAAKBgHdvP97HQsb8UVjYBabqlrIqwu5WWOBPXAJXrFIKyGNDkKvNFvD9\n/vZyzUbyHfR/CyCe9/Vb37zDlzsUD59xQ2FNVC3CHdY3BtdvXs2IHbhV1V0/mO/T\nxKtk4V9dT4xPFcHCqTdropRoO7mZzLMRc7HiM1FUkIL4ACHCEUL0BzzxAgMBAAEC\ngYAo0Pc17kkO8dnnD+RWl+MqPlzh0NaMyfI6xrWYUCENc2C0peFKOLNyi+dFcKb2\nEJi/7DP3QQ+kVf+P7Boutil9VhZouFaFF8ayO6Nn/4n6vtYnkH3fmG8skmKFS/ch\ne7KgJZYeO5sdo+AuKQkiYb+dNmkEtX5J35lRXo9yS1AxJQJBAMLMs8uA3zEsThx5\nk93+gbcPwkDZcok2nllLyqfQrsUun+Z4cPe/CEQAIDsrPVf4ISGArbhxE8MiCsPb\nRqB/wCMCQQCc9RrPhPrKmjgZAY2eiDT/zZ0FtDT4LkcvDQSGK4jpg7Ew8RPKuxUB\nc/u+/plXko1EKgldv64kVmFtXug2SRXbAkBoUinjTPO6KMj4FN/sXfTnrWfRROJC\nu15X4e/4qRg/fvWg/lU5SDPL/ulD5qcmajqL75aZFO2JbbyoINEU+PVTAkEAirNm\nf9/pp8RksmRW+7Mt8qeGjRXUgUSUDxYX22D5WjHQEYnYjZyJUYFnBD8Ezwho4cWs\nBTZv8xiKfBYUanRnZQJAeHIVTqvYy6NZhn4N1w+JCV67RwYhHQF/eX7DJWv7TbDA\n5GJJekjs+jeT1noURpaPwSoWdJassJuBhWdipHluJQ==\n-----END RSA PRIVATE KEY-----\n",
+      "i": {
+        "n": "private-key.pem",
+        "c": 1499721224,
+        "m": 1499721224,
+        "s": 887,
+        "f": true
+      }
+    },
+    {
+      "i": {
+        "F": true,
+        "n": "root"
+      },
+      "c": [
+        {
+          "c": [
+            {
+              "i": {
+                "c": 1508888498,
+                "n": "Yts - 1.rfp",
+                "s": 1058,
+                "m": 1508888498
+              },
+              "b": "{\"p\":true,\"pwd\":\"h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk\",\"n\":\"\",\"g\":\"https://yts.ag/\",\"m\":\"https://yts.ag/\",\"f\":[{\"n\":\"query\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"Quick search\",\"id\":\"quick-search-input\"},{\"n\":\"username\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"uuw55836\",\"id\":\"\"},{\"n\":\"password\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"bugmenot\",\"id\":\"\"},{\"n\":\"username\",\"c\":\"\",\"d\":true,\"i\":1,\"t\":1,\"v\":\"\",\"id\":\"\"},{\"n\":\"email\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"\",\"id\":\"\"},{\"n\":\"password\",\"c\":\"\",\"d\":true,\"i\":1,\"t\":2,\"v\":\"\",\"id\":\"\"},{\"n\":\"password_confirmation\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":2,\"v\":\"\",\"id\":\"\"},{\"n\":\"email\",\"c\":\"\",\"d\":true,\"i\":1,\"t\":1,\"v\":\"\",\"id\":\"\"},{\"n\":\"keyword\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"\",\"id\":\"\"},{\"n\":\"quality\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"All\",\"id\":\"\"},{\"n\":\"genre\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"All\",\"id\":\"\"},{\"n\":\"rating\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"All\",\"id\":\"\"},{\"n\":\"order_by\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"Latest\",\"id\":\"\"},{\"n\":\"Submit$\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":0,\"v\":\"279:452:-text-::0:\",\"id\":\"\"}]}"
+            }
+          ],
+          "i": {
+            "s": 0,
+            "F": true,
+            "n": "test-folder",
+            "m": 1499721698,
+            "c": 1499721698
+          }
+        },
+        {
+          "i": {
+            "c": 1506378501,
+            "n": "Asana.rfp",
+            "s": 407,
+            "m": 1506378501
+          },
+          "b": "{\"p\":true,\"pwd\":\"h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk\",\"n\":\"\",\"g\":\"https://app.asana.com/\",\"m\":\"https://app.asana.com/\",\"f\":[{\"n\":\"e\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"detunized@gmail.com\",\"id\":\"email_input\"},{\"n\":\"p\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":2,\"v\":\"d39Cd87^BPcu#Eyb\",\"id\":\"password_input\"},{\"n\":\"Submit$\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":0,\"v\":\"555:692:login::0:Log In\\n\",\"id\":\"\"}]}"
+        },
+        {
+          "i": {
+            "c": 1499722114,
+            "n": "Roboform.rfp",
+            "s": 807,
+            "m": 1499722114
+          },
+          "b": "{\"p\":true,\"pwd\":\"h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk\",\"g\":\"https://online.roboform.com/login\",\"m\":\"https://online.roboform.com/login\",\"f\":[{\"n\":\"-no-name-\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"\",\"id\":\"\"},{\"n\":\"-no-name-\",\"c\":\"\",\"d\":true,\"i\":1,\"t\":2,\"v\":\"\",\"id\":\"\"},{\"n\":\"username\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"lastpass.ruby@gmail.com\",\"id\":\"username\"},{\"n\":\"password\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":2,\"v\":\"h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk\",\"id\":\"password\"},{\"n\":\"rf_timeout\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"per settings\",\"id\":\"\"},{\"n\":\"tie_ip\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":3,\"v\":\"*\",\"id\":\"tiechk\"},{\"n\":\"_rf_computerdescr_\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"\",\"id\":\"\"},{\"n\":\"Submit$\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":0,\"v\":\"289:925:login::0:Login\",\"id\":\"\"}]}"
+        },
+        {
+          "i": {
+            "c": 1508888360,
+            "n": "Yts.rfp",
+            "s": 1190,
+            "m": 1508888360
+          },
+          "b": "{\"p\":true,\"pwd\":\"h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk\",\"n\":\"\",\"g\":\"https://yts.ag/\",\"m\":\"https://yts.ag/\",\"f\":[{\"n\":\"query\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"$DefaultValue$\",\"id\":\"quick-search-input\"},{\"n\":\"username\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"willem123\",\"id\":\"\"},{\"n\":\"password\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":2,\"v\":\"10minutemail\",\"id\":\"\"},{\"n\":\"username\",\"c\":\"\",\"d\":true,\"i\":1,\"t\":1,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"email\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"password\",\"c\":\"\",\"d\":true,\"i\":1,\"t\":2,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"password_confirmation\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":2,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"email\",\"c\":\"\",\"d\":true,\"i\":1,\"t\":1,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"keyword\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":1,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"quality\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"genre\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"rating\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"order_by\",\"c\":\"\",\"d\":true,\"i\":0,\"t\":7,\"v\":\"$DefaultValue$\",\"id\":\"\"},{\"n\":\"Submit$\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":0,\"v\":\"201:452:-text-::0:\",\"id\":\"\"}]}"
+        }
+      ]
+    }
+  ]
+}

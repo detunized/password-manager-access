@@ -67,6 +67,12 @@
     <Compile Include="TestData.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Fixtures\blob.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Fixtures\blob.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
