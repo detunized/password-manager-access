@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Schema;
 using Newtonsoft.Json.Linq;
 
 namespace RoboForm
@@ -26,7 +25,7 @@ namespace RoboForm
             var accounts = new List<Account>();
             TraverseParse(root["c"], "", accounts);
 
-            return new Vault();
+            return new Vault(accounts.ToArray());
         }
 
         private static void TraverseParse(JToken node, string path, List<Account> accounts)
