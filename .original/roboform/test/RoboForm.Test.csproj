@@ -65,6 +65,7 @@
     <Compile Include="Pbkdf2Test.cs" />
     <Compile Include="SessionTest.cs" />
     <Compile Include="TestData.cs" />
+    <Compile Include="VaultParserTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures\blob.bin">
