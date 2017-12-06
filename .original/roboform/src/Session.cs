@@ -15,7 +15,7 @@ namespace RoboForm
             DeviceId = deviceId;
 
             // Join the cookies together into one header. That's what the browsers do.
-            Header = string.Join("; ", token, deviceId);
+            Header = string.Format("sib-auth={0}; sib-deviceid={1}", token, deviceId);
         }
     }
 }

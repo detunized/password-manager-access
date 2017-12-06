@@ -23,7 +23,8 @@ namespace RoboForm.Test
         [Test]
         public void Header_is_set()
         {
-            Assert.That(new Session("token", "device-id").Header, Is.EqualTo("token; device-id"));
+            Assert.That(new Session("token", "device-id").Header,
+                        Is.EqualTo("sib-auth=token; sib-deviceid=device-id"));
         }
     }
 }
