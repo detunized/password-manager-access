@@ -24,7 +24,7 @@ namespace Example
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];
-                    Console.WriteLine("{0}: {1} {2} {3} {4}", i + 1, a.Name, a.Path, a.Url);
+                    Console.WriteLine("{0}: {1} {2} {3}", i + 1, a.Name, a.Path, a.Url);
                     foreach (var field in a.Fields)
                         Console.WriteLine("  - {0}: {1}", field.Key, field.Value);
                 }
