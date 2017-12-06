@@ -32,26 +32,27 @@ namespace RoboForm
 
         public HttpResponseMessage Get(string url, Dictionary<string, string> headers)
         {
-            using (var http = new SystemHttp())
-                return SetHeaders(http, headers).GetAsync(url).Result;
+            using (var http = CreateHttp(headers))
+                return http.GetAsync(url).Result;
         }
 
         public HttpResponseMessage Post(string url, Dictionary<string, string> headers)
         {
-            using (var http = new SystemHttp())
-                return SetHeaders(http, headers).PostAsync(url, new StringContent("")).Result;
+            using (var http = CreateHttp(headers))
+                return http.PostAsync(url, new StringContent("")).Result;
         }
 
         //
         // Private
         //
 
-        private static SystemHttp SetHeaders(SystemHttp client, Dictionary<string, string> headers)
+        private static SystemHttp CreateHttp(Dictionary<string, string> headers)
         {
+            var http = new SystemHttp(new HttpClientHandler() {UseCookies = false});
             foreach (var i in headers)
-                client.DefaultRequestHeaders.Add(i.Key, i.Value);
+                http.DefaultRequestHeaders.Add(i.Key, i.Value);
 
-            return client;
+            return http;
         }
     }
 }
