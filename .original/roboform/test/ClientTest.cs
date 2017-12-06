@@ -171,8 +171,8 @@ namespace RoboForm.Test
         public void Step2AuthorizationHeader_returns_header()
         {
             var expected = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJy" +
-                           "WmpDOERaXzBlOFJHc2lzZ00yLXRqZ2YtNjBtLS1GQmhMUTI2dGcscD1VdGQvV3FCSm" +
-                           "5SU2pyeTBRTCswa3owUCtDUk5rcXRCYytySHVmRHllaUhrPQ==\"";
+                           "WmpDOERaXzBlOFJHc2lzZ00yLXRqZ2YtNjBtLS1GQmhMUTI2dGcscD1lWk5RUE9zOH" +
+                           "FIRi9nSGVSWXEyekhmZ0gxNmdJS05xdGFPak5rUjlrRTRrPQ==\"";
             var header = Client.Step2AuthorizationHeader(TestData.Username,
                                                          TestData.Password,
                                                          TestData.Nonce,

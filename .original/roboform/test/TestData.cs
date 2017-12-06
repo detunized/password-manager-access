@@ -13,8 +13,7 @@ namespace RoboForm.Test
 
         public static readonly AuthInfo AuthInfo = new AuthInfo(
             sid: "6Ag93Y02vihucO9IQl1fbg",
-            data: "cj0tRGVIUnJaakM4RFpfMGU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ4VU0" +
-                  "2NzRPWk9PalVqWENkYnc9PSxpPTQwOTY=",
+            data : "r=-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg,s=A+Ft8UM674OZOOjUjXCdbw==,i=4096",
             nonce: "-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg",
             salt: "A+Ft8UM674OZOOjUjXCdbw==".Decode64(),
             iterationCount: 4096,
