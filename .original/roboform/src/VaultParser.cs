@@ -52,8 +52,8 @@ namespace RoboForm
         private static KeyValuePair<string, string>[] ParseFields(JArray fields)
         {
             return fields
-                .Where(i => InRange(i.IntAt("t", 0), 1, 2)) // Only keep text (1) and password (2) inputs
-                .Where(i => !i.BoolAt("d", true))           // Don't need input fields with default values
+                .Where(i => InRange(i.IntAt("t", 1), 1, 2)) // Only keep text (1) and password (2) inputs
+                .Where(i => !i.BoolAt("d", false))          // Don't need input fields with default values
                 .Select(i => new KeyValuePair<string, string>(i.StringAt("n", ""), i.StringAt("v", "")))
                 .Where(i => i.Key.Length != 0 || i.Value.Length != 0)
                 .ToArray();
