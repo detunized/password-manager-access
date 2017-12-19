@@ -26,7 +26,7 @@ namespace Example
                     var a = vault.Accounts[i];
                     Console.WriteLine("{0}: {1} {2} {3}", i + 1, a.Name, a.Path, a.Url);
                     foreach (var field in a.Fields)
-                        Console.WriteLine("  - {0}: {1}", field.Key, field.Value);
+                        Console.WriteLine("  - {0}: {1}", field.Name, field.Value);
                 }
             }
             catch (BaseException e)

@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace RoboForm
@@ -49,19 +48,43 @@ namespace RoboForm
             return new Account(name, path, url, fields);
         }
 
-        private static KeyValuePair<string, string>[] ParseFields(JArray fields)
+        private static Account.Field[] ParseFields(JArray fields)
         {
-            return fields
-                .Where(i => InRange(i.IntAt("t", 1), 1, 2)) // Only keep text (1) and password (2) inputs
-                .Where(i => !i.BoolAt("d", false))          // Don't need input fields with default values
-                .Select(i => new KeyValuePair<string, string>(i.StringAt("n", ""), i.StringAt("v", "")))
-                .Where(i => i.Key.Length != 0 || i.Value.Length != 0)
-                .ToArray();
-        }
+            var parsedFields = new List<Account.Field>();
+            foreach (var field in fields)
+            {
+                Account.FieldKind kind;
+                switch (field.IntAt("t", 1))
+                {
+                case 1:
+                    kind = Account.FieldKind.Text;
+                    break;
+                case 2:
+                    kind = Account.FieldKind.Password;
+                    break;
+                default:
+                    // Ignore all other types of fields like buttons and dropdowns.
+                    continue;
+                }
 
-        private static bool InRange(int i, int min, int max)
-        {
-            return i >= min && i <= max;
+                // Ignore fields with default values
+                if (field.BoolAt("d", false))
+                    continue;
+
+                // Name cannot be blank
+                var name = field.StringAt("n", "");
+                if (name == "")
+                    continue;
+
+                // Value also cannot be blank
+                var value = field.StringAt("v", "");
+                if (value == "")
+                    continue;
+
+                parsedFields.Add(new Account.Field(name, value, kind));
+            }
+
+            return parsedFields.ToArray();
         }
 
         private static ClientException ParseError(string format, params object[] args)
