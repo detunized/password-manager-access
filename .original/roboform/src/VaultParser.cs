@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace RoboForm
@@ -44,8 +45,10 @@ namespace RoboForm
             var json = JObject.Parse(content);
             var url = json.StringAt("g", json.StringAt("m", ""));
             var fields = ParseFields(json["f"] as JArray ?? new JArray());
+            var username = GuessUsername(fields);
+            var password = GuessPassword(fields);
 
-            return new Account(name, path, url, fields);
+            return new Account(name, path, url, fields, username, password);
         }
 
         private static Account.Field[] ParseFields(JArray fields)
@@ -87,10 +90,65 @@ namespace RoboForm
             return parsedFields.ToArray();
         }
 
+        private static string GuessUsername(Account.Field[] fields)
+        {
+            // If there's only one text field with a special name then it's the username.
+            var username = fields.Where(i => i.Kind == Account.FieldKind.Text &&
+                                             UsernameFields.Contains(i.Name.ToLower())).ToArray();
+            if (username.Length == 1)
+                return username[0].Value;
+
+            // If there's only one text field, assume it's the username.
+            username = fields.Where(i => i.Kind == Account.FieldKind.Text).ToArray();
+            if (username.Length == 1)
+                return username[0].Value;
+
+            return null;
+        }
+
+        private static string GuessPassword(Account.Field[] fields)
+        {
+            // Search all fields first with the appropriate names
+            var password = fields.Where(i => PasswordFields.Contains(i.Name.ToLower())).ToArray();
+            if (password.Length == 1)
+                return password[0].Value;
+
+            // We have too many, remove all the text fields.
+            // If there's only one left then it's the password.
+            password = password.Where(i => i.Kind == Account.FieldKind.Password).ToArray();
+            if (password.Length == 1)
+                return password[0].Value;
+
+            // If there's only one password field, assume it's the password.
+            password = fields.Where(i => i.Kind == Account.FieldKind.Password).ToArray();
+            if (password.Length == 1)
+                return password[0].Value;
+
+            return null;
+        }
+
         private static ClientException ParseError(string format, params object[] args)
         {
             return new ClientException(ClientException.FailureReason.ParseError,
                                        string.Format("Vault " + format, args));
         }
+
+        private static readonly HashSet<string> UsernameFields = new HashSet<string>
+        {
+            "username",
+            "login",
+            "email",
+            "user",
+            "u",
+        };
+
+        private static readonly HashSet<string> PasswordFields = new HashSet<string>
+        {
+            "password",
+            "passwd",
+            "pwd",
+            "pass",
+            "p",
+        };
     }
 }

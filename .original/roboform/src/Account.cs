@@ -30,15 +30,24 @@ namespace RoboForm
         public readonly string Url;
         public readonly Field[] Fields;
 
+        // These are guessed based on some heuristic. When the guess cannot be
+        // made with confidence the guessed value is null.
+        public readonly string GuessedUsername;
+        public readonly string GuessedPassword;
+
         public Account(string name,
                        string path,
                        string url,
-                       Field[] fields)
+                       Field[] fields,
+                       string guessedUsername,
+                       string guessedPassword)
         {
             Name = name;
             Path = path;
             Url = url;
             Fields = fields;
+            GuessedUsername = guessedUsername;
+            GuessedPassword = guessedPassword;
         }
     }
 }
