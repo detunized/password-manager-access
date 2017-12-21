@@ -109,8 +109,10 @@ namespace OnePassword
 
         internal static Session StartNewSession(ClientInfo clientInfo, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Get(string.Format("v1/auth/{0}/{1}/-",
+            var response = jsonHttp.Get(string.Format("v2/auth/{0}/{1}/{2}/{3}",
                                                       clientInfo.Username,
+                                                      clientInfo.AccountKey.Format,
+                                                      clientInfo.AccountKey.Uuid,
                                                       clientInfo.Uuid));
             var status = response.StringAt("status");
             switch (status)
