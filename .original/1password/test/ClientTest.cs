@@ -34,7 +34,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("start-new-session-response"));
             Client.StartNewSession(TestData.ClientInfo, http);
 
-            VerifyGetUrl(http.Http, "1password.com/api/v1/auth");
+            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/auth");
         }
 
         [Test]
@@ -81,7 +81,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 1}"));
             Client.RegisterDevice(TestData.ClientInfo, http);
 
-            VerifyPostUrl(http.Http, "1password.com/api/v1/device");
+            JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v1/device");
         }
 
         [Test]
@@ -106,7 +106,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
             Client.ReauthorizeDevice(TestData.ClientInfo, http);
 
-            VerifyPutUrl(http.Http, "1password.com/api/v1/device");
+            JsonHttpClientTest.VerifyPutUrl(http.Http, "1password.com/api/v1/device");
         }
 
         [Test]
@@ -131,7 +131,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
             Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
 
-            VerifyPostUrl(http.Http, "1password.com/api/v1/auth/verify");
+            JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v1/auth/verify");
         }
 
         [Test]
@@ -147,7 +147,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
             Client.GetAccountInfo(TestData.SesionKey, http);
 
-            VerifyGetUrl(http.Http, "1password.com/api/v1/account");
+            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account");
         }
 
         [Test]
@@ -175,7 +175,7 @@ namespace OnePassword.Test
 
             Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http);
 
-            VerifyGetUrl(http.Http, "1password.com/api/v1/vault");
+            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/vault");
         }
 
         [Test]
@@ -191,7 +191,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
             Client.SignOut(http);
 
-            VerifyPutUrl(http.Http, "1password.com/api/v1/session/signout");
+            JsonHttpClientTest.VerifyPutUrl(http.Http, "1password.com/api/v1/session/signout");
         }
 
         [Test]
@@ -270,25 +270,6 @@ namespace OnePassword.Test
         private static JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
         {
             return new JsonHttpClient(http.Object, Client.ApiUrl);
-        }
-
-        private static void VerifyGetUrl(IHttpClient http, string url)
-        {
-            Mock.Get(http).Verify(x => x.Get(It.Is<string>(s => s.Contains(url)),
-                                             It.IsAny<Dictionary<string, string>>()));
-        }
-
-        private static void VerifyPostUrl(IHttpClient http, string url)
-        {
-            Mock.Get(http).Verify(x => x.Post(It.Is<string>(s => s.Contains(url)),
-                                              It.IsAny<string>(),
-                                              It.IsAny<Dictionary<string, string>>()));
-        }
-
-        private static void VerifyPutUrl(IHttpClient http, string url)
-        {
-            Mock.Get(http).Verify(x => x.Put(It.Is<string>(s => s.Contains(url)),
-                                             It.IsAny<Dictionary<string, string>>()));
         }
     }
 }

@@ -173,6 +173,18 @@ namespace OnePassword.Test
             return mock;
         }
 
+        // TODO: internal in inconsistent with public everywhere else
+        internal static void VerifyGetUrl(JsonHttpClient http, string url)
+        {
+            VerifyGetUrl(http.Http, url);
+        }
+
+        public static void VerifyGetUrl(IHttpClient http, string url)
+        {
+            Mock.Get(http).Verify(x => x.Get(It.Is<string>(s => s.Contains(url)),
+                                             It.IsAny<Dictionary<string, string>>()));
+        }
+
         //
         // - POST
         //
@@ -202,6 +214,19 @@ namespace OnePassword.Test
             return mock;
         }
 
+        // TODO: internal in inconsistent with public everywhere else
+        internal static void VerifyPostUrl(JsonHttpClient http, string url)
+        {
+            VerifyPostUrl(http.Http, url);
+        }
+
+        public static void VerifyPostUrl(IHttpClient http, string url)
+        {
+            Mock.Get(http).Verify(x => x.Post(It.Is<string>(s => s.Contains(url)),
+                                              It.IsAny<string>(),
+                                              It.IsAny<Dictionary<string, string>>()));
+        }
+
         //
         // - PUT
         //
@@ -213,6 +238,18 @@ namespace OnePassword.Test
                                   It.IsAny<Dictionary<string, string>>()))
                 .Returns(response);
             return mock;
+        }
+
+        // TODO: internal in inconsistent with public everywhere else
+        internal static void VerifyPutUrl(JsonHttpClient http, string url)
+        {
+            VerifyPutUrl(http.Http, url);
+        }
+
+        public static void VerifyPutUrl(IHttpClient http, string url)
+        {
+            Mock.Get(http).Verify(x => x.Put(It.Is<string>(s => s.Contains(url)),
+                                             It.IsAny<Dictionary<string, string>>()));
         }
 
         public static string ReadFixture(string name)
