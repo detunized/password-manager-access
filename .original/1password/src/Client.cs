@@ -170,7 +170,7 @@ namespace OnePassword
             try
             {
                 var response = PostEncryptedJson(
-                    "v1/auth/verify",
+                    "v2/auth/verify",
                     new
                     {
                         sessionID = session.Id,
