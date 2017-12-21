@@ -12,7 +12,7 @@ namespace OnePassword
 {
     public static class Client
     {
-        public const string ApiUrl = "https://my.1password.com/api/v1";
+        public const string ApiUrl = "https://my.1password.com/api";
         public const string ClientName = "1Password for Web";
         public const string ClientVersion = "443"; // TODO: This needs to be updated every now and then.
         public const string ClientId = ClientName + "/" + ClientVersion;
@@ -109,7 +109,7 @@ namespace OnePassword
 
         internal static Session StartNewSession(ClientInfo clientInfo, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Get(string.Format("auth/{0}/{1}/-",
+            var response = jsonHttp.Get(string.Format("v1/auth/{0}/{1}/-",
                                                       clientInfo.Username,
                                                       clientInfo.Uuid));
             var status = response.StringAt("status");
@@ -136,7 +136,7 @@ namespace OnePassword
 
         internal static void RegisterDevice(ClientInfo clientInfo, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Post("device",
+            var response = jsonHttp.Post("v1/device",
                                          new Dictionary<string, object>
                                          {
                                              {"uuid", clientInfo.Uuid},
@@ -152,7 +152,7 @@ namespace OnePassword
 
         internal static void ReauthorizeDevice(ClientInfo clientInfo, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Put(string.Format("device/{0}/reauthorize", clientInfo.Uuid));
+            var response = jsonHttp.Put(string.Format("v1/device/{0}/reauthorize", clientInfo.Uuid));
 
             if (response.IntAt("success") != 1)
                 throw new ClientException(ClientException.FailureReason.RespondedWithError,
@@ -168,7 +168,7 @@ namespace OnePassword
             try
             {
                 var response = PostEncryptedJson(
-                    "auth/verify",
+                    "v1/auth/verify",
                     new
                     {
                         sessionID = session.Id,
@@ -220,7 +220,7 @@ namespace OnePassword
 
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
         {
-            return GetEncryptedJson("account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults", sessionKey, jsonHttp);
+            return GetEncryptedJson("v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults", sessionKey, jsonHttp);
         }
 
         internal static Vault[] GetVaults(JToken accountInfo,
@@ -252,7 +252,7 @@ namespace OnePassword
                                                    Keychain keychain,
                                                    JsonHttpClient jsonHttp)
         {
-            var response = GetEncryptedJson(string.Format("vault/{0}/0/items", id),
+            var response = GetEncryptedJson(string.Format("v1/vault/{0}/0/items", id),
                                             sessionKey,
                                             jsonHttp);
             return response.At("items").Select(i => ParseAccount(i, keychain)).ToArray();
@@ -283,7 +283,7 @@ namespace OnePassword
 
         internal static void SignOut(JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Put("session/signout");
+            var response = jsonHttp.Put("v1/session/signout");
             if (response.IntAt("success") != 1)
                 throw new ClientException(ClientException.FailureReason.RespondedWithError,
                                           "Failed to sign out");

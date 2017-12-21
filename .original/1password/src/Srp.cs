@@ -48,7 +48,7 @@ namespace OnePassword
                                                  Session session,
                                                  JsonHttpClient http)
         {
-            var response = http.Post("auth",
+            var response = http.Post("v1/auth",
                                      new Dictionary<string, object>
                                      {
                                          {"sessionID", session.Id},
