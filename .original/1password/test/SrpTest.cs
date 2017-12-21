@@ -50,6 +50,15 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void ExchangeAForB_makes_POST_request_to_specific_url()
+        {
+            var http = SetupJsonHttp("exchange-a-for-b-response");
+            Srp.ExchangeAForB(0, TestData.MakeSession(), http);
+
+            JsonHttpClientTest.VerifyPostUrl(http, "1password.com/api/v1/auth");
+        }
+
+        [Test]
         public void ExchangeAForB_throws_on_mismatching_session_id()
         {
             Assert.That(() => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"),
@@ -144,7 +153,8 @@ namespace OnePassword.Test
 
         private static JsonHttpClient SetupJsonHttp(string fixture)
         {
-            return new JsonHttpClient(JsonHttpClientTest.SetupPostWithFixture(fixture).Object, "");
+            return new JsonHttpClient(JsonHttpClientTest.SetupPostWithFixture(fixture).Object,
+                                      Client.ApiUrl);
         }
     }
 }
