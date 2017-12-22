@@ -34,7 +34,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("start-new-session-response"));
             Client.StartNewSession(TestData.ClientInfo, http);
 
-            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/auth");
+            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v2/auth");
         }
 
         [Test]
@@ -131,7 +131,7 @@ namespace OnePassword.Test
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
             Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
 
-            JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v1/auth/verify");
+            JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v2/auth/verify");
         }
 
         [Test]
