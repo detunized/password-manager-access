@@ -174,8 +174,8 @@ namespace OnePassword
                     new
                     {
                         sessionID = session.Id,
-                        client = ClientId,
-                        clientVerifyHash = Crypto.CalculateClientHash(clientInfo, session)
+                        clientVerifyHash = Crypto.CalculateClientHash(clientInfo, session),
+                        client = ClientId
                     },
                     sessionKey,
                     jsonHttp);
