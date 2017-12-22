@@ -27,7 +27,7 @@ namespace OnePassword
 
         public string Get(string url, Dictionary<string, string> headers)
         {
-            using (var client = new WebClient())
+            using (var client = NewWebClient())
                 return SetHeaders(client, headers).DownloadString(url);
         }
 
@@ -42,15 +42,24 @@ namespace OnePassword
         }
 
         //
+        // Protected
+        //
+
+        protected virtual WebClient NewWebClient()
+        {
+            return new WebClient();
+        }
+
+        //
         // Private
         //
 
-        private static string UploadString(string url,
-                                           string method,
-                                           string content,
-                                           Dictionary<string, string> headers)
+        private string UploadString(string url,
+                                    string method,
+                                    string content,
+                                    Dictionary<string, string> headers)
         {
-            using (var client = new WebClient())
+            using (var client = NewWebClient())
                 return SetHeaders(client, headers).UploadString(url, method, content);
         }
 
