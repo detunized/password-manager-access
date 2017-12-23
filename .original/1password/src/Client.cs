@@ -218,7 +218,7 @@ namespace OnePassword
                 var json = JObject.Parse(text);
                 if (json.IntAt("errorCode", 0) == 102)
                     throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                              "Username and/or password is incorrect",
+                                              "Username, password or account key is incorrect",
                                               e);
 
                 throw;
