@@ -59,18 +59,18 @@ namespace OnePassword
             // signed with the session ID.
             jsonHttp = MakeJsonClient(http, session.Id);
 
+            // Step 2: Perform SRP exchange
+            var sessionKey = Srp.Perform(clientInfo, session, jsonHttp);
+
+            // Assign a request signer now that we have a key.
+            // All the following requests are expected to be signed with the MAC.
+            jsonHttp.Signer = new MacRequestSigner(session, sessionKey);
+
+            // Step 3: Verify the key with the server
+            VerifySessionKey(clientInfo, session, sessionKey, jsonHttp);
+
             try
             {
-                // Step 2: Perform SRP exchange
-                var sessionKey = Srp.Perform(clientInfo, session, jsonHttp);
-
-                // Assign a request signer now that we have a key.
-                // All the following requests are expected to be signed with the MAC.
-                jsonHttp.Signer = new MacRequestSigner(session, sessionKey);
-
-                // Step 3: Verify the key with the server
-                VerifySessionKey(clientInfo, session, sessionKey, jsonHttp);
-
                 // Step 4: Get account info. It contains users, keys, groups, vault info and other stuff.
                 //         Not the actual vault data though. That is requested separately.
                 var accountInfo = GetAccountInfo(sessionKey, jsonHttp);
