@@ -193,7 +193,7 @@ namespace OnePassword
             {
                 // This is a quite ugly attempt at handling a very special case.
                 // When this specific request fails with 400, the response contains
-                // the error code. It seems 100 means invalid credentials.
+                // the error code. It seems 102 means invalid credentials.
 
                 // TODO: Write a test for this case.
 
@@ -216,7 +216,7 @@ namespace OnePassword
                 var text = new System.IO.StreamReader(stream).ReadToEnd();
 
                 var json = JObject.Parse(text);
-                if (json.IntAt("errorCode", 0) == 100)
+                if (json.IntAt("errorCode", 0) == 102)
                     throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
                                               "Username and/or password is incorrect",
                                               e);
