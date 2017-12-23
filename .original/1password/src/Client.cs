@@ -123,7 +123,11 @@ namespace OnePassword
             switch (status)
             {
             case "ok":
-                return Session.Parse(response);
+                var session = Session.Parse(response);
+                if (session.KeyUuid != clientInfo.AccountKey.Uuid)
+                    throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
+                                              "The account key is incorrect");
+                return session;
             case "device-not-registered":
                 RegisterDevice(clientInfo, MakeJsonClient(jsonHttp, response.StringAt("sessionID")));
                 break;
