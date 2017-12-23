@@ -7,9 +7,9 @@ using OnePassword;
 
 namespace Example
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             // Read 1Password credentials from a file
             // The file should contain 4 lines: username, password, account key and the client UUID
@@ -20,6 +20,18 @@ namespace Example
             var accountKey = credentials[2];
             var uuid = credentials[3];
 
+            try
+            {
+                DumpAllVaults(username, password, accountKey, uuid);
+            }
+            catch (ClientException e)
+            {
+                Console.WriteLine("Error: {0} (Reason: {1})", e.Message, e.Reason);
+            }
+        }
+
+        private static void DumpAllVaults(string username, string password, string accountKey, string uuid)
+        {
             var vaults = Client.OpenAllVaults(username, password, accountKey, uuid);
 
             foreach (var vault in vaults)
