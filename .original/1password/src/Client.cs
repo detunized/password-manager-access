@@ -86,6 +86,11 @@ namespace OnePassword
             }
             finally
             {
+                // TODO: If SignOut throws an exception it will hide the exception
+                //       thrown in the try block above (if any). This will hide the
+                //       original problem and thus will make it harder to diagnose
+                //       the issue.
+
                 // Last step: Make sure to sign out in any case
                 SignOut(jsonHttp);
             }
