@@ -41,36 +41,31 @@ namespace RoboForm.Test
         [Test]
         public void ParseAuthInfo_throws_on_missing_parts()
         {
-            Assert.That(() => AuthInfo.Parse("SibAuth"),
-                        Throws.TypeOf<InvalidOperationException>());
+            VerifyThrows(() => AuthInfo.Parse("SibAuth"));
         }
 
         [Test]
         public void ParseAuthInfo_throws_on_invalid_realm()
         {
-            Assert.That(() => AuthInfo.Parse("Realm sid=\"\",data=\"\""),
-                        Throws.TypeOf<InvalidOperationException>());
+            VerifyThrows(() => AuthInfo.Parse("Realm sid=\"\",data=\"\""));
         }
 
         [Test]
         public void ParseAuthInfo_throws_on_invalid_parameters_format()
         {
-            Assert.That(() => AuthInfo.Parse("SibAuth sid=,data="),
-                        Throws.TypeOf<InvalidOperationException>());
+            VerifyThrows(() => AuthInfo.Parse("SibAuth sid=,data="));
         }
 
         [Test]
         public void ParseAuthInfo_throws_on_missing_sid()
         {
-            Assert.That(() => AuthInfo.Parse("SibAuth data=\"\""),
-                        Throws.TypeOf<InvalidOperationException>());
+            VerifyThrows(() => AuthInfo.Parse("SibAuth data=\"\""));
         }
 
         [Test]
         public void ParseAuthInfo_throws_on_missing_data()
         {
-            Assert.That(() => AuthInfo.Parse("SibAuth sid=\"\""),
-                        Throws.TypeOf<InvalidOperationException>());
+            VerifyThrows(() => AuthInfo.Parse("SibAuth sid=\"\""));
         }
 
         [Test]
@@ -86,10 +81,8 @@ namespace RoboForm.Test
             };
 
             foreach (var data in testCases)
-                Assert.That(
-                    () => AuthInfo.Parse(string.Format("SibAuth sid=\"sid\",data=\"{0}\"",
-                                                       data.ToBase64())),
-                    Throws.TypeOf<InvalidOperationException>());
+                VerifyThrows(() => AuthInfo.Parse(string.Format("SibAuth sid=\"sid\",data=\"{0}\"",
+                                                                data.ToBase64())));
         }
 
         [Test]
@@ -100,6 +93,15 @@ namespace RoboForm.Test
                                                     data.ToBase64()));
 
             Assert.That(info.IsMd5, Is.True);
+        }
+
+        //
+        // Helpers
+        //
+        private static void VerifyThrows(Action action)
+        {
+            Assert.That(new TestDelegate(action),
+                        ExceptionsTest.ThrowsInvalidResponseWithMessage("Invalid auth info"));
         }
     }
 }

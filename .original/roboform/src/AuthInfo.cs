@@ -38,14 +38,13 @@ namespace RoboForm
             {
                 var splitHeader = encoded.Split(' ');
                 if (splitHeader.Length < 2)
-                    throw new InvalidOperationException("Invalid auth info format");
+                    throw MakeInvalidResponse("Invalid auth info format");
 
                 var realm = splitHeader[0];
                 var parameters = splitHeader[1];
 
                 if (realm != "SibAuth")
-                    throw new InvalidOperationException(
-                        String.Format("Invalid auth info realm '{0}'", realm));
+                    throw MakeInvalidResponse(string.Format("Invalid auth info realm '{0}'", realm));
 
                 var parsedParameters = parameters
                     .Split(',')
@@ -71,9 +70,9 @@ namespace RoboForm
                                     iterationCount: Int32.Parse(parsedData["i"]),
                                     isMd5: isMd5);
             }
-            catch (KeyNotFoundException e)
+            catch (KeyNotFoundException)
             {
-                throw new InvalidOperationException("Invalid auth info format", e);
+                throw MakeInvalidResponse("Invalid auth info format");
             }
         }
 
@@ -97,7 +96,7 @@ namespace RoboForm
         {
             var m = regex.Match(encoded);
             if (!m.Success || m.Groups.Count < 3)
-                throw new InvalidOperationException("Invalid auth info parameter format");
+                throw MakeInvalidResponse("Invalid auth info parameter format");
 
             return new KeyValuePair<string, string>(m.Groups[1].Value, m.Groups[2].Value);
         }
@@ -105,6 +104,11 @@ namespace RoboForm
         //
         // Private
         //
+
+        private static ClientException MakeInvalidResponse(string message)
+        {
+            return new ClientException(ClientException.FailureReason.InvalidResponse, message);
+        }
 
         private static readonly Regex ParamRegex = new Regex(@"^(\w+)\=(.*?)$");
         private static readonly Regex QuotedParamRegex = new Regex(@"^(\w+)\=""(.*?)""$");
