@@ -47,7 +47,7 @@ namespace RoboForm
                                      new Dictionary<string, string> {{"Cookie", session.Header}});
 
             if (response.StatusCode != HttpStatusCode.OK)
-                throw new InvalidOperationException("Network request failed");
+                throw MakeNetworkError(response.StatusCode);
         }
 
         internal static byte[] GetBlob(string username, Session session, IHttpClient http)
@@ -59,7 +59,7 @@ namespace RoboForm
             var response = http.Get(url, new Dictionary<string, string> {{"Cookie", session.Header}});
 
             if (response.StatusCode != HttpStatusCode.OK)
-                throw new InvalidOperationException("Network request failed");
+                throw MakeNetworkError(response.StatusCode);
 
             return response.Content.ReadAsByteArrayAsync().Result;
         }
@@ -72,12 +72,20 @@ namespace RoboForm
                 {"Authorization", Step1AuthorizationHeader(username, nonce)}
             });
 
+            // Handle this separately not to have a confusing error message on "success"
+            if (response.IsSuccessStatusCode)
+                throw MakeInvalidResponse(
+                    string.Format(
+                        "Unauthorized (401) is expected in the response, got {0} ({1}) instead",
+                        response.StatusCode,
+                        (int)response.StatusCode));
+
             if (response.StatusCode != HttpStatusCode.Unauthorized)
-                throw new InvalidOperationException("Expected 401"); // TODO: Custom exception
+                throw MakeNetworkError(response.StatusCode);
 
             var header = GetHeader(response, "WWW-Authenticate");
             if (string.IsNullOrWhiteSpace(header))
-                throw new InvalidOperationException("WWW-Authenticate header expected"); // TODO: Custom exception
+                throw MakeInvalidResponse("WWW-Authenticate header wasn't found in the response");
 
             return header;
         }
@@ -100,11 +108,11 @@ namespace RoboForm
 
             // Otherwise step2 is supposed to succeed
             if (response.StatusCode != HttpStatusCode.OK)
-                throw new InvalidOperationException("Network request failed");
+                throw MakeNetworkError(response.StatusCode);
 
             // The server is supposed to return some cookies
             if (!response.Headers.Contains("Set-Cookie"))
-                throw new InvalidOperationException("Auth cookie expected"); // TODO: Custom exception
+                throw MakeInvalidResponse("No cookies were found in the response");
 
             // Any URL will do. It's just a key in a hash.
             var cookieUri = new Uri("https://detunized.net");
@@ -119,11 +127,11 @@ namespace RoboForm
 
             var auth = cookies["sib-auth"];
             if (auth == null)
-                throw new InvalidOperationException("sib-auth cookie not found");
+                throw MakeInvalidResponse("'sib-auth' cookie wasn't found in the response");
 
             var device = cookies["sib-deviceid"];
             if (device == null)
-                throw new InvalidOperationException("sib-deviceid cookie not found");
+                throw MakeInvalidResponse("'sib-deviceid' cookie wasn't found in the response");
 
             return new Session(auth.Value, device.Value);
         }
@@ -178,6 +186,22 @@ namespace RoboForm
                 return header.FirstOrDefault();
 
             return null;
+        }
+
+        //
+        // Private
+        //
+
+        private static ClientException MakeNetworkError(HttpStatusCode code)
+        {
+            return new ClientException(
+                ClientException.FailureReason.NetworkError,
+                string.Format("Network request failed with HTTP code {0} ({1})", code, (int)code));
+        }
+
+        private static ClientException MakeInvalidResponse(string message)
+        {
+            return new ClientException(ClientException.FailureReason.InvalidResponse, message);
         }
     }
 }

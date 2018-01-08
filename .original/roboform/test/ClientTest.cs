@@ -28,7 +28,7 @@ namespace RoboForm.Test
         public void Logout_throws_on_not_HTTP_OK()
         {
             Assert.That(() => Logout(HttpStatusCode.NotFound),
-                        Throws.TypeOf<InvalidOperationException>());
+                        ExceptionsTest.ThrowsNetworkErrorWithMessage("NotFound (404)"));
         }
 
         [Test]
@@ -39,6 +39,14 @@ namespace RoboForm.Test
             var response = Client.GetBlob(TestData.Username, Session, http.Object);
 
             Assert.That(response, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void GetBlob_throws_on_not_HTTP_OK()
+        {
+            var http = SetupGet(HttpStatusCode.NotFound, new byte[0]);
+            Assert.That(() => Client.GetBlob(TestData.Username, Session, http.Object),
+                        ExceptionsTest.ThrowsNetworkErrorWithMessage("NotFound (404)"));
         }
 
         [Test]
@@ -79,7 +87,7 @@ namespace RoboForm.Test
         {
             var http = SetupStep1(null);
             Assert.That(() => Client.Step1(TestData.Username, TestData.Nonce, http.Object),
-                        Throws.TypeOf<InvalidOperationException>());
+                        ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
         }
 
         [Test]
@@ -163,7 +171,7 @@ namespace RoboForm.Test
                                                TestData.Nonce,
                                                TestData.AuthInfo,
                                                http.Object),
-                            Throws.TypeOf<InvalidOperationException>());
+                            ExceptionsTest.ThrowsInvalidResponseWithMessage("cookie"));
             }
         }
 
