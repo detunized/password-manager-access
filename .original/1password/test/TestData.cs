@@ -27,7 +27,7 @@ namespace OnePassword.Test
         {
             return new Session(id: id,
                                keyFormat: "A3",
-                               keyUuid: "FRN8GF",
+                               keyUuid : "RTN9SA",
                                srpMethod: "SRPg-4096",
                                keyMethod: "PBES2g-HS256",
                                iterations: 100000,
