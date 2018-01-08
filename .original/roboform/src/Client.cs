@@ -93,7 +93,12 @@ namespace RoboForm
                 {"Authorization", Step2AuthorizationHeader(username, password, nonce, authInfo)}
             });
 
-            // Step2 is supposed to succeed
+            // Step2 fails with 401 on incorrect username or password
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
+                                          "Username or password is incorrect");
+
+            // Otherwise step2 is supposed to succeed
             if (response.StatusCode != HttpStatusCode.OK)
                 throw new InvalidOperationException("Network request failed");
 

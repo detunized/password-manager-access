@@ -43,6 +43,11 @@ namespace RoboForm.Test
         // Helpers
         //
 
+        public static Constraint ThrowsIncorrectCredentialsWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ClientException.FailureReason.IncorrectCredentials, message);
+        }
+
         public static Constraint ThrowsNetworkErrorWithMessage(string message)
         {
             return ThrowsReasonWithMessage(ClientException.FailureReason.NetworkError, message);

@@ -168,6 +168,18 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void Step2_throws_http_unauthorized()
+        {
+            var http = SetupStep2(HttpStatusCode.Unauthorized);
+            Assert.That(() => Client.Step2(TestData.Username,
+                                           TestData.Password,
+                                           TestData.Nonce,
+                                           TestData.AuthInfo,
+                                           http.Object),
+                        ExceptionsTest.ThrowsIncorrectCredentialsWithMessage("Username or password"));
+        }
+
+        [Test]
         public void Step2AuthorizationHeader_returns_header()
         {
             var expected = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJy" +
@@ -228,6 +240,12 @@ namespace RoboForm.Test
                                  cookies
                                      .Select(i => new KeyValuePair<string, string>("Set-Cookie", i))
                                      .ToArray());
+            return http;
+        }
+
+        public static Mock<IHttpClient> SetupStep2(HttpStatusCode status)
+        {
+            var http = SetupPost(status);
             return http;
         }
 
