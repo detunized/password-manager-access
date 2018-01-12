@@ -48,6 +48,11 @@ namespace RoboForm
             return Convert.ToBase64String(x);
         }
 
+        public static string ToUrlSafeBase64(this byte[] x)
+        {
+            return Convert.ToBase64String(x).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        }
+
         //
         // BinaryReader
         //
