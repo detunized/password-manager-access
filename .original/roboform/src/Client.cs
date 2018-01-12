@@ -65,7 +65,7 @@ namespace RoboForm
 
         internal static byte[] GetBlob(string username, Session session, IHttpClient http)
         {
-            // TODO: Make this random
+            // TODO: Make this random? TBH not sure what it's for.
             var url = string.Format("{0}/user-data.rfo?_{1}", ApiBaseUrl(username), 1337);
 
             using (var response = http.Get(url,
