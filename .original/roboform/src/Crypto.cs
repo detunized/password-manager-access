@@ -8,6 +8,16 @@ namespace RoboForm
 {
     internal static class Crypto
     {
+        public static byte[] RandomBytes(int size)
+        {
+            using (var random = new RNGCryptoServiceProvider())
+            {
+                var bytes = new byte[size];
+                random.GetBytes(bytes);
+                return bytes;
+            }
+        }
+
         public static byte[] ComputeClientKey(string password, AuthInfo authInfo)
         {
             return Hmac(HashPassword(password, authInfo), "Client Key".ToBytes());
