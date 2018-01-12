@@ -91,6 +91,13 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void GenerateNonce_returns_string_of_correct_length()
+        {
+            var nonce = Client.GenerateNonce();
+            Assert.That(nonce.Length, Is.EqualTo(22));
+        }
+
+        [Test]
         public void Step1AuthorizationHeader_returns_header()
         {
             var expected = "SibAuth realm=\"RoboForm Online Server\",data=\"biwsbj1sYXN0cGFzcy" +

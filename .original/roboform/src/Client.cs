@@ -32,7 +32,11 @@ namespace RoboForm
 
         internal static Session Login(string username, string password, IHttpClient http)
         {
-            var nonce = "-DeHRrZjC8DZ_0e8RGsisg"; // TODO: Make this random
+            return Login(username, password, GenerateNonce(), http);
+        }
+
+        internal static Session Login(string username, string password, string nonce, IHttpClient http)
+        {
             var header = Step1(username, nonce, http);
             var authInfo = AuthInfo.Parse(header);
             var session = Step2(username, password, nonce, authInfo, http);
@@ -134,6 +138,11 @@ namespace RoboForm
                 throw MakeInvalidResponse("'sib-deviceid' cookie wasn't found in the response");
 
             return new Session(auth.Value, device.Value);
+        }
+
+        internal static string GenerateNonce()
+        {
+            return Crypto.RandomBytes(16).ToUrlSafeBase64();
         }
 
         internal static string Step1AuthorizationHeader(string username, string nonce)
