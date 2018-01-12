@@ -83,28 +83,32 @@ namespace RoboForm
 
         internal static string Step1(string username, string nonce, IHttpClient http)
         {
-            // TODO: Wrap in using when done
-            var response = http.Post(LoginUrl(username), new Dictionary<string, string>
+            using (var response = http.Post(LoginUrl(username),
+                                            new Dictionary<string, string>
+                                            {
+                                                {
+                                                    "Authorization",
+                                                    Step1AuthorizationHeader(username, nonce)
+                                                }
+                                            }))
             {
-                {"Authorization", Step1AuthorizationHeader(username, nonce)}
-            });
+                // Handle this separately not to have a confusing error message on "success"
+                if (response.IsSuccessStatusCode)
+                    throw MakeInvalidResponse(
+                        string.Format(
+                            "Unauthorized (401) is expected in the response, got {0} ({1}) instead",
+                            response.StatusCode,
+                            (int)response.StatusCode));
 
-            // Handle this separately not to have a confusing error message on "success"
-            if (response.IsSuccessStatusCode)
-                throw MakeInvalidResponse(
-                    string.Format(
-                        "Unauthorized (401) is expected in the response, got {0} ({1}) instead",
-                        response.StatusCode,
-                        (int)response.StatusCode));
+                if (response.StatusCode != HttpStatusCode.Unauthorized)
+                    throw MakeNetworkError(response.StatusCode);
 
-            if (response.StatusCode != HttpStatusCode.Unauthorized)
-                throw MakeNetworkError(response.StatusCode);
+                var header = GetHeader(response, "WWW-Authenticate");
+                if (string.IsNullOrWhiteSpace(header))
+                    throw MakeInvalidResponse("WWW-Authenticate header wasn't found in the response");
 
-            var header = GetHeader(response, "WWW-Authenticate");
-            if (string.IsNullOrWhiteSpace(header))
-                throw MakeInvalidResponse("WWW-Authenticate header wasn't found in the response");
-
-            return header;
+                return header;
+            }
         }
 
         internal static Session Step2(string username,
