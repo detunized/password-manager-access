@@ -46,12 +46,21 @@ namespace RoboForm
 
         internal static void Logout(string username, Session session, IHttpClient http)
         {
-            // TODO: Wrap in using when done
-            var response = http.Post(ApiUrl(username, "logout"),
-                                     new Dictionary<string, string> {{"Cookie", session.Header}});
-
-            if (response.StatusCode != HttpStatusCode.OK)
-                throw MakeNetworkError(response.StatusCode);
+            using (var response = http.Post(ApiUrl(username, "logout"),
+                                            new Dictionary<string, string>
+                                            {
+                                                {"Cookie", session.Header}
+                                            }))
+            {
+                // TODO: Do we want to abort on the failed logout? If we got here it means we
+                //       have a parsed vault and aborting at this stage is gonna prevent the
+                //       user from getting it. On the other hand this will help to catch
+                //       any bugs in the logout code if the protocol changes. It's important
+                //       to log out as the server usually keeps track of open sessions and
+                //       might start blocking new sessions at some point.
+                if (response.StatusCode != HttpStatusCode.OK)
+                    throw MakeNetworkError(response.StatusCode);
+            }
         }
 
         internal static byte[] GetBlob(string username, Session session, IHttpClient http)
@@ -59,13 +68,17 @@ namespace RoboForm
             // TODO: Make this random
             var url = string.Format("{0}/user-data.rfo?_{1}", ApiBaseUrl(username), 1337);
 
-            // TODO: Wrap in using when done
-            var response = http.Get(url, new Dictionary<string, string> {{"Cookie", session.Header}});
+            using (var response = http.Get(url,
+                                           new Dictionary<string, string>
+                                           {
+                                               {"Cookie", session.Header}
+                                           }))
+            {
+                if (response.StatusCode != HttpStatusCode.OK)
+                    throw MakeNetworkError(response.StatusCode);
 
-            if (response.StatusCode != HttpStatusCode.OK)
-                throw MakeNetworkError(response.StatusCode);
-
-            return response.Content.ReadAsByteArrayAsync().Result;
+                return response.Content.ReadAsByteArrayAsync().Result;
+            }
         }
 
         internal static string Step1(string username, string nonce, IHttpClient http)
