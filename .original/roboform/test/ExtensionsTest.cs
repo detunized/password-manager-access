@@ -96,8 +96,8 @@ namespace RoboForm.Test
         [Test]
         public void BinaryReader_ReadUInt32BigEndian_reads_uint()
         {
-            using (var s = new MemoryStream(new byte[] {0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE}))
-            using (var r = new BinaryReader(s))
+            var bytes = new byte[] {0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE};
+            using (var r = new BinaryReader(new MemoryStream(bytes)))
             {
                 Assert.That(r.ReadUInt32LittleEndian(), Is.EqualTo(0xDEADBEEF));
                 Assert.That(r.ReadUInt32LittleEndian(), Is.EqualTo(0xFEEDF00D));

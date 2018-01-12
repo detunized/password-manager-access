@@ -18,8 +18,7 @@ namespace RoboForm
             if (blob.Length < 30) // magic(8) + flags(1) + checksum-type(1) + length(4) + md5(16)
                 throw ParseError("File is too short");
 
-            using (var stream = new MemoryStream(blob))
-            using (var io = new BinaryReader(stream))
+            using (var io = new BinaryReader(new MemoryStream(blob)))
             {
                 // 00-07 (8): magic ("onefile1")
                 var magic = io.ReadBytes(8);
@@ -85,8 +84,7 @@ namespace RoboForm
             if (content.Length < 15) // magic(8) + extra(1) + kdf(1) + iterations(4) + salt(1)
                 throw ParseError("Content is too short");
 
-            using (var stream = new MemoryStream(content))
-            using (var io = new BinaryReader(stream))
+            using (var io = new BinaryReader(new MemoryStream(content)))
             {
                 // 00-07 (8): magic ("gsencst1")
                 var magic = io.ReadBytes(8);
@@ -147,7 +145,7 @@ namespace RoboForm
                 var iv = keyIv.Skip(32).Take(16).ToArray();
 
                 // The rest is encrypted
-                var ciphertext = io.ReadBytes((int)(stream.Length - stream.Position));
+                var ciphertext = io.ReadBytes((int)(content.Length - io.BaseStream.Position));
 
                 // With AES-256-CBC there's no way to know if decrypted correctly.
                 // It will later fail in decompression/JSON parsing.
@@ -169,8 +167,8 @@ namespace RoboForm
 
         internal static byte[] Decompress(byte[] content)
         {
-            using (var inputStream = new MemoryStream(content, false))
-            using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            using (var gzipStream = new GZipStream(new MemoryStream(content, false),
+                                                   CompressionMode.Decompress))
             using (var outputStream = new MemoryStream())
             {
                 // TODO: Handle exceptions in case of corruption

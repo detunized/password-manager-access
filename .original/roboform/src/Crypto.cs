@@ -35,12 +35,16 @@ namespace RoboForm
                 return md5.ComputeHash(data);
         }
 
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] key, byte[] iv, PaddingMode padding)
+        public static byte[] DecryptAes256(byte[] ciphertext,
+                                           byte[] key,
+                                           byte[] iv,
+                                           PaddingMode padding)
         {
             using (var aes = CreateAes256Cbc(key, iv, padding))
             using (var decryptor = aes.CreateDecryptor())
-            using (var ciphertextStream = new MemoryStream(ciphertext, false))
-            using (var cryptoStream = new CryptoStream(ciphertextStream, decryptor, CryptoStreamMode.Read))
+            using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
+                                                       decryptor,
+                                                       CryptoStreamMode.Read))
             using (var plaintextStream = new MemoryStream())
             {
                 cryptoStream.CopyTo(plaintextStream);
