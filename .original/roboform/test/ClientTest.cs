@@ -4,9 +4,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using Moq;
 using NUnit.Framework;
-using System.Net.Http;
 
 namespace RoboForm.Test
 {
@@ -77,7 +77,7 @@ namespace RoboForm.Test
         public void Step1_returns_WWW_Authenticate_header()
         {
             var http = SetupStep1();
-            Assert.That(Client.Step1(TestData.Username, TestData.Nonce, http.Object),
+            Assert.That(Client.Step1(TestData.Username, TestData.Nonce, null, null, http.Object),
                         Is.EqualTo(Step1Header));
         }
 
@@ -85,8 +85,9 @@ namespace RoboForm.Test
         public void Step1_throws_on_missing_WWW_Authenticate_header()
         {
             var http = SetupStep1(null);
-            Assert.That(() => Client.Step1(TestData.Username, TestData.Nonce, http.Object),
-                        ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
+            Assert.That(
+                () => Client.Step1(TestData.Username, TestData.Nonce, null, null, http.Object),
+                ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
         }
 
         [Test]
@@ -135,26 +136,30 @@ namespace RoboForm.Test
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
-            var session = Client.Step2(TestData.Username,
-                                       TestData.Password,
-                                       TestData.Nonce,
-                                       TestData.AuthInfo,
-                                       http.Object);
+            var result = Client.Step2(TestData.Username,
+                                      TestData.Password,
+                                      TestData.Nonce,
+                                      null,
+                                      null,
+                                      TestData.AuthInfo,
+                                      http.Object);
 
-            AssertEqual(session, Session);
+            AssertEqual(result.Session, Session);
         }
 
         [Test]
         public void Step2_ignores_extra_cookies()
         {
             var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
-            var session = Client.Step2(TestData.Username,
-                                       TestData.Password,
-                                       TestData.Nonce,
-                                       TestData.AuthInfo,
-                                       http.Object);
+            var result = Client.Step2(TestData.Username,
+                                      TestData.Password,
+                                      TestData.Nonce,
+                                      null,
+                                      null,
+                                      TestData.AuthInfo,
+                                      http.Object);
 
-            AssertEqual(session, Session);
+            AssertEqual(result.Session, Session);
         }
 
         [Test]
@@ -175,6 +180,8 @@ namespace RoboForm.Test
                 Assert.That(() => Client.Step2(TestData.Username,
                                                TestData.Password,
                                                TestData.Nonce,
+                                               null,
+                                               null,
                                                TestData.AuthInfo,
                                                http.Object),
                             ExceptionsTest.ThrowsInvalidResponseWithMessage("cookie"));
@@ -188,6 +195,8 @@ namespace RoboForm.Test
             Assert.That(() => Client.Step2(TestData.Username,
                                            TestData.Password,
                                            TestData.Nonce,
+                                           null,
+                                           null,
                                            TestData.AuthInfo,
                                            http.Object),
                         ExceptionsTest.ThrowsIncorrectCredentialsWithMessage("Username or password"));
@@ -221,7 +230,7 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> MakeStep1()
         {
             var http = SetupStep1();
-            Client.Step1(TestData.Username, TestData.Nonce, http.Object);
+            Client.Step1(TestData.Username, TestData.Nonce, null, null, http.Object);
             return http;
         }
 
@@ -238,6 +247,8 @@ namespace RoboForm.Test
             Client.Step2(TestData.Username,
                          TestData.Password,
                          TestData.Nonce,
+                         null,
+                         null,
                          TestData.AuthInfo,
                          http.Object);
             return http;
