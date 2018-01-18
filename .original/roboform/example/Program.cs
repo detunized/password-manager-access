@@ -9,6 +9,27 @@ namespace Example
 {
     class Program
     {
+        private class TextUi: Ui
+        {
+            public override SecondFactorPassword ProvideSecondFactorPassword(string kind)
+            {
+                var password = GetAnswer(
+                    string.Format("Please provide the second factor code ({0})", kind));
+                var remember = GetAnswer("Remember this device (y/n)?").ToLowerInvariant();
+
+                return new SecondFactorPassword(password, remember == "y" || remember == "yes");
+            }
+
+            private static string GetAnswer(string prompt)
+            {
+                Console.WriteLine(prompt);
+                Console.Write("> ");
+                var input = Console.ReadLine();
+
+                return input == null ? "" : input.Trim();
+            }
+        }
+
         private static void Main(string[] args)
         {
             // Read RoboForm credentials from a file
@@ -20,7 +41,7 @@ namespace Example
 
             try
             {
-                var vault = Vault.Open(username, password);
+                var vault = Vault.Open(username, password, new TextUi());
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];

@@ -7,18 +7,18 @@ namespace RoboForm
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password)
+        public static Vault Open(string username, string password, Ui ui)
         {
-            return Open(username, password, new HttpClient());
+            return Open(username, password, ui, new HttpClient());
         }
 
         //
         // Internal
         //
 
-        internal static Vault Open(string username, string password, IHttpClient http)
+        internal static Vault Open(string username, string password, Ui ui, IHttpClient http)
         {
-            return Client.OpenVault(username, password, http);
+            return Client.OpenVault(username, password, ui, http);
         }
 
         internal Vault(Account[] accounts)

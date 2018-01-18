@@ -13,9 +13,9 @@ namespace RoboForm
     {
         // TODO: It's possible we need a device-id so the server doesn't generate a new
         //       one every time. Look into this. Set a cookie.
-        public static Vault OpenVault(string username, string password, IHttpClient http)
+        public static Vault OpenVault(string username, string password, Ui ui, IHttpClient http)
         {
-            var session = Login(username, password, http);
+            var session = Login(username, password, ui, http);
             try
             {
                 var blob = GetBlob(username, session, http);
@@ -45,14 +45,15 @@ namespace RoboForm
         // When the password is incorrect we fail on the step 1. When the OTP is incorrect
         // we fail on step 3.
 
-        internal static Session Login(string username, string password, IHttpClient http)
+        internal static Session Login(string username, string password, Ui ui, IHttpClient http)
         {
-            return Login(username, password, GenerateNonce(), http);
+            return Login(username, password, GenerateNonce(), ui, http);
         }
 
         internal static Session Login(string username,
                                       string password,
                                       string nonce,
+                                      Ui ui,
                                       IHttpClient http)
         {
             // Step 1: Log in or get a name of the 2FA channel (email, sms, totp)
@@ -77,16 +78,14 @@ namespace RoboForm
                 return sessionOrChannel.Session;
 
             // Ask the UI for the OTP
-            Console.Write("OTP: ");
-            Console.Out.Flush();
-            var otp = Console.ReadLine().Trim();
+            var otp = ui.ProvideSecondFactorPassword(otpChannel);
 
             // Step 3: Send the OTP.
             var shouldBeSession = PerformScramSequence(username,
                                                        password,
                                                        nonce,
                                                        otpChannel,
-                                                       otp,
+                                                       otp.Password,
                                                        http);
 
             // We should be really logged in this time.

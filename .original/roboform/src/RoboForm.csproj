@@ -61,6 +61,7 @@
     <Compile Include="OneFile.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Session.cs" />
+    <Compile Include="Ui.cs" />
     <Compile Include="Vault.cs" />
     <Compile Include="VaultParser.cs" />
   </ItemGroup>
