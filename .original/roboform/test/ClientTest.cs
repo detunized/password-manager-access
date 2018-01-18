@@ -77,7 +77,7 @@ namespace RoboForm.Test
         public void Step1_returns_WWW_Authenticate_header()
         {
             var http = SetupStep1();
-            Assert.That(Client.Step1(TestData.Username, TestData.Nonce, null, null, http.Object),
+            Assert.That(Client.Step1(TestData.Username, TestData.Nonce, null, http.Object),
                         Is.EqualTo(Step1Header));
         }
 
@@ -86,7 +86,7 @@ namespace RoboForm.Test
         {
             var http = SetupStep1(null);
             Assert.That(
-                () => Client.Step1(TestData.Username, TestData.Nonce, null, null, http.Object),
+                () => Client.Step1(TestData.Username, TestData.Nonce, null, http.Object),
                 ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
         }
 
@@ -133,6 +133,20 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void Step2_makes_POST_request_with_x_sib_headers_set()
+        {
+            MakeStep2("channel", "otp", true).Verify(x => x.Post(
+                It.IsAny<string>(),
+                It.Is<Dictionary<string, string>>(d =>
+                                                      d.ContainsKey("x-sib-auth-alt-channel") &&
+                                                      d["x-sib-auth-alt-channel"] == "channel" &&
+                                                      d.ContainsKey("x-sib-auth-alt-otp") &&
+                                                      d["x-sib-auth-alt-otp"] == "otp" &&
+                                                      d.ContainsKey("x-sib-auth-alt-memorize") &&
+                                                      d["x-sib-auth-alt-memorize"] == "1")));
+        }
+
+        [Test]
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
@@ -141,6 +155,7 @@ namespace RoboForm.Test
                                       TestData.Nonce,
                                       null,
                                       null,
+                                      false,
                                       TestData.AuthInfo,
                                       http.Object);
 
@@ -156,6 +171,7 @@ namespace RoboForm.Test
                                       TestData.Nonce,
                                       null,
                                       null,
+                                      false,
                                       TestData.AuthInfo,
                                       http.Object);
 
@@ -182,6 +198,7 @@ namespace RoboForm.Test
                                                TestData.Nonce,
                                                null,
                                                null,
+                                               false,
                                                TestData.AuthInfo,
                                                http.Object),
                             ExceptionsTest.ThrowsInvalidResponseWithMessage("cookie"));
@@ -197,6 +214,7 @@ namespace RoboForm.Test
                                            TestData.Nonce,
                                            null,
                                            null,
+                                           false,
                                            TestData.AuthInfo,
                                            http.Object),
                         ExceptionsTest.ThrowsIncorrectCredentialsWithMessage("Username or password"));
@@ -230,7 +248,7 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> MakeStep1()
         {
             var http = SetupStep1();
-            Client.Step1(TestData.Username, TestData.Nonce, null, null, http.Object);
+            Client.Step1(TestData.Username, TestData.Nonce, null, http.Object);
             return http;
         }
 
@@ -241,14 +259,17 @@ namespace RoboForm.Test
             return http;
         }
 
-        public static Mock<IHttpClient> MakeStep2()
+        public static Mock<IHttpClient> MakeStep2(string otpChannel = null,
+                                                  string otp = null,
+                                                  bool rememberDevice = false)
         {
             var http = SetupStep2();
             Client.Step2(TestData.Username,
                          TestData.Password,
                          TestData.Nonce,
-                         null,
-                         null,
+                         otpChannel,
+                         otp,
+                         rememberDevice,
                          TestData.AuthInfo,
                          http.Object);
             return http;

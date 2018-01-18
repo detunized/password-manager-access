@@ -57,7 +57,13 @@ namespace RoboForm
                                       IHttpClient http)
         {
             // Step 1: Log in or get a name of the 2FA channel (email, sms, totp)
-            var sessionOrChannel = PerformScramSequence(username, password, nonce, null, null, http);
+            var sessionOrChannel = PerformScramSequence(username,
+                                                        password,
+                                                        nonce,
+                                                        null,
+                                                        null,
+                                                        false,
+                                                        http);
 
             // Logged in. No 2FA.
             if (sessionOrChannel.Session != null)
@@ -71,6 +77,7 @@ namespace RoboForm
                                                    nonce,
                                                    otpChannel,
                                                    null,
+                                                   false,
                                                    http);
 
             // Should never happen really. But let's see just in case if we got logged in.
@@ -86,6 +93,7 @@ namespace RoboForm
                                                        nonce,
                                                        otpChannel,
                                                        otp.Password,
+                                                       otp.RememberDevice,
                                                        http);
 
             // We should be really logged in this time.
@@ -117,12 +125,13 @@ namespace RoboForm
                                                          string nonce,
                                                          string otpChannel,
                                                          string otp,
+                                                         bool rememberDevice,
                                                          IHttpClient http)
         {
             // TODO: Shouldn't Step1 return AuthInfo and not a header?
-            var header = Step1(username, nonce, otpChannel, otp, http);
+            var header = Step1(username, nonce, otpChannel, http);
             var authInfo = AuthInfo.Parse(header);
-            return Step2(username, password, nonce, otpChannel, otp, authInfo, http);
+            return Step2(username, password, nonce, otpChannel, otp, rememberDevice, authInfo, http);
         }
 
         internal static void Logout(string username, Session session, IHttpClient http)
@@ -164,7 +173,8 @@ namespace RoboForm
 
         internal static Dictionary<string, string> ScramHeaders(string authorization,
                                                                 string otpChannel,
-                                                                string otp)
+                                                                string otp = null,
+                                                                bool rememberDevice = false)
         {
             var headers = new Dictionary<string, string>()
             {
@@ -175,7 +185,7 @@ namespace RoboForm
             if (otp != null)
             {
                 headers["x-sib-auth-alt-otp"] = otp;
-                headers["x-sib-auth-alt-memorize"] = "0";
+                headers["x-sib-auth-alt-memorize"] = rememberDevice ? "1" : "0";
             }
 
             return headers;
@@ -184,10 +194,9 @@ namespace RoboForm
         internal static string Step1(string username,
                                      string nonce,
                                      string otpChannel,
-                                     string otp,
                                      IHttpClient http)
         {
-            var headers = ScramHeaders(Step1AuthorizationHeader(username, nonce), otpChannel, otp);
+            var headers = ScramHeaders(Step1AuthorizationHeader(username, nonce), otpChannel);
             using (var response = http.Post(LoginUrl(username), headers))
             {
                 // Handle this separately not to have a confusing error message on "success"
@@ -214,6 +223,7 @@ namespace RoboForm
                                           string nonce,
                                           string otpChannel,
                                           string otp,
+                                          bool rememberDevice,
                                           AuthInfo authInfo,
                                           IHttpClient http)
         {
@@ -221,7 +231,8 @@ namespace RoboForm
             var headers = ScramHeaders(
                 Step2AuthorizationHeader(username, password, nonce, authInfo),
                 otpChannel,
-                otp);
+                otp,
+                rememberDevice);
             var response = http.Post(LoginUrl(username), headers);
 
             // Step2 fails with 401 on incorrect username or password
