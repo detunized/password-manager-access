@@ -71,6 +71,13 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void ByteArray_ToHex_returns_hex_string()
+        {
+            Assert.That(new byte[] {}.ToHex(), Is.EqualTo(""));
+            Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
+        }
+
+        [Test]
         public void ByteArray_ToBase64_returns_base64()
         {
             Assert.That(new byte[] {}.ToBase64(), Is.EqualTo(""));
@@ -314,6 +321,9 @@ namespace RoboForm.Test
         //
 
         private const string TestString = "All your base are belong to us";
+        private const string TestHex = "416c6c20796f757220626173652061" +
+                                       "72652062656c6f6e6720746f207573";
+
         private static readonly byte[] TestBytes =
         {
             65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
