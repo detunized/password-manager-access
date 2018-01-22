@@ -9,30 +9,35 @@ using System.Net.Http;
 
 namespace RoboForm
 {
-    // TODO: See if it makes sense to pass username, password and deviceId in one data structure
-    //       not to have so many parameters in all the functions.
+    // TODO: Move out to its own file
+    internal class ClientInfo
+    {
+        public readonly string Username;
+        public readonly string Password;
+        public readonly string DeviceId;
+
+        public ClientInfo(string username, string password, string deviceId)
+        {
+            Username = username;
+            Password = password;
+            DeviceId = deviceId;
+        }
+    }
+
     internal static class Client
     {
-        public static Vault OpenVault(string username,
-                                      string password,
-                                      string deviceId,
-                                      Ui ui,
-                                      IHttpClient http)
+        public static Vault OpenVault(ClientInfo clientInfo, Ui ui, IHttpClient http)
         {
-            var session = Login(username: username,
-                                password: password,
-                                deviceId: deviceId,
-                                ui: ui,
-                                http: http);
+            var session = Login(clientInfo, ui, http);
             try
             {
-                var blob = GetBlob(username, session, http);
-                var json = OneFile.Parse(blob, password);
+                var blob = GetBlob(clientInfo.Username, session, http);
+                var json = OneFile.Parse(blob, clientInfo.Password);
                 return VaultParser.Parse(json);
             }
             finally
             {
-                Logout(username, session, http);
+                Logout(clientInfo.Username, session, http);
             }
         }
 
@@ -53,32 +58,37 @@ namespace RoboForm
         // When the password is incorrect we fail on the step 1. When the OTP is incorrect
         // we fail on step 3.
 
-        internal static Session Login(string username,
-                                      string password,
-                                      string deviceId,
-                                      Ui ui,
-                                      IHttpClient http)
+        // This is an internal version of ClientInfo that also contains session specific nonce.
+        internal class Credentials
         {
-            return Login(username: username,
-                         password: password,
-                         deviceId: deviceId,
-                         nonce: GenerateNonce(),
-                         ui: ui,
-                         http: http);
+            public readonly string Username;
+            public readonly string Password;
+            public readonly string DeviceId;
+            public readonly string Nonce;
+
+            public Credentials(string username, string password, string deviceId, string nonce)
+            {
+                Username = username;
+                Password = password;
+                DeviceId = deviceId;
+                Nonce = nonce;
+            }
+
+            public Credentials(ClientInfo clientInfo, string nonce)
+                : this(clientInfo.Username, clientInfo.Password, clientInfo.DeviceId, nonce)
+            {
+            }
         }
 
-        internal static Session Login(string username,
-                                      string password,
-                                      string deviceId,
-                                      string nonce,
-                                      Ui ui,
-                                      IHttpClient http)
+        internal static Session Login(ClientInfo clientInfo, Ui ui, IHttpClient http)
+        {
+            return Login(new Credentials(clientInfo, GenerateNonce()), ui, http);
+        }
+
+        internal static Session Login(Credentials credentials, Ui ui, IHttpClient http)
         {
             // Step 1: Log in or get a name of the 2FA channel (email, sms, totp)
-            var sessionOrChannel = PerformScramSequence(username: username,
-                                                        password: password,
-                                                        deviceId: deviceId,
-                                                        nonce: nonce,
+            var sessionOrChannel = PerformScramSequence(credentials,
                                                         otpChannel: null,
                                                         otp: null,
                                                         rememberDevice: false,
@@ -91,10 +101,7 @@ namespace RoboForm
             var otpChannel = sessionOrChannel.OtpChannel;
 
             // Step 2: Trigger OTP issue.
-            var shouldBeOtp = PerformScramSequence(username: username,
-                                                   password: password,
-                                                   deviceId: deviceId,
-                                                   nonce: nonce,
+            var shouldBeOtp = PerformScramSequence(credentials,
                                                    otpChannel: otpChannel,
                                                    otp: null,
                                                    rememberDevice: false,
@@ -108,10 +115,7 @@ namespace RoboForm
             var otp = ui.ProvideSecondFactorPassword(otpChannel);
 
             // Step 3: Send the OTP.
-            var shouldBeSession = PerformScramSequence(username: username,
-                                                       password: password,
-                                                       deviceId: deviceId,
-                                                       nonce: nonce,
+            var shouldBeSession = PerformScramSequence(credentials,
                                                        otpChannel: otpChannel,
                                                        otp: otp.Password,
                                                        rememberDevice: otp.RememberDevice,
@@ -141,26 +145,23 @@ namespace RoboForm
             }
         }
 
-        internal static ScramResult PerformScramSequence(string username,
-                                                         string password,
-                                                         string deviceId,
-                                                         string nonce,
+        internal static ScramResult PerformScramSequence(Credentials credentials,
                                                          string otpChannel,
                                                          string otp,
                                                          bool rememberDevice,
                                                          IHttpClient http)
         {
             // TODO: Shouldn't Step1 return AuthInfo and not a header?
-            var header = Step1(username: username,
-                               deviceId: deviceId,
-                               nonce: nonce,
+            var header = Step1(username: credentials.Username,
+                               deviceId: credentials.DeviceId,
+                               nonce: credentials.Nonce,
                                otpChannel: otpChannel,
                                http: http);
             var authInfo = AuthInfo.Parse(header);
-            return Step2(username: username,
-                         password: password,
-                         deviceId: deviceId,
-                         nonce: nonce,
+            return Step2(username: credentials.Username,
+                         password: credentials.Password,
+                         deviceId: credentials.DeviceId,
+                         nonce: credentials.Nonce,
                          otpChannel: otpChannel,
                          otp: otp,
                          rememberDevice: rememberDevice,
