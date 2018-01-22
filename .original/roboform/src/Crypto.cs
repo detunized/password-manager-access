@@ -18,6 +18,13 @@ namespace RoboForm
             }
         }
 
+        public static string RandomDeviceId()
+        {
+            // All the device ids returned by the server seem to be in this format.
+            // Example: B57192ee77db5e5989c5ef7e091b119ea
+            return "B" + RandomBytes(16).ToHex();
+        }
+
         public static byte[] ComputeClientKey(string password, AuthInfo authInfo)
         {
             return Hmac(HashPassword(password, authInfo), "Client Key".ToBytes());

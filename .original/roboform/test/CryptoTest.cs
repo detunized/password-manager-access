@@ -17,6 +17,20 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void RandomDeviceId_starts_with_B()
+        {
+            for (var i = 0; i < 10; ++i)
+                Assert.That(Crypto.RandomDeviceId(), Is.StringStarting("B"));
+        }
+
+        [Test]
+        public void RandomDeviceId_has_correct_length()
+        {
+            for (var i = 0; i < 10; ++i)
+                Assert.That(Crypto.RandomDeviceId().Length, Is.EqualTo(33));
+        }
+
+        [Test]
         public void ComputeClientKey_returns_key()
         {
             // Generated with the original JavaScript code
