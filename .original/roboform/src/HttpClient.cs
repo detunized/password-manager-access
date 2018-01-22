@@ -48,7 +48,7 @@ namespace RoboForm
 
         private static SystemHttp CreateHttp(Dictionary<string, string> headers)
         {
-            var http = new SystemHttp(new HttpClientHandler() {UseCookies = false});
+            var http = new SystemHttp(new HttpClientHandler {UseCookies = false});
             foreach (var i in headers)
                 http.DefaultRequestHeaders.Add(i.Key, i.Value);
 
