@@ -238,17 +238,23 @@ namespace RoboForm
                                        otpChannel: otpChannel);
             using (var response = http.Post(LoginUrl(username), headers))
             {
-                // Handle this separately not to have a confusing error message on "success"
+                // Handle this separately not to have a confusing error message on "success".
+                // This should never happen as it's not clear what to do after this fake "success".
+                // We need both step1 and step2 to complete to get a valid session.
                 if (response.IsSuccessStatusCode)
-                    throw MakeInvalidResponse(
-                        string.Format(
-                            "Unauthorized (401) is expected in the response, got {0} ({1}) instead",
-                            response.StatusCode,
-                            (int)response.StatusCode));
+                {
+                    var message = string.Format(
+                        "Unauthorized (401) is expected in the response, got {0} ({1}) instead",
+                        response.StatusCode,
+                        (int)response.StatusCode);
+                    throw MakeInvalidResponse(message);
+                }
 
+                // 401 is expected as the only valid response at this point
                 if (response.StatusCode != HttpStatusCode.Unauthorized)
                     throw MakeNetworkError(response.StatusCode);
 
+                // WWW-Authenticate has the result of this step.
                 var header = GetHeader(response, "WWW-Authenticate");
                 if (string.IsNullOrWhiteSpace(header))
                     throw MakeInvalidResponse("WWW-Authenticate header wasn't found in the response");
