@@ -77,8 +77,9 @@ namespace RoboForm.Test
         public void Step1_returns_WWW_Authenticate_header()
         {
             var http = SetupStep1();
-            Assert.That(Client.Step1(TestData.Username, TestData.Nonce, null, http.Object),
-                        Is.EqualTo(Step1Header));
+            Assert.That(
+                Client.Step1(TestData.Username, TestData.DeviceId, TestData.Nonce, null, http.Object),
+                Is.EqualTo(Step1Header));
         }
 
         [Test]
@@ -86,7 +87,11 @@ namespace RoboForm.Test
         {
             var http = SetupStep1(null);
             Assert.That(
-                () => Client.Step1(TestData.Username, TestData.Nonce, null, http.Object),
+                () => Client.Step1(TestData.Username,
+                                   TestData.DeviceId,
+                                   TestData.Nonce,
+                                   null,
+                                   http.Object),
                 ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
         }
 
@@ -150,14 +155,15 @@ namespace RoboForm.Test
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
-            var result = Client.Step2(TestData.Username,
-                                      TestData.Password,
-                                      TestData.Nonce,
-                                      null,
-                                      null,
-                                      false,
-                                      TestData.AuthInfo,
-                                      http.Object);
+            var result = Client.Step2(username: TestData.Username,
+                                      password: TestData.Password,
+                                      deviceId: TestData.DeviceId,
+                                      nonce: TestData.Nonce,
+                                      otpChannel: null,
+                                      otp: null,
+                                      rememberDevice: false,
+                                      authInfo: TestData.AuthInfo,
+                                      http: http.Object);
 
             AssertEqual(result.Session, Session);
         }
@@ -166,14 +172,15 @@ namespace RoboForm.Test
         public void Step2_ignores_extra_cookies()
         {
             var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
-            var result = Client.Step2(TestData.Username,
-                                      TestData.Password,
-                                      TestData.Nonce,
-                                      null,
-                                      null,
-                                      false,
-                                      TestData.AuthInfo,
-                                      http.Object);
+            var result = Client.Step2(username: TestData.Username,
+                                      password: TestData.Password,
+                                      deviceId: TestData.DeviceId,
+                                      nonce: TestData.Nonce,
+                                      otpChannel: null,
+                                      otp: null,
+                                      rememberDevice: false,
+                                      authInfo: TestData.AuthInfo,
+                                      http: http.Object);
 
             AssertEqual(result.Session, Session);
         }
@@ -193,14 +200,15 @@ namespace RoboForm.Test
             foreach (var testCase in testCases)
             {
                 var http = SetupStep2(testCase);
-                Assert.That(() => Client.Step2(TestData.Username,
-                                               TestData.Password,
-                                               TestData.Nonce,
-                                               null,
-                                               null,
-                                               false,
-                                               TestData.AuthInfo,
-                                               http.Object),
+                Assert.That(() => Client.Step2(username: TestData.Username,
+                                               password: TestData.Password,
+                                               deviceId: TestData.DeviceId,
+                                               nonce: TestData.Nonce,
+                                               otpChannel: null,
+                                               otp: null,
+                                               rememberDevice: false,
+                                               authInfo: TestData.AuthInfo,
+                                               http: http.Object),
                             ExceptionsTest.ThrowsInvalidResponseWithMessage("cookie"));
             }
         }
@@ -209,14 +217,15 @@ namespace RoboForm.Test
         public void Step2_throws_http_unauthorized()
         {
             var http = SetupStep2(HttpStatusCode.Unauthorized);
-            Assert.That(() => Client.Step2(TestData.Username,
-                                           TestData.Password,
-                                           TestData.Nonce,
-                                           null,
-                                           null,
-                                           false,
-                                           TestData.AuthInfo,
-                                           http.Object),
+            Assert.That(() => Client.Step2(username: TestData.Username,
+                                           password: TestData.Password,
+                                           deviceId: TestData.DeviceId,
+                                           nonce: TestData.Nonce,
+                                           otpChannel: null,
+                                           otp: null,
+                                           rememberDevice: false,
+                                           authInfo: TestData.AuthInfo,
+                                           http: http.Object),
                         ExceptionsTest.ThrowsIncorrectCredentialsWithMessage("Username or password"));
         }
 
@@ -248,7 +257,7 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> MakeStep1()
         {
             var http = SetupStep1();
-            Client.Step1(TestData.Username, TestData.Nonce, null, http.Object);
+            Client.Step1(TestData.Username, TestData.DeviceId, TestData.Nonce, null, http.Object);
             return http;
         }
 
@@ -264,14 +273,15 @@ namespace RoboForm.Test
                                                   bool rememberDevice = false)
         {
             var http = SetupStep2();
-            Client.Step2(TestData.Username,
-                         TestData.Password,
-                         TestData.Nonce,
-                         otpChannel,
-                         otp,
-                         rememberDevice,
-                         TestData.AuthInfo,
-                         http.Object);
+            Client.Step2(username: TestData.Username,
+                         password: TestData.Password,
+                         deviceId: TestData.DeviceId,
+                         nonce: TestData.Nonce,
+                         otpChannel: otpChannel,
+                         otp: otp,
+                         rememberDevice: rememberDevice,
+                         authInfo: TestData.AuthInfo,
+                         http: http.Object);
             return http;
         }
 

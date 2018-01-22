@@ -9,6 +9,7 @@ namespace RoboForm.Test
     {
         public const string Username = "lastpass.ruby@gmail.com";
         public const string Password = "h74@aB$SCt9dTBQ3%rmAVN3oOmtGLt58Nix7!3z%vUO4Ni07rfjutHRbhJ9!SkOk";
+        public const string DeviceId = "B57192ee77db5e5989c5ef7e091b119ea";
         public const string Nonce = "-DeHRrZjC8DZ_0e8RGsisg";
 
         public static readonly AuthInfo AuthInfo = new AuthInfo(

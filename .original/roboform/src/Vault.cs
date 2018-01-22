@@ -7,9 +7,17 @@ namespace RoboForm
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, Ui ui)
+        // Use GenerateRandomDeviceId to generate a random device id only once per device,
+        // store it and reuse later on subsequent logins.
+        // Calling Vault.Open(username, password, Vault.GenerateRandomDeviceId(), ui) is
+        // not a good idea. See bellow.
+        public static Vault Open(string username, string password, string deviceId, Ui ui)
         {
-            return Open(username, password, ui, new HttpClient());
+            return Open(username: username,
+                        password: password,
+                        deviceId: deviceId,
+                        ui: ui,
+                        http: new HttpClient());
         }
 
         // Generates a random device id that should be used with every new device.
@@ -27,9 +35,17 @@ namespace RoboForm
         // Internal
         //
 
-        internal static Vault Open(string username, string password, Ui ui, IHttpClient http)
+        internal static Vault Open(string username,
+                                   string password,
+                                   string deviceId,
+                                   Ui ui,
+                                   IHttpClient http)
         {
-            return Client.OpenVault(username, password, ui, http);
+            return Client.OpenVault(username: username,
+                                    password: password,
+                                    deviceId: deviceId,
+                                    ui: ui,
+                                    http: http);
         }
 
         internal Vault(Account[] accounts)
