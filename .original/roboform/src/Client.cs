@@ -267,57 +267,58 @@ namespace RoboForm
                                           AuthInfo authInfo,
                                           IHttpClient http)
         {
-            // TODO: Wrap in using
             var headers = ScramHeaders(
                 authorization: Step2AuthorizationHeader(username, password, nonce, authInfo),
                 deviceId: deviceId,
                 otpChannel: otpChannel,
                 otp: otp,
                 rememberDevice: rememberDevice);
-            var response = http.Post(LoginUrl(username), headers);
-
-            // Step2 fails with 401 on incorrect username or password
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            using (var response = http.Post(LoginUrl(username), headers))
             {
-                var requestedOtpChannel = GetHeader(response, "x-sib-auth-alt-otp");
-                if (string.IsNullOrWhiteSpace(requestedOtpChannel))
-                    // TODO: This is not correct when OTP is wrong. At this level it's not clear
-                    //       if it's the password or OTP that was wrong. Maybe rather handle this
-                    //       in the caller.
-                    throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                              "Username or password is incorrect");
+                // Step2 fails with 401 on incorrect username or password
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    var requestedOtpChannel = GetHeader(response, "x-sib-auth-alt-otp");
+                    if (string.IsNullOrWhiteSpace(requestedOtpChannel))
+                        // TODO: This is not correct when OTP is wrong. At this level it's not clear
+                        //       if it's the password or OTP that was wrong. Maybe rather handle this
+                        //       in the caller.
+                        throw new ClientException(
+                            ClientException.FailureReason.IncorrectCredentials,
+                            "Username or password is incorrect");
 
-                return new ScramResult(requestedOtpChannel);
+                    return new ScramResult(requestedOtpChannel);
+                }
+
+                // Otherwise step2 is supposed to succeed
+                if (response.StatusCode != HttpStatusCode.OK)
+                    throw MakeNetworkError(response.StatusCode);
+
+                // The server is supposed to return some cookies
+                if (!response.Headers.Contains("Set-Cookie"))
+                    throw MakeInvalidResponse("No cookies were found in the response");
+
+                // Any URL will do. It's just a key in a hash.
+                var cookieUri = new Uri("https://detunized.net");
+
+                // Parse all the cookies and put them in a jar
+                var cookieJar = new CookieContainer();
+                foreach (var cookie in response.Headers.GetValues("Set-Cookie"))
+                    cookieJar.SetCookies(cookieUri, cookie);
+
+                // Extract the cookies we're interested in
+                var cookies = cookieJar.GetCookies(cookieUri);
+
+                var auth = cookies["sib-auth"];
+                if (auth == null)
+                    throw MakeInvalidResponse("'sib-auth' cookie wasn't found in the response");
+
+                var device = cookies["sib-deviceid"];
+                if (device == null)
+                    throw MakeInvalidResponse("'sib-deviceid' cookie wasn't found in the response");
+
+                return new ScramResult(new Session(auth.Value, device.Value));
             }
-
-            // Otherwise step2 is supposed to succeed
-            if (response.StatusCode != HttpStatusCode.OK)
-                throw MakeNetworkError(response.StatusCode);
-
-            // The server is supposed to return some cookies
-            if (!response.Headers.Contains("Set-Cookie"))
-                throw MakeInvalidResponse("No cookies were found in the response");
-
-            // Any URL will do. It's just a key in a hash.
-            var cookieUri = new Uri("https://detunized.net");
-
-            // Parse all the cookies and put them in a jar
-            var cookieJar = new CookieContainer();
-            foreach (var cookie in response.Headers.GetValues("Set-Cookie"))
-                cookieJar.SetCookies(cookieUri, cookie);
-
-            // Extract the cookies we're interested in
-            var cookies = cookieJar.GetCookies(cookieUri);
-
-            var auth = cookies["sib-auth"];
-            if (auth == null)
-                throw MakeInvalidResponse("'sib-auth' cookie wasn't found in the response");
-
-            var device = cookies["sib-deviceid"];
-            if (device == null)
-                throw MakeInvalidResponse("'sib-deviceid' cookie wasn't found in the response");
-
-            return new ScramResult(new Session(auth.Value, device.Value));
         }
 
         internal static string GenerateNonce()
