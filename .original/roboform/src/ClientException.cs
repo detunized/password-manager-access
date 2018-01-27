@@ -10,6 +10,7 @@ namespace RoboForm
         public enum FailureReason
         {
             IncorrectCredentials,
+            IncorrectOneTimePassword,
             NetworkError,
             InvalidResponse,
             RespondedWithError,

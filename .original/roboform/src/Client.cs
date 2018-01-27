@@ -266,15 +266,18 @@ namespace RoboForm
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     var requestedOtpChannel = GetHeader(response, "x-sib-auth-alt-otp");
-                    if (string.IsNullOrWhiteSpace(requestedOtpChannel))
-                        // TODO: This is not correct when OTP is wrong. At this level it's not clear
-                        //       if it's the password or OTP that was wrong. Maybe rather handle this
-                        //       in the caller.
-                        throw new ClientException(
-                            ClientException.FailureReason.IncorrectCredentials,
-                            "Username or password is incorrect");
+                    if (!string.IsNullOrWhiteSpace(requestedOtpChannel))
+                        return new ScramResult(requestedOtpChannel);
 
-                    return new ScramResult(requestedOtpChannel);
+                    // If OTP is set then it's the OTP that is wrong
+                    if (otp.Password != null)
+                        throw new ClientException(
+                            ClientException.FailureReason.IncorrectOneTimePassword,
+                            "One time password is incorrect");
+
+                    throw new ClientException(
+                        ClientException.FailureReason.IncorrectCredentials,
+                        "Username or password is incorrect");
                 }
 
                 // Otherwise step2 is supposed to succeed
