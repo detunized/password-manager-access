@@ -151,10 +151,7 @@ namespace RoboForm.Test
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
-            var result = Client.Step2(username: TestData.Username,
-                                      password: TestData.Password,
-                                      deviceId: TestData.DeviceId,
-                                      nonce: TestData.Nonce,
+            var result = Client.Step2(credentials: TestData.Credentials,
                                       otpChannel: null,
                                       otp: null,
                                       rememberDevice: false,
@@ -168,10 +165,7 @@ namespace RoboForm.Test
         public void Step2_ignores_extra_cookies()
         {
             var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
-            var result = Client.Step2(username: TestData.Username,
-                                      password: TestData.Password,
-                                      deviceId: TestData.DeviceId,
-                                      nonce: TestData.Nonce,
+            var result = Client.Step2(credentials : TestData.Credentials,
                                       otpChannel: null,
                                       otp: null,
                                       rememberDevice: false,
@@ -196,10 +190,7 @@ namespace RoboForm.Test
             foreach (var testCase in testCases)
             {
                 var http = SetupStep2(testCase);
-                Assert.That(() => Client.Step2(username: TestData.Username,
-                                               password: TestData.Password,
-                                               deviceId: TestData.DeviceId,
-                                               nonce: TestData.Nonce,
+                Assert.That(() => Client.Step2(credentials: TestData.Credentials,
                                                otpChannel: null,
                                                otp: null,
                                                rememberDevice: false,
@@ -213,10 +204,7 @@ namespace RoboForm.Test
         public void Step2_throws_http_unauthorized()
         {
             var http = SetupStep2(HttpStatusCode.Unauthorized);
-            Assert.That(() => Client.Step2(username: TestData.Username,
-                                           password: TestData.Password,
-                                           deviceId: TestData.DeviceId,
-                                           nonce: TestData.Nonce,
+            Assert.That(() => Client.Step2(credentials: TestData.Credentials,
                                            otpChannel: null,
                                            otp: null,
                                            rememberDevice: false,
@@ -231,10 +219,7 @@ namespace RoboForm.Test
             var expected = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJy" +
                            "WmpDOERaXzBlOFJHc2lzZ00yLXRqZ2YtNjBtLS1GQmhMUTI2dGcscD1lWk5RUE9zOH" +
                            "FIRi9nSGVSWXEyekhmZ0gxNmdJS05xdGFPak5rUjlrRTRrPQ==\"";
-            var header = Client.Step2AuthorizationHeader(TestData.Username,
-                                                         TestData.Password,
-                                                         TestData.Nonce,
-                                                         TestData.AuthInfo);
+            var header = Client.Step2AuthorizationHeader(TestData.Credentials, TestData.AuthInfo);
 
             Assert.That(header, Is.EqualTo(expected));
         }
@@ -269,10 +254,7 @@ namespace RoboForm.Test
                                                   bool rememberDevice = false)
         {
             var http = SetupStep2();
-            Client.Step2(username: TestData.Username,
-                         password: TestData.Password,
-                         deviceId: TestData.DeviceId,
-                         nonce: TestData.Nonce,
+            Client.Step2(credentials : TestData.Credentials,
                          otpChannel: otpChannel,
                          otp: otp,
                          rememberDevice: rememberDevice,

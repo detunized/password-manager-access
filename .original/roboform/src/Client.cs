@@ -154,10 +154,7 @@ namespace RoboForm
             // TODO: Shouldn't Step1 return AuthInfo and not a header?
             var header = Step1(credentials, otpChannel: otpChannel, http: http);
             var authInfo = AuthInfo.Parse(header);
-            return Step2(username: credentials.Username,
-                         password: credentials.Password,
-                         deviceId: credentials.DeviceId,
-                         nonce: credentials.Nonce,
+            return Step2(credentials,
                          otpChannel: otpChannel,
                          otp: otp,
                          rememberDevice: rememberDevice,
@@ -256,10 +253,7 @@ namespace RoboForm
             }
         }
 
-        internal static ScramResult Step2(string username,
-                                          string password,
-                                          string deviceId,
-                                          string nonce,
+        internal static ScramResult Step2(Credentials credentials,
                                           string otpChannel,
                                           string otp,
                                           bool rememberDevice,
@@ -267,12 +261,12 @@ namespace RoboForm
                                           IHttpClient http)
         {
             var headers = ScramHeaders(
-                authorization: Step2AuthorizationHeader(username, password, nonce, authInfo),
-                deviceId: deviceId,
+                authorization: Step2AuthorizationHeader(credentials, authInfo),
+                deviceId: credentials.DeviceId,
                 otpChannel: otpChannel,
                 otp: otp,
                 rememberDevice: rememberDevice);
-            using (var response = http.Post(LoginUrl(username), headers))
+            using (var response = http.Post(LoginUrl(credentials.Username), headers))
             {
                 // Step2 fails with 401 on incorrect username or password
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -334,17 +328,14 @@ namespace RoboForm
                                  data.ToBase64());
         }
 
-        internal static string Step2AuthorizationHeader(string username,
-                                                        string password,
-                                                        string nonce,
-                                                        AuthInfo authInfo)
+        internal static string Step2AuthorizationHeader(Credentials credentials, AuthInfo authInfo)
         {
-            var clientKey = Crypto.ComputeClientKey(password, authInfo);
+            var clientKey = Crypto.ComputeClientKey(credentials.Password, authInfo);
             var clientHash = Crypto.Sha256(clientKey);
 
             var hashingMaterial = string.Format("n={0},r={1},{2},c=biws,r={3}",
-                                                username.EncodeUri(),
-                                                nonce,
+                                                credentials.Username.EncodeUri(),
+                                                credentials.Nonce,
                                                 authInfo.Data,
                                                 authInfo.Nonce);
 
