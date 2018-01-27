@@ -152,11 +152,7 @@ namespace RoboForm
                                                          IHttpClient http)
         {
             // TODO: Shouldn't Step1 return AuthInfo and not a header?
-            var header = Step1(username: credentials.Username,
-                               deviceId: credentials.DeviceId,
-                               nonce: credentials.Nonce,
-                               otpChannel: otpChannel,
-                               http: http);
+            var header = Step1(credentials, otpChannel: otpChannel, http: http);
             var authInfo = AuthInfo.Parse(header);
             return Step2(username: credentials.Username,
                          password: credentials.Password,
@@ -228,16 +224,12 @@ namespace RoboForm
             return headers;
         }
 
-        internal static string Step1(string username,
-                                     string deviceId,
-                                     string nonce,
-                                     string otpChannel,
-                                     IHttpClient http)
+        internal static string Step1(Credentials credentials, string otpChannel, IHttpClient http)
         {
-            var headers = ScramHeaders(authorization: Step1AuthorizationHeader(username, nonce),
-                                       deviceId: deviceId,
-                                       otpChannel: otpChannel);
-            using (var response = http.Post(LoginUrl(username), headers))
+            var headers = ScramHeaders(Step1AuthorizationHeader(credentials),
+                                       credentials.DeviceId,
+                                       otpChannel);
+            using (var response = http.Post(LoginUrl(credentials.Username), headers))
             {
                 // Handle this separately not to have a confusing error message on "success".
                 // This should never happen as it's not clear what to do after this fake "success".
@@ -333,9 +325,11 @@ namespace RoboForm
             return Crypto.RandomBytes(16).ToUrlSafeBase64();
         }
 
-        internal static string Step1AuthorizationHeader(string username, string nonce)
+        internal static string Step1AuthorizationHeader(Credentials credentials)
         {
-            var data = string.Format("n,,n={0},r={1}", username.EncodeUri(), nonce);
+            var data = string.Format("n,,n={0},r={1}",
+                                     credentials.Username.EncodeUri(),
+                                     credentials.Nonce);
             return string.Format("SibAuth realm=\"RoboForm Online Server\",data=\"{0}\"",
                                  data.ToBase64());
         }

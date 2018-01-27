@@ -12,6 +12,11 @@ namespace RoboForm.Test
         public const string DeviceId = "B57192ee77db5e5989c5ef7e091b119ea";
         public const string Nonce = "-DeHRrZjC8DZ_0e8RGsisg";
 
+        public static readonly Client.Credentials Credentials = new Client.Credentials(Username,
+                                                                                       Password,
+                                                                                       DeviceId,
+                                                                                       Nonce);
+
         public static readonly AuthInfo AuthInfo = new AuthInfo(
             sid: "6Ag93Y02vihucO9IQl1fbg",
             data : "r=-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg,s=A+Ft8UM674OZOOjUjXCdbw==,i=4096",

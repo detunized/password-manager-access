@@ -78,7 +78,7 @@ namespace RoboForm.Test
         {
             var http = SetupStep1();
             Assert.That(
-                Client.Step1(TestData.Username, TestData.DeviceId, TestData.Nonce, null, http.Object),
+                Client.Step1(TestData.Credentials, null, http.Object),
                 Is.EqualTo(Step1Header));
         }
 
@@ -87,11 +87,7 @@ namespace RoboForm.Test
         {
             var http = SetupStep1(null);
             Assert.That(
-                () => Client.Step1(TestData.Username,
-                                   TestData.DeviceId,
-                                   TestData.Nonce,
-                                   null,
-                                   http.Object),
+                () => Client.Step1(TestData.Credentials, null, http.Object),
                 ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
         }
 
@@ -107,7 +103,7 @@ namespace RoboForm.Test
         {
             var expected = "SibAuth realm=\"RoboForm Online Server\",data=\"biwsbj1sYXN0cGFzcy" +
                            "5ydWJ5QGdtYWlsLmNvbSxyPS1EZUhSclpqQzhEWl8wZThSR3Npc2c=\"";
-            var header = Client.Step1AuthorizationHeader(TestData.Username, TestData.Nonce);
+            var header = Client.Step1AuthorizationHeader(TestData.Credentials);
 
             Assert.That(header, Is.EqualTo(expected));
         }
@@ -257,7 +253,7 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> MakeStep1()
         {
             var http = SetupStep1();
-            Client.Step1(TestData.Username, TestData.DeviceId, TestData.Nonce, null, http.Object);
+            Client.Step1(TestData.Credentials, null, http.Object);
             return http;
         }
 
