@@ -9,21 +9,6 @@ using System.Net.Http;
 
 namespace RoboForm
 {
-    // TODO: Move out to its own file
-    internal class ClientInfo
-    {
-        public readonly string Username;
-        public readonly string Password;
-        public readonly string DeviceId;
-
-        public ClientInfo(string username, string password, string deviceId)
-        {
-            Username = username;
-            Password = password;
-            DeviceId = deviceId;
-        }
-    }
-
     internal static class Client
     {
         public static Vault OpenVault(ClientInfo clientInfo, Ui ui, IHttpClient http)
