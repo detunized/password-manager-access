@@ -78,7 +78,7 @@ namespace RoboForm.Test
         {
             var http = SetupStep1();
             Assert.That(
-                Client.Step1(TestData.Credentials, null, http.Object),
+                Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object),
                 Is.EqualTo(Step1Header));
         }
 
@@ -87,7 +87,7 @@ namespace RoboForm.Test
         {
             var http = SetupStep1(null);
             Assert.That(
-                () => Client.Step1(TestData.Credentials, null, http.Object),
+                () => Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object),
                 ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
         }
 
@@ -134,29 +134,35 @@ namespace RoboForm.Test
         }
 
         [Test]
+        public void Step2_makes_POST_request_with_channel_header_set_to_dash()
+        {
+            MakeStep2().Verify(x => x.Post(
+                It.IsAny<string>(),
+                It.Is<Dictionary<string, string>>(d => d.ContainsKey("x-sib-auth-alt-channel") &&
+                                                       d["x-sib-auth-alt-channel"] == "-")));
+        }
+
+        [Test]
         public void Step2_makes_POST_request_with_x_sib_headers_set()
         {
             MakeStep2("channel", "otp", true).Verify(x => x.Post(
                 It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(d =>
-                                                      d.ContainsKey("x-sib-auth-alt-channel") &&
-                                                      d["x-sib-auth-alt-channel"] == "channel" &&
-                                                      d.ContainsKey("x-sib-auth-alt-otp") &&
-                                                      d["x-sib-auth-alt-otp"] == "otp" &&
-                                                      d.ContainsKey("x-sib-auth-alt-memorize") &&
-                                                      d["x-sib-auth-alt-memorize"] == "1")));
+                It.Is<Dictionary<string, string>>(d => d.ContainsKey("x-sib-auth-alt-channel") &&
+                                                       d["x-sib-auth-alt-channel"] == "channel" &&
+                                                       d.ContainsKey("x-sib-auth-alt-otp") &&
+                                                       d["x-sib-auth-alt-otp"] == "otp" &&
+                                                       d.ContainsKey("x-sib-auth-alt-memorize") &&
+                                                       d["x-sib-auth-alt-memorize"] == "1")));
         }
 
         [Test]
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
-            var result = Client.Step2(credentials: TestData.Credentials,
-                                      otpChannel: null,
-                                      otp: null,
-                                      rememberDevice: false,
-                                      authInfo: TestData.AuthInfo,
-                                      http: http.Object);
+            var result = Client.Step2(TestData.Credentials,
+                                      new Client.OtpOptions(),
+                                      TestData.AuthInfo,
+                                      http.Object);
 
             AssertEqual(result.Session, Session);
         }
@@ -165,12 +171,10 @@ namespace RoboForm.Test
         public void Step2_ignores_extra_cookies()
         {
             var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
-            var result = Client.Step2(credentials : TestData.Credentials,
-                                      otpChannel: null,
-                                      otp: null,
-                                      rememberDevice: false,
-                                      authInfo: TestData.AuthInfo,
-                                      http: http.Object);
+            var result = Client.Step2(TestData.Credentials,
+                                      new Client.OtpOptions(),
+                                      TestData.AuthInfo,
+                                      http.Object);
 
             AssertEqual(result.Session, Session);
         }
@@ -190,12 +194,10 @@ namespace RoboForm.Test
             foreach (var testCase in testCases)
             {
                 var http = SetupStep2(testCase);
-                Assert.That(() => Client.Step2(credentials: TestData.Credentials,
-                                               otpChannel: null,
-                                               otp: null,
-                                               rememberDevice: false,
-                                               authInfo: TestData.AuthInfo,
-                                               http: http.Object),
+                Assert.That(() => Client.Step2(TestData.Credentials,
+                                               new Client.OtpOptions(),
+                                               TestData.AuthInfo,
+                                               http.Object),
                             ExceptionsTest.ThrowsInvalidResponseWithMessage("cookie"));
             }
         }
@@ -204,12 +206,10 @@ namespace RoboForm.Test
         public void Step2_throws_http_unauthorized()
         {
             var http = SetupStep2(HttpStatusCode.Unauthorized);
-            Assert.That(() => Client.Step2(credentials: TestData.Credentials,
-                                           otpChannel: null,
-                                           otp: null,
-                                           rememberDevice: false,
-                                           authInfo: TestData.AuthInfo,
-                                           http: http.Object),
+            Assert.That(() => Client.Step2(TestData.Credentials,
+                                           new Client.OtpOptions(),
+                                           TestData.AuthInfo,
+                                           http.Object),
                         ExceptionsTest.ThrowsIncorrectCredentialsWithMessage("Username or password"));
         }
 
@@ -238,7 +238,7 @@ namespace RoboForm.Test
         public static Mock<IHttpClient> MakeStep1()
         {
             var http = SetupStep1();
-            Client.Step1(TestData.Credentials, null, http.Object);
+            Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object);
             return http;
         }
 
@@ -254,12 +254,10 @@ namespace RoboForm.Test
                                                   bool rememberDevice = false)
         {
             var http = SetupStep2();
-            Client.Step2(credentials : TestData.Credentials,
-                         otpChannel: otpChannel,
-                         otp: otp,
-                         rememberDevice: rememberDevice,
-                         authInfo: TestData.AuthInfo,
-                         http: http.Object);
+            Client.Step2(TestData.Credentials,
+                         new Client.OtpOptions(otpChannel, otp, rememberDevice),
+                         TestData.AuthInfo,
+                         http.Object);
             return http;
         }
 
