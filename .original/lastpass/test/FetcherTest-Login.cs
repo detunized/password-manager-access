@@ -29,8 +29,17 @@ namespace LastPass.Test
         private const string YubikeyPassword = "emdbwzemyisymdnevznyqhqnklaqheaxszzvtnxjrmkb";
 
         private static readonly ResponseOrException IterationsResponse = new ResponseOrException(IterationCount.ToString());
-        private static readonly ResponseOrException OkResponse = new ResponseOrException(string.Format("<ok sessionid=\"{0}\" />",
-                                                                                                       SessionId));
+
+        private static readonly ResponseOrException OkResponse = new ResponseOrException(
+            string.Format("<ok sessionid=\"{0}\" privatekeyenc=\"{1}\" />",
+                          SessionId,
+                          EncryptedPrivateKey));
+
+        private static readonly ResponseOrException OkResponseNoPrivateKey =
+            new ResponseOrException(string.Format("<ok sessionid=\"{0}\" />", SessionId));
+
+        private static readonly ResponseOrException OkResponseBlankPrivateKey =
+            new ResponseOrException(string.Format("<ok sessionid=\"{0}\" privatekeyenc=\"\" />", SessionId));
 
         private static readonly NameValueCollection ExpectedIterationsRequestValues = new NameValueCollection
             {
@@ -44,7 +53,8 @@ namespace LastPass.Test
                 {"xml", "1"},
                 {"username", Username},
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
-                {"iterations", string.Format("{0}", IterationCount)}
+                {"iterations", string.Format("{0}", IterationCount)},
+                {"includeprivatekeyenc", "1"}
             };
 
         private const string IncorrectGoogleAuthenticatorCodeMessage = "Google Authenticator code is missing or incorrect";
@@ -265,6 +275,22 @@ namespace LastPass.Test
             LoginAndVerifySession(YubikeyPassword);
         }
 
+        [Test]
+        public void Login_returns_session_without_private_key()
+        {
+            LoginAndVerifySession(NoMultifactorPassword,
+                                  OkResponseNoPrivateKey,
+                                  expectedPrivateKey: null);
+        }
+
+        [Test]
+        public void Login_returns_session_with_blank_private_key()
+        {
+            LoginAndVerifySession(NoMultifactorPassword,
+                                  OkResponseBlankPrivateKey,
+                                  expectedPrivateKey: null);
+        }
+
         //
         // Helpers
         //
@@ -296,17 +322,25 @@ namespace LastPass.Test
             return webClient;
         }
 
-        // Immitates the successful login sequence.
+        // Imitates the successful login sequence.
         private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword)
         {
             Session session;
             return SuccessfullyLogin(multifactorPassword, out session);
         }
 
-        // Immitates the successful login sequence, returns the session.
+        // Imitates the successful login sequence, returns the session.
         private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword, out Session session)
         {
-            var webClient = SetupLogin(IterationsResponse, OkResponse);
+            return SuccessfullyLogin(multifactorPassword, OkResponse, out session);
+        }
+
+        // Imitates the successful login sequence, returns the session.
+        private static Mock<IWebClient> SuccessfullyLogin(string multifactorPassword,
+                                                          ResponseOrException response,
+                                                          out Session session)
+        {
+            var webClient = SetupLogin(IterationsResponse, response);
             session = Fetcher.Login(Username, Password, multifactorPassword, webClient.Object);
             return webClient;
         }
@@ -374,7 +408,7 @@ namespace LastPass.Test
         }
 
         // The most generic version. It expects on the requests to fail with an exception.
-        // The exception is verified agains the expectations.
+        // The exception is verified against the expectations.
         private static void LoginAndVerifyException(ResponseOrException iterationsResponseOrException,
                                                     ResponseOrException loginResponseOrException,
                                                     LoginException.FailureReason reason,
@@ -410,14 +444,22 @@ namespace LastPass.Test
                              "Did not see login POST request with expected form data and/or URL");
         }
 
-        // Verify the session is correct.
         private static void LoginAndVerifySession(string multifactorPassword)
         {
+            LoginAndVerifySession(multifactorPassword, OkResponse, EncryptedPrivateKey);
+        }
+
+        // Verify the session is correct.
+        private static void LoginAndVerifySession(string multifactorPassword,
+                                                  ResponseOrException response,
+                                                  string expectedPrivateKey)
+        {
             Session session;
-            SuccessfullyLogin(multifactorPassword, out session);
+            SuccessfullyLogin(multifactorPassword, response, out session);
 
             Assert.AreEqual(SessionId, session.Id);
             Assert.AreEqual(IterationCount, session.KeyIterationCount);
+            Assert.AreEqual(expectedPrivateKey, session.EncryptedPrivateKey);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)

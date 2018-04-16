@@ -33,7 +33,9 @@ namespace LastPass
                 var sessionId = ok.Attribute("sessionid");
                 if (sessionId != null)
                 {
-                    return new Session(sessionId.Value, keyIterationCount, "DEADBEEF"); // TODO: Get PK
+                    return new Session(sessionId.Value,
+                                       keyIterationCount,
+                                       GetEncryptedPrivateKey(ok));
                 }
             }
 
@@ -111,7 +113,8 @@ namespace LastPass
                         {"xml", "1"},
                         {"username", username},
                         {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
-                        {"iterations", string.Format("{0}", keyIterationCount)}
+                        {"iterations", string.Format("{0}", keyIterationCount)},
+                        {"includeprivatekeyenc", "1"}
                     };
 
                 if (multifactorPassword != null)
@@ -132,6 +135,20 @@ namespace LastPass
                                          "Invalid XML in response",
                                          e);
             }
+        }
+
+        // Returned value could be missing or blank. In both of these cases we need null.
+        private static string GetEncryptedPrivateKey(XElement ok)
+        {
+            var attr = ok.Attribute("privatekeyenc");
+            if (attr == null)
+                return null;
+
+            var value = attr.Value;
+            if (value.Length == 0)
+                return null;
+
+            return value;
         }
 
         private static LoginException CreateLoginException(XElement error)
