@@ -33,7 +33,7 @@ namespace LastPass
                 var sessionId = ok.Attribute("sessionid");
                 if (sessionId != null)
                 {
-                    return new Session(sessionId.Value, keyIterationCount);
+                    return new Session(sessionId.Value, keyIterationCount, "DEADBEEF"); // TODO: Get PK
                 }
             }
 

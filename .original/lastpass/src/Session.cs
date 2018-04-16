@@ -5,13 +5,15 @@ namespace LastPass
 {
     class Session
     {
-        public Session(string id, int keyIterationCount)
+        public Session(string id, int keyIterationCount, string encryptedPrivateKey)
         {
             Id = id;
             KeyIterationCount = keyIterationCount;
+            EncryptedPrivateKey = encryptedPrivateKey;
         }
 
         public string Id { get; private set; }
         public int KeyIterationCount { get; private set; }
+        public string EncryptedPrivateKey { get; private set; }
     }
 }
