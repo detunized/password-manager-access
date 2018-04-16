@@ -48,6 +48,7 @@ namespace LastPass.Test
 
             Assert.AreEqual(Blob, blob.Bytes);
             Assert.AreEqual(IterationCount, blob.KeyIterationCount);
+            Assert.AreEqual(EncryptedPrivateKey, blob.EncryptedPrivateKey);
         }
 
         [Test]

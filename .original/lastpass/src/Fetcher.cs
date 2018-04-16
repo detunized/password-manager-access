@@ -64,7 +64,9 @@ namespace LastPass
 
             try
             {
-                return new Blob(response.ToUtf8().Decode64(), session.KeyIterationCount);
+                return new Blob(response.ToUtf8().Decode64(),
+                                session.KeyIterationCount,
+                                session.EncryptedPrivateKey);
             }
             catch (FormatException e)
             {

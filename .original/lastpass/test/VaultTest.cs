@@ -25,7 +25,7 @@ namespace LastPass.Test
             foreach (var i in tests)
             {
                 var e = Assert.Throws<ParseException>(() => Vault.Create(
-                    new Blob(TestData.Blob.Take(TestData.Blob.Length - i).ToArray(), 1),
+                    new Blob(TestData.Blob.Take(TestData.Blob.Length - i).ToArray(), 1, ""),
                     username: "",
                     password: ""));
                 Assert.AreEqual(ParseException.FailureReason.CorruptedBlob, e.Reason);
@@ -36,7 +36,7 @@ namespace LastPass.Test
         //[Test]
         public void Create_returns_vault_with_correct_accounts()
         {
-            var vault = Vault.Create(new Blob(TestData.Blob, 1), username: "", password: "");
+            var vault = Vault.Create(new Blob(TestData.Blob, 1, ""), username: "", password: "");
             Assert.AreEqual(TestData.Accounts.Length, vault.Accounts.Length);
             Assert.AreEqual(TestData.Accounts.Select(i => i.Id), vault.Accounts.Select(i => i.Id));
             Assert.AreEqual(TestData.Accounts.Select(i => i.Url), vault.Accounts.Select(i => i.Url));
