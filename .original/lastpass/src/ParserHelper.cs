@@ -68,11 +68,9 @@ namespace LastPass
             });
         }
 
-        public static RSAParameters Parse_PRIK(Chunk chunk, byte[] encryptionKey)
+        public static RSAParameters ParseEcryptedPrivateKey(string encryptedPrivateKey, byte[] encryptionKey)
         {
-            Debug.Assert(chunk.Id == "PRIK");
-
-            var decrypted = DecryptAes256(chunk.Payload.ToUtf8().DecodeHex(),
+            var decrypted = DecryptAes256(encryptedPrivateKey.DecodeHex(),
                                           encryptionKey,
                                           CipherMode.CBC,
                                           encryptionKey.Take(16).ToArray());
@@ -95,7 +93,7 @@ namespace LastPass
             return WithBytes(yetAnotherEnclosingSequence.Value, reader => {
                 Asn1.ExtractItem(reader);
 
-                // There are occasional leading zeroes that need to be stripped.
+                // There are occasional leading zeros that need to be stripped.
                 Func<byte[]> readInteger =
                     () => Asn1.ExtractItem(reader).Value.SkipWhile(i => i == 0).ToArray();
 

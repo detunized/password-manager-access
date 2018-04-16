@@ -29,13 +29,22 @@ namespace LastPass
         // TODO: Extract some of the code and put it some place else.
         private Vault(Blob blob, byte[] encryptionKey)
         {
-            ParserHelper.WithBytes(blob.Bytes, reader => {
-                var chunks = ParserHelper.ExtractChunks(reader);
-                if (!IsComplete(chunks))
-                    throw new ParseException(ParseException.FailureReason.CorruptedBlob, "Blob is truncated");
+            ParserHelper.WithBytes(
+                blob.Bytes,
+                reader =>
+                {
+                    var chunks = ParserHelper.ExtractChunks(reader);
+                    if (!IsComplete(chunks))
+                        throw new ParseException(ParseException.FailureReason.CorruptedBlob,
+                                                 "Blob is truncated");
 
-                Accounts = ParseAccounts(chunks, encryptionKey);
-            });
+                    var privateKey = new RSAParameters();
+                    if (blob.EncryptedPrivateKey != null)
+                        privateKey = ParserHelper.ParseEcryptedPrivateKey(blob.EncryptedPrivateKey,
+                                                                          encryptionKey);
+
+                    Accounts = ParseAccounts(chunks, encryptionKey, privateKey);
+                });
         }
 
         private bool IsComplete(List<ParserHelper.Chunk> chunks)
@@ -43,29 +52,29 @@ namespace LastPass
             return chunks.Count > 0 && chunks.Last().Id == "ENDM" && chunks.Last().Payload.SequenceEqual("OK".ToBytes());
         }
 
-        private Account[] ParseAccounts(List<ParserHelper.Chunk> chunks, byte[] encryptionKey)
+        private Account[] ParseAccounts(List<ParserHelper.Chunk> chunks,
+                                        byte[] encryptionKey,
+                                        RSAParameters privateKey)
         {
             var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
             SharedFolder folder = null;
-            var rsaKey = new RSAParameters();
 
             foreach (var i in chunks)
             {
                 switch (i.Id)
                 {
-                    case "ACCT":
-                        var account = ParserHelper.Parse_ACCT(i,
-                                                              folder == null ? encryptionKey : folder.EncryptionKey,
-                                                              folder);
-                        if (account != null)
-                            accounts.Add(account);
-                        break;
-                    case "PRIK":
-                        rsaKey = ParserHelper.Parse_PRIK(i, encryptionKey);
-                        break;
-                    case "SHAR":
-                        folder = ParserHelper.Parse_SHAR(i, encryptionKey, rsaKey);
-                        break;
+                case "ACCT":
+                    var account = ParserHelper.Parse_ACCT(
+                        i,
+                        folder == null ? encryptionKey : folder.EncryptionKey,
+                        folder);
+
+                    if (account != null)
+                        accounts.Add(account);
+                    break;
+                case "SHAR":
+                    folder = ParserHelper.Parse_SHAR(i, encryptionKey, privateKey);
+                    break;
                 }
             }
 

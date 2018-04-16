@@ -899,7 +899,7 @@ namespace LastPass.Test
         public static readonly byte[] Blob = BlobBase64.Decode64();
         public static readonly byte[] EncryptionKey = "p8utF7ZB8yD06SrtrD4hsdvEOiBU1Y19cr2dhG9DWZg=".Decode64();
 
-        public static readonly byte[] Chunk_PRIK = (
+        public static readonly string EncryptedPrivateKey =
             "fc61ba57136d7ebb627e659a1e1f0ac68686bf4a7774dcc90a80b16383cfe7ef" +
             "4523386da9e62c30e01fcb2d07fccfbf79e30497c72e3b41be1cf4c36cf24b74" +
             "f8ffe41cd4ed301bf56f1229eb7c87ff50d61ecd2f8bedc538a379b983e13ace" +
@@ -977,7 +977,7 @@ namespace LastPass.Test
             "3d7e6fcf6023daf2bcc6d00fe33ce68166fba31a32ebe4a1b4d1e792a9db76b8" +
             "50710ae7d0f3007ab15b94e1a3b97f9cb165457e706d19e40081ce917be0cbbf" +
             "5b78fb81701939efef4f57350c2dbf2fa05ff469aa48b2cac1f496de48cc55c8" +
-            "c2d6db524687475335dd9169a496a4c2").ToBytes();
+            "c2d6db524687475335dd9169a496a4c2";
 
         public static readonly byte[] RsaD = (
             "oCZKcCWHrddSg44/MMadv3nW6VdMiR4Tpw13yvdO2XgFUX8Rt2o/mL1g+KYD" +

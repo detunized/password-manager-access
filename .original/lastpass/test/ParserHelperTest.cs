@@ -27,10 +27,10 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Parse_PRIK_returns_private_key()
+        public void ParseEcryptedPrivateKey_returns_private_key()
         {
-            var chunk = new ParserHelper.Chunk("PRIK", TestData.Chunk_PRIK);
-            var rsa = ParserHelper.Parse_PRIK(chunk, TestData.EncryptionKey);
+            var rsa = ParserHelper.ParseEcryptedPrivateKey(TestData.EncryptedPrivateKey,
+                                                           TestData.EncryptionKey);
 
             Assert.AreEqual(TestData.RsaD, rsa.D);
             Assert.AreEqual(TestData.RsaDP, rsa.DP);
@@ -68,10 +68,10 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void Parse_PRIK_throws_on_invalid_chunk()
+        public void ParseEcryptedPrivateKey_throws_on_invalid_chunk()
         {
-            var chunk = new ParserHelper.Chunk("PRIK", "".ToBytes());
-            var e = Assert.Throws<ParseException>(() => ParserHelper.Parse_PRIK(chunk, TestData.EncryptionKey));
+            var e = Assert.Throws<ParseException>(
+                () => ParserHelper.ParseEcryptedPrivateKey("", TestData.EncryptionKey));
             Assert.AreEqual(ParseException.FailureReason.CorruptedBlob, e.Reason);
             Assert.AreEqual("Failed to decrypt private key", e.Message);
         }
