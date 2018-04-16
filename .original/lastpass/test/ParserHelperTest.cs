@@ -27,22 +27,6 @@ namespace LastPass.Test
         }
 
         [Test]
-        public void ParseEcryptedPrivateKey_returns_private_key()
-        {
-            var rsa = ParserHelper.ParseEcryptedPrivateKey(TestData.EncryptedPrivateKey,
-                                                           TestData.EncryptionKey);
-
-            Assert.AreEqual(TestData.RsaD, rsa.D);
-            Assert.AreEqual(TestData.RsaDP, rsa.DP);
-            Assert.AreEqual(TestData.RsaDQ, rsa.DQ);
-            Assert.AreEqual(TestData.RsaExponent, rsa.Exponent);
-            Assert.AreEqual(TestData.RsaInverseQ, rsa.InverseQ);
-            Assert.AreEqual(TestData.RsaModulus, rsa.Modulus);
-            Assert.AreEqual(TestData.RsaP, rsa.P);
-            Assert.AreEqual(TestData.RsaQ, rsa.Q);
-        }
-
-        [Test]
         public void Parse_SHAR_returns_folder_key_when_aes_encrypted()
         {
             var id = "id";
@@ -65,6 +49,22 @@ namespace LastPass.Test
             Assert.AreEqual(id, folder.Id);
             Assert.AreEqual(name, folder.Name);
             Assert.AreEqual(key, folder.EncryptionKey);
+        }
+
+        [Test]
+        public void ParseEcryptedPrivateKey_returns_private_key()
+        {
+            var rsa = ParserHelper.ParseEcryptedPrivateKey(TestData.EncryptedPrivateKey,
+                                                           TestData.EncryptionKey);
+
+            Assert.AreEqual(TestData.RsaD, rsa.D);
+            Assert.AreEqual(TestData.RsaDP, rsa.DP);
+            Assert.AreEqual(TestData.RsaDQ, rsa.DQ);
+            Assert.AreEqual(TestData.RsaExponent, rsa.Exponent);
+            Assert.AreEqual(TestData.RsaInverseQ, rsa.InverseQ);
+            Assert.AreEqual(TestData.RsaModulus, rsa.Modulus);
+            Assert.AreEqual(TestData.RsaP, rsa.P);
+            Assert.AreEqual(TestData.RsaQ, rsa.Q);
         }
 
         [Test]

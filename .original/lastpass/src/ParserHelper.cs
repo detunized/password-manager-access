@@ -68,6 +68,42 @@ namespace LastPass
             });
         }
 
+        // TODO: Write a test for the RSA case!
+        public static SharedFolder Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
+        {
+            Debug.Assert(chunk.Id == "SHAR");
+
+            return WithBytes(chunk.Payload, reader =>
+            {
+                var id = ReadItem(reader).ToUtf8();
+                var rsaEncryptedFolderKey = ReadItem(reader);
+                var encryptedName = ReadItem(reader);
+                2.Times(() => SkipItem(reader));
+                var aesEncryptedFolderKey = ReadItem(reader);
+
+                byte[] key = null;
+
+                // Shared folder encryption key might come already in pre-decrypted form,
+                // where it's only AES encrypted with the regular encryption key.
+                if (aesEncryptedFolderKey.Length > 0)
+                {
+                    key = DecryptAes256Plain(aesEncryptedFolderKey, encryptionKey).DecodeHex();
+                }
+                else
+                {
+                    // When the key is blank, then there's an RSA encrypted key, which has to
+                    // be decrypted first before use.
+                    using (var rsa = new RSACryptoServiceProvider())
+                    {
+                        rsa.ImportParameters(rsaKey);
+                        key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
+                    }
+                }
+
+                return new SharedFolder(id, DecryptAes256Base64(encryptedName, key), key);
+            });
+        }
+
         public static RSAParameters ParseEcryptedPrivateKey(string encryptedPrivateKey, byte[] encryptionKey)
         {
             var decrypted = DecryptAes256(encryptedPrivateKey.DecodeHex(),
@@ -108,42 +144,6 @@ namespace LastPass
                     DQ = readInteger(),
                     InverseQ = readInteger()
                 };
-            });
-        }
-
-        // TODO: Write a test for the RSA case!
-        public static SharedFolder Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
-        {
-            Debug.Assert(chunk.Id == "SHAR");
-
-            return WithBytes(chunk.Payload, reader =>
-            {
-                var id = ReadItem(reader).ToUtf8();
-                var rsaEncryptedFolderKey = ReadItem(reader);
-                var encryptedName = ReadItem(reader);
-                2.Times(() => SkipItem(reader));
-                var aesEncryptedFolderKey = ReadItem(reader);
-
-                byte[] key = null;
-
-                // Shared folder encryption key might come already in pre-decrypted form,
-                // where it's only AES encrypted with the regular encryption key.
-                if (aesEncryptedFolderKey.Length > 0)
-                {
-                    key = DecryptAes256Plain(aesEncryptedFolderKey, encryptionKey).DecodeHex();
-                }
-                else
-                {
-                    // When the key is blank, then there's an RSA encrypted key, which has to
-                    // be decrypted first before use.
-                    using (var rsa = new RSACryptoServiceProvider())
-                    {
-                        rsa.ImportParameters(rsaKey);
-                        key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
-                    }
-                }
-
-                return new SharedFolder(id, DecryptAes256Base64(encryptedName, key), key);
             });
         }
 
