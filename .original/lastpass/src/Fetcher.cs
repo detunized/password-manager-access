@@ -28,7 +28,7 @@ namespace LastPass
             var response = Login(username, password, multifactorPassword, keyIterationCount, webClient);
 
             // Parse the response
-            var ok = response.XPathSelectElement("ok");
+            var ok = response.XPathSelectElement("response/ok");
             if (ok != null)
             {
                 var sessionId = ok.Attribute("sessionid");
@@ -56,7 +56,7 @@ namespace LastPass
             byte[] response;
             try
             {
-                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc=android");
+                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc=cli");
             }
             catch (WebException e)
             {
@@ -111,9 +111,8 @@ namespace LastPass
             {
                 var parameters = new NameValueCollection
                     {
-                        {"method", "mobile"},
-                        {"web", "1"},
-                        {"xml", "1"},
+                        {"method", "cli"},
+                        {"xml", "2"},
                         {"username", username},
                         {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
                         {"iterations", string.Format("{0}", keyIterationCount)},
@@ -182,7 +181,7 @@ namespace LastPass
                 case "googleauthfailed":
                     return new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
                                               "Google Authenticator code is missing or incorrect");
-                case "yubikeyrestricted":
+                case "otprequired":
                     return new LoginException(LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                                               "Yubikey password is missing or incorrect");
                 case "outofbandrequired":

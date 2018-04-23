@@ -31,15 +31,17 @@ namespace LastPass.Test
         private static readonly ResponseOrException IterationsResponse = new ResponseOrException(IterationCount.ToString());
 
         private static readonly ResponseOrException OkResponse = new ResponseOrException(
-            string.Format("<ok sessionid=\"{0}\" privatekeyenc=\"{1}\" />",
+            string.Format("<response><ok sessionid=\"{0}\" privatekeyenc=\"{1}\" /></response>",
                           SessionId,
                           EncryptedPrivateKey));
 
-        private static readonly ResponseOrException OkResponseNoPrivateKey =
-            new ResponseOrException(string.Format("<ok sessionid=\"{0}\" />", SessionId));
+        private static readonly ResponseOrException OkResponseNoPrivateKey = new ResponseOrException(
+            string.Format("<response><ok sessionid=\"{0}\" /></response>",
+                          SessionId));
 
-        private static readonly ResponseOrException OkResponseBlankPrivateKey =
-            new ResponseOrException(string.Format("<ok sessionid=\"{0}\" privatekeyenc=\"\" />", SessionId));
+        private static readonly ResponseOrException OkResponseBlankPrivateKey = new ResponseOrException(
+            string.Format("<response><ok sessionid=\"{0}\" privatekeyenc=\"\" /></response>",
+                          SessionId));
 
         private static readonly NameValueCollection ExpectedIterationsRequestValues = new NameValueCollection
             {
@@ -48,9 +50,8 @@ namespace LastPass.Test
 
         private static readonly NameValueCollection ExpectedLoginRequestValues = new NameValueCollection
             {
-                {"method", "mobile"},
-                {"web", "1"},
-                {"xml", "1"},
+                {"method", "cli"},
+                {"xml", "2"},
                 {"username", Username},
                 {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
                 {"iterations", string.Format("{0}", IterationCount)},
@@ -144,7 +145,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_missing_yubikey_password()
         {
-            LoginAndVerifyExceptionInLoginRequest(FormatResponse("yubikeyrestricted",
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("otprequired",
                                                                  "Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication."),
                                                   LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                                                   IncorrectYubikeyPasswordMessage);
@@ -153,7 +154,7 @@ namespace LastPass.Test
         [Test]
         public void Login_failed_because_of_incorrect_yubikey_password()
         {
-            LoginAndVerifyExceptionInLoginRequest(FormatResponse("yubikeyrestricted",
+            LoginAndVerifyExceptionInLoginRequest(FormatResponse("otprequired",
                                                                  "Your account settings have restricted you from logging in from mobile devices that do not support YubiKey authentication."),
                                                   LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                                                   IncorrectYubikeyPasswordMessage);
