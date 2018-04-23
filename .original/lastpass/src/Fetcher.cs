@@ -10,6 +10,7 @@ using System.Xml.XPath;
 
 namespace LastPass
 {
+    // TODO: Implement logout!
     static class Fetcher
     {
         public static Session Login(string username, string password, string multifactorPassword)
