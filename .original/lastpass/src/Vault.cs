@@ -22,7 +22,15 @@ namespace LastPass
 
         public static Blob Download(string username, string password, string multifactorPassword = null)
         {
-            return Fetcher.Fetch(Fetcher.Login(username, password, multifactorPassword));
+            var session = Fetcher.Login(username, password, multifactorPassword);
+            try
+            {
+                return Fetcher.Fetch(session);
+            }
+            finally
+            {
+                Fetcher.Logout(session);
+            }
         }
 
         // TODO: Make a test for this!
