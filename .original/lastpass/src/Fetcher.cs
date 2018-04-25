@@ -10,7 +10,6 @@ using System.Xml.XPath;
 
 namespace LastPass
 {
-    // TODO: Implement logout!
     static class Fetcher
     {
         public static Session Login(string username, string password, string multifactorPassword)
@@ -43,6 +42,32 @@ namespace LastPass
             throw CreateLoginException(response.XPathSelectElement("response/error"));
         }
 
+        public static void Logout(Session session)
+        {
+            using (var webClient = new WebClient())
+                Logout(session, webClient);
+        }
+
+        public static void Logout(Session session, IWebClient webClient)
+        {
+            try
+            {
+                SetSessionCookies(webClient, session);
+                webClient.UploadValues("https://lastpass.com/logout.php",
+                                       new NameValueCollection
+                                       {
+                                           {"method", "cli"},
+                                           {"noredirect", "1"}
+                                       });
+            }
+            catch (WebException e)
+            {
+                throw new LogoutException(LogoutException.FailureReason.WebException,
+                                          "WebException occurred",
+                                          e);
+            }
+        }
+
         public static Blob Fetch(Session session)
         {
             using (var webClient = new WebClient())
@@ -51,11 +76,10 @@ namespace LastPass
 
         public static Blob Fetch(Session session, IWebClient webClient)
         {
-            webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
-
             byte[] response;
             try
             {
+                SetSessionCookies(webClient, session);
                 response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc=cli");
             }
             catch (WebException e)
@@ -204,6 +228,11 @@ namespace LastPass
 
             // Nothing we know, just the error element
             return new LoginException(LoginException.FailureReason.LastPassUnknown, "Unknown reason");
+        }
+
+        private static void SetSessionCookies(IWebClient webClient, Session session)
+        {
+            webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
         }
     }
 }
