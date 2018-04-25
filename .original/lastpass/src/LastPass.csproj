@@ -47,6 +47,7 @@
     <Compile Include="FetchException.cs" />
     <Compile Include="IWebClient.cs" />
     <Compile Include="LoginException.cs" />
+    <Compile Include="LogoutException.cs" />
     <Compile Include="ParseException.cs" />
     <Compile Include="ParserHelper.cs" />
     <Compile Include="Pbkdf2.cs" />
@@ -56,7 +57,7 @@
     <Compile Include="WebClient.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>

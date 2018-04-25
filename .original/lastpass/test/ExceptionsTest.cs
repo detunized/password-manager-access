@@ -13,6 +13,7 @@ namespace LastPass.Test
         private readonly Exception _innerException = new Exception();
         private const FetchException.FailureReason _fetchReason = FetchException.FailureReason.InvalidResponse;
         private const LoginException.FailureReason _loginReason = LoginException.FailureReason.InvalidResponse;
+        private const LogoutException.FailureReason _logoutReason = LogoutException.FailureReason.WebException;
         private const ParseException.FailureReason _parseReason = ParseException.FailureReason.CorruptedBlob;
 
         [Test]
@@ -65,6 +66,24 @@ namespace LastPass.Test
             Assert.AreEqual(_message, e.Message);
             Assert.AreSame(_innerException, e.InnerException);
             Assert.AreEqual(_loginReason, e.Reason);
+        }
+
+        [Test]
+        public void LogoutException_with_message()
+        {
+            var e = new LogoutException(_logoutReason, _message);
+            Assert.AreEqual(_message, e.Message);
+            Assert.IsNull(e.InnerException);
+            Assert.AreEqual(_logoutReason, e.Reason);
+        }
+
+        [Test]
+        public void LogoutException_with_message_and_inner_exception()
+        {
+            var e = new LogoutException(_logoutReason, _message, _innerException);
+            Assert.AreEqual(_message, e.Message);
+            Assert.AreSame(_innerException, e.InnerException);
+            Assert.AreEqual(_logoutReason, e.Reason);
         }
 
         [Test]
