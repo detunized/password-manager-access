@@ -19,7 +19,7 @@ namespace LastPass.Test
         private const string SessionId = "53ru,Hb713QnEVM5zWZ16jMvxS0";
         private const string EncryptedPrivateKey = "DEADBEEF";
 
-        private const string WebExceptionMessage = "WebException occured";
+        private const string WebExceptionMessage = "WebException occurred";
 
         class ResponseOrException
         {

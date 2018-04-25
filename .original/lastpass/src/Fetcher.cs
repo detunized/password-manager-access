@@ -60,7 +60,7 @@ namespace LastPass
             }
             catch (WebException e)
             {
-                throw new FetchException(FetchException.FailureReason.WebException, "WebException occured", e);
+                throw new FetchException(FetchException.FailureReason.WebException, "WebException occurred", e);
             }
 
             try
@@ -89,7 +89,7 @@ namespace LastPass
             }
             catch (WebException e)
             {
-                throw new LoginException(LoginException.FailureReason.WebException, "WebException occured", e);
+                throw new LoginException(LoginException.FailureReason.WebException, "WebException occurred", e);
             }
             catch (FormatException e)
             {
@@ -128,7 +128,7 @@ namespace LastPass
             catch (WebException e)
             {
                 throw new LoginException(LoginException.FailureReason.WebException,
-                                         "WebException occured",
+                                         "WebException occurred",
                                          e);
             }
             catch (XmlException e)
