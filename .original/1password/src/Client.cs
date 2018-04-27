@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -16,9 +17,17 @@ namespace OnePassword
         public const string ClientVersion = "10600"; // TODO: This needs to be updated every now and then.
         public const string ClientId = ClientName + "/" + ClientVersion;
 
+        public enum Region
+        {
+            Global,
+            Europe,
+            Canada
+        }
+
         // Public entry point to the library.
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
+        // Valid domains are: my.1password.com, my.1password.eu, my.1password.ca
         public static Vault[] OpenAllVaults(string username,
                                             string password,
                                             string accountKey,
@@ -26,6 +35,21 @@ namespace OnePassword
                                             string domain = DefaultDomain)
         {
             return OpenAllVaults(username, password, accountKey, uuid, domain, new HttpClient());
+        }
+
+        // Alternative entry point with a predefined region
+        public static Vault[] OpenAllVaults(string username,
+                                            string password,
+                                            string accountKey,
+                                            string uuid,
+                                            Region region)
+        {
+            return OpenAllVaults(username,
+                                 password,
+                                 accountKey,
+                                 uuid,
+                                 GetDomain(region),
+                                 new HttpClient());
         }
 
         public static Vault[] OpenAllVaults(string username,
@@ -42,6 +66,21 @@ namespace OnePassword
         public static string GenerateRandomUuid()
         {
             return Crypto.RandomUuid();
+        }
+
+        public static string GetDomain(Region region)
+        {
+            switch (region)
+            {
+            case Region.Global:
+                return "my.1password.com";
+            case Region.Europe:
+                return "my.1password.eu";
+            case Region.Canada:
+                return "my.1password.ca";
+            }
+
+            throw new ArgumentException("Region values is invalid");
         }
 
         //
