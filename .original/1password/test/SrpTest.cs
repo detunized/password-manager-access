@@ -154,7 +154,7 @@ namespace OnePassword.Test
         private static JsonHttpClient SetupJsonHttp(string fixture)
         {
             return new JsonHttpClient(JsonHttpClientTest.SetupPostWithFixture(fixture).Object,
-                                      Client.ApiUrl);
+                                      Client.GetApiUrl(Client.DefaultDomain));
         }
     }
 }

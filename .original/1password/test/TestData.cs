@@ -9,11 +9,13 @@ namespace OnePassword.Test
         public const string Password = "password";
         public const string AccountKey = "A3-RTN9SA-DY9445Y5FF96X6E7B5GPFA95R9";
         public const string Uuid = "rz64r4uhyvgew672nm4ncaqonq";
+        public const string Domain = "my.1password.com";
 
         public static readonly ClientInfo ClientInfo = new ClientInfo(username: Username,
                                                                       password: Password,
                                                                       accountKey: AccountKey,
-                                                                      uuid: Uuid);
+                                                                      uuid: Uuid,
+                                                                      domain: Domain);
 
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
         public static readonly Session Session = MakeSession();

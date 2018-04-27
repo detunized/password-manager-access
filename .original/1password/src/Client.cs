@@ -1,7 +1,6 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -12,7 +11,7 @@ namespace OnePassword
 {
     public static class Client
     {
-        public const string ApiUrl = "https://my.1password.com/api";
+        public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password Extension";
         public const string ClientVersion = "10600"; // TODO: This needs to be updated every now and then.
         public const string ClientId = ClientName + "/" + ClientVersion;
@@ -23,18 +22,20 @@ namespace OnePassword
         public static Vault[] OpenAllVaults(string username,
                                             string password,
                                             string accountKey,
-                                            string uuid)
+                                            string uuid,
+                                            string domain = DefaultDomain)
         {
-            return OpenAllVaults(username, password, accountKey, uuid, new HttpClient());
+            return OpenAllVaults(username, password, accountKey, uuid, domain, new HttpClient());
         }
 
         public static Vault[] OpenAllVaults(string username,
                                             string password,
                                             string accountKey,
                                             string uuid,
+                                            string domain,
                                             IHttpClient http)
         {
-            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid), http);
+            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain), http);
         }
 
         // Use this function to generate a unique random identifier for each new client.
@@ -50,14 +51,14 @@ namespace OnePassword
         internal static Vault[] OpenAllVaults(ClientInfo clientInfo, IHttpClient http)
         {
             var keychain = new Keychain();
-            var jsonHttp = MakeJsonClient(http);
+            var jsonHttp = MakeJsonClient(http, GetApiUrl(clientInfo.Domain));
 
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo, jsonHttp);
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
-            jsonHttp = MakeJsonClient(http, session.Id);
+            jsonHttp = MakeJsonClient(jsonHttp, session.Id);
 
             // Step 2: Perform SRP exchange
             var sessionKey = Srp.Perform(clientInfo, session, jsonHttp);
@@ -96,9 +97,16 @@ namespace OnePassword
             }
         }
 
-        internal static JsonHttpClient MakeJsonClient(IHttpClient http, string sessionId = null)
+        internal static string GetApiUrl(string domain)
         {
-            var jsonHttp = new JsonHttpClient(http, ApiUrl);
+            return string.Format("https://{0}/api", domain);
+        }
+
+        internal static JsonHttpClient MakeJsonClient(IHttpClient http,
+                                                      string baseUrl,
+                                                      string sessionId = null)
+        {
+            var jsonHttp = new JsonHttpClient(http, baseUrl);
             jsonHttp.Headers["X-AgileBits-Client"] = ClientId;
 
             if (sessionId != null)
@@ -107,9 +115,10 @@ namespace OnePassword
             return jsonHttp;
         }
 
-        internal static JsonHttpClient MakeJsonClient(JsonHttpClient jsonHttp, string sessionId = null)
+        internal static JsonHttpClient MakeJsonClient(JsonHttpClient jsonHttp,
+                                                      string sessionId = null)
         {
-            return MakeJsonClient(jsonHttp.Http, sessionId);
+            return MakeJsonClient(jsonHttp.Http, jsonHttp.BaseUrl, sessionId);
         }
 
         internal static Session StartNewSession(ClientInfo clientInfo, JsonHttpClient jsonHttp)

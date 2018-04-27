@@ -1,7 +1,6 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Collections.Generic;
 using Moq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -249,6 +248,29 @@ namespace OnePassword.Test
             Assert.That(key.Key, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void GetApiUrl_returns_correct_url()
+        {
+            Assert.That(Client.GetApiUrl("my.1password.com"),
+                        Is.EqualTo("https://my.1password.com/api"));
+            Assert.That(Client.GetApiUrl("my.1password.eu"),
+                        Is.EqualTo("https://my.1password.eu/api"));
+        }
+
+        [Test]
+        public void MakeJsonClient_sets_base_url()
+        {
+            var http = Client.MakeJsonClient(new HttpClient(), "https://base.url");
+            Assert.That(http.BaseUrl, Is.EqualTo("https://base.url"));
+        }
+
+        [Test]
+        public void MakeJsonClient_copies_base_url()
+        {
+            var http = Client.MakeJsonClient(new JsonHttpClient(new HttpClient(), "https://base.url"));
+            Assert.That(http.BaseUrl, Is.EqualTo("https://base.url"));
+        }
+
         //
         // Data
         //
@@ -261,7 +283,8 @@ namespace OnePassword.Test
             username: "detunized@gmail.com",
             password: "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
             accountKey: "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
-            uuid: "rz64r4uhyvgew672nm4ncaqonq");
+            uuid: "rz64r4uhyvgew672nm4ncaqonq",
+            domain: "my.1password.com");
 
         //
         // Helpers
@@ -269,7 +292,7 @@ namespace OnePassword.Test
 
         private static JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
         {
-            return new JsonHttpClient(http.Object, Client.ApiUrl);
+            return new JsonHttpClient(http.Object, Client.GetApiUrl(Client.DefaultDomain));
         }
     }
 }

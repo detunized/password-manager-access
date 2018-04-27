@@ -12,17 +12,23 @@ namespace Example
         public static void Main(string[] args)
         {
             // Read 1Password credentials from a file
-            // The file should contain 4 lines: username, password, account key and the client UUID
+            // The file should contain 5 lines:
+            //   - username
+            //   - password
+            //   - account key
+            //   - client UUID
+            //   - API domain (my.1password.com, my.1password.eu or my.1password.ca)
             // See credentials.txt.example for an example.
             var credentials = File.ReadAllLines("../../credentials.txt");
             var username = credentials[0];
             var password = credentials[1];
             var accountKey = credentials[2];
             var uuid = credentials[3];
+            var domain = credentials[4];
 
             try
             {
-                DumpAllVaults(username, password, accountKey, uuid);
+                DumpAllVaults(username, password, accountKey, uuid, domain);
             }
             catch (ClientException e)
             {
@@ -30,9 +36,13 @@ namespace Example
             }
         }
 
-        private static void DumpAllVaults(string username, string password, string accountKey, string uuid)
+        private static void DumpAllVaults(string username,
+                                          string password,
+                                          string accountKey,
+                                          string uuid,
+                                          string domain)
         {
-            var vaults = Client.OpenAllVaults(username, password, accountKey, uuid);
+            var vaults = Client.OpenAllVaults(username, password, accountKey, uuid, domain);
 
             foreach (var vault in vaults)
             {

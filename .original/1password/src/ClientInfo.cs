@@ -9,13 +9,19 @@ namespace OnePassword
         public readonly string Password;
         public readonly AccountKey AccountKey;
         public readonly string Uuid;
+        public readonly string Domain;
 
-        public ClientInfo(string username, string password, string accountKey, string uuid)
+        public ClientInfo(string username,
+                          string password,
+                          string accountKey,
+                          string uuid,
+                          string domain)
         {
             Username = username;
             Password = password;
             AccountKey = AccountKey.Parse(accountKey);
             Uuid = uuid;
+            Domain = domain;
         }
     }
 }
