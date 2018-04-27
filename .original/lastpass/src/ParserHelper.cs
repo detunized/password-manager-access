@@ -25,7 +25,7 @@ namespace LastPass
         }
 
         // May return null when the chunk does not represent an account.
-        // All secure notes are ACCTs but not all of them strore account information.
+        // All secure notes are ACCTs but not all of them store account information.
         //
         // TODO: Add a test for the folder case!
         // TODO: Add a test case that covers secure note account!

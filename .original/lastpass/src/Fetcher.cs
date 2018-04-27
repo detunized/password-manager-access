@@ -20,7 +20,7 @@ namespace LastPass
 
         public static Session Login(string username, string password, string multifactorPassword, IWebClient webClient)
         {
-            // First we need to request PBKDF2 key interation count
+            // First we need to request PBKDF2 key iteration count
             var keyIterationCount = RequestIterationCount(username, webClient);
 
             // Knowing the iterations count we can hash the password and log in

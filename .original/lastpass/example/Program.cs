@@ -22,7 +22,7 @@ namespace Example
             Vault vault = null;
             try
             {
-                // Frist try basic authentication
+                // First try basic authentication
                 vault = Vault.Create(username, password);
             }
             catch (LoginException e)
