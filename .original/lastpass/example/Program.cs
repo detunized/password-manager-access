@@ -9,6 +9,25 @@ namespace Example
 {
     class Program
     {
+        // Very simple text based user interface that demonstrates how to respond to
+        // to Vault UI requests.
+        private class TextUi: Ui
+        {
+            public override string ProvideSecondFactorPassword(SecondFactorMethod method)
+            {
+                return GetAnswer(string.Format("Please enter {0} code", method));
+            }
+
+            private static string GetAnswer(string prompt)
+            {
+                Console.WriteLine(prompt);
+                Console.Write("> ");
+                var input = Console.ReadLine();
+
+                return string.IsNullOrEmpty(input) ? null : input.Trim();
+            }
+        }
+
         static void Main(string[] args)
         {
             // Read LastPass credentials from a file
@@ -18,58 +37,28 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
-            // Fetch and create the vault from LastPass
-            Vault vault = null;
             try
             {
-                // First try basic authentication
-                vault = Vault.Create(username, password);
+                // Fetch and create the vault from LastPass
+                var vault = Vault.Create(username, password, new TextUi());
+
+                // Dump all the accounts
+                for (var i = 0; i < vault.Accounts.Length; ++i)
+                {
+                    var account = vault.Accounts[i];
+                    Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
+                                      i + 1,
+                                      account.Id,
+                                      account.Name,
+                                      account.Username,
+                                      account.Password,
+                                      account.Url,
+                                      account.Group);
+                }
             }
             catch (LoginException e)
             {
-                switch (e.Reason)
-                {
-                case LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode:
-                    {
-                        // Request Google Authenticator code
-                        Console.Write("Enter Google Authenticator code: ");
-                        var code = Console.ReadLine();
-
-                        // Now try with GAuth code
-                        vault = Vault.Create(username, password, code);
-
-                        break;
-                    }
-                case LoginException.FailureReason.LastPassIncorrectYubikeyPassword:
-                    {
-                        // Request Yubikey password
-                        Console.Write("Enter Yubikey password: ");
-                        var yubikeyPassword = Console.ReadLine();
-
-                        // Now try with Yubikey password
-                        vault = Vault.Create(username, password, yubikeyPassword);
-
-                        break;
-                    }
-                default:
-                    {
-                        throw;
-                    }
-                }
-            }
-
-            // Dump all the accounts
-            for (var i = 0; i < vault.Accounts.Length; ++i)
-            {
-                var account = vault.Accounts[i];
-                Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
-                                  i + 1,
-                                  account.Id,
-                                  account.Name,
-                                  account.Username,
-                                  account.Password,
-                                  account.Url,
-                                  account.Group);
+                Console.WriteLine("Something went wrong: {0}", e);
             }
         }
     }

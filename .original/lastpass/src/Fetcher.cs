@@ -12,34 +12,61 @@ namespace LastPass
 {
     static class Fetcher
     {
-        public static Session Login(string username, string password, string multifactorPassword)
+        public static Session Login(string username, string password, Ui ui)
         {
             using (var webClient = new WebClient())
-                return Login(username, password, multifactorPassword, webClient);
+                return Login(username, password, ui, webClient);
         }
 
-        public static Session Login(string username, string password, string multifactorPassword, IWebClient webClient)
+        // TODO: Write tests for this. Possibly the whole current concept of how it's tested
+        //       should be rethought. Maybe should simply tests against a fake server.
+        public static Session Login(string username, string password, Ui ui, IWebClient webClient)
         {
-            // First we need to request PBKDF2 key iteration count
+            // 1. First we need to request PBKDF2 key iteration count.
             var keyIterationCount = RequestIterationCount(username, webClient);
 
-            // Knowing the iterations count we can hash the password and log in
-            var response = Login(username, password, multifactorPassword, keyIterationCount, webClient);
+            // 2. Knowing the iterations count we can hash the password and log in.
+            //    One the first attempt simply with the username and password.
+            var response = Login(username, password, null, keyIterationCount, webClient);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount);
+            if (session != null)
+                return session;
 
-            // Parse the response
-            var ok = response.XPathSelectElement("response/ok");
-            if (ok != null)
+            string otp = null;
+            switch (response.XPathEvaluate("string(response/error/@cause)") as string)
             {
-                var sessionId = ok.Attribute("sessionid");
-                if (sessionId != null)
-                {
-                    return new Session(sessionId.Value,
-                                       keyIterationCount,
-                                       GetEncryptedPrivateKey(ok));
-                }
+            case "googleauthrequired":
+                otp = ui.ProvideSecondFactorPassword(Ui.SecondFactorMethod.GoogleAuth);
+                break;
+            case "otprequired":
+                otp = ui.ProvideSecondFactorPassword(Ui.SecondFactorMethod.Yubikey);
+                break;
+            default:
+                throw CreateLoginException(response);
             }
 
-            throw CreateLoginException(response.XPathSelectElement("response/error"));
+            // 2. Now try with a one time password
+            response = Login(username, password, otp, keyIterationCount, webClient);
+            session = ExtractSessionFromLoginResponse(response, keyIterationCount);
+            if (session != null)
+                return session;
+
+            throw CreateLoginException(response);
+        }
+
+        private static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount)
+        {
+            var ok = response.XPathSelectElement("response/ok");
+            if (ok == null)
+                return null;
+
+            var sessionId = ok.Attribute("sessionid");
+            if (sessionId == null)
+                return null;
+
+            return new Session(sessionId.Value,
+                               keyIterationCount,
+                               GetEncryptedPrivateKey(ok));
         }
 
         public static void Logout(Session session)
@@ -127,24 +154,25 @@ namespace LastPass
 
         private static XDocument Login(string username,
                                        string password,
-                                       string multifactorPassword,
+                                       string secondFactorPassword,
                                        int keyIterationCount,
                                        IWebClient webClient)
         {
             try
             {
                 var parameters = new NameValueCollection
-                    {
-                        {"method", "cli"},
-                        {"xml", "2"},
-                        {"username", username},
-                        {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
-                        {"iterations", string.Format("{0}", keyIterationCount)},
-                        {"includeprivatekeyenc", "1"}
-                    };
+                {
+                    {"method", "cli"},
+                    {"xml", "2"},
+                    {"username", username},
+                    {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
+                    {"iterations", string.Format("{0}", keyIterationCount)},
+                    {"includeprivatekeyenc", "1"},
+                    {"outofbandsupported", "1"},
+                };
 
-                if (multifactorPassword != null)
-                    parameters["otp"] = multifactorPassword;
+                if (secondFactorPassword != null)
+                    parameters["otp"] = secondFactorPassword;
 
                 return XDocument.Parse(webClient.UploadValues("https://lastpass.com/login.php",
                                                               parameters).ToUtf8());
@@ -177,13 +205,13 @@ namespace LastPass
             return value;
         }
 
-        private static LoginException CreateLoginException(XElement error)
+        private static LoginException CreateLoginException(XDocument response)
         {
             // XML is valid but there's nothing in it we can understand
+            var error = response.XPathSelectElement("response/error");
             if (error == null)
-            {
-                return new LoginException(LoginException.FailureReason.UnknownResponseSchema, "Unknown response schema");
-            }
+                return new LoginException(LoginException.FailureReason.UnknownResponseSchema,
+                                          "Unknown response schema");
 
             // Both of these are optional
             var cause = error.Attribute("cause");
@@ -201,11 +229,10 @@ namespace LastPass
                 case "unknownpassword":
                     return new LoginException(LoginException.FailureReason.LastPassInvalidPassword,
                                               "Invalid password");
-                case "googleauthrequired":
                 case "googleauthfailed":
                     return new LoginException(LoginException.FailureReason.LastPassIncorrectGoogleAuthenticatorCode,
                                               "Google Authenticator code is missing or incorrect");
-                case "otprequired":
+                case "otpfailed":
                     return new LoginException(LoginException.FailureReason.LastPassIncorrectYubikeyPassword,
                                               "Yubikey password is missing or incorrect");
                 case "outofbandrequired":

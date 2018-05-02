@@ -7,11 +7,23 @@ using System.Security.Cryptography;
 
 namespace LastPass
 {
+    public abstract class Ui
+    {
+        public enum SecondFactorMethod
+        {
+            GoogleAuth,
+            Yubikey,
+            // TODO: See which other methods should be supported.
+        }
+
+        public abstract string ProvideSecondFactorPassword(SecondFactorMethod method);
+    }
+
     public class Vault
     {
-        public static Vault Create(string username, string password, string multifactorPassword = null)
+        public static Vault Create(string username, string password, Ui ui)
         {
-            return Create(Download(username, password, multifactorPassword), username, password);
+            return Create(Download(username, password, ui), username, password);
         }
 
         // TODO: Make a test for this!
@@ -20,9 +32,9 @@ namespace LastPass
             return new Vault(blob, blob.MakeEncryptionKey(username, password));
         }
 
-        public static Blob Download(string username, string password, string multifactorPassword = null)
+        public static Blob Download(string username, string password, Ui ui)
         {
-            var session = Fetcher.Login(username, password, multifactorPassword);
+            var session = Fetcher.Login(username, password, ui);
             try
             {
                 return Fetcher.Fetch(session);
