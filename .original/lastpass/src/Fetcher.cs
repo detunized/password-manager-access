@@ -34,7 +34,7 @@ namespace LastPass
                                                      new NameValueCollection(),
                                                      mode,
                                                      webClient);
-            var session = ExtractSessionFromLoginResponse(response, keyIterationCount);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, mode);
             if (session != null)
                 return session;
 
@@ -203,7 +203,7 @@ namespace LastPass
                                                      new NameValueCollection {{"otp", otp}},
                                                      mode,
                                                      webClient);
-            var session = ExtractSessionFromLoginResponse(response, keyIterationCount);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, mode);
             if (session != null)
                 return session;
 
@@ -230,7 +230,7 @@ namespace LastPass
                                                          extraParameters,
                                                          mode,
                                                          webClient);
-                var session = ExtractSessionFromLoginResponse(response, keyIterationCount);
+                var session = ExtractSessionFromLoginResponse(response, keyIterationCount, mode);
                 if (session != null)
                     return session;
 
@@ -258,7 +258,7 @@ namespace LastPass
             return response.XPathEvaluate(string.Format("string(response/error/@{0})", name)) as string;
         }
 
-        private static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount)
+        private static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount, Mode mode)
         {
             var ok = response.XPathSelectElement("response/ok");
             if (ok == null)
@@ -270,7 +270,8 @@ namespace LastPass
 
             return new Session(sessionId.Value,
                                keyIterationCount,
-                               GetEncryptedPrivateKey(ok));
+                               GetEncryptedPrivateKey(ok),
+                               mode);
         }
 
         private static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
