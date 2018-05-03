@@ -20,7 +20,7 @@ namespace Example
 
             public override void AskToApproveOutOfBand(OutOfBandMethod method)
             {
-                Console.WriteLine("Please approve out-of-band via {0} and press ENTER", method);
+                Console.WriteLine("Please approve out-of-band via {0}", method);
             }
 
             private static string GetAnswer(string prompt)
