@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 
 namespace LastPass
 {
+    // TODO: Move this out of here
     public abstract class Ui
     {
         public enum SecondFactorMethod
@@ -16,7 +17,13 @@ namespace LastPass
             // TODO: See which other methods should be supported.
         }
 
+        // Should always a valid string. Cancellation is not supported yet.
         public abstract string ProvideSecondFactorPassword(SecondFactorMethod method);
+
+        // Should return immediately to allow the login process to continue. Once the OOB is approved 
+        // or declined by the user the library will return the result or throw an error.
+        // Cancellation is not supported yet.
+        public abstract void AskToApproveOutOfBand(string method);
     }
 
     public class Vault

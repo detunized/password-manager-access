@@ -27,46 +27,43 @@ namespace LastPass
 
             // 2. Knowing the iterations count we can hash the password and log in.
             //    One the first attempt simply with the username and password.
-            var response = Login(username, password, null, keyIterationCount, webClient);
+            var response = PerformSingleLoginRequest(username, password, keyIterationCount, webClient);
             var session = ExtractSessionFromLoginResponse(response, keyIterationCount);
             if (session != null)
                 return session;
 
-            string otp = null;
-            switch (response.XPathEvaluate("string(response/error/@cause)") as string)
+            // 3. The simple login failed. This is usually due to some error, invalid credentials or
+            //    a multifactor authentication being enabled.
+            switch (GetOptionalErrorAttribute(response, "cause"))
             {
             case "googleauthrequired":
-                otp = ui.ProvideSecondFactorPassword(Ui.SecondFactorMethod.GoogleAuth);
-                break;
+                // Google Authenticator code is required
+                return LoginWithOtp(username,
+                                    password,
+                                    keyIterationCount,
+                                    Ui.SecondFactorMethod.GoogleAuth,
+                                    ui,
+                                    webClient);
             case "otprequired":
-                otp = ui.ProvideSecondFactorPassword(Ui.SecondFactorMethod.Yubikey);
-                break;
+                // Yubikey code is required
+                return LoginWithOtp(username,
+                                    password,
+                                    keyIterationCount,
+                                    Ui.SecondFactorMethod.Yubikey,
+                                    ui,
+                                    webClient);
+            case "outofbandrequired":
+                // Some out-of-bound authentication is enabled. This does not require any
+                // additional input from the user.
+                return LoginWithOob(username,
+                                    password,
+                                    keyIterationCount,
+                                    GetErrorAttribute(response, "outofbandname"),
+                                    ui,
+                                    webClient);
             default:
                 throw CreateLoginException(response);
             }
-
-            // 2. Now try with a one time password
-            response = Login(username, password, otp, keyIterationCount, webClient);
-            session = ExtractSessionFromLoginResponse(response, keyIterationCount);
-            if (session != null)
-                return session;
-
-            throw CreateLoginException(response);
-        }
-
-        private static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount)
-        {
-            var ok = response.XPathSelectElement("response/ok");
-            if (ok == null)
-                return null;
-
-            var sessionId = ok.Attribute("sessionid");
-            if (sessionId == null)
-                return null;
-
-            return new Session(sessionId.Value,
-                               keyIterationCount,
-                               GetEncryptedPrivateKey(ok));
         }
 
         public static void Logout(Session session)
@@ -152,11 +149,19 @@ namespace LastPass
             }
         }
 
-        private static XDocument Login(string username,
-                                       string password,
-                                       string secondFactorPassword,
-                                       int keyIterationCount,
-                                       IWebClient webClient)
+        private static XDocument PerformSingleLoginRequest(string username,
+                                                           string password,
+                                                           int keyIterationCount,
+                                                           IWebClient webClient)
+        {
+            return PerformSingleLoginRequest(username, password, keyIterationCount, null, webClient);
+        }
+
+        private static XDocument PerformSingleLoginRequest(string username,
+                                                           string password,
+                                                           int keyIterationCount,
+                                                           NameValueCollection extraParameters,
+                                                           IWebClient webClient)
         {
             try
             {
@@ -171,8 +176,8 @@ namespace LastPass
                     {"outofbandsupported", "1"},
                 };
 
-                if (secondFactorPassword != null)
-                    parameters["otp"] = secondFactorPassword;
+                if (extraParameters != null)
+                    parameters.Add(extraParameters);
 
                 return XDocument.Parse(webClient.UploadValues("https://lastpass.com/login.php",
                                                               parameters).ToUtf8());
@@ -189,6 +194,88 @@ namespace LastPass
                                          "Invalid XML in response",
                                          e);
             }
+        }
+
+        // Returns a valid session or throws
+        private static Session LoginWithOtp(string username,
+                                            string password,
+                                            int keyIterationCount,
+                                            Ui.SecondFactorMethod method,
+                                            Ui ui,
+                                            IWebClient webClient)
+        {
+            var otp = ui.ProvideSecondFactorPassword(method);
+            var response = PerformSingleLoginRequest(username,
+                                                     password,
+                                                     keyIterationCount,
+                                                     new NameValueCollection {{"otp", otp}},
+                                                     webClient);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount);
+            if (session != null)
+                return session;
+
+            throw CreateLoginException(response);
+        }
+
+        // Returns a valid session or throws
+        private static Session LoginWithOob(string username,
+                                            string password,
+                                            int keyIterationCount,
+                                            string method,
+                                            Ui ui,
+                                            IWebClient webClient)
+        {
+            var extraParameters = new NameValueCollection {{"outofbandrequest", "1"}};
+
+            ui.AskToApproveOutOfBand(method);
+            for (;;)
+            {
+                var response = PerformSingleLoginRequest(username,
+                                                         password,
+                                                         keyIterationCount,
+                                                         extraParameters,
+                                                         webClient);
+                var session = ExtractSessionFromLoginResponse(response, keyIterationCount);
+                if (session != null)
+                    return session;
+
+                if (GetOptionalErrorAttribute(response, "cause") != "outofbandrequired")
+                    throw CreateLoginException(response);
+
+                // Retry
+                extraParameters["outofbandretry"] = "1";
+                extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
+            }
+        }
+
+        private static string GetErrorAttribute(XDocument response, string name)
+        {
+            var attr = GetOptionalErrorAttribute(response, name);
+            if (attr != null)
+                return attr;
+
+            throw new LoginException(LoginException.FailureReason.UnknownResponseSchema,
+                                     string.Format("Unknown response schema, attribute {0} is missing", name));
+        }
+
+        private static string GetOptionalErrorAttribute(XDocument response, string name)
+        {
+            return response.XPathEvaluate(string.Format("string(response/error/@{0})", name)) as string;
+        }
+
+        private static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount)
+        {
+            var ok = response.XPathSelectElement("response/ok");
+            if (ok == null)
+                return null;
+
+            var sessionId = ok.Attribute("sessionid");
+            if (sessionId == null)
+                return null;
+
+            return new Session(sessionId.Value,
+                               keyIterationCount,
+                               GetEncryptedPrivateKey(ok));
         }
 
         // Returned value could be missing or blank. In both of these cases we need null.
@@ -249,9 +336,7 @@ namespace LastPass
 
             // No cause, maybe at least a message
             if (message != null)
-            {
                 return new LoginException(LoginException.FailureReason.LastPassOther, message.Value);
-            }
 
             // Nothing we know, just the error element
             return new LoginException(LoginException.FailureReason.LastPassUnknown, "Unknown reason");

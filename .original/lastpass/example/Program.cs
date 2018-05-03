@@ -18,13 +18,18 @@ namespace Example
                 return GetAnswer(string.Format("Please enter {0} code", method));
             }
 
+            public override void AskToApproveOutOfBand(string method)
+            {
+                Console.WriteLine("Please approve out-of-band via {0} and press ENTER", method);
+            }
+
             private static string GetAnswer(string prompt)
             {
                 Console.WriteLine(prompt);
                 Console.Write("> ");
                 var input = Console.ReadLine();
 
-                return string.IsNullOrEmpty(input) ? null : input.Trim();
+                return input == null ? "" : input.Trim();
             }
         }
 
