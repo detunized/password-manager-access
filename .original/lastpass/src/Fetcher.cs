@@ -80,7 +80,7 @@ namespace LastPass
                 webClient.UploadValues("https://lastpass.com/logout.php",
                                        new NameValueCollection
                                        {
-                                           {"method", "cli"},
+                                           {"method", ModeToUserAgent[session.Mode]},
                                            {"noredirect", "1"}
                                        });
             }
@@ -104,7 +104,7 @@ namespace LastPass
             try
             {
                 SetSessionCookies(webClient, session);
-                response = webClient.DownloadData("https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc=cli");
+                response = webClient.DownloadData(GetFetchUrl(session.Mode));
             }
             catch (WebException e)
             {
@@ -121,6 +121,13 @@ namespace LastPass
             {
                 throw new FetchException(FetchException.FailureReason.InvalidResponse, "Invalid base64 in response", e);
             }
+        }
+
+        private static string GetFetchUrl(Mode mode)
+        {
+            return string.Format(
+                "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc={0}",
+                ModeToUserAgent[mode]);
         }
 
         private static int RequestIterationCount(string username, IWebClient webClient)
@@ -160,15 +167,15 @@ namespace LastPass
             {
                 var parameters = new NameValueCollection
                 {
-                    {"method", Modes[mode]},
+                    {"method", ModeToUserAgent[mode]},
                     {"xml", "2"},
                     {"username", username},
                     {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
                     {"iterations", string.Format("{0}", keyIterationCount)},
                     {"includeprivatekeyenc", "1"},
                     {"outofbandsupported", "1"},
+                    extraParameters
                 };
-                parameters.Add(extraParameters);
 
                 return XDocument.Parse(webClient.UploadValues("https://lastpass.com/login.php",
                                                               parameters).ToUtf8());
@@ -354,7 +361,7 @@ namespace LastPass
             webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
         }
 
-        private static readonly Dictionary<Mode, string> Modes = new Dictionary<Mode, string>
+        private static readonly Dictionary<Mode, string> ModeToUserAgent = new Dictionary<Mode, string>
         {
             {Mode.Desktop, "cli"},
             {Mode.Mobile, "android"},
