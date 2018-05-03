@@ -45,7 +45,7 @@ namespace Example
             try
             {
                 // Fetch and create the vault from LastPass
-                var vault = Vault.Open(username, password, new TextUi());
+                var vault = Vault.Open(username, password, Mode.Mobile, new TextUi());
 
                 // Dump all the accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)

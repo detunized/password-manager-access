@@ -377,7 +377,7 @@ namespace LastPass.Test
                                                           out Session session)
         {
             var webClient = SetupLogin(IterationsResponse, response);
-            session = Fetcher.Login(Username, Password, SetupUi(multifactorPassword), webClient.Object);
+            session = Fetcher.Login(Username, Password, Mode.Desktop, SetupUi(multifactorPassword), webClient.Object);
             return webClient;
         }
 
@@ -389,6 +389,7 @@ namespace LastPass.Test
             var webClient = SetupLogin(iterationsResponseOrException, loginResponseOrException);
             return Assert.Throws<LoginException>(() => Fetcher.Login(Username,
                                                                      Password,
+                                                                     Mode.Desktop,
                                                                      SetupUi(multifactorPassword),
                                                                      webClient.Object));
         }

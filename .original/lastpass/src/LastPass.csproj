@@ -48,6 +48,7 @@
     <Compile Include="IWebClient.cs" />
     <Compile Include="LoginException.cs" />
     <Compile Include="LogoutException.cs" />
+    <Compile Include="Mode.cs" />
     <Compile Include="ParseException.cs" />
     <Compile Include="ParserHelper.cs" />
     <Compile Include="Pbkdf2.cs" />

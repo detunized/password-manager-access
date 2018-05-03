@@ -9,9 +9,9 @@ namespace LastPass
 {
     public class Vault
     {
-        public static Vault Open(string username, string password, Ui ui)
+        public static Vault Open(string username, string password, Mode mode, Ui ui)
         {
-            return Create(Download(username, password, ui), username, password);
+            return Create(Download(username, password, mode, ui), username, password);
         }
 
         // TODO: Make a test for this!
@@ -20,9 +20,9 @@ namespace LastPass
             return new Vault(blob, blob.MakeEncryptionKey(username, password));
         }
 
-        public static Blob Download(string username, string password, Ui ui)
+        public static Blob Download(string username, string password, Mode mode, Ui ui)
         {
-            var session = Fetcher.Login(username, password, ui);
+            var session = Fetcher.Login(username, password, mode, ui);
             try
             {
                 return Fetcher.Fetch(session);
