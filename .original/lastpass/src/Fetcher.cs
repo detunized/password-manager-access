@@ -35,36 +35,28 @@ namespace LastPass
 
             // 3. The simple login failed. This is usually due to some error, invalid credentials or
             //    a multifactor authentication being enabled.
-            switch (GetOptionalErrorAttribute(response, "cause"))
-            {
-            case "googleauthrequired":
-                // Google Authenticator code is required
+            var cause = GetOptionalErrorAttribute(response, "cause");
+
+            // 3.1. One-time-password is required
+            if (KnownOtpMethods.ContainsKey(cause))
                 return LoginWithOtp(username,
                                     password,
                                     keyIterationCount,
-                                    Ui.SecondFactorMethod.GoogleAuth,
+                                    KnownOtpMethods[cause],
                                     ui,
                                     webClient);
-            case "otprequired":
-                // Yubikey code is required
-                return LoginWithOtp(username,
-                                    password,
-                                    keyIterationCount,
-                                    Ui.SecondFactorMethod.Yubikey,
-                                    ui,
-                                    webClient);
-            case "outofbandrequired":
-                // Some out-of-bound authentication is enabled. This does not require any
-                // additional input from the user.
+
+            // 3.2. Some out-of-bound authentication is enabled. This does not require any
+            //      additional input from the user.
+            if (cause == "outofbandrequired")
                 return LoginWithOob(username,
                                     password,
                                     keyIterationCount,
                                     ExtractOobMethodFromLoginResponse(response),
                                     ui,
                                     webClient);
-            default:
-                throw CreateLoginException(response);
-            }
+
+            throw CreateLoginException(response);
         }
 
         public static void Logout(Session session)
@@ -358,6 +350,14 @@ namespace LastPass
         {
             webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
         }
+
+        private static readonly Dictionary<string, Ui.SecondFactorMethod> KnownOtpMethods =
+            new Dictionary<string, Ui.SecondFactorMethod>
+            {
+                {"googleauthrequired", Ui.SecondFactorMethod.GoogleAuth},
+                {"otprequired", Ui.SecondFactorMethod.Yubikey},
+
+            };
 
         private static readonly Dictionary<string, Ui.OutOfBandMethod> KnownOobMethods =
             new Dictionary<string, Ui.OutOfBandMethod>
