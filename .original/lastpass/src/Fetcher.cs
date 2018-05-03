@@ -285,8 +285,9 @@ namespace LastPass
             if (KnownOobMethods.ContainsKey(type))
                 return KnownOobMethods[type];
 
+            var name = GetOptionalErrorAttribute(response, "outofbandname");
             throw new LoginException(LoginException.FailureReason.UnsupportedFeature,
-                                     string.Format("Out-of-band method '{0}' is not supported", type));
+                                     string.Format("Out-of-band method '{0}' is not supported", name ?? type));
         }
 
         // Returned value could be missing or blank. In both of these cases we need null.
