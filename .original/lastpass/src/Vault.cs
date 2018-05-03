@@ -9,7 +9,7 @@ namespace LastPass
 {
     public class Vault
     {
-        public static Vault Create(string username, string password, Ui ui)
+        public static Vault Open(string username, string password, Ui ui)
         {
             return Create(Download(username, password, ui), username, password);
         }
