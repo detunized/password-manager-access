@@ -18,7 +18,7 @@ namespace Example
                 return GetAnswer(string.Format("Please enter {0} code", method));
             }
 
-            public override void AskToApproveOutOfBand(string method)
+            public override void AskToApproveOutOfBand(OutOfBandMethod method)
             {
                 Console.WriteLine("Please approve out-of-band via {0} and press ENTER", method);
             }

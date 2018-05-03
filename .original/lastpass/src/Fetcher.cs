@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 using System.Xml;
@@ -58,7 +59,7 @@ namespace LastPass
                 return LoginWithOob(username,
                                     password,
                                     keyIterationCount,
-                                    GetErrorAttribute(response, "outofbandname"),
+                                    ExtractOobMethodFromLoginResponse(response),
                                     ui,
                                     webClient);
             default:
@@ -221,7 +222,7 @@ namespace LastPass
         private static Session LoginWithOob(string username,
                                             string password,
                                             int keyIterationCount,
-                                            string method,
+                                            Ui.OutOfBandMethod method,
                                             Ui ui,
                                             IWebClient webClient)
         {
@@ -276,6 +277,16 @@ namespace LastPass
             return new Session(sessionId.Value,
                                keyIterationCount,
                                GetEncryptedPrivateKey(ok));
+        }
+
+        private static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
+        {
+            var type = GetErrorAttribute(response, "outofbandtype");
+            if (KnownOobMethods.ContainsKey(type))
+                return KnownOobMethods[type];
+
+            throw new LoginException(LoginException.FailureReason.UnsupportedFeature,
+                                     string.Format("Out-of-band method '{0}' is not supported", type));
         }
 
         // Returned value could be missing or blank. In both of these cases we need null.
@@ -346,5 +357,14 @@ namespace LastPass
         {
             webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
         }
+
+        private static readonly Dictionary<string, Ui.OutOfBandMethod> KnownOobMethods =
+            new Dictionary<string, Ui.OutOfBandMethod>
+            {
+                {"lastpassauth", Ui.OutOfBandMethod.LastPassAuth},
+                {"toopher", Ui.OutOfBandMethod.Toopher},
+                {"duo", Ui.OutOfBandMethod.Duo},
+
+            };
     }
 }

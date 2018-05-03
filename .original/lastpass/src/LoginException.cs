@@ -20,9 +20,10 @@ namespace LastPass
             LastPassUnknown,
 
             // Other
+            UnsupportedFeature,
             UnknownResponseSchema,
             InvalidResponse,
-            WebException
+            WebException,
         }
 
         public LoginException(FailureReason reason, string message): base(message)
