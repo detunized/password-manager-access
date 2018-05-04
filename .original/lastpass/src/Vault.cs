@@ -33,6 +33,16 @@ namespace LastPass
             }
         }
 
+        public static string GenerateRandomClientId()
+        {
+            using (var random = new RNGCryptoServiceProvider())
+            {
+                var bytes = new byte[16];
+                random.GetBytes(bytes);
+                return bytes.ToHex();
+            }
+        }
+
         // TODO: Make a test for this!
         // TODO: Extract some of the code and put it some place else.
         private Vault(Blob blob, byte[] encryptionKey)

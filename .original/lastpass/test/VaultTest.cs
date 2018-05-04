@@ -10,6 +10,22 @@ namespace LastPass.Test
     [TestFixture]
     class VaultTest
     {
+        [Test]
+        public void GenerateRandomClientId_returns_32_characters()
+        {
+            var id = Vault.GenerateRandomClientId();
+            Assert.That(id.Length, Is.EqualTo(32));
+        }
+
+        [Test]
+        public void GenerateRandomClientId_returns_different_ids()
+        {
+            var id1 = Vault.GenerateRandomClientId();
+            var id2 = Vault.GenerateRandomClientId();
+
+            Assert.That(id1, Is.Not.EqualTo(id2));
+        }
+
         //
         // TODO: Figure out how to test this!
         //       All methods require username/password which I don't want to expose here.
