@@ -43,6 +43,7 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="BaseException.cs" />
     <Compile Include="Blob.cs" />
+    <Compile Include="ClientInfo.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Fetcher.cs" />
     <Compile Include="FetcherHelper.cs" />

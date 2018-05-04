@@ -20,6 +20,7 @@ namespace LastPass.Test
 
         private const string Username = "username";
         private const string Password = "password";
+        private static readonly ClientInfo ClientInfo = new ClientInfo(Mode.Desktop, "id", "description", true);
 
         private const string IterationsUrl = "https://lastpass.com/iterations.php";
         private const string LoginUrl = "https://lastpass.com/login.php";
@@ -377,7 +378,7 @@ namespace LastPass.Test
                                                           out Session session)
         {
             var webClient = SetupLogin(IterationsResponse, response);
-            session = Fetcher.Login(Username, Password, Mode.Desktop, SetupUi(multifactorPassword), webClient.Object);
+            session = Fetcher.Login(Username, Password, ClientInfo, SetupUi(multifactorPassword), webClient.Object);
             return webClient;
         }
 
@@ -389,7 +390,7 @@ namespace LastPass.Test
             var webClient = SetupLogin(iterationsResponseOrException, loginResponseOrException);
             return Assert.Throws<LoginException>(() => Fetcher.Login(Username,
                                                                      Password,
-                                                                     Mode.Desktop,
+                                                                     ClientInfo,
                                                                      SetupUi(multifactorPassword),
                                                                      webClient.Object));
         }

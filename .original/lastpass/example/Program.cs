@@ -36,16 +36,25 @@ namespace Example
         static void Main(string[] args)
         {
             // Read LastPass credentials from a file
-            // The file should contain 2 lines: username and password.
+            // The file should contain 4 lines:
+            //   - username
+            //   - password
+            //   - client ID
+            //   - client description
             // See credentials.txt.example for an example.
             var credentials = File.ReadAllLines("../../credentials.txt");
             var username = credentials[0];
             var password = credentials[1];
+            var id = credentials[2];
+            var description = credentials[3];
 
             try
             {
                 // Fetch and create the vault from LastPass
-                var vault = Vault.Open(username, password, Mode.Mobile, new TextUi());
+                var vault = Vault.Open(username,
+                                       password,
+                                       new ClientInfo(Mode.Desktop, id, description, false),
+                                       new TextUi());
 
                 // Dump all the accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)

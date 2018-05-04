@@ -13,15 +13,15 @@ namespace LastPass
 {
     static class Fetcher
     {
-        public static Session Login(string username, string password, Mode mode, Ui ui)
+        public static Session Login(string username, string password, ClientInfo clientInfo, Ui ui)
         {
             using (var webClient = new WebClient())
-                return Login(username, password, mode, ui, webClient);
+                return Login(username, password, clientInfo, ui, webClient);
         }
 
         // TODO: Write tests for this. Possibly the whole current concept of how it's tested
         //       should be rethought. Maybe should simply tests against a fake server.
-        public static Session Login(string username, string password, Mode mode, Ui ui, IWebClient webClient)
+        public static Session Login(string username, string password, ClientInfo clientInfo, Ui ui, IWebClient webClient)
         {
             // 1. First we need to request PBKDF2 key iteration count.
             var keyIterationCount = RequestIterationCount(username, webClient);
@@ -32,9 +32,9 @@ namespace LastPass
                                                      password,
                                                      keyIterationCount,
                                                      new NameValueCollection(),
-                                                     mode,
+                                                     clientInfo,
                                                      webClient);
-            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, mode);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
             if (session != null)
                 return session;
 
@@ -48,7 +48,7 @@ namespace LastPass
                                     password,
                                     keyIterationCount,
                                     KnownOtpMethods[cause],
-                                    mode,
+                                    clientInfo,
                                     ui,
                                     webClient);
 
@@ -59,7 +59,7 @@ namespace LastPass
                                     password,
                                     keyIterationCount,
                                     ExtractOobMethodFromLoginResponse(response),
-                                    mode,
+                                    clientInfo,
                                     ui,
                                     webClient);
 
@@ -160,22 +160,26 @@ namespace LastPass
                                                            string password,
                                                            int keyIterationCount,
                                                            NameValueCollection extraParameters,
-                                                           Mode mode,
+                                                           ClientInfo clientInfo,
                                                            IWebClient webClient)
         {
             try
             {
                 var parameters = new NameValueCollection
                 {
-                    {"method", ModeToUserAgent[mode]},
+                    {"method", ModeToUserAgent[clientInfo.Mode]},
                     {"xml", "2"},
                     {"username", username},
                     {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
                     {"iterations", string.Format("{0}", keyIterationCount)},
                     {"includeprivatekeyenc", "1"},
                     {"outofbandsupported", "1"},
+                    {"imei", clientInfo.Id},
                     extraParameters
                 };
+
+                if (clientInfo.TrustThisDevice)
+                    parameters["trustlabel"] = clientInfo.Description;
 
                 return XDocument.Parse(webClient.UploadValues("https://lastpass.com/login.php",
                                                               parameters).ToUtf8());
@@ -199,7 +203,7 @@ namespace LastPass
                                             string password,
                                             int keyIterationCount,
                                             Ui.SecondFactorMethod method,
-                                            Mode mode,
+                                            ClientInfo clientInfo,
                                             Ui ui,
                                             IWebClient webClient)
         {
@@ -208,9 +212,9 @@ namespace LastPass
                                                      password,
                                                      keyIterationCount,
                                                      new NameValueCollection {{"otp", otp}},
-                                                     mode,
+                                                     clientInfo,
                                                      webClient);
-            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, mode);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
             if (session != null)
                 return session;
 
@@ -222,7 +226,7 @@ namespace LastPass
                                             string password,
                                             int keyIterationCount,
                                             Ui.OutOfBandMethod method,
-                                            Mode mode,
+                                            ClientInfo clientInfo,
                                             Ui ui,
                                             IWebClient webClient)
         {
@@ -235,9 +239,9 @@ namespace LastPass
                                                          password,
                                                          keyIterationCount,
                                                          extraParameters,
-                                                         mode,
+                                                         clientInfo,
                                                          webClient);
-                var session = ExtractSessionFromLoginResponse(response, keyIterationCount, mode);
+                var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
                 if (session != null)
                     return session;
 
@@ -265,7 +269,9 @@ namespace LastPass
             return response.XPathEvaluate(string.Format("string(response/error/@{0})", name)) as string;
         }
 
-        private static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount, Mode mode)
+        private static Session ExtractSessionFromLoginResponse(XDocument response,
+                                                               int keyIterationCount,
+                                                               ClientInfo clientInfo)
         {
             var ok = response.XPathSelectElement("response/ok");
             if (ok == null)
@@ -275,10 +281,7 @@ namespace LastPass
             if (sessionId == null)
                 return null;
 
-            return new Session(sessionId.Value,
-                               keyIterationCount,
-                               GetEncryptedPrivateKey(ok),
-                               mode);
+            return new Session(sessionId.Value, keyIterationCount, GetEncryptedPrivateKey(ok), clientInfo.Mode);
         }
 
         private static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
@@ -372,7 +375,6 @@ namespace LastPass
             {
                 {"googleauthrequired", Ui.SecondFactorMethod.GoogleAuth},
                 {"otprequired", Ui.SecondFactorMethod.Yubikey},
-
             };
 
         private static readonly Dictionary<string, Ui.OutOfBandMethod> KnownOobMethods =
@@ -381,7 +383,6 @@ namespace LastPass
                 {"lastpassauth", Ui.OutOfBandMethod.LastPassAuth},
                 {"toopher", Ui.OutOfBandMethod.Toopher},
                 {"duo", Ui.OutOfBandMethod.Duo},
-
             };
     }
 }
