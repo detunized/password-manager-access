@@ -3,7 +3,7 @@
 
 namespace LastPass
 {
-    public enum Mode
+    public enum Platform
     {
         Desktop,
         Mobile,

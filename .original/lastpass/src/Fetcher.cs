@@ -80,7 +80,7 @@ namespace LastPass
                 webClient.UploadValues("https://lastpass.com/logout.php",
                                        new NameValueCollection
                                        {
-                                           {"method", ModeToUserAgent[session.Mode]},
+                                           {"method", PlatformToUserAgent[session.Platform]},
                                            {"noredirect", "1"}
                                        });
             }
@@ -104,7 +104,7 @@ namespace LastPass
             try
             {
                 SetSessionCookies(webClient, session);
-                response = webClient.DownloadData(GetFetchUrl(session.Mode));
+                response = webClient.DownloadData(GetFetchUrl(session.Platform));
             }
             catch (WebException e)
             {
@@ -123,11 +123,11 @@ namespace LastPass
             }
         }
 
-        private static string GetFetchUrl(Mode mode)
+        private static string GetFetchUrl(Platform platform)
         {
             return string.Format(
                 "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc={0}",
-                ModeToUserAgent[mode]);
+                PlatformToUserAgent[platform]);
         }
 
         private static int RequestIterationCount(string username, IWebClient webClient)
@@ -167,7 +167,7 @@ namespace LastPass
             {
                 var parameters = new NameValueCollection
                 {
-                    {"method", ModeToUserAgent[clientInfo.Mode]},
+                    {"method", PlatformToUserAgent[clientInfo.Platform]},
                     {"xml", "2"},
                     {"username", username},
                     {"hash", FetcherHelper.MakeHash(username, password, keyIterationCount)},
@@ -281,7 +281,7 @@ namespace LastPass
             if (sessionId == null)
                 return null;
 
-            return new Session(sessionId.Value, keyIterationCount, GetEncryptedPrivateKey(ok), clientInfo.Mode);
+            return new Session(sessionId.Value, keyIterationCount, GetEncryptedPrivateKey(ok), clientInfo.Platform);
         }
 
         private static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
@@ -364,10 +364,10 @@ namespace LastPass
             webClient.Headers.Add("Cookie", string.Format("PHPSESSID={0}", Uri.EscapeDataString(session.Id)));
         }
 
-        private static readonly Dictionary<Mode, string> ModeToUserAgent = new Dictionary<Mode, string>
+        private static readonly Dictionary<Platform, string> PlatformToUserAgent = new Dictionary<Platform, string>
         {
-            {Mode.Desktop, "cli"},
-            {Mode.Mobile, "android"},
+            {Platform.Desktop, "cli"},
+            {Platform.Mobile, "android"},
         };
 
         private static readonly Dictionary<string, Ui.SecondFactorMethod> KnownOtpMethods =

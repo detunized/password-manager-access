@@ -20,7 +20,7 @@ namespace LastPass.Test
 
         private const string Username = "username";
         private const string Password = "password";
-        private static readonly ClientInfo ClientInfo = new ClientInfo(Mode.Desktop, "id", "description", true);
+        private static readonly ClientInfo ClientInfo = new ClientInfo(Platform.Desktop, "id", "description", true);
 
         private const string IterationsUrl = "https://lastpass.com/iterations.php";
         private const string LoginUrl = "https://lastpass.com/login.php";

@@ -5,14 +5,14 @@ namespace LastPass
 {
     public class ClientInfo
     {
-        public readonly Mode Mode; // TODO: Rename to platform
+        public readonly Platform Platform;
         public readonly string Id;
         public readonly string Description;
         public readonly bool TrustThisDevice;
 
-        public ClientInfo(Mode mode, string id, string description, bool trustThisDevice)
+        public ClientInfo(Platform platform, string id, string description, bool trustThisDevice)
         {
-            Mode = mode;
+            Platform = platform;
             Id = id;
             Description = description;
             TrustThisDevice = trustThisDevice;
