@@ -377,6 +377,9 @@ namespace OnePassword
 
         internal static void DecryptGroupKeys(JToken groups, Keychain keychain)
         {
+            // TODO: Crashes here. This doesn't seem to work anymore.
+            //       From a quick analysis it looks like we have to request the keys from
+            //       https://my.1password.com/api/v1/account/keysets
             foreach (var i in groups)
                 DecryptKeyset(i.At("userMembership/keyset"), keychain);
         }
