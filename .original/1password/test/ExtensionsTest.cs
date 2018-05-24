@@ -247,6 +247,24 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void JToken_At_returns_default_value_on_invalid_path()
+        {
+            var j = JObject.Parse(@"{
+                'k1': 'v1',
+                'k2': {'k22': 'v22'},
+                'k3': {'k33': {'k333': 'v333'}}
+            }");
+
+            VerifyAtReturnsDefault(j, "i1");
+            VerifyAtReturnsDefault(j, "k1/k11");
+            VerifyAtReturnsDefault(j, "k2/i2");
+            VerifyAtReturnsDefault(j, "k2/k22/i22");
+            VerifyAtReturnsDefault(j, "k3/i3");
+            VerifyAtReturnsDefault(j, "k3/k33/i33");
+            VerifyAtReturnsDefault(j, "k3/k33/k333/i333");
+        }
+
+        [Test]
         public void JToken_StringAt_returns_string()
         {
             var j = JObject.Parse(@"{
@@ -458,6 +476,12 @@ namespace OnePassword.Test
         private static void VerifyAccessThrows(JToken token, string path, Action<JToken, string> access)
         {
             Assert.That(() => access(token, path), Throws.TypeOf<JTokenAccessException>());
+        }
+
+        private static void VerifyAtReturnsDefault(JToken token, string path)
+        {
+            var dv = new JArray();
+            Assert.That(token.At(path, dv), Is.SameAs(dv));
         }
 
         private static void VerifyStringAtReturnsDefault(JToken token, string path)

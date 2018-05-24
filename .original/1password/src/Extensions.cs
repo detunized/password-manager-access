@@ -170,6 +170,18 @@ namespace OnePassword
             return c;
         }
 
+        public static JToken At(this JToken j, string path, JToken defaultValue)
+        {
+            try
+            {
+                return j.At(path);
+            }
+            catch (JTokenAccessException)
+            {
+                return defaultValue;
+            }
+        }
+
         public static string StringAt(this JToken j, string path)
         {
             var s = j.At(path);
