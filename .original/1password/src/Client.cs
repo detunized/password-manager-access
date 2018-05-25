@@ -364,7 +364,11 @@ namespace OnePassword
 
         internal static void DecryptKeysets(JToken keysets, ClientInfo clientInfo, Keychain keychain)
         {
-            var sorted = keysets.OrderBy(i => i.IntAt("sn")).Reverse().ToArray();
+            var sorted = keysets
+                .OrderByDescending(i => i.StringAt("encryptedBy") == MasterKeyId) // everything with "mp" goes first
+                .ThenByDescending(i => i.IntAt("sn"))                             // and then is sorted by "sn"
+                .ToArray();
+
             if (sorted[0].StringAt("encryptedBy") != MasterKeyId)
                 throw ExceptionFactory.MakeInvalidOperation(
                     string.Format("Invalid keyset (key must be encrypted by '{0}')", MasterKeyId));
