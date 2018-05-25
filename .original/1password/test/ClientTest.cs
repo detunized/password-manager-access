@@ -232,9 +232,10 @@ namespace OnePassword.Test
         public void DecryptKeys_stores_keys_in_keychain()
         {
             var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
+            var keysets = JObject.Parse(JsonHttpClientTest.ReadFixture("keysets"));
             var keychain = new Keychain();
 
-            Client.DecryptKeys(accountInfo, ClientInfo, keychain);
+            Client.DecryptAllKeys(accountInfo, keysets, ClientInfo, keychain);
 
             var aesKeys = new[]
             {
@@ -246,7 +247,7 @@ namespace OnePassword.Test
             foreach (var i in aesKeys)
                 Assert.That(keychain.GetAes(i), Is.Not.Null);
 
-            var keysets = new[]
+            var keysetIds = new[]
             {
                 "szerdhg2ww2ahjo4ilz57x7cce",
                 "yf2ji37vkqdow7pnbo3y37b3lu",
@@ -254,7 +255,7 @@ namespace OnePassword.Test
                 "sm5hkw3mxwdcwcgljf4kyplwea",
             };
 
-            foreach (var i in keysets)
+            foreach (var i in keysetIds)
             {
                 Assert.That(keychain.GetAes(i), Is.Not.Null);
                 Assert.That(keychain.GetRsa(i), Is.Not.Null);

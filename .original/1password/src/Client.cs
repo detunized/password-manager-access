@@ -115,10 +115,16 @@ namespace OnePassword
                 //         Not the actual vault data though. That is requested separately.
                 var accountInfo = GetAccountInfo(sessionKey, jsonHttp);
 
-                // Step 5: Derive and decrypt keys
-                DecryptKeys(accountInfo, clientInfo, keychain);
+                // Step 5: Get all the keysets in one place. The original code is quite hairy around this
+                //         topic, so it's not very clear if these keysets should be merged with anything else
+                //         or it's enough to just use these keys. For now we gonna ignore other keys and
+                //         see if it's enough.
+                var keysets = GetKeysets(sessionKey, jsonHttp);
 
-                // Step 6: Get and decrypt vaults
+                // Step 6: Derive and decrypt keys
+                DecryptAllKeys(accountInfo, keysets, clientInfo, keychain);
+
+                // Step 7: Get and decrypt vaults
                 var vaults = GetVaults(accountInfo, sessionKey, keychain, jsonHttp);
 
                 // Done
@@ -353,12 +359,12 @@ namespace OnePassword
                                           "Failed to sign out");
         }
 
-        internal static void DecryptKeys(JToken accountInfo,
-                                         ClientInfo clientInfo,
-                                         Keychain keychain)
+        internal static void DecryptAllKeys(JToken accountInfo,
+                                            JToken keysets,
+                                            ClientInfo clientInfo,
+                                            Keychain keychain)
         {
-            DecryptKeysets(accountInfo.At("me/keysets"), clientInfo, keychain);
-            DecryptGroupKeys(accountInfo.At("groups"), keychain);
+            DecryptKeysets(keysets.At("keysets"), clientInfo, keychain);
             DecryptVaultKeys(accountInfo.At("me/vaultAccess"), keychain);
         }
 
@@ -382,15 +388,6 @@ namespace OnePassword
 
             foreach (var i in sorted)
                 DecryptKeyset(i, keychain);
-        }
-
-        internal static void DecryptGroupKeys(JToken groups, Keychain keychain)
-        {
-            // TODO: Crashes here. This doesn't seem to work anymore.
-            //       From a quick analysis it looks like we have to request the keys from
-            //       https://my.1password.com/api/v1/account/keysets
-            foreach (var i in groups)
-                DecryptKeyset(i.At("userMembership/keyset"), keychain);
         }
 
         internal static void DecryptVaultKeys(JToken vaults, Keychain keychain)
