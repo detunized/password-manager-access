@@ -6,6 +6,8 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 // TODO: DRY up tests. There's quite a bit of copy-paste here.
+// TODO: Creating encrypted test fixtures is a giant PITA and not very obvious what's going on.
+//       Look into this. Maybe encrypt on the fly and store plain JSON response in the fixture.
 
 namespace OnePassword.Test
 {
