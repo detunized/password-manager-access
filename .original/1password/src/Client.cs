@@ -282,6 +282,11 @@ namespace OnePassword
             return GetEncryptedJson("v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults", sessionKey, jsonHttp);
         }
 
+        internal static JObject GetKeysets(AesKey sessionKey, JsonHttpClient jsonHttp)
+        {
+            return GetEncryptedJson("v1/account/keysets", sessionKey, jsonHttp);
+        }
+
         internal static Vault[] GetVaults(JToken accountInfo,
                                           AesKey sessionKey,
                                           Keychain keychain,

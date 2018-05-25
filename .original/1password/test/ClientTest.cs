@@ -150,6 +150,22 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void GetKeysets_works()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("empty-object-response"));
+            Client.GetKeysets(TestData.SesionKey, http);
+        }
+
+        [Test]
+        public void GetKeysets_makes_GET_request_to_specific_url()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("empty-object-response"));
+            Client.GetKeysets(TestData.SesionKey, http);
+
+            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account/keysets");
+        }
+
+        [Test]
         public void GetVaultAccounts_work()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
