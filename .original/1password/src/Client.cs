@@ -314,7 +314,7 @@ namespace OnePassword
             var response = GetEncryptedJson(string.Format("v1/vault/{0}/0/items", id),
                                             sessionKey,
                                             jsonHttp);
-            return response.At("items").Select(i => ParseAccount(i, keychain)).ToArray();
+            return response.At("items", new JArray()).Select(i => ParseAccount(i, keychain)).ToArray();
         }
 
         internal static Account ParseAccount(JToken json, Keychain keychain)

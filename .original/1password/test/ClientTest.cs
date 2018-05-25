@@ -152,9 +152,18 @@ namespace OnePassword.Test
         [Test]
         public void GetVaultAccounts_work()
         {
-            var http =
-                MakeJsonHttp(
-                    JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
+            var keychain = new Keychain();
+            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
+                                    "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http);
+        }
+
+        [Test]
+        public void GetVaultAccounts_with_no_items_work()
+        {
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-with-no-items-response"));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
