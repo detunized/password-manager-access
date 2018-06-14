@@ -44,26 +44,33 @@ namespace LastPass
 
             // 3.1. One-time-password is required
             if (KnownOtpMethods.ContainsKey(cause))
-                return LoginWithOtp(username,
-                                    password,
-                                    keyIterationCount,
-                                    KnownOtpMethods[cause],
-                                    clientInfo,
-                                    ui,
-                                    webClient);
+                session = LoginWithOtp(username,
+                                       password,
+                                       keyIterationCount,
+                                       KnownOtpMethods[cause],
+                                       clientInfo,
+                                       ui,
+                                       webClient);
 
             // 3.2. Some out-of-bound authentication is enabled. This does not require any
             //      additional input from the user.
-            if (cause == "outofbandrequired")
-                return LoginWithOob(username,
-                                    password,
-                                    keyIterationCount,
-                                    ExtractOobMethodFromLoginResponse(response),
-                                    clientInfo,
-                                    ui,
-                                    webClient);
+            else if (cause == "outofbandrequired")
+                session = LoginWithOob(username,
+                                       password,
+                                       keyIterationCount,
+                                       ExtractOobMethodFromLoginResponse(response),
+                                       clientInfo,
+                                       ui,
+                                       webClient);
 
-            throw CreateLoginException(response);
+            if (session == null)
+                throw CreateLoginException(response);
+
+            // 4. The login with OTP or OOB is successful. Tell the server to trust this device next time.
+            if (clientInfo.TrustThisDevice)
+                Trust(session, clientInfo, webClient);
+
+            return session;
         }
 
         public static void Logout(Session session)
@@ -174,7 +181,7 @@ namespace LastPass
                     {"iterations", string.Format("{0}", keyIterationCount)},
                     {"includeprivatekeyenc", "1"},
                     {"outofbandsupported", "1"},
-                    {"imei", clientInfo.Id},
+                    {"uuid", clientInfo.Id},
                     extraParameters
                 };
 
@@ -251,6 +258,27 @@ namespace LastPass
                 // Retry
                 extraParameters["outofbandretry"] = "1";
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
+            }
+        }
+
+        private static void Trust(Session session, ClientInfo clientInfo, IWebClient webClient)
+        {
+            try
+            {
+                SetSessionCookies(webClient, session);
+                webClient.UploadValues("https://lastpass.com/trust.php",
+                                       new NameValueCollection
+                                       {
+                                           {"uuid", clientInfo.Id},
+                                           {"trustlabel", clientInfo.Description},
+                                           {"token", session.Token},
+                                       });
+            }
+            catch (WebException e)
+            {
+                throw new LoginException(LoginException.FailureReason.WebException,
+                                         "WebException occurred",
+                                         e);
             }
         }
 
