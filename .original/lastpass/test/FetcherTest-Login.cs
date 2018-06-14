@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
@@ -24,6 +25,7 @@ namespace LastPass.Test
 
         private const string IterationsUrl = "https://lastpass.com/iterations.php";
         private const string LoginUrl = "https://lastpass.com/login.php";
+        private const string TrustUrl = "https://lastpass.com/trust.php";
 
         private const string NoMultifactorPassword = null;
         private const string GoogleAuthenticatorCode = "123456";
@@ -69,41 +71,333 @@ namespace LastPass.Test
         // Login tests
         //
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
-        public void Login_failed_because_of_WebException_in_iterations_request()
+        private class Request
         {
-            LoginAndVerifyExceptionInIterationsRequest<WebException>(new ResponseOrException(new WebException()),
-                                                                     LoginException.FailureReason.WebException,
-                                                                     WebExceptionMessage);
+            public readonly string Method;
+            public readonly string Url;
+            public readonly byte[] Response;
+            public readonly Dictionary<string, string> Parameters;
+            public readonly Dictionary<string, string> Headers;
+
+            public Request(string method,
+                           string url,
+                           string response,
+                           Dictionary<string, string> parameters = null,
+                           Dictionary<string, string> headers = null)
+            {
+                Method = method;
+                Url = url;
+                Response = response.ToBytes();
+                Parameters = parameters;
+                Headers = headers;
+            }
+        }
+
+        private class MockWebClient: IWebClient
+        {
+            public MockWebClient(Request[] requests, int failIndex = -1)
+            {
+                Assert.That(failIndex, Is.InRange(-1, requests.Length - 1));
+
+                Headers = new WebHeaderCollection();
+                _requests = requests;
+                _failIndex = failIndex;
+            }
+
+            public byte[] DownloadData(string address)
+            {
+                return CheckRequest(req =>
+                {
+                    Assert.That(req.Method, Is.EqualTo("GET"));
+                    CheckCommonParts(req, address, null);
+                });
+            }
+
+            public byte[] UploadValues(string address, NameValueCollection data)
+            {
+                return CheckRequest(req =>
+                {
+                    Assert.That(req.Method, Is.EqualTo("POST"));
+                    CheckCommonParts(req, address, data);
+                });
+            }
+
+            public WebHeaderCollection Headers { get; private set; }
+
+            public void CheckFinished()
+            {
+                Assert.That(_currentRequestIndex, Is.EqualTo(_requests.Length), "Too few requests have been made");
+            }
+
+            private byte[] CheckRequest(Action<Request> check)
+            {
+                Assert.That(_currentRequestIndex, Is.LessThan(_requests.Length), "Too many requests");
+
+                try
+                {
+                    var request = _requests[_currentRequestIndex];
+                    check(request);
+
+                    if (_currentRequestIndex == _failIndex)
+                        throw new WebException();
+                    else
+                        return request.Response;
+                }
+                finally
+                {
+                    _currentRequestIndex += 1;
+                }
+            }
+
+            private void CheckCommonParts(Request expected, string url, NameValueCollection parameters)
+            {
+                Assert.That(url, Is.EqualTo(expected.Url));
+
+                if (expected.Parameters != null)
+                    CheckParameters(expected.Parameters, parameters);
+            }
+
+            private void CheckParameters(Dictionary<string, string> expected, NameValueCollection actual)
+            {
+                Assert.That(expected, Is.Not.Null);
+                Assert.That(actual, Is.Not.Null);
+
+                foreach (var expectedKey in expected)
+                {
+                    var actualValues = actual.GetValues(expectedKey.Key);
+                    Assert.That(actualValues, Is.Not.Null, "Request parameter '{0}' is not found", expectedKey.Key);
+                    Assert.That(actualValues.Length,
+                                Is.EqualTo(1),
+                                "Request parameter '{0}' has multiple values",
+                                expectedKey.Key);
+                    Assert.That(actualValues[0],
+                                Is.EqualTo(expectedKey.Value),
+                                "Request parameter '{0}' is expected to be '{1}', got '{2}'",
+                                expectedKey.Key,
+                                expectedKey.Value,
+                                actualValues[0]);
+                }
+
+                foreach (var key in actual.AllKeys)
+                    Assert.That(expected.ContainsKey(key), "Unexpected request parameter '{0}' found", key);
+            }
+
+            private readonly Request[] _requests;
+            private readonly int _failIndex;
+            private int _currentRequestIndex = 0;
+        }
+
+        private static Session LoginSequence(Request[] requests)
+        {
+            return Fetcher.Login(Username, Password, ClientInfo, null, new MockWebClient(requests));
+        }
+
+        private static void CheckLoginSequence(Request[] requests, Ui ui = null)
+        {
+            CheckSequence(requests, webClient => Fetcher.Login(Username, Password, ClientInfo, ui, webClient));
+        }
+
+        private static void CheckSequence(Request[] requests, Action<IWebClient> executeSequence)
+        {
+            // Success test
+            var webClient = new MockWebClient(requests);
+            executeSequence(webClient);
+            webClient.CheckFinished();
+
+            // Test failure at each step
+            for (var i = 0; i < requests.Length; ++i)
+                Assert.That(() => executeSequence(new MockWebClient(requests, i)),
+                            Throws.InstanceOf<LoginException>()
+                                .And.Property("Reason").EqualTo(LoginException.FailureReason.WebException));
+        }
+
+        private static readonly Dictionary<string, string> IterationsParameters = new Dictionary<string, string>
+        {
+            {"email", Username}
+        };
+
+        private static readonly Dictionary<string, string> SimpleLoginParameters = new Dictionary<string, string>
+        {
+            {"method", "cli"},
+            {"xml", "2"},
+            {"username", Username},
+            {"hash", "7880a04588cfab954aa1a2da98fd9c0d2c6eba4c53e36a94510e6dbf30759256"},
+            {"iterations", string.Format("{0}", IterationCount)},
+            {"includeprivatekeyenc", "1"},
+            {"outofbandsupported", "1"},
+            {"uuid", ClientInfo.Id},
+            {"trustlabel", ClientInfo.Description},
+        };
+
+        private static readonly Dictionary<string, string> GoogleAuthLoginParameters =
+            new Dictionary<string, string>(SimpleLoginParameters)
+            {
+                {"otp", GoogleAuthenticatorCode}
+            };
+
+        private static readonly Dictionary<string, string> YubikeyLoginParameters =
+            new Dictionary<string, string>(SimpleLoginParameters)
+            {
+                {"otp", YubikeyPassword}
+            };
+
+        private static readonly Dictionary<string, string> OutOfBandLoginParameters =
+            new Dictionary<string, string>(SimpleLoginParameters)
+            {
+                {"outofbandrequest", "1"}
+            };
+
+        private static readonly Dictionary<string, string> OutOfBandRetryLoginParameters =
+            new Dictionary<string, string>(OutOfBandLoginParameters)
+            {
+                {"outofbandretry", "1"},
+                {"outofbandretryid", "1337"},
+            };
+
+        private static readonly Dictionary<string, string> TrustParameters = new Dictionary<string, string>
+        {
+            {"uuid", ClientInfo.Id},
+            {"trustlabel", ClientInfo.Description},
+            {"token", Token},
+        };
+
+        private static readonly string LoginOkResponse =
+            string.Format("<response><ok sessionid=\"{0}\" token=\"{1}\" privatekeyenc=\"{2}\" /></response>",
+                          SessionId,
+                          Token,
+                          EncryptedPrivateKey);
+
+        private static readonly Request IterationsValid = new Request("POST",
+                                                                      IterationsUrl,
+                                                                      IterationCount.ToString(),
+                                                                      IterationsParameters);
+
+        private static readonly Request IterationsInvalid = new Request("POST",
+                                                                        IterationsUrl,
+                                                                        "Not an integer",
+                                                                        IterationsParameters);
+
+        private static readonly Request IterationsTooBig = new Request("POST",
+                                                                       IterationsUrl,
+                                                                       "2147483648",
+                                                                       IterationsParameters);
+
+        private static readonly Request SimpleLoginOk = new Request("POST",
+                                                                    LoginUrl,
+                                                                    LoginOkResponse,
+                                                                    SimpleLoginParameters);
+
+        private static readonly Request SimpleLoginGoogleAuthRequired =
+            new Request("POST",
+                        LoginUrl,
+                        "<response><error cause=\"googleauthrequired\" /></response>");
+
+        private static readonly Request SimpleLoginYubikeyRequired =
+            new Request("POST",
+                        LoginUrl,
+                        "<response><error cause=\"otprequired\" /></response>");
+
+        private static readonly Request SimpleLoginLastPassAuthRequired =
+            new Request("POST",
+                        LoginUrl,
+                        "<response><error cause=\"outofbandrequired\" outofbandtype=\"lastpassauth\" /></response>",
+                        SimpleLoginParameters);
+
+        private static readonly Request OobLastPassAuthTimeOut =
+            new Request("POST",
+                        LoginUrl,
+                        "<response><error cause=\"outofbandrequired\" outofbandtype=\"lastpassauth\" retryid=\"1337\" /></response>",
+                        OutOfBandLoginParameters);
+
+        private static readonly Request GoogleAuthLogin = new Request("POST",
+                                                                      LoginUrl,
+                                                                      LoginOkResponse,
+                                                                      GoogleAuthLoginParameters);
+
+        private static readonly Request YubikeyLogin = new Request("POST",
+                                                                   LoginUrl,
+                                                                   LoginOkResponse,
+                                                                   YubikeyLoginParameters);
+
+        private static readonly Request OutOfBandLogin = new Request("POST",
+                                                                     LoginUrl,
+                                                                     LoginOkResponse,
+                                                                     OutOfBandLoginParameters);
+
+        private static readonly Request OutOfBandLoginRetry = new Request("POST",
+                                                                          LoginUrl,
+                                                                          LoginOkResponse,
+                                                                          OutOfBandRetryLoginParameters);
+
+        private static readonly Request Trust = new Request("POST",
+                                                            TrustUrl,
+                                                            "<response />",
+                                                            TrustParameters);
+
+        [Test]
+        public void Basic_login_works()
+        {
+            CheckLoginSequence(new[] {IterationsValid, SimpleLoginOk});
         }
 
         [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        public void GoogleAuth_login_works()
+        {
+
+            CheckLoginSequence(new[] {IterationsValid, SimpleLoginGoogleAuthRequired, GoogleAuthLogin, Trust},
+                               SetupUi(GoogleAuthenticatorCode));
+        }
+
+        [Test]
+        public void Yubikey_login_works()
+        {
+
+            CheckLoginSequence(new[] {IterationsValid, SimpleLoginYubikeyRequired, YubikeyLogin, Trust},
+                               SetupUi(YubikeyPassword));
+        }
+
+        [Test]
+        public void LastPassAuth_login_works()
+        {
+
+            CheckLoginSequence(new[] {IterationsValid, SimpleLoginLastPassAuthRequired, OutOfBandLogin, Trust},
+                               SetupUi(""));
+        }
+
+        [Test]
+        public void LastPassAuth_login_with_retry_works()
+        {
+
+            CheckLoginSequence(
+                new[]
+                {
+                    IterationsValid,
+                    SimpleLoginLastPassAuthRequired,
+                    OobLastPassAuthTimeOut,
+                    OutOfBandLoginRetry,
+                    Trust
+                },
+                SetupUi(""));
+        }
+
+        [Test]
         public void Login_failed_because_of_invalid_iteration_count()
         {
-            LoginAndVerifyExceptionInIterationsRequest<FormatException>(new ResponseOrException("Not an integer"),
-                                                                        LoginException.FailureReason.InvalidResponse,
-                                                                        "Iteration count is invalid");
+            Assert.That(() => LoginSequence(new[] {IterationsInvalid}),
+                        Throws.InstanceOf<LoginException>()
+                            .And.Property("Reason").EqualTo(LoginException.FailureReason.InvalidResponse)
+                            .And.Message.EqualTo("Iteration count is invalid")
+                            .And.InnerException.InstanceOf<FormatException>());
         }
 
         [Test]
-        [Ignore("TODO: this test is no longer valid")]
         public void Login_failed_because_of_very_large_iteration_count()
         {
-
-            LoginAndVerifyExceptionInIterationsRequest<OverflowException>(new ResponseOrException("2147483648"),
-                                                                          LoginException.FailureReason.InvalidResponse,
-                                                                          "Iteration count is invalid");
-        }
-
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
-        public void Login_failed_because_of_WebException_in_login_request()
-        {
-            LoginAndVerifyExceptionInLoginRequest<WebException>(new ResponseOrException(new WebException()),
-                                                                LoginException.FailureReason.WebException,
-                                                                WebExceptionMessage);
+            Assert.That(() => LoginSequence(new[] {IterationsTooBig}),
+                        Throws.InstanceOf<LoginException>()
+                            .And.Property("Reason").EqualTo(LoginException.FailureReason.InvalidResponse)
+                            .And.Message.EqualTo("Iteration count is invalid")
+                            .And.InnerException.InstanceOf<OverflowException>());
         }
 
         [Test]
