@@ -281,7 +281,15 @@ namespace LastPass
             if (sessionId == null)
                 return null;
 
-            return new Session(sessionId.Value, keyIterationCount, GetEncryptedPrivateKey(ok), clientInfo.Platform);
+            var token = ok.Attribute("token");
+            if (token == null)
+                return null;
+
+            return new Session(sessionId.Value,
+                               keyIterationCount,
+                               token.Value,
+                               GetEncryptedPrivateKey(ok),
+                               clientInfo.Platform);
         }
 
         private static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)

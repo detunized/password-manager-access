@@ -16,7 +16,11 @@ namespace LastPass.Test
         //
 
         private const string AccountDownloadUrl = "https://lastpass.com/getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc=cli";
-        private static readonly Session Session = new Session(SessionId, IterationCount, "DEADBEEF", Platform.Desktop);
+        private static readonly Session Session = new Session(SessionId,
+                                                              IterationCount,
+                                                              Token,
+                                                              EncryptedPrivateKey,
+                                                              Platform.Desktop);
         private const string FetchResponse = "VGVzdCBibG9i";
         private static readonly byte[] Blob = "Test blob".ToBytes();
 
