@@ -299,8 +299,14 @@ namespace OnePassword
                                           JsonHttpClient jsonHttp)
         {
             return accountInfo.At("vaults")
+                .Where(IsVaultEntryValid)
                 .Select(i => GetVault(i, sessionKey, keychain, jsonHttp))
                 .ToArray();
+        }
+
+        internal static bool IsVaultEntryValid(JToken json)
+        {
+            return json.StringAt("uuid", "") != "";
         }
 
         internal static Vault GetVault(JToken json,
