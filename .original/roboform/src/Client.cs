@@ -11,12 +11,14 @@ namespace RoboForm
 {
     internal static class Client
     {
-        public static Vault OpenVault(ClientInfo clientInfo, Ui ui, IHttpClient http)
+        public static Vault OpenVault(ClientInfo clientInfo, Ui ui, Logger logger, IHttpClient http)
         {
             var session = Login(clientInfo, ui, http);
             try
             {
                 var blob = GetBlob(clientInfo.Username, session, http);
+                if (logger != null)
+                    logger.Log(DateTime.UtcNow, "Encrypted blob: '{0}'", blob.ToBase64());
                 var json = OneFile.Parse(blob, clientInfo.Password);
                 return VaultParser.Parse(json);
             }

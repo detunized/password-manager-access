@@ -11,12 +11,12 @@ namespace RoboForm
         // store it and reuse later on subsequent logins.
         // Calling Vault.Open(username, password, Vault.GenerateRandomDeviceId(), ui) is
         // not a good idea. See bellow.
-        public static Vault Open(string username, string password, string deviceId, Ui ui)
+        public static Vault Open(string username, string password, string deviceId, Ui ui, Logger logger = null)
         {
             var clientInfo = new ClientInfo(username: username,
                                             password: password,
                                             deviceId: deviceId);
-            return Open(clientInfo, ui, new HttpClient());
+            return Open(clientInfo, ui, logger, new HttpClient());
         }
 
         // Generates a random device id that should be used with every new device.
@@ -34,9 +34,9 @@ namespace RoboForm
         // Internal
         //
 
-        internal static Vault Open(ClientInfo clientInfo, Ui ui, IHttpClient http)
+        internal static Vault Open(ClientInfo clientInfo, Ui ui, Logger logger, IHttpClient http)
         {
-            return Client.OpenVault(clientInfo, ui, http);
+            return Client.OpenVault(clientInfo, ui, logger, http);
         }
 
         internal Vault(Account[] accounts)
