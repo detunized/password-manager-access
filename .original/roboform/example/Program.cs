@@ -30,6 +30,14 @@ namespace Example
             }
         }
 
+        private class ConsoleLogger: Logger
+        {
+            public override void Log(DateTime timestamp, string text)
+            {
+                Console.WriteLine("{0}: {1}", timestamp, text);
+            }
+        }
+
         private static void Main(string[] args)
         {
             // Read RoboForm credentials from a file
@@ -42,7 +50,7 @@ namespace Example
 
             try
             {
-                var vault = Vault.Open(username, password, deviceId, new TextUi());
+                var vault = Vault.Open(username, password, deviceId, new TextUi(), new ConsoleLogger());
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];
