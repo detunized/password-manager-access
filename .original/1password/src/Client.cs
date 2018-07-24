@@ -234,11 +234,11 @@ namespace OnePassword
             {
                 var response = PostEncryptedJson(
                     "v2/auth/verify",
-                    new
+                    new Dictionary<string, object>
                     {
-                        sessionID = session.Id,
-                        clientVerifyHash = Crypto.CalculateClientHash(clientInfo, session),
-                        client = ClientId
+                        {"sessionID", session.Id},
+                        {"clientVerifyHash", Crypto.CalculateClientHash(clientInfo, session)},
+                        {"client", ClientId},
                     },
                     sessionKey,
                     jsonHttp);
@@ -446,7 +446,7 @@ namespace OnePassword
         }
 
         internal static JObject PostEncryptedJson(string endpoint,
-                                                  object parameters,
+                                                  Dictionary<string, object> parameters,
                                                   AesKey sessionKey,
                                                   JsonHttpClient jsonHttp)
         {
