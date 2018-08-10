@@ -11,9 +11,9 @@ namespace Dashlane
 {
     public static class Remote
     {
-        private const string LatestUrl = "https://www.dashlane.com/12/backup/latest";
-        private const string TokenUrl = "https://www.dashlane.com/6/authentication/sendtoken";
-        private const string RegisterUrl = "https://www.dashlane.com/6/authentication/registeruki";
+        private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
+        private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
+        private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";
 
         public static JObject Fetch(string username, string uki)
         {

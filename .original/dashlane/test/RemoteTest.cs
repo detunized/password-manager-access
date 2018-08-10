@@ -18,9 +18,9 @@ namespace Dashlane.Test
         public const string Uki = "uki";
         public const string DeviceName = "device";
         public const string Token = "token";
-        public const string FetchUrl = "https://www.dashlane.com/12/backup/latest";
-        public const string RegisterStep1Url = "https://www.dashlane.com/6/authentication/sendtoken";
-        public const string RegisterStep2Url = "https://www.dashlane.com/6/authentication/registeruki";
+        public const string FetchUrl = "https://ws1.dashlane.com/12/backup/latest";
+        public const string RegisterStep1Url = "https://ws1.dashlane.com/6/authentication/sendtoken";
+        public const string RegisterStep2Url = "https://ws1.dashlane.com/6/authentication/registeruki";
 
         [Test]
         public void Fetch_returns_received_json()
