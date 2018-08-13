@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace OPVault.Test
@@ -8,6 +9,36 @@ namespace OPVault.Test
     [TestFixture]
     public class VaultTest
     {
+        [Test]
+        public void LoadJsAsJsonFromString_returns_parsed_json_object()
+        {
+            var expected = JObject.Parse("{'key': 'value'}");
+            var json = Vault.LoadJsAsJsonFromString("var j = {'key': 'value'};", "var j = ", ";");
+
+            Assert.That(JToken.DeepEquals(json, expected));
+        }
+
+        [Test]
+        public void LoadJsAsJsonFromString_throws_on_too_short_input()
+        {
+            Assert.That(() => Vault.LoadJsAsJsonFromString("-", "var j = ", ";"),
+                        Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void LoadJsAsJsonFromString_throws_on_missing_prefix()
+        {
+            Assert.That(() => Vault.LoadJsAsJsonFromString("var j = {};", "-", ";"),
+                        Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void LoadJsAsJsonFromString_throws_on_missing_suffix()
+        {
+            Assert.That(() => Vault.LoadJsAsJsonFromString("var j = {};", "var j =", "-"),
+                        Throws.InvalidOperationException);
+        }
+
         [Test]
         public void MakeFilename_makes_path_inside_vault()
         {
