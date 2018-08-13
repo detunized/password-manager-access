@@ -17,6 +17,13 @@ namespace OPVault.Test
         }
 
         [Test]
+        public void LoadFolders_reads_folders_js()
+        {
+            var folders = Vault.LoadFolders(TestVaultPath);
+            Assert.That(folders["1D3B2B341F7A43F6A316179F4216E731"].Type, Is.EqualTo(JTokenType.Object));
+        }
+
+        [Test]
         public void LoadJsAsJson_reads_json_from_file()
         {
             var json = Vault.LoadJsAsJson(string.Format("{0}/default/profile.js", TestVaultPath), "var profile=", ";");

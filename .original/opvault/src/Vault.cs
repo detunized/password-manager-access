@@ -11,8 +11,12 @@ namespace OPVault
     {
         internal static JObject LoadProfile(string path)
         {
-            var filename = MakeFilename(path, "profile.js");
-            return LoadJsAsJson(filename, "var profile=", ";");
+            return LoadJsAsJson(MakeFilename(path, "profile.js"), "var profile=", ";");
+        }
+
+        internal static JObject LoadFolders(string path)
+        {
+            return LoadJsAsJson(MakeFilename(path, "folders.js"), "loadFolders(", ");");
         }
 
         internal static JObject LoadJsAsJson(string filename, string prefix, string suffix)
