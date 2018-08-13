@@ -11,6 +11,16 @@ namespace OPVault
 {
     public class Vault
     {
+        public void Open(string path)
+        {
+            // Load all the files
+            var profile = LoadProfile(path);
+            var encryptedFolders = LoadFolders(path);
+            var encryptedItems = LoadItems(path);
+
+            throw new NotImplementedException();
+        }
+
         internal static JObject LoadProfile(string path)
         {
             return LoadJsAsJson(MakeFilename(path, "profile.js"), "var profile=", ";");
