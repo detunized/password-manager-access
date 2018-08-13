@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="VaultTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
