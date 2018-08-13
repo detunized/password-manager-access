@@ -39,6 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Pbkdf2.cs" />
     <Compile Include="Vault.cs" />
   </ItemGroup>
   <ItemGroup>
