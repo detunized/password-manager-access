@@ -11,12 +11,14 @@ namespace OPVault
 {
     public class Vault
     {
-        public void Open(string path)
+        public void Open(string path, string password)
         {
             // Load all the files
             var profile = LoadProfile(path);
             var encryptedFolders = LoadFolders(path);
             var encryptedItems = LoadItems(path);
+
+            var kek = DeriveKek(profile, password);
 
             throw new NotImplementedException();
         }
