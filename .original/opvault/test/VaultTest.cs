@@ -24,6 +24,13 @@ namespace OPVault.Test
         }
 
         [Test]
+        public void LoadItems_reads_items_from_all_bands()
+        {
+            var items = Vault.LoadItems(TestVaultPath);
+            Assert.That(items.Length, Is.EqualTo(3));
+        }
+
+        [Test]
         public void LoadJsAsJson_reads_json_from_file()
         {
             var json = Vault.LoadJsAsJson(string.Format("{0}/default/profile.js", TestVaultPath), "var profile=", ";");

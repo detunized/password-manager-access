@@ -2,7 +2,9 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace OPVault
@@ -17,6 +19,26 @@ namespace OPVault
         internal static JObject LoadFolders(string path)
         {
             return LoadJsAsJson(MakeFilename(path, "folders.js"), "loadFolders(", ");");
+        }
+
+        internal static JObject[] LoadItems(string path)
+        {
+            var items = new List<JObject>();
+            foreach (var c in "0123456789ABCDEF")
+            {
+                var filename = MakeFilename(path, string.Format("band_{0}.js", c));
+                if (!File.Exists(filename))
+                    continue;
+
+                items.AddRange(LoadBand(filename).Values().Select(i => (JObject)i));
+            }
+
+            return items.ToArray();
+        }
+
+        internal static JObject LoadBand(string filename)
+        {
+            return LoadJsAsJson(filename, "ld(", ");");
         }
 
         internal static JObject LoadJsAsJson(string filename, string prefix, string suffix)
