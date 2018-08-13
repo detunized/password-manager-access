@@ -10,6 +10,13 @@ namespace OPVault.Test
     public class VaultTest
     {
         [Test]
+        public void LoadJsAsJson_reads_json_from_file()
+        {
+            var json = Vault.LoadJsAsJson("test.opvault/default/profile.js", "var profile=", ";");
+            Assert.That((string)json["uuid"], Is.EqualTo("714A14D7017048CC9577AD050FC9C6CA"));
+        }
+
+        [Test]
         public void LoadJsAsJsonFromString_returns_parsed_json_object()
         {
             var expected = JObject.Parse("{'key': 'value'}");

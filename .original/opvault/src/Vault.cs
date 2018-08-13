@@ -9,6 +9,11 @@ namespace OPVault
 {
     public class Vault
     {
+        internal static JObject LoadJsAsJson(string filename, string prefix, string suffix)
+        {
+            return LoadJsAsJsonFromString(File.ReadAllText(filename), prefix, suffix);
+        }
+
         internal static JObject LoadJsAsJsonFromString(string content, string prefix, string suffix)
         {
             // TODO: Use custom exception
