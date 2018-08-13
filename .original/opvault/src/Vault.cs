@@ -9,6 +9,12 @@ namespace OPVault
 {
     public class Vault
     {
+        internal static JObject LoadProfile(string path)
+        {
+            var filename = MakeFilename(path, "profile.js");
+            return LoadJsAsJson(filename, "var profile=", ";");
+        }
+
         internal static JObject LoadJsAsJson(string filename, string prefix, string suffix)
         {
             return LoadJsAsJsonFromString(File.ReadAllText(filename), prefix, suffix);

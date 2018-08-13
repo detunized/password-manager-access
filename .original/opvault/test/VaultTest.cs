@@ -10,6 +10,13 @@ namespace OPVault.Test
     public class VaultTest
     {
         [Test]
+        public void LoadProfile_reads_profile_js()
+        {
+            var profile = Vault.LoadProfile(TestVaultPath);
+            Assert.That((string)profile["uuid"], Is.EqualTo("714A14D7017048CC9577AD050FC9C6CA"));
+        }
+
+        [Test]
         public void LoadJsAsJson_reads_json_from_file()
         {
             var json = Vault.LoadJsAsJson("test.opvault/default/profile.js", "var profile=", ";");
@@ -74,5 +81,11 @@ namespace OPVault.Test
             var normalized = Vault.NormalizeSlashes("/path/to\\a/file/");
             Assert.That(normalized, Is.EqualTo("\\path\\to\\a\\file\\"));
         }
+
+        //
+        // Data
+        //
+
+        private const string TestVaultPath = "test.opvault";
     }
 }
