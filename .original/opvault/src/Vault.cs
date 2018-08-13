@@ -79,5 +79,12 @@ namespace OPVault
             // TODO: Test on non Windows based platforms
             return path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
         }
+
+        internal static byte[] DeriveKek(JObject profile, string password)
+        {
+            return Crypto.DeriveKek(password.ToBytes(),
+                                    profile.StringAt("salt").Decode64(),
+                                    profile.IntAt("iterations"));
+        }
     }
 }

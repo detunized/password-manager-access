@@ -96,10 +96,21 @@ namespace OPVault.Test
             Assert.That(normalized, Is.EqualTo("\\path\\to\\a\\file\\"));
         }
 
+        [Test]
+        public void DeriveKek_returns_key()
+        {
+            var expected = "a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzufhnDVeB4cDrxnTsPFYMTvpHboE8MPGg==";
+            var profile = Vault.LoadProfile(TestVaultPath);
+            var kek = Vault.DeriveKek(profile, Password);
+
+            Assert.That(kek, Is.EqualTo(expected.Decode64()));
+        }
+
         //
         // Data
         //
 
         private const string TestVaultPath = "test.opvault";
+        private const string Password = "password";
     }
 }
