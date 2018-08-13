@@ -5,9 +5,9 @@ namespace OPVault
 {
     internal static class Crypto
     {
-        public static byte[] DeriveKek(byte[] password, byte[] salt, int iterations)
+        public static KeyMac DeriveKek(byte[] password, byte[] salt, int iterations)
         {
-            return Pbkdf2.GenerateSha512(password, salt, iterations, 64);
+            return new KeyMac(Pbkdf2.GenerateSha512(password, salt, iterations, 64));
         }
     }
 }

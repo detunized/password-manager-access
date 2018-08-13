@@ -82,7 +82,7 @@ namespace OPVault
             return path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
         }
 
-        internal static byte[] DeriveKek(JObject profile, string password)
+        internal static KeyMac DeriveKek(JObject profile, string password)
         {
             return Crypto.DeriveKek(password.ToBytes(),
                                     profile.StringAt("salt").Decode64(),

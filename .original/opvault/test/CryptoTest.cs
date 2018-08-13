@@ -11,10 +11,12 @@ namespace OPVault.Test
         [Test]
         public void DeriveKek_returns_key()
         {
-            var expected = "a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzufhnDVeB4cDrxnTsPFYMTvpHboE8MPGg==";
+            var expected = new KeyMac("a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzuf" +
+                                      "hnDVeB4cDrxnTsPFYMTvpHboE8MPGg==");
             var kek = Crypto.DeriveKek("password".ToBytes(), "pzJ5y/CiCeU8Sbo8+k4/zg==".Decode64(), 40000);
 
-            Assert.That(kek, Is.EqualTo(expected.Decode64()));
+            Assert.That(kek.Key, Is.EqualTo(expected.Key));
+            Assert.That(kek.MacKey, Is.EqualTo(expected.MacKey));
         }
     }
 }
