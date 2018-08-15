@@ -84,6 +84,7 @@ namespace OPVault
 
         internal static KeyMac DeriveKek(JObject profile, string password)
         {
+            // TODO: Handle JSON exceptions
             return Crypto.DeriveKek(password.ToBytes(),
                                     profile.StringAt("salt").Decode64(),
                                     profile.IntAt("iterations"));
