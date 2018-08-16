@@ -11,7 +11,7 @@ namespace OPVault
 {
     public class Vault
     {
-        public void Open(string path, string password)
+        public static void Open(string path, string password)
         {
             // Load all the files
             var profile = LoadProfile(path);
@@ -19,6 +19,7 @@ namespace OPVault
             var encryptedItems = LoadItems(path);
 
             var kek = DeriveKek(profile, password);
+            var masterKey = DecryptMasterKey(profile, kek);
 
             throw new NotImplementedException();
         }
@@ -88,6 +89,12 @@ namespace OPVault
             return Crypto.DeriveKek(password.ToBytes(),
                                     profile.StringAt("salt").Decode64(),
                                     profile.IntAt("iterations"));
+        }
+
+        internal static KeyMac DecryptMasterKey(JObject profile, KeyMac kek)
+        {
+            // TODO: Handle JSON exceptions
+            return new KeyMac(Opdata01.Decrypt(profile.StringAt("masterKey"), kek));
         }
     }
 }
