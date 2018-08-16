@@ -50,6 +50,7 @@
     <Compile Include="CryptoTest.cs" />
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="KeyMacTest.cs" />
+    <Compile Include="Opdata01Test.cs" />
     <Compile Include="Pbkdf2Test.cs" />
     <Compile Include="VaultTest.cs" />
   </ItemGroup>

@@ -42,6 +42,7 @@
     <Compile Include="Crypto.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="KeyMac.cs" />
+    <Compile Include="Opdata01.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Vault.cs" />
   </ItemGroup>
