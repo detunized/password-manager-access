@@ -21,6 +21,8 @@ namespace OPVault
             var kek = DeriveKek(profile, password);
             var masterKey = DecryptMasterKey(profile, kek);
             var overviewKey = DecryptOverviewKey(profile, kek);
+
+            var folders = DecryptFolders(encryptedFolders, overviewKey);
         }
 
         internal static JObject LoadProfile(string path)
@@ -109,6 +111,24 @@ namespace OPVault
         {
             var raw = Opdata01.Decrypt(encryptedKeyBase64, kek);
             return new KeyMac(Crypto.Sha512(raw));
+        }
+
+        internal static object[] DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
+        {
+            return encryptedFolders
+                .Where(i => !i.BoolAt("trashed", false))
+                .Select(i => DecryptFolder(i, overviewKey))
+                .ToArray();
+        }
+
+        private static object DecryptFolder(JObject folder, KeyMac overviewKey)
+        {
+            var overview = JObject.Parse(Opdata01.Decrypt(folder.StringAt("overview"), overviewKey).ToUtf8());
+            return new
+            {
+                Id = folder.StringAt("uuid"),
+                Name = overview.StringAt("title")
+            };
         }
     }
 }
