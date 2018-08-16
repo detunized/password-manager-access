@@ -18,5 +18,31 @@ namespace OPVault.Test
             Assert.That(kek.Key, Is.EqualTo(expected.Key));
             Assert.That(kek.MacKey, Is.EqualTo(expected.MacKey));
         }
+
+        [Test]
+        public void Hmac_returns_hashed_message()
+        {
+            // Generated with OpenSSL (just a smoke test, we're not implementing HMAC here)
+            // $ echo -n message | openssl dgst -sha256 -binary -hmac "saltsaltsaltsaltsaltsaltsaltsalt" | openssl base64
+            Assert.That(Crypto.Hmac("message".ToBytes(), TestKey),
+                        Is.EqualTo("drZnXZBwtFUIqm8vnAtCXXWSRmHl4qt9E0tqT4kok7Q=".Decode64()));
+        }
+
+        [Test]
+        public void DecryptAes_returns_plaintext_without_padding()
+        {
+            // Generated with Ruby/openssl
+            Assert.That(Crypto.DecryptAes("yNVOKI5bgIJ0lPdVszvlEQ==".Decode64(),
+                                          "iviviviviviviviv".ToBytes(),
+                                          TestKey),
+                        Is.EqualTo("decrypted data!!".ToBytes()));
+        }
+
+        //
+        // Data
+        //
+
+        private static readonly KeyMac TestKey =
+            new KeyMac("key!key!key!key!key!key!key!key!saltsaltsaltsaltsaltsaltsaltsalt".ToBytes());
     }
 }
