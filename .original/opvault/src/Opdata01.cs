@@ -7,6 +7,9 @@ using System.Linq;
 
 namespace OPVault
 {
+    // TODO: Performance might be an issue here. There's a lot of small temporary objects in this code.
+    //       For small vaults it wouldn't worth the effort to make it more efficient. On big vaults this
+    //       could cause problems when decrypting everything at once. Profile this and verify.
     internal static class Opdata01
     {
         public static byte[] Decrypt(string blobBase64, KeyMac key)
