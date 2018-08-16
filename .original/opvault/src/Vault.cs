@@ -20,8 +20,7 @@ namespace OPVault
 
             var kek = DeriveKek(profile, password);
             var masterKey = DecryptMasterKey(profile, kek);
-
-            throw new NotImplementedException();
+            var overviewKey = DecryptOverviewKey(profile, kek);
         }
 
         internal static JObject LoadProfile(string path)
@@ -94,7 +93,18 @@ namespace OPVault
         internal static KeyMac DecryptMasterKey(JObject profile, KeyMac kek)
         {
             // TODO: Handle JSON exceptions
-            var raw = Opdata01.Decrypt(profile.StringAt("masterKey"), kek);
+            return DecryptBase64Key(profile.StringAt("masterKey"), kek);
+        }
+
+        internal static KeyMac DecryptOverviewKey(JObject profile, KeyMac kek)
+        {
+            // TODO: Handle JSON exceptions
+            return DecryptBase64Key(profile.StringAt("overviewKey"), kek);
+        }
+
+        internal static KeyMac DecryptBase64Key(string encryptedKeyBase64, KeyMac kek)
+        {
+            var raw = Opdata01.Decrypt(encryptedKeyBase64, kek);
             return new KeyMac(Crypto.Sha512(raw));
         }
     }
