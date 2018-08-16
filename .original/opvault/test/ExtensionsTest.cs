@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -260,34 +259,11 @@ namespace OPVault.Test
         //
 
         private const string TestString = "All your base are belong to us";
-        public const string TestHex = "416c6c20796f757220626173652061" +
-                                      "72652062656c6f6e6720746f207573";
 
         private static readonly byte[] TestBytes =
         {
             65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
             114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
-        };
-
-        private static readonly Dictionary<string, byte[]> HexToBytes = new Dictionary<string, byte[]>
-        {
-            {"",
-             new byte[] {}},
-
-            {"00",
-             new byte[] {0}},
-
-            {"00ff",
-             new byte[] {0, 255}},
-
-            {"00010203040506070809",
-             new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
-
-            {"000102030405060708090a0b0c0d0e0f",
-             new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
-
-            {"8af633933e96a3c3550c2734bd814195",
-             new byte[] {0x8A, 0xF6, 0x33, 0x93, 0x3E, 0x96, 0xA3, 0xC3, 0x55, 0x0C, 0x27, 0x34, 0xBD, 0x81, 0x41, 0x95}}
         };
 
         //
