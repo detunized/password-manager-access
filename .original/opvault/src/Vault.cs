@@ -28,9 +28,10 @@ namespace OPVault
             return LoadJsAsJson(MakeFilename(path, "profile.js"), "var profile=", ";");
         }
 
-        internal static JObject LoadFolders(string path)
+        internal static Dictionary<string, JObject> LoadFolders(string path)
         {
-            return LoadJsAsJson(MakeFilename(path, "folders.js"), "loadFolders(", ");");
+            var json = LoadJsAsJson(MakeFilename(path, "folders.js"), "loadFolders(", ");");
+            return json.ToObject<Dictionary<string, JObject>>();
         }
 
         internal static JObject[] LoadItems(string path)
