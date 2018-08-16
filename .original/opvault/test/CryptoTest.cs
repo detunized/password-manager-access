@@ -20,6 +20,16 @@ namespace OPVault.Test
         }
 
         [Test]
+        public void Sha512_returns_hashed_message()
+        {
+            var expected = "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==";
+
+            // Generated with OpenSSL (just a smoke test, we're not implementing SHA here)
+            // $ echo -n message | openssl dgst -sha512 -binary | openssl base64
+            Assert.That(Crypto.Sha512("message".ToBytes()), Is.EqualTo(expected.Decode64()));
+        }
+
+        [Test]
         public void Hmac_returns_hashed_message()
         {
             // Generated with OpenSSL (just a smoke test, we're not implementing HMAC here)
