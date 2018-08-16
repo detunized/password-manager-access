@@ -113,7 +113,7 @@ namespace OPVault
             return new KeyMac(Crypto.Sha512(raw));
         }
 
-        internal static object[] DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
+        internal static Folder[] DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
         {
             return encryptedFolders
                 .Where(i => !i.BoolAt("trashed", false))
@@ -121,14 +121,11 @@ namespace OPVault
                 .ToArray();
         }
 
-        private static object DecryptFolder(JObject folder, KeyMac overviewKey)
+        private static Folder DecryptFolder(JObject folder, KeyMac overviewKey)
         {
+            // TODO: Handle JSON exceptions
             var overview = JObject.Parse(Opdata01.Decrypt(folder.StringAt("overview"), overviewKey).ToUtf8());
-            return new
-            {
-                Id = folder.StringAt("uuid"),
-                Name = overview.StringAt("title")
-            };
+            return new Folder(folder.StringAt("uuid"), overview.StringAt("title"));
         }
     }
 }
