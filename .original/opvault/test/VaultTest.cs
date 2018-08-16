@@ -102,18 +102,6 @@ namespace OPVault.Test
             Assert.That(normalized, Is.EqualTo("\\path\\to\\a\\file\\"));
         }
 
-        [Test]
-        public void DeriveKek_returns_key()
-        {
-            var expected = new KeyMac("a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzuf" +
-                                      "hnDVeB4cDrxnTsPFYMTvpHboE8MPGg==");
-            var profile = Vault.LoadProfile(TestVaultPath);
-            var kek = Vault.DeriveKek(profile, Password);
-
-            Assert.That(kek.Key, Is.EqualTo(expected.Key));
-            Assert.That(kek.MacKey, Is.EqualTo(expected.MacKey));
-        }
-
         //
         // Data
         //
