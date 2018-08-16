@@ -32,6 +32,17 @@ namespace OPVault.Test
         }
 
         //
+        // byte[]
+        //
+
+        [Test]
+        public void ByteArray_ToUtf8_returns_string()
+        {
+            Assert.That(new byte[] { }.ToUtf8(), Is.EqualTo(""));
+            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+        }
+
+        //
         // JToken
         //
 

@@ -24,6 +24,15 @@ namespace OPVault
         }
 
         //
+        // byte[]
+        //
+
+        public static string ToUtf8(this byte[] x)
+        {
+            return Encoding.UTF8.GetString(x);
+        }
+
+        //
         // Nested JToken access by path with and without exceptions
         //
 
