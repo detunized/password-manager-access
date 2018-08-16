@@ -113,12 +113,12 @@ namespace OPVault
             return new KeyMac(Crypto.Sha512(raw));
         }
 
-        internal static Folder[] DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
+        internal static Dictionary<string, Folder> DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
         {
             return encryptedFolders
                 .Where(i => !i.BoolAt("trashed", false))
                 .Select(i => DecryptFolder(i, overviewKey))
-                .ToArray();
+                .ToDictionary(i => i.Id);
         }
 
         private static Folder DecryptFolder(JObject folder, KeyMac overviewKey)
