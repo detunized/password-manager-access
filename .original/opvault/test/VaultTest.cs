@@ -10,6 +10,12 @@ namespace OPVault.Test
     public class VaultTest
     {
         [Test]
+        public void Open_works()
+        {
+            Vault.Open(TestVaultPath, Password);
+        }
+
+        [Test]
         public void LoadProfile_reads_profile_js()
         {
             var profile = Vault.LoadProfile(TestVaultPath);
