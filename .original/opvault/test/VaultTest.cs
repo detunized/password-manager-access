@@ -26,7 +26,7 @@ namespace OPVault.Test
         public void LoadFolders_reads_folders_js()
         {
             var folders = Vault.LoadFolders(TestVaultPath);
-            Assert.That(folders["1D3B2B341F7A43F6A316179F4216E731"].Type, Is.EqualTo(JTokenType.Object));
+            Assert.That(folders.Length, Is.EqualTo(2));
         }
 
         [Test]
