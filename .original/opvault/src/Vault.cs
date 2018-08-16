@@ -94,7 +94,8 @@ namespace OPVault
         internal static KeyMac DecryptMasterKey(JObject profile, KeyMac kek)
         {
             // TODO: Handle JSON exceptions
-            return new KeyMac(Opdata01.Decrypt(profile.StringAt("masterKey"), kek));
+            var raw = Opdata01.Decrypt(profile.StringAt("masterKey"), kek);
+            return new KeyMac(Crypto.Sha512(raw));
         }
     }
 }
