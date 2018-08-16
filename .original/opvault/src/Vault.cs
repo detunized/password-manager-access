@@ -18,10 +18,14 @@ namespace OPVault
             var encryptedFolders = LoadFolders(path);
             var encryptedItems = LoadItems(path);
 
+            // Derive key encryption key
             var kek = DeriveKek(profile, password);
+
+            // sDecrypt main keys
             var masterKey = DecryptMasterKey(profile, kek);
             var overviewKey = DecryptOverviewKey(profile, kek);
 
+            // Decrypt, parse and convert folders
             var folders = DecryptFolders(encryptedFolders, overviewKey);
         }
 
