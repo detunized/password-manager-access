@@ -164,7 +164,7 @@ namespace OPVault
                                password: "TODO: password",
                                url: overview.StringAt("url"),
                                note: details.StringAt("notesPlain"),
-                               folder: folder);
+                               folder: folder ?? Folder.NoFolder);
         }
 
         private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
