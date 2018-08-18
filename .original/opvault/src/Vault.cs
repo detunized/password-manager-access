@@ -162,8 +162,8 @@ namespace OPVault
 
             return new Account(id: encryptedItem.StringAt("uuid"),
                                name: overview.StringAt("title"),
-                               username: "TODO: username",
-                               password: "TODO: password",
+                               username: FindDetailField(details, "username"),
+                               password: FindDetailField(details, "password"),
                                url: overview.StringAt("url"),
                                note: details.StringAt("notesPlain"),
                                folder: folder ?? Folder.None);
@@ -210,6 +210,16 @@ namespace OPVault
         private static JObject DecryptJson(string encryptedJsonBase64, KeyMac key)
         {
             return JObject.Parse(Opdata01.Decrypt(encryptedJsonBase64, key).ToUtf8());
+        }
+
+        // TODO: Write a test
+        private static string FindDetailField(JObject details, string name)
+        {
+            foreach (var i in details.At("fields", new JArray()))
+                if (i.StringAt("designation", "") == name)
+                    return i.StringAt("value", "");
+
+            return "";
         }
     }
 }
