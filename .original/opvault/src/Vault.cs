@@ -126,10 +126,10 @@ namespace OPVault
                 .ToDictionary(i => i.Id);
         }
 
-        internal static object DecryptAccounts(JObject[] encryptedItems,
-                                               KeyMac masterKey,
-                                               KeyMac overviewKey,
-                                               Dictionary<string, Folder> folders)
+        internal static Account[] DecryptAccounts(JObject[] encryptedItems,
+                                                  KeyMac masterKey,
+                                                  KeyMac overviewKey,
+                                                  Dictionary<string, Folder> folders)
         {
             return encryptedItems
                 .Where(i => !i.BoolAt("trashed", false))
@@ -145,7 +145,7 @@ namespace OPVault
             return new Folder(folder.StringAt("uuid"), overview.StringAt("title"));
         }
 
-        private static object DecryptAccount(JObject encryptedItem,
+        private static Account DecryptAccount(JObject encryptedItem,
                                              KeyMac masterKey,
                                              KeyMac overviewKey,
                                              Dictionary<string, Folder> folders)
@@ -154,11 +154,13 @@ namespace OPVault
             var accountKey = DecryptAccountKey(encryptedItem, masterKey);
             var details = DecryptAccountDetails(encryptedItem, accountKey);
 
-            return new
-            {
-                Overview = overview,
-                Details = details
-            };
+            return new Account(id: encryptedItem.StringAt("uuid"),
+                               name: overview.StringAt("title"),
+                               username: "TODO: username",
+                               password: "TODO: password",
+                               url: overview.StringAt("url"),
+                               note: details.StringAt("notesPlain"),
+                               folder: folders[encryptedItem.StringAt("folder", "TODO: no folder")]);
         }
 
         private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
@@ -193,7 +195,7 @@ namespace OPVault
             }
         }
 
-        private static object DecryptAccountDetails(JObject encryptedItem, KeyMac accountKey)
+        private static JObject DecryptAccountDetails(JObject encryptedItem, KeyMac accountKey)
         {
             // TODO: Handle JSON exceptions
             return DecryptJson(encryptedItem.StringAt("d"), accountKey);
