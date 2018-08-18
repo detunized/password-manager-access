@@ -151,8 +151,8 @@ namespace OPVault
                                              Dictionary<string, Folder> folders)
         {
             var overview = DecryptAccountOverview(encryptedItem, overviewKey);
-            var itemKey = DecryptAccountKey(encryptedItem, masterKey);
-            var details = DecryptAccountDetails(encryptedItem, itemKey);
+            var accountKey = DecryptAccountKey(encryptedItem, masterKey);
+            var details = DecryptAccountDetails(encryptedItem, accountKey);
 
             return new
             {
@@ -193,9 +193,10 @@ namespace OPVault
             }
         }
 
-        private static object DecryptAccountDetails(JObject encryptedItem, KeyMac itemKey)
+        private static object DecryptAccountDetails(JObject encryptedItem, KeyMac accountKey)
         {
-            return null;
+            // TODO: Handle JSON exceptions
+            return DecryptJson(encryptedItem.StringAt("d"), accountKey);
         }
 
         private static JObject DecryptJson(string encryptedJsonBase64, KeyMac key)
