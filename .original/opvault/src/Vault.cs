@@ -148,9 +148,9 @@ namespace OPVault
         }
 
         private static Account DecryptAccount(JObject encryptedItem,
-                                             KeyMac masterKey,
-                                             KeyMac overviewKey,
-                                             Dictionary<string, Folder> folders)
+                                              KeyMac masterKey,
+                                              KeyMac overviewKey,
+                                              Dictionary<string, Folder> folders)
         {
             var overview = DecryptAccountOverview(encryptedItem, overviewKey);
             var accountKey = DecryptAccountKey(encryptedItem, masterKey);
@@ -160,12 +160,12 @@ namespace OPVault
             Folder folder;
             folders.TryGetValue(encryptedItem.StringAt("folder", ""), out folder);
 
-            return new Account(id: encryptedItem.StringAt("uuid"),
-                               name: overview.StringAt("title"),
+            return new Account(id: encryptedItem.StringAt("uuid", ""),
+                               name: overview.StringAt("title", ""),
                                username: FindDetailField(details, "username"),
                                password: FindDetailField(details, "password"),
-                               url: overview.StringAt("url"),
-                               note: details.StringAt("notesPlain"),
+                               url: overview.StringAt("url", ""),
+                               note: details.StringAt("notesPlain", ""),
                                folder: folder ?? Folder.None);
         }
 
