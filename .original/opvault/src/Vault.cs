@@ -27,6 +27,7 @@ namespace OPVault
 
             // Decrypt, parse and convert folders
             var folders = DecryptFolders(encryptedFolders, overviewKey);
+            var encryptedAccounts = DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
         }
 
         internal static JObject LoadProfile(string path)
@@ -125,11 +126,60 @@ namespace OPVault
                 .ToDictionary(i => i.Id);
         }
 
+        internal static object DecryptAccounts(JObject[] encryptedItems,
+                                               KeyMac masterKey,
+                                               KeyMac overviewKey,
+                                               Dictionary<string, Folder> folders)
+        {
+            return encryptedItems
+                .Where(i => !i.BoolAt("trashed", false))
+                .Where(i => i.StringAt("category", "") == "001")
+                .Select(i => DecryptAccount(i, masterKey, overviewKey, folders))
+                .ToArray();
+        }
+
         private static Folder DecryptFolder(JObject folder, KeyMac overviewKey)
         {
             // TODO: Handle JSON exceptions
-            var overview = JObject.Parse(Opdata01.Decrypt(folder.StringAt("overview"), overviewKey).ToUtf8());
+            var overview = DecryptJson(folder.StringAt("overview"), overviewKey);
             return new Folder(folder.StringAt("uuid"), overview.StringAt("title"));
+        }
+
+        private static object DecryptAccount(JObject encryptedItem,
+                                             KeyMac masterKey,
+                                             KeyMac overviewKey,
+                                             Dictionary<string, Folder> folders)
+        {
+            var overview = DecryptAccountOverview(encryptedItem, overviewKey);
+            var itemKey = DecryptAccountKey(encryptedItem, masterKey);
+            var details = DecryptAccountDetails(encryptedItem, itemKey);
+
+            return new
+            {
+                Overview = overview,
+                Details = details
+            };
+        }
+
+        private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
+        {
+            // TODO: Handle JSON exceptions
+            return DecryptJson(encryptedItem.StringAt("o"), overviewKey);
+        }
+
+        private static KeyMac DecryptAccountKey(JObject encryptedItem, KeyMac masterKey)
+        {
+            return null;
+        }
+
+        private static object DecryptAccountDetails(JObject encryptedItem, KeyMac itemKey)
+        {
+            return null;
+        }
+
+        private static JObject DecryptJson(string encryptedJsonBase64, KeyMac key)
+        {
+            return JObject.Parse(Opdata01.Decrypt(encryptedJsonBase64, key).ToUtf8());
         }
     }
 }
