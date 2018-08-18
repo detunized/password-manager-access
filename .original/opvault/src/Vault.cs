@@ -154,13 +154,17 @@ namespace OPVault
             var accountKey = DecryptAccountKey(encryptedItem, masterKey);
             var details = DecryptAccountDetails(encryptedItem, accountKey);
 
+            // Folder is optional. Use null to mark a non-existent folder.
+            Folder folder;
+            folders.TryGetValue(encryptedItem.StringAt("folder", ""), out folder);
+
             return new Account(id: encryptedItem.StringAt("uuid"),
                                name: overview.StringAt("title"),
                                username: "TODO: username",
                                password: "TODO: password",
                                url: overview.StringAt("url"),
                                note: details.StringAt("notesPlain"),
-                               folder: folders[encryptedItem.StringAt("folder", "TODO: no folder")]);
+                               folder: folder);
         }
 
         private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
