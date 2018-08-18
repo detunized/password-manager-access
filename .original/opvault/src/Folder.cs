@@ -6,7 +6,7 @@ namespace OPVault
     public class Folder
     {
         // Used to mark no folder situation not to use null and avoid crashes.
-        public static Folder NoFolder = new Folder("", "");
+        public static Folder None = new Folder("", "");
 
         public readonly string Id;
         public readonly string Name;
