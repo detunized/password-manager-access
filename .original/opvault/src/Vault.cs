@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace OPVault
@@ -152,6 +153,8 @@ namespace OPVault
                                               KeyMac overviewKey,
                                               Dictionary<string, Folder> folders)
         {
+            VerifyAccountTag(encryptedItem, overviewKey);
+
             var overview = DecryptAccountOverview(encryptedItem, overviewKey);
             var accountKey = DecryptAccountKey(encryptedItem, masterKey);
             var details = DecryptAccountDetails(encryptedItem, accountKey);
@@ -167,6 +170,31 @@ namespace OPVault
                                url: overview.StringAt("url", ""),
                                note: details.StringAt("notesPlain", ""),
                                folder: folder ?? Folder.None);
+        }
+
+        private static void VerifyAccountTag(JObject encryptedItem, KeyMac key)
+        {
+            // We need to hash everything but the "hmac" field
+            var properties = encryptedItem
+                .Properties()
+                .Where(i => i.Name != "hmac")
+                .OrderBy(i => i.Name);
+
+            // Join all the properties in the alphabetical oder into a flat string
+            var hashedContent = new StringBuilder();
+            foreach (var i in properties)
+            {
+                hashedContent.Append(i.Name);
+                hashedContent.Append(i.Value);
+            }
+
+            // Check against the stored HMAC/tag
+            var storedTag = encryptedItem.StringAt("hmac").Decode64();
+            var computedTag = Crypto.Hmac(hashedContent.ToString().ToBytes(), key);
+
+            // TODO: Use custom exceptions
+            if (!computedTag.SequenceEqual(storedTag))
+                throw new InvalidOperationException("Item is corrupted: tag doesn't match");
         }
 
         private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
