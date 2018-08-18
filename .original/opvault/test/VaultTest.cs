@@ -10,9 +10,10 @@ namespace OPVault.Test
     public class VaultTest
     {
         [Test]
-        public void Open_works()
+        public void Open_returns_accounts()
         {
-            Vault.Open(TestVaultPath, Password);
+            var accounts = Vault.Open(TestVaultPath, Password);
+            Assert.That(accounts.Length, Is.EqualTo(3));
         }
 
         [Test]

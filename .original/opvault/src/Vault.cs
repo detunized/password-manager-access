@@ -11,7 +11,7 @@ namespace OPVault
 {
     public class Vault
     {
-        public static void Open(string path, string password)
+        public static Account[] Open(string path, string password)
         {
             // Load all the files
             var profile = LoadProfile(path);
@@ -27,7 +27,9 @@ namespace OPVault
 
             // Decrypt, parse and convert folders
             var folders = DecryptFolders(encryptedFolders, overviewKey);
-            var encryptedAccounts = DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
+
+            // Decrypt, parse, convert and assign folders
+            return DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
         }
 
         internal static JObject LoadProfile(string path)
