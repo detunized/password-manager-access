@@ -40,10 +40,11 @@ namespace OPVault
                 var ciphertext = io.ReadBytes(padding + length);
                 var storedTag = io.ReadBytes(32);
 
+                // Rewind and reread everything to the tag
                 io.BaseStream.Seek(0, SeekOrigin.Begin);
-                var hashedMessage = io.ReadBytes(32 + padding + length);
+                var hashedContent = io.ReadBytes(32 + padding + length);
 
-                var computedTag = Crypto.Hmac(hashedMessage, key);
+                var computedTag = Crypto.Hmac(hashedContent, key);
                 if (!computedTag.SequenceEqual(storedTag))
                     throw ParseError("tag doesn't match");
 

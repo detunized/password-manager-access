@@ -169,7 +169,28 @@ namespace OPVault
 
         private static KeyMac DecryptAccountKey(JObject encryptedItem, KeyMac masterKey)
         {
-            return null;
+            // TODO: Handle JSON exceptions
+            // TODO: Use custom exceptions
+            var raw = encryptedItem.StringAt("k").Decode64();
+            if (raw.Length != 112)
+                throw new InvalidOperationException("Item key is corrupted: invalid size");
+
+            using (var io = new BinaryReader(new MemoryStream(raw, false)))
+            {
+                var iv = io.ReadBytes(16);
+                var ciphertext = io.ReadBytes(64);
+                var storedTag = io.ReadBytes(32);
+
+                // Rewind and reread everything to the tag
+                io.BaseStream.Seek(0, SeekOrigin.Begin);
+                var hashedContent = io.ReadBytes(80);
+
+                var computedTag = Crypto.Hmac(hashedContent, masterKey);
+                if (!computedTag.SequenceEqual(storedTag))
+                    throw new InvalidOperationException("Item key is corrupted: tag doesn't match");
+
+                return new KeyMac(Crypto.DecryptAes(ciphertext, iv, masterKey));
+            }
         }
 
         private static object DecryptAccountDetails(JObject encryptedItem, KeyMac itemKey)
