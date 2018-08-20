@@ -1,7 +1,6 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -68,7 +67,18 @@ namespace OPVault
 
         internal static JObject LoadJsAsJson(string filename, string prefix, string suffix)
         {
-            return LoadJsAsJsonFromString(File.ReadAllText(filename), prefix, suffix);
+            return LoadJsAsJsonFromString(LoadTextFile(filename), prefix, suffix);
+        }
+
+        internal static string LoadTextFile(string filename)
+        {
+            // We're deliberately not trying to catch all the possible file/io errors.
+            // It's impossible to handle them all. Just a basic check that the file is there.
+            if (!File.Exists(filename))
+                throw new ParseException(ParseException.FailureReason.FileNotFound,
+                                         string.Format("File '{0}' doesn't exist", filename));
+
+            return File.ReadAllText(filename);
         }
 
         internal static JObject LoadJsAsJsonFromString(string content, string prefix, string suffix)

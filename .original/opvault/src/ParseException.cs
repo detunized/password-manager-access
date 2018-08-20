@@ -11,6 +11,7 @@ namespace OPVault
         {
             InvalidFormat,
             Corrupted,
+            FileNotFound,
             UnknownError
         }
 

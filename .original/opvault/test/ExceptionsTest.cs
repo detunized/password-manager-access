@@ -47,6 +47,11 @@ namespace OPVault.Test
             return ThrowsReasonWithMessage(ParseException.FailureReason.Corrupted, message);
         }
 
+        public static Constraint ThrowsFileNotFoundWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ParseException.FailureReason.FileNotFound, message);
+        }
+
         public static Constraint ThrowsReasonWithMessage(ParseException.FailureReason reason, string message)
         {
             return Throws.TypeOf<ParseException>()

@@ -17,6 +17,13 @@ namespace OPVault.Test
         }
 
         [Test]
+        public void Open_throws_on_invalid_path()
+        {
+            Assert.That(() => Vault.Open("does/not/exist", Password),
+                        ExceptionsTest.ThrowsFileNotFoundWithMessage("doesn't exist"));
+        }
+
+        [Test]
         public void LoadProfile_reads_profile_js()
         {
             var profile = Vault.LoadProfile(TestVaultPath);
