@@ -9,7 +9,7 @@ namespace OPVault
     {
         public enum FailureReason
         {
-            // TODO: Add more reasons
+            InvalidFormat,
             UnknownError
         }
 

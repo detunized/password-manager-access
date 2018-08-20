@@ -57,21 +57,21 @@ namespace OPVault.Test
         public void LoadJsAsJsonFromString_throws_on_too_short_input()
         {
             Assert.That(() => Vault.LoadJsAsJsonFromString("-", "var j = ", ";"),
-                        Throws.InvalidOperationException);
+                        ExceptionsTest.ThrowsInvalidFormatWithMessage("too short"));
         }
 
         [Test]
         public void LoadJsAsJsonFromString_throws_on_missing_prefix()
         {
             Assert.That(() => Vault.LoadJsAsJsonFromString("var j = {};", "-", ";"),
-                        Throws.InvalidOperationException);
+                        ExceptionsTest.ThrowsInvalidFormatWithMessage("prefix is not found"));
         }
 
         [Test]
         public void LoadJsAsJsonFromString_throws_on_missing_suffix()
         {
             Assert.That(() => Vault.LoadJsAsJsonFromString("var j = {};", "var j =", "-"),
-                        Throws.InvalidOperationException);
+                        ExceptionsTest.ThrowsInvalidFormatWithMessage("suffix is not found"));
         }
 
         [Test]

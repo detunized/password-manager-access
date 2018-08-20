@@ -73,13 +73,12 @@ namespace OPVault
 
         internal static JObject LoadJsAsJsonFromString(string content, string prefix, string suffix)
         {
-            // TODO: Use custom exception
             if (content.Length < prefix.Length + suffix.Length)
-                throw new InvalidOperationException("Content is too short");
+                throw FormatError("JS/JSON: Content is too short");
             if (!content.StartsWith(prefix))
-                throw new InvalidOperationException("Expected prefix is not found in content");
+                throw FormatError("JS/JSON: Expected prefix is not found in the content");
             if (!content.EndsWith(suffix))
-                throw new InvalidOperationException("Expected suffix is not found in content");
+                throw FormatError("JS/JSON: Expected suffix is not found in the content");
 
             return JObject.Parse(content.Substring(prefix.Length, content.Length - prefix.Length - suffix.Length));
         }
@@ -248,6 +247,11 @@ namespace OPVault
                     return i.StringAt("value", "");
 
             return "";
+        }
+
+        private static ParseException FormatError(string message)
+        {
+            return new ParseException(ParseException.FailureReason.InvalidFormat, message);
         }
     }
 }

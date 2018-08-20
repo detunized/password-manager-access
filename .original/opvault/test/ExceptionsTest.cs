@@ -3,6 +3,7 @@
 
 using System;
 using NUnit.Framework;
+using NUnit.Framework.Constraints;
 
 namespace OPVault.Test
 {
@@ -35,6 +36,18 @@ namespace OPVault.Test
         //
         // Helpers
         //
+
+        public static Constraint ThrowsInvalidFormatWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ParseException.FailureReason.InvalidFormat, message);
+        }
+
+        public static Constraint ThrowsReasonWithMessage(ParseException.FailureReason reason, string message)
+        {
+            return Throws.TypeOf<ParseException>()
+                .And.Property("Reason").EqualTo(reason)
+                .And.Message.Contains(message);
+        }
 
         private static void VerifyException(BaseException e)
         {
