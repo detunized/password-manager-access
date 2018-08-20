@@ -47,6 +47,7 @@
     <Compile Include="JTokenAccessException.cs" />
     <Compile Include="KeyMac.cs" />
     <Compile Include="Opdata01.cs" />
+    <Compile Include="ParseException.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Vault.cs" />
   </ItemGroup>

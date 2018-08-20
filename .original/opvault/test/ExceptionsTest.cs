@@ -15,6 +15,16 @@ namespace OPVault.Test
             VerifyException(new JTokenAccessException(Message, InnerException));
         }
 
+        [Test]
+        public void ParseException_properties_are_set()
+        {
+            var reason = ParseException.FailureReason.UnknownError;
+            var e = new ParseException(reason, Message, InnerException);
+
+            VerifyException(e);
+            Assert.That(e.Reason, Is.EqualTo(reason));
+        }
+
         //
         // Data
         //
