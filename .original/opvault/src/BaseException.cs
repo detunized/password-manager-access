@@ -5,13 +5,13 @@ using System;
 
 namespace OPVault
 {
-    public class BaseException: Exception
+    public abstract class BaseException: Exception
     {
-        public BaseException(string message): base(message)
+        protected BaseException(string message): base(message)
         {
         }
 
-        public BaseException(string message, Exception innerException):
+        protected BaseException(string message, Exception innerException):
             base(message, innerException)
         {
         }

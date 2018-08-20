@@ -10,12 +10,6 @@ namespace OPVault.Test
     public class ExceptionsTest
     {
         [Test]
-        public void BaseException_properties_are_set()
-        {
-            VerifyException(new BaseException(Message, InnerException));
-        }
-
-        [Test]
         public void JTokenAccessException_properties_are_set()
         {
             VerifyException(new JTokenAccessException(Message, InnerException));
