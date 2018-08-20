@@ -128,13 +128,4 @@ namespace OPVault
             }
         }
     }
-
-    // TODO: Move this out of here!
-    internal class JTokenAccessException: Exception
-    {
-        public JTokenAccessException(string message)
-            : base(message)
-        {
-        }
-    }
 }

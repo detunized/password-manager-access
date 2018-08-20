@@ -15,6 +15,12 @@ namespace OPVault.Test
             VerifyException(new BaseException(Message, InnerException));
         }
 
+        [Test]
+        public void JTokenAccessException_properties_are_set()
+        {
+            VerifyException(new JTokenAccessException(Message, InnerException));
+        }
+
         //
         // Data
         //
