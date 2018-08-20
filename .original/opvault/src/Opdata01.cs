@@ -20,13 +20,13 @@ namespace OPVault
         public static byte[] Decrypt(byte[] blob, KeyMac key)
         {
             if (blob.Length < 64)
-                throw ParseError("too short");
+                throw CurruptedError("too short");
 
             using (var io = new BinaryReader(new MemoryStream(blob)))
             {
                 var magic = io.ReadBytes(8);
                 if (!magic.SequenceEqual("opdata01".ToBytes()))
-                    throw ParseError("invalid signature");
+                    throw CurruptedError("invalid signature");
 
                 // TODO: Sloppy! Assume 2G should be enough.
                 // TODO: Should be little endian! This will not work on big endian platform!
@@ -35,7 +35,7 @@ namespace OPVault
                 var padding = 16 - length % 16;
 
                 if (blob.Length != 32 + padding + length + 32)
-                    throw ParseError("invalid length");
+                    throw CurruptedError("invalid length");
 
                 var ciphertext = io.ReadBytes(padding + length);
                 var storedTag = io.ReadBytes(32);
@@ -46,17 +46,17 @@ namespace OPVault
 
                 var computedTag = Crypto.Hmac(hashedContent, key);
                 if (!computedTag.SequenceEqual(storedTag))
-                    throw ParseError("tag doesn't match");
+                    throw CurruptedError("tag doesn't match");
 
                 var plaintext = Crypto.DecryptAes(ciphertext, iv, key);
                 return plaintext.Skip(padding).Take(length).ToArray();
             }
         }
 
-        private static Exception ParseError(string message)
+        private static ParseException CurruptedError(string message)
         {
-            // TODO: Use custom exception
-            return new InvalidOperationException(string.Format("Opdata01 container is corrupted: {0}", message));
+            return new ParseException(ParseException.FailureReason.Corrupted,
+                                      string.Format("Opdata01 container is corrupted: {0}", message));
         }
     }
 }

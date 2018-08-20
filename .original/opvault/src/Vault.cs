@@ -191,9 +191,8 @@ namespace OPVault
             var storedTag = encryptedItem.StringAt("hmac").Decode64();
             var computedTag = Crypto.Hmac(hashedContent.ToString().ToBytes(), key);
 
-            // TODO: Use custom exceptions
             if (!computedTag.SequenceEqual(storedTag))
-                throw new InvalidOperationException("Item is corrupted: tag doesn't match");
+                throw CorruptedError("Vault item is corrupted: tag doesn't match");
         }
 
         private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
@@ -205,10 +204,9 @@ namespace OPVault
         private static KeyMac DecryptAccountKey(JObject encryptedItem, KeyMac masterKey)
         {
             // TODO: Handle JSON exceptions
-            // TODO: Use custom exceptions
             var raw = encryptedItem.StringAt("k").Decode64();
             if (raw.Length != 112)
-                throw new InvalidOperationException("Item key is corrupted: invalid size");
+                throw CorruptedError("Vault item key is corrupted: invalid size");
 
             using (var io = new BinaryReader(new MemoryStream(raw, false)))
             {
@@ -222,7 +220,7 @@ namespace OPVault
 
                 var computedTag = Crypto.Hmac(hashedContent, masterKey);
                 if (!computedTag.SequenceEqual(storedTag))
-                    throw new InvalidOperationException("Item key is corrupted: tag doesn't match");
+                    throw CorruptedError("Vault item key is corrupted: tag doesn't match");
 
                 return new KeyMac(Crypto.DecryptAes(ciphertext, iv, masterKey));
             }
@@ -252,6 +250,11 @@ namespace OPVault
         private static ParseException FormatError(string message)
         {
             return new ParseException(ParseException.FailureReason.InvalidFormat, message);
+        }
+
+        private static ParseException CorruptedError(string message)
+        {
+            return new ParseException(ParseException.FailureReason.Corrupted, message);
         }
     }
 }

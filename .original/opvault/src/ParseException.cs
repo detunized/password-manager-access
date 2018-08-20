@@ -10,6 +10,7 @@ namespace OPVault
         public enum FailureReason
         {
             InvalidFormat,
+            Corrupted,
             UnknownError
         }
 

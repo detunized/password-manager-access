@@ -24,7 +24,7 @@ namespace OPVault.Test
         public void Decrypt_throws_short_input()
         {
             Assert.That(() => Opdata01.Decrypt(new byte[63], TestKey),
-                        Throws.InvalidOperationException.And.Message.Contains("too short"));
+                        ExceptionsTest.ThrowsCorruptedWithMessage("too short"));
         }
 
         [Test]
@@ -34,7 +34,7 @@ namespace OPVault.Test
             blob[0] += 1;
 
             Assert.That(() => Opdata01.Decrypt(blob, TestKey),
-                        Throws.InvalidOperationException.And.Message.Contains("invalid signature"));
+                        ExceptionsTest.ThrowsCorruptedWithMessage("invalid signature"));
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace OPVault.Test
             blob[blob.Length - 1] += 1;
 
             Assert.That(() => Opdata01.Decrypt(blob, TestKey),
-                        Throws.InvalidOperationException.And.Message.Contains("tag doesn't match"));
+                        ExceptionsTest.ThrowsCorruptedWithMessage("tag doesn't match"));
         }
 
         //

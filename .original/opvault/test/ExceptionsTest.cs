@@ -42,6 +42,11 @@ namespace OPVault.Test
             return ThrowsReasonWithMessage(ParseException.FailureReason.InvalidFormat, message);
         }
 
+        public static Constraint ThrowsCorruptedWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ParseException.FailureReason.Corrupted, message);
+        }
+
         public static Constraint ThrowsReasonWithMessage(ParseException.FailureReason reason, string message)
         {
             return Throws.TypeOf<ParseException>()
