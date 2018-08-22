@@ -132,10 +132,19 @@ namespace OPVault
 
         internal static Dictionary<string, Folder> DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
         {
-            return encryptedFolders
-                .Where(i => !i.BoolAt("trashed", false))
-                .Select(i => DecryptFolder(i, overviewKey))
-                .ToDictionary(i => i.Id);
+            var activeFolders = encryptedFolders.Where(i => !i.BoolAt("trashed", false)).ToArray();
+            var childToParent = activeFolders.ToDictionary(i => i.StringAt("uuid"), i => i.StringAt("parent", ""));
+            var folders = activeFolders.Select(i => DecryptFolder(i, overviewKey)).ToDictionary(i => i.Id);
+
+            // Assign parent folders
+            foreach (var i in folders)
+            {
+                var parentId = childToParent[i.Key];
+                if (folders.ContainsKey(parentId))
+                    i.Value.Parent = folders[parentId];
+            }
+
+            return folders;
         }
 
         internal static Account[] DecryptAccounts(JObject[] encryptedItems,

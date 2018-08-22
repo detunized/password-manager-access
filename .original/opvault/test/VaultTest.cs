@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -14,6 +15,15 @@ namespace OPVault.Test
         {
             var accounts = Vault.Open(TestVaultPath, Password);
             Assert.That(accounts.Length, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Open_supprts_nested_folders()
+        {
+            var accounts = Vault.Open(TestVaultPath, Password);
+            var childFolder = accounts.First(i => i.Folder.Name == "Even Cooler Stuff").Folder;
+
+            Assert.That(childFolder.Parent.Name, Is.EqualTo("Cool Stuff"));
         }
 
         [Test]
@@ -34,7 +44,7 @@ namespace OPVault.Test
         public void LoadFolders_reads_folders_js()
         {
             var folders = Vault.LoadFolders(TestVaultPath);
-            Assert.That(folders.Length, Is.EqualTo(2));
+            Assert.That(folders.Length, Is.EqualTo(3));
         }
 
         [Test]

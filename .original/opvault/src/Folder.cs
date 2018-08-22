@@ -8,13 +8,15 @@ namespace OPVault
         // Used to mark no folder situation not to use null and avoid crashes.
         public static Folder None = new Folder("", "");
 
-        public readonly string Id;
-        public readonly string Name;
+        public string Id { get; private set; }
+        public string Name { get; private set; }
+        public Folder Parent { get; set; }
 
         public Folder(string id, string name)
         {
             Id = id;
             Name = name;
+            Parent = None;
         }
     }
 }
