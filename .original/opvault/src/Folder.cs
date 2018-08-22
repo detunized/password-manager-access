@@ -12,6 +12,12 @@ namespace OPVault
         public string Name { get; private set; }
         public Folder Parent { get; set; }
 
+        static Folder()
+        {
+            // Make sure there are no nulls
+            None.Parent = None;
+        }
+
         public Folder(string id, string name)
         {
             Id = id;
