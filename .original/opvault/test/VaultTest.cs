@@ -34,6 +34,13 @@ namespace OPVault.Test
         }
 
         [Test]
+        public void Open_throws_on_incorrect_password()
+        {
+            Assert.That(() => Vault.Open(TestVaultPath, "incorrect password"),
+                        ExceptionsTest.ThrowsIncorrectPasswordWithMessage("password is incorrect"));
+        }
+
+        [Test]
         public void LoadProfile_reads_profile_js()
         {
             var profile = Vault.LoadProfile(TestVaultPath);

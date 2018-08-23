@@ -9,6 +9,7 @@ namespace OPVault
     {
         public enum FailureReason
         {
+            IncorrectPassword,
             InvalidFormat,
             Corrupted,
             FileNotFound,

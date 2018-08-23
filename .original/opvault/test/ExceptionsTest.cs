@@ -37,6 +37,11 @@ namespace OPVault.Test
         // Helpers
         //
 
+        public static Constraint ThrowsIncorrectPasswordWithMessage(string message)
+        {
+            return ThrowsReasonWithMessage(ParseException.FailureReason.IncorrectPassword, message);
+        }
+
         public static Constraint ThrowsInvalidFormatWithMessage(string message)
         {
             return ThrowsReasonWithMessage(ParseException.FailureReason.InvalidFormat, message);

@@ -121,7 +121,24 @@ namespace OPVault
 
         internal static KeyMac DecryptMasterKey(JObject profile, KeyMac kek)
         {
-            return DecryptBase64Key(profile.StringAt("masterKey"), kek);
+            try
+            {
+                return DecryptBase64Key(profile.StringAt("masterKey"), kek);
+            }
+            catch (ParseException e)
+            {
+                // This is a bit hacky. There's no sure way to verify if the password is correct. The things
+                // will start failing to decrypt on HMAC/tag verification. So only for the master key we assume
+                // that the structure of the vault is not corrupted (which is unlikely) but rather the master
+                // password wasn't given correctly. So we rethrow the "corrupted" exception as the "incorrect
+                // password". Unfortunately we have to rely on the contents of the error message as well.
+                if (e.Reason == ParseException.FailureReason.Corrupted && e.Message.Contains("tag doesn't match"))
+                    throw new ParseException(ParseException.FailureReason.IncorrectPassword,
+                                             "Most likely the master password is incorrect",
+                                             e);
+
+                throw;
+            }
         }
 
         internal static KeyMac DecryptOverviewKey(JObject profile, KeyMac kek)
