@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,18 +19,25 @@ namespace OPVault
             var encryptedFolders = LoadFolders(path);
             var encryptedItems = LoadItems(path);
 
-            // Derive key encryption key
-            var kek = DeriveKek(profile, password);
+            try
+            {
+                // Derive key encryption key
+                var kek = DeriveKek(profile, password);
 
-            // sDecrypt main keys
-            var masterKey = DecryptMasterKey(profile, kek);
-            var overviewKey = DecryptOverviewKey(profile, kek);
+                // sDecrypt main keys
+                var masterKey = DecryptMasterKey(profile, kek);
+                var overviewKey = DecryptOverviewKey(profile, kek);
 
-            // Decrypt, parse and convert folders
-            var folders = DecryptFolders(encryptedFolders, overviewKey);
+                // Decrypt, parse and convert folders
+                var folders = DecryptFolders(encryptedFolders, overviewKey);
 
-            // Decrypt, parse, convert and assign folders
-            return DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
+                // Decrypt, parse, convert and assign folders
+                return DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
+            }
+            catch (JTokenAccessException e)
+            {
+                throw FormatError("Unexpected JSON schema", e);
+            }
         }
 
         internal static JObject LoadProfile(string path)
@@ -106,7 +114,6 @@ namespace OPVault
 
         internal static KeyMac DeriveKek(JObject profile, string password)
         {
-            // TODO: Handle JSON exceptions
             return Crypto.DeriveKek(password.ToBytes(),
                                     profile.StringAt("salt").Decode64(),
                                     profile.IntAt("iterations"));
@@ -114,13 +121,11 @@ namespace OPVault
 
         internal static KeyMac DecryptMasterKey(JObject profile, KeyMac kek)
         {
-            // TODO: Handle JSON exceptions
             return DecryptBase64Key(profile.StringAt("masterKey"), kek);
         }
 
         internal static KeyMac DecryptOverviewKey(JObject profile, KeyMac kek)
         {
-            // TODO: Handle JSON exceptions
             return DecryptBase64Key(profile.StringAt("overviewKey"), kek);
         }
 
@@ -161,7 +166,6 @@ namespace OPVault
 
         private static Folder DecryptFolder(JObject folder, KeyMac overviewKey)
         {
-            // TODO: Handle JSON exceptions
             var overview = DecryptJson(folder.StringAt("overview"), overviewKey);
             return new Folder(folder.StringAt("uuid"), overview.StringAt("title"));
         }
@@ -216,13 +220,11 @@ namespace OPVault
 
         private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
         {
-            // TODO: Handle JSON exceptions
             return DecryptJson(encryptedItem.StringAt("o"), overviewKey);
         }
 
         private static KeyMac DecryptAccountKey(JObject encryptedItem, KeyMac masterKey)
         {
-            // TODO: Handle JSON exceptions
             var raw = encryptedItem.StringAt("k").Decode64();
             if (raw.Length != 112)
                 throw CorruptedError("Vault item key is corrupted: invalid size");
@@ -247,7 +249,6 @@ namespace OPVault
 
         private static JObject DecryptAccountDetails(JObject encryptedItem, KeyMac accountKey)
         {
-            // TODO: Handle JSON exceptions
             return DecryptJson(encryptedItem.StringAt("d"), accountKey);
         }
 
@@ -266,9 +267,9 @@ namespace OPVault
             return "";
         }
 
-        private static ParseException FormatError(string message)
+        private static ParseException FormatError(string message, Exception innerException = null)
         {
-            return new ParseException(ParseException.FailureReason.InvalidFormat, message);
+            return new ParseException(ParseException.FailureReason.InvalidFormat, message, innerException);
         }
 
         private static ParseException CorruptedError(string message)
