@@ -60,7 +60,13 @@ namespace Example
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];
-                    Console.WriteLine("{0}: {1} {2} {3} {4} {5} {6}",
+                    Console.WriteLine("{0}:\n" +
+                                      "        id: {1}\n" +
+                                      "      name: {2}\n" +
+                                      "  username: {3}\n" +
+                                      "  password: {4}\n" +
+                                      "       url: {5}\n" +
+                                      "     group: {6}\n",
                                       i + 1,
                                       account.Id,
                                       account.Name,
