@@ -42,6 +42,11 @@ namespace LastPass
                 var name = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var group = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
+
+                // Ignore "group" accounts. They have no credentials.
+                if (url == "http://group")
+                    return null;
+
                 var notes = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 2.Times(() => SkipItem(reader));
                 var username = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
