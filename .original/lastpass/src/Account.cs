@@ -1,10 +1,9 @@
 // Copyright (C) 2013 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
-
 namespace LastPass
 {
+    // TODO: Rename Group to Path since it reflects the actual meaning better.
     public class Account
     {
         public Account(string id, string name, string username, string password, string url, string group)

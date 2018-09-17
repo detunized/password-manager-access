@@ -149,6 +149,36 @@ namespace LastPass.Test
         }
 
         [Test]
+        public void MakeAccountPath_returns_none_when_group_is_null_or_blank_and_not_in_shared_folder()
+        {
+            Assert.AreEqual(ParserHelper.MakeAccountPath(null, null), "(none)");
+            Assert.AreEqual(ParserHelper.MakeAccountPath("", null), "(none)");
+        }
+
+        [Test]
+        public void MakeAccountPath_returns_shared_folder_name_when_group_is_null_or_blank()
+        {
+            var folder = new SharedFolder("id", "folder", null);
+
+            Assert.AreEqual(ParserHelper.MakeAccountPath(null, folder), "folder");
+            Assert.AreEqual(ParserHelper.MakeAccountPath("", folder), "folder");
+        }
+
+        [Test]
+        public void MakeAccountPath_combines_shared_folder_and_group()
+        {
+            var folder = new SharedFolder("id", "folder", null);
+
+            Assert.AreEqual(ParserHelper.MakeAccountPath("group", folder), "folder\\group");
+        }
+
+        [Test]
+        public void MakeAccountPath_returns_group_when_not_in_shared_folder()
+        {
+            Assert.AreEqual(ParserHelper.MakeAccountPath("group", null), "group");
+        }
+
+        [Test]
         public void ReadChunk_returns_first_chunk()
         {
             WithBlob(reader => {
