@@ -125,6 +125,21 @@
           "enc": "RSA-OAEP",
           "kid": "yf2ji37vkqdow7pnbo3y37b3lu"
         }
+      },
+      {
+        "vaultUuid": "hg75jdjgf995mmv0d8nf9034s2",
+        "accessorType": "group",
+        "accessorUuid": "rash7augjrxu4ituggyhjmte6a",
+        "acl": 2,
+        "leaseTimeout": 0,
+        "vaultKeySN": 1,
+        "encryptedBy": "yf2ji37vkqdow7pnbo3y37b3lu",
+        "encVaultKey": {
+          "cty": "b5+jwk+json",
+          "data": "hA4eldrmP5aDbKmxrhQH1xkr7jcnCDK6SQg5WFoHRBoyd7t3qC0TrectgAWAGBMiL53a3tamzdwOxch9kH2dST5E4vWmdLJLOo_PZgYJ6ez5Gk5UnKgNlBiEu5Ulclo8eJbJM1U1W4i8iyHUcvWjHBHyB8QDZxAq0x2U22iaVcE9TfctGAqaa99VNzSR4HCA1VuL1pAhJ39gMon5vkw6BHgRuXIlzb9J-1jLZ982J-6jxYHd_YICoRR5RYIeV_5HzSHCRtlajwqXDba0BEMTZgPROpjy03IN_hskg5EPZ44abu0kYW9kLJvYknLd6ShdU3toeqYwHXML2n5x5BA4OQ",
+          "enc": "RSA-OAEP",
+          "kid": "yf2ji37vkqdow7pnbo3y37b3lu"
+        }
       }
     ],
     "memberships": [

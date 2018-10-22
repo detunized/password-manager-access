@@ -298,15 +298,23 @@ namespace OnePassword
                                           Keychain keychain,
                                           JsonHttpClient jsonHttp)
         {
+            var accessibleVaults = new HashSet<string>(BuildListOfAccessibleVaults(accountInfo));
+
             return accountInfo.At("vaults")
-                .Where(IsVaultEntryValid)
+                .Where(i => accessibleVaults.Contains(i.StringAt("uuid", "")))
                 .Select(i => GetVault(i, sessionKey, keychain, jsonHttp))
                 .ToArray();
         }
 
-        internal static bool IsVaultEntryValid(JToken json)
+        internal static string[] BuildListOfAccessibleVaults(JToken accountInfo)
         {
-            return json.StringAt("uuid", "") != "";
+            const int haveReadAccess = 32;
+
+            return accountInfo.At("me/vaultAccess")
+                .Where(i => (i.IntAt("acl", 0) & haveReadAccess) != 0)
+                .Select(i => i.StringAt("vaultUuid", ""))
+                .Where(i => i != "")
+                .ToArray();
         }
 
         internal static Vault GetVault(JToken json,

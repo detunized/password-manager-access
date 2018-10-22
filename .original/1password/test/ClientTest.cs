@@ -168,6 +168,15 @@ namespace OnePassword.Test
         }
 
         [Test]
+        public void BuildListOfAccessibleVaults_returns_vaults()
+        {
+            var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
+            var vaults = Client.BuildListOfAccessibleVaults(accountInfo);
+
+            Assert.That(vaults, Is.EquivalentTo(new[] {"ru74fjxlkipzzctorwj4icrj2a", "4tz67op2kfiapodi5ygprtwn64"}));
+        }
+
+        [Test]
         public void GetVaultAccounts_work()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
