@@ -18,6 +18,8 @@ namespace Example
             var credentials = File.ReadAllLines("../../credentials.txt");
             var username = credentials[0];
             var password = credentials[1];
+
+            Client.RequestKdfIterationCount(username, new HttpClient());
         }
     }
 }
