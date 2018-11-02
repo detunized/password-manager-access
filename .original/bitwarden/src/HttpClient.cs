@@ -16,12 +16,8 @@ namespace Bitwarden
 
         public string Post(string url, string content, Dictionary<string, string> headers)
         {
-            return UploadString(url, "POST", content, headers);
-        }
-
-        public string Put(string url, Dictionary<string, string> headers)
-        {
-            return UploadString(url, "PUT", "", headers);
+            using (var client = NewWebClient())
+                return SetHeaders(client, headers).UploadString(url, content);
         }
 
         //
@@ -36,15 +32,6 @@ namespace Bitwarden
         //
         // Private
         //
-
-        private string UploadString(string url,
-                                    string method,
-                                    string content,
-                                    Dictionary<string, string> headers)
-        {
-            using (var client = NewWebClient())
-                return SetHeaders(client, headers).UploadString(url, method, content);
-        }
 
         private static WebClient SetHeaders(WebClient client, Dictionary<string, string> headers)
         {
