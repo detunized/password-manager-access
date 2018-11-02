@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Bitwarden
 {
@@ -14,10 +15,23 @@ namespace Bitwarden
 
         internal static int RequestKdfIterationCount(string username, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Post("api/accounts/prelogin",
-                                         new Dictionary<string, string> {{"email", username}});
+            var response = jsonHttp.Post<KdfResponse>("api/accounts/prelogin",
+                                                      new Dictionary<string, string> {{"email", username}});
 
-            return (int)response["KdfIterations"];
+            // TODO: Check Kdf field and throw if it's not the one we support.
+            return response.KdfIterations;
+        }
+
+        //
+        // Internal
+        //
+
+        // TODO: Move this out of here. Maybe?
+        [JsonObject(ItemRequired = Required.Always)]
+        internal struct KdfResponse
+        {
+            public int Kdf;
+            public int KdfIterations;
         }
     }
 }
