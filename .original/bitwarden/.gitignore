@@ -1,6 +1,7 @@
 /bitwarden-sharp.v12.suo
 /example/bin/
 /example/obj/
+/example/credentials.txt
 /packages/
 /src/bin/
 /src/obj/
