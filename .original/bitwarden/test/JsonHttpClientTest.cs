@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using Moq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -26,6 +27,28 @@ namespace Bitwarden.Test
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
 
             Assert.That(JToken.DeepEquals(response, ResponseJson));
+        }
+
+        [Test]
+        public void Get_returns_deserialized_object()
+        {
+            var http = SetupGet();
+            var client = SetupClient(http);
+            var response = client.Get<ResponseObject>(Endpoint);
+
+            Assert.That(response.Status, Is.EqualTo("Ok"));
+        }
+
+        [Test]
+        public void Get_throws_on_missing_fields_in_json()
+        {
+            var http = SetupGet("{}");
+            var client = SetupClient(http);
+
+            Assert.That(() => client.Get<ResponseObject>(Endpoint),
+                        Throws.InstanceOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.InvalidResponse));
         }
 
         [Test]
@@ -51,6 +74,28 @@ namespace Bitwarden.Test
         }
 
         [Test]
+        public void Post_returns_deserialized_object()
+        {
+            var http = SetupPost();
+            var client = SetupClient(http);
+            var response = client.Post<ResponseObject>(Endpoint, new Dictionary<string, string>());
+
+            Assert.That(response.Status, Is.EqualTo("Ok"));
+        }
+
+        [Test]
+        public void Post_throws_on_missing_fields_in_json()
+        {
+            var http = SetupPost("{}");
+            var client = SetupClient(http);
+
+            Assert.That(() => client.Post<ResponseObject>(Endpoint, new Dictionary<string, string>()),
+                        Throws.InstanceOf<ClientException>()
+                            .And.Property("Reason")
+                            .EqualTo(ClientException.FailureReason.InvalidResponse));
+        }
+
+        [Test]
         public void MakeUrl_joins_url_with_slashes()
         {
             string[] bases = {"http://all.your.base", "http://all.your.base/"};
@@ -70,7 +115,13 @@ namespace Bitwarden.Test
         private const string Endpoint = "one/two/three";
         private const string Url = "https://whats.up/one/two/three";
 
-        private const string Response = "{'status': 'ok'}";
+        [JsonObject(ItemRequired = Required.Always)]
+        public struct ResponseObject
+        {
+            public string Status;
+        }
+
+        private const string Response = "{'Status': 'Ok'}";
         private static readonly JObject ResponseJson = JObject.Parse(Response);
 
         private static readonly Dictionary<string, string> Headers = new Dictionary<string, string>()

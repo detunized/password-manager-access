@@ -28,7 +28,12 @@ namespace Bitwarden
 
         public JObject Get(string endpoint)
         {
-            return MakeRequest("GET", endpoint, Headers, (url, headers) => Http.Get(url, headers));
+            return Get(endpoint, Request);
+        }
+
+        public T Get<T>(string endpoint)
+        {
+            return Get(endpoint, Request<T>);
         }
 
         //
@@ -37,30 +42,71 @@ namespace Bitwarden
 
         public JObject Post(string endpoint, Dictionary<string, string> parameters)
         {
-            var jsonHeaders = new Dictionary<string, string>(Headers);
-            jsonHeaders["Content-Type"] = "application/json; charset=UTF-8";
+            return Post(endpoint, parameters, Request);
+        }
 
-            return MakeRequest("POST",
-                               endpoint,
-                               jsonHeaders,
-                               (url, headers) => Http.Post(url,
-                                                           JsonConvert.SerializeObject(parameters),
-                                                           headers));
+        public T Post<T>(string endpoint, Dictionary<string, string> parameters)
+        {
+            return Post(endpoint, parameters, Request<T>);
         }
 
         //
-        // Private
+        // Internal
         //
 
-        internal JObject MakeRequest(string method,
-                                     string endpoint,
-                                     Dictionary<string, string> headers,
-                                     Func<string, Dictionary<string, string>, string> request)
+        internal T Get<T>(string endpoint,
+                          Func<string,
+                               string,
+                               Dictionary<string, string>,
+                               Func<string, Dictionary<string, string>, string>, T> request)
+        {
+            return request("GET", endpoint, Headers, (url, headers) => Http.Get(url, headers));
+        }
+
+        internal T Post<T>(string endpoint,
+                           Dictionary<string, string> parameters,
+                           Func<string,
+                                string,
+                                Dictionary<string, string>,
+                                Func<string, Dictionary<string, string>, string>, T> request)
+        {
+            var jsonHeaders = new Dictionary<string, string>(Headers);
+            jsonHeaders["Content-Type"] = "application/json; charset=UTF-8";
+
+            return request("POST",
+                           endpoint,
+                           jsonHeaders,
+                           (url, headers) => Http.Post(url,
+                                                       JsonConvert.SerializeObject(parameters),
+                                                       headers));
+        }
+
+        internal T Request<T>(string method,
+                              string endpoint,
+                              Dictionary<string, string> headers,
+                              Func<string, Dictionary<string, string>, string> request)
+        {
+            return Request(method, endpoint, headers, request, JsonConvert.DeserializeObject<T>);
+        }
+
+        internal JObject Request(string method,
+                                 string endpoint,
+                                 Dictionary<string, string> headers,
+                                 Func<string, Dictionary<string, string>, string> request)
+        {
+            return Request(method, endpoint, headers, request, JObject.Parse);
+        }
+
+        internal T Request<T>(string method,
+                              string endpoint,
+                              Dictionary<string, string> headers,
+                              Func<string, Dictionary<string, string>, string> request,
+                              Func<string, T> parse)
         {
             var url = MakeUrl(endpoint);
             try
             {
-                return JObject.Parse(request(url, headers));
+                return parse(request(url, headers));
             }
             catch (WebException e)
             {
@@ -89,10 +135,10 @@ namespace Bitwarden
                                        original);
         }
 
-        private static ClientException MakeHttpError(string method,
-                                                     string url,
-                                                     HttpWebResponse response,
-                                                     WebException original)
+        internal static ClientException MakeHttpError(string method,
+                                                      string url,
+                                                      HttpWebResponse response,
+                                                      WebException original)
         {
             return new ClientException(ClientException.FailureReason.NetworkError,
                                        string.Format(
@@ -103,9 +149,9 @@ namespace Bitwarden
                                        original);
         }
 
-        private static ClientException MakeInvalidResponseError(string format,
-                                                                string url,
-                                                                Exception original)
+        internal static ClientException MakeInvalidResponseError(string format,
+                                                                 string url,
+                                                                 Exception original)
         {
             return new ClientException(ClientException.FailureReason.InvalidResponse,
                                        string.Format(format, url),
