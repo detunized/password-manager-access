@@ -39,6 +39,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="HttpClient.cs" />
+    <Compile Include="IHttpClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
