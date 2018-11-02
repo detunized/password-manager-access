@@ -39,6 +39,12 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\Bitwarden.csproj">
+      <Project>{a4ca04f2-2e44-4140-9477-569efecf343d}</Project>
+      <Name>Bitwarden</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
