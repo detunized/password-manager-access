@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Web;
 
 namespace Bitwarden
 {
@@ -42,12 +44,22 @@ namespace Bitwarden
 
         public JObject Post(string endpoint, Dictionary<string, string> parameters)
         {
-            return Post(endpoint, parameters, Request);
+            return Post(endpoint, parameters, JsonContentType, JsonConvert.SerializeObject, Request);
         }
 
         public T Post<T>(string endpoint, Dictionary<string, string> parameters)
         {
-            return Post(endpoint, parameters, Request<T>);
+            return Post(endpoint, parameters, JsonContentType, JsonConvert.SerializeObject, Request<T>);
+        }
+
+        public JObject PostForm(string endpoint, Dictionary<string, string> parameters)
+        {
+            return Post(endpoint, parameters, FormContentType, UrlEncode, Request);
+        }
+
+        public T PostForm<T>(string endpoint, Dictionary<string, string> parameters)
+        {
+            return Post(endpoint, parameters, FormContentType, UrlEncode, Request<T>);
         }
 
         //
@@ -65,28 +77,20 @@ namespace Bitwarden
 
         internal T Post<T>(string endpoint,
                            Dictionary<string, string> parameters,
+                           string contentType,
+                           Func<Dictionary<string, string>, string> serialize,
                            Func<string,
                                 string,
                                 Dictionary<string, string>,
                                 Func<string, Dictionary<string, string>, string>, T> request)
         {
             var jsonHeaders = new Dictionary<string, string>(Headers);
-            jsonHeaders["Content-Type"] = "application/json; charset=UTF-8";
+            jsonHeaders["Content-Type"] = contentType;
 
             return request("POST",
                            endpoint,
                            jsonHeaders,
-                           (url, headers) => Http.Post(url,
-                                                       JsonConvert.SerializeObject(parameters),
-                                                       headers));
-        }
-
-        internal T Request<T>(string method,
-                              string endpoint,
-                              Dictionary<string, string> headers,
-                              Func<string, Dictionary<string, string>, string> request)
-        {
-            return Request(method, endpoint, headers, request, JsonConvert.DeserializeObject<T>);
+                           (url, headers) => Http.Post(url, serialize(parameters), headers));
         }
 
         internal JObject Request(string method,
@@ -95,6 +99,14 @@ namespace Bitwarden
                                  Func<string, Dictionary<string, string>, string> request)
         {
             return Request(method, endpoint, headers, request, JObject.Parse);
+        }
+
+        internal T Request<T>(string method,
+                              string endpoint,
+                              Dictionary<string, string> headers,
+                              Func<string, Dictionary<string, string>, string> request)
+        {
+            return Request(method, endpoint, headers, request, JsonConvert.DeserializeObject<T>);
         }
 
         internal T Request<T>(string method,
@@ -121,6 +133,15 @@ namespace Bitwarden
         internal string MakeUrl(string endpoint)
         {
             return BaseUrl + '/' + endpoint.TrimStart('/');
+        }
+
+        // TODO: Test this
+        internal string UrlEncode(Dictionary<string, string> parameters)
+        {
+            return string.Join("&",
+                               parameters.Select(i => string.Format("{0}={1}",
+                                                                    HttpUtility.UrlEncode(i.Key),
+                                                                    HttpUtility.UrlEncode(i.Value))));
         }
 
         internal static ClientException MakeNetworkError(string method,
@@ -157,5 +178,8 @@ namespace Bitwarden
                                        string.Format(format, url),
                                        original);
         }
+
+        private const string JsonContentType = "application/json; charset=UTF-8";
+        private const string FormContentType = "application/x-www-form-urlencoded; charset=UTF-8";
     }
 }

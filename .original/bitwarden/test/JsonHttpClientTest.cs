@@ -74,6 +74,28 @@ namespace Bitwarden.Test
         }
 
         [Test]
+        public void PostForm_makes_POST_request_with_data_and_headers()
+        {
+            var http = SetupPost();
+            var data = new Dictionary<string, string>
+            {
+                {"one", "1"},
+                {"two", "2"},
+                {"three", "3"},
+            };
+            var encodedData = "one=1&two=2&three=3";
+
+            var client = SetupClient(http);
+            var response = client.PostForm(Endpoint, data);
+
+            http.Verify(x => x.Post(It.Is<string>(s => s == Url),
+                                    It.Is<string>(s => s == encodedData),
+                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, FormHeaders))));
+
+            Assert.That(JToken.DeepEquals(response, ResponseJson));
+        }
+
+        [Test]
         public void Post_returns_deserialized_object()
         {
             var http = SetupPost();
@@ -135,6 +157,14 @@ namespace Bitwarden.Test
         private static readonly Dictionary<string, string> JsonHeaders = new Dictionary<string, string>()
         {
             {"Content-Type", "application/json; charset=UTF-8"},
+            {"Header1", "Blah-blah"},
+            {"Header2", "Blah-blah-blah"},
+            {"Header3", "Blah-blah-blah-blah, blah, blah!"},
+        };
+
+        private static readonly Dictionary<string, string> FormHeaders = new Dictionary<string, string>()
+        {
+            {"Content-Type", "application/x-www-form-urlencoded; charset=UTF-8"},
             {"Header1", "Blah-blah"},
             {"Header2", "Blah-blah-blah"},
             {"Header3", "Blah-blah-blah-blah, blah, blah!"},
@@ -227,7 +257,7 @@ namespace Bitwarden.Test
 
         public static string ReadFixture(string name)
         {
-            return File.ReadAllText(String.Format("Fixtures/{0}.json", name));
+            return File.ReadAllText(string.Format("Fixtures/{0}.json", name));
         }
 
         //
