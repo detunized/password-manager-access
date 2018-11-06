@@ -42,6 +42,7 @@
     <Compile Include="BaseException.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientException.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="HttpClient.cs" />
     <Compile Include="IHttpClient.cs" />
     <Compile Include="JsonHttpClient.cs" />
