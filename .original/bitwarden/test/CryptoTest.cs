@@ -22,6 +22,13 @@ namespace Bitwarden.Test
             Assert.That(key, Is.EqualTo(DerivedKey.Decode64()));
         }
 
+        [Test]
+        public void HashPassword_returns_hashed_password()
+        {
+            var hash = Crypto.HashPassword(Password, DerivedKey.Decode64());
+            Assert.That(hash, Is.EqualTo(PasswordHash.Decode64()));
+        }
+
         //
         // Data
         //
@@ -29,5 +36,7 @@ namespace Bitwarden.Test
         private const string Username = "username";
         private const string Password = "password";
         private const string DerivedKey = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
+        private const string PasswordHash = "zhQ5ps7B3qN3/m2JVn+UckMTPH5dOI6K369pCiLL9wQ=";
+
     }
 }

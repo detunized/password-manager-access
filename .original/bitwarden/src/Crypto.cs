@@ -9,5 +9,10 @@ namespace Bitwarden
         {
             return Pbkdf2.GenerateSha256(password.ToBytes(), username.ToLower().Trim().ToBytes(), iterations, 32);
         }
+
+        public static byte[] HashPassword(string password, byte[] key)
+        {
+            return Pbkdf2.GenerateSha256(key, password.ToBytes(), 1, 32);
+        }
     }
 }
