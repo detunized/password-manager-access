@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.IO;
 using Bitwarden;
 
@@ -19,7 +20,15 @@ namespace Example
             var username = credentials[0];
             var password = credentials[1];
 
-            Client.RequestKdfIterationCount(username, new HttpClient());
+            try
+            {
+                var token = Client.Login(username, password, new HttpClient());
+                Console.WriteLine("token: {0}", token);
+            }
+            catch (ClientException e)
+            {
+                Console.WriteLine(e);
+            }
         }
     }
 }

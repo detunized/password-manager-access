@@ -8,9 +8,16 @@ namespace Bitwarden
 {
     public static class Client
     {
-        public static int RequestKdfIterationCount(string username, IHttpClient http)
+        // Returns the auth token
+        public static string Login(string username, string password, IHttpClient http)
         {
-            return RequestKdfIterationCount(username, new JsonHttpClient(http, "https://vault.bitwarden.com"));
+            var jsonHttp = new JsonHttpClient(http, "https://vault.bitwarden.com");
+            var iterations = RequestKdfIterationCount(username, jsonHttp);
+            var key = Crypto.DeriveKey(username, password, iterations);
+            var hash = Crypto.HashPassword(password, key);
+            var token = RequestAuthToken(username, hash, jsonHttp);
+
+            return token;
         }
 
         internal static int RequestKdfIterationCount(string username, JsonHttpClient jsonHttp)
