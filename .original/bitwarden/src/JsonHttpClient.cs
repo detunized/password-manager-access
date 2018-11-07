@@ -85,6 +85,7 @@ namespace Bitwarden
                                 Func<string, Dictionary<string, string>, string>, T> request)
         {
             var jsonHeaders = new Dictionary<string, string>(Headers);
+            jsonHeaders["Accept"] = "application/json";
             jsonHeaders["Content-Type"] = contentType;
 
             return request("POST",
