@@ -22,8 +22,7 @@ namespace Example
 
             try
             {
-                var token = Client.Login(username, password, new HttpClient());
-                Console.WriteLine("token: {0}", token);
+                Client.OpenVault(username, password, new HttpClient());
             }
             catch (ClientException e)
             {
