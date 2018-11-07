@@ -49,13 +49,16 @@ namespace Bitwarden.Test
 
         private static JsonHttpClient SetupKdfRequest()
         {
-            var response = "{'Kdf': 0, 'KdfIterations': 1337}";
-            return MakeJsonHttp(JsonHttpClientTest.SetupPost(response));
+            return SetupPost("{'Kdf': 0, 'KdfIterations': 1337}");
         }
 
         private static JsonHttpClient SetupAuthTokenRequest()
         {
-            var response = "{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}";
+            return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}");
+        }
+
+        private static JsonHttpClient SetupPost(string response)
+        {
             return MakeJsonHttp(JsonHttpClientTest.SetupPost(response));
         }
 
