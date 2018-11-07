@@ -22,16 +22,40 @@ namespace Bitwarden
             return response.KdfIterations;
         }
 
+        internal static string RequestAuthToken(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        {
+            var response = jsonHttp.PostForm<AuthTokenResponse>("identity/connect/token",
+                                                                new Dictionary<string, string>
+                                                                {
+                                                                    {"username", username},
+                                                                    {"password", passwordHash.ToBase64()},
+                                                                    {"grant_type", "password"},
+                                                                    {"scope", "api offline_access"},
+                                                                    {"client_id", "web"},
+                                                                });
+            return string.Format("{0} {1}", response.TokenType, response.AccessToken);
+        }
+
         //
         // Internal
         //
 
-        // TODO: Move this out of here. Maybe?
+        // TODO: Move all of these out of here. Maybe?
+
         [JsonObject(ItemRequired = Required.Always)]
         internal struct KdfResponse
         {
             public int Kdf;
             public int KdfIterations;
+        }
+
+        [JsonObject(ItemRequired = Required.Always)]
+        internal struct AuthTokenResponse
+        {
+            [JsonProperty(PropertyName = "token_type")]
+            public string TokenType;
+            [JsonProperty(PropertyName = "access_token")]
+            public string AccessToken;
         }
     }
 }

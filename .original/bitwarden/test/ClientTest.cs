@@ -12,7 +12,7 @@ namespace Bitwarden.Test
         [Test]
         public void RequestKdfIterationCount_returns_iteration_count()
         {
-            var count = Client.RequestKdfIterationCount("username", SetupKdfRequest());
+            var count = Client.RequestKdfIterationCount(Username, SetupKdfRequest());
 
             Assert.That(count, Is.EqualTo(1337));
         }
@@ -21,9 +21,26 @@ namespace Bitwarden.Test
         public void RequestKdfIterationCount_makes_POST_request_to_specific_endpoint()
         {
             var jsonHttp = SetupKdfRequest();
-            Client.RequestKdfIterationCount("username", jsonHttp);
+            Client.RequestKdfIterationCount(Username, jsonHttp);
 
             JsonHttpClientTest.VerifyPostUrl(jsonHttp.Http, ".com/api/accounts/prelogin");
+        }
+
+        [Test]
+        public void RequestAuthToken_returns_auth_token()
+        {
+            var token = Client.RequestAuthToken(Username, PasswordHash, SetupAuthTokenRequest());
+
+            Assert.That(token, Is.EqualTo("Bearer wa-wa-wee-wa"));
+        }
+
+        [Test]
+        public void RequestAuthToken_makes_POST_request_to_specific_endpoint()
+        {
+            var jsonHttp = SetupAuthTokenRequest();
+            Client.RequestAuthToken(Username, PasswordHash, jsonHttp);
+
+            JsonHttpClientTest.VerifyPostUrl(jsonHttp.Http, ".com/identity/connect/token");
         }
 
         //
@@ -32,12 +49,26 @@ namespace Bitwarden.Test
 
         private static JsonHttpClient SetupKdfRequest()
         {
-            return MakeJsonHttp(JsonHttpClientTest.SetupPost("{'Kdf': 0, 'KdfIterations': 1337}".Replace('\'', '"')));
+            var response = "{'Kdf': 0, 'KdfIterations': 1337}";
+            return MakeJsonHttp(JsonHttpClientTest.SetupPost(response));
+        }
+
+        private static JsonHttpClient SetupAuthTokenRequest()
+        {
+            var response = "{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}";
+            return MakeJsonHttp(JsonHttpClientTest.SetupPost(response));
         }
 
         private static JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
         {
             return new JsonHttpClient(http.Object, "https://vault.bitwarden.com");
         }
+
+        //
+        // Data
+        //
+
+        private const string Username = "username";
+        private static readonly byte[] PasswordHash = "password-hash".ToBytes();
     }
 }
