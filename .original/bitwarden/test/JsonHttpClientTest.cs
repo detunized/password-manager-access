@@ -147,6 +147,7 @@ namespace Bitwarden.Test
 
         private static readonly Dictionary<string, string> Headers = new Dictionary<string, string>()
         {
+            {"Accept", "application/json"},
             {"Content-Type", "Should be overwritten"},
             {"Header1", "Blah-blah"},
             {"Header2", "Blah-blah-blah"},
@@ -155,6 +156,7 @@ namespace Bitwarden.Test
 
         private static readonly Dictionary<string, string> JsonHeaders = new Dictionary<string, string>()
         {
+            {"Accept", "application/json"},
             {"Content-Type", "application/json; charset=UTF-8"},
             {"Header1", "Blah-blah"},
             {"Header2", "Blah-blah-blah"},
@@ -163,6 +165,7 @@ namespace Bitwarden.Test
 
         private static readonly Dictionary<string, string> FormHeaders = new Dictionary<string, string>()
         {
+            {"Accept", "application/json"},
             {"Content-Type", "application/x-www-form-urlencoded; charset=UTF-8"},
             {"Header1", "Blah-blah"},
             {"Header2", "Blah-blah-blah"},
