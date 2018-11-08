@@ -43,6 +43,13 @@ namespace Bitwarden.Test
                         Is.EqualTo("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64()));
         }
 
+        [Test]
+        public void ExpandKey_expands_key_to_64_bytes()
+        {
+            var expected = "GKPlyJlfe4rO+RNeBj6P4Jm1Ds4QFB23rN2WvwVcb5Iw0U+9uVf7jwQ04Yq75uCrOSsL7HonzBzNdYi1hO/mlQ==";
+            Assert.That(Crypto.ExpandKey("key".ToBytes()), Is.EqualTo(expected.Decode64()));
+        }
+
         //
         // Data
         //

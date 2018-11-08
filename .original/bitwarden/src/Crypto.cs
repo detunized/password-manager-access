@@ -31,5 +31,12 @@ namespace Bitwarden
         {
             return Hmac(prk, info.Concat(new byte[] {1}).ToArray());
         }
+
+        public static byte[] ExpandKey(byte[] key)
+        {
+            var enc = HkdfExpand(key, "enc".ToBytes());
+            var mac = HkdfExpand(key, "mac".ToBytes());
+            return enc.Concat(mac).ToArray();
+        }
     }
 }
