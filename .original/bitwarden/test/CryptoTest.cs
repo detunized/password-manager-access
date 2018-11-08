@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Security.Cryptography;
 using NUnit.Framework;
 
 namespace Bitwarden.Test
@@ -50,6 +51,29 @@ namespace Bitwarden.Test
             Assert.That(Crypto.ExpandKey("key".ToBytes()), Is.EqualTo(expected.Decode64()));
         }
 
+        [Test]
+        public void DecryptAes256_decrypts_ciphertext()
+        {
+            Assert.That(
+                Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                     "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                     "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()),
+                Is.EqualTo("All your base are belong to us".ToBytes()));
+        }
+
+        [Test]
+        public void DecryptAes256_throws_on_incorrect_encryption_key()
+        {
+            Assert.That(() => Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                                   "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                                   "Incorrect key must be 32 bytes!!".ToBytes()),
+                        Throws
+                            .InstanceOf<ClientException>()
+                            .And.Property("Reason").EqualTo(ClientException.FailureReason.CryptoError)
+                            .And.Message.EqualTo("Decryption failed")
+                            .And.InnerException.InstanceOf<CryptographicException>());
+        }
+
         //
         // Data
         //
@@ -58,6 +82,5 @@ namespace Bitwarden.Test
         private const string Password = "password";
         private const string DerivedKey = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
         private const string PasswordHash = "zhQ5ps7B3qN3/m2JVn+UckMTPH5dOI6K369pCiLL9wQ=";
-
     }
 }

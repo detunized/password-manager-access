@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -37,6 +38,27 @@ namespace Bitwarden
             var enc = HkdfExpand(key, "enc".ToBytes());
             var mac = HkdfExpand(key, "mac".ToBytes());
             return enc.Concat(mac).ToArray();
+        }
+
+        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] key)
+        {
+            var mode = System.Security.Cryptography.CipherMode.CBC;
+            try
+            {
+                using (var aes = new AesManaged {KeySize = 256, Key = key, Mode = mode, IV = iv})
+                using (var decryptor = aes.CreateDecryptor())
+                using (var inputStream = new MemoryStream(ciphertext, false))
+                using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
+                using (var outputStream = new MemoryStream())
+                {
+                    cryptoStream.CopyTo(outputStream);
+                    return outputStream.ToArray();
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new ClientException(ClientException.FailureReason.CryptoError, "Decryption failed", e);
+            }
         }
     }
 }
