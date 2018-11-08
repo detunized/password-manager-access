@@ -42,6 +42,7 @@
     <Compile Include="Account.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="BaseException.cs" />
+    <Compile Include="CipherString.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientException.cs" />
     <Compile Include="Crypto.cs" />

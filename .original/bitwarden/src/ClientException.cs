@@ -14,6 +14,7 @@ namespace Bitwarden
             InvalidResponse,
             RespondedWithError,
             UnsupportedFeature,
+            InvalidFormat,
             InvalidOperation,
             UnknownError
         }
