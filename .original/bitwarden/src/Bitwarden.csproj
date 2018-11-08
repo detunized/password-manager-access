@@ -49,6 +49,7 @@
     <Compile Include="IHttpClient.cs" />
     <Compile Include="JsonHttpClient.cs" />
     <Compile Include="Pbkdf2.cs" />
+    <Compile Include="Response.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

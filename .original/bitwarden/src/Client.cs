@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
 
 namespace Bitwarden
 {
@@ -31,15 +30,19 @@ namespace Bitwarden
             var encryptedVault = DownloadVault(jsonHttp);
         }
 
-        internal static VaultResponse DownloadVault(JsonHttpClient jsonHttp)
+        //
+        // Internal
+        //
+
+        internal static Response.Vault DownloadVault(JsonHttpClient jsonHttp)
         {
-            return jsonHttp.Get<VaultResponse>("api/sync");
+            return jsonHttp.Get<Response.Vault>("api/sync");
         }
 
         internal static int RequestKdfIterationCount(string username, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Post<KdfResponse>("api/accounts/prelogin",
-                                                      new Dictionary<string, string> {{"email", username}});
+            var response = jsonHttp.Post<Response.KdfInfo>("api/accounts/prelogin",
+                                                           new Dictionary<string, string> {{"email", username}});
 
             // TODO: Check Kdf field and throw if it's not the one we support.
             return response.KdfIterations;
@@ -47,66 +50,16 @@ namespace Bitwarden
 
         internal static string RequestAuthToken(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.PostForm<AuthTokenResponse>("identity/connect/token",
-                                                                new Dictionary<string, string>
-                                                                {
-                                                                    {"username", username},
-                                                                    {"password", passwordHash.ToBase64()},
-                                                                    {"grant_type", "password"},
-                                                                    {"scope", "api offline_access"},
-                                                                    {"client_id", "web"},
-                                                                });
+            var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
+                                                                 new Dictionary<string, string>
+                                                                 {
+                                                                     {"username", username},
+                                                                     {"password", passwordHash.ToBase64()},
+                                                                     {"grant_type", "password"},
+                                                                     {"scope", "api offline_access"},
+                                                                     {"client_id", "web"},
+                                                                 });
             return string.Format("{0} {1}", response.TokenType, response.AccessToken);
-        }
-
-        //
-        // Internal
-        //
-
-        // TODO: Move all of these out of here. Maybe?
-
-        [JsonObject(ItemRequired = Required.Always)]
-        internal struct KdfResponse
-        {
-            public int Kdf;
-            public int KdfIterations;
-        }
-
-        [JsonObject(ItemRequired = Required.Always)]
-        internal struct AuthTokenResponse
-        {
-            [JsonProperty(PropertyName = "token_type")]
-            public string TokenType;
-            [JsonProperty(PropertyName = "access_token")]
-            public string AccessToken;
-        }
-
-        [JsonObject(ItemRequired = Required.Always)]
-        internal struct VaultResponse
-        {
-            public ProfileModel Profile;
-            public CipherModel[] Ciphers;
-        }
-
-        internal struct ProfileModel
-        {
-            public string Key;
-        }
-
-        internal struct CipherModel
-        {
-            [JsonProperty(Required = Required.Always)]
-            public string Id;
-            public string Name;
-            public string Notes;
-            public LoginModel Login;
-        }
-
-        internal struct LoginModel
-        {
-            public string Username;
-            public string Password;
-            public string Uri;
         }
     }
 }
