@@ -7,7 +7,7 @@ namespace Bitwarden
 {
     public static class Client
     {
-        public static void OpenVault(string username, string password, IHttpClient http)
+        public static Account[] OpenVault(string username, string password, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, "https://vault.bitwarden.com");
 
@@ -28,6 +28,9 @@ namespace Bitwarden
 
             // 6. Fetch the vault
             var encryptedVault = DownloadVault(jsonHttp);
+
+            // TODO: Implement this
+            return new Account[0];
         }
 
         //
