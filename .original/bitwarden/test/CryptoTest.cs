@@ -29,6 +29,13 @@ namespace Bitwarden.Test
             Assert.That(hash, Is.EqualTo(PasswordHash.Decode64()));
         }
 
+        [Test]
+        public void Hmac256_bytes_returns_hashed_message()
+        {
+            Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
+                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+        }
+
         //
         // Data
         //
