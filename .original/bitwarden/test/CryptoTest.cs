@@ -36,6 +36,13 @@ namespace Bitwarden.Test
                         Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
         }
 
+        [Test]
+        public void HkdfExpand_returns_expected_result()
+        {
+            Assert.That(Crypto.HkdfExpand("prk".ToBytes(), "info".ToBytes()),
+                        Is.EqualTo("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64()));
+        }
+
         //
         // Data
         //
