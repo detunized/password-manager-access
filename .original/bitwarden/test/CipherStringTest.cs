@@ -118,6 +118,33 @@ namespace Bitwarden.Test
                                       expectedMessage : "MAC must be 32 bytes long");
         }
 
+        [Test]
+        public void Decrypt_decrypts_ciphertext_without_mac()
+        {
+            var cs = new CipherString(mode: CipherMode.Aes256Cbc,
+                                      iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                      ciphertext: "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                      mac: null);
+            var plaintext = cs.Decrypt("OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
+
+            Assert.That(plaintext, Is.EqualTo("All your base are belong to us".ToBytes()));
+        }
+
+        [Test]
+        public void Decrypt_decrypts_ciphertext_with_expanded_key()
+        {
+            var key = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
+            var iv = "XZ2vMa5oFCcp7BUAfPowvA==".Decode64();
+            var ciphertext = "1/GDPwJWo+2Iacio0UkRfR0zXXUufGjMIxD+y/A/YfQPKKep69B0nfbueqZJ1nA1pv15qVounBVJLhetVMGW7mKSxdVtTYObe0Uiqm/C9/s=".Decode64();
+            var mac = "ZLZcTYFq4o1tBSYkGUbQEIj64/rAE8sAVmfzpOhPTNM=".Decode64();
+            var expected = "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();
+
+            var cs = new CipherString(mode: CipherMode.Aes256CbcHmacSha256, iv: iv, ciphertext: ciphertext, mac: mac);
+            var plaintext = cs.Decrypt(key);
+
+            Assert.That(plaintext, Is.EqualTo(expected));
+        }
+
         //
         // Helper
         //

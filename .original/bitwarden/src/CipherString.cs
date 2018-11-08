@@ -1,6 +1,10 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
+using System.Diagnostics.Contracts;
+using System.Linq;
+
 namespace Bitwarden
 {
     internal enum CipherMode
@@ -70,6 +74,21 @@ namespace Bitwarden
             Mac = mac;
         }
 
+        public byte[] Decrypt(byte[] key)
+        {
+            switch (Mode)
+            {
+            case CipherMode.Aes256Cbc:
+                return DecryptAes256Cbc(key);
+            case CipherMode.Aes128CbcHmacSha256:
+                return DecryptAes128CbcHmacSha256(key);
+            case CipherMode.Aes256CbcHmacSha256:
+                return DecryptAes256CbcHmacSha256(key);
+            default:
+                throw new InvalidOperationException("Invalid cipher mode");
+            }
+        }
+
         //
         // Private
         //
@@ -116,6 +135,38 @@ namespace Bitwarden
         private static ClientException MakeError(string message)
         {
             return new ClientException(ClientException.FailureReason.InvalidFormat, message);
+        }
+
+        private byte[] DecryptAes256Cbc(byte[] key)
+        {
+            Contract.Requires(Mode == CipherMode.Aes256Cbc);
+
+            if (key.Length != 32)
+                throw new InvalidOperationException("Invalid key size");
+
+            return Crypto.DecryptAes256(Ciphertext, Iv, key);
+        }
+
+        private byte[] DecryptAes128CbcHmacSha256(byte[] key)
+        {
+            Contract.Requires(Mode == CipherMode.Aes128CbcHmacSha256);
+
+            throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
+                                      "AES-128-CBC-HMAC-SHA-256 is not supported");
+        }
+
+        private byte[] DecryptAes256CbcHmacSha256(byte[] key)
+        {
+            Contract.Requires(Mode == CipherMode.Aes256CbcHmacSha256);
+
+            if (key.Length == 32)
+                key = Crypto.ExpandKey(key);
+
+            if (key.Length != 64)
+                throw new InvalidOperationException("Invalid key size");
+
+            // TODO: Verify the MAC
+            return Crypto.DecryptAes256(Ciphertext, Iv, key.Take(32).ToArray());
         }
     }
 }
