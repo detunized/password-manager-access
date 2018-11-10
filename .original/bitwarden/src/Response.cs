@@ -27,7 +27,7 @@ namespace Bitwarden
         internal struct Vault
         {
             public Profile Profile;
-            public Cipher[] Ciphers;
+            public Item[] Ciphers;
         }
 
         internal struct Profile
@@ -35,7 +35,7 @@ namespace Bitwarden
             public string Key;
         }
 
-        internal enum CipherType
+        internal enum ItemType
         {
             Login = 1,
             SecureNote = 2,
@@ -43,18 +43,18 @@ namespace Bitwarden
             Identity = 4,
         }
 
-        internal struct Cipher
+        internal struct Item
         {
             [JsonProperty(Required = Required.Always)]
-            public CipherType Type;
+            public ItemType Type;
 
             public string Id;
             public string Name;
             public string Notes;
-            public Login Login;
+            public LoginInfo Login;
         }
 
-        internal struct Login
+        internal struct LoginInfo
         {
             public string Username;
             public string Password;

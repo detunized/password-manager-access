@@ -77,18 +77,18 @@ namespace Bitwarden
                 vaultKey = DecryptToBytes(vault.Profile.Key, key);
 
             return vault.Ciphers
-                .Where(i => i.Type == Response.CipherType.Login)
-                .Select(i => ParseAccount(i, vaultKey)).ToArray();
+                .Where(i => i.Type == Response.ItemType.Login)
+                .Select(i => ParseAccountItem(i, vaultKey)).ToArray();
         }
 
-        internal static Account ParseAccount(Response.Cipher cipher, byte[] key)
+        internal static Account ParseAccountItem(Response.Item item, byte[] key)
         {
-            return new Account(id: cipher.Id,
-                               name: DecryptToStringOrBlank(cipher.Name, key),
-                               username: DecryptToStringOrBlank(cipher.Login.Username, key),
-                               password: DecryptToStringOrBlank(cipher.Login.Password, key),
-                               url: DecryptToStringOrBlank(cipher.Login.Uri, key),
-                               note: DecryptToStringOrBlank(cipher.Notes, key));
+            return new Account(id: item.Id,
+                               name: DecryptToStringOrBlank(item.Name, key),
+                               username: DecryptToStringOrBlank(item.Login.Username, key),
+                               password: DecryptToStringOrBlank(item.Login.Password, key),
+                               url: DecryptToStringOrBlank(item.Login.Uri, key),
+                               note: DecryptToStringOrBlank(item.Notes, key));
         }
 
         internal static byte[] DecryptToBytes(string s, byte[] key)
