@@ -1,7 +1,9 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bitwarden
 {
@@ -29,8 +31,7 @@ namespace Bitwarden
             // 6. Fetch the vault
             var encryptedVault = DownloadVault(jsonHttp);
 
-            // TODO: Implement this
-            return new Account[0];
+            return DecryptVault(encryptedVault, key);
         }
 
         //
@@ -63,6 +64,48 @@ namespace Bitwarden
                                                                      {"client_id", "web"},
                                                                  });
             return string.Format("{0} {1}", response.TokenType, response.AccessToken);
+        }
+
+        internal static Account[] DecryptVault(Response.Vault vault, byte[] key)
+        {
+            // By default use the derived key, this is true for some old vaults.
+            var vaultKey = key;
+
+            // The newer vaults have a key stored in the profile section. It's encrypted
+            // with the derived key, with is effectively a KEK now.
+            var encryptedVaultKey = vault.Profile.Key;
+            if (encryptedVaultKey != null)
+                vaultKey = DecryptToBytes(vault.Profile.Key, key);
+
+            return vault.Ciphers
+                .Where(i => i.Type == 1)
+                .Select(i => ParseAccount(i, vaultKey)).ToArray();
+        }
+
+        internal static Account ParseAccount(Response.Cipher cipher, byte[] key)
+        {
+            return new Account(id: cipher.Id,
+                               name: DecryptToStringOrBlank(cipher.Name, key),
+                               username: DecryptToStringOrBlank(cipher.Login.Username, key),
+                               password: DecryptToStringOrBlank(cipher.Login.Password, key),
+                               url: DecryptToStringOrBlank(cipher.Login.Uri, key),
+                               note: DecryptToStringOrBlank(cipher.Notes, key));
+        }
+
+        internal static byte[] DecryptToBytes(string s, byte[] key)
+        {
+            return CipherString.Parse(s).Decrypt(key);
+        }
+
+        internal static string DecryptToString(string s, byte[] key)
+        {
+            return  DecryptToBytes(s, key).ToUtf8();
+        }
+
+        // s may be null
+        internal static string DecryptToStringOrBlank(string s, byte[] key)
+        {
+            return s == null ? "" : DecryptToString(s, key);
         }
     }
 }

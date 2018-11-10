@@ -39,6 +39,8 @@ namespace Bitwarden
         {
             [JsonProperty(Required = Required.Always)]
             public string Id;
+            [JsonProperty(Required = Required.Always)]
+            public int Type;
             public string Name;
             public string Notes;
             public Login Login;
