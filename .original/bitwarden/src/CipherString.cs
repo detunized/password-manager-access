@@ -2,7 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Diagnostics.Contracts;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Bitwarden
@@ -139,7 +139,7 @@ namespace Bitwarden
 
         private byte[] DecryptAes256Cbc(byte[] key)
         {
-            Contract.Requires(Mode == CipherMode.Aes256Cbc);
+            Debug.Assert(Mode == CipherMode.Aes256Cbc);
 
             if (key.Length != 32)
                 throw new InvalidOperationException("Invalid key size");
@@ -149,7 +149,7 @@ namespace Bitwarden
 
         private byte[] DecryptAes128CbcHmacSha256(byte[] key)
         {
-            Contract.Requires(Mode == CipherMode.Aes128CbcHmacSha256);
+            Debug.Assert(Mode == CipherMode.Aes128CbcHmacSha256);
 
             throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
                                       "AES-128-CBC-HMAC-SHA-256 is not supported");
@@ -157,7 +157,7 @@ namespace Bitwarden
 
         private byte[] DecryptAes256CbcHmacSha256(byte[] key)
         {
-            Contract.Requires(Mode == CipherMode.Aes256CbcHmacSha256);
+            Debug.Assert(Mode == CipherMode.Aes256CbcHmacSha256);
 
             if (key.Length == 32)
                 key = Crypto.ExpandKey(key);
