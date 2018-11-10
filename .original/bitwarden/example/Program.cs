@@ -22,7 +22,25 @@ namespace Example
 
             try
             {
-                Client.OpenVault(username, password, new HttpClient());
+                var accounts = Client.OpenVault(username, password, new HttpClient());
+                for (int i = 0; i < accounts.Length; ++i)
+                {
+                    var account = accounts[i];
+                    Console.WriteLine("{0}:\n" +
+                                      "          id: {1}\n" +
+                                      "        name: {2}\n" +
+                                      "    username: {3}\n" +
+                                      "    password: {4}\n" +
+                                      "         url: {5}\n" +
+                                      "        note: {6}\n",
+                                      i + 1,
+                                      account.Id,
+                                      account.Name,
+                                      account.Username,
+                                      account.Password,
+                                      account.Url,
+                                      account.Note);
+                }
             }
             catch (ClientException e)
             {
