@@ -35,12 +35,20 @@ namespace Bitwarden
             public string Key;
         }
 
+        internal enum CipherType
+        {
+            Login = 1,
+            SecureNote = 2,
+            Card = 3,
+            Identity = 4,
+        }
+
         internal struct Cipher
         {
             [JsonProperty(Required = Required.Always)]
+            public CipherType Type;
+
             public string Id;
-            [JsonProperty(Required = Required.Always)]
-            public int Type;
             public string Name;
             public string Notes;
             public Login Login;

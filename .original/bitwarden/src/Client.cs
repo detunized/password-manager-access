@@ -78,7 +78,7 @@ namespace Bitwarden
                 vaultKey = DecryptToBytes(vault.Profile.Key, key);
 
             return vault.Ciphers
-                .Where(i => i.Type == 1)
+                .Where(i => i.Type == Response.CipherType.Login)
                 .Select(i => ParseAccount(i, vaultKey)).ToArray();
         }
 
