@@ -56,6 +56,9 @@
     <Compile Include="Pbkdf2Test.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Fixtures\vault.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

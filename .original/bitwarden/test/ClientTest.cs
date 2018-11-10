@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Moq;
+using Newtonsoft.Json;
 using NUnit.Framework;
 
 namespace Bitwarden.Test
@@ -41,6 +42,18 @@ namespace Bitwarden.Test
             Client.RequestAuthToken(Username, PasswordHash, jsonHttp);
 
             JsonHttpClientTest.VerifyPostUrl(jsonHttp.Http, ".com/identity/connect/token");
+        }
+
+        [Test]
+        public void DecryptVault_returns_accounts()
+        {
+            var key = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
+            var vault = JsonConvert.DeserializeObject<Response.Vault>(JsonHttpClientTest.ReadFixture("vault"));
+            var accounts = Client.DecryptVault(vault, key);
+
+            Assert.That(accounts.Length, Is.EqualTo(2));
+            Assert.That(accounts[0].Name, Is.EqualTo("Facebook"));
+            Assert.That(accounts[1].Name, Is.EqualTo("Google"));
         }
 
         //
