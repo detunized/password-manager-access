@@ -128,6 +128,19 @@ namespace Bitwarden.Test
                                 Is.EqualTo("http://all.your.base/are/belong/to/us"));
         }
 
+        [Test]
+        public void UrlEncode_returns_encoded_parameters()
+        {
+            var encoded = JsonHttpClient.UrlEncode(new Dictionary<string, string>
+            {
+                {"1", "2"},
+                {"three", "four"},
+                {"white space", "and symbols @%!/$"},
+            });
+
+            Assert.That(encoded, Is.EqualTo("1=2&three=four&white+space=and+symbols+%40%25!%2f%24"));
+        }
+
         //
         // Helper
         //

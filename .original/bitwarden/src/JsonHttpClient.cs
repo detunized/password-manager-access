@@ -141,8 +141,7 @@ namespace Bitwarden
             return BaseUrl + '/' + endpoint.TrimStart('/');
         }
 
-        // TODO: Test this
-        internal string UrlEncode(Dictionary<string, string> parameters)
+        internal static string UrlEncode(Dictionary<string, string> parameters)
         {
             return string.Join("&",
                                parameters.Select(i => string.Format("{0}={1}",
