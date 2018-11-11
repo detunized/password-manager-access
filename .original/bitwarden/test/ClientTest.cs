@@ -66,13 +66,25 @@ namespace Bitwarden.Test
         [Test]
         public void DecryptVault_returns_accounts()
         {
-            var key = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
-            var vault = JsonConvert.DeserializeObject<Response.Vault>(JsonHttpClientTest.ReadFixture("vault"));
-            var accounts = Client.DecryptVault(vault, key);
+            var accounts = Client.DecryptVault(LoadVaultFixture(), Kek);
 
             Assert.That(accounts.Length, Is.EqualTo(2));
             Assert.That(accounts[0].Name, Is.EqualTo("Facebook"));
             Assert.That(accounts[1].Name, Is.EqualTo("Google"));
+        }
+
+        [Test]
+        public void ParseAccountItem_returns_account()
+        {
+            var vault = LoadVaultFixture();
+            var account = Client.ParseAccountItem(vault.Ciphers[0], Key);
+
+            Assert.That(account.Id, Is.EqualTo("a323db80-891a-4d91-9304-a981014cf3ca"));
+            Assert.That(account.Name, Is.EqualTo("Facebook"));
+            Assert.That(account.Username, Is.EqualTo("mark"));
+            Assert.That(account.Password, Is.EqualTo("zuckerberg"));
+            Assert.That(account.Url, Is.EqualTo("https://facebook.com"));
+            Assert.That(account.Note, Is.EqualTo("Hey, check this out!"));
         }
 
         //
@@ -109,11 +121,18 @@ namespace Bitwarden.Test
             return new JsonHttpClient(http.Object, "https://vault.bitwarden.com");
         }
 
+        private static Response.Vault LoadVaultFixture()
+        {
+            return JsonConvert.DeserializeObject<Response.Vault>(JsonHttpClientTest.ReadFixture("vault"));
+        }
+
         //
         // Data
         //
 
         private const string Username = "username";
         private static readonly byte[] PasswordHash = "password-hash".ToBytes();
+        private static readonly byte[] Kek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
+        private static readonly byte[] Key = "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();
     }
 }
