@@ -8,7 +8,16 @@ namespace Bitwarden
 {
     public static class Client
     {
-        public static Account[] OpenVault(string username, string password, IHttpClient http)
+        public static Account[] OpenVault(string username, string password)
+        {
+            return OpenVault(username, password, new HttpClient());
+        }
+
+        //
+        // Internal
+        //
+
+        internal static Account[] OpenVault(string username, string password, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, BaseUrl);
 
@@ -34,10 +43,6 @@ namespace Bitwarden
 
             return DecryptVault(encryptedVault, key);
         }
-
-        //
-        // Internal
-        //
 
         internal static Response.Vault DownloadVault(JsonHttpClient jsonHttp)
         {
