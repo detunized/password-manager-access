@@ -6,7 +6,7 @@ using System.Net;
 
 namespace Bitwarden
 {
-    internal class HttpClient: IHttpClient
+    internal sealed class HttpClient: IHttpClient
     {
         public string Get(string url, Dictionary<string, string> headers)
         {
@@ -24,7 +24,7 @@ namespace Bitwarden
         // Protected
         //
 
-        protected virtual WebClient NewWebClient()
+        private static WebClient NewWebClient()
         {
             return new WebClient();
         }
