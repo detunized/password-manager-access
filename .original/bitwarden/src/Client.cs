@@ -2,8 +2,11 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Bitwarden
 {
@@ -45,11 +48,6 @@ namespace Bitwarden
             return DecryptVault(encryptedVault, key);
         }
 
-        internal static Response.Vault DownloadVault(JsonHttpClient jsonHttp)
-        {
-            return jsonHttp.Get<Response.Vault>("api/sync");
-        }
-
         internal static int RequestKdfIterationCount(string username, JsonHttpClient jsonHttp)
         {
             try
@@ -62,10 +60,9 @@ namespace Bitwarden
             }
             catch (ClientException e)
             {
-                // The server returns 404 at this stage when the username is invalid
-                if (IsHttp404(e))
-                    throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                              "The username is invalid");
+                // The web client seems to ignore network errors. Default to 5000 iterations.
+                if (IsHttp400To500(e))
+                    return 5000;
 
                 throw;
             }
@@ -73,16 +70,35 @@ namespace Bitwarden
 
         internal static string RequestAuthToken(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
-                                                                 new Dictionary<string, string>
-                                                                 {
-                                                                     {"username", username},
-                                                                     {"password", passwordHash.ToBase64()},
-                                                                     {"grant_type", "password"},
-                                                                     {"scope", "api offline_access"},
-                                                                     {"client_id", "web"},
-                                                                 });
-            return string.Format("{0} {1}", response.TokenType, response.AccessToken);
+            try
+            {
+                var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
+                                                                     new Dictionary<string, string>
+                                                                     {
+                                                                         {"username", username},
+                                                                         {"password", passwordHash.ToBase64()},
+                                                                         {"grant_type", "password"},
+                                                                         {"scope", "api offline_access"},
+                                                                         {"client_id", "web"},
+                                                                     });
+                return string.Format("{0} {1}", response.TokenType, response.AccessToken);
+            }
+            catch (ClientException e)
+            {
+                throw MakeSpecializedError(e);
+            }
+        }
+
+        internal static Response.Vault DownloadVault(JsonHttpClient jsonHttp)
+        {
+            try
+            {
+                return jsonHttp.Get<Response.Vault>("api/sync");
+            }
+            catch (ClientException e)
+            {
+                throw MakeSpecializedError(e);
+            }
         }
 
         internal static Account[] DecryptVault(Response.Vault vault, byte[] key)
@@ -127,17 +143,81 @@ namespace Bitwarden
             return s == null ? "" : DecryptToString(s, key);
         }
 
-        internal static bool IsHttp404(ClientException e)
+        internal static HttpStatusCode? GetHttpStatus(ClientException e)
         {
             if (e.Reason != ClientException.FailureReason.NetworkError)
-                return false;
+                return null;
 
             var we = e.InnerException as WebException;
             if (we == null || we.Status != WebExceptionStatus.ProtocolError)
-                return false;
+                return null;
 
             var wr = we.Response as HttpWebResponse;
-            return wr != null && wr.StatusCode == HttpStatusCode.NotFound;
+            if (wr == null)
+                return null;
+
+            return wr.StatusCode;
+        }
+
+        internal static bool IsHttp400To500(ClientException e)
+        {
+            var status = GetHttpStatus(e);
+            return status != null && (int)status.Value / 100 == 4;
+        }
+
+        internal static string GetHttpResponse(ClientException e)
+        {
+            if (e.Reason != ClientException.FailureReason.NetworkError)
+                return null;
+
+            var we = e.InnerException as WebException;
+            if (we == null || we.Status != WebExceptionStatus.ProtocolError)
+                return null;
+
+            var wr = we.Response as HttpWebResponse;
+            if (wr == null)
+                return null;
+
+            var stream = wr.GetResponseStream();
+            if (stream == null)
+                return null;
+
+            using (var r = new StreamReader(stream))
+                return r.ReadToEnd();
+        }
+
+        internal static string GetServerErrorMessage(ClientException e)
+        {
+            var response = GetHttpResponse(e);
+            if (response == null)
+                return null;
+
+            try
+            {
+                var parsed = JObject.Parse(response);
+                if (parsed["ErrorModel"] == null)
+                    return null;
+
+                return (string)parsed["ErrorModel"]["Message"];
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        internal static ClientException MakeSpecializedError(ClientException e)
+        {
+            if (!IsHttp400To500(e))
+                return e;
+
+            var message = GetServerErrorMessage(e);
+            if (message == null)
+                return e;
+
+            return message.Contains("Username or password is incorrect")
+                ? new ClientException(ClientException.FailureReason.IncorrectCredentials, message, e)
+                : new ClientException(ClientException.FailureReason.RespondedWithError, message, e);
         }
 
         //

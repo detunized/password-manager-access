@@ -168,10 +168,11 @@ namespace Bitwarden
         {
             return new ClientException(ClientException.FailureReason.NetworkError,
                                        string.Format(
-                                           "{0} request to '{1}' failed with HTTP status code {2}",
+                                           "{0} request to '{1}' failed with HTTP status code {2} ({3})",
                                            method,
                                            url,
-                                           response.StatusCode),
+                                           response.StatusCode,
+                                           (int)response.StatusCode),
                                        original);
         }
 

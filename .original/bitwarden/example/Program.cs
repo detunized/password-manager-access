@@ -22,7 +22,7 @@ namespace Example
 
             try
             {
-                var accounts = Client.OpenVault(username, password + "!");
+                var accounts = Client.OpenVault(username, password);
                 for (int i = 0; i < accounts.Length; ++i)
                 {
                     var account = accounts[i];

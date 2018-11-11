@@ -17,7 +17,6 @@ namespace Bitwarden
             InvalidFormat,
             InvalidOperation,
             CryptoError,
-            UnknownError
         }
 
         public ClientException(FailureReason reason, string message, Exception innerException = null):
