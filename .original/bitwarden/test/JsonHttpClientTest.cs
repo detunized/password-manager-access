@@ -268,7 +268,7 @@ namespace Bitwarden.Test
 
         private static JsonHttpClient SetupClient(Mock<IHttpClient> http)
         {
-            return new JsonHttpClient(http.Object, BaseUrl) {Headers = Headers};
+            return new JsonHttpClient(http.Object, BaseUrl, Headers);
         }
 
         private static bool AreEqual<TK, TV>(Dictionary<TK, TV> a, Dictionary<TK, TV> b)

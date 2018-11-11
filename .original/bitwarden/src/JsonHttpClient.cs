@@ -13,16 +13,21 @@ namespace Bitwarden
 {
     internal class JsonHttpClient
     {
-        public JsonHttpClient(IHttpClient http, string baseUrl)
+        public readonly IHttpClient Http;
+        public readonly string BaseUrl;
+        public readonly Dictionary<string, string> Headers;
+
+        public JsonHttpClient(IHttpClient http, string baseUrl):
+            this(http, baseUrl, new Dictionary<string, string>())
+        {
+        }
+
+        public JsonHttpClient(IHttpClient http, string baseUrl, Dictionary<string, string> headers)
         {
             Http = http;
             BaseUrl = baseUrl.TrimEnd('/');
-            Headers = new Dictionary<string, string>();
+            Headers = headers;
         }
-
-        public IHttpClient Http { get; private set; }
-        public string BaseUrl { get; private set; }
-        public Dictionary<string, string> Headers { get; set; }
 
         //
         // Get

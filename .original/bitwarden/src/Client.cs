@@ -10,7 +10,7 @@ namespace Bitwarden
     {
         public static Account[] OpenVault(string username, string password, IHttpClient http)
         {
-            var jsonHttp = new JsonHttpClient(http, "https://vault.bitwarden.com");
+            var jsonHttp = new JsonHttpClient(http, BaseUrl);
 
             // 1. Request the number of KDF iterations needed to derive the key
             var iterations = RequestKdfIterationCount(username, jsonHttp);
@@ -25,10 +25,12 @@ namespace Bitwarden
             var token = RequestAuthToken(username, hash, jsonHttp);
 
             // 5. All subsequent requests are signed with this header
-            jsonHttp.Headers["Authorization"] = token;
+            var authJsonHttp = new JsonHttpClient(http,
+                                                  BaseUrl,
+                                                  new Dictionary<string, string> {{"Authorization", token}});
 
             // 6. Fetch the vault
-            var encryptedVault = DownloadVault(jsonHttp);
+            var encryptedVault = DownloadVault(authJsonHttp);
 
             return DecryptVault(encryptedVault, key);
         }
@@ -106,5 +108,11 @@ namespace Bitwarden
         {
             return s == null ? "" : DecryptToString(s, key);
         }
+
+        //
+        // Private
+        //
+
+        private const string BaseUrl = "https://vault.bitwarden.com";
     }
 }
