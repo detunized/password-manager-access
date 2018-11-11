@@ -45,6 +45,25 @@ namespace Bitwarden.Test
         }
 
         [Test]
+        public void DownloadVault_returns_parsed_response()
+        {
+            var jsonHttp = SetupDownloadVault();
+            var response = Client.DownloadVault(jsonHttp);
+
+            Assert.That(response.Profile.Key, Is.StringStarting("2.XZ2v"));
+            Assert.That(response.Ciphers.Length, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void DownloadVault_makes_GET_request_to_specific_endpoint()
+        {
+            var jsonHttp = SetupDownloadVault();
+            Client.DownloadVault(jsonHttp);
+
+            JsonHttpClientTest.VerifyGetUrl(jsonHttp.Http, ".com/api/sync");
+        }
+
+        [Test]
         public void DecryptVault_returns_accounts()
         {
             var key = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
@@ -68,6 +87,16 @@ namespace Bitwarden.Test
         private static JsonHttpClient SetupAuthTokenRequest()
         {
             return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}");
+        }
+
+        private static JsonHttpClient SetupDownloadVault()
+        {
+            return SetupGetWithFixture("vault");
+        }
+
+        private static JsonHttpClient SetupGetWithFixture(string name)
+        {
+            return MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture(name));
         }
 
         private static JsonHttpClient SetupPost(string response)
