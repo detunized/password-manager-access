@@ -7,9 +7,9 @@ using Bitwarden;
 
 namespace Example
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             // Read Bitwarden credentials from a file
             // The file should contain 2 lines:

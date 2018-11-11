@@ -24,7 +24,7 @@ namespace Bitwarden.Test
             var jsonHttp = SetupKdfRequest();
             Client.RequestKdfIterationCount(Username, jsonHttp);
 
-            JsonHttpClientTest.VerifyPostUrl(jsonHttp.Http, ".com/api/accounts/prelogin");
+            JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/api/accounts/prelogin");
         }
 
         [Test]
@@ -41,7 +41,7 @@ namespace Bitwarden.Test
             var jsonHttp = SetupAuthTokenRequest();
             Client.RequestAuthToken(Username, PasswordHash, jsonHttp);
 
-            JsonHttpClientTest.VerifyPostUrl(jsonHttp.Http, ".com/identity/connect/token");
+            JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/identity/connect/token");
         }
 
         [Test]
@@ -60,7 +60,7 @@ namespace Bitwarden.Test
             var jsonHttp = SetupDownloadVault();
             Client.DownloadVault(jsonHttp);
 
-            JsonHttpClientTest.VerifyGetUrl(jsonHttp.Http, ".com/api/sync");
+            JsonHttpClientTest.VerifyGetUrl(jsonHttp, ".com/api/sync");
         }
 
         [Test]

@@ -184,6 +184,10 @@ namespace Bitwarden
                                        original);
         }
 
+        //
+        // Private
+        //
+
         private const string JsonContentType = "application/json; charset=UTF-8";
         private const string FormContentType = "application/x-www-form-urlencoded; charset=UTF-8";
     }

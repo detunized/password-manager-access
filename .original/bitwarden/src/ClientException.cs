@@ -20,12 +20,7 @@ namespace Bitwarden
             UnknownError
         }
 
-        public ClientException(FailureReason reason, string message):
-            this(reason, message, null)
-        {
-        }
-
-        public ClientException(FailureReason reason, string message, Exception innerException):
+        public ClientException(FailureReason reason, string message, Exception innerException = null):
             base(message, innerException)
         {
             Reason = reason;
