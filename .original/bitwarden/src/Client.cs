@@ -195,10 +195,7 @@ namespace Bitwarden
             try
             {
                 var parsed = JObject.Parse(response);
-                if (parsed["ErrorModel"] == null)
-                    return null;
-
-                return (string)parsed["ErrorModel"]["Message"];
+                return (string)(parsed["ErrorModel"] ?? parsed)["Message"];
             }
             catch (JsonException)
             {
