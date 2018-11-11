@@ -87,6 +87,34 @@ namespace Bitwarden.Test
             Assert.That(account.Note, Is.EqualTo("Hey, check this out!"));
         }
 
+        [Test]
+        public void DecryptToBytes_returns_decrypted_input()
+        {
+            var plaintext = Client.DecryptToBytes(EncryptedString, Key);
+            Assert.That(plaintext, Is.EqualTo(Plaintext.ToBytes()));
+        }
+
+        [Test]
+        public void DecryptToString_returns_decrypted_input()
+        {
+            var plaintext = Client.DecryptToString(EncryptedString, Key);
+            Assert.That(plaintext, Is.EqualTo(Plaintext));
+        }
+
+        [Test]
+        public void DecryptToStringOrBlank_returns_decrypted_input()
+        {
+            var plaintext = Client.DecryptToStringOrBlank(EncryptedString, Key);
+            Assert.That(plaintext, Is.EqualTo(Plaintext));
+        }
+
+        [Test]
+        public void DecryptToStringOrBlank_returns_blank_for_null_input()
+        {
+            var blank = Client.DecryptToStringOrBlank(null, Key);
+            Assert.That(blank, Is.EqualTo(""));
+        }
+
         //
         // Helpers
         //
@@ -134,5 +162,8 @@ namespace Bitwarden.Test
         private static readonly byte[] PasswordHash = "password-hash".ToBytes();
         private static readonly byte[] Kek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
         private static readonly byte[] Key = "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();
+
+        private const string EncryptedString = "2.8RPqQRT3z5dTQtNAE/2XWw==|cl1uG8jueR0kxPPklGjVJAGCJqaw+YwmDPyNJtIwsXg=|klc2vOsbPPZD5K1MDMf/nqSNLBrOMPVUNycgCgl6l44=";
+        private const string Plaintext = "Hey, check this out!";
     }
 }
