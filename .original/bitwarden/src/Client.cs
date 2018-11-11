@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 
 namespace Bitwarden
 {
@@ -51,11 +52,23 @@ namespace Bitwarden
 
         internal static int RequestKdfIterationCount(string username, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.Post<Response.KdfInfo>("api/accounts/prelogin",
-                                                           new Dictionary<string, string> {{"email", username}});
+            try
+            {
+                var response = jsonHttp.Post<Response.KdfInfo>("api/accounts/prelogin",
+                                                               new Dictionary<string, string> {{"email", username}});
 
-            // TODO: Check Kdf field and throw if it's not the one we support.
-            return response.KdfIterations;
+                // TODO: Check Kdf field and throw if it's not the one we support.
+                return response.KdfIterations;
+            }
+            catch (ClientException e)
+            {
+                // The server returns 404 at this stage when the username is invalid
+                if (IsHttp404(e))
+                    throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
+                                              "The username is invalid");
+
+                throw;
+            }
         }
 
         internal static string RequestAuthToken(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
@@ -112,6 +125,19 @@ namespace Bitwarden
         internal static string DecryptToStringOrBlank(string s, byte[] key)
         {
             return s == null ? "" : DecryptToString(s, key);
+        }
+
+        internal static bool IsHttp404(ClientException e)
+        {
+            if (e.Reason != ClientException.FailureReason.NetworkError)
+                return false;
+
+            var we = e.InnerException as WebException;
+            if (we == null || we.Status != WebExceptionStatus.ProtocolError)
+                return false;
+
+            var wr = we.Response as HttpWebResponse;
+            return wr != null && wr.StatusCode == HttpStatusCode.NotFound;
         }
 
         //
