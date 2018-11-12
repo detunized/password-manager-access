@@ -32,14 +32,16 @@ namespace Example
                                       "    username: {3}\n" +
                                       "    password: {4}\n" +
                                       "         url: {5}\n" +
-                                      "        note: {6}\n",
+                                      "        note: {6}\n" +
+                                      "      folder: {7}\n",
                                       i + 1,
                                       account.Id,
                                       account.Name,
                                       account.Username,
                                       account.Password,
                                       account.Url,
-                                      account.Note);
+                                      account.Note,
+                                      account.Folder);
                 }
             }
             catch (ClientException e)
