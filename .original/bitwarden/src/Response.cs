@@ -28,11 +28,19 @@ namespace Bitwarden
         {
             public Profile Profile;
             public Item[] Ciphers;
+            public Folder[] Folders;
         }
 
         internal struct Profile
         {
             public string Key;
+        }
+
+        [JsonObject(ItemRequired = Required.Always)]
+        internal struct Folder
+        {
+            public string Id;
+            public string Name;
         }
 
         internal enum ItemType

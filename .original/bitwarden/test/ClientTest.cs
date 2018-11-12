@@ -52,6 +52,7 @@ namespace Bitwarden.Test
 
             Assert.That(response.Profile.Key, Is.StringStarting("2.XZ2v"));
             Assert.That(response.Ciphers.Length, Is.EqualTo(6));
+            Assert.That(response.Folders.Length, Is.EqualTo(2));
         }
 
         [Test]

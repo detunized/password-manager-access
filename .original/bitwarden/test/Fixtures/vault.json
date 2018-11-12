@@ -15,12 +15,24 @@
         "Organizations": [],
         "Object": "profile"
     },
-    "Folders": [],
+    "Folders": [
+    {
+        "Id": "d0e9210c-610b-4427-a344-a99600d462d3",
+        "Name": "2.L0RAFMDytvstcFvICrgACw==|qkEleXtK8wg5xxaUffZ9Sg==|VLmVcXDeAInGPHWAQlQtcjCxmNic/lTA3FyM67AzY20=",
+        "RevisionDate": "2018-11-12T12:53:26.8733333Z",
+        "Object": "folder"
+    },
+    {
+        "Id": "94542f0a-d858-46ce-87a5-a99600d47732",
+        "Name": "2.f348ky6Q7rYjbPGqElp8Mw==|tbgLvStJ4CmQxiO+Sv8ZmA==|SuOq7A08BYtKNfr3gdVtC2c7Pca2SlfEAj59kgr84Zg=",
+        "RevisionDate": "2018-11-12T12:53:33.8166667Z",
+        "Object": "folder"
+    }],
     "Collections": [],
     "Ciphers": [
     {
         "CollectionIds": [],
-        "FolderId": null,
+        "FolderId": "94542f0a-d858-46ce-87a5-a99600d47732",
         "Favorite": false,
         "Edit": true,
         "Id": "a323db80-891a-4d91-9304-a981014cf3ca",
@@ -120,7 +132,7 @@
     },
     {
         "CollectionIds": [],
-        "FolderId": null,
+        "FolderId": "d0e9210c-610b-4427-a344-a99600d462d3",
         "Favorite": false,
         "Edit": true,
         "Id": "23b87357-a0df-454d-8912-a991014f863d",
