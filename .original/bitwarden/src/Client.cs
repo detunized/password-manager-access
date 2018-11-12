@@ -112,19 +112,31 @@ namespace Bitwarden
             if (encryptedVaultKey != null)
                 vaultKey = DecryptToBytes(vault.Profile.Key, key);
 
+            var folders = ParseFolders(vault.Folders, vaultKey);
+
             return vault.Ciphers
                 .Where(i => i.Type == Response.ItemType.Login)
-                .Select(i => ParseAccountItem(i, vaultKey)).ToArray();
+                .Select(i => ParseAccountItem(i, vaultKey, folders)).ToArray();
         }
 
-        internal static Account ParseAccountItem(Response.Item item, byte[] key)
+        internal static Dictionary<string, string> ParseFolders(Response.Folder[] folders, byte[] key)
         {
+            return folders.ToDictionary(i => i.Id, i => DecryptToString(i.Name, key));
+        }
+
+        internal static Account ParseAccountItem(Response.Item item, byte[] key, Dictionary<string, string> folders)
+        {
+            var folder = item.FolderId != null && folders.ContainsKey(item.FolderId)
+                ? folders[item.FolderId]
+                : "";
+
             return new Account(id: item.Id,
                                name: DecryptToStringOrBlank(item.Name, key),
                                username: DecryptToStringOrBlank(item.Login.Username, key),
                                password: DecryptToStringOrBlank(item.Login.Password, key),
                                url: DecryptToStringOrBlank(item.Login.Uri, key),
-                               note: DecryptToStringOrBlank(item.Notes, key));
+                               note: DecryptToStringOrBlank(item.Notes, key),
+                               folder: folder);
         }
 
         internal static byte[] DecryptToBytes(string s, byte[] key)

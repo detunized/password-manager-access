@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
 using Moq;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -76,10 +77,30 @@ namespace Bitwarden.Test
         }
 
         [Test]
+        public void DecryptVault_assigns_folders()
+        {
+            var accounts = Client.DecryptVault(LoadVaultFixture(), Kek);
+
+            Assert.That(accounts[0].Name, Is.EqualTo("Facebook"));
+            Assert.That(accounts[0].Folder, Is.EqualTo("folder2"));
+
+            Assert.That(accounts[1].Name, Is.EqualTo("Google"));
+            Assert.That(accounts[1].Folder, Is.EqualTo(""));
+
+            Assert.That(accounts[2].Name, Is.EqualTo("only name"));
+            Assert.That(accounts[2].Folder, Is.EqualTo("folder1"));
+        }
+
+        [Test]
         public void ParseAccountItem_returns_account()
         {
             var vault = LoadVaultFixture();
-            var account = Client.ParseAccountItem(vault.Ciphers[0], Key);
+            var folders = new Dictionary<string, string>
+            {
+                {"d0e9210c-610b-4427-a344-a99600d462d3", "folder1"},
+                {"94542f0a-d858-46ce-87a5-a99600d47732", "folder2"},
+            };
+            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, folders);
 
             Assert.That(account.Id, Is.EqualTo("a323db80-891a-4d91-9304-a981014cf3ca"));
             Assert.That(account.Name, Is.EqualTo("Facebook"));
@@ -87,6 +108,7 @@ namespace Bitwarden.Test
             Assert.That(account.Password, Is.EqualTo("zuckerberg"));
             Assert.That(account.Url, Is.EqualTo("https://facebook.com"));
             Assert.That(account.Note, Is.EqualTo("Hey, check this out!"));
+            Assert.That(account.Folder, Is.EqualTo("folder2"));
         }
 
         [Test]

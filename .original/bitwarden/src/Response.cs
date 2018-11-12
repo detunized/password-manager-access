@@ -59,6 +59,7 @@ namespace Bitwarden
             public string Id;
             public string Name;
             public string Notes;
+            public string FolderId;
 
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public LoginInfo Login;

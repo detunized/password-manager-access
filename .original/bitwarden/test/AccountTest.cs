@@ -17,7 +17,8 @@ namespace Bitwarden.Test
             var password = "password";
             var url = "url";
             var note = "note";
-            var account = new Account(id, name, username, password, url, note);
+            var folder = "folder";
+            var account = new Account(id, name, username, password, url, note, folder);
 
             Assert.That(account.Id, Is.EqualTo(id));
             Assert.That(account.Name, Is.EqualTo(name));
@@ -25,6 +26,7 @@ namespace Bitwarden.Test
             Assert.That(account.Password, Is.EqualTo(password));
             Assert.That(account.Url, Is.EqualTo(url));
             Assert.That(account.Note, Is.EqualTo(note));
+            Assert.That(account.Folder, Is.EqualTo(folder));
         }
     }
 }

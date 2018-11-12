@@ -11,13 +11,15 @@ namespace Bitwarden
         public readonly string Password;
         public readonly string Url;
         public readonly string Note;
+        public readonly string Folder;
 
         public Account(string id,
                        string name,
                        string username,
                        string password,
                        string url,
-                       string note)
+                       string note,
+                       string folder)
         {
             Id = id;
             Name = name;
@@ -25,6 +27,7 @@ namespace Bitwarden
             Password = password;
             Url = url;
             Note = note;
+            Folder = folder;
         }
     }
 }
