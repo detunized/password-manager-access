@@ -22,10 +22,10 @@ namespace Example
 
             try
             {
-                var accounts = Client.OpenVault(username, password);
-                for (int i = 0; i < accounts.Length; ++i)
+                var vault = Vault.Open(username, password);
+                for (int i = 0; i < vault.Accounts.Length; ++i)
                 {
-                    var account = accounts[i];
+                    var account = vault.Accounts[i];
                     Console.WriteLine("{0}:\n" +
                                       "          id: {1}\n" +
                                       "        name: {2}\n" +
