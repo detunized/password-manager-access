@@ -51,6 +51,8 @@ namespace Bitwarden
             public string Id;
             public string Name;
             public string Notes;
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public LoginInfo Login;
         }
 

@@ -51,7 +51,7 @@ namespace Bitwarden.Test
             var response = Client.DownloadVault(jsonHttp);
 
             Assert.That(response.Profile.Key, Is.StringStarting("2.XZ2v"));
-            Assert.That(response.Ciphers.Length, Is.EqualTo(2));
+            Assert.That(response.Ciphers.Length, Is.EqualTo(6));
         }
 
         [Test]
@@ -68,9 +68,10 @@ namespace Bitwarden.Test
         {
             var accounts = Client.DecryptVault(LoadVaultFixture(), Kek);
 
-            Assert.That(accounts.Length, Is.EqualTo(2));
+            Assert.That(accounts.Length, Is.EqualTo(3));
             Assert.That(accounts[0].Name, Is.EqualTo("Facebook"));
             Assert.That(accounts[1].Name, Is.EqualTo("Google"));
+            Assert.That(accounts[2].Name, Is.EqualTo("only name"));
         }
 
         [Test]
