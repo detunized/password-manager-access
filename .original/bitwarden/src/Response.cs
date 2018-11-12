@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace Bitwarden
 {
-    internal static class Response
+    namespace Response
     {
         [JsonObject(ItemRequired = Required.Always)]
         internal struct KdfInfo
