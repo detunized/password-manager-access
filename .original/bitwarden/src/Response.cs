@@ -3,73 +3,73 @@
 
 using Newtonsoft.Json;
 
-namespace Bitwarden
+// Everything in this namespace is public on purpose, even though it's only used internally.
+// This is done to avoid problems with code obfuscation. The deserialization doesn't work when
+// any names here get changed.
+namespace Bitwarden.Response
 {
-    namespace Response
+    [JsonObject(ItemRequired = Required.Always)]
+    public struct KdfInfo
     {
-        [JsonObject(ItemRequired = Required.Always)]
-        internal struct KdfInfo
-        {
-            public int Kdf;
-            public int KdfIterations;
-        }
+        public int Kdf;
+        public int KdfIterations;
+    }
 
-        [JsonObject(ItemRequired = Required.Always)]
-        internal struct AuthToken
-        {
-            [JsonProperty(PropertyName = "token_type")]
-            public string TokenType;
-            [JsonProperty(PropertyName = "access_token")]
-            public string AccessToken;
-        }
+    [JsonObject(ItemRequired = Required.Always)]
+    public struct AuthToken
+    {
+        [JsonProperty(PropertyName = "token_type")]
+        public string TokenType;
+        [JsonProperty(PropertyName = "access_token")]
+        public string AccessToken;
+    }
 
-        [JsonObject(ItemRequired = Required.Always)]
-        internal struct Vault
-        {
-            public Profile Profile;
-            public Item[] Ciphers;
-            public Folder[] Folders;
-        }
+    [JsonObject(ItemRequired = Required.Always)]
+    public struct Vault
+    {
+        public Profile Profile;
+        public Item[] Ciphers;
+        public Folder[] Folders;
+    }
 
-        internal struct Profile
-        {
-            public string Key;
-        }
+    public struct Profile
+    {
+        public string Key;
+    }
 
-        [JsonObject(ItemRequired = Required.Always)]
-        internal struct Folder
-        {
-            public string Id;
-            public string Name;
-        }
+    [JsonObject(ItemRequired = Required.Always)]
+    public struct Folder
+    {
+        public string Id;
+        public string Name;
+    }
 
-        internal enum ItemType
-        {
-            Login = 1,
-            SecureNote = 2,
-            Card = 3,
-            Identity = 4,
-        }
+    public enum ItemType
+    {
+        Login = 1,
+        SecureNote = 2,
+        Card = 3,
+        Identity = 4,
+    }
 
-        internal struct Item
-        {
-            [JsonProperty(Required = Required.Always)]
-            public ItemType Type;
+    public struct Item
+    {
+        [JsonProperty(Required = Required.Always)]
+        public ItemType Type;
 
-            public string Id;
-            public string Name;
-            public string Notes;
-            public string FolderId;
+        public string Id;
+        public string Name;
+        public string Notes;
+        public string FolderId;
 
-            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-            public LoginInfo Login;
-        }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public LoginInfo Login;
+    }
 
-        internal struct LoginInfo
-        {
-            public string Username;
-            public string Password;
-            public string Uri;
-        }
+    public struct LoginInfo
+    {
+        public string Username;
+        public string Password;
+        public string Uri;
     }
 }
