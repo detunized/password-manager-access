@@ -29,11 +29,21 @@ namespace Bitwarden.Test
         }
 
         [Test]
-        public void RequestAuthToken_returns_auth_token()
+        public void Login_returns_auth_token_on_non_2fa_login()
         {
-            var token = Client.RequestAuthToken(Username, PasswordHash, SetupAuthTokenRequest());
+            var token = Client.Login(Username, PasswordHash, SetupAuthTokenRequest());
 
             Assert.That(token, Is.EqualTo("Bearer wa-wa-wee-wa"));
+        }
+
+        [Test]
+        public void RequestAuthToken_returns_auth_token_response()
+        {
+            var response = Client.RequestAuthToken(Username, PasswordHash, SetupAuthTokenRequest());
+
+            Assert.That(response.TokenType, Is.EqualTo("Bearer"));
+            Assert.That(response.AccessToken, Is.EqualTo("wa-wa-wee-wa"));
+            Assert.That(response.SecondFactorMethods, Is.Null);
         }
 
         [Test]

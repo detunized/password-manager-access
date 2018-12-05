@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 // Everything in this namespace is public on purpose, even though it's only used internally.
@@ -15,13 +16,16 @@ namespace Bitwarden.Response
         public int KdfIterations;
     }
 
-    [JsonObject(ItemRequired = Required.Always)]
     public struct AuthToken
     {
-        [JsonProperty(PropertyName = "token_type")]
+        [JsonProperty(PropertyName = "token_type", Required = Required.Always)]
         public string TokenType;
-        [JsonProperty(PropertyName = "access_token")]
+
+        [JsonProperty(PropertyName = "access_token", Required = Required.Always)]
         public string AccessToken;
+
+        [JsonProperty(PropertyName = "TwoFactorProviders2")]
+        public Dictionary<int, object> SecondFactorMethods;
     }
 
     [JsonObject(ItemRequired = Required.Always)]

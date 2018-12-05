@@ -26,7 +26,7 @@ namespace Bitwarden
             var hash = Crypto.HashPassword(password, key);
 
             // 4. Authenticate with the server and get the token
-            var token = RequestAuthToken(username, hash, jsonHttp);
+            var token = Login(username, hash, jsonHttp);
 
             // 5. All subsequent requests are signed with this header
             var authJsonHttp = new JsonHttpClient(http,
@@ -59,28 +59,66 @@ namespace Bitwarden
                 if (IsHttp400To500(e))
                     return 5000;
 
-                throw;
+                throw MakeSpecializedError(e);
             }
         }
 
-        internal static string RequestAuthToken(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        internal static string Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        {
+            var response = RequestAuthToken(username, passwordHash, jsonHttp);
+            return string.Format("{0} {1}", response.TokenType, response.AccessToken);
+        }
+
+        internal static Response.AuthToken RequestAuthToken(string username,
+                                                            byte[] passwordHash,
+                                                            JsonHttpClient jsonHttp)
         {
             try
             {
-                var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
-                                                                     new Dictionary<string, string>
-                                                                     {
-                                                                         {"username", username},
-                                                                         {"password", passwordHash.ToBase64()},
-                                                                         {"grant_type", "password"},
-                                                                         {"scope", "api offline_access"},
-                                                                         {"client_id", "web"},
-                                                                     });
-                return string.Format("{0} {1}", response.TokenType, response.AccessToken);
+                return jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
+                                                             new Dictionary<string, string>
+                                                             {
+                                                                 {"username", username},
+                                                                 {"password", passwordHash.ToBase64()},
+                                                                 {"grant_type", "password"},
+                                                                 {"scope", "api offline_access"},
+                                                                 {"client_id", "web"},
+                                                             });
             }
             catch (ClientException e)
             {
+                // .NET WebClinet throws exceptions on HTTP errors. In the case of 2FA the server
+                // returns some 400+ HTTP error and the response contains extra information about
+                // the available 2FA methods. JsonHttpClient doesn't handle parsing of the response
+                // on error. So we have to fish it out of the original exception and the attached
+                // HTTP response object.
+                // TODO: Write a test for this situation. It's not very easy at the moment, since
+                //       we have to throw some pretty complex made up exceptions.
+                var authToken = ExtractAuthTokenFromResponse(e);
+                if (authToken != null)
+                    return authToken.Value;
+
+                // TODO: Check if the response stream needs to be rewound.
                 throw MakeSpecializedError(e);
+            }
+        }
+
+        internal static Response.AuthToken? ExtractAuthTokenFromResponse(ClientException e)
+        {
+            if (!IsHttp400To500(e))
+                return null;
+
+            var response = GetHttpResponse(e);
+            if (response == null)
+                return null;
+
+            try
+            {
+                return JsonConvert.DeserializeObject<Response.AuthToken>(response);
+            }
+            catch (JsonException)
+            {
+                return null;
             }
         }
 
