@@ -41,8 +41,7 @@ namespace Bitwarden.Test
         {
             var response = Client.RequestAuthToken(Username, PasswordHash, SetupAuthTokenRequest());
 
-            Assert.That(response.TokenType, Is.EqualTo("Bearer"));
-            Assert.That(response.AccessToken, Is.EqualTo("wa-wa-wee-wa"));
+            Assert.That(response.AuthToken, Is.EqualTo("Bearer wa-wa-wee-wa"));
             Assert.That(response.SecondFactorMethods, Is.Null);
         }
 

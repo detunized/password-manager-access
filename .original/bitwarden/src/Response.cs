@@ -16,16 +16,21 @@ namespace Bitwarden.Response
         public int KdfIterations;
     }
 
+    [JsonObject(ItemRequired = Required.Always)]
     public struct AuthToken
     {
-        [JsonProperty(PropertyName = "token_type", Required = Required.Always)]
+        [JsonProperty(PropertyName = "token_type")]
         public string TokenType;
 
-        [JsonProperty(PropertyName = "access_token", Required = Required.Always)]
+        [JsonProperty(PropertyName = "access_token")]
         public string AccessToken;
+    }
 
+    [JsonObject(ItemRequired = Required.Always)]
+    public struct SecondFactor
+    {
         [JsonProperty(PropertyName = "TwoFactorProviders2")]
-        public Dictionary<int, object> SecondFactorMethods;
+        public Dictionary<int, object> Methods;
     }
 
     [JsonObject(ItemRequired = Required.Always)]

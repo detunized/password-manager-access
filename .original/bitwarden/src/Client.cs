@@ -66,24 +66,52 @@ namespace Bitwarden
         internal static string Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
         {
             var response = RequestAuthToken(username, passwordHash, jsonHttp);
-            return string.Format("{0} {1}", response.TokenType, response.AccessToken);
+
+            // Simple password login (no 2FA) succeeded
+            if (response.AuthToken != null)
+                return response.AuthToken;
+
+            if (response.SecondFactorMethods == null || response.SecondFactorMethods.Count == 0)
+                throw new ClientException(ClientException.FailureReason.InvalidResponse,
+                                          "Expected a list of avaliable 2FA methods");
+
+            throw new ClientException(ClientException.FailureReason.UnsupportedFeature, "2FA is not supported");
         }
 
-        internal static Response.AuthToken RequestAuthToken(string username,
-                                                            byte[] passwordHash,
-                                                            JsonHttpClient jsonHttp)
+        internal struct TokenOrSencodFactorMethods
+        {
+            public readonly string AuthToken;
+            public readonly Dictionary<int, object> SecondFactorMethods;
+
+            public TokenOrSencodFactorMethods(string authToken)
+            {
+                AuthToken = authToken;
+                SecondFactorMethods = null;
+            }
+
+            public TokenOrSencodFactorMethods(Dictionary<int, object> secondFactorMethods)
+            {
+                AuthToken = null;
+                SecondFactorMethods = secondFactorMethods;
+            }
+        }
+
+        internal static TokenOrSencodFactorMethods RequestAuthToken(string username,
+                                                                    byte[] passwordHash,
+                                                                    JsonHttpClient jsonHttp)
         {
             try
             {
-                return jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
-                                                             new Dictionary<string, string>
-                                                             {
-                                                                 {"username", username},
-                                                                 {"password", passwordHash.ToBase64()},
-                                                                 {"grant_type", "password"},
-                                                                 {"scope", "api offline_access"},
-                                                                 {"client_id", "web"},
-                                                             });
+                var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
+                                                                     new Dictionary<string, string>
+                                                                     {
+                                                                         {"username", username},
+                                                                         {"password", passwordHash.ToBase64()},
+                                                                         {"grant_type", "password"},
+                                                                         {"scope", "api offline_access"},
+                                                                         {"client_id", "web"},
+                                                                     });
+                return new TokenOrSencodFactorMethods(string.Format("{0} {1}", response.TokenType, response.AccessToken));
             }
             catch (ClientException e)
             {
@@ -94,16 +122,16 @@ namespace Bitwarden
                 // HTTP response object.
                 // TODO: Write a test for this situation. It's not very easy at the moment, since
                 //       we have to throw some pretty complex made up exceptions.
-                var authToken = ExtractAuthTokenFromResponse(e);
-                if (authToken != null)
-                    return authToken.Value;
+                var secondFactor = ExtractSecondFactorFromResponse(e);
+                if (secondFactor != null)
+                    return new TokenOrSencodFactorMethods(secondFactor.Value.Methods);
 
                 // TODO: Check if the response stream needs to be rewound.
                 throw MakeSpecializedError(e);
             }
         }
 
-        internal static Response.AuthToken? ExtractAuthTokenFromResponse(ClientException e)
+        internal static Response.SecondFactor? ExtractSecondFactorFromResponse(ClientException e)
         {
             if (!IsHttp400To500(e))
                 return null;
@@ -114,7 +142,7 @@ namespace Bitwarden
 
             try
             {
-                return JsonConvert.DeserializeObject<Response.AuthToken>(response);
+                return JsonConvert.DeserializeObject<Response.SecondFactor>(response);
             }
             catch (JsonException)
             {
