@@ -52,6 +52,7 @@
     <Compile Include="JsonHttpClient.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Response.cs" />
+    <Compile Include="Ui.cs" />
     <Compile Include="Vault.cs" />
   </ItemGroup>
   <ItemGroup>

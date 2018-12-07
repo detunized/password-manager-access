@@ -32,7 +32,7 @@ namespace Bitwarden.Test
         [Test]
         public void Login_returns_auth_token_on_non_2fa_login()
         {
-            var token = Client.Login(Username, PasswordHash, SetupAuthTokenRequest());
+            var token = Client.Login(Username, PasswordHash, null, SetupAuthTokenRequest());
 
             Assert.That(token, Is.EqualTo("Bearer wa-wa-wee-wa"));
         }

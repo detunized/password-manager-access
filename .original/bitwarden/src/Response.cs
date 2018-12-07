@@ -28,7 +28,7 @@ namespace Bitwarden.Response
 
     public enum SecondFactorMethod
     {
-        GAuth = 0,
+        GoogleAuth = 0,
         Email = 1,
         Duo = 2,
         YubiKey = 3,

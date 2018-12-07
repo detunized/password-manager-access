@@ -9,6 +9,23 @@ namespace Example
 {
     public class Program
     {
+        private class TextUi: Ui
+        {
+            public override string ProvideSecondFactorPassword(SecondFactorMethod method)
+            {
+                return GetAnswer(string.Format("Please enter {0} code", method));
+            }
+
+            private static string GetAnswer(string prompt)
+            {
+                Console.WriteLine(prompt);
+                Console.Write("> ");
+                var input = Console.ReadLine();
+
+                return input == null ? "" : input.Trim();
+            }
+        }
+
         public static void Main(string[] args)
         {
             // Read Bitwarden credentials from a file
@@ -22,7 +39,7 @@ namespace Example
 
             try
             {
-                var vault = Vault.Open(username, password);
+                var vault = Vault.Open(username, password, new TextUi());
                 for (int i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];

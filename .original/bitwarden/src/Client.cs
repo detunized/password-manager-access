@@ -13,7 +13,7 @@ namespace Bitwarden
 {
     internal static class Client
     {
-        public static Account[] OpenVault(string username, string password, IHttpClient http)
+        public static Account[] OpenVault(string username, string password, Ui ui, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, BaseUrl);
 
@@ -27,7 +27,7 @@ namespace Bitwarden
             var hash = Crypto.HashPassword(password, key);
 
             // 4. Authenticate with the server and get the token
-            var token = Login(username, hash, jsonHttp);
+            var token = Login(username, hash, ui, jsonHttp);
 
             // 5. All subsequent requests are signed with this header
             var authJsonHttp = new JsonHttpClient(http,
@@ -64,7 +64,7 @@ namespace Bitwarden
             }
         }
 
-        internal static string Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        internal static string Login(string username, byte[] passwordHash, Ui ui, JsonHttpClient jsonHttp)
         {
             var response = RequestAuthToken(username, passwordHash, jsonHttp);
 
@@ -77,12 +77,12 @@ namespace Bitwarden
                 throw new ClientException(ClientException.FailureReason.InvalidResponse,
                                           "Expected a non empty list of available 2FA methods");
 
-            string code;
             var method = ChooseSecondFactorMethod(secondFactor);
+            Ui.SecondFactorMethod uiMethod;
             switch (method)
             {
-            case Response.SecondFactorMethod.GAuth:
-                code = "GAuth";
+            case Response.SecondFactorMethod.GoogleAuth:
+                uiMethod = Ui.SecondFactorMethod.GoogleAuth;
                 break;
             case Response.SecondFactorMethod.Email:
                 if (secondFactor.Methods.Count != 1)
@@ -90,12 +90,15 @@ namespace Bitwarden
                                                         "only when there are no other options left");
                 // When only email 2FA present, the email is sent by the server right away
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
-                code = "Email";
+                uiMethod = Ui.SecondFactorMethod.Email;
                 break;
             default:
                 throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
                                           string.Format("2FA method {0} is not supported", method));
             }
+
+            // Ask the user for the code (could take a while)
+            var code = ui.ProvideSecondFactorPassword(uiMethod);
 
             var secondFactorResponse = RequestAuthToken(username,
                                                         passwordHash,
@@ -375,7 +378,7 @@ namespace Bitwarden
         {
             Response.SecondFactorMethod.YubiKey,
             Response.SecondFactorMethod.Duo,
-            Response.SecondFactorMethod.GAuth,
+            Response.SecondFactorMethod.GoogleAuth,
             Response.SecondFactorMethod.Email // Must be the last one!
         };
     }
