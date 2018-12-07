@@ -1,6 +1,7 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -71,47 +72,121 @@ namespace Bitwarden
             if (response.AuthToken != null)
                 return response.AuthToken;
 
-            if (response.SecondFactorMethods == null || response.SecondFactorMethods.Count == 0)
+            var secondFactor = response.SecondFactor;
+            if (secondFactor.Methods == null || secondFactor.Methods.Count == 0)
                 throw new ClientException(ClientException.FailureReason.InvalidResponse,
-                                          "Expected a list of avaliable 2FA methods");
+                                          "Expected a non empty list of available 2FA methods");
 
-            throw new ClientException(ClientException.FailureReason.UnsupportedFeature, "2FA is not supported");
+            string code;
+            var method = ChooseSecondFactorMethod(secondFactor);
+            switch (method)
+            {
+            case Response.SecondFactorMethod.GAuth:
+                code = "GAuth";
+                break;
+            case Response.SecondFactorMethod.Email:
+                if (secondFactor.Methods.Count != 1)
+                    throw new InvalidOperationException("Logical error: email 2FA method should be chosen " +
+                                                        "only when there are no other options left");
+                // When only email 2FA present, the email is sent by the server right away
+                // and we don't need to trigger it. Otherwise we don't support it at the moment.
+                code = "Email";
+                break;
+            default:
+                throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
+                                          string.Format("2FA method {0} is not supported", method));
+            }
+
+            var secondFactorResponse = RequestAuthToken(username,
+                                                        passwordHash,
+                                                        new SecondFactorOptions(method, code),
+                                                        jsonHttp);
+            if (secondFactorResponse.AuthToken != null)
+                return secondFactorResponse.AuthToken;
+
+            throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
+                                      "Second factor code is not correct");
         }
 
-        internal struct TokenOrSencodFactorMethods
+        internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor)
+        {
+            var methods = secondFactor.Methods;
+            if (methods == null || methods.Count == 0)
+                throw new InvalidOperationException("Logical error: should be called with non empty list of methods");
+
+            if (methods.Count == 1)
+                return methods.ElementAt(0).Key;
+
+            foreach (var i in SecondFactorMethodPreferenceOrder)
+                if (methods.ContainsKey(i))
+                    return i;
+
+            return methods.ElementAt(0).Key;
+        }
+
+        internal struct TokenOrSecondFactor
         {
             public readonly string AuthToken;
-            public readonly Dictionary<int, object> SecondFactorMethods;
+            public readonly Response.SecondFactor SecondFactor;
 
-            public TokenOrSencodFactorMethods(string authToken)
+            public TokenOrSecondFactor(string authToken)
             {
                 AuthToken = authToken;
-                SecondFactorMethods = null;
+                SecondFactor = new Response.SecondFactor();
             }
 
-            public TokenOrSencodFactorMethods(Dictionary<int, object> secondFactorMethods)
+            public TokenOrSecondFactor(Response.SecondFactor secondFactor)
             {
                 AuthToken = null;
-                SecondFactorMethods = secondFactorMethods;
+                SecondFactor = secondFactor;
             }
         }
 
-        internal static TokenOrSencodFactorMethods RequestAuthToken(string username,
-                                                                    byte[] passwordHash,
-                                                                    JsonHttpClient jsonHttp)
+        internal class SecondFactorOptions
+        {
+            public readonly Response.SecondFactorMethod Method;
+            public readonly string Code;
+
+            public SecondFactorOptions(Response.SecondFactorMethod method, string code)
+            {
+                Method = method;
+                Code = code;
+            }
+        }
+
+        internal static TokenOrSecondFactor RequestAuthToken(string username,
+                                                             byte[] passwordHash,
+                                                             JsonHttpClient jsonHttp)
+        {
+            return RequestAuthToken(username, passwordHash, null, jsonHttp);
+        }
+
+        // secondFactorOptions is optional
+        internal static TokenOrSecondFactor RequestAuthToken(string username,
+                                                             byte[] passwordHash,
+                                                             SecondFactorOptions secondFactorOptions,
+                                                             JsonHttpClient jsonHttp)
         {
             try
             {
-                var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token",
-                                                                     new Dictionary<string, string>
-                                                                     {
-                                                                         {"username", username},
-                                                                         {"password", passwordHash.ToBase64()},
-                                                                         {"grant_type", "password"},
-                                                                         {"scope", "api offline_access"},
-                                                                         {"client_id", "web"},
-                                                                     });
-                return new TokenOrSencodFactorMethods(string.Format("{0} {1}", response.TokenType, response.AccessToken));
+                var parameters = new Dictionary<string, string>
+                {
+                    {"username", username},
+                    {"password", passwordHash.ToBase64()},
+                    {"grant_type", "password"},
+                    {"scope", "api offline_access"},
+                    {"client_id", "web"},
+                };
+
+                if (secondFactorOptions != null)
+                {
+                    parameters["twoFactorProvider"] = secondFactorOptions.Method.ToString("d");
+                    parameters["twoFactorToken"] = secondFactorOptions.Code;
+                    parameters["twoFactorRemember"] = "0"; // TODO: Implement "remember me"
+                }
+
+                var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token", parameters);
+                return new TokenOrSecondFactor(string.Format("{0} {1}", response.TokenType, response.AccessToken));
             }
             catch (ClientException e)
             {
@@ -123,8 +198,8 @@ namespace Bitwarden
                 // TODO: Write a test for this situation. It's not very easy at the moment, since
                 //       we have to throw some pretty complex made up exceptions.
                 var secondFactor = ExtractSecondFactorFromResponse(e);
-                if (secondFactor != null)
-                    return new TokenOrSencodFactorMethods(secondFactor.Value.Methods);
+                if (secondFactor.HasValue)
+                    return new TokenOrSecondFactor(secondFactor.Value);
 
                 // TODO: Check if the response stream needs to be rewound.
                 throw MakeSpecializedError(e);
@@ -295,5 +370,13 @@ namespace Bitwarden
         //
 
         private const string BaseUrl = "https://vault.bitwarden.com";
+
+        private static readonly Response.SecondFactorMethod[] SecondFactorMethodPreferenceOrder =
+        {
+            Response.SecondFactorMethod.YubiKey,
+            Response.SecondFactorMethod.Duo,
+            Response.SecondFactorMethod.GAuth,
+            Response.SecondFactorMethod.Email // Must be the last one!
+        };
     }
 }

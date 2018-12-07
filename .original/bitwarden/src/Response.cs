@@ -26,11 +26,19 @@ namespace Bitwarden.Response
         public string AccessToken;
     }
 
+    public enum SecondFactorMethod
+    {
+        GAuth = 0,
+        Email = 1,
+        Duo = 2,
+        YubiKey = 3,
+    }
+
     [JsonObject(ItemRequired = Required.Always)]
     public struct SecondFactor
     {
         [JsonProperty(PropertyName = "TwoFactorProviders2")]
-        public Dictionary<int, object> Methods;
+        public Dictionary<SecondFactorMethod, object> Methods;
     }
 
     [JsonObject(ItemRequired = Required.Always)]

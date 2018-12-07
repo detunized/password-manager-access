@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using Bitwarden.Response;
 using Moq;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -42,7 +43,7 @@ namespace Bitwarden.Test
             var response = Client.RequestAuthToken(Username, PasswordHash, SetupAuthTokenRequest());
 
             Assert.That(response.AuthToken, Is.EqualTo("Bearer wa-wa-wee-wa"));
-            Assert.That(response.SecondFactorMethods, Is.Null);
+            Assert.That(response.SecondFactor.Methods, Is.Null);
         }
 
         [Test]
@@ -52,6 +53,21 @@ namespace Bitwarden.Test
             Client.RequestAuthToken(Username, PasswordHash, jsonHttp);
 
             JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/identity/connect/token");
+        }
+
+        [Test]
+        public void RequestAuthToken_with_second_factor_options_adds_extra_parameters()
+        {
+            var jsonHttp = SetupAuthTokenRequest();
+            Client.RequestAuthToken(Username,
+                                    PasswordHash,
+                                    new Client.SecondFactorOptions(SecondFactorMethod.Duo, "code"),
+                                    jsonHttp);
+
+            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
+                It.IsAny<string>(),
+                It.Is<string>(s => s.Contains("twoFactorToken=code") && s.Contains("twoFactorProvider=2")),
+                It.IsAny<Dictionary<string, string>>()));
         }
 
         [Test]
