@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -204,7 +205,6 @@ namespace Bitwarden
                 if (secondFactor.HasValue)
                     return new TokenOrSecondFactor(secondFactor.Value);
 
-                // TODO: Check if the response stream needs to be rewound.
                 throw MakeSpecializedError(e);
             }
         }
@@ -333,8 +333,21 @@ namespace Bitwarden
             if (stream == null)
                 return null;
 
-            using (var r = new StreamReader(stream))
-                return r.ReadToEnd();
+            // Leave the response stream open to be able to read it again later
+            using (var r = new StreamReader(stream,
+                                            Encoding.UTF8,
+                                            detectEncodingFromByteOrderMarks: true,
+                                            bufferSize: 1024,
+                                            leaveOpen: true))
+            {
+                var response = r.ReadToEnd();
+
+                // Rewind it back not to make someone very confused when they try to read from it
+                if (stream.CanSeek)
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                return response;
+            }
         }
 
         internal static string GetServerErrorMessage(ClientException e)
