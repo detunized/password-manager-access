@@ -10,6 +10,7 @@ namespace Bitwarden
         public enum FailureReason
         {
             IncorrectCredentials,
+            IncorrectSecondFactorCode,
             NetworkError,
             InvalidResponse,
             RespondedWithError,

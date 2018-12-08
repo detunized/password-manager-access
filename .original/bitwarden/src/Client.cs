@@ -376,9 +376,13 @@ namespace Bitwarden
             if (message == null)
                 return e;
 
-            return message.Contains("Username or password is incorrect")
-                ? new ClientException(ClientException.FailureReason.IncorrectCredentials, message, e)
-                : new ClientException(ClientException.FailureReason.RespondedWithError, message, e);
+            if (message.Contains("Username or password is incorrect"))
+                return new ClientException(ClientException.FailureReason.IncorrectCredentials, message, e);
+
+            if (message.Contains("Two-step token is invalid"))
+                return new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode, message, e);
+
+            return new ClientException(ClientException.FailureReason.RespondedWithError, message, e);
         }
 
         //
