@@ -93,6 +93,9 @@ namespace Bitwarden
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
                 uiMethod = Ui.SecondFactorMethod.Email;
                 break;
+            case Response.SecondFactorMethod.YubiKey:
+                uiMethod = Ui.SecondFactorMethod.YubiKey;
+                break;
             default:
                 throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
                                           string.Format("2FA method {0} is not supported", method));
