@@ -93,6 +93,9 @@ namespace Bitwarden
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
                 code = ui.ProvideEmailCode("TODO@example.com");
                 break;
+            case Response.SecondFactorMethod.Duo:
+                code = Duo.Authenticate(secondFactor.Methods[method].ToObject<Response.InfoDuo>(), ui);
+                break;
             case Response.SecondFactorMethod.YubiKey:
                 code = ui.ProvideYubiKeyCode();
                 break;

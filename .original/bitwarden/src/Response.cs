@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 // Everything in this namespace is public on purpose, even though it's only used internally.
 // This is done to avoid problems with code obfuscation. The deserialization doesn't work when
@@ -38,7 +39,14 @@ namespace Bitwarden.Response
     public struct SecondFactor
     {
         [JsonProperty(PropertyName = "TwoFactorProviders2")]
-        public Dictionary<SecondFactorMethod, object> Methods;
+        public Dictionary<SecondFactorMethod, JObject> Methods;
+    }
+
+    [JsonObject(ItemRequired = Required.Always)]
+    public struct InfoDuo
+    {
+        public string Host;
+        public string Signature;
     }
 
     [JsonObject(ItemRequired = Required.Always)]

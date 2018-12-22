@@ -48,6 +48,7 @@
     <Compile Include="Client.cs" />
     <Compile Include="ClientException.cs" />
     <Compile Include="Crypto.cs" />
+    <Compile Include="Duo.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="HttpClient.cs" />
     <Compile Include="IHttpClient.cs" />
