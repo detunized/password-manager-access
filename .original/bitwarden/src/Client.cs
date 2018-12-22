@@ -79,11 +79,11 @@ namespace Bitwarden
                                           "Expected a non empty list of available 2FA methods");
 
             var method = ChooseSecondFactorMethod(secondFactor);
-            Ui.SecondFactorMethod uiMethod;
+            var code = "";
             switch (method)
             {
             case Response.SecondFactorMethod.GoogleAuth:
-                uiMethod = Ui.SecondFactorMethod.GoogleAuth;
+                code = ui.ProvideGoogleAuthCode();
                 break;
             case Response.SecondFactorMethod.Email:
                 if (secondFactor.Methods.Count != 1)
@@ -91,18 +91,15 @@ namespace Bitwarden
                                                         "only when there are no other options left");
                 // When only email 2FA present, the email is sent by the server right away
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
-                uiMethod = Ui.SecondFactorMethod.Email;
+                code = ui.ProvideEmailCode("TODO@example.com");
                 break;
             case Response.SecondFactorMethod.YubiKey:
-                uiMethod = Ui.SecondFactorMethod.YubiKey;
+                code = ui.ProvideYubiKeyCode();
                 break;
             default:
                 throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
                                           string.Format("2FA method {0} is not supported", method));
             }
-
-            // Ask the user for the code (could take a while)
-            var code = ui.ProvideSecondFactorPassword(uiMethod);
 
             var secondFactorResponse = RequestAuthToken(username,
                                                         passwordHash,

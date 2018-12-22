@@ -11,9 +11,19 @@ namespace Example
     {
         private class TextUi: Ui
         {
-            public override string ProvideSecondFactorPassword(SecondFactorMethod method)
+            public override string ProvideGoogleAuthCode()
             {
-                return GetAnswer(string.Format("Please enter {0} code", method));
+                return GetAnswer("Please enter Google Authenticator code");
+            }
+
+            public override string ProvideEmailCode(string email)
+            {
+                return GetAnswer($"Please check you email ({email}) and enter the code");
+            }
+
+            public override string ProvideYubiKeyCode()
+            {
+                return GetAnswer("Please enter the YubiKey code");
             }
 
             private static string GetAnswer(string prompt)

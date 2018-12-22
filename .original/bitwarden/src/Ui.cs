@@ -6,15 +6,9 @@ namespace Bitwarden
     // TODO: Think about how to deal with the cancellation.
     public abstract class Ui
     {
-        public enum SecondFactorMethod
-        {
-            GoogleAuth,
-            Email,
-            Duo,
-            YubiKey,
-        }
-
         // Should always return a valid string. Cancellation is not supported yet.
-        public abstract string ProvideSecondFactorPassword(SecondFactorMethod method);
+        public abstract string ProvideGoogleAuthCode();
+        public abstract string ProvideEmailCode(string email);
+        public abstract string ProvideYubiKeyCode();
     }
 }
