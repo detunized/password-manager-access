@@ -31,8 +31,14 @@ namespace Bitwarden
             var choice = ui.ProvideDuoResponse(devices);
 
             var jsonHttp = new JsonHttpClient(http, $"https://{info.Host}");
-            var token = SubmitFactor(choice, sid, jsonHttp);
 
+            // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
+            // a new batch of passcodes to the phone via SMS.
+            if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
+                SubmitFactor(choice, sid, jsonHttp);
+
+            choice = ui.ProvideDuoResponse(devices);
+            var token = SubmitFactorAndWaitForToken(choice, sid, jsonHttp);
             if (token == "")
                 return "";
 
@@ -68,13 +74,14 @@ namespace Bitwarden
                 .DeEntitizeValue;
         }
 
+        // Returns the transaction id
         internal static string SubmitFactor(Ui.DuoResponse info, string sid, JsonHttpClient jsonHttp)
         {
             var parameters = new Dictionary<string, string>
             {
                 {"sid", sid},
                 {"device", info.Device.Id},
-                {"factor", FactorToString(info.Factor)},
+                {"factor", GetFactorParameterValue(info.Factor)},
             };
 
             if (info.Factor == Ui.DuoFactor.Passcode)
@@ -87,7 +94,12 @@ namespace Bitwarden
             if ((string)response["stat"] != "OK")
                 return "";
 
-            var txid = (string)response["response"]?["txid"];
+            return (string)response["response"]?["txid"];
+        }
+
+        internal static string SubmitFactorAndWaitForToken(Ui.DuoResponse info, string sid, JsonHttpClient jsonHttp)
+        {
+            var txid = SubmitFactor(info, sid, jsonHttp);
             if (string.IsNullOrEmpty(txid))
                 return "";
 
@@ -150,17 +162,29 @@ namespace Bitwarden
         // Unsupported methods are ignored.
         internal static Ui.DuoFactor[] GetDeviceFactors(HtmlNode form, string deviceId)
         {
+            var sms = CanSendSmsToDevice(form, deviceId)
+                ? new Ui.DuoFactor[] { Ui.DuoFactor.SendPasscodesBySms }
+                : new Ui.DuoFactor[0];
+
             return form
                 .SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")?
                 .SelectNodes(".//input[@name='factor']")?
                 .Select(x => x.Attributes["value"]?.DeEntitizeValue)?
-                .Select(x => ParseDuoFactor(x))?
+                .Select(x => ParseFactor(x))?
                 .Where(x => x != null)?
                 .Select(x => x.Value)?
+                .Concat(sms)?
                 .ToArray() ?? new Ui.DuoFactor[0];
         }
 
-        internal static Ui.DuoFactor? ParseDuoFactor(string s)
+        internal static bool CanSendSmsToDevice(HtmlNode form, string deviceId)
+        {
+            return form
+                .SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")?
+                .SelectSingleNode(".//input[@name='phone-smsable' and @value='true']") != null;
+        }
+
+        internal static Ui.DuoFactor? ParseFactor(string s)
         {
             switch (s)
             {
@@ -173,7 +197,7 @@ namespace Bitwarden
             return null;
         }
 
-        internal static string FactorToString(Ui.DuoFactor factor)
+        internal static string GetFactorParameterValue(Ui.DuoFactor factor)
         {
             switch (factor)
             {
@@ -181,6 +205,8 @@ namespace Bitwarden
                 return "Duo Push";
             case Ui.DuoFactor.Passcode:
                 return "Passcode";
+            case Ui.DuoFactor.SendPasscodesBySms:
+                return "sms";
             }
 
             return "";

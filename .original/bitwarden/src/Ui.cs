@@ -18,7 +18,8 @@ namespace Bitwarden
         public enum DuoFactor
         {
             Push,
-            Passcode
+            Passcode,
+            SendPasscodesBySms,
         }
 
         public class DuoDevice
