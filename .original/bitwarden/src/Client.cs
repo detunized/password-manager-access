@@ -94,7 +94,7 @@ namespace Bitwarden
                 code = ui.ProvideEmailCode("TODO@example.com");
                 break;
             case Response.SecondFactorMethod.Duo:
-                code = Duo.Authenticate(secondFactor.Methods[method].ToObject<Response.InfoDuo>(), ui);
+                code = Duo.Authenticate(secondFactor.Methods[method].ToObject<Response.InfoDuo>(), ui, jsonHttp.Http);
                 break;
             case Response.SecondFactorMethod.YubiKey:
                 code = ui.ProvideYubiKeyCode();
