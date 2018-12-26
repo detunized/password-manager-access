@@ -1,9 +1,9 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using Bitwarden;
 using System;
 using System.IO;
-using Bitwarden;
 
 namespace Example
 {
@@ -24,6 +24,46 @@ namespace Example
             public override string ProvideYubiKeyCode()
             {
                 return GetAnswer("Please enter the YubiKey code");
+            }
+
+            public override DuoResponse ProviceDuoResponse(DuoDevice[] devices)
+            {
+                var prompt = "Choose a factor you want to use:\n\n";
+                var index = 1;
+                foreach (var d in devices)
+                {
+                    prompt += $"{d.Name}\n";
+                    foreach (var f in d.Factors)
+                    {
+                        prompt += $"  {index}. {f}\n";
+                        index += 1;
+                    }
+                }
+
+                while (true)
+                {
+                    var choice = int.Parse(GetAnswer(prompt));
+
+                    foreach (var d in devices)
+                    {
+                        foreach (var f in d.Factors)
+                        {
+                            choice -= 1;
+                            if (choice == 0)
+                            {
+                                switch (f)
+                                {
+                                case DuoFactor.Push:
+                                    return new DuoResponse(d, f, "");
+                                case DuoFactor.Passcode:
+                                    return new DuoResponse(d, f, GetAnswer("Enter Duo passcode"));
+                                }
+                            }
+                        }
+                    }
+
+                    Console.WriteLine("Wrong input, try again");
+                }
             }
 
             private static string GetAnswer(string prompt)

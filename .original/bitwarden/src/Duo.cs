@@ -28,13 +28,10 @@ namespace Bitwarden
             if (sid == null || devices == null)
                 throw new InvalidOperationException("Duo HTML: signature or devices are not found");
 
-            // TODO: This is just for testing. Grab the first phone that supports the push method.
-            var phonesWithPush = devices.Where(x => x.Factors.Contains("Duo Push")).ToArray();
-            if (phonesWithPush.Length == 0)
-                return "";
+            var choice = ui.ProviceDuoResponse(devices);
 
             var jsonHttp = new JsonHttpClient(http, $"https://{info.Host}");
-            var token = SubmitFactor(phonesWithPush[0], sid, "Duo Push", null, jsonHttp);
+            var token = SubmitFactor(choice, sid, jsonHttp);
 
             if (token == "")
                 return "";
@@ -71,14 +68,14 @@ namespace Bitwarden
                 .DeEntitizeValue;
         }
 
-        internal static string SubmitFactor(Device device, string sid, string factor, string passcode, JsonHttpClient jsonHttp)
+        internal static string SubmitFactor(Ui.DuoResponse info, string sid, JsonHttpClient jsonHttp)
         {
             // Submit the factor
             var response = jsonHttp.PostForm("frame/prompt", new Dictionary<string, string>
             {
                 {"sid", sid},
-                {"device", device.Id},
-                {"factor", factor},
+                {"device", info.Device.Id},
+                {"factor", FactorToString(info.Factor)},
             });
 
             // Something went wrong
@@ -126,22 +123,9 @@ namespace Bitwarden
             return token;
         }
 
-        internal struct Device
-        {
-            public readonly string Id;
-            public readonly string Name;
-            public readonly string[] Factors;
-
-            public Device(string id, string name, string[] factors)
-            {
-                Id = id;
-                Name = name;
-                Factors = factors;
-            }
-        }
-
-        // Extracts all devices listed in the login form
-        internal static Device[] GetDevices(HtmlNode form)
+        // Extracts all devices listed in the login form.
+        // Devices with no supported methods are ignored.
+        internal static Ui.DuoDevice[] GetDevices(HtmlNode form)
         {
             var devices = form
                 .SelectNodes("//select[@name='device']/option")?
@@ -151,18 +135,50 @@ namespace Bitwarden
             if (devices == null || devices.Any(x => x.Id == null || x.Name == null))
                 return null;
 
-            return devices.Select(x => new Device(x.Id, x.Name, GetDeviceFactors(form, x.Id))).ToArray();
+            return devices
+                .Select(x => new Ui.DuoDevice(x.Id, x.Name, GetDeviceFactors(form, x.Id)))
+                .Where(x => x.Factors.Length > 0)
+                .ToArray();
         }
 
-        // Extracts all the second factor methods supported by the device
-        private static string[] GetDeviceFactors(HtmlNode form, string deviceId)
+        // Extracts all the second factor methods supported by the device.
+        // Unsupported methods are ignored.
+        internal static Ui.DuoFactor[] GetDeviceFactors(HtmlNode form, string deviceId)
         {
             return form
                 .SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")?
                 .SelectNodes(".//input[@name='factor']")?
                 .Select(x => x.Attributes["value"]?.DeEntitizeValue)?
+                .Select(x => ParseDuoFactor(x))?
                 .Where(x => x != null)?
-                .ToArray() ?? new string[0];
+                .Select(x => x.Value)?
+                .ToArray() ?? new Ui.DuoFactor[0];
+        }
+
+        internal static Ui.DuoFactor? ParseDuoFactor(string s)
+        {
+            switch (s)
+            {
+            case "Duo Push":
+                return Ui.DuoFactor.Push;
+            case "Passcode":
+                return Ui.DuoFactor.Passcode;
+            }
+
+            return null;
+        }
+
+        internal static string FactorToString(Ui.DuoFactor factor)
+        {
+            switch (factor)
+            {
+            case Ui.DuoFactor.Push:
+                return "Duo Push";
+            case Ui.DuoFactor.Passcode:
+                return "Passcode";
+            }
+
+            return "";
         }
     }
 }

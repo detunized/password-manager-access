@@ -10,5 +10,45 @@ namespace Bitwarden
         public abstract string ProvideGoogleAuthCode();
         public abstract string ProvideEmailCode(string email);
         public abstract string ProvideYubiKeyCode();
+
+        //
+        // Duo
+        //
+
+        public enum DuoFactor
+        {
+            Push,
+            Passcode
+        }
+
+        public class DuoDevice
+        {
+            public readonly string Id;
+            public readonly string Name;
+            public readonly DuoFactor[] Factors;
+
+            public DuoDevice(string id, string name, DuoFactor[] factors)
+            {
+                Id = id;
+                Name = name;
+                Factors = factors;
+            }
+        }
+
+        public class DuoResponse
+        {
+            public readonly DuoDevice Device;
+            public readonly DuoFactor Factor;
+            public readonly string Response;
+
+            public DuoResponse(DuoDevice device, DuoFactor factor, string response)
+            {
+                Device = device;
+                Factor = factor;
+                Response = response;
+            }
+        }
+
+        public abstract DuoResponse ProviceDuoResponse(DuoDevice[] devices);
     }
 }
