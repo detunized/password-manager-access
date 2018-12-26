@@ -56,7 +56,7 @@ namespace Example
                                     case DuoFactor.Push:
                                         return new DuoResponse(d, f, "");
                                     case DuoFactor.Passcode:
-                                        return new DuoResponse(d, f, GetAnswer("Enter Duo passcode"));
+                                        return new DuoResponse(d, f, GetAnswer($"Enter the passcode for {d.Name}"));
                                     }
                                 }
                             }
