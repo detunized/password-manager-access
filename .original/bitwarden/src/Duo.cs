@@ -28,7 +28,7 @@ namespace Bitwarden
             if (sid == null || devices == null)
                 throw new InvalidOperationException("Duo HTML: signature or devices are not found");
 
-            var choice = ui.ProviceDuoResponse(devices);
+            var choice = ui.ProvideDuoResponse(devices);
 
             var jsonHttp = new JsonHttpClient(http, $"https://{info.Host}");
             var token = SubmitFactor(choice, sid, jsonHttp);
@@ -70,13 +70,18 @@ namespace Bitwarden
 
         internal static string SubmitFactor(Ui.DuoResponse info, string sid, JsonHttpClient jsonHttp)
         {
-            // Submit the factor
-            var response = jsonHttp.PostForm("frame/prompt", new Dictionary<string, string>
+            var parameters = new Dictionary<string, string>
             {
                 {"sid", sid},
                 {"device", info.Device.Id},
                 {"factor", FactorToString(info.Factor)},
-            });
+            };
+
+            if (info.Factor == Ui.DuoFactor.Passcode)
+                parameters["passcode"] = info.Response;
+
+            // Submit the factor
+            var response = jsonHttp.PostForm("frame/prompt", parameters);
 
             // Something went wrong
             if ((string)response["stat"] != "OK")

@@ -26,7 +26,7 @@ namespace Example
                 return GetAnswer("Please enter the YubiKey code");
             }
 
-            public override DuoResponse ProviceDuoResponse(DuoDevice[] devices)
+            public override DuoResponse ProvideDuoResponse(DuoDevice[] devices)
             {
                 var prompt = "Choose a factor you want to use:\n\n";
                 var index = 1;
@@ -42,21 +42,22 @@ namespace Example
 
                 while (true)
                 {
-                    var choice = int.Parse(GetAnswer(prompt));
-
-                    foreach (var d in devices)
+                    if (int.TryParse(GetAnswer(prompt), out var choice))
                     {
-                        foreach (var f in d.Factors)
+                        foreach (var d in devices)
                         {
-                            choice -= 1;
-                            if (choice == 0)
+                            foreach (var f in d.Factors)
                             {
-                                switch (f)
+                                choice -= 1;
+                                if (choice == 0)
                                 {
-                                case DuoFactor.Push:
-                                    return new DuoResponse(d, f, "");
-                                case DuoFactor.Passcode:
-                                    return new DuoResponse(d, f, GetAnswer("Enter Duo passcode"));
+                                    switch (f)
+                                    {
+                                    case DuoFactor.Push:
+                                        return new DuoResponse(d, f, "");
+                                    case DuoFactor.Passcode:
+                                        return new DuoResponse(d, f, GetAnswer("Enter Duo passcode"));
+                                    }
                                 }
                             }
                         }

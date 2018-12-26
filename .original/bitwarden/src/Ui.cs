@@ -49,6 +49,6 @@ namespace Bitwarden
             }
         }
 
-        public abstract DuoResponse ProviceDuoResponse(DuoDevice[] devices);
+        public abstract DuoResponse ProvideDuoResponse(DuoDevice[] devices);
     }
 }
