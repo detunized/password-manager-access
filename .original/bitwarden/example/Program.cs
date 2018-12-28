@@ -11,24 +11,26 @@ namespace Example
     {
         private class TextUi: Ui
         {
+            private const string ToCancel = "or just press ENTER to cancel";
+
             public override string ProvideGoogleAuthCode()
             {
-                return GetAnswer("Please enter Google Authenticator code");
+                return GetAnswer($"Please enter Google Authenticator code {ToCancel}");
             }
 
             public override string ProvideEmailCode(string email)
             {
-                return GetAnswer($"Please check you email ({email}) and enter the code");
+                return GetAnswer($"Please check you email ({email}) and enter the code {ToCancel}");
             }
 
             public override string ProvideYubiKeyCode()
             {
-                return GetAnswer("Please enter the YubiKey code");
+                return GetAnswer($"Please enter the YubiKey code {ToCancel}");
             }
 
             public override DuoResponse ProvideDuoResponse(DuoDevice[] devices)
             {
-                var prompt = "Choose a factor you want to use:\n\n";
+                var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
                 var index = 1;
                 foreach (var d in devices)
                 {
@@ -42,7 +44,13 @@ namespace Example
 
                 while (true)
                 {
-                    if (int.TryParse(GetAnswer(prompt), out var choice))
+                    var answer = GetAnswer(prompt);
+
+                    // Blank means canceled by user
+                    if (string.IsNullOrWhiteSpace(answer))
+                        return null;
+
+                    if (int.TryParse(answer, out var choice))
                     {
                         foreach (var d in devices)
                         {

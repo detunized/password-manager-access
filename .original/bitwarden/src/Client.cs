@@ -104,6 +104,10 @@ namespace Bitwarden
                                           string.Format("2FA method {0} is not supported", method));
             }
 
+            if (string.IsNullOrEmpty(code))
+                throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
+                                          "Second factor step is canceled by the user");
+
             var secondFactorResponse = RequestAuthToken(username,
                                                         passwordHash,
                                                         new SecondFactorOptions(method, code),
@@ -111,7 +115,7 @@ namespace Bitwarden
             if (secondFactorResponse.AuthToken != null)
                 return secondFactorResponse.AuthToken;
 
-            throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
+            throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
                                       "Second factor code is not correct");
         }
 

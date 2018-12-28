@@ -29,7 +29,10 @@ namespace Bitwarden
             if (sid == null || devices == null)
                 throw new InvalidOperationException("Duo HTML: signature or devices are not found");
 
+            // Ask the user to choose what to do
             var choice = ui.ProvideDuoResponse(devices);
+            if (choice == null)
+                return ""; // Canceled by user
 
             var jsonHttp = new JsonHttpClient(http, $"https://{info.Host}");
 
@@ -39,6 +42,8 @@ namespace Bitwarden
             {
                 SubmitFactor(choice, sid, jsonHttp);
                 choice = ui.ProvideDuoResponse(devices);
+                if (choice == null)
+                    return ""; // Canceled by user
             }
 
             var token = SubmitFactorAndWaitForToken(choice, sid, ui, jsonHttp);

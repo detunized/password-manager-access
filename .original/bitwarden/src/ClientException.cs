@@ -11,6 +11,7 @@ namespace Bitwarden
         {
             IncorrectCredentials,
             IncorrectSecondFactorCode,
+            UserCanceledSecondFactor,
             NetworkError,
             InvalidResponse,
             RespondedWithError,
