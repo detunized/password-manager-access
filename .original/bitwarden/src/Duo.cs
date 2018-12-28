@@ -15,7 +15,7 @@ namespace Bitwarden
         public static string Authenticate(Response.InfoDuo info, Ui ui, IHttpClient http)
         {
             var signature = ParseSignature(info.Signature);
-            var html = DownloadFrame(info.Host, signature.Tx);
+            var html = DownloadFrame(info.Host, signature.Tx, http);
 
             // Find the main form
             var form = html.DocumentNode.SelectSingleNode("//form[@id='login-form']");
@@ -57,15 +57,20 @@ namespace Bitwarden
             return (parts[0], parts[1]);
         }
 
-        internal static HtmlDocument DownloadFrame(string host, string tx)
+        internal static HtmlDocument DownloadFrame(string host, string tx, IHttpClient http)
         {
             const string parent = "https%3A%2F%2Fvault.bitwarden.com%2F%23%2F2fa";
             const string version = "2.6";
 
+            // Fetch
             var url = $"https://{host}/frame/web/v1/auth?tx={tx}&parent={parent}&v={version}";
+            var response = http.Post(url, "", new Dictionary<string, string>());
 
-            // TODO: Better would be to use the IHttpClient here but it doesn't support redirects ATM
-            return new HtmlWeb() { CaptureRedirect = true }.Load(url, "POST");
+            // Parse
+            var html = new HtmlDocument();
+            html.LoadHtml(response);
+
+            return html;
         }
 
         // All the info is the frame is stored in input fields <input name="name" value="value">
