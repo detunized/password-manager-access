@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 
 namespace Bitwarden
 {
@@ -17,21 +18,10 @@ namespace Bitwarden
         {
             var signature = ParseSignature(info.Signature);
             var html = DownloadFrame(info.Host, signature.Tx, http);
-
-            // Find the main form
-            var form = html.DocumentNode.SelectSingleNode("//form[@id='login-form']");
-            if (form == null)
-                throw new InvalidOperationException("Duo HTML: main form is not found");
-
-            // Find all the devices and the signature
-            var sid = GetInputValue(form, "sid");
-            var devices = GetDevices(form);
-
-            if (sid == null || devices == null)
-                throw new InvalidOperationException("Duo HTML: signature or devices are not found");
+            var frame = ParseFrame(html);
 
             // Ask the user to choose what to do
-            var choice = ui.ProvideDuoResponse(devices);
+            var choice = ui.ProvideDuoResponse(frame.Devices);
             if (choice == null)
                 return ""; // Canceled by user
 
@@ -41,15 +31,15 @@ namespace Bitwarden
             // a new batch of passcodes to the phone via SMS.
             if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
             {
-                SubmitFactor(choice, sid, jsonHttp);
+                SubmitFactor(choice, frame.Sid, jsonHttp);
 
                 // Now we have to ask to choose again
-                choice = ui.ProvideDuoResponse(devices);
+                choice = ui.ProvideDuoResponse(frame.Devices);
                 if (choice == null)
                     return ""; // Canceled by user
             }
 
-            var token = SubmitFactorAndWaitForToken(choice, sid, ui, jsonHttp);
+            var token = SubmitFactorAndWaitForToken(choice, frame.Sid, ui, jsonHttp);
             if (token == "")
                 return "";  // TODO: error
 
@@ -59,8 +49,8 @@ namespace Bitwarden
         internal static (string Tx, string App) ParseSignature(string signature)
         {
             var parts = signature.Split(':');
-            if (parts.Length < 2)
-                throw new InvalidOperationException("Duo HTML: the signature is invalid");
+            if (parts.Length != 2)
+                throw MakeInvalidFormatError("Duo HTML: the signature is invalid or in an unsupported format");
 
             return (parts[0], parts[1]);
         }
@@ -70,15 +60,44 @@ namespace Bitwarden
             const string parent = "https%3A%2F%2Fvault.bitwarden.com%2F%23%2F2fa";
             const string version = "2.6";
 
-            // Fetch
             var url = $"https://{host}/frame/web/v1/auth?tx={tx}&parent={parent}&v={version}";
-            var response = http.Post(url, "", new Dictionary<string, string>());
+            return Parse(Post(url, http));
+        }
 
-            // Parse
-            var html = new HtmlDocument();
-            html.LoadHtml(response);
+        internal static string Post(string url, IHttpClient http)
+        {
+            try
+            {
+                return http.Post(url, "", new Dictionary<string, string>());
+            }
+            catch (WebException e)
+            {
+                throw MakeNetworkError("Network error occurred", e);
+            }
+        }
 
-            return html;
+        internal static HtmlDocument Parse(string html)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            return doc;
+        }
+
+        internal static (string Sid, Ui.DuoDevice[] Devices) ParseFrame(HtmlDocument html)
+        {
+            // Find the main form
+            var form = html.DocumentNode.SelectSingleNode("//form[@id='login-form']");
+            if (form == null)
+                throw MakeInvalidFormatError("Duo HTML: main form is not found");
+
+            // Find all the devices and the signature
+            var sid = GetInputValue(form, "sid");
+            var devices = GetDevices(form);
+
+            if (sid == null || devices == null)
+                throw MakeInvalidFormatError("Duo HTML: signature or devices are not found");
+
+            return (sid, devices);
         }
 
         // All the info is the frame is stored in input fields <input name="name" value="value">
@@ -275,6 +294,16 @@ namespace Bitwarden
             }
 
             return "";
+        }
+
+        internal static ClientException MakeInvalidFormatError(string message, Exception original = null)
+        {
+            return new ClientException(ClientException.FailureReason.InvalidFormat, message, original);
+        }
+
+        internal static ClientException MakeNetworkError(string message, Exception original = null)
+        {
+            return new ClientException(ClientException.FailureReason.NetworkError, message, original);
         }
     }
 }

@@ -30,6 +30,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="HtmlAgilityPack, Version=1.8.11.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
+      <HintPath>..\packages\HtmlAgilityPack.1.8.11\lib\Net45\HtmlAgilityPack.dll</HintPath>
+    </Reference>
     <Reference Include="Moq, Version=4.2.1510.2205, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
       <HintPath>..\packages\Moq.4.2.1510.2205\lib\net40\Moq.dll</HintPath>
     </Reference>
@@ -48,12 +51,16 @@
     <Compile Include="CipherStringTest.cs" />
     <Compile Include="ClientTest.cs" />
     <Compile Include="CryptoTest.cs" />
+    <Compile Include="DuoTest.cs" />
     <Compile Include="ExtensionsTest.cs" />
     <Compile Include="JsonHttpClientTest.cs" />
     <Compile Include="Pbkdf2Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures\vault.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Fixtures\duo.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />

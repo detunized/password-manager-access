@@ -270,9 +270,9 @@ namespace Bitwarden.Test
                                               It.IsAny<Dictionary<string, string>>()));
         }
 
-        public static string ReadFixture(string name)
+        public static string ReadFixture(string name, string extension = "json")
         {
-            return File.ReadAllText(string.Format("Fixtures/{0}.json", name));
+            return File.ReadAllText($"Fixtures/{name}.{extension}");
         }
 
         //
