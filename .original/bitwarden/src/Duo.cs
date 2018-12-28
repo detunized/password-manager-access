@@ -12,6 +12,7 @@ namespace Bitwarden
     // TODO: Error handling! It's pretty much non-existent here!
     internal static class Duo
     {
+        // Returns the second factor token from Duo or blank when canceled by the user.
         public static string Authenticate(Response.InfoDuo info, Ui ui, IHttpClient http)
         {
             var signature = ParseSignature(info.Signature);
@@ -41,6 +42,8 @@ namespace Bitwarden
             if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
             {
                 SubmitFactor(choice, sid, jsonHttp);
+
+                // Now we have to ask to choose again
                 choice = ui.ProvideDuoResponse(devices);
                 if (choice == null)
                     return ""; // Canceled by user
