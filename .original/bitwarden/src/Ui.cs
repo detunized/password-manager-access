@@ -18,6 +18,7 @@ namespace Bitwarden
         public enum DuoFactor
         {
             Push,
+            Call,
             Passcode,
             SendPasscodesBySms,
         }
@@ -51,5 +52,15 @@ namespace Bitwarden
         }
 
         public abstract DuoResponse ProvideDuoResponse(DuoDevice[] devices);
+
+
+        public enum DuoStatus
+        {
+            Success,
+            Error,
+            Info,
+        }
+
+        public abstract void UpdateDuoStatus(DuoStatus status, string text);
     }
 }

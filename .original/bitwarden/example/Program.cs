@@ -54,11 +54,11 @@ namespace Example
                                     switch (f)
                                     {
                                     case DuoFactor.Push:
+                                    case DuoFactor.Call:
+                                    case DuoFactor.SendPasscodesBySms:
                                         return new DuoResponse(d, f, "");
                                     case DuoFactor.Passcode:
                                         return new DuoResponse(d, f, GetAnswer($"Enter the passcode for {d.Name}"));
-                                    case DuoFactor.SendPasscodesBySms:
-                                        return new DuoResponse(d, f, "");
                                     }
                                 }
                             }
@@ -67,6 +67,11 @@ namespace Example
 
                     Console.WriteLine("Wrong input, try again");
                 }
+            }
+
+            public override void UpdateDuoStatus(DuoStatus status, string text)
+            {
+                Console.WriteLine($"Duo {status}: {text}");
             }
 
             private static string GetAnswer(string prompt)

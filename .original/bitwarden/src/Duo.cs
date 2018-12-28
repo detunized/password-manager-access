@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using HtmlAgilityPack;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,12 +36,14 @@ namespace Bitwarden
             // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
             // a new batch of passcodes to the phone via SMS.
             if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
+            {
                 SubmitFactor(choice, sid, jsonHttp);
+                choice = ui.ProvideDuoResponse(devices);
+            }
 
-            choice = ui.ProvideDuoResponse(devices);
-            var token = SubmitFactorAndWaitForToken(choice, sid, jsonHttp);
+            var token = SubmitFactorAndWaitForToken(choice, sid, ui, jsonHttp);
             if (token == "")
-                return "";
+                return "";  // TODO: error
 
             return $"{token}:{signature.App}";
         }
@@ -92,52 +95,97 @@ namespace Bitwarden
 
             // Something went wrong
             if ((string)response["stat"] != "OK")
-                return "";
+                return "";  // TODO: error
 
             return (string)response["response"]?["txid"];
         }
 
-        internal static string SubmitFactorAndWaitForToken(Ui.DuoResponse info, string sid, JsonHttpClient jsonHttp)
+        internal static string SubmitFactorAndWaitForToken(Ui.DuoResponse info, string sid, Ui ui, JsonHttpClient jsonHttp)
         {
             var txid = SubmitFactor(info, sid, jsonHttp);
             if (string.IsNullOrEmpty(txid))
-                return "";
+                return ""; // TODO: error
 
-            // Ask for status once
-            var status1 = jsonHttp.PostForm("frame/status", new Dictionary<string, string>
-            {
-                {"sid", sid},
-                {"txid", txid},
-            });
-
-            if ((string)status1["stat"] != "OK")
-                return "";
-
-            // Ask for status twice. This is a long poll. It returns either when the server times out or
-            // the user confirms or denies the request.
-            var status2 = jsonHttp.PostForm("frame/status", new Dictionary<string, string>
-            {
-                {"sid", sid},
-                {"txid", txid},
-            });
-
-            if ((string)status2["stat"] != "OK" || (string)status2["response"]?["result"] != "SUCCESS")
-                return "";
-
-            var url = (string)status2["response"]?["result_url"];
+            var url = PollForResultUrl(sid, txid, ui, jsonHttp);
             if (string.IsNullOrEmpty(url))
-                return "";
+                return ""; // TODO: error
 
-            var result = jsonHttp.PostForm(url, new Dictionary<string, string> { { "sid", sid } });
+            return FetchToken(sid, url, ui, jsonHttp);
+        }
 
-            if ((string)result["stat"] != "OK")
-                return "";
+        internal static string PollForResultUrl(string sid, string txid, Ui ui, JsonHttpClient jsonHttp)
+        {
+            const int MaxPollAttempts = 100;
 
-            var token = (string)result["response"]?["cookie"];
+            // Normally it wouldn't poll nearly as many times. Just a few at most. It either bails on error or
+            // returns the result. This number here just to prevent an infinite loop, while is never a good idea.
+            for (var i = 0; i < MaxPollAttempts; i += 1)
+            {
+                var response = jsonHttp.PostForm("frame/status", new Dictionary<string, string>
+                {
+                    {"sid", sid},
+                    {"txid", txid},
+                });
+
+                if ((string)response["stat"] != "OK")
+                    return ""; // TODO: error
+
+                UpdateUi(response, ui);
+
+                var status = GetResponseStatus(response);
+                switch (status)
+                {
+                case Ui.DuoStatus.Success:
+                    var url = (string)response["response"]?["result_url"];
+                    if (string.IsNullOrEmpty(url))
+                        return ""; // TODO: error
+
+                    // Done
+                    return url;
+                case Ui.DuoStatus.Error:
+                    return ""; // TODO: error
+                }
+            }
+
+            return ""; // TODO: error
+        }
+
+        internal static string FetchToken(string sid, string url, Ui ui, JsonHttpClient jsonHttp)
+        {
+            var response = jsonHttp.PostForm(url, new Dictionary<string, string> { { "sid", sid } });
+
+            if ((string)response["stat"] != "OK")
+                return ""; // TODO: error
+
+            UpdateUi(response, ui);
+
+            var token = (string)response["response"]?["cookie"];
             if (string.IsNullOrEmpty(token))
-                return "";
+                return "";  // TODO: error
 
             return token;
+        }
+
+        internal static void UpdateUi(JObject response, Ui ui)
+        {
+            var text = (string)response["response"]?["status"];
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            ui.UpdateDuoStatus(GetResponseStatus(response), text);
+        }
+
+        internal static Ui.DuoStatus GetResponseStatus(JObject response)
+        {
+            switch ((string)response["response"]?["result"])
+            {
+            case "SUCCESS":
+                return Ui.DuoStatus.Success;
+            case "FAILURE":
+                return Ui.DuoStatus.Error;
+            default:
+                return Ui.DuoStatus.Info;
+            }
         }
 
         // Extracts all devices listed in the login form.
@@ -190,6 +238,8 @@ namespace Bitwarden
             {
             case "Duo Push":
                 return Ui.DuoFactor.Push;
+            case "Phone Call":
+                return Ui.DuoFactor.Call;
             case "Passcode":
                 return Ui.DuoFactor.Passcode;
             }
@@ -203,6 +253,8 @@ namespace Bitwarden
             {
             case Ui.DuoFactor.Push:
                 return "Duo Push";
+            case Ui.DuoFactor.Call:
+                return "Phone Call";
             case Ui.DuoFactor.Passcode:
                 return "Passcode";
             case Ui.DuoFactor.SendPasscodesBySms:
