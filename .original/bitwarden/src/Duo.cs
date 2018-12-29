@@ -10,7 +10,6 @@ using System.Net;
 
 namespace Bitwarden
 {
-    // TODO: Error handling! It's pretty much non-existent here!
     internal static class Duo
     {
         // Returns the second factor token from Duo or blank when canceled by the user.
@@ -40,8 +39,11 @@ namespace Bitwarden
             }
 
             var token = SubmitFactorAndWaitForToken(choice, frame.Sid, ui, jsonHttp);
-            if (token == "")
-                return "";  // TODO: error
+
+            // TODO: This should not throw but rather continue interact with the user and offer other options
+            if (token.IsNullOrEmpty())
+                throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
+                                          "Duo: second factor wasn't accepted");
 
             return $"{token}:{signature.App}";
         }
@@ -50,7 +52,7 @@ namespace Bitwarden
         {
             var parts = signature.Split(':');
             if (parts.Length != 2)
-                throw MakeInvalidFormatError("Duo HTML: the signature is invalid or in an unsupported format");
+                throw MakeInvalidResponseError("Duo HTML: the signature is invalid or in an unsupported format");
 
             return (parts[0], parts[1]);
         }
@@ -88,14 +90,14 @@ namespace Bitwarden
             // Find the main form
             var form = html.DocumentNode.SelectSingleNode("//form[@id='login-form']");
             if (form == null)
-                throw MakeInvalidFormatError("Duo HTML: main form is not found");
+                throw MakeInvalidResponseError("Duo HTML: main form is not found");
 
             // Find all the devices and the signature
             var sid = GetInputValue(form, "sid");
             var devices = GetDevices(form);
 
             if (sid == null || devices == null)
-                throw MakeInvalidFormatError("Duo HTML: signature or devices are not found");
+                throw MakeInvalidResponseError("Duo HTML: signature or devices are not found");
 
             return (sid, devices);
         }
@@ -122,29 +124,30 @@ namespace Bitwarden
             if (info.Factor == Ui.DuoFactor.Passcode)
                 parameters["passcode"] = info.Response;
 
-            // Submit the factor
-            var response = jsonHttp.PostForm("frame/prompt", parameters);
+            var response = PostForm("frame/prompt", parameters, jsonHttp);
 
-            // Something went wrong
-            if ((string)response["stat"] != "OK")
-                return "";  // TODO: error
+            var txid = (string)response["response"]?["txid"];
+            if (txid.IsNullOrEmpty())
+                throw MakeInvalidResponseError("Duo: transaction ID (txid) is expected by wasn't found");
 
-            return (string)response["response"]?["txid"];
+            return txid;
         }
 
+        // Returns null when a recoverable flow error (like incorrect code or time out) happened
+        // TODO: Don't return null, use something more obvious
         internal static string SubmitFactorAndWaitForToken(Ui.DuoResponse info, string sid, Ui ui, JsonHttpClient jsonHttp)
         {
             var txid = SubmitFactor(info, sid, jsonHttp);
-            if (string.IsNullOrEmpty(txid))
-                return ""; // TODO: error
 
             var url = PollForResultUrl(sid, txid, ui, jsonHttp);
-            if (string.IsNullOrEmpty(url))
-                return ""; // TODO: error
+            if (url.IsNullOrEmpty())
+                return null;
 
             return FetchToken(sid, url, ui, jsonHttp);
         }
 
+        // Returns null when a recoverable flow error (like incorrect code or time out) happened
+        // TODO: Don't return null, use something more obvious
         internal static string PollForResultUrl(string sid, string txid, Ui ui, JsonHttpClient jsonHttp)
         {
             const int MaxPollAttempts = 100;
@@ -153,71 +156,84 @@ namespace Bitwarden
             // returns the result. This number here just to prevent an infinite loop, while is never a good idea.
             for (var i = 0; i < MaxPollAttempts; i += 1)
             {
-                var response = jsonHttp.PostForm("frame/status", new Dictionary<string, string>
-                {
-                    {"sid", sid},
-                    {"txid", txid},
-                });
+                var response = PostForm("frame/status",
+                                        new Dictionary<string, string> {{"sid", sid}, {"txid", txid}},
+                                        jsonHttp);
 
-                if ((string)response["stat"] != "OK")
-                    return ""; // TODO: error
+                var (status, text) = GetResponseStatus(response);
+                UpdateUi(status, text, ui);
 
-                UpdateUi(response, ui);
-
-                var status = GetResponseStatus(response);
                 switch (status)
                 {
                 case Ui.DuoStatus.Success:
                     var url = (string)response["response"]?["result_url"];
-                    if (string.IsNullOrEmpty(url))
-                        return ""; // TODO: error
+                    if (url.IsNullOrEmpty())
+                        throw MakeInvalidResponseError("Duo: result URL (result_url) was expected but wasn't found");
 
                     // Done
                     return url;
                 case Ui.DuoStatus.Error:
-                    return ""; // TODO: error
+                    return null; // TODO: Use something better than null
                 }
             }
 
-            return ""; // TODO: error
+            throw MakeInvalidResponseError("Duo: expected to receive a valid result or error, got none of it");
         }
 
         internal static string FetchToken(string sid, string url, Ui ui, JsonHttpClient jsonHttp)
         {
-            var response = jsonHttp.PostForm(url, new Dictionary<string, string> { { "sid", sid } });
-
-            if ((string)response["stat"] != "OK")
-                return ""; // TODO: error
+            var response = PostForm(url, new Dictionary<string, string> {{"sid", sid}}, jsonHttp);
 
             UpdateUi(response, ui);
 
             var token = (string)response["response"]?["cookie"];
-            if (string.IsNullOrEmpty(token))
-                return "";  // TODO: error
+            if (token.IsNullOrEmpty())
+                throw MakeInvalidResponseError("Duo: authentication token expected in response but wasn't found");
 
             return token;
         }
 
-        internal static void UpdateUi(JObject response, Ui ui)
+        internal static JObject PostForm(string endpoint, Dictionary<string, string> parameters, JsonHttpClient jsonHttp)
         {
-            var text = (string)response["response"]?["status"];
-            if (string.IsNullOrEmpty(text))
-                return;
+            var response = jsonHttp.PostForm(endpoint, parameters);
 
-            ui.UpdateDuoStatus(GetResponseStatus(response), text);
+            // Something went wrong
+            if ((string)response["stat"] != "OK")
+                throw MakeRespondedWithError($"Duo: POST to {jsonHttp.BaseUrl}/{endpoint} failed", response);
+
+            return response;
         }
 
-        internal static Ui.DuoStatus GetResponseStatus(JObject response)
+        internal static void UpdateUi(JObject response, Ui ui)
         {
+            var (status, text) = GetResponseStatus(response);
+            UpdateUi(status, text, ui);
+        }
+
+        internal static void UpdateUi(Ui.DuoStatus status, string text, Ui ui)
+        {
+            if (text.IsNullOrEmpty())
+                return;
+
+            ui.UpdateDuoStatus(status, text);
+        }
+
+        internal static (Ui.DuoStatus Status, string Text) GetResponseStatus(JObject response)
+        {
+            var status = Ui.DuoStatus.Info;
             switch ((string)response["response"]?["result"])
             {
             case "SUCCESS":
-                return Ui.DuoStatus.Success;
+                status = Ui.DuoStatus.Success;
+                break;
             case "FAILURE":
-                return Ui.DuoStatus.Error;
-            default:
-                return Ui.DuoStatus.Info;
+                status = Ui.DuoStatus.Error;
+                break;
             }
+
+            var text = (string)response["response"]?["status"] ?? "";
+
+            return (status, text);
         }
 
         // Extracts all devices listed in the login form.
@@ -296,14 +312,24 @@ namespace Bitwarden
             return "";
         }
 
-        internal static ClientException MakeInvalidFormatError(string message, Exception original = null)
-        {
-            return new ClientException(ClientException.FailureReason.InvalidFormat, message, original);
-        }
-
         internal static ClientException MakeNetworkError(string message, Exception original = null)
         {
             return new ClientException(ClientException.FailureReason.NetworkError, message, original);
+        }
+
+        internal static ClientException MakeInvalidResponseError(string message, Exception original = null)
+        {
+            return new ClientException(ClientException.FailureReason.InvalidResponse, message, original);
+        }
+
+        internal static ClientException MakeRespondedWithError(string message,
+                                                               JObject response,
+                                                               Exception original = null)
+        {
+            var serverMessage = (string)response["message"] ?? "none";
+            return new ClientException(ClientException.FailureReason.RespondedWithError,
+                                       $"{message} Server message: {serverMessage}",
+                                       original);
         }
     }
 }

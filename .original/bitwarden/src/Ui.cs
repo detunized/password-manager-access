@@ -40,7 +40,7 @@ namespace Bitwarden
         {
             public readonly DuoDevice Device;
             public readonly DuoFactor Factor;
-            public readonly string Response;
+            public readonly string Response; // TODO: Rename to passcode
 
             public DuoResponse(DuoDevice device, DuoFactor factor, string response)
             {
