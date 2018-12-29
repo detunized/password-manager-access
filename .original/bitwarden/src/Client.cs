@@ -104,7 +104,7 @@ namespace Bitwarden
                                           string.Format("2FA method {0} is not supported", method));
             }
 
-            if (string.IsNullOrEmpty(code))
+            if (code.IsNullOrEmpty())
                 throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
                                           "Second factor step is canceled by the user");
 
