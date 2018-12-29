@@ -29,6 +29,21 @@ namespace Bitwarden.Test
             Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
         }
 
+        [Test]
+        public void String_IsNullOrEmpty_returns_true()
+        {
+            Assert.That(((string)null).IsNullOrEmpty(), Is.True);
+            Assert.That("".IsNullOrEmpty(), Is.True);
+        }
+
+        [Test]
+        public void String_IsNullOrEmpty_returns_false()
+        {
+            Assert.That(" ".IsNullOrEmpty(), Is.False);
+            Assert.That("abc".IsNullOrEmpty(), Is.False);
+            Assert.That("All your base are belong to us".IsNullOrEmpty(), Is.False);
+        }
+
         //
         // byte[]
         //
