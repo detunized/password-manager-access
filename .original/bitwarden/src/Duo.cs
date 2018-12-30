@@ -21,36 +21,39 @@ namespace Bitwarden
             var html = DownloadFrame(info.Host, signature.Tx, http);
             var frame = ParseFrame(html);
 
-            // Ask the user to choose what to do
-            var (device, factor) = ui.ChooseDuoFactor(frame.Devices);
-            if (device == null)
-                return ""; // Canceled by user
-
-            // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
-            // a new batch of passcodes to the phone via SMS.
-            if (factor == Ui.DuoFactor.SendPasscodesBySms)
+            while (true)
             {
-                SubmitFactor(device, factor, frame.Sid, "", jsonHttp);
-                factor = Ui.DuoFactor.Passcode;
-            }
-
-            // Ask for the passcode
-            var passcode = "";
-            if (factor == Ui.DuoFactor.Passcode)
-            {
-                passcode = ui.ProvideDuoPasscode(device);
-                if (passcode.IsNullOrEmpty())
+                // Ask the user to choose what to do
+                var (device, factor) = ui.ChooseDuoFactor(frame.Devices);
+                if (device == null)
                     return ""; // Canceled by user
+
+                // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
+                // a new batch of passcodes to the phone via SMS.
+                if (factor == Ui.DuoFactor.SendPasscodesBySms)
+                {
+                    SubmitFactor(device, factor, frame.Sid, "", jsonHttp);
+                    factor = Ui.DuoFactor.Passcode;
+                }
+
+                // Ask for the passcode
+                var passcode = "";
+                if (factor == Ui.DuoFactor.Passcode)
+                {
+                    passcode = ui.ProvideDuoPasscode(device);
+                    if (passcode.IsNullOrEmpty())
+                        return ""; // Canceled by user
+                }
+
+                var token = SubmitFactorAndWaitForToken(device, factor, frame.Sid, passcode, ui, jsonHttp);
+
+                // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
+                if (token.IsNullOrEmpty())
+                    continue;
+
+                // All good
+                return $"{token}:{signature.App}";
             }
-
-            var token = SubmitFactorAndWaitForToken(device, factor, frame.Sid, passcode, ui, jsonHttp);
-
-            // TODO: This should not throw but rather continue interact with the user and offer other options
-            if (token.IsNullOrEmpty())
-                throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
-                                          "Duo: second factor wasn't accepted");
-
-            return $"{token}:{signature.App}";
         }
 
         internal static (string Tx, string App) ParseSignature(string signature)
@@ -273,7 +276,7 @@ namespace Bitwarden
         internal static Ui.DuoFactor[] GetDeviceFactors(HtmlNode form, string deviceId)
         {
             var sms = CanSendSmsToDevice(form, deviceId)
-                ? new Ui.DuoFactor[] { Ui.DuoFactor.SendPasscodesBySms }
+                ? new Ui.DuoFactor[] {Ui.DuoFactor.SendPasscodesBySms}
                 : new Ui.DuoFactor[0];
 
             return form
