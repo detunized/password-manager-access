@@ -157,7 +157,7 @@ namespace Bitwarden
                 return MakeHttpError(method, url, (HttpWebResponse)original.Response, original);
 
             return new ClientException(ClientException.FailureReason.NetworkError,
-                                       string.Format("{0} request to '{1}' failed", method, url),
+                                       $"{method} request to '{url}' failed",
                                        original);
         }
 

@@ -101,7 +101,7 @@ namespace Bitwarden
                 break;
             default:
                 throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
-                                          string.Format("2FA method {0} is not supported", method));
+                                          $"2FA method {method} is not supported");
             }
 
             if (code.IsNullOrEmpty())
@@ -197,7 +197,7 @@ namespace Bitwarden
                 }
 
                 var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token", parameters);
-                return new TokenOrSecondFactor(string.Format("{0} {1}", response.TokenType, response.AccessToken));
+                return new TokenOrSecondFactor($"{response.TokenType} {response.AccessToken}");
             }
             catch (ClientException e)
             {

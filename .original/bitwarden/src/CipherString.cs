@@ -105,7 +105,7 @@ namespace Bitwarden
                 return CipherMode.Aes256CbcHmacSha256;
             }
 
-            throw MakeError(string.Format("Invalid/unsupported cipher mode: '{0}'", s));
+            throw MakeError($"Invalid/unsupported cipher mode: '{s}'");
         }
 
         private static void Validate(CipherMode mode, byte[] iv, byte[] ciphertext, byte[] mac)
