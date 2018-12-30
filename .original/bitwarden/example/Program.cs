@@ -28,7 +28,7 @@ namespace Example
                 return GetAnswer($"Please enter the YubiKey code {ToCancel}");
             }
 
-            public override DuoResponse ProvideDuoResponse(DuoDevice[] devices)
+            public override (DuoDevice Device, DuoFactor Factor) ChooseDuoFactor(DuoDevice[] devices)
             {
                 var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
                 var index = 1;
@@ -46,35 +46,23 @@ namespace Example
                 {
                     var answer = GetAnswer(prompt);
 
-                    // Blank means canceled by user
+                    // Blank means canceled by the user
                     if (string.IsNullOrWhiteSpace(answer))
-                        return null;
+                        return (null, (DuoFactor)(-1)); // Factor doesn't matter, let's put garbage in it
 
                     if (int.TryParse(answer, out var choice))
-                    {
                         foreach (var d in devices)
-                        {
                             foreach (var f in d.Factors)
-                            {
-                                choice -= 1;
-                                if (choice == 0)
-                                {
-                                    switch (f)
-                                    {
-                                    case DuoFactor.Push:
-                                    case DuoFactor.Call:
-                                    case DuoFactor.SendPasscodesBySms:
-                                        return new DuoResponse(d, f, "");
-                                    case DuoFactor.Passcode:
-                                        return new DuoResponse(d, f, GetAnswer($"Enter the passcode for {d.Name}"));
-                                    }
-                                }
-                            }
-                        }
-                    }
+                                if (--choice == 0)
+                                    return (d, f);
 
                     Console.WriteLine("Wrong input, try again");
                 }
+            }
+
+            public override string ProvideDuoPasscode(DuoDevice device)
+            {
+                return GetAnswer($"Enter the passcode for {device.Name} {ToCancel}");
             }
 
             public override void UpdateDuoStatus(DuoStatus status, string text)

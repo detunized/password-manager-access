@@ -36,22 +36,11 @@ namespace Bitwarden
             }
         }
 
-        public class DuoResponse
-        {
-            public readonly DuoDevice Device;
-            public readonly DuoFactor Factor;
-            public readonly string Response; // TODO: Rename to passcode
+        // To cancel return null device and any factor
+        public abstract (DuoDevice Device, DuoFactor Factor) ChooseDuoFactor(DuoDevice[] devices);
 
-            public DuoResponse(DuoDevice device, DuoFactor factor, string response)
-            {
-                Device = device;
-                Factor = factor;
-                Response = response;
-            }
-        }
-
-        // To cancel return null
-        public abstract DuoResponse ProvideDuoResponse(DuoDevice[] devices);
+        // To cancel return null or blank
+        public abstract string ProvideDuoPasscode(DuoDevice device);
 
         public enum DuoStatus
         {

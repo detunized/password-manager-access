@@ -15,30 +15,35 @@ namespace Bitwarden
         // Returns the second factor token from Duo or blank when canceled by the user.
         public static string Authenticate(Response.InfoDuo info, Ui ui, IHttpClient http)
         {
+            var jsonHttp = new JsonHttpClient(http, $"https://{info.Host}");
+
             var signature = ParseSignature(info.Signature);
             var html = DownloadFrame(info.Host, signature.Tx, http);
             var frame = ParseFrame(html);
 
             // Ask the user to choose what to do
-            var choice = ui.ProvideDuoResponse(frame.Devices);
-            if (choice == null)
+            var (device, factor) = ui.ChooseDuoFactor(frame.Devices);
+            if (device == null)
                 return ""; // Canceled by user
-
-            var jsonHttp = new JsonHttpClient(http, $"https://{info.Host}");
 
             // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
             // a new batch of passcodes to the phone via SMS.
-            if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
+            if (factor == Ui.DuoFactor.SendPasscodesBySms)
             {
-                SubmitFactor(choice, frame.Sid, jsonHttp);
+                SubmitFactor(device, factor, frame.Sid, "", jsonHttp);
+                factor = Ui.DuoFactor.Passcode;
+            }
 
-                // Now we have to ask to choose again
-                choice = ui.ProvideDuoResponse(frame.Devices);
-                if (choice == null)
+            // Ask for the passcode
+            var passcode = "";
+            if (factor == Ui.DuoFactor.Passcode)
+            {
+                passcode = ui.ProvideDuoPasscode(device);
+                if (passcode.IsNullOrEmpty())
                     return ""; // Canceled by user
             }
 
-            var token = SubmitFactorAndWaitForToken(choice, frame.Sid, ui, jsonHttp);
+            var token = SubmitFactorAndWaitForToken(device, factor, frame.Sid, passcode, ui, jsonHttp);
 
             // TODO: This should not throw but rather continue interact with the user and offer other options
             if (token.IsNullOrEmpty())
@@ -112,17 +117,21 @@ namespace Bitwarden
         }
 
         // Returns the transaction id
-        internal static string SubmitFactor(Ui.DuoResponse info, string sid, JsonHttpClient jsonHttp)
+        internal static string SubmitFactor(Ui.DuoDevice device,
+                                            Ui.DuoFactor factor,
+                                            string sid,
+                                            string passcode,
+                                            JsonHttpClient jsonHttp)
         {
             var parameters = new Dictionary<string, string>
             {
                 {"sid", sid},
-                {"device", info.Device.Id},
-                {"factor", GetFactorParameterValue(info.Factor)},
+                {"device", device.Id},
+                {"factor", GetFactorParameterValue(factor)},
             };
 
-            if (info.Factor == Ui.DuoFactor.Passcode)
-                parameters["passcode"] = info.Response;
+            if (!passcode.IsNullOrEmpty())
+                parameters["passcode"] = passcode;
 
             var response = PostForm("frame/prompt", parameters, jsonHttp);
 
@@ -135,9 +144,14 @@ namespace Bitwarden
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string SubmitFactorAndWaitForToken(Ui.DuoResponse info, string sid, Ui ui, JsonHttpClient jsonHttp)
+        internal static string SubmitFactorAndWaitForToken(Ui.DuoDevice device,
+                                                           Ui.DuoFactor factor,
+                                                           string sid,
+                                                           string passcode,
+                                                           Ui ui,
+                                                           JsonHttpClient jsonHttp)
         {
-            var txid = SubmitFactor(info, sid, jsonHttp);
+            var txid = SubmitFactor(device, factor, sid, passcode, jsonHttp);
 
             var url = PollForResultUrl(sid, txid, ui, jsonHttp);
             if (url.IsNullOrEmpty())
