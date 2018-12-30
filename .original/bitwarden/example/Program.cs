@@ -67,7 +67,21 @@ namespace Example
 
             public override void UpdateDuoStatus(DuoStatus status, string text)
             {
+                switch (status)
+                {
+                case DuoStatus.Success:
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    break;
+                case DuoStatus.Error:
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case DuoStatus.Info:
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    break;
+                }
+
                 Console.WriteLine($"Duo {status}: {text}");
+                Console.ResetColor();
             }
 
             private static string GetAnswer(string prompt)
