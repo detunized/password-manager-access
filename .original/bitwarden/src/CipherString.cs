@@ -165,8 +165,17 @@ namespace Bitwarden
             if (key.Length != 64)
                 throw new InvalidOperationException("Invalid key size");
 
-            // TODO: Verify the MAC
-            return Crypto.DecryptAes256(Ciphertext, Iv, key.Take(32).ToArray());
+            // First 32 bytes is the encryption key and the next 32 bytes is the MAC key
+            var encKey = key.Take(32).ToArray();
+            var macKey = key.Skip(32).Take(32).ToArray();
+
+            // Encrypt-then-MAC scheme
+            var mac = Crypto.Hmac(macKey, Iv.Concat(Ciphertext).ToArray());
+            if (!mac.SequenceEqual(Mac))
+                throw new ClientException(ClientException.FailureReason.CryptoError,
+                                          "MAC doesn't match. The vault is most likely corrupted.");
+
+            return Crypto.DecryptAes256(Ciphertext, Iv, encKey);
         }
     }
 }

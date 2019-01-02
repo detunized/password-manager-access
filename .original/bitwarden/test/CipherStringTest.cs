@@ -145,6 +145,21 @@ namespace Bitwarden.Test
             Assert.That(plaintext, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void Decrypt_throws_on_mismatching_mac()
+        {
+            var key = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
+            var iv = "XZ2vMa5oFCcp7BUAfPowvA==".Decode64();
+            var ciphertext = "1/GDPwJWo+2Iacio0UkRfR0zXXUufGjMIxD+y/A/YfQPKKep69B0nfbueqZJ1nA1pv15qVounBVJLhetVMGW7mKSxdVtTYObe0Uiqm/C9/s=".Decode64();
+            var mac = "mismatching MAC, mismatching MAC".ToBytes();
+            var cs = new CipherString(mode: CipherMode.Aes256CbcHmacSha256, iv: iv, ciphertext: ciphertext, mac: mac);
+
+            Assert.That(() => cs.Decrypt(key),
+                        Throws.InstanceOf<ClientException>()
+                            .And.Message.Contains("MAC doesn't match")
+                            .And.Property("Reason").EqualTo(ClientException.FailureReason.CryptoError));
+        }
+
         //
         // Helper
         //
