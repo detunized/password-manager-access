@@ -10,10 +10,15 @@ using Newtonsoft.Json.Linq;
 // any names here get changed.
 namespace Bitwarden.Response
 {
+    public enum KdfMethod
+    {
+        Pbkdf2Sha256 = 0,
+    }
+
     [JsonObject(ItemRequired = Required.Always)]
     public struct KdfInfo
     {
-        public int Kdf;
+        public KdfMethod Kdf;
         public int KdfIterations;
     }
 

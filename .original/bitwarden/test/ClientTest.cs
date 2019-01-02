@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using Bitwarden.Response;
 using Moq;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -15,7 +14,7 @@ namespace Bitwarden.Test
         [Test]
         public void RequestKdfIterationCount_returns_iteration_count()
         {
-            var count = Client.RequestKdfIterationCount(Username, SetupKdfRequest());
+            var count = Client.RequestKdfIterationCount(Username, SetupKdfRequest(1337));
 
             Assert.That(count, Is.EqualTo(1337));
         }
@@ -23,10 +22,20 @@ namespace Bitwarden.Test
         [Test]
         public void RequestKdfIterationCount_makes_POST_request_to_specific_endpoint()
         {
-            var jsonHttp = SetupKdfRequest();
+            var jsonHttp = SetupKdfRequest(1337);
             Client.RequestKdfIterationCount(Username, jsonHttp);
 
             JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/api/accounts/prelogin");
+        }
+
+        [Test]
+        public void RequestKdfIterationCount_throws_on_unsupported_kdf_method()
+        {
+            var jsonHttp = SetupKdfRequest(1337, 13);
+            Assert.That(() => Client.RequestKdfIterationCount(Username, jsonHttp),
+                        Throws.InstanceOf<ClientException>()
+                            .And.Message.Contains("not supported")
+                            .And.Property("Reason").EqualTo(ClientException.FailureReason.UnsupportedFeature));
         }
 
         [Test]
@@ -61,7 +70,7 @@ namespace Bitwarden.Test
             var jsonHttp = SetupAuthTokenRequest();
             Client.RequestAuthToken(Username,
                                     PasswordHash,
-                                    new Client.SecondFactorOptions(SecondFactorMethod.Duo, "code"),
+                                    new Client.SecondFactorOptions(Response.SecondFactorMethod.Duo, "code"),
                                     jsonHttp);
 
             Mock.Get(jsonHttp.Http).Verify(x => x.Post(
@@ -168,9 +177,9 @@ namespace Bitwarden.Test
         // Helpers
         //
 
-        private static JsonHttpClient SetupKdfRequest()
+        private static JsonHttpClient SetupKdfRequest(int iteratons, int method = (int)Response.KdfMethod.Pbkdf2Sha256)
         {
-            return SetupPost("{'Kdf': 0, 'KdfIterations': 1337}");
+            return SetupPost($"{{'Kdf': {method}, 'KdfIterations': {iteratons}}}");
         }
 
         private static JsonHttpClient SetupAuthTokenRequest()

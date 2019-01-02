@@ -47,19 +47,26 @@ namespace Bitwarden
 
         internal static int RequestKdfIterationCount(string username, JsonHttpClient jsonHttp)
         {
+            var info = RequestKdfInfo(username, jsonHttp);
+            if (info.Kdf != Response.KdfMethod.Pbkdf2Sha256)
+                throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
+                                          $"KDF method {info.Kdf} is not supported");
+
+            return info.KdfIterations;
+        }
+
+        internal static Response.KdfInfo RequestKdfInfo(string username, JsonHttpClient jsonHttp)
+        {
             try
             {
-                var response = jsonHttp.Post<Response.KdfInfo>("api/accounts/prelogin",
-                                                               new Dictionary<string, string> {{"email", username}});
-
-                // TODO: Check Kdf field and throw if it's not the one we support.
-                return response.KdfIterations;
+                return jsonHttp.Post<Response.KdfInfo>("api/accounts/prelogin",
+                                                       new Dictionary<string, string> { { "email", username } });
             }
             catch (ClientException e)
             {
                 // The web client seems to ignore network errors. Default to 5000 iterations.
                 if (IsHttp400To500(e))
-                    return 5000;
+                    return DefaultKdfInfo;
 
                 throw MakeSpecializedError(e);
             }
@@ -408,6 +415,12 @@ namespace Bitwarden
             Response.SecondFactorMethod.Duo,
             Response.SecondFactorMethod.GoogleAuth,
             Response.SecondFactorMethod.Email // Must be the last one!
+        };
+
+        private static readonly Response.KdfInfo DefaultKdfInfo = new Response.KdfInfo
+        {
+            Kdf = Response.KdfMethod.Pbkdf2Sha256,
+            KdfIterations = 5000
         };
     }
 }
