@@ -250,7 +250,7 @@ namespace Bitwarden
         {
             try
             {
-                return jsonHttp.Get<Response.Vault>("api/sync");
+                return jsonHttp.Get<Response.Vault>("api/sync?excludeDomains=true");
             }
             catch (ClientException e)
             {
