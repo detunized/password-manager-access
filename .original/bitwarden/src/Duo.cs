@@ -13,18 +13,18 @@ namespace Bitwarden
     internal static class Duo
     {
         // Returns the second factor token from Duo or blank when canceled by the user.
-        public static string Authenticate(Response.InfoDuo info, Ui ui, IHttpClient http)
+        public static string Authenticate(string host, string signature, Ui ui, IHttpClient http)
         {
-            var jsonHttp = new JsonHttpClient(http, $"https://{info.Host}");
+            var jsonHttp = new JsonHttpClient(http, $"https://{host}");
 
-            var signature = ParseSignature(info.Signature);
-            var html = DownloadFrame(info.Host, signature.Tx, http);
-            var frame = ParseFrame(html);
+            var (tx, app) = ParseSignature(signature);
+            var html = DownloadFrame(host, tx, http);
+            var (sid, devices) = ParseFrame(html);
 
             while (true)
             {
                 // Ask the user to choose what to do
-                var (device, factor) = ui.ChooseDuoFactor(frame.Devices);
+                var (device, factor) = ui.ChooseDuoFactor(devices);
                 if (device == null)
                     return ""; // Canceled by user
 
@@ -32,7 +32,7 @@ namespace Bitwarden
                 // a new batch of passcodes to the phone via SMS.
                 if (factor == Ui.DuoFactor.SendPasscodesBySms)
                 {
-                    SubmitFactor(device, factor, frame.Sid, "", jsonHttp);
+                    SubmitFactor(device, factor, sid, "", jsonHttp);
                     factor = Ui.DuoFactor.Passcode;
                 }
 
@@ -45,14 +45,14 @@ namespace Bitwarden
                         return ""; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(device, factor, frame.Sid, passcode, ui, jsonHttp);
+                var token = SubmitFactorAndWaitForToken(device, factor, sid, passcode, ui, jsonHttp);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
                     continue;
 
                 // All good
-                return $"{token}:{signature.App}";
+                return $"{token}:{app}";
             }
         }
 

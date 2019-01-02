@@ -43,13 +43,6 @@ namespace Bitwarden.Response
     }
 
     [JsonObject(ItemRequired = Required.Always)]
-    public struct InfoDuo
-    {
-        public string Host;
-        public string Signature;
-    }
-
-    [JsonObject(ItemRequired = Required.Always)]
     public struct Vault
     {
         public Profile Profile;
