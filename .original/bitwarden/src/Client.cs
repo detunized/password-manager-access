@@ -79,6 +79,7 @@ namespace Bitwarden
                                           "Expected a non empty list of available 2FA methods");
 
             var method = ChooseSecondFactorMethod(secondFactor);
+            var extra = secondFactor.Methods[method];
             var code = "";
             switch (method)
             {
@@ -91,7 +92,7 @@ namespace Bitwarden
                                                         "only when there are no other options left");
                 // When only email 2FA present, the email is sent by the server right away
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
-                code = ui.ProvideEmailCode("TODO@example.com");
+                code = ui.ProvideEmailCode((string)extra["Email"] ?? "");
                 break;
             case Response.SecondFactorMethod.Duo:
                 code = Duo.Authenticate(secondFactor.Methods[method].ToObject<Response.InfoDuo>(), ui, jsonHttp.Http);
