@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using NUnit.Framework;
-using System.IO;
 
 namespace Bitwarden.Test
 {
@@ -48,7 +47,9 @@ namespace Bitwarden.Test
             var http = JsonHttpClientTest.SetupPostWithFailure();
 
             Assert.That(() => Duo.DownloadFrame("host.com", "tx", http.Object),
-                        Throws.InstanceOf<ClientException>().And.Property("Reason").EqualTo(ClientException.FailureReason.NetworkError));
+                        Throws.InstanceOf<ClientException>()
+                            .And.Message.Contains("Network error")
+                            .And.Property("Reason").EqualTo(ClientException.FailureReason.NetworkError));
         }
     }
 }
