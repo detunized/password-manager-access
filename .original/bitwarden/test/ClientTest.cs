@@ -41,7 +41,7 @@ namespace Bitwarden.Test
         [Test]
         public void Login_returns_auth_token_on_non_2fa_login()
         {
-            var token = Client.Login(Username, PasswordHash, null, SetupAuthTokenRequest());
+            var token = Client.Login(Username, PasswordHash, DeviceId, null, SetupAuthTokenRequest());
 
             Assert.That(token, Is.EqualTo("Bearer wa-wa-wee-wa"));
         }
@@ -49,7 +49,7 @@ namespace Bitwarden.Test
         [Test]
         public void RequestAuthToken_returns_auth_token_response()
         {
-            var response = Client.RequestAuthToken(Username, PasswordHash, SetupAuthTokenRequest());
+            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, SetupAuthTokenRequest());
 
             Assert.That(response.AuthToken, Is.EqualTo("Bearer wa-wa-wee-wa"));
             Assert.That(response.SecondFactor.Methods, Is.Null);
@@ -59,9 +59,21 @@ namespace Bitwarden.Test
         public void RequestAuthToken_makes_POST_request_to_specific_endpoint()
         {
             var jsonHttp = SetupAuthTokenRequest();
-            Client.RequestAuthToken(Username, PasswordHash, jsonHttp);
+            Client.RequestAuthToken(Username, PasswordHash, DeviceId, jsonHttp);
 
             JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/identity/connect/token");
+        }
+
+        [Test]
+        public void RequestAuthToken_sends_device_id()
+        {
+            var jsonHttp = SetupAuthTokenRequest();
+            Client.RequestAuthToken(Username, PasswordHash, DeviceId, jsonHttp);
+
+            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
+                It.IsAny<string>(),
+                It.Is<string>(s => s.Contains("deviceIdentifier=device-id")),
+                It.IsAny<Dictionary<string, string>>()));
         }
 
         [Test]
@@ -70,6 +82,7 @@ namespace Bitwarden.Test
             var jsonHttp = SetupAuthTokenRequest();
             Client.RequestAuthToken(Username,
                                     PasswordHash,
+                                    DeviceId,
                                     new Client.SecondFactorOptions(Response.SecondFactorMethod.Duo, "code"),
                                     jsonHttp);
 
@@ -217,6 +230,7 @@ namespace Bitwarden.Test
         //
 
         private const string Username = "username";
+        private const string DeviceId = "device-id";
         private static readonly byte[] PasswordHash = "password-hash".ToBytes();
         private static readonly byte[] Kek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
         private static readonly byte[] Key = "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();

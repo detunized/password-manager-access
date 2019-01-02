@@ -97,17 +97,19 @@ namespace Example
         public static void Main(string[] args)
         {
             // Read Bitwarden credentials from a file
-            // The file should contain 2 lines:
+            // The file should contain 3 lines:
             //   - username
             //   - password
+            //   - device ID
             // See credentials.txt.example for an example.
             var credentials = File.ReadAllLines("../../credentials.txt");
             var username = credentials[0];
             var password = credentials[1];
+            var deviceId = credentials[2];
 
             try
             {
-                var vault = Vault.Open(username, password, new TextUi());
+                var vault = Vault.Open(username, password, deviceId, new TextUi());
                 for (int i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];

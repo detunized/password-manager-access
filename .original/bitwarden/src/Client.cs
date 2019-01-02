@@ -14,7 +14,7 @@ namespace Bitwarden
 {
     internal static class Client
     {
-        public static Account[] OpenVault(string username, string password, Ui ui, IHttpClient http)
+        public static Account[] OpenVault(string username, string password, string deviceId, Ui ui, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, BaseUrl);
 
@@ -28,7 +28,7 @@ namespace Bitwarden
             var hash = Crypto.HashPassword(password, key);
 
             // 4. Authenticate with the server and get the token
-            var token = Login(username, hash, ui, jsonHttp);
+            var token = Login(username, hash, deviceId, ui, jsonHttp);
 
             // 5. All subsequent requests are signed with this header
             var authJsonHttp = new JsonHttpClient(http,
@@ -72,9 +72,13 @@ namespace Bitwarden
             }
         }
 
-        internal static string Login(string username, byte[] passwordHash, Ui ui, JsonHttpClient jsonHttp)
+        internal static string Login(string username,
+                                     byte[] passwordHash,
+                                     string deviceId,
+                                     Ui ui,
+                                     JsonHttpClient jsonHttp)
         {
-            var response = RequestAuthToken(username, passwordHash, jsonHttp);
+            var response = RequestAuthToken(username, passwordHash, deviceId, jsonHttp);
 
             // Simple password login (no 2FA) succeeded
             if (response.AuthToken != null)
@@ -121,6 +125,7 @@ namespace Bitwarden
 
             var secondFactorResponse = RequestAuthToken(username,
                                                         passwordHash,
+                                                        deviceId,
                                                         new SecondFactorOptions(method, code),
                                                         jsonHttp);
             if (secondFactorResponse.AuthToken != null)
@@ -178,14 +183,16 @@ namespace Bitwarden
 
         internal static TokenOrSecondFactor RequestAuthToken(string username,
                                                              byte[] passwordHash,
+                                                             string deviceId,
                                                              JsonHttpClient jsonHttp)
         {
-            return RequestAuthToken(username, passwordHash, null, jsonHttp);
+            return RequestAuthToken(username, passwordHash, deviceId, null, jsonHttp);
         }
 
         // secondFactorOptions is optional
         internal static TokenOrSecondFactor RequestAuthToken(string username,
                                                              byte[] passwordHash,
+                                                             string deviceId,
                                                              SecondFactorOptions secondFactorOptions,
                                                              JsonHttpClient jsonHttp)
         {
@@ -198,6 +205,7 @@ namespace Bitwarden
                     {"grant_type", "password"},
                     {"scope", "api offline_access"},
                     {"client_id", "web"},
+                    {"deviceIdentifier", deviceId},
                 };
 
                 if (secondFactorOptions != null)

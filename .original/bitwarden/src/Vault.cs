@@ -7,9 +7,9 @@ namespace Bitwarden
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, Ui ui)
+        public static Vault Open(string username, string password, string deviceId, Ui ui)
         {
-            return new Vault(Client.OpenVault(username, password, ui, new HttpClient()));
+            return new Vault(Client.OpenVault(username, password, deviceId, ui, new HttpClient()));
         }
 
         //
