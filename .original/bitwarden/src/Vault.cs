@@ -9,6 +9,10 @@ namespace Bitwarden
     {
         public readonly Account[] Accounts;
 
+        // Main entry point. Use this function to open the vault.
+        // The device ID should be unique to each installation, but it should not be new on
+        // every run. A new random device ID should be generated with GenerateRandomDeviceId
+        // on the first run and reused later on.
         public static Vault Open(string username, string password, string deviceId, Ui ui)
         {
             return new Vault(Client.OpenVault(username, password, deviceId, ui, new HttpClient()));
