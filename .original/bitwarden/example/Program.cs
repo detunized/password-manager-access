@@ -4,6 +4,7 @@
 using Bitwarden;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace Example
 {
@@ -97,15 +98,25 @@ namespace Example
         public static void Main(string[] args)
         {
             // Read Bitwarden credentials from a file
-            // The file should contain 3 lines:
+            // The file should contain 2 or 3 lines:
             //   - username
             //   - password
-            //   - device ID
+            //   - device ID (optional)
             // See credentials.txt.example for an example.
             var credentials = File.ReadAllLines("../../credentials.txt");
             var username = credentials[0];
             var password = credentials[1];
-            var deviceId = credentials[2];
+
+            // The device is required. The first time it should be generated using
+            // Vault.GenerateRandomDeviceId and stored for later reuse. It's not a
+            // good idea to generate a new device ID on every run.
+            var deviceId = credentials.ElementAtOrDefault(2);
+            if (string.IsNullOrWhiteSpace(deviceId))
+            {
+                deviceId = Vault.GenerateRandomDeviceId();
+                Console.WriteLine($"Your newly generated device ID is {deviceId}. " +
+                                  "Store it and use it for subsequent runs.");
+            }
 
             try
             {
