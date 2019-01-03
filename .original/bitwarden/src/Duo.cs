@@ -13,7 +13,7 @@ namespace Bitwarden
     internal static class Duo
     {
         // Returns the second factor token from Duo or blank when canceled by the user.
-        public static string Authenticate(string host, string signature, Ui ui, IHttpClient http)
+        public static Ui.Passcode Authenticate(string host, string signature, Ui ui, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, $"https://{host}");
 
@@ -24,35 +24,35 @@ namespace Bitwarden
             while (true)
             {
                 // Ask the user to choose what to do
-                var (device, factor) = ui.ChooseDuoFactor(devices);
-                if (device == null)
-                    return ""; // Canceled by user
+                var choice = ui.ChooseDuoFactor(devices);
+                if (choice == null)
+                    return null; // Canceled by user
 
                 // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
                 // a new batch of passcodes to the phone via SMS.
-                if (factor == Ui.DuoFactor.SendPasscodesBySms)
+                if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
                 {
-                    SubmitFactor(device, factor, sid, "", jsonHttp);
-                    factor = Ui.DuoFactor.Passcode;
+                    SubmitFactor(sid, choice, "", jsonHttp);
+                    choice = new Ui.DuoChoice(choice.Device, Ui.DuoFactor.Passcode, choice.RememberMe);
                 }
 
                 // Ask for the passcode
                 var passcode = "";
-                if (factor == Ui.DuoFactor.Passcode)
+                if (choice.Factor == Ui.DuoFactor.Passcode)
                 {
-                    passcode = ui.ProvideDuoPasscode(device);
+                    passcode = ui.ProvideDuoPasscode(choice.Device);
                     if (passcode.IsNullOrEmpty())
-                        return ""; // Canceled by user
+                        return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(device, factor, sid, passcode, ui, jsonHttp);
+                var token = SubmitFactorAndWaitForToken(sid, choice, passcode, ui, jsonHttp);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
                     continue;
 
                 // All good
-                return $"{token}:{app}";
+                return new Ui.Passcode($"{token}:{app}", choice.RememberMe);
             }
         }
 
@@ -120,17 +120,13 @@ namespace Bitwarden
         }
 
         // Returns the transaction id
-        internal static string SubmitFactor(Ui.DuoDevice device,
-                                            Ui.DuoFactor factor,
-                                            string sid,
-                                            string passcode,
-                                            JsonHttpClient jsonHttp)
+        internal static string SubmitFactor(string sid, Ui.DuoChoice choice, string passcode, JsonHttpClient jsonHttp)
         {
             var parameters = new Dictionary<string, string>
             {
                 {"sid", sid},
-                {"device", device.Id},
-                {"factor", GetFactorParameterValue(factor)},
+                {"device", choice.Device.Id},
+                {"factor", GetFactorParameterValue(choice.Factor)},
             };
 
             if (!passcode.IsNullOrEmpty())
@@ -147,14 +143,13 @@ namespace Bitwarden
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string SubmitFactorAndWaitForToken(Ui.DuoDevice device,
-                                                           Ui.DuoFactor factor,
-                                                           string sid,
+        internal static string SubmitFactorAndWaitForToken(string sid,
+                                                           Ui.DuoChoice choice,
                                                            string passcode,
                                                            Ui ui,
                                                            JsonHttpClient jsonHttp)
         {
-            var txid = SubmitFactor(device, factor, sid, passcode, jsonHttp);
+            var txid = SubmitFactor(sid, choice, passcode, jsonHttp);
 
             var url = PollForResultUrl(sid, txid, ui, jsonHttp);
             if (url.IsNullOrEmpty())

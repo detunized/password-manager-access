@@ -14,22 +14,22 @@ namespace Example
         {
             private const string ToCancel = "or just press ENTER to cancel";
 
-            public override string ProvideGoogleAuthCode()
+            public override Passcode ProvideGoogleAuthPasscode()
             {
-                return GetAnswer($"Please enter Google Authenticator code {ToCancel}");
+                return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
             }
 
-            public override string ProvideEmailCode(string email)
+            public override Passcode ProvideEmailPasscode(string emailHint)
             {
-                return GetAnswer($"Please check you email ({email}) and enter the code {ToCancel}");
+                return GetPasscode($"Please check you email ({emailHint}) and enter the code {ToCancel}");
             }
 
-            public override string ProvideYubiKeyCode()
+            public override Passcode ProvideYubiKeyPasscode()
             {
-                return GetAnswer($"Please enter the YubiKey code {ToCancel}");
+                return GetPasscode($"Please enter the YubiKey code {ToCancel}");
             }
 
-            public override (DuoDevice Device, DuoFactor Factor) ChooseDuoFactor(DuoDevice[] devices)
+            public override DuoChoice ChooseDuoFactor(DuoDevice[] devices)
             {
                 var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
                 var index = 1;
@@ -49,13 +49,13 @@ namespace Example
 
                     // Blank means canceled by the user
                     if (string.IsNullOrWhiteSpace(answer))
-                        return (null, (DuoFactor)(-1)); // Factor doesn't matter, let's put garbage in it
+                        return null;
 
                     if (int.TryParse(answer, out var choice))
                         foreach (var d in devices)
                             foreach (var f in d.Factors)
                                 if (--choice == 0)
-                                    return (d, f);
+                                    return new DuoChoice(d, f, false); // TODO: Ask to remember me
 
                     Console.WriteLine("Wrong input, try again");
                 }
@@ -83,6 +83,17 @@ namespace Example
 
                 Console.WriteLine($"Duo {status}: {text}");
                 Console.ResetColor();
+            }
+
+            private static Passcode GetPasscode(string prompt)
+            {
+                var passcode = GetAnswer(prompt);
+                if (string.IsNullOrWhiteSpace(passcode))
+                    return null;
+
+                var remember = GetAnswer("Remember this device?").ToLower();
+
+                return new Passcode(passcode, remember == "y" || remember == "yes");
             }
 
             private static string GetAnswer(string prompt)

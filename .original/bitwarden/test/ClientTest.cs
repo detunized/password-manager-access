@@ -83,12 +83,14 @@ namespace Bitwarden.Test
             Client.RequestAuthToken(Username,
                                     PasswordHash,
                                     DeviceId,
-                                    new Client.SecondFactorOptions(Response.SecondFactorMethod.Duo, "code"),
+                                    new Client.SecondFactorOptions(Response.SecondFactorMethod.Duo, "code", true),
                                     jsonHttp);
 
             Mock.Get(jsonHttp.Http).Verify(x => x.Post(
                 It.IsAny<string>(),
-                It.Is<string>(s => s.Contains("twoFactorToken=code") && s.Contains("twoFactorProvider=2")),
+                It.Is<string>(s => s.Contains("twoFactorToken=code") &&
+                                   s.Contains("twoFactorProvider=2") &&
+                                   s.Contains("twoFactorRemember=1")),
                 It.IsAny<Dictionary<string, string>>()));
         }
 

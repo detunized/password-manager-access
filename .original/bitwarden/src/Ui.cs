@@ -5,10 +5,22 @@ namespace Bitwarden
 {
     public abstract class Ui
     {
-        // To cancel any of these return a blank string or null
-        public abstract string ProvideGoogleAuthCode();
-        public abstract string ProvideEmailCode(string email);
-        public abstract string ProvideYubiKeyCode();
+        public class Passcode
+        {
+            public readonly string Code;
+            public readonly bool RememberMe;
+
+            public Passcode(string code, bool rememberMe)
+            {
+                Code = code;
+                RememberMe = rememberMe;
+            }
+        }
+
+        // To cancel any of these return null
+        public abstract Passcode ProvideGoogleAuthPasscode();
+        public abstract Passcode ProvideEmailPasscode(string emailHint);
+        public abstract Passcode ProvideYubiKeyPasscode();
 
         //
         // Duo
@@ -36,8 +48,22 @@ namespace Bitwarden
             }
         }
 
-        // To cancel return null device and any factor
-        public abstract (DuoDevice Device, DuoFactor Factor) ChooseDuoFactor(DuoDevice[] devices);
+        public class DuoChoice
+        {
+            public readonly DuoDevice Device;
+            public readonly DuoFactor Factor;
+            public readonly bool RememberMe;
+
+            public DuoChoice(DuoDevice device, DuoFactor factor, bool rememberMe)
+            {
+                Device = device;
+                Factor = factor;
+                RememberMe = rememberMe;
+            }
+        }
+
+        // To cancel return null
+        public abstract DuoChoice ChooseDuoFactor(DuoDevice[] devices);
 
         // To cancel return null or blank
         public abstract string ProvideDuoPasscode(DuoDevice device);

@@ -91,11 +91,11 @@ namespace Bitwarden
 
             var method = ChooseSecondFactorMethod(secondFactor);
             var extra = secondFactor.Methods[method];
-            var code = "";
+            Ui.Passcode passcode;
             switch (method)
             {
             case Response.SecondFactorMethod.GoogleAuth:
-                code = ui.ProvideGoogleAuthCode();
+                passcode = ui.ProvideGoogleAuthPasscode();
                 break;
             case Response.SecondFactorMethod.Email:
                 if (secondFactor.Methods.Count != 1)
@@ -103,30 +103,32 @@ namespace Bitwarden
                                                         "only when there are no other options left");
                 // When only email 2FA present, the email is sent by the server right away
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
-                code = ui.ProvideEmailCode((string)extra["Email"] ?? "");
+                passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
                 break;
             case Response.SecondFactorMethod.Duo:
-                code = Duo.Authenticate((string)extra["Host"] ?? "",
-                                        (string)extra["Signature"] ?? "",
-                                        ui,
-                                        jsonHttp.Http);
+                passcode = Duo.Authenticate((string)extra["Host"] ?? "",
+                                            (string)extra["Signature"] ?? "",
+                                            ui,
+                                            jsonHttp.Http);
                 break;
             case Response.SecondFactorMethod.YubiKey:
-                code = ui.ProvideYubiKeyCode();
+                passcode = ui.ProvideYubiKeyPasscode();
                 break;
             default:
                 throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
                                           $"2FA method {method} is not supported");
             }
 
-            if (code.IsNullOrEmpty())
+            if (passcode == null)
                 throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
                                           "Second factor step is canceled by the user");
 
             var secondFactorResponse = RequestAuthToken(username,
                                                         passwordHash,
                                                         deviceId,
-                                                        new SecondFactorOptions(method, code),
+                                                        new SecondFactorOptions(method,
+                                                                                passcode.Code,
+                                                                                passcode.RememberMe),
                                                         jsonHttp);
             if (secondFactorResponse.AuthToken != null)
                 return secondFactorResponse.AuthToken;
@@ -172,12 +174,14 @@ namespace Bitwarden
         internal class SecondFactorOptions
         {
             public readonly Response.SecondFactorMethod Method;
-            public readonly string Code;
+            public readonly string Passcode;
+            public readonly bool RememberMe;
 
-            public SecondFactorOptions(Response.SecondFactorMethod method, string code)
+            public SecondFactorOptions(Response.SecondFactorMethod method, string passcode, bool rememberMe)
             {
                 Method = method;
-                Code = code;
+                Passcode = passcode;
+                RememberMe = rememberMe;
             }
         }
 
@@ -211,8 +215,8 @@ namespace Bitwarden
                 if (secondFactorOptions != null)
                 {
                     parameters["twoFactorProvider"] = secondFactorOptions.Method.ToString("d");
-                    parameters["twoFactorToken"] = secondFactorOptions.Code;
-                    parameters["twoFactorRemember"] = "0"; // TODO: Implement "remember me"
+                    parameters["twoFactorToken"] = secondFactorOptions.Passcode;
+                    parameters["twoFactorRemember"] = secondFactorOptions.RememberMe ? "1" : "0";
                 }
 
                 var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token", parameters);
