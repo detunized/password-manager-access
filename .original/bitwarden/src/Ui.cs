@@ -62,12 +62,6 @@ namespace Bitwarden
             }
         }
 
-        // To cancel return null
-        public abstract DuoChoice ChooseDuoFactor(DuoDevice[] devices);
-
-        // To cancel return null or blank
-        public abstract string ProvideDuoPasscode(DuoDevice device);
-
         public enum DuoStatus
         {
             Success,
@@ -75,6 +69,14 @@ namespace Bitwarden
             Info,
         }
 
-        public abstract void UpdateDuoStatus(DuoStatus status, string text);
+        // To cancel return null
+        public abstract DuoChoice ChooseDuoFactor(DuoDevice[] devices);
+
+        // To cancel return null or blank
+        public abstract string ProvideDuoPasscode(DuoDevice device);
+
+        // This updates the UI with the messages from the server.
+        // The implementation is optional as this is purely informational.
+        public virtual void UpdateDuoStatus(DuoStatus status, string text) { }
     }
 }
