@@ -40,6 +40,8 @@ namespace Bitwarden.Response
         Email = 1,
         Duo = 2,
         YubiKey = 3,
+
+        RememberMe = 5,
     }
 
     [JsonObject(ItemRequired = Required.Always)]

@@ -41,9 +41,39 @@ namespace Bitwarden.Test
         [Test]
         public void Login_returns_auth_token_on_non_2fa_login()
         {
-            var token = Client.Login(Username, PasswordHash, DeviceId, null, null, SetupAuthTokenRequest());
+            var token = Client.Login(Username,
+                                     PasswordHash,
+                                     DeviceId,
+                                     null,
+                                     SetupSecureStorage(null),
+                                     SetupAuthTokenRequest());
 
             Assert.That(token, Is.EqualTo("Bearer wa-wa-wee-wa"));
+        }
+
+        [Test]
+        public void Login_sends_remember_me_token_when_available()
+        {
+            var jsonHttp = SetupAuthTokenRequest();
+            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(RememberMeToken), jsonHttp);
+
+            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
+                It.IsAny<string>(),
+                It.Is<string>(s => s.Contains($"twoFactorToken={RememberMeToken}") &&
+                                   s.Contains("twoFactorProvider=5")),
+                It.IsAny<Dictionary<string, string>>()));
+        }
+
+        [Test]
+        public void Login_does_not_send_remember_me_token_when_not_available()
+        {
+            var jsonHttp = SetupAuthTokenRequest();
+            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), jsonHttp);
+
+            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
+                It.IsAny<string>(),
+                It.Is<string>(s => !s.Contains("twoFactorToken") && !s.Contains("twoFactorProvider")),
+                It.IsAny<Dictionary<string, string>>()));
         }
 
         [Test]
@@ -52,6 +82,20 @@ namespace Bitwarden.Test
             var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, SetupAuthTokenRequest());
 
             Assert.That(response.AuthToken, Is.EqualTo("Bearer wa-wa-wee-wa"));
+            Assert.That(response.RememberMeToken, Is.Null);
+            Assert.That(response.SecondFactor.Methods, Is.Null);
+        }
+
+        [Test]
+        public void RequestAuthToken_returns_remember_me_token_when_present()
+        {
+            var response = Client.RequestAuthToken(Username,
+                                                   PasswordHash,
+                                                   DeviceId,
+                                                   SetupAuthTokenRequestWithRememberMeToken());
+
+            Assert.That(response.AuthToken, Is.EqualTo("Bearer wa-wa-wee-wa"));
+            Assert.That(response.RememberMeToken, Is.EqualTo(RememberMeToken));
             Assert.That(response.SecondFactor.Methods, Is.Null);
         }
 
@@ -192,6 +236,13 @@ namespace Bitwarden.Test
         // Helpers
         //
 
+        private static ISecureStorage SetupSecureStorage(string token)
+        {
+            var mock = new Mock<ISecureStorage>();
+            mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns(token);
+            return mock.Object;
+        }
+
         private static JsonHttpClient SetupKdfRequest(int iteratons, int method = (int)Response.KdfMethod.Pbkdf2Sha256)
         {
             return SetupPost($"{{'Kdf': {method}, 'KdfIterations': {iteratons}}}");
@@ -200,6 +251,11 @@ namespace Bitwarden.Test
         private static JsonHttpClient SetupAuthTokenRequest()
         {
             return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}");
+        }
+
+        private static JsonHttpClient SetupAuthTokenRequestWithRememberMeToken()
+        {
+            return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'TwoFactorToken': 'remember-me-token'}");
         }
 
         private static JsonHttpClient SetupDownloadVault()
@@ -233,6 +289,7 @@ namespace Bitwarden.Test
 
         private const string Username = "username";
         private const string DeviceId = "device-id";
+        private const string RememberMeToken = "remember-me-token";
         private static readonly byte[] PasswordHash = "password-hash".ToBytes();
         private static readonly byte[] Kek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
         private static readonly byte[] Key = "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();

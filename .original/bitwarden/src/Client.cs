@@ -84,7 +84,13 @@ namespace Bitwarden
                                      ISecureStorage storage,
                                      JsonHttpClient jsonHttp)
         {
-            var response = RequestAuthToken(username, passwordHash, deviceId, jsonHttp);
+            // Try simple password login, potentially with a stored second factor token if
+            // "remember me" was used before.
+            var response = RequestAuthToken(username,
+                                            passwordHash,
+                                            deviceId,
+                                            GetRememberMeOptions(storage),
+                                            jsonHttp);
 
             // Simple password login (no 2FA) succeeded
             if (response.AuthToken != null)
@@ -140,16 +146,28 @@ namespace Bitwarden
             // Password + 2FA is successful
             if (secondFactorResponse.AuthToken != null)
             {
-                // Store the "remember me" token to be used next time
-                var rememberMeToken = secondFactorResponse.RememberMeToken;
-                if (rememberMeToken != null)
-                    storage.StoreString(RememberMeTokenKey, rememberMeToken);
-
+                SaveRememberMeToken(response, storage);
                 return secondFactorResponse.AuthToken;
             }
 
             throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
                                       "Second factor code is not correct");
+        }
+
+        internal static SecondFactorOptions GetRememberMeOptions(ISecureStorage storage)
+        {
+            var storedRememberMeToken = storage.LoadString(RememberMeTokenKey);
+            if (storedRememberMeToken.IsNullOrEmpty())
+                return null;
+
+            return new SecondFactorOptions(Response.SecondFactorMethod.RememberMe, storedRememberMeToken, false);
+        }
+
+        internal static void SaveRememberMeToken(TokenOrSecondFactor reseponse, ISecureStorage storage)
+        {
+            var token = reseponse.RememberMeToken;
+            if (token != null)
+                storage.StoreString(RememberMeTokenKey, token);
         }
 
         internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor)
