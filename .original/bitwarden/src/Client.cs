@@ -209,6 +209,8 @@ namespace Bitwarden
                     {"grant_type", "password"},
                     {"scope", "api offline_access"},
                     {"client_id", "web"},
+                    {"deviceType", "9"},
+                    {"deviceName", "chrome"},
                     {"deviceIdentifier", deviceId},
                 };
 
