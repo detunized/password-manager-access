@@ -14,7 +14,12 @@ namespace Bitwarden
 {
     internal static class Client
     {
-        public static Account[] OpenVault(string username, string password, string deviceId, Ui ui, IHttpClient http)
+        public static Account[] OpenVault(string username,
+                                          string password,
+                                          string deviceId,
+                                          Ui ui,
+                                          ISecureStorage storage,
+                                          IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, BaseUrl);
 
@@ -28,7 +33,7 @@ namespace Bitwarden
             var hash = Crypto.HashPassword(password, key);
 
             // 4. Authenticate with the server and get the token
-            var token = Login(username, hash, deviceId, ui, jsonHttp);
+            var token = Login(username, hash, deviceId, ui, storage, jsonHttp);
 
             // 5. All subsequent requests are signed with this header
             var authJsonHttp = new JsonHttpClient(http,
@@ -76,6 +81,7 @@ namespace Bitwarden
                                      byte[] passwordHash,
                                      string deviceId,
                                      Ui ui,
+                                     ISecureStorage storage,
                                      JsonHttpClient jsonHttp)
         {
             var response = RequestAuthToken(username, passwordHash, deviceId, jsonHttp);
