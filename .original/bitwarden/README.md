@@ -60,6 +60,12 @@ When the user used an incorrect passcode the library will try to follow all
 the steps again. So it's possible to retry. In case of a network or some other
 irrecoverable error, the process stops with an exception.
 
+`Ui.Close` is called after the interaction with the UI is finished. This is
+only called when the login is finished successfully and no exceptions are
+thrown. It's possible to close or hide the UI at this point while the library
+keeps downloading, decrypting and parsing the vault. It's possible to do
+nothing and just wait a bit for the library to return and then close the UI.
+
 `Example.Program.TextUi` provides a simple implementation example.
 
 **Secure Storage**
