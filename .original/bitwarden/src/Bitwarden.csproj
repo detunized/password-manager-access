@@ -53,6 +53,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="HttpClient.cs" />
     <Compile Include="IHttpClient.cs" />
+    <Compile Include="ISecureStorage.cs" />
     <Compile Include="JsonHttpClient.cs" />
     <Compile Include="Pbkdf2.cs" />
     <Compile Include="Response.cs" />
