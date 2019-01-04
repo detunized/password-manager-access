@@ -55,7 +55,7 @@ namespace Example
                         foreach (var d in devices)
                             foreach (var f in d.Factors)
                                 if (--choice == 0)
-                                    return new DuoChoice(d, f, false); // TODO: Ask to remember me
+                                    return new DuoChoice(d, f, GetRememberMe());
 
                     Console.WriteLine("Wrong input, try again");
                 }
@@ -91,9 +91,7 @@ namespace Example
                 if (string.IsNullOrWhiteSpace(passcode))
                     return null;
 
-                var remember = GetAnswer("Remember this device?").ToLower();
-
-                return new Passcode(passcode, remember == "y" || remember == "yes");
+                return new Passcode(passcode, GetRememberMe());
             }
 
             private static string GetAnswer(string prompt)
@@ -103,6 +101,12 @@ namespace Example
                 var input = Console.ReadLine();
 
                 return input == null ? "" : input.Trim();
+            }
+
+            private static bool GetRememberMe()
+            {
+                var remember = GetAnswer("Remember this device?").ToLower();
+                return remember == "y" || remember == "yes";
             }
         }
 
