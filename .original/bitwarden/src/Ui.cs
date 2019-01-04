@@ -5,6 +5,9 @@ namespace Bitwarden
 {
     public abstract class Ui
     {
+        // The UI will no longer be used and could be closed
+        public abstract void Close();
+
         public class Passcode
         {
             public readonly string Code;
@@ -76,7 +79,6 @@ namespace Bitwarden
         public abstract string ProvideDuoPasscode(DuoDevice device);
 
         // This updates the UI with the messages from the server.
-        // The implementation is optional as this is purely informational.
-        public virtual void UpdateDuoStatus(DuoStatus status, string text) { }
+        public abstract void UpdateDuoStatus(DuoStatus status, string text);
     }
 }
