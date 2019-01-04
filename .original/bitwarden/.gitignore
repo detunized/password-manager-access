@@ -3,6 +3,7 @@
 /example/bin/
 /example/obj/
 /example/credentials.txt
+/example/storage.txt
 /packages/
 /src/bin/
 /src/obj/

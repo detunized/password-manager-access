@@ -136,8 +136,17 @@ namespace Bitwarden
                                                                                 passcode.Code,
                                                                                 passcode.RememberMe),
                                                         jsonHttp);
+
+            // Password + 2FA is successful
             if (secondFactorResponse.AuthToken != null)
+            {
+                // Store the "remember me" token to be used next time
+                var rememberMeToken = secondFactorResponse.RememberMeToken;
+                if (rememberMeToken != null)
+                    storage.StoreString(RememberMeTokenKey, rememberMeToken);
+
                 return secondFactorResponse.AuthToken;
+            }
 
             throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
                                       "Second factor code is not correct");
@@ -162,17 +171,20 @@ namespace Bitwarden
         internal struct TokenOrSecondFactor
         {
             public readonly string AuthToken;
+            public readonly string RememberMeToken;
             public readonly Response.SecondFactor SecondFactor;
 
-            public TokenOrSecondFactor(string authToken)
+            public TokenOrSecondFactor(string authToken, string rememberMeToken)
             {
                 AuthToken = authToken;
+                RememberMeToken = rememberMeToken;
                 SecondFactor = new Response.SecondFactor();
             }
 
             public TokenOrSecondFactor(Response.SecondFactor secondFactor)
             {
                 AuthToken = null;
+                RememberMeToken = null;
                 SecondFactor = secondFactor;
             }
         }
@@ -228,7 +240,7 @@ namespace Bitwarden
                 }
 
                 var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token", parameters);
-                return new TokenOrSecondFactor($"{response.TokenType} {response.AccessToken}");
+                return new TokenOrSecondFactor($"{response.TokenType} {response.AccessToken}", response.TwoFactorToken);
             }
             catch (ClientException e)
             {
@@ -428,6 +440,7 @@ namespace Bitwarden
         //
 
         private const string BaseUrl = "https://vault.bitwarden.com";
+        private const string RememberMeTokenKey = "remember-me";
 
         private static readonly Response.SecondFactorMethod[] SecondFactorMethodPreferenceOrder =
         {
