@@ -120,10 +120,12 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void VerifySessionKey_works()
+        public void VerifySessionKey_returns_success()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
-            Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
+            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
+
+            Assert.That(result.Status, Is.EqualTo(Client.VerifyStatus.Success));
         }
 
         [Test]
@@ -133,6 +135,34 @@ namespace OnePassword.Test
             Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
 
             JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v2/auth/verify");
+        }
+
+        [Test]
+        public void ParseSecondFactors_returns_factors()
+        {
+            var json = JToken.Parse("{'totp': {'enabled': true}, 'dsecret': {'enabled': true}}");
+            var factors = Client.ParseSecondFactors(json);
+
+            Assert.That(factors, Is.EquivalentTo(new[] { Client.SecondFactor.GoogleAuthenticator,
+                                                         Client.SecondFactor.RememberMeToken }));
+        }
+
+        [Test]
+        public void ParseSecondFactor_ignores_missing_factors()
+        {
+            var json = JToken.Parse("{'totp': {'enabled': true}}");
+            var factors = Client.ParseSecondFactors(json);
+
+            Assert.That(factors, Is.EquivalentTo(new[] { Client.SecondFactor.GoogleAuthenticator }));
+        }
+
+        [Test]
+        public void ParseSecondFactor_ignores_disabled_factors()
+        {
+            var json = JToken.Parse("{'totp': {'enabled': true}, 'dsecret': {'enabled': false}}");
+            var factors = Client.ParseSecondFactors(json);
+
+            Assert.That(factors, Is.EquivalentTo(new[] { Client.SecondFactor.GoogleAuthenticator }));
         }
 
         [Test]

@@ -107,24 +107,28 @@ namespace OnePassword
             jsonHttp.Signer = new MacRequestSigner(session, sessionKey);
 
             // Step 3: Verify the key with the server
-            VerifySessionKey(clientInfo, session, sessionKey, jsonHttp);
+            var verifiedOrMfa = VerifySessionKey(clientInfo, session, sessionKey, jsonHttp);
+
+            // Step 4: Submit 2FA code if needed
+            if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
+                throw new NotImplementedException();
 
             try
             {
-                // Step 4: Get account info. It contains users, keys, groups, vault info and other stuff.
+                // Step 5: Get account info. It contains users, keys, groups, vault info and other stuff.
                 //         Not the actual vault data though. That is requested separately.
                 var accountInfo = GetAccountInfo(sessionKey, jsonHttp);
 
-                // Step 5: Get all the keysets in one place. The original code is quite hairy around this
+                // Step 6: Get all the keysets in one place. The original code is quite hairy around this
                 //         topic, so it's not very clear if these keysets should be merged with anything else
                 //         or it's enough to just use these keys. For now we gonna ignore other keys and
                 //         see if it's enough.
                 var keysets = GetKeysets(sessionKey, jsonHttp);
 
-                // Step 6: Derive and decrypt keys
+                // Step 7: Derive and decrypt keys
                 DecryptAllKeys(accountInfo, keysets, clientInfo, keychain);
 
-                // Step 7: Get and decrypt vaults
+                // Step 8: Get and decrypt vaults
                 var vaults = GetVaults(accountInfo, sessionKey, keychain, jsonHttp);
 
                 // Done
@@ -225,10 +229,38 @@ namespace OnePassword
                                                         clientInfo.Uuid));
         }
 
-        internal static void VerifySessionKey(ClientInfo clientInfo,
-                                              Session session,
-                                              AesKey sessionKey,
-                                              JsonHttpClient jsonHttp)
+        internal enum VerifyStatus
+        {
+            Success,
+            SecondFactorRequired
+        }
+
+        internal enum SecondFactor
+        {
+            GoogleAuthenticator,
+            RememberMeToken
+        }
+
+        internal struct VerifyResult
+        {
+            public readonly VerifyStatus Status;
+            public readonly SecondFactor[] Factors;
+
+            public VerifyResult(VerifyStatus status): this(status, new SecondFactor[0])
+            {
+            }
+
+            public VerifyResult(VerifyStatus status, SecondFactor[] factors)
+            {
+                Status = status;
+                Factors = factors;
+            }
+        }
+
+        internal static VerifyResult VerifySessionKey(ClientInfo clientInfo,
+                                                      Session session,
+                                                      AesKey sessionKey,
+                                                      JsonHttpClient jsonHttp)
         {
             try
             {
@@ -243,9 +275,14 @@ namespace OnePassword
                     sessionKey,
                     jsonHttp);
 
-                // Just to verify that it's a valid JSON and it has some keys.
-                // Technically it should have failed by now either in decrypt or JSON parse
-                response.StringAt("userUuid");
+                // TODO: 1P verifies if "serverVerifyHash" is valid. Do that.
+                // We assume it's all good if we got HTTP 200.
+
+                var mfa = response.At("mfa", null);
+                if (mfa == null)
+                    return new VerifyResult(VerifyStatus.Success);
+
+                return new VerifyResult(VerifyStatus.SecondFactorRequired, ParseSecondFactors(mfa));
             }
             catch (ClientException e)
             {
@@ -281,6 +318,19 @@ namespace OnePassword
 
                 throw;
             }
+        }
+
+        internal static SecondFactor[] ParseSecondFactors(JToken mfa)
+        {
+            var factors = new List<SecondFactor>(2);
+
+            if (mfa.BoolAt("totp/enabled", false))
+                factors.Add(SecondFactor.GoogleAuthenticator);
+
+            if (mfa.BoolAt("dsecret/enabled", false))
+                factors.Add(SecondFactor.RememberMeToken);
+
+            return factors.ToArray();
         }
 
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
