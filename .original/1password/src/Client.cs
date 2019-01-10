@@ -111,7 +111,7 @@ namespace OnePassword
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                throw new NotImplementedException();
+                SubmitSecondFactorCode(session, sessionKey, jsonHttp);
 
             try
             {
@@ -266,7 +266,7 @@ namespace OnePassword
             {
                 var response = PostEncryptedJson(
                     "v2/auth/verify",
-                    new Dictionary<string, string>
+                    new Dictionary<string, object>
                     {
                         {"sessionID", session.Id},
                         {"clientVerifyHash", Crypto.CalculateClientHash(clientInfo, session)},
@@ -331,6 +331,23 @@ namespace OnePassword
                 factors.Add(SecondFactor.RememberMeToken);
 
             return factors.ToArray();
+        }
+
+        // Returns "remember me" token when successful
+        internal static string SubmitSecondFactorCode(Session session, AesKey sessionKey, JsonHttpClient jsonHttp)
+        {
+            var response = PostEncryptedJson(
+                "v1/auth/mfa",
+                new Dictionary<string, object>
+                {
+                    {"sessionID", session.Id},
+                    {"client", ClientId},
+                    {"totp", new Dictionary<string, string> {{"code", "306331"}}}, // TODO: Get the actual code
+                },
+                sessionKey,
+                jsonHttp);
+
+            return response.StringAt("dsecret", "");
         }
 
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
@@ -504,7 +521,7 @@ namespace OnePassword
         }
 
         internal static JObject PostEncryptedJson(string endpoint,
-                                                  Dictionary<string, string> parameters,
+                                                  Dictionary<string, object> parameters,
                                                   AesKey sessionKey,
                                                   JsonHttpClient jsonHttp)
         {
