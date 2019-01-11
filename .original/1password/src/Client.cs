@@ -32,9 +32,10 @@ namespace OnePassword
                                             string password,
                                             string accountKey,
                                             string uuid,
-                                            string domain = DefaultDomain)
+                                            string domain,
+                                            Ui ui)
         {
-            return OpenAllVaults(username, password, accountKey, uuid, domain, new HttpClient());
+            return OpenAllVaults(username, password, accountKey, uuid, domain, ui, new HttpClient());
         }
 
         // Alternative entry point with a predefined region
@@ -42,13 +43,15 @@ namespace OnePassword
                                             string password,
                                             string accountKey,
                                             string uuid,
-                                            Region region)
+                                            Region region,
+                                            Ui ui)
         {
             return OpenAllVaults(username,
                                  password,
                                  accountKey,
                                  uuid,
                                  GetDomain(region),
+                                 ui,
                                  new HttpClient());
         }
 
@@ -57,9 +60,10 @@ namespace OnePassword
                                             string accountKey,
                                             string uuid,
                                             string domain,
+                                            Ui ui,
                                             IHttpClient http)
         {
-            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain), http);
+            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain), ui, http);
         }
 
         // Use this function to generate a unique random identifier for each new client.
@@ -87,7 +91,7 @@ namespace OnePassword
         // Internal
         //
 
-        internal static Vault[] OpenAllVaults(ClientInfo clientInfo, IHttpClient http)
+        internal static Vault[] OpenAllVaults(ClientInfo clientInfo, Ui ui, IHttpClient http)
         {
             var keychain = new Keychain();
             var jsonHttp = MakeJsonClient(http, GetApiUrl(clientInfo.Domain));
@@ -111,7 +115,11 @@ namespace OnePassword
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                SubmitSecondFactorCode(session, sessionKey, jsonHttp);
+            {
+                var factor = ChooseSecondFactor(verifiedOrMfa.Factors);
+                var code = GetSecondFactorCode(factor, ui);
+                SubmitSecondFactorCode(factor, code, session, sessionKey, jsonHttp);
+            }
 
             try
             {
@@ -330,19 +338,67 @@ namespace OnePassword
             if (mfa.BoolAt("dsecret/enabled", false))
                 factors.Add(SecondFactor.RememberMeToken);
 
+            if (factors.Count == 0)
+                throw ExceptionFactory.MakeUnsupported("No supported 2FA methods found");
+
             return factors.ToArray();
         }
 
-        // Returns "remember me" token when successful
-        internal static string SubmitSecondFactorCode(Session session, AesKey sessionKey, JsonHttpClient jsonHttp)
+        internal static SecondFactor ChooseSecondFactor(SecondFactor[] factors)
         {
+            if (factors.Length == 0)
+                throw ExceptionFactory.MakeInvalidOperation("The list of 2FA methods could not be empty");
+
+            // Contains is O(N) for arrays, so technically we have O(N^2) here.
+            // But it's ok, since it's at most just a handful of elements. Converting
+            // them to a hash set would take longer.
+            foreach (var i in SecondFactorPriority)
+                if (factors.Contains(i))
+                    return i;
+
+            return factors[0];
+        }
+
+        internal static string GetSecondFactorCode(SecondFactor factor, Ui ui)
+        {
+            switch (factor)
+            {
+            case SecondFactor.GoogleAuthenticator:
+                return ui.ProviceGoogleAuthenticatorCode();
+            case SecondFactor.RememberMeToken:
+                return "TODO: Retrieve the 'remember me' code";
+            }
+
+            return "";
+        }
+
+        // Returns "remember me" token when successful
+        internal static string SubmitSecondFactorCode(SecondFactor factor,
+                                                      string code,
+                                                      Session session,
+                                                      AesKey sessionKey,
+                                                      JsonHttpClient jsonHttp)
+        {
+            var key = "";
+            object data = null;
+
+            switch (factor)
+            {
+            case SecondFactor.GoogleAuthenticator:
+                key = "totp";
+                data = new Dictionary<string, string> {{"code", code}};
+                break;
+            default:
+                throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
+            }
+
             var response = PostEncryptedJson(
                 "v1/auth/mfa",
                 new Dictionary<string, object>
                 {
                     {"sessionID", session.Id},
                     {"client", ClientId},
-                    {"totp", new Dictionary<string, string> {{"code", "306331"}}}, // TODO: Get the actual code
+                    {key, data},
                 },
                 sessionKey,
                 jsonHttp);
@@ -547,5 +603,10 @@ namespace OnePassword
         //
 
         private const string MasterKeyId = "mp";
+        private static readonly SecondFactor[] SecondFactorPriority = new[]
+        {
+            //SecondFactor.RememberMeToken,
+            SecondFactor.GoogleAuthenticator,
+        };
     }
 }

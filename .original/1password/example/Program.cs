@@ -9,6 +9,25 @@ namespace Example
 {
     public class Program
     {
+        class TextUi: Ui
+        {
+            private const string ToCancel = "or just press ENTER to cancel";
+
+            public override string ProviceGoogleAuthenticatorCode()
+            {
+                return GetAnswer($"Enter Google Authenticator passcode {ToCancel}");
+            }
+
+            private static string GetAnswer(string prompt)
+            {
+                Console.WriteLine(prompt);
+                Console.Write("> ");
+                var input = Console.ReadLine();
+
+                return input == null ? "" : input.Trim();
+            }
+        }
+
         public static void Main(string[] args)
         {
             // Read 1Password credentials from a file
@@ -42,7 +61,7 @@ namespace Example
                                           string uuid,
                                           string domain)
         {
-            var vaults = Client.OpenAllVaults(username, password, accountKey, uuid, domain);
+            var vaults = Client.OpenAllVaults(username, password, accountKey, uuid, domain, new TextUi());
 
             foreach (var vault in vaults)
             {
