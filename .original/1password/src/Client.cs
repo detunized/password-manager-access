@@ -74,7 +74,7 @@ namespace OnePassword
                                             ISecureStorage storage,
                                             IHttpClient http)
         {
-            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain), ui, http);
+            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain), ui, storage, http);
         }
 
         // Use this function to generate a unique random identifier for each new client.
@@ -102,7 +102,7 @@ namespace OnePassword
         // Internal
         //
 
-        internal static Vault[] OpenAllVaults(ClientInfo clientInfo, Ui ui, IHttpClient http)
+        internal static Vault[] OpenAllVaults(ClientInfo clientInfo, Ui ui, ISecureStorage storage, IHttpClient http)
         {
             var keychain = new Keychain();
             var jsonHttp = MakeJsonClient(http, GetApiUrl(clientInfo.Domain));
@@ -128,8 +128,9 @@ namespace OnePassword
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
             {
                 var factor = ChooseSecondFactor(verifiedOrMfa.Factors);
-                var code = GetSecondFactorCode(factor, ui);
-                SubmitSecondFactorCode(factor, code, session, sessionKey, jsonHttp);
+                var code = GetSecondFactorCode(factor, ui, storage);
+                var token = SubmitSecondFactorCode(factor, code, session, sessionKey, jsonHttp);
+                storage.StoreString(RememberMeTokenKey, token);
             }
 
             try
@@ -370,17 +371,17 @@ namespace OnePassword
             return factors[0];
         }
 
-        internal static string GetSecondFactorCode(SecondFactor factor, Ui ui)
+        internal static string GetSecondFactorCode(SecondFactor factor, Ui ui, ISecureStorage storage)
         {
             switch (factor)
             {
             case SecondFactor.GoogleAuthenticator:
                 return ui.ProviceGoogleAuthenticatorCode();
             case SecondFactor.RememberMeToken:
-                return "TODO: Retrieve the 'remember me' code";
+                return storage.LoadString(RememberMeTokenKey);
+            default:
+                throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
             }
-
-            return "";
         }
 
         // Returns "remember me" token when successful
@@ -398,6 +399,10 @@ namespace OnePassword
             case SecondFactor.GoogleAuthenticator:
                 key = "totp";
                 data = new Dictionary<string, string> {{"code", code}};
+                break;
+            case SecondFactor.RememberMeToken:
+                key = "dsecret";
+                data = code; // TODO: Hash this!
                 break;
             default:
                 throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
@@ -614,9 +619,11 @@ namespace OnePassword
         //
 
         private const string MasterKeyId = "mp";
+        private const string RememberMeTokenKey = "remember-me-token";
+
         private static readonly SecondFactor[] SecondFactorPriority = new[]
         {
-            //SecondFactor.RememberMeToken,
+            SecondFactor.RememberMeToken,
             SecondFactor.GoogleAuthenticator,
         };
     }

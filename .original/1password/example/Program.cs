@@ -2,7 +2,9 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using OnePassword;
 
 namespace Example
@@ -26,6 +28,40 @@ namespace Example
 
                 return input == null ? "" : input.Trim();
             }
+        }
+
+        // A primitive not-so-secure secure storage implementation. It stores a dictionary
+        // as a list of strings in a text file. It could be JSON or something but we don't
+        // want any extra dependencies.
+        private class PlainStorage: ISecureStorage
+        {
+            public PlainStorage(string filename)
+            {
+                _filename = filename;
+
+                var lines = File.Exists(filename) ? File.ReadAllLines(filename) : new string[0];
+                for (var i = 0; i < lines.Length / 2; ++i)
+                    _storage[lines[i * 2]] = lines[i * 2 + 1];
+            }
+
+            public void StoreString(string name, string value)
+            {
+                _storage[name] = value;
+                Save();
+            }
+
+            public string LoadString(string name)
+            {
+                return _storage.ContainsKey(name) ? _storage[name] : null;
+            }
+
+            private void Save()
+            {
+                File.WriteAllLines(_filename, _storage.SelectMany(i => new[] { i.Key, i.Value }));
+            }
+
+            private readonly string _filename;
+            private readonly Dictionary<string, string> _storage = new Dictionary<string, string>();
         }
 
         public static void Main(string[] args)
@@ -67,7 +103,7 @@ namespace Example
                                               uuid,
                                               domain,
                                               new TextUi(),
-                                              null);
+                                              new PlainStorage("../../storage.txt"));
 
             foreach (var vault in vaults)
             {
