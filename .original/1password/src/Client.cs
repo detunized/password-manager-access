@@ -33,9 +33,17 @@ namespace OnePassword
                                             string accountKey,
                                             string uuid,
                                             string domain,
-                                            Ui ui)
+                                            Ui ui,
+                                            ISecureStorage storage)
         {
-            return OpenAllVaults(username, password, accountKey, uuid, domain, ui, new HttpClient());
+            return OpenAllVaults(username,
+                                 password,
+                                 accountKey,
+                                 uuid,
+                                 domain,
+                                 ui,
+                                 storage,
+                                 new HttpClient());
         }
 
         // Alternative entry point with a predefined region
@@ -44,7 +52,8 @@ namespace OnePassword
                                             string accountKey,
                                             string uuid,
                                             Region region,
-                                            Ui ui)
+                                            Ui ui,
+                                            ISecureStorage storage)
         {
             return OpenAllVaults(username,
                                  password,
@@ -52,6 +61,7 @@ namespace OnePassword
                                  uuid,
                                  GetDomain(region),
                                  ui,
+                                 storage,
                                  new HttpClient());
         }
 
@@ -61,6 +71,7 @@ namespace OnePassword
                                             string uuid,
                                             string domain,
                                             Ui ui,
+                                            ISecureStorage storage,
                                             IHttpClient http)
         {
             return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain), ui, http);

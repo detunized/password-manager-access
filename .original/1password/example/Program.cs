@@ -61,7 +61,13 @@ namespace Example
                                           string uuid,
                                           string domain)
         {
-            var vaults = Client.OpenAllVaults(username, password, accountKey, uuid, domain, new TextUi());
+            var vaults = Client.OpenAllVaults(username,
+                                              password,
+                                              accountKey,
+                                              uuid,
+                                              domain,
+                                              new TextUi(),
+                                              null);
 
             foreach (var vault in vaults)
             {
