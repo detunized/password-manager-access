@@ -10,6 +10,7 @@ namespace OnePassword
         public enum FailureReason
         {
             IncorrectCredentials,
+            UserCanceledSecondFactor,
             NetworkError,
             InvalidResponse,
             RespondedWithError,

@@ -126,12 +126,7 @@ namespace OnePassword
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-            {
-                var factor = ChooseSecondFactor(verifiedOrMfa.Factors);
-                var code = GetSecondFactorCode(factor, ui, storage);
-                var token = SubmitSecondFactorCode(factor, code, session, sessionKey, jsonHttp);
-                storage.StoreString(RememberMeTokenKey, token);
-            }
+                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, jsonHttp);
 
             try
             {
@@ -354,6 +349,38 @@ namespace OnePassword
                 throw ExceptionFactory.MakeUnsupported("No supported 2FA methods found");
 
             return factors.ToArray();
+        }
+
+        internal static void PerformSecondFactorAuthentication(SecondFactor[] factors,
+                                                               Session session,
+                                                               AesKey sessionKey,
+                                                               Ui ui,
+                                                               ISecureStorage storage,
+                                                               JsonHttpClient jsonHttp)
+        {
+            var factor = ChooseSecondFactor(factors);
+            var code = GetSecondFactorCode(factor, ui, storage);
+
+            // The "remember me" is special. When it's available it takes the highest priority.
+            // But in the case when we don't have the "remember me" token saved from the last time,
+            // we need to choose a different 2FA method. Normally some other method should be available.
+            if (string.IsNullOrEmpty(code) && factor == SecondFactor.RememberMeToken)
+            {
+                var otherFactors = factors.Where(x => x != SecondFactor.RememberMeToken).ToArray();
+                if (otherFactors.Length == 0)
+                    throw ExceptionFactory.MakeUnsupported("No supported 2FA methods other than 'remember me' found");
+
+                factor = ChooseSecondFactor(otherFactors);
+                code = GetSecondFactorCode(factor, ui, storage);
+            }
+
+            // Null or blank means the user canceled the 2FA
+            if (string.IsNullOrEmpty(code))
+                throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
+                                          "Second factor step is canceled by the user");
+
+            var token = SubmitSecondFactorCode(factor, code, session, sessionKey, jsonHttp);
+            storage.StoreString(RememberMeTokenKey, token);
         }
 
         internal static SecondFactor ChooseSecondFactor(SecondFactor[] factors)
