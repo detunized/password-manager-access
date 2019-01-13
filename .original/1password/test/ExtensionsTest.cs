@@ -50,7 +50,82 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void String_String_Decode64_decodes_base64()
+        public void String_Decode32_decodes_base32()
+        {
+            // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
+            Assert.That("".Decode32(), Is.EqualTo(new byte [] { }));
+            Assert.That("MY======".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
+            Assert.That("MY======".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
+            Assert.That("MZXQ====".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f }));
+            Assert.That("MZXW6===".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f }));
+            Assert.That("MZXW6YQ=".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62 }));
+            Assert.That("MZXW6YTB".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }));
+            Assert.That("MZXW6YTBOI======".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }));
+        }
+
+        [Test]
+        public void String_Decode32_decodes_base32_without_padding()
+        {
+            // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
+            Assert.That("MY".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
+            Assert.That("MZXQ".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f }));
+            Assert.That("MZXW6".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f }));
+            Assert.That("MZXW6YQ".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62 }));
+            Assert.That("MZXW6YTB".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }));
+            Assert.That("MZXW6YTBOI".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }));
+        }
+
+        [Test]
+        public void String_Decode32_decodes_base32_lowercase()
+        {
+            // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
+            Assert.That("my".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
+            Assert.That("mzxq".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f }));
+            Assert.That("mzxw6".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f }));
+            Assert.That("mzxw6yq".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62 }));
+            Assert.That("mzxw6ytb".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }));
+            Assert.That("mzxw6ytboi".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }));
+        }
+
+        [Test]
+        public void String_Decode32_decodes_incorrectly_padded_base32()
+        {
+            Assert.That("=".Decode32(), Is.EqualTo(new byte[] { }));
+            Assert.That("==".Decode32(), Is.EqualTo(new byte[] { }));
+            Assert.That("===".Decode32(), Is.EqualTo(new byte[] { }));
+            Assert.That("====".Decode32(), Is.EqualTo(new byte[] { }));
+            Assert.That("=====".Decode32(), Is.EqualTo(new byte[] { }));
+            Assert.That("MY=".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
+            Assert.That("MY==".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
+            Assert.That("MY===".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
+            Assert.That("MY====".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
+            Assert.That("MY=====".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
+            Assert.That("MY=========".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
+        }
+
+        public void String_Decode32_throws_on_invalid_base32()
+        {
+            var invalidBase32 = new[]
+            {
+                "0",
+                "1",
+                "8",
+                "9",
+                "!",
+                "MZXQ!",
+                "!@#$%^&*()",
+                "MY======MY",
+                "MY======MY======",
+                "=MY======",
+            };
+
+            foreach (var i in invalidBase32)
+                Assert.That(() => i.Decode32(),
+                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("invalid characters in base32"));
+        }
+
+        [Test]
+        public void String_Decode64_decodes_base64()
         {
             Assert.That("".Decode64(), Is.EqualTo(new byte[] { }));
             Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));

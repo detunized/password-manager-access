@@ -50,6 +50,43 @@ namespace OnePassword
             return bytes;
         }
 
+        public static byte[] Decode32(this string s)
+        {
+            // Remove padding
+            var length = s.Length;
+            while (length > 0 && s[length - 1] == '=')
+                length -= 1;
+
+            var result = new byte[length * 5 / 8];
+            int currentByte = 0;
+            int bitsReady = 0;
+            int outputIndex = 0;
+
+            for (var i  = 0; i < length; i += 1)
+            {
+                int c = char.ToLower(s[i]);
+                if (c >= 'a' && c <= 'z')
+                    c -= 'a';
+                else if (c >= '2' && c <= '7')
+                    c += 26 - '2';
+                else
+                    throw ExceptionFactory.MakeInvalidOperation("Decode32: invalid characters in base32");
+
+                currentByte <<= 5;
+                currentByte |= c & 31;
+                bitsReady += 5;
+
+                if (bitsReady >= 8)
+                {
+                    bitsReady -= 8;
+                    result[outputIndex] = (byte)(currentByte >> bitsReady);
+                    outputIndex += 1;
+                }
+            }
+
+            return result;
+        }
+
         // Handles URL-safe, regular and mixed Base64 with or without padding.
         public static byte[] Decode64(this string s)
         {
