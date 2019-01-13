@@ -88,5 +88,19 @@ namespace OnePassword.Test
             Assert.That(Crypto.CalculateClientHash(TestData.ClientInfo, TestData.Session),
                         Is.EqualTo("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA"));
         }
+
+        [Test]
+        public void HashRememberMeToken_with_session_object_returns_hash()
+        {
+            Assert.That(Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", TestData.Session),
+                        Is.EqualTo("XPvm9ASr"));
+        }
+
+        [Test]
+        public void HashRememberMeToken_with_session_id_object_returns_hash()
+        {
+            Assert.That(Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"),
+                        Is.EqualTo("oNk_XW_e"));
+        }
     }
 }

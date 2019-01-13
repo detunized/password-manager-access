@@ -93,6 +93,16 @@ namespace OnePassword
             return Sha256(a.Concat(b).ToArray()).ToBase64();
         }
 
+        public static string HashRememberMeToken(string token, Session session)
+        {
+            return HashRememberMeToken(token, session.Id);
+        }
+
+        public static string HashRememberMeToken(string token, string sessionId)
+        {
+            return Hmac256(token.Decode64(), sessionId.Decode32()).ToBase64().Substring(0, 8);
+        }
+
         private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();
         private const string SessionHmacSecret =
             "He never wears a Mac, in the pouring rain. Very strange.";
