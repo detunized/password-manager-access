@@ -284,7 +284,7 @@ namespace OnePassword
                     new Dictionary<string, object>
                     {
                         {"sessionID", session.Id},
-                        {"clientVerifyHash", Crypto.CalculateClientHash(clientInfo, session)},
+                        {"clientVerifyHash", Crypto.CalculateClientHash(session)},
                         {"client", ClientId},
                     },
                     sessionKey,

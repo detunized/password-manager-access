@@ -85,7 +85,7 @@ namespace OnePassword.Test
         [Test]
         public void CalculateClientHash_convenience_returns_hash()
         {
-            Assert.That(Crypto.CalculateClientHash(TestData.ClientInfo, TestData.Session),
+            Assert.That(Crypto.CalculateClientHash(TestData.Session),
                         Is.EqualTo("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA"));
         }
 

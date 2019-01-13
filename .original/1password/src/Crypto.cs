@@ -86,10 +86,9 @@ namespace OnePassword
             return Hmac256(sessionKey.Key, SessionHmacSecret);
         }
 
-        // TODO: Looks like we can get rid of clientInfo since the session has the UUID as well
-        public static string CalculateClientHash(ClientInfo clientInfo, Session session)
+        public static string CalculateClientHash(Session session)
         {
-            return CalculateClientHash(clientInfo.AccountKey.Uuid, session.Id);
+            return CalculateClientHash(session.KeyUuid, session.Id);
         }
 
         public static string CalculateClientHash(string accountKeyUuid, string sessionId)
