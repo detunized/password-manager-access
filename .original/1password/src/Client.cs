@@ -420,6 +420,7 @@ namespace OnePassword
         {
             var key = "";
             object data = null;
+            var rememberMetoken = "";
 
             switch (factor)
             {
@@ -429,7 +430,10 @@ namespace OnePassword
                 break;
             case SecondFactor.RememberMeToken:
                 key = "dsecret";
-                data = code; // TODO: Hash this!
+                data = new Dictionary<string, string> {{"dshmac", Crypto.HashRememberMeToken(code, session)}};
+
+                // We need to return the old token, since the server doesn't provide a new token in this case
+                rememberMetoken = code;
                 break;
             default:
                 throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
@@ -446,7 +450,7 @@ namespace OnePassword
                 sessionKey,
                 jsonHttp);
 
-            return response.StringAt("dsecret", "");
+            return response.StringAt("dsecret", rememberMetoken);
         }
 
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
