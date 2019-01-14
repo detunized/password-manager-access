@@ -416,18 +416,29 @@ namespace OnePassword
                 throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
             }
 
-            var response = PostEncryptedJson(
-                "v1/auth/mfa",
-                new Dictionary<string, object>
-                {
-                    {"sessionID", session.Id},
-                    {"client", ClientId},
-                    {key, data},
-                },
-                sessionKey,
-                jsonHttp);
+            try
+            {
+                var response = PostEncryptedJson("v1/auth/mfa",
+                                                 new Dictionary<string, object>
+                                                 {
+                                                     {"sessionID", session.Id},
+                                                     {"client", ClientId},
+                                                     {key, data},
+                                                 },
+                                                 sessionKey,
+                                                 jsonHttp);
 
-            return response.StringAt("dsecret", rememberMetoken);
+                return response.StringAt("dsecret", rememberMetoken);
+            }
+            catch (ClientException e)
+            {
+                if (!IsError102(e))
+                    throw;
+
+                throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
+                                          "Incorrect second factor code",
+                                          e.InnerException);
+            }
         }
 
         internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
