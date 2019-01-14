@@ -3,8 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -301,37 +303,12 @@ namespace OnePassword
             }
             catch (ClientException e)
             {
-                // This is a quite ugly attempt at handling a very special case.
-                // When this specific request fails with 400, the response contains
-                // the error code. It seems 102 means invalid credentials.
-
-                // TODO: Write a test for this case.
-
-                if (e.Reason != ClientException.FailureReason.NetworkError)
+                if (!IsError102(e))
                     throw;
 
-                var web = e.InnerException as WebException;
-                if (web == null)
-                    throw;
-
-                var response = web.Response as HttpWebResponse;
-                if (response == null)
-                    throw;
-
-                var stream = response.GetResponseStream();
-                if (stream == null)
-                    throw;
-
-                stream.Position = 0;
-                var text = new System.IO.StreamReader(stream).ReadToEnd();
-
-                var json = JObject.Parse(text);
-                if (json.IntAt("errorCode", 0) == 102)
-                    throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                              "Username, password or account key is incorrect",
-                                              e);
-
-                throw;
+                throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
+                                          "Username, password or account key is incorrect",
+                                          e.InnerException);
             }
         }
 
@@ -643,6 +620,60 @@ namespace OnePassword
         internal static JObject Decrypt(JToken json, Keychain keychain)
         {
             return JObject.Parse(keychain.Decrypt(Encrypted.Parse(json)).ToUtf8());
+        }
+
+        internal static string GetHttpResponse(ClientException e)
+        {
+            if (e.Reason != ClientException.FailureReason.NetworkError)
+                return null;
+
+            var we = e.InnerException as WebException;
+            if (we == null || we.Status != WebExceptionStatus.ProtocolError)
+                return null;
+
+            var wr = we.Response as HttpWebResponse;
+            if (wr == null)
+                return null;
+
+            var stream = wr.GetResponseStream();
+            if (stream == null)
+                return null;
+
+            // Leave the response stream open to be able to read it again later
+            using (var r = new StreamReader(stream,
+                                            Encoding.UTF8,
+                                            detectEncodingFromByteOrderMarks: true,
+                                            bufferSize: 1024,
+                                            leaveOpen: true))
+            {
+                var response = r.ReadToEnd();
+
+                // Rewind it back not to make someone very confused when they try to read from it
+                if (stream.CanSeek)
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                return response;
+            }
+        }
+
+        // This is a quite ugly attempt at handling a very special case.
+        // When this specific request fails with 400, the response contains
+        // the error code. It seems 102 means invalid credentials or 2FA code.
+        internal static bool IsError102(ClientException e)
+        {
+            var response = GetHttpResponse(e);
+            if (response == null)
+                return false;
+
+            try
+            {
+                var json = JObject.Parse(response);
+                return json.IntAt("errorCode", 0) == 102;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
         }
 
         //
