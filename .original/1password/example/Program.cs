@@ -15,7 +15,7 @@ namespace Example
         {
             private const string ToCancel = "or just press ENTER to cancel";
 
-            public override string ProviceGoogleAuthenticatorCode()
+            public override string ProvideGoogleAuthPasscode()
             {
                 return GetAnswer($"Enter Google Authenticator passcode {ToCancel}");
             }

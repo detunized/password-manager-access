@@ -6,6 +6,6 @@ namespace OnePassword
     public abstract class Ui
     {
         // Return null or blank to cancel
-        public abstract string ProviceGoogleAuthenticatorCode();
+        public abstract string ProvideGoogleAuthPasscode();
     }
 }

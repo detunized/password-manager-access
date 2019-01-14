@@ -380,7 +380,7 @@ namespace OnePassword
             switch (factor)
             {
             case SecondFactor.GoogleAuthenticator:
-                return ui.ProviceGoogleAuthenticatorCode();
+                return ui.ProvideGoogleAuthPasscode();
             case SecondFactor.RememberMeToken:
                 return storage.LoadString(RememberMeTokenKey);
             default:
