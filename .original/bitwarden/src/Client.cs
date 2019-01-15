@@ -86,11 +86,8 @@ namespace Bitwarden
         {
             // Try simple password login, potentially with a stored second factor token if
             // "remember me" was used before.
-            var response = RequestAuthToken(username,
-                                            passwordHash,
-                                            deviceId,
-                                            GetRememberMeOptions(storage),
-                                            jsonHttp);
+            var rememberMeOptions = GetRememberMeOptions(storage);
+            var response = RequestAuthToken(username, passwordHash, deviceId, rememberMeOptions, jsonHttp);
 
             // Simple password login (no 2FA) succeeded
             if (response.AuthToken != null)
@@ -100,6 +97,10 @@ namespace Bitwarden
             if (secondFactor.Methods == null || secondFactor.Methods.Count == 0)
                 throw new ClientException(ClientException.FailureReason.InvalidResponse,
                                           "Expected a non empty list of available 2FA methods");
+
+            // We had a "remember me" token saved, but the login failed anyway. This token is not valid anymore.
+            if (rememberMeOptions != null)
+                EraseRememberMeToken(storage);
 
             var method = ChooseSecondFactorMethod(secondFactor);
             var extra = secondFactor.Methods[method];
@@ -171,6 +172,11 @@ namespace Bitwarden
             var token = reseponse.RememberMeToken;
             if (token != null)
                 storage.StoreString(RememberMeTokenKey, token);
+        }
+
+        internal static void EraseRememberMeToken(ISecureStorage storage)
+        {
+            storage.StoreString(RememberMeTokenKey, "");
         }
 
         internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor)
