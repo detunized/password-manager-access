@@ -11,10 +11,10 @@ namespace Bitwarden.Test
         [Test]
         public void ParseSignature_returns_parts()
         {
-            (var tx, var app) = Duo.ParseSignature("tx:app");
+            var parsed = Duo.ParseSignature("tx:app");
 
-            Assert.That(tx, Is.EqualTo("tx"));
-            Assert.That(app, Is.EqualTo("app"));
+            Assert.That(parsed.Tx, Is.EqualTo("tx"));
+            Assert.That(parsed.App, Is.EqualTo("app"));
         }
 
         [Test]

@@ -56,7 +56,8 @@ namespace Example
                     if (string.IsNullOrWhiteSpace(answer))
                         return null;
 
-                    if (int.TryParse(answer, out var choice))
+                    int choice;
+                    if (int.TryParse(answer, out choice))
                         foreach (var d in devices)
                             foreach (var f in d.Factors)
                                 if (--choice == 0)

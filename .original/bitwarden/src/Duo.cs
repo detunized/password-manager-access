@@ -17,14 +17,14 @@ namespace Bitwarden
         {
             var jsonHttp = new JsonHttpClient(http, $"https://{host}");
 
-            var (tx, app) = ParseSignature(signature);
-            var html = DownloadFrame(host, tx, http);
-            var (sid, devices) = ParseFrame(html);
+            var parsedSignature = ParseSignature(signature);
+            var html = DownloadFrame(host, parsedSignature.Tx, http);
+            var parsedFrame = ParseFrame(html);
 
             while (true)
             {
                 // Ask the user to choose what to do
-                var choice = ui.ChooseDuoFactor(devices);
+                var choice = ui.ChooseDuoFactor(parsedFrame.Devices);
                 if (choice == null)
                     return null; // Canceled by user
 
@@ -32,7 +32,7 @@ namespace Bitwarden
                 // a new batch of passcodes to the phone via SMS.
                 if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
                 {
-                    SubmitFactor(sid, choice, "", jsonHttp);
+                    SubmitFactor(parsedFrame.Sid, choice, "", jsonHttp);
                     choice = new Ui.DuoChoice(choice.Device, Ui.DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -45,24 +45,37 @@ namespace Bitwarden
                         return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(sid, choice, passcode, ui, jsonHttp);
+                var token = SubmitFactorAndWaitForToken(parsedFrame.Sid, choice, passcode, ui, jsonHttp);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
                     continue;
 
                 // All good
-                return new Ui.Passcode($"{token}:{app}", choice.RememberMe);
+                return new Ui.Passcode($"{token}:{parsedSignature.App}", choice.RememberMe);
             }
         }
 
-        internal static (string Tx, string App) ParseSignature(string signature)
+        // TODO: Use a tuple once we're on C# 7
+        internal struct ParsedSignature
+        {
+            public readonly string Tx;
+            public readonly string App;
+
+            public ParsedSignature(string tx, string app)
+            {
+                Tx = tx;
+                App = app;
+            }
+        }
+
+        internal static ParsedSignature ParseSignature(string signature)
         {
             var parts = signature.Split(':');
             if (parts.Length != 2)
                 throw MakeInvalidResponseError("Duo HTML: the signature is invalid or in an unsupported format");
 
-            return (parts[0], parts[1]);
+            return new ParsedSignature(parts[0], parts[1]);
         }
 
         internal static HtmlDocument DownloadFrame(string host, string tx, IHttpClient http)
@@ -93,7 +106,20 @@ namespace Bitwarden
             return doc;
         }
 
-        internal static (string Sid, Ui.DuoDevice[] Devices) ParseFrame(HtmlDocument html)
+        // TODO: Use a tuple once we're on C# 7
+        internal struct ParsedFrame
+        {
+            public readonly string Sid;
+            public readonly Ui.DuoDevice[] Devices;
+
+            public ParsedFrame(string sid, Ui.DuoDevice[] devices)
+            {
+                Sid = sid;
+                Devices = devices;
+            }
+        }
+
+        internal static ParsedFrame ParseFrame(HtmlDocument html)
         {
             // Find the main form
             var form = html.DocumentNode.SelectSingleNode("//form[@id='login-form']");
@@ -107,7 +133,7 @@ namespace Bitwarden
             if (sid == null || devices == null)
                 throw MakeInvalidResponseError("Duo HTML: signature or devices are not found");
 
-            return (sid, devices);
+            return new ParsedFrame(sid, devices);
         }
 
         // All the info is the frame is stored in input fields <input name="name" value="value">
@@ -172,10 +198,10 @@ namespace Bitwarden
                                         new Dictionary<string, string> {{"sid", sid}, {"txid", txid}},
                                         jsonHttp);
 
-                var (status, text) = GetResponseStatus(response);
-                UpdateUi(status, text, ui);
+                var responseStatus = GetResponseStatus(response);
+                UpdateUi(responseStatus, ui);
 
-                switch (status)
+                switch (responseStatus.Status)
                 {
                 case Ui.DuoStatus.Success:
                     var url = (string)response["response"]?["result_url"];
@@ -218,19 +244,31 @@ namespace Bitwarden
 
         internal static void UpdateUi(JObject response, Ui ui)
         {
-            var (status, text) = GetResponseStatus(response);
-            UpdateUi(status, text, ui);
+            UpdateUi(GetResponseStatus(response), ui);
         }
 
-        internal static void UpdateUi(Ui.DuoStatus status, string text, Ui ui)
+        internal static void UpdateUi(ResponseStatus responseStatus, Ui ui)
         {
-            if (text.IsNullOrEmpty())
+            if (responseStatus.Text.IsNullOrEmpty())
                 return;
 
-            ui.UpdateDuoStatus(status, text);
+            ui.UpdateDuoStatus(responseStatus.Status, responseStatus.Text);
         }
 
-        internal static (Ui.DuoStatus Status, string Text) GetResponseStatus(JObject response)
+        // TODO: Use a tuple once we're on C# 7
+        internal struct ResponseStatus
+        {
+            public readonly Ui.DuoStatus Status;
+            public readonly string Text;
+
+            public ResponseStatus(Ui.DuoStatus status, string text)
+            {
+                Status = status;
+                Text = text;
+            }
+        }
+
+        internal static ResponseStatus GetResponseStatus(JObject response)
         {
             var status = Ui.DuoStatus.Info;
             switch ((string)response["response"]?["result"])
@@ -245,23 +283,25 @@ namespace Bitwarden
 
             var text = (string)response["response"]?["status"] ?? "";
 
-            return (status, text);
+            return new ResponseStatus(status, text);
         }
 
         // Extracts all devices listed in the login form.
         // Devices with no supported methods are ignored.
         internal static Ui.DuoDevice[] GetDevices(HtmlNode form)
         {
+            // Use key-value pair as an ad-hoc data structure to store the device id and name
+            // TODO: Use a tuple once we're on C# 7
             var devices = form
                 .SelectNodes("//select[@name='device']/option")?
-                .Select(x => (Id: x.Attributes["value"]?.DeEntitizeValue,
-                              Name: HtmlEntity.DeEntitize(x.InnerText ?? "")));
+                .Select(x => new KeyValuePair<string, string>(x.Attributes["value"]?.DeEntitizeValue,
+                                                              HtmlEntity.DeEntitize(x.InnerText ?? "")));
 
-            if (devices == null || devices.Any(x => x.Id == null || x.Name == null))
+            if (devices == null || devices.Any(x => x.Key == null || x.Value == null))
                 return null;
 
             return devices
-                .Select(x => new Ui.DuoDevice(x.Id, x.Name, GetDeviceFactors(form, x.Id)))
+                .Select(x => new Ui.DuoDevice(x.Key, x.Value, GetDeviceFactors(form, x.Key)))
                 .Where(x => x.Factors.Length > 0)
                 .ToArray();
         }
