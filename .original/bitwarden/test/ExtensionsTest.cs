@@ -65,6 +65,23 @@ namespace Bitwarden.Test
             Assert.That(new byte[] { 0x61, 0x62, 0x63, 0x64 }.ToBase64(), Is.EqualTo("YWJjZA=="));
         }
 
+        [Test]
+        public void ByteArray_Open_provides_binary_read()
+        {
+            byte result = 0;
+            new byte[] { 13 }.Open(reader => result = reader.ReadByte());
+
+            Assert.That(result, Is.EqualTo(13));
+        }
+
+        [Test]
+        public void ByteArray_Open_returns_result()
+        {
+            byte result = new byte[] { 13 }.Open(reader => reader.ReadByte());
+
+            Assert.That(result, Is.EqualTo(13));
+        }
+
         //
         // Data
         //
