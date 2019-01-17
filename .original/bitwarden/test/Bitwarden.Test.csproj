@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AccountTest.cs" />
+    <Compile Include="Asn1Test.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="CipherStringTest.cs" />
     <Compile Include="ClientTest.cs" />
