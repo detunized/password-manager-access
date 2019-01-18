@@ -15,12 +15,12 @@ namespace Bitwarden
         public enum Kind
         {
             Integer,
-            Bytes,
+            OctetString,
             Null,
             Sequence,
         }
 
-        public static KeyValuePair<Kind, byte[]> ParseItem(byte[] bytes)
+        public static KeyValuePair<Kind, byte[]> ExtractItem(byte[] bytes)
         {
             return bytes.Open(reader => ExtractItem(reader));
         }
@@ -37,7 +37,7 @@ namespace Bitwarden
                 kind = Kind.Integer;
                 break;
             case 4:
-                kind = Kind.Bytes;
+                kind = Kind.OctetString;
                 break;
             case 5:
                 kind = Kind.Null;

@@ -10,66 +10,66 @@ namespace Bitwarden.Test
     class Asn1Test
     {
         [Test]
-        public void Asn1_ParseItem_returns_integer()
+        public void Asn1_ExtractItem_returns_integer()
         {
-            ParseDeadBeefItem(2, Asn1.Kind.Integer);
+            ExtractDeadBeefItem(2, Asn1.Kind.Integer);
         }
 
         [Test]
-        public void Asn1_ParseItem_returns_bytes()
+        public void Asn1_ExtractItem_returns_bytes()
         {
-            ParseDeadBeefItem(4, Asn1.Kind.Bytes);
+            ExtractDeadBeefItem(4, Asn1.Kind.OctetString);
         }
 
         [Test]
-        public void Asn1_ParseItem_returns_null()
+        public void Asn1_ExtractItem_returns_null()
         {
-            ParseDeadBeefItem(5, Asn1.Kind.Null);
+            ExtractDeadBeefItem(5, Asn1.Kind.Null);
         }
 
         [Test]
-        public void Asn1_ParseItem_returns_squence()
+        public void Asn1_ExtractItem_returns_squence()
         {
-            ParseDeadBeefItem(16, Asn1.Kind.Sequence);
+            ExtractDeadBeefItem(16, Asn1.Kind.Sequence);
         }
 
         [Test]
-        public void Asn1_ParseItem_throws_on_invalid_tag()
+        public void Asn1_ExtractItem_throws_on_invalid_tag()
         {
-            Assert.That(() => Asn1.ParseItem("0D04DEADBEEF".DecodeHex()),
+            Assert.That(() => Asn1.ExtractItem("0D04DEADBEEF".DecodeHex()),
                         Throws.ArgumentException.And.Message.EqualTo("Unknown ASN.1 tag 13"));
         }
 
         [Test]
-        public void Asn1_ParseItem_reads_packed_size()
+        public void Asn1_ExtractItem_reads_packed_size()
         {
             const int size = 127;
-            var item = Asn1.ParseItem(("027F" + "AB".Repeat(size)).DecodeHex());
+            var item = Asn1.ExtractItem(("027F" + "AB".Repeat(size)).DecodeHex());
 
             Assert.That(item.Value.Length, Is.EqualTo(size));
         }
 
         [Test]
-        public void Asn1_ParseItem_reads_single_byte_size()
+        public void Asn1_ExtractItem_reads_single_byte_size()
         {
             const int size = 128;
-            var item = Asn1.ParseItem(("028180" + "AB".Repeat(size)).DecodeHex());
+            var item = Asn1.ExtractItem(("028180" + "AB".Repeat(size)).DecodeHex());
 
             Assert.That(item.Value.Length, Is.EqualTo(size));
         }
 
         [Test]
-        public void Asn1_ParseItem_reads_multi_byte_size()
+        public void Asn1_ExtractItem_reads_multi_byte_size()
         {
             const int size = 260;
-            var item = Asn1.ParseItem(("02820104" + "AB".Repeat(size)).DecodeHex());
+            var item = Asn1.ExtractItem(("02820104" + "AB".Repeat(size)).DecodeHex());
 
             Assert.That(item.Value.Length, Is.EqualTo(size));
         }
 
-        private static void ParseDeadBeefItem(byte tag, Asn1.Kind kind)
+        private static void ExtractDeadBeefItem(byte tag, Asn1.Kind kind)
         {
-            var item = Asn1.ParseItem($"{tag:X2}04DEADBEEF".DecodeHex());
+            var item = Asn1.ExtractItem($"{tag:X2}04DEADBEEF".DecodeHex());
 
             Assert.That(item.Key, Is.EqualTo(kind));
             Assert.That(item.Value, Is.EqualTo(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}));
