@@ -64,7 +64,7 @@ namespace Bitwarden.Test
         [Test]
         public void Parse_throws_on_malformed_input()
         {
-            var invalid = new[] {"", "0.", "0..", "0.|||"};
+            var invalid = new[] {"0..", "0.|||"};
             foreach (var i in invalid)
                 VerifyThrowsInvalidFormat(i, "Invalid/unsupported cipher string format");
         }
@@ -90,43 +90,95 @@ namespace Bitwarden.Test
         }
 
         [Test]
-        public void Ctor_throws_on_invalid_parameters()
+        public void Ctor_throws_on_nulls()
         {
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
                                       iv: null,
                                       ciphertext: Ciphertext,
-                                      mac: null,
-                                      expectedMessage: "IV must be 16 bytes long");
-
-            VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
-                                      iv: "invalid iv".ToBytes(),
-                                      ciphertext: Ciphertext,
-                                      mac: null,
-                                      expectedMessage: "IV must be 16 bytes long");
+                                      mac: Mac,
+                                      expectedMessage: "IV, ciphertext and MAC must not be null");
 
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
                                       iv: Iv,
                                       ciphertext: null,
+                                      mac: Mac,
+                                      expectedMessage: "IV, ciphertext and MAC must not be null");
+
+            VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
+                                      iv: Iv,
+                                      ciphertext: Ciphertext,
                                       mac: null,
-                                      expectedMessage: "Ciphertext must not be null");
+                                      expectedMessage: "IV, ciphertext and MAC must not be null");
+        }
+
+        [Test]
+        public void Ctor_throws_on_invalid_aes_256_cbc()
+        {
+            VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
+                                      iv: "invalid iv".ToBytes(),
+                                      ciphertext: Ciphertext,
+                                      mac: "".ToBytes(),
+                                      expectedMessage: "IV must be 16 bytes long");
 
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
                                       iv: Iv,
                                       ciphertext: Ciphertext,
                                       mac: Mac,
-                                      expectedMessage: "MAC is not supported in AES-256-CBC mode");
+                                      expectedMessage: "MAC is not supported");
+        }
 
-            VerifyThrowsInvalidFormat(mode: CipherMode.Aes256CbcHmacSha256,
+        [Test]
+        public void Ctor_throws_on_invalid_aes_128_cbc_hmac_sha_256()
+        {
+            VerifyThrowsInvalidFormat(mode: CipherMode.Aes128CbcHmacSha256,
+                                      iv: "invalid iv".ToBytes(),
+                                      ciphertext: Ciphertext,
+                                      mac: Mac,
+                                      expectedMessage: "IV must be 16 bytes long");
+
+            VerifyThrowsInvalidFormat(mode: CipherMode.Aes128CbcHmacSha256,
                                       iv: Iv,
                                       ciphertext: Ciphertext,
-                                      mac: null,
-                                      expectedMessage : "MAC must be 32 bytes long");
+                                      mac: "invalid mac".ToBytes(),
+                                      expectedMessage: "MAC must be 32 bytes long");
+        }
+
+        [Test]
+        public void Ctor_throws_on_invalid_aes_256_cbc_hmac_sha_256()
+        {
+            VerifyThrowsInvalidFormat(mode: CipherMode.Aes256CbcHmacSha256,
+                                      iv: "invalid iv".ToBytes(),
+                                      ciphertext: Ciphertext,
+                                      mac: Mac,
+                                      expectedMessage: "IV must be 16 bytes long");
 
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes256CbcHmacSha256,
                                       iv: Iv,
                                       ciphertext: Ciphertext,
                                       mac: "invalid mac".ToBytes(),
-                                      expectedMessage : "MAC must be 32 bytes long");
+                                      expectedMessage: "MAC must be 32 bytes long");
+        }
+
+        [Test]
+        public void Ctor_throws_on_invalid_rsa_2048_oaep_sha_1()
+        {
+            VerifyThrowsInvalidFormat(mode: CipherMode.Rsa2048OaepSha1,
+                                    iv: "invalid iv".ToBytes(),
+                                    ciphertext: RsaCiphertext,
+                                    mac: "".ToBytes(),
+                                    expectedMessage: "IV is not supported");
+
+            VerifyThrowsInvalidFormat(mode: CipherMode.Rsa2048OaepSha1,
+                                    iv: "".ToBytes(),
+                                    ciphertext: "invalid ciphertext".ToBytes(),
+                                    mac: "".ToBytes(),
+                                    expectedMessage: "Ciphertext must be 256 bytes long");
+
+            VerifyThrowsInvalidFormat(mode: CipherMode.Rsa2048OaepSha1,
+                                    iv: "".ToBytes(),
+                                    ciphertext: RsaCiphertext,
+                                    mac: "invalid mac".ToBytes(),
+                                    expectedMessage: "MAC is not supported");
         }
 
         [Test]
@@ -135,7 +187,7 @@ namespace Bitwarden.Test
             var cs = new CipherString(mode: CipherMode.Aes256Cbc,
                                       iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
                                       ciphertext: "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                      mac: null);
+                                      mac: "".ToBytes());
             var plaintext = cs.Decrypt("OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
 
             Assert.That(plaintext, Is.EqualTo("All your base are belong to us".ToBytes()));
@@ -204,5 +256,7 @@ namespace Bitwarden.Test
         private static readonly byte[] Iv = "iviviviviviviviv".ToBytes();
         private static readonly byte[] Ciphertext = "ciphertext".ToBytes();
         private static readonly byte[] Mac = "mac mac mac mac mac mac mac mac ".ToBytes();
+
+        private static readonly byte[] RsaCiphertext = new string('!', 256).ToBytes();
     }
 }

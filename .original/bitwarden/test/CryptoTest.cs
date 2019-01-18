@@ -70,7 +70,7 @@ namespace Bitwarden.Test
                         Throws
                             .InstanceOf<ClientException>()
                             .And.Property("Reason").EqualTo(ClientException.FailureReason.CryptoError)
-                            .And.Message.EqualTo("Decryption failed")
+                            .And.Message.EqualTo("AES decryption failed")
                             .And.InnerException.InstanceOf<CryptographicException>());
         }
 

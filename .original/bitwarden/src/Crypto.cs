@@ -58,7 +58,28 @@ namespace Bitwarden
             }
             catch (CryptographicException e)
             {
-                throw new ClientException(ClientException.FailureReason.CryptoError, "Decryption failed", e);
+                throw new ClientException(ClientException.FailureReason.CryptoError, "AES decryption failed", e);
+            }
+        }
+
+        public static byte[] DecryptRsa(byte[] ciphertext, byte[] privateKey)
+        {
+            return DecryptRsa(ciphertext, ParsePrivateKeyPkcs8(privateKey));
+        }
+
+        public static byte[] DecryptRsa(byte[] ciphertext, RSAParameters privateKey)
+        {
+            try
+            {
+                using (var rsa = new RSACryptoServiceProvider())
+                {
+                    rsa.ImportParameters(privateKey);
+                    return rsa.Decrypt(ciphertext, true);
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new ClientException(ClientException.FailureReason.CryptoError, "RSA decryption failed", e);
             }
         }
 

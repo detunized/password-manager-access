@@ -93,6 +93,8 @@ namespace Bitwarden
                 return DecryptAes128CbcHmacSha256(key);
             case CipherMode.Aes256CbcHmacSha256:
                 return DecryptAes256CbcHmacSha256(key);
+            case CipherMode.Rsa2048OaepSha1:
+                return DecryptRsa2048OaepSha1(key);
             default:
                 throw new InvalidOperationException("Invalid cipher mode");
             }
@@ -116,7 +118,7 @@ namespace Bitwarden
                 return CipherMode.Rsa2048OaepSha1;
             }
 
-            throw MakeError($"Invalid/unsupported cipher mode: '{s}'");
+            throw MakeError($"Invalid/unsupported cipher mode: {s}");
         }
 
         private static void Validate(CipherMode mode, byte[] iv, byte[] ciphertext, byte[] mac)
@@ -135,13 +137,13 @@ namespace Bitwarden
             case CipherMode.Aes256CbcHmacSha256:
                 ValidateAesIv(iv);
                 if (mac.Length != 32)
-                    throw MakeError("MAC must be 32 bytes long");
+                    throw MakeError($"MAC must be 32 bytes long, got {mac.Length}");
                 break;
             case CipherMode.Rsa2048OaepSha1:
                 if (iv.Length != 0)
                     throw MakeError("IV is not supported in RSA modes");
                 if (ciphertext.Length != 256)
-                    throw MakeError("Ciphertext must be 256 bytes long");
+                    throw MakeError($"Ciphertext must be 256 bytes long, got {ciphertext.Length}");
                 if (mac.Length != 0)
                     throw MakeError("MAC is not supported in RSA modes");
                 break;
@@ -153,7 +155,7 @@ namespace Bitwarden
         private static void ValidateAesIv(byte[] iv)
         {
             if (iv.Length != 16)
-                throw MakeError("IV must be 16 bytes long in AES modes");
+                throw MakeError($"IV must be 16 bytes long in AES modes, got {iv.Length}");
         }
 
         private static ClientException MakeError(string message)
@@ -166,7 +168,7 @@ namespace Bitwarden
             Debug.Assert(Mode == CipherMode.Aes256Cbc);
 
             if (key.Length != 32)
-                throw new InvalidOperationException("Invalid key size");
+                throw new InvalidOperationException($"Key must be 32 bytes long, got {key.Length}");
 
             return Crypto.DecryptAes256(Ciphertext, Iv, key);
         }
@@ -187,7 +189,7 @@ namespace Bitwarden
                 key = Crypto.ExpandKey(key);
 
             if (key.Length != 64)
-                throw new InvalidOperationException("Invalid key size");
+                throw new InvalidOperationException($"Key must be 64 bytes long, got {key.Length}");
 
             // First 32 bytes is the encryption key and the next 32 bytes is the MAC key
             var encKey = key.Take(32).ToArray();
@@ -200,6 +202,16 @@ namespace Bitwarden
                                           "MAC doesn't match. The vault is most likely corrupted.");
 
             return Crypto.DecryptAes256(Ciphertext, Iv, encKey);
+        }
+
+        private byte[] DecryptRsa2048OaepSha1(byte[] key)
+        {
+            Debug.Assert(Mode == CipherMode.Rsa2048OaepSha1);
+
+            if (Ciphertext.Length != 256)
+                throw new InvalidOperationException($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
+
+            return Crypto.DecryptRsa(Ciphertext, key);
         }
     }
 }
