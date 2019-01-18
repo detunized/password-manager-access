@@ -9,9 +9,15 @@ namespace Bitwarden
 {
     internal enum CipherMode
     {
+        // Symmetric
         Aes256Cbc = 0,
         Aes128CbcHmacSha256 = 1,
         Aes256CbcHmacSha256 = 2,
+
+        // Asymmetric
+        Rsa2048OaepSha1 = 4,
+
+        // TODO: Support other RSA modes. They don't seem to be used, so it's ok for now.
     }
 
     internal class CipherString
@@ -41,13 +47,16 @@ namespace Bitwarden
                 throw MakeError("Invalid/unsupported cipher string format");
             }
 
-            string iv;
+            string iv = "";
             string ciphertext;
             string mac = "";
 
             var onPipe = encrypted.Split('|');
             switch (onPipe.Length)
             {
+            case 1:
+                ciphertext = onPipe[0];
+                break;
             case 2:
                 iv = onPipe[0];
                 ciphertext = onPipe[1];
@@ -103,6 +112,8 @@ namespace Bitwarden
                 return CipherMode.Aes128CbcHmacSha256;
             case "2":
                 return CipherMode.Aes256CbcHmacSha256;
+            case "4":
+                return CipherMode.Rsa2048OaepSha1;
             }
 
             throw MakeError($"Invalid/unsupported cipher mode: '{s}'");
@@ -110,26 +121,39 @@ namespace Bitwarden
 
         private static void Validate(CipherMode mode, byte[] iv, byte[] ciphertext, byte[] mac)
         {
-            if (iv == null || iv.Length != 16)
-                throw MakeError("IV must be 16 bytes long");
-
-            if (ciphertext == null)
-                throw MakeError("Ciphertext must not be null");
+            if (iv == null || ciphertext == null || mac == null)
+                throw MakeError("IV, ciphertext and MAC must not be null");
 
             switch (mode)
             {
             case CipherMode.Aes256Cbc:
-                if (mac != null && mac.Length != 0)
+                ValidateAesIv(iv);
+                if (mac.Length != 0)
                     throw MakeError("MAC is not supported in AES-256-CBC mode");
                 break;
             case CipherMode.Aes128CbcHmacSha256:
             case CipherMode.Aes256CbcHmacSha256:
-                if (mac == null || mac.Length != 32)
+                ValidateAesIv(iv);
+                if (mac.Length != 32)
                     throw MakeError("MAC must be 32 bytes long");
+                break;
+            case CipherMode.Rsa2048OaepSha1:
+                if (iv.Length != 0)
+                    throw MakeError("IV is not supported in RSA modes");
+                if (ciphertext.Length != 256)
+                    throw MakeError("Ciphertext must be 256 bytes long");
+                if (mac.Length != 0)
+                    throw MakeError("MAC is not supported in RSA modes");
                 break;
             default:
                 throw MakeError("Invalid cipher mode");
             }
+        }
+
+        private static void ValidateAesIv(byte[] iv)
+        {
+            if (iv.Length != 16)
+                throw MakeError("IV must be 16 bytes long in AES modes");
         }
 
         private static ClientException MakeError(string message)

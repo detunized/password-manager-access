@@ -51,6 +51,17 @@ namespace Bitwarden.Test
         }
 
         [Test]
+        public void Parse_handles_cipher_mode_4()
+        {
+            var cs = CipherString.Parse("4.dcGElncBCW/5N+J9gcO0StC+TvUbRgAaV6PrWked/ejcmjqZxZTlFJ/K7mt1lcyEOz4aq/+2wrveHois5hvDv2Ft0M+MMk6iLiSc+TwHFjxX1jINVymRQMQwEsLF6HA2sTPyhi+HhebWXI0c+jBOW2m17DItEipUXODeCjGa6skWPb+U3+eFV0Un+GObaYP6/BmJw2jVePzudgwJ6b0ai1OtQMvIVlTaE/p3lJiEMhCPw5LGcLxe2Kmjer2Z1jABr+zmowveSnZ35sJcvpUHQLPi4j5Sj66PEPv6I0A+h7f0Jlm1S/MB+ViZN5k2KGNGIGfisGvCIl0GU+rmg8wFnw==");
+
+            Assert.That(cs.Mode, Is.EqualTo(CipherMode.Rsa2048OaepSha1));
+            Assert.That(cs.Iv.Length, Is.EqualTo(0));
+            Assert.That(cs.Ciphertext.Length, Is.EqualTo(256));
+            Assert.That(cs.Mac.Length, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Parse_throws_on_malformed_input()
         {
             var invalid = new[] {"", "0.", "0..", "0.|||"};
