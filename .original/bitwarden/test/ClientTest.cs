@@ -193,7 +193,7 @@ namespace Bitwarden.Test
                 {"d0e9210c-610b-4427-a344-a99600d462d3", "folder1"},
                 {"94542f0a-d858-46ce-87a5-a99600d47732", "folder2"},
             };
-            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, folders);
+            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, null, folders);
 
             Assert.That(account.Id, Is.EqualTo("a323db80-891a-4d91-9304-a981014cf3ca"));
             Assert.That(account.Name, Is.EqualTo("Facebook"));

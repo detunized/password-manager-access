@@ -62,6 +62,15 @@ namespace Bitwarden.Response
     public struct Profile
     {
         public string Key;
+        public string PrivateKey;
+        public Organization[] Organizations;
+    }
+
+    public struct Organization
+    {
+        public string Id;
+        public string Name;
+        public string Key;
     }
 
     [JsonObject(ItemRequired = Required.Always)]
@@ -88,6 +97,7 @@ namespace Bitwarden.Response
         public string Name;
         public string Notes;
         public string FolderId;
+        public string OrganizationId;
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public LoginInfo Login;

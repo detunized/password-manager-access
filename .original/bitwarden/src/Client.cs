@@ -319,20 +319,42 @@ namespace Bitwarden
 
         internal static Account[] DecryptVault(Response.Vault vault, byte[] key)
         {
-            // By default use the derived key, this is true for some old vaults.
-            var vaultKey = key;
-
-            // The newer vaults have a key stored in the profile section. It's encrypted
-            // with the derived key, with is effectively a KEK now.
-            var encryptedVaultKey = vault.Profile.Key;
-            if (encryptedVaultKey != null)
-                vaultKey = DecryptToBytes(vault.Profile.Key, key);
-
+            var vaultKey = DecryptVaultKey(vault.Profile, key);
+            var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
+            var orgKeys = DecryptOrganizationKeys(vault.Profile, privateKey);
             var folders = ParseFolders(vault.Folders, vaultKey);
 
             return vault.Ciphers
                 .Where(i => i.Type == Response.ItemType.Login)
-                .Select(i => ParseAccountItem(i, vaultKey, folders)).ToArray();
+                .Select(i => ParseAccountItem(i, vaultKey, orgKeys, folders)).ToArray();
+        }
+
+        internal static byte[] DecryptVaultKey(Response.Profile profile, byte[] derivedKey)
+        {
+            // By default use the derived key, this is true for some old vaults.
+            if (profile.Key.IsNullOrEmpty())
+                return derivedKey;
+
+            // The newer vaults have a key stored in the profile section. It's encrypted
+            // with the derived key, with is effectively a KEK now.
+            return DecryptToBytes(profile.Key, derivedKey);
+        }
+
+        // Null if not present
+        internal static byte[] DecryptPrivateKey(Response.Profile profile, byte[] vaultKey)
+        {
+            if (profile.PrivateKey.IsNullOrEmpty())
+                return null;
+
+            return DecryptToBytes(profile.PrivateKey, vaultKey);
+        }
+
+        internal static Dictionary<string, byte[]> DecryptOrganizationKeys(Response.Profile profile, byte[] privateKey)
+        {
+            if (privateKey == null || profile.Organizations == null)
+                return new Dictionary<string, byte[]>();
+
+            return profile.Organizations.ToDictionary(x => x.Id, x => DecryptToBytes(x.Key, privateKey));
         }
 
         internal static Dictionary<string, string> ParseFolders(Response.Folder[] folders, byte[] key)
@@ -340,8 +362,15 @@ namespace Bitwarden
             return folders.ToDictionary(i => i.Id, i => DecryptToString(i.Name, key));
         }
 
-        internal static Account ParseAccountItem(Response.Item item, byte[] key, Dictionary<string, string> folders)
+        internal static Account ParseAccountItem(Response.Item item,
+                                                 byte[] vaultKey,
+                                                 Dictionary<string, byte[]> orgKeys,
+                                                 Dictionary<string, string> folders)
         {
+            var key = item.OrganizationId.IsNullOrEmpty()
+                ? vaultKey
+                : orgKeys[item.OrganizationId];
+
             var folder = item.FolderId != null && folders.ContainsKey(item.FolderId)
                 ? folders[item.FolderId]
                 : "";
