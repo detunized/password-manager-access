@@ -11,6 +11,7 @@ namespace OnePassword
         {
             IncorrectCredentials,
             IncorrectSecondFactorCode,
+            OutdatedRememberMeToken,
             UserCanceledSecondFactor,
             NetworkError,
             InvalidResponse,

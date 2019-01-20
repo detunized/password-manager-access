@@ -106,8 +106,74 @@ namespace OnePassword
 
         internal static Vault[] OpenAllVaults(ClientInfo clientInfo, Ui ui, ISecureStorage storage, IHttpClient http)
         {
+            // Step 1: Login is multi-step process in itself, which might iterate for a few times internally.
+            var login = Login(clientInfo, ui, storage, http);
+
+            try
+            {
+                // Step 2: Get account info. It contains users, keys, groups, vault info and other stuff.
+                //         Not the actual vault data though. That is requested separately.
+                var accountInfo = GetAccountInfo(login.SessionKey, login.JsonHttp);
+
+                // Step 6: Get all the keysets in one place. The original code is quite hairy around this
+                //         topic, so it's not very clear if these keysets should be merged with anything else
+                //         or it's enough to just use these keys. For now we gonna ignore other keys and
+                //         see if it's enough.
+                var keysets = GetKeysets(login.SessionKey, login.JsonHttp);
+
+                // Step 3: Derive and decrypt keys
+                var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
+
+                // Step 4: Get and decrypt vaults
+                var vaults = GetVaults(accountInfo, login.SessionKey, keychain, login.JsonHttp);
+
+                // Done
+                return vaults;
+            }
+            finally
+            {
+                // TODO: If SignOut throws an exception it will hide the exception
+                //       thrown in the try block above (if any). This will hide the
+                //       original problem and thus will make it harder to diagnose
+                //       the issue.
+
+                // Last step: Make sure to sign out in any case
+                SignOut(login.JsonHttp);
+            }
+        }
+
+        internal struct LoginResult
+        {
+            public readonly AesKey SessionKey;
+            public readonly JsonHttpClient JsonHttp;
+
+            public LoginResult(AesKey sessionKey, JsonHttpClient jsonHttp)
+            {
+                SessionKey = sessionKey;
+                JsonHttp = jsonHttp;
+            }
+        }
+
+        internal static LoginResult Login(ClientInfo clientInfo, Ui ui, ISecureStorage storage, IHttpClient http)
+        {
             var jsonHttp = MakeJsonClient(http, GetApiUrl(clientInfo.Domain));
 
+            while (true)
+            {
+                try
+                {
+                    return LoginAttempt(clientInfo, ui, storage, jsonHttp);
+                }
+                catch (ClientException e) when (e.Reason == ClientException.FailureReason.OutdatedRememberMeToken)
+                {
+                    // When the stored 'remember me' token is rejected by the server, we need to try the whole
+                    // login sequence one more time. Probably the token is expired or it's invalid.
+                }
+            }
+        }
+
+        private static LoginResult LoginAttempt(ClientInfo clientInfo, Ui ui, ISecureStorage storage, JsonHttpClient jsonHttp)
+        {
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo, jsonHttp);
 
@@ -129,37 +195,7 @@ namespace OnePassword
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
                 PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, jsonHttp);
 
-            try
-            {
-                // Step 5: Get account info. It contains users, keys, groups, vault info and other stuff.
-                //         Not the actual vault data though. That is requested separately.
-                var accountInfo = GetAccountInfo(sessionKey, jsonHttp);
-
-                // Step 6: Get all the keysets in one place. The original code is quite hairy around this
-                //         topic, so it's not very clear if these keysets should be merged with anything else
-                //         or it's enough to just use these keys. For now we gonna ignore other keys and
-                //         see if it's enough.
-                var keysets = GetKeysets(sessionKey, jsonHttp);
-
-                // Step 7: Derive and decrypt keys
-                var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
-
-                // Step 8: Get and decrypt vaults
-                var vaults = GetVaults(accountInfo, sessionKey, keychain, jsonHttp);
-
-                // Done
-                return vaults;
-            }
-            finally
-            {
-                // TODO: If SignOut throws an exception it will hide the exception
-                //       thrown in the try block above (if any). This will hide the
-                //       original problem and thus will make it harder to diagnose
-                //       the issue.
-
-                // Last step: Make sure to sign out in any case
-                SignOut(jsonHttp);
-            }
+            return new LoginResult(sessionKey, jsonHttp);
         }
 
         internal static string GetApiUrl(string domain)
@@ -367,7 +403,20 @@ namespace OnePassword
             if (string.IsNullOrEmpty(token))
                 return false;
 
-            SubmitSecondFactorCode(SecondFactor.RememberMeToken, token, session, sessionKey, jsonHttp);
+            try
+            {
+                SubmitSecondFactorCode(SecondFactor.RememberMeToken, token, session, sessionKey, jsonHttp);
+            }
+            catch (ClientException e) when (e.Reason == ClientException.FailureReason.IncorrectSecondFactorCode)
+            {
+                // The token got rejected, need to erase it, it's no longer valid.
+                storage.StoreString(RememberMeTokenKey, null);
+
+                throw new ClientException(ClientException.FailureReason.OutdatedRememberMeToken,
+                                          "'Remember me' token got rejected",
+                                          e.InnerException);
+            }
+
             return true;
         }
 
