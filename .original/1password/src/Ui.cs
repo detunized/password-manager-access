@@ -5,7 +5,19 @@ namespace OnePassword
 {
     public abstract class Ui
     {
-        // Return null or blank to cancel
-        public abstract string ProvideGoogleAuthPasscode();
+        public class Passcode
+        {
+            public readonly string Code;
+            public readonly bool RememberMe;
+
+            public Passcode(string code, bool rememberMe)
+            {
+                Code = code;
+                RememberMe = rememberMe;
+            }
+        }
+
+        // Return null or cancel
+        public abstract Passcode ProvideGoogleAuthPasscode();
     }
 }

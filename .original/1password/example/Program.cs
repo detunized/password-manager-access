@@ -15,9 +15,18 @@ namespace Example
         {
             private const string ToCancel = "or just press ENTER to cancel";
 
-            public override string ProvideGoogleAuthPasscode()
+            public override Passcode ProvideGoogleAuthPasscode()
             {
-                return GetAnswer($"Enter Google Authenticator passcode {ToCancel}");
+                return GetPasscode("Enter Google Authenticator passcode");
+            }
+
+            private static Passcode GetPasscode(string prompt)
+            {
+                var passcode = GetAnswer($"{prompt} {ToCancel}");
+                if (string.IsNullOrWhiteSpace(passcode))
+                    return null;
+
+                return new Passcode(passcode, GetRememberMe());
             }
 
             private static string GetAnswer(string prompt)
@@ -27,6 +36,12 @@ namespace Example
                 var input = Console.ReadLine();
 
                 return input == null ? "" : input.Trim();
+            }
+
+            private static bool GetRememberMe()
+            {
+                var remember = GetAnswer("Remember this device?").ToLower();
+                return remember == "y" || remember == "yes";
             }
         }
 

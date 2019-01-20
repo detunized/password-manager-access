@@ -335,32 +335,44 @@ namespace OnePassword
                                                                ISecureStorage storage,
                                                                JsonHttpClient jsonHttp)
         {
-            var factor = ChooseSecondFactor(factors);
-            var code = GetSecondFactorCode(factor, ui, storage);
+            // Try "remember me" first. It's possible the server didn't allow it or
+            // we don't have a valid token stored from one of the previous sessions.
+            if (TrySubmitRememberMeToken(factors, session, sessionKey, storage, jsonHttp))
+                return;
 
-            // The "remember me" is special. When it's available it takes the highest priority.
-            // But in the case when we don't have the "remember me" token saved from the last time,
-            // we need to choose a different 2FA method. Normally some other method should be available.
-            if (string.IsNullOrEmpty(code) && factor == SecondFactor.RememberMeToken)
-            {
-                var otherFactors = factors.Where(x => x != SecondFactor.RememberMeToken).ToArray();
-                if (otherFactors.Length == 0)
-                    throw ExceptionFactory.MakeUnsupported("No supported 2FA methods other than 'remember me' found");
-
-                factor = ChooseSecondFactor(otherFactors);
-                code = GetSecondFactorCode(factor, ui, storage);
-            }
+            var factor = ChooseInteractiveSecondFactor(factors);
+            var passcode = GetSecondFactorPasscode(factor, ui);
 
             // Null or blank means the user canceled the 2FA
-            if (string.IsNullOrEmpty(code))
+            if (passcode == null)
                 throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
                                           "Second factor step is canceled by the user");
 
-            var token = SubmitSecondFactorCode(factor, code, session, sessionKey, jsonHttp);
-            storage.StoreString(RememberMeTokenKey, token);
+            var token = SubmitSecondFactorCode(factor, passcode.Code, session, sessionKey, jsonHttp);
+
+            // Store the token with the application. Next time we're not gonna need to enter any passcodes.
+            if (passcode.RememberMe)
+                storage.StoreString(RememberMeTokenKey, token);
         }
 
-        internal static SecondFactor ChooseSecondFactor(SecondFactor[] factors)
+        internal static bool TrySubmitRememberMeToken(SecondFactor[] factors,
+                                                      Session session,
+                                                      AesKey sessionKey,
+                                                      ISecureStorage storage,
+                                                      JsonHttpClient jsonHttp)
+        {
+            if (!factors.Contains(SecondFactor.RememberMeToken))
+                return false;
+
+            var token = storage.LoadString(RememberMeTokenKey);
+            if (string.IsNullOrEmpty(token))
+                return false;
+
+            SubmitSecondFactorCode(SecondFactor.RememberMeToken, token, session, sessionKey, jsonHttp);
+            return true;
+        }
+
+        internal static SecondFactor ChooseInteractiveSecondFactor(SecondFactor[] factors)
         {
             if (factors.Length == 0)
                 throw ExceptionFactory.MakeInvalidOperation("The list of 2FA methods could not be empty");
@@ -372,17 +384,15 @@ namespace OnePassword
                 if (factors.Contains(i))
                     return i;
 
-            return factors[0];
+            throw ExceptionFactory.MakeInvalidOperation("The list of 2FA methods doesn't contain anything we support");
         }
 
-        internal static string GetSecondFactorCode(SecondFactor factor, Ui ui, ISecureStorage storage)
+        internal static Ui.Passcode GetSecondFactorPasscode(SecondFactor factor, Ui ui)
         {
             switch (factor)
             {
             case SecondFactor.GoogleAuthenticator:
                 return ui.ProvideGoogleAuthPasscode();
-            case SecondFactor.RememberMeToken:
-                return storage.LoadString(RememberMeTokenKey);
             default:
                 throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
             }
@@ -397,7 +407,6 @@ namespace OnePassword
         {
             var key = "";
             object data = null;
-            var rememberMetoken = "";
 
             switch (factor)
             {
@@ -408,9 +417,6 @@ namespace OnePassword
             case SecondFactor.RememberMeToken:
                 key = "dsecret";
                 data = new Dictionary<string, string> {{"dshmac", Crypto.HashRememberMeToken(code, session)}};
-
-                // We need to return the old token, since the server doesn't provide a new token in this case
-                rememberMetoken = code;
                 break;
             default:
                 throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
@@ -428,7 +434,7 @@ namespace OnePassword
                                                  sessionKey,
                                                  jsonHttp);
 
-                return response.StringAt("dsecret", rememberMetoken);
+                return response.StringAt("dsecret", "");
             }
             catch (ClientException e)
             {
@@ -696,7 +702,6 @@ namespace OnePassword
 
         private static readonly SecondFactor[] SecondFactorPriority = new[]
         {
-            SecondFactor.RememberMeToken,
             SecondFactor.GoogleAuthenticator,
         };
     }
