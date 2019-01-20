@@ -106,7 +106,6 @@ namespace OnePassword
 
         internal static Vault[] OpenAllVaults(ClientInfo clientInfo, Ui ui, ISecureStorage storage, IHttpClient http)
         {
-            var keychain = new Keychain();
             var jsonHttp = MakeJsonClient(http, GetApiUrl(clientInfo.Domain));
 
             // Step 1: Request to initiate a new session
@@ -143,7 +142,7 @@ namespace OnePassword
                 var keysets = GetKeysets(sessionKey, jsonHttp);
 
                 // Step 7: Derive and decrypt keys
-                DecryptAllKeys(accountInfo, keysets, clientInfo, keychain);
+                var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
 
                 // Step 8: Get and decrypt vaults
                 var vaults = GetVaults(accountInfo, sessionKey, keychain, jsonHttp);
@@ -537,13 +536,13 @@ namespace OnePassword
                                           "Failed to sign out");
         }
 
-        internal static void DecryptAllKeys(JToken accountInfo,
-                                            JToken keysets,
-                                            ClientInfo clientInfo,
-                                            Keychain keychain)
+        internal static Keychain DecryptAllKeys(JToken accountInfo, JToken keysets, ClientInfo clientInfo)
         {
+            var keychain = new Keychain();
             DecryptKeysets(keysets.At("keysets"), clientInfo, keychain);
             DecryptVaultKeys(accountInfo.At("me/vaultAccess"), keychain);
+
+            return keychain;
         }
 
         internal static void DecryptKeysets(JToken keysets, ClientInfo clientInfo, Keychain keychain)

@@ -268,13 +268,11 @@ namespace OnePassword.Test
         }
 
         [Test]
-        public void DecryptKeys_stores_keys_in_keychain()
+        public void DecryptKeys_returns_all_keys_in_keychain()
         {
             var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
             var keysets = JObject.Parse(JsonHttpClientTest.ReadFixture("keysets"));
-            var keychain = new Keychain();
-
-            Client.DecryptAllKeys(accountInfo, keysets, ClientInfo, keychain);
+            var keychain = Client.DecryptAllKeys(accountInfo, keysets, ClientInfo);
 
             var aesKeys = new[]
             {
