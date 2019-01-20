@@ -9,7 +9,7 @@ using OnePassword;
 
 namespace Example
 {
-    public class Program
+    public static class Program
     {
         class TextUi: Ui
         {
@@ -79,7 +79,7 @@ namespace Example
             private readonly Dictionary<string, string> _storage = new Dictionary<string, string>();
         }
 
-        public static void Main(string[] args)
+        public static void Main()
         {
             // Read 1Password credentials from a file
             // The file should contain 5 lines:
