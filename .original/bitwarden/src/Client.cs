@@ -17,11 +17,16 @@ namespace Bitwarden
         public static Account[] OpenVault(string username,
                                           string password,
                                           string deviceId,
+                                          string baseUrl,
                                           Ui ui,
                                           ISecureStorage storage,
                                           IHttpClient http)
         {
-            var jsonHttp = new JsonHttpClient(http, BaseUrl);
+            // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
+            if (baseUrl.IsNullOrEmpty())
+                baseUrl = BaseUrl;
+
+            var jsonHttp = new JsonHttpClient(http, baseUrl);
 
             // 1. Request the number of KDF iterations needed to derive the key
             var iterations = RequestKdfIterationCount(username, jsonHttp);
@@ -37,7 +42,7 @@ namespace Bitwarden
 
             // 5. All subsequent requests are signed with this header
             var authJsonHttp = new JsonHttpClient(http,
-                                                  BaseUrl,
+                                                  baseUrl,
                                                   new Dictionary<string, string> {{"Authorization", token}});
 
             // 6. Fetch the vault

@@ -157,6 +157,7 @@ namespace Example
             //   - username
             //   - password
             //   - device ID (optional)
+            //   - base URL (optional)
             // See credentials.txt.example for an example.
             var credentials = File.ReadAllLines("../../credentials.txt");
             var username = credentials[0];
@@ -173,12 +174,17 @@ namespace Example
                                   "Store it and use it for subsequent runs.");
             }
 
+            // This one is optional. Must be set to null or "" for the default value.
+            var baseUrl = credentials.ElementAtOrDefault(3);
+            if (!string.IsNullOrEmpty(baseUrl))
+                Console.WriteLine($"Using a custom base URL {baseUrl}");
+
             // File backed secure storage that keeps things between sessions.
             var storage = new PlainStorage("../../storage.txt");
 
             try
             {
-                var vault = Vault.Open(username, password, deviceId, new TextUi(), storage);
+                var vault = Vault.Open(username, password, deviceId, baseUrl, new TextUi(), storage);
                 for (int i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];
