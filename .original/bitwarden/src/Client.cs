@@ -155,7 +155,7 @@ namespace Bitwarden
             // Password + 2FA is successful
             if (secondFactorResponse.AuthToken != null)
             {
-                SaveRememberMeToken(response, storage);
+                SaveRememberMeToken(secondFactorResponse, storage);
                 return secondFactorResponse.AuthToken;
             }
 
@@ -501,7 +501,7 @@ namespace Bitwarden
         //
 
         private const string BaseUrl = "https://vault.bitwarden.com";
-        private const string RememberMeTokenKey = "remember-me";
+        private const string RememberMeTokenKey = "remember-me-token";
 
         private static readonly Response.SecondFactorMethod[] SecondFactorMethodPreferenceOrder =
         {
