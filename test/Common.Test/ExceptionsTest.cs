@@ -25,6 +25,10 @@ namespace PasswordManagerAccess.Common.Test
         private const string Message = "message";
         private static readonly Exception InnerException = new Exception();
 
+        //
+        // Helpers
+        //
+
         private static void VerifyException(BaseException e)
         {
             Assert.Equal(Message, e.Message);

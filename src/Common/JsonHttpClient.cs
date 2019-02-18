@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -7,9 +7,8 @@ using System.Linq;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Web;
 
-namespace Bitwarden
+namespace PasswordManagerAccess.Common
 {
     internal class JsonHttpClient
     {
@@ -17,7 +16,7 @@ namespace Bitwarden
         public readonly string BaseUrl;
         public readonly Dictionary<string, string> Headers;
 
-        public JsonHttpClient(IHttpClient http, string baseUrl):
+        public JsonHttpClient(IHttpClient http, string baseUrl) :
             this(http, baseUrl, new Dictionary<string, string>())
         {
         }
@@ -145,8 +144,8 @@ namespace Bitwarden
         {
             return string.Join("&",
                                parameters.Select(i => string.Format("{0}={1}",
-                                                                    HttpUtility.UrlEncode(i.Key),
-                                                                    HttpUtility.UrlEncode(i.Value))));
+                                                                    WebUtility.UrlEncode(i.Key),
+                                                                    WebUtility.UrlEncode(i.Value))));
         }
 
         internal static ClientException MakeNetworkError(string method,

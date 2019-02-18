@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
@@ -8,14 +8,13 @@ using System.Net;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using Xunit;
 
-namespace Bitwarden.Test
+namespace PasswordManagerAccess.Common.Test
 {
-    [TestFixture]
     public class JsonHttpClientTest
     {
-        [Test]
+        [Fact]
         public void Get_makes_GET_request_with_headers()
         {
             var http = SetupGet();
@@ -25,32 +24,29 @@ namespace Bitwarden.Test
             http.Verify(x => x.Get(It.Is<string>(s => s == Url),
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
 
-            Assert.That(JToken.DeepEquals(response, ResponseJson));
+            Assert.True(JToken.DeepEquals(response, ResponseJson));
         }
 
-        [Test]
+        [Fact]
         public void Get_returns_deserialized_object()
         {
             var http = SetupGet();
             var client = SetupClient(http);
             var response = client.Get<ResponseObject>(Endpoint);
 
-            Assert.That(response.Status, Is.EqualTo("Ok"));
+            Assert.Equal("Ok", response.Status);
         }
 
-        [Test]
+        [Fact]
         public void Get_throws_on_missing_fields_in_json()
         {
             var http = SetupGet("{}");
             var client = SetupClient(http);
 
-            Assert.That(() => client.Get<ResponseObject>(Endpoint),
-                        Throws.InstanceOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.InvalidResponse));
+            Exceptions.AssertThrowsInvalidResponse(() => client.Get<ResponseObject>(Endpoint));
         }
 
-        [Test]
+        [Fact]
         public void Post_makes_POST_request_with_data_and_headers()
         {
             var http = SetupPost();
@@ -69,10 +65,10 @@ namespace Bitwarden.Test
                                     It.Is<string>(s => s == encodedData),
                                     It.Is<Dictionary<string, string>>(d => AreEqual(d, JsonHeaders))));
 
-            Assert.That(JToken.DeepEquals(response, ResponseJson));
+            Assert.True(JToken.DeepEquals(response, ResponseJson));
         }
 
-        [Test]
+        [Fact]
         public void PostForm_makes_POST_request_with_data_and_headers()
         {
             var http = SetupPost();
@@ -91,32 +87,29 @@ namespace Bitwarden.Test
                                     It.Is<string>(s => s == encodedData),
                                     It.Is<Dictionary<string, string>>(d => AreEqual(d, FormHeaders))));
 
-            Assert.That(JToken.DeepEquals(response, ResponseJson));
+            Assert.True(JToken.DeepEquals(response, ResponseJson));
         }
 
-        [Test]
+        [Fact]
         public void Post_returns_deserialized_object()
         {
             var http = SetupPost();
             var client = SetupClient(http);
             var response = client.Post<ResponseObject>(Endpoint, new Dictionary<string, string>());
 
-            Assert.That(response.Status, Is.EqualTo("Ok"));
+            Assert.Equal("Ok", response.Status);
         }
 
-        [Test]
+        [Fact]
         public void Post_throws_on_missing_fields_in_json()
         {
             var http = SetupPost("{}");
             var client = SetupClient(http);
 
-            Assert.That(() => client.Post<ResponseObject>(Endpoint, new Dictionary<string, string>()),
-                        Throws.InstanceOf<ClientException>()
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.InvalidResponse));
+            Exceptions.AssertThrowsInvalidResponse(() => client.Post<ResponseObject>(Endpoint, new Dictionary<string, string>()));
         }
 
-        [Test]
+        [Fact]
         public void MakeUrl_joins_url_with_slashes()
         {
             string[] bases = {"http://all.your.base", "http://all.your.base/"};
@@ -124,11 +117,10 @@ namespace Bitwarden.Test
 
             foreach (var b in bases)
                 foreach (var e in endpoints)
-                    Assert.That(new JsonHttpClient(null, b).MakeUrl(e),
-                                Is.EqualTo("http://all.your.base/are/belong/to/us"));
+                    Assert.Equal("http://all.your.base/are/belong/to/us", new JsonHttpClient(null, b).MakeUrl(e));
         }
 
-        [Test]
+        [Fact]
         public void UrlEncode_returns_encoded_parameters()
         {
             var encoded = JsonHttpClient.UrlEncode(new Dictionary<string, string>
@@ -138,7 +130,7 @@ namespace Bitwarden.Test
                 {"white space", "and symbols @%!/$"},
             });
 
-            Assert.That(encoded, Is.EqualTo("1=2&three=four&white+space=and+symbols+%40%25!%2f%24"));
+            Assert.Equal("1=2&three=four&white+space=and+symbols+%40%25!%2F%24", encoded);
         }
 
         //
