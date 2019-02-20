@@ -50,13 +50,13 @@ namespace PasswordManagerAccess.Common.Test
         public void Post_makes_POST_request_with_data_and_headers()
         {
             var http = SetupPost();
-            var data = new Dictionary<string, string>
+            var data = new Dictionary<string, object>
             {
                 {"one", "1"},
-                {"two", "2"},
-                {"three", "3"},
+                {"two", 2},
+                {"three", new object[] {"1", 2, true}},
             };
-            var encodedData = "{'one':'1','two':'2','three':'3'}".Replace('\'', '"');
+            var encodedData = "{'one':'1','two':2,'three':['1',2,true]}".Replace('\'', '"');
 
             var client = SetupClient(http);
             var response = client.Post(Endpoint, data);
@@ -72,13 +72,13 @@ namespace PasswordManagerAccess.Common.Test
         public void PostForm_makes_POST_request_with_data_and_headers()
         {
             var http = SetupPost();
-            var data = new Dictionary<string, string>
+            var data = new Dictionary<string, object>
             {
                 {"one", "1"},
-                {"two", "2"},
-                {"three", "3"},
+                {"two", 2},
+                {"three", "three"},
             };
-            var encodedData = "one=1&two=2&three=3";
+            var encodedData = "one=1&two=2&three=three";
 
             var client = SetupClient(http);
             var response = client.PostForm(Endpoint, data);
@@ -95,7 +95,7 @@ namespace PasswordManagerAccess.Common.Test
         {
             var http = SetupPost();
             var client = SetupClient(http);
-            var response = client.Post<ResponseObject>(Endpoint, new Dictionary<string, string>());
+            var response = client.Post<ResponseObject>(Endpoint, new Dictionary<string, object>());
 
             Assert.Equal("Ok", response.Status);
         }
@@ -106,7 +106,8 @@ namespace PasswordManagerAccess.Common.Test
             var http = SetupPost("{}");
             var client = SetupClient(http);
 
-            Exceptions.AssertThrowsInvalidResponse(() => client.Post<ResponseObject>(Endpoint, new Dictionary<string, string>()));
+            Exceptions.AssertThrowsInvalidResponse(
+                () => client.Post<ResponseObject>(Endpoint, new Dictionary<string, object>()));
         }
 
         [Fact]
@@ -123,9 +124,9 @@ namespace PasswordManagerAccess.Common.Test
         [Fact]
         public void UrlEncode_returns_encoded_parameters()
         {
-            var encoded = JsonHttpClient.UrlEncode(new Dictionary<string, string>
+            var encoded = JsonHttpClient.UrlEncode(new Dictionary<string, object>
             {
-                {"1", "2"},
+                {"1", 2},
                 {"three", "four"},
                 {"white space", "and symbols @%!/$"},
             });

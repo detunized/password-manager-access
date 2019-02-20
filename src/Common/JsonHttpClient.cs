@@ -10,18 +10,21 @@ using Newtonsoft.Json.Linq;
 
 namespace PasswordManagerAccess.Common
 {
+    using HttpHeaders = Dictionary<string, string>;
+    using PostParameters = Dictionary<string, object>;
+
     internal class JsonHttpClient
     {
         public readonly IHttpClient Http;
         public readonly string BaseUrl;
-        public readonly Dictionary<string, string> Headers;
+        public readonly HttpHeaders Headers;
 
         public JsonHttpClient(IHttpClient http, string baseUrl) :
-            this(http, baseUrl, new Dictionary<string, string>())
+            this(http, baseUrl, new HttpHeaders())
         {
         }
 
-        public JsonHttpClient(IHttpClient http, string baseUrl, Dictionary<string, string> headers)
+        public JsonHttpClient(IHttpClient http, string baseUrl, HttpHeaders headers)
         {
             Http = http;
             BaseUrl = baseUrl.TrimEnd('/');
@@ -46,22 +49,22 @@ namespace PasswordManagerAccess.Common
         // Post
         //
 
-        public JObject Post(string endpoint, Dictionary<string, string> parameters)
+        public JObject Post(string endpoint, PostParameters parameters)
         {
             return Post(endpoint, parameters, JsonContentType, JsonConvert.SerializeObject, Request);
         }
 
-        public T Post<T>(string endpoint, Dictionary<string, string> parameters)
+        public T Post<T>(string endpoint, PostParameters parameters)
         {
             return Post(endpoint, parameters, JsonContentType, JsonConvert.SerializeObject, Request<T>);
         }
 
-        public JObject PostForm(string endpoint, Dictionary<string, string> parameters)
+        public JObject PostForm(string endpoint, PostParameters parameters)
         {
             return Post(endpoint, parameters, FormContentType, UrlEncode, Request);
         }
 
-        public T PostForm<T>(string endpoint, Dictionary<string, string> parameters)
+        public T PostForm<T>(string endpoint, PostParameters parameters)
         {
             return Post(endpoint, parameters, FormContentType, UrlEncode, Request<T>);
         }
@@ -73,22 +76,22 @@ namespace PasswordManagerAccess.Common
         internal T Get<T>(string endpoint,
                           Func<string,
                                string,
-                               Dictionary<string, string>,
-                               Func<string, Dictionary<string, string>, string>, T> request)
+                               HttpHeaders,
+                               Func<string, HttpHeaders, string>, T> request)
         {
             return request("GET", endpoint, Headers, (url, headers) => Http.Get(url, headers));
         }
 
         internal T Post<T>(string endpoint,
-                           Dictionary<string, string> parameters,
+                           PostParameters parameters,
                            string contentType,
-                           Func<Dictionary<string, string>, string> serialize,
+                           Func<PostParameters, string> serialize,
                            Func<string,
                                 string,
-                                Dictionary<string, string>,
-                                Func<string, Dictionary<string, string>, string>, T> request)
+                                HttpHeaders,
+                                Func<string, HttpHeaders, string>, T> request)
         {
-            var jsonHeaders = new Dictionary<string, string>(Headers);
+            var jsonHeaders = new HttpHeaders(Headers);
             jsonHeaders["Accept"] = "application/json";
             jsonHeaders["Content-Type"] = contentType;
 
@@ -100,24 +103,24 @@ namespace PasswordManagerAccess.Common
 
         internal JObject Request(string method,
                                  string endpoint,
-                                 Dictionary<string, string> headers,
-                                 Func<string, Dictionary<string, string>, string> request)
+                                 HttpHeaders headers,
+                                 Func<string, HttpHeaders, string> request)
         {
             return Request(method, endpoint, headers, request, JObject.Parse);
         }
 
         internal T Request<T>(string method,
                               string endpoint,
-                              Dictionary<string, string> headers,
-                              Func<string, Dictionary<string, string>, string> request)
+                              HttpHeaders headers,
+                              Func<string, HttpHeaders, string> request)
         {
             return Request(method, endpoint, headers, request, JsonConvert.DeserializeObject<T>);
         }
 
         internal T Request<T>(string method,
                               string endpoint,
-                              Dictionary<string, string> headers,
-                              Func<string, Dictionary<string, string>, string> request,
+                              HttpHeaders headers,
+                              Func<string, HttpHeaders, string> request,
                               Func<string, T> parse)
         {
             var url = MakeUrl(endpoint);
@@ -140,12 +143,12 @@ namespace PasswordManagerAccess.Common
             return BaseUrl + '/' + endpoint.TrimStart('/');
         }
 
-        internal static string UrlEncode(Dictionary<string, string> parameters)
+        internal static string UrlEncode(PostParameters parameters)
         {
             return string.Join("&",
                                parameters.Select(i => string.Format("{0}={1}",
                                                                     WebUtility.UrlEncode(i.Key),
-                                                                    WebUtility.UrlEncode(i.Value))));
+                                                                    WebUtility.UrlEncode(i.Value.ToString()))));
         }
 
         internal static ClientException MakeNetworkError(string method,
