@@ -1,12 +1,15 @@
-using System;
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Licensed under the terms of the MIT license. See LICENCE for details.
+
+using PasswordManagerAccess.Keeper;
 
 namespace Keeper
 {
-    class Program
+    static class Program
     {
-        static void Main(string[] args)
+        public static void Main()
         {
-            Console.WriteLine("Hello World!");
+            Vault.Open("someone@example.com", "passw0rd!");
         }
     }
 }
