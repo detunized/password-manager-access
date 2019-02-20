@@ -22,8 +22,9 @@ namespace PasswordManagerAccess.Common
                                                                   ClientException.FailureReason reason,
                                                                   string message = "")
         {
-            var e = AssertThrowsClientException(action, reason);
+            var e = AssertThrowsClientException(action);
 
+            Assert.Equal(reason, e.Reason);
             Assert.NotNull(e.Message);
             Assert.Contains(message, e.Message);
 
