@@ -1,4 +1,6 @@
 /.vs/
+/example/*/bin/
+/example/*/obj/
 /src/bin/
 /src/obj/
 /test/bin/
