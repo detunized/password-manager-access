@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -6,9 +6,8 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Newtonsoft.Json.Linq;
 
-namespace OnePassword
+namespace PasswordManagerAccess.Common
 {
     internal static class Extensions
     {
@@ -24,8 +23,7 @@ namespace OnePassword
         public static byte[] DecodeHex(this string s)
         {
             if (s.Length % 2 != 0)
-                throw ExceptionFactory.MakeInvalidOperation(
-                    "DecodeHex: input length must be multiple of 2");
+                throw ExceptionFactory.MakeInvalidOperation("input length must be multiple of 2");
 
             var bytes = new byte[s.Length / 2];
             for (var i = 0; i < s.Length / 2; ++i)
@@ -40,8 +38,7 @@ namespace OnePassword
                     else if (c >= 'a' && c <= 'f')
                         b |= c - 'a' + 10;
                     else
-                        throw ExceptionFactory.MakeInvalidOperation(
-                            "DecodeHex: input contains invalid characters");
+                        throw ExceptionFactory.MakeInvalidOperation("invalid characters in hex");
                 }
 
                 bytes[i] = (byte)b;
@@ -70,7 +67,7 @@ namespace OnePassword
                 else if (c >= '2' && c <= '7')
                     c += 26 - '2';
                 else
-                    throw ExceptionFactory.MakeInvalidOperation("Decode32: invalid characters in base32");
+                    throw ExceptionFactory.MakeInvalidOperation("invalid characters in base32");
 
                 currentByte <<= 5;
                 currentByte |= c & 31;
@@ -87,10 +84,23 @@ namespace OnePassword
             return result;
         }
 
-        // Handles URL-safe, regular and mixed Base64 with or without padding.
+        // Decodes regular/standard Base64 (requires padding)
         public static byte[] Decode64(this string s)
         {
-            // Remove any padding.
+            return Convert.FromBase64String(s);
+        }
+
+        // Decodes URL-safe Base64 (requires padding)
+        public static byte[] Decode64UrlSafe(this string s)
+        {
+            var regularBase64 = s.Replace('-', '+').Replace('_', '/');
+            return regularBase64.Decode64();
+        }
+
+        // Handles URL-safe, regular and mixed Base64 with or without padding
+        public static byte[] Decode64Loose(this string s)
+        {
+            // Remove any padding
             var withoutPadding = s.TrimEnd('=');
 
             // Re-pad correctly
@@ -105,11 +115,8 @@ namespace OnePassword
                 break;
             }
 
-            // Convert to regular Base64
-            var regularBase64 = withPadding.Replace('-', '+').Replace('_', '/');
-
-            // Shouldn't fail anymore base of the padding or URL-safe.
-            return Convert.FromBase64String(regularBase64);
+            // Should be safe to call strict functions now
+            return withPadding.Decode64UrlSafe();
         }
 
         public static BigInteger ToBigInt(this string s)
@@ -146,10 +153,22 @@ namespace OnePassword
             return new string(hex);
         }
 
-        // URL-safe Base64
+        // Regular/standard Base64
         public static string ToBase64(this byte[] x)
         {
-            return Convert.ToBase64String(x).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            return Convert.ToBase64String(x);
+        }
+
+        // URL-safe Base64 with padding
+        public static string ToUrlSafeBase64(this byte[] x)
+        {
+            return x.ToBase64().Replace('+', '-').Replace('/', '_');
+        }
+
+        // URL-safe Base64 without padding
+        public static string ToUrlSafeBase64NoPadding(this byte[] x)
+        {
+            return x.ToUrlSafeBase64().TrimEnd('=');
         }
 
         public static BigInteger ToBigInt(this byte[] x)
@@ -186,99 +205,12 @@ namespace OnePassword
             return r >= 0 ? r : r + m;
         }
 
-        //
-        // Nested JToken access by path with and without exceptions
-        //
-
-        public static JToken At(this JToken j, string path)
+        // TODO: Get rid of this. It's just for porting.
+        private static class ExceptionFactory
         {
-            var c = j;
-            foreach (var i in path.Split('/'))
+            public static ClientException MakeInvalidOperation(string message)
             {
-                if (c.Type != JTokenType.Object)
-                    throw new JTokenAccessException(
-                        string.Format("Expected nested objects at '{0}'", path));
-
-                c = c[i];
-                if (c == null)
-                    throw new JTokenAccessException(string.Format("Path '{0}' doesn't exist", path));
-            }
-
-            return c;
-        }
-
-        public static JToken At(this JToken j, string path, JToken defaultValue)
-        {
-            try
-            {
-                return j.At(path);
-            }
-            catch (JTokenAccessException)
-            {
-                return defaultValue;
-            }
-        }
-
-        public static string StringAt(this JToken j, string path)
-        {
-            var s = j.At(path);
-            if (s.Type != JTokenType.String)
-                throw new JTokenAccessException(string.Format("Expected a string at '{0}'", path));
-
-            return (string)s;
-        }
-
-        public static string StringAt(this JToken j, string path, string defaultValue)
-        {
-            try
-            {
-                return j.StringAt(path);
-            }
-            catch (JTokenAccessException)
-            {
-                return defaultValue;
-            }
-        }
-
-        public static int IntAt(this JToken j, string path)
-        {
-            var i = j.At(path);
-            if (i.Type != JTokenType.Integer)
-                throw new JTokenAccessException(string.Format("Expected an integer at '{0}'", path));
-
-            return (int)i;
-        }
-
-        public static int IntAt(this JToken j, string path, int defaultValue)
-        {
-            try
-            {
-                return j.IntAt(path);
-            }
-            catch (JTokenAccessException)
-            {
-                return defaultValue;
-            }
-        }
-
-        public static bool BoolAt(this JToken j, string path)
-        {
-            var b = j.At(path);
-            if (b.Type != JTokenType.Boolean)
-                throw new JTokenAccessException(string.Format("Expected a boolean at '{0}'", path));
-
-            return (bool)b;
-        }
-
-        public static bool BoolAt(this JToken j, string path, bool defaultValue)
-        {
-            try
-            {
-                return j.BoolAt(path);
-            }
-            catch (JTokenAccessException)
-            {
-                return defaultValue;
+                return new ClientException(ClientException.FailureReason.InvalidOperation, message);
             }
         }
     }

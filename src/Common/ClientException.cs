@@ -16,6 +16,7 @@ namespace PasswordManagerAccess.Common
             InvalidResponse,
             RespondedWithError,
             UnsupportedFeature,
+            InvalidOperation,
             InvalidFormat,
             CryptoError,
             UnknownError,

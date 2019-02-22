@@ -35,5 +35,10 @@ namespace PasswordManagerAccess.Common
         {
             return AssertThrowsClientException(action, ClientException.FailureReason.InvalidResponse, message);
         }
+
+        public static ClientException AssertThrowsInvalidOperation(Action action, string message = "")
+        {
+            return AssertThrowsClientException(action, ClientException.FailureReason.InvalidOperation, message);
+        }
     }
 }

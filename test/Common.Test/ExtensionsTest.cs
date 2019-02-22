@@ -1,108 +1,104 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using Xunit;
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Common.Test
 {
-    [TestFixture]
     public class ExtensionsTest
     {
         //
         // string
         //
 
-        [Test]
+        [Fact]
         public void String_ToBytes_converts_string_to_utf8_bytes()
         {
-            Assert.That("".ToBytes(), Is.EqualTo(new byte[] { }));
-            Assert.That(TestString.ToBytes(), Is.EqualTo(TestBytes));
+            Assert.Equal(new byte[] { }, "".ToBytes());
+            Assert.Equal(TestBytes, TestString.ToBytes());
         }
 
-        [Test]
+        [Fact]
         public void String_DecodeHex()
         {
             foreach (var i in HexToBytes)
             {
-                Assert.That(i.Key.ToLower().DecodeHex(), Is.EqualTo(i.Value));
-                Assert.That(i.Key.ToUpper().DecodeHex(), Is.EqualTo(i.Value));
+                Assert.Equal(i.Value, i.Key.ToLower().DecodeHex());
+                Assert.Equal(i.Value, i.Key.ToUpper().DecodeHex());
             }
         }
 
-        [Test]
+        [Fact]
         public void String_DecodeHex_throws_on_odd_length()
         {
-            Assert.That(() => "0".DecodeHex(),
-                        ExceptionsTest.ThrowsInvalidOpeationWithMessage(
-                            "input length must be multiple of 2"));
+            Exceptions.AssertThrowsInvalidOperation(() => "0".DecodeHex(),
+                                                    "input length must be multiple of 2");
         }
 
-        [Test]
+        [Fact]
         public void String_DecodeHex_throws_on_non_hex_characters()
         {
-            Assert.That(() => "xz".DecodeHex(),
-                        ExceptionsTest.ThrowsInvalidOpeationWithMessage(
-                            "input contains invalid characters"));
+            Exceptions.AssertThrowsInvalidOperation(() => "xz".DecodeHex(),
+                                                    "invalid characters in hex");
         }
 
-        [Test]
+        [Fact]
         public void String_Decode32_decodes_base32()
         {
             // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
-            Assert.That("".Decode32(), Is.EqualTo(new byte [] { }));
-            Assert.That("MY======".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
-            Assert.That("MY======".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
-            Assert.That("MZXQ====".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f }));
-            Assert.That("MZXW6===".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f }));
-            Assert.That("MZXW6YQ=".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62 }));
-            Assert.That("MZXW6YTB".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }));
-            Assert.That("MZXW6YTBOI======".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }));
+            Assert.Equal(new byte[] { }, "".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY======".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY======".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f }, "MZXQ====".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f }, "MZXW6===".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "MZXW6YQ=".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "MZXW6YTB".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "MZXW6YTBOI======".Decode32());
         }
 
-        [Test]
+        [Fact]
         public void String_Decode32_decodes_base32_without_padding()
         {
             // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
-            Assert.That("MY".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
-            Assert.That("MZXQ".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f }));
-            Assert.That("MZXW6".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f }));
-            Assert.That("MZXW6YQ".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62 }));
-            Assert.That("MZXW6YTB".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }));
-            Assert.That("MZXW6YTBOI".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }));
+            Assert.Equal(new byte[] { 0x66 }, "MY".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f }, "MZXQ".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f }, "MZXW6".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "MZXW6YQ".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "MZXW6YTB".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "MZXW6YTBOI".Decode32());
         }
 
-        [Test]
+        [Fact]
         public void String_Decode32_decodes_base32_lowercase()
         {
             // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
-            Assert.That("my".Decode32(), Is.EqualTo(new byte [] { 0x66 }));
-            Assert.That("mzxq".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f }));
-            Assert.That("mzxw6".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f }));
-            Assert.That("mzxw6yq".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62 }));
-            Assert.That("mzxw6ytb".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }));
-            Assert.That("mzxw6ytboi".Decode32(), Is.EqualTo(new byte [] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }));
+            Assert.Equal(new byte[] { 0x66 }, "my".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f }, "mzxq".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f }, "mzxw6".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "mzxw6yq".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "mzxw6ytb".Decode32());
+            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "mzxw6ytboi".Decode32());
         }
 
-        [Test]
+        [Fact]
         public void String_Decode32_decodes_incorrectly_padded_base32()
         {
-            Assert.That("=".Decode32(), Is.EqualTo(new byte[] { }));
-            Assert.That("==".Decode32(), Is.EqualTo(new byte[] { }));
-            Assert.That("===".Decode32(), Is.EqualTo(new byte[] { }));
-            Assert.That("====".Decode32(), Is.EqualTo(new byte[] { }));
-            Assert.That("=====".Decode32(), Is.EqualTo(new byte[] { }));
-            Assert.That("MY=".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
-            Assert.That("MY==".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
-            Assert.That("MY===".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
-            Assert.That("MY====".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
-            Assert.That("MY=====".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
-            Assert.That("MY=========".Decode32(), Is.EqualTo(new byte[] { 0x66 }));
+            Assert.Equal(new byte[] { }, "=".Decode32());
+            Assert.Equal(new byte[] { }, "==".Decode32());
+            Assert.Equal(new byte[] { }, "===".Decode32());
+            Assert.Equal(new byte[] { }, "====".Decode32());
+            Assert.Equal(new byte[] { }, "=====".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY=".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY==".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY===".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY====".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY=====".Decode32());
+            Assert.Equal(new byte[] { 0x66 }, "MY=========".Decode32());
         }
 
+        [Fact]
         public void String_Decode32_throws_on_invalid_base32()
         {
             var invalidBase32 = new[]
@@ -120,109 +116,125 @@ namespace OnePassword.Test
             };
 
             foreach (var i in invalidBase32)
-                Assert.That(() => i.Decode32(),
-                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("invalid characters in base32"));
+                Exceptions.AssertThrowsInvalidOperation(() => i.Decode32(), "invalid characters in base32");
         }
 
-        [Test]
+        [Fact]
         public void String_Decode64_decodes_base64()
         {
-            Assert.That("".Decode64(), Is.EqualTo(new byte[] { }));
-            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
-            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
-            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
-            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+            Assert.Equal(new byte[] { }, "".Decode64());
+            Assert.Equal(new byte[] { 0x61 }, "YQ==".Decode64());
+            Assert.Equal(new byte[] { 0x61, 0x62 }, "YWI=".Decode64());
+            Assert.Equal(new byte[] { 0x61, 0x62, 0x63 }, "YWJj".Decode64());
+            Assert.Equal(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA==".Decode64());
         }
 
-        [Test]
-        public void String_Decode64_decodes_base64_without_padding()
+        [Fact]
+        public void String_Decode64UrlSafe_decodes_url_safe_base64()
         {
-            Assert.That("".Decode64(), Is.EqualTo(new byte[] { }));
-            Assert.That("YQ".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
-            Assert.That("YWI".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
-            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
-            Assert.That("YWJjZA".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+            Assert.Equal(new byte[] { 0xFB, 0xEF, 0xFF }, "++__".Decode64UrlSafe());
+            Assert.Equal(new byte[] { 0xFB, 0xEF, 0xFF }, "+-_/".Decode64UrlSafe());
+            Assert.Equal(new byte[] { 0xFB, 0xEF, 0xBE }, "++--".Decode64UrlSafe());
+            Assert.Equal(new byte[] { 0xF9, 0xAF, 0xDC }, "+a_c".Decode64UrlSafe());
         }
 
-        [Test]
-        public void String_Decode64_decodes_incorrectly_padded_base64()
+        [Fact]
+        public void String_Decode64Loose_decodes_base64_without_padding()
         {
-            Assert.That("==".Decode64(), Is.EqualTo(new byte[] { }));
-            Assert.That("YQ=".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
-            Assert.That("YWI==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
-            Assert.That("YWJj=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
-            Assert.That("YWJjZA===".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+            Assert.Equal(new byte[] { }, "".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61 }, "YQ".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61, 0x62 }, "YWI".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61, 0x62, 0x63 }, "YWJj".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA".Decode64Loose());
         }
 
-        [Test]
-        public void String_Decode64_decodes_url_safe_base64()
+        [Fact]
+        public void String_Decode64Loose_decodes_incorrectly_padded_base64()
         {
-            Assert.That("++__".Decode64(), Is.EqualTo(new byte[] { 0xFB, 0xEF, 0xFF }));
-            Assert.That("+-_/".Decode64(), Is.EqualTo(new byte[] { 0xFB, 0xEF, 0xFF }));
-            Assert.That("++--".Decode64(), Is.EqualTo(new byte[] { 0xFB, 0xEF, 0xBE }));
-            Assert.That("+a_c".Decode64(), Is.EqualTo(new byte[] { 0xF9, 0xAF, 0xDC }));
+            Assert.Equal(new byte[] { }, "==".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61 }, "YQ=".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61, 0x62 }, "YWI==".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61, 0x62, 0x63 }, "YWJj=".Decode64Loose());
+            Assert.Equal(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA===".Decode64Loose());
         }
 
-        [Test]
+        [Fact]
         public void String_ToBigInt_returns_BigInteger()
         {
-            Assert.That("".ToBigInt(), Is.EqualTo(BigInteger.Zero));
-            Assert.That("0".ToBigInt(), Is.EqualTo(BigInteger.Zero));
-            Assert.That("0FF".ToBigInt(), Is.EqualTo(new BigInteger(255)));
-            Assert.That("0DEADBEEF".ToBigInt(), Is.EqualTo(new BigInteger(0xDEADBEEF)));
+            Assert.Equal(BigInteger.Zero, "".ToBigInt());
+            Assert.Equal(BigInteger.Zero, "0".ToBigInt());
+            Assert.Equal(new BigInteger(255), "0FF".ToBigInt());
+            Assert.Equal(new BigInteger(0xDEADBEEF), "0DEADBEEF".ToBigInt());
         }
 
-        [Test]
+        [Fact]
         public void String_ToBigInt_returns_positive_BigInteger()
         {
-            Assert.That("7F".ToBigInt(), Is.EqualTo(new BigInteger(127)));
-            Assert.That("80".ToBigInt(), Is.EqualTo(new BigInteger(128)));
-            Assert.That("FF".ToBigInt(), Is.EqualTo(new BigInteger(255)));
-            Assert.That("DEADBEEF".ToBigInt(), Is.EqualTo(new BigInteger(0xDEADBEEF)));
+            Assert.Equal(new BigInteger(127), "7F".ToBigInt());
+            Assert.Equal(new BigInteger(128), "80".ToBigInt());
+            Assert.Equal(new BigInteger(255), "FF".ToBigInt());
+            Assert.Equal(new BigInteger(0xDEADBEEF), "DEADBEEF".ToBigInt());
         }
 
         //
         // byte[]
         //
 
-        [Test]
+        [Fact]
         public void ByteArray_ToUtf8_returns_string()
         {
-            Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+            Assert.Equal("", new byte[] { }.ToUtf8());
+            Assert.Equal(TestString, TestBytes.ToUtf8());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_ToHex_returns_hex_string()
         {
-            Assert.That(new byte[] { }.ToHex(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
+            Assert.Equal("", new byte[] { }.ToHex());
+            Assert.Equal(TestHex, TestBytes.ToHex());
         }
 
-        [Test]
-        public void ByteArray_ToBase64_returns_urlsafe_base64_without_padding()
+        [Fact]
+        public void ByteArray_ToBase64_returns_regular_base64_with_padding()
         {
-            Assert.That(new byte[] { }.ToBase64(), Is.EqualTo(""));
-            Assert.That(new byte[] { 0xFB }.ToBase64(), Is.EqualTo("-w"));
-            Assert.That(new byte[] { 0xFB, 0xEF }.ToBase64(), Is.EqualTo("--8"));
-            Assert.That(new byte[] { 0xFB, 0xEF, 0xFF }.ToBase64(), Is.EqualTo("--__"));
+            Assert.Equal("", new byte[] { }.ToBase64());
+            Assert.Equal("+w==", new byte[] { 0xFB }.ToBase64());
+            Assert.Equal("++8=", new byte[] { 0xFB, 0xEF }.ToBase64());
+            Assert.Equal("++//", new byte[] { 0xFB, 0xEF, 0xFF }.ToBase64());
         }
 
-        [Test]
+        [Fact]
+        public void ByteArray_ToUrlSafeBase64_returns_urlsafe_base64_with_padding()
+        {
+            Assert.Equal("", new byte[] { }.ToUrlSafeBase64());
+            Assert.Equal("-w==", new byte[] { 0xFB }.ToUrlSafeBase64());
+            Assert.Equal("--8=", new byte[] { 0xFB, 0xEF }.ToUrlSafeBase64());
+            Assert.Equal("--__", new byte[] { 0xFB, 0xEF, 0xFF }.ToUrlSafeBase64());
+        }
+
+        [Fact]
+        public void ByteArray_ToUrlSafeBase64NoPadding_returns_urlsafe_base64_without_padding()
+        {
+            Assert.Equal("", new byte[] { }.ToUrlSafeBase64NoPadding());
+            Assert.Equal("-w", new byte[] { 0xFB }.ToUrlSafeBase64NoPadding());
+            Assert.Equal("--8", new byte[] { 0xFB, 0xEF }.ToUrlSafeBase64NoPadding());
+            Assert.Equal("--__", new byte[] { 0xFB, 0xEF, 0xFF }.ToUrlSafeBase64NoPadding());
+        }
+
+        [Fact]
         public void ByteArray_ToBigInt_returns_BigInteger()
         {
-            Assert.That(new byte[] {}.ToBigInt(), Is.EqualTo(BigInteger.Zero));
-            Assert.That(new byte[] {0}.ToBigInt(), Is.EqualTo(BigInteger.Zero));
-            Assert.That(new byte[] {0xFF}.ToBigInt(), Is.EqualTo(new BigInteger(255)));
-            Assert.That(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}.ToBigInt(),
-                        Is.EqualTo(new BigInteger(0xDEADBEEF)));
+            Assert.Equal(BigInteger.Zero, new byte[] { }.ToBigInt());
+            Assert.Equal(BigInteger.Zero, new byte[] { 0 }.ToBigInt());
+            Assert.Equal(new BigInteger(255), new byte[] { 0xFF }.ToBigInt());
+            Assert.Equal(new BigInteger(0xDEADBEEF), new byte[] { 0xDE, 0xAD, 0xBE, 0xEF }.ToBigInt());
         }
 
         //
         // BigInteger
         //
 
-        [Test]
+        [Fact]
         public void BigInteger_ToHex_returns_hex_string()
         {
             var testCases = new Dictionary<int, string>
@@ -245,10 +257,10 @@ namespace OnePassword.Test
             };
 
             foreach (var i in testCases)
-                Assert.That(new BigInteger(i.Key).ToHex(), Is.EqualTo(i.Value));
+                Assert.Equal(i.Value, new BigInteger(i.Key).ToHex());
         }
 
-        [Test]
+        [Fact]
         public void BigInteger_ModExp_returns_positive_result()
         {
             var testCases = new[]
@@ -262,231 +274,8 @@ namespace OnePassword.Test
             foreach (var i in testCases)
             {
                 var r = new BigInteger(i[0]).ModExp(new BigInteger(i[1]), new BigInteger(i[2]));
-                Assert.That(r, Is.EqualTo(new BigInteger(i[3])));
+                Assert.Equal(new BigInteger(i[3]), r);
             }
-        }
-
-        //
-        // JToken
-        //
-
-        [Test]
-        public void JToken_chained_At_returns_token()
-        {
-            var j = JObject.Parse(@"{
-                'k1': {'k2': {'k3': 'v3'}}
-            }");
-
-            var k1 = j["k1"];
-            var k2 = j["k1"]["k2"];
-            var k3 = j["k1"]["k2"]["k3"];
-
-            Assert.That(j.At("k1"), Is.EqualTo(k1));
-            Assert.That(j.At("k1").At("k2"), Is.EqualTo(k2));
-            Assert.That(j.At("k1").At("k2").At("k3"), Is.EqualTo(k3));
-
-            Assert.That(j.At("k1").At("k2/k3"), Is.EqualTo(k3));
-            Assert.That(j.At("k1/k2").At("k3"), Is.EqualTo(k3));
-        }
-
-        [Test]
-        public void JToken_At_throws_on_invalid_path()
-        {
-            var j = JObject.Parse(@"{
-                'k1': 'v1',
-                'k2': {'k22': 'v22'},
-                'k3': {'k33': {'k333': 'v333'}}
-            }");
-
-            VerifyAtThrows(j, "i1");
-            VerifyAtThrows(j, "k1/k11");
-            VerifyAtThrows(j, "k2/i2");
-            VerifyAtThrows(j, "k2/k22/i22");
-            VerifyAtThrows(j, "k3/i3");
-            VerifyAtThrows(j, "k3/k33/i33");
-            VerifyAtThrows(j, "k3/k33/k333/i333");
-        }
-
-        [Test]
-        public void JToken_At_throws_on_non_objects()
-        {
-            var j = JObject.Parse(@"{
-                'k1': [],
-                'k2': true,
-                'k3': 10
-            }");
-
-            VerifyAtThrows(j, "k1/0");
-            VerifyAtThrows(j, "k2/k22");
-            VerifyAtThrows(j, "k3/k33/k333");
-        }
-
-        [Test]
-        public void JToken_At_returns_default_value_on_invalid_path()
-        {
-            var j = JObject.Parse(@"{
-                'k1': 'v1',
-                'k2': {'k22': 'v22'},
-                'k3': {'k33': {'k333': 'v333'}}
-            }");
-
-            VerifyAtReturnsDefault(j, "i1");
-            VerifyAtReturnsDefault(j, "k1/k11");
-            VerifyAtReturnsDefault(j, "k2/i2");
-            VerifyAtReturnsDefault(j, "k2/k22/i22");
-            VerifyAtReturnsDefault(j, "k3/i3");
-            VerifyAtReturnsDefault(j, "k3/k33/i33");
-            VerifyAtReturnsDefault(j, "k3/k33/k333/i333");
-        }
-
-        [Test]
-        public void JToken_StringAt_returns_string()
-        {
-            var j = JObject.Parse(@"{
-                'k1': 'v1',
-                'k2': {'k22': 'v22'},
-                'k3': {'k33': {'k333': 'v333'}}
-            }");
-
-            Assert.That(j.StringAt("k1"), Is.EqualTo("v1"));
-            Assert.That(j.StringAt("k2/k22"), Is.EqualTo("v22"));
-            Assert.That(j.StringAt("k3/k33/k333"), Is.EqualTo("v333"));
-        }
-
-        [Test]
-        public void JToken_StringAt_throws_on_non_stings()
-        {
-            var j = JObject.Parse(@"{
-                'k1': true,
-                'k2': 10,
-                'k3': 10.0,
-                'k4': [],
-                'k5': {},
-            }");
-
-            VerifyStringAtThrows(j, "k1");
-            VerifyStringAtThrows(j, "k2");
-            VerifyStringAtThrows(j, "k3");
-            VerifyStringAtThrows(j, "k4");
-            VerifyStringAtThrows(j, "k5");
-        }
-
-        [Test]
-        public void JToken_StringAt_returns_default_value_on_non_strings()
-        {
-            var j = JObject.Parse(@"{
-                'k1': true,
-                'k2': 10,
-                'k3': 10.0,
-                'k4': [],
-                'k5': {},
-            }");
-
-            VerifyStringAtReturnsDefault(j, "k1");
-            VerifyStringAtReturnsDefault(j, "k2");
-            VerifyStringAtReturnsDefault(j, "k3");
-            VerifyStringAtReturnsDefault(j, "k4");
-            VerifyStringAtReturnsDefault(j, "k5");
-        }
-
-        [Test]
-        public void JToken_IntAt_returns_int()
-        {
-            var j = JObject.Parse(@"{
-                'k1': 13,
-                'k2': {'k22': 42},
-                'k3': {'k33': {'k333': 1337}}
-            }");
-
-            Assert.That(j.IntAt("k1"), Is.EqualTo(13));
-            Assert.That(j.IntAt("k2/k22"), Is.EqualTo(42));
-            Assert.That(j.IntAt("k3/k33/k333"), Is.EqualTo(1337));
-        }
-
-        [Test]
-        public void JToken_IntAt_throws_on_non_ints()
-        {
-            var j = JObject.Parse(@"{
-                'k1': true,
-                'k2': '10',
-                'k3': 10.0,
-                'k4': [],
-                'k5': {},
-            }");
-
-            VerifyIntAtThrows(j, "k1");
-            VerifyIntAtThrows(j, "k2");
-            VerifyIntAtThrows(j, "k3");
-            VerifyIntAtThrows(j, "k4");
-            VerifyIntAtThrows(j, "k5");
-        }
-
-        [Test]
-        public void JToken_IntAtOrNull_returns_default_value_on_non_ints()
-        {
-            var j = JObject.Parse(@"{
-                'k1': true,
-                'k2': '10',
-                'k3': 10.0,
-                'k4': [],
-                'k5': {},
-            }");
-
-            VerifyIntAtReturnsDefault(j, "k1");
-            VerifyIntAtReturnsDefault(j, "k2");
-            VerifyIntAtReturnsDefault(j, "k3");
-            VerifyIntAtReturnsDefault(j, "k4");
-            VerifyIntAtReturnsDefault(j, "k5");
-        }
-
-        [Test]
-        public void JToken_BoolAt_returns_bools()
-        {
-            var j = JObject.Parse(@"{
-                'k1': true,
-                'k2': {'k22': false},
-                'k3': {'k33': {'k333': true}}
-            }");
-
-            Assert.That(j.BoolAt("k1"), Is.EqualTo(true));
-            Assert.That(j.BoolAt("k2/k22"), Is.EqualTo(false));
-            Assert.That(j.BoolAt("k3/k33/k333"), Is.EqualTo(true));
-        }
-
-        [Test]
-        public void JToken_BoolAt_throws_on_non_bools()
-        {
-            var j = JObject.Parse(@"{
-                'k1': 10,
-                'k2': '10',
-                'k3': 10.0,
-                'k4': [],
-                'k5': {},
-            }");
-
-            VerifyBoolAtThrows(j, "k1");
-            VerifyBoolAtThrows(j, "k2");
-            VerifyBoolAtThrows(j, "k3");
-            VerifyBoolAtThrows(j, "k4");
-            VerifyBoolAtThrows(j, "k5");
-        }
-
-        [Test]
-        public void JToken_BoolAtOrNull_returns_null_on_non_bools()
-        {
-            var j = JObject.Parse(@"{
-                'k1': 10,
-                'k2': '10',
-                'k3': 10.0,
-                'k4': [],
-                'k5': {},
-            }");
-
-            VerifyBoolAtReturnsDefault(j, "k1");
-            VerifyBoolAtReturnsDefault(j, "k2");
-            VerifyBoolAtReturnsDefault(j, "k3");
-            VerifyBoolAtReturnsDefault(j, "k4");
-            VerifyBoolAtReturnsDefault(j, "k5");
         }
 
         //
@@ -523,56 +312,5 @@ namespace OnePassword.Test
             {"8af633933e96a3c3550c2734bd814195",
              new byte[] {0x8A, 0xF6, 0x33, 0x93, 0x3E, 0x96, 0xA3, 0xC3, 0x55, 0x0C, 0x27, 0x34, 0xBD, 0x81, 0x41, 0x95}}
         };
-
-        //
-        // Helpers
-        //
-
-        private static void VerifyAtThrows(JToken token, string path)
-        {
-            VerifyAccessThrows(token, path, (t, p) => t.At(p));
-        }
-
-        private static void VerifyStringAtThrows(JToken token, string path)
-        {
-            VerifyAccessThrows(token, path, (t, p) => t.StringAt(p));
-        }
-
-        private static void VerifyIntAtThrows(JToken token, string path)
-        {
-            VerifyAccessThrows(token, path, (t, p) => t.IntAt(p));
-        }
-
-        private static void VerifyBoolAtThrows(JToken token, string path)
-        {
-            VerifyAccessThrows(token, path, (t, p) => t.BoolAt(p));
-        }
-
-        private static void VerifyAccessThrows(JToken token, string path, Action<JToken, string> access)
-        {
-            Assert.That(() => access(token, path), Throws.TypeOf<JTokenAccessException>());
-        }
-
-        private static void VerifyAtReturnsDefault(JToken token, string path)
-        {
-            var dv = new JArray();
-            Assert.That(token.At(path, dv), Is.SameAs(dv));
-        }
-
-        private static void VerifyStringAtReturnsDefault(JToken token, string path)
-        {
-            Assert.That(token.StringAt(path, "default"), Is.EqualTo("default"));
-        }
-
-        private static void VerifyIntAtReturnsDefault(JToken token, string path)
-        {
-            Assert.That(token.IntAt(path, 1337), Is.EqualTo(1337));
-        }
-
-        private static void VerifyBoolAtReturnsDefault(JToken token, string path)
-        {
-            Assert.That(token.BoolAt(path, false), Is.EqualTo(false));
-            Assert.That(token.BoolAt(path, true), Is.EqualTo(true));
-        }
     }
 }
