@@ -52,5 +52,18 @@ namespace PasswordManagerAccess.Common.Test
             var derived = Crypto.Pbkdf2Sha512("password", "saltsalt".ToBytes(), 13, 32);
             Assert.Equal("zpWyQNRZlkwRdVOkHlemEWCjT8P8js2m6sYqcakt+ns=".Decode64(), derived);
         }
+
+        //
+        // AES
+        //
+
+        [Fact]
+        public void DecryptAes256_decrypts_ciphertext()
+        {
+            var plaintext = Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                                 "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                                 "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
+            Assert.Equal("All your base are belong to us".ToBytes(), plaintext);
+        }
     }
 }
