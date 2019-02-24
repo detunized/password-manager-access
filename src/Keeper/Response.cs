@@ -36,6 +36,18 @@ namespace PasswordManagerAccess.Keeper.Response
 
         [JsonProperty(PropertyName = "session_token")]
         public string Token;
+
+        [JsonProperty(PropertyName = "keys")]
+        public Keys Keys;
+    }
+
+    internal struct Keys
+    {
+        [JsonProperty(PropertyName = "encryption_params")]
+        public string EncryptionParams;
+
+        [JsonProperty(PropertyName = "encrypted_private_key")]
+        public string EncryptPrivateKey;
     }
 
     internal struct EncryptedVault

@@ -28,6 +28,10 @@ namespace PasswordManagerAccess.Keeper
 
             // 4. Get vault
             var encryptedVault = RequestVault(username, session.Token, jsonHttp);
+
+            // 5. Decrypt vault key
+            var vaultKey = Crypto.DecryptVaultKey(session.Keys.EncryptionParams.Decode64Loose(),
+                                                  password);
         }
 
         //
