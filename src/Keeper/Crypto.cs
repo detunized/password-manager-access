@@ -3,6 +3,9 @@
 
 namespace PasswordManagerAccess.Keeper
 {
+    using System.IO;
+    using System.Linq;
+    using PasswordManagerAccess.Common;
     using C = Common.Crypto;
 
     internal static class Crypto
@@ -10,6 +13,31 @@ namespace PasswordManagerAccess.Keeper
         public static byte[] HashPassword(string password, byte[] salt, int iterations)
         {
             return C.Sha256(C.Pbkdf2Sha256(password, salt, iterations, 32));
+        }
+
+        internal static byte[] DecryptVaultKey(byte[] encodedKey, string password)
+        {
+            using (var r = new BinaryReader(new MemoryStream(encodedKey, false)))
+            {
+                var version = r.ReadByte();
+                var iterations = (r.ReadByte() << 16) | (r.ReadByte() << 8) | r.ReadByte();
+                var salt = r.ReadBytes(16);
+                var iv = r.ReadBytes(16);
+                var ciphertext = r.ReadBytes(64);
+
+                var key = C.Pbkdf2Sha256(password, salt, iterations, 32);
+                var plaintext = C.DecryptAes256CbcNoPadding(ciphertext, iv, key);
+
+                // Verification: must be the same value twice
+                var vaultKey = plaintext.Take(32);
+                var verification = plaintext.Skip(32).Take(32);
+
+                if (!vaultKey.SequenceEqual(verification))
+                    throw new ClientException(ClientException.FailureReason.CryptoError,
+                                              "Vault key decryption failed");
+
+                return vaultKey.ToArray();
+            }
         }
     }
 }
