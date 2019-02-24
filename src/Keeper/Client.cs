@@ -3,11 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Keeper
 {
+    using R = Response;
+
     internal static class Client
     {
         public static void OpenVault(string username, string password, IHttpClient http)
@@ -33,50 +34,17 @@ namespace PasswordManagerAccess.Keeper
         // Internal
         //
 
-        internal struct KdfInfo
+        internal static R.KdfInfo RequestKdfInfo(string username, JsonHttpClient jsonHttp)
         {
-            [JsonProperty(PropertyName ="result")]
-            public string Result;
-
-            [JsonProperty(PropertyName = "result_code")]
-            public string ResultCode;
-
-            [JsonProperty(PropertyName = "message")]
-            public string Message;
-
-            [JsonProperty(PropertyName = "salt")]
-            public string Salt;
-
-            [JsonProperty(PropertyName = "iterations")]
-            public int Iterations;
+            return jsonHttp.Post<R.KdfInfo>("", SharedLoginParameters(username));
         }
 
-        internal static KdfInfo RequestKdfInfo(string username, JsonHttpClient jsonHttp)
-        {
-            return jsonHttp.Post<KdfInfo>("", SharedLoginParameters(username));
-        }
-
-        internal struct Session
-        {
-            [JsonProperty(PropertyName = "result")]
-            public string Result;
-
-            [JsonProperty(PropertyName = "result_code")]
-            public string ResultCode;
-
-            [JsonProperty(PropertyName = "message")]
-            public string Message;
-
-            [JsonProperty(PropertyName = "session_token")]
-            public string Token;
-        }
-
-        internal static Session Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        internal static R.Session Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
         {
             var parameters = SharedLoginParameters(username);
             parameters["auth_response"] = passwordHash.ToUrlSafeBase64NoPadding();
 
-            var response = jsonHttp.Post<Session>("", parameters);
+            var response = jsonHttp.Post<R.Session>("", parameters);
             if (response.Result != "success")
             {
                 var error = response.Message.IsNullOrEmpty() ? response.ResultCode : response.Message;
@@ -99,18 +67,9 @@ namespace PasswordManagerAccess.Keeper
             };
         }
 
-        internal struct EncryptedVault
+        internal static R.EncryptedVault RequestVault(string username, string token, JsonHttpClient jsonHttp)
         {
-            [JsonProperty(PropertyName = "result")]
-            public string Result;
-
-            [JsonProperty(PropertyName = "full_sync")]
-            public bool FullSync;
-        }
-
-        internal static object RequestVault(string username, string token, JsonHttpClient jsonHttp)
-        {
-            var response = jsonHttp.Post<EncryptedVault>("", new Dictionary<string, object>
+            var response = jsonHttp.Post<R.EncryptedVault>("", new Dictionary<string, object>
             {
                 {"command", "sync_down"},
                 {"include", new []{"sfheaders", "sfrecords", "sfusers", "teams", "folders"}},
