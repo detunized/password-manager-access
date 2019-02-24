@@ -1,6 +1,7 @@
 /.vs/
 /example/*/bin/
 /example/*/obj/
+/example/*/config.yaml
 /src/bin/
 /src/obj/
 /test/bin/
