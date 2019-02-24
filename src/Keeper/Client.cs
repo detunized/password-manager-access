@@ -20,6 +20,9 @@ namespace PasswordManagerAccess.Keeper
             var passwordHash = Crypto.HashPassword(password,
                                                    kdfInfo.Salt.Decode64Loose(),
                                                    kdfInfo.Iterations);
+
+            // 3. Login
+            var session = Login(username, passwordHash, jsonHttp);
         }
 
         //
@@ -46,14 +49,33 @@ namespace PasswordManagerAccess.Keeper
 
         internal static KdfInfo RequestKdfInfo(string username, JsonHttpClient jsonHttp)
         {
-            return jsonHttp.Post<KdfInfo>("", new Dictionary<string, object>
+            return jsonHttp.Post<KdfInfo>("", SharedLoginParameters(username));
+        }
+
+        internal struct Session
+        {
+            [JsonProperty(PropertyName = "auth_response")]
+            public string Token;
+        }
+
+        internal static Session Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        {
+            var parameters = SharedLoginParameters(username);
+            parameters["auth_response"] = passwordHash.ToUrlSafeBase64NoPadding();
+
+            return jsonHttp.Post<Session>("", parameters);
+        }
+
+        internal static Dictionary<string, object> SharedLoginParameters(string username)
+        {
+            return new Dictionary<string, object>
             {
                 {"command", "login"},
                 {"include", new []{"keys"}},
                 {"version", 2},
                 {"client_version", ClientVersion},
                 {"username", username},
-            });
+            };
         }
 
         //
