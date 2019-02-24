@@ -15,6 +15,11 @@ namespace PasswordManagerAccess.Keeper
 
             // 1. Get KDF info
             var kdfInfo = RequestKdfInfo(username, jsonHttp);
+
+            // 2. Hash the password to prove identity
+            var passwordHash = Crypto.HashPassword(password,
+                                                   kdfInfo.Salt.Decode64Loose(),
+                                                   kdfInfo.Iterations);
         }
 
         //
