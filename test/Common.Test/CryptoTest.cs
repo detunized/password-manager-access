@@ -40,14 +40,14 @@ namespace PasswordManagerAccess.Common.Test
         }
 
         [Fact]
-        public void Generate_sha_256_returns_correct_result()
+        public void Pbkdf2Sha256_returns_correct_result()
         {
             var derived = Crypto.Pbkdf2Sha256("password", "saltsalt".ToBytes(), 13, 32);
             Assert.Equal("vJEouk0ert2NexzPxbIn09X1I34luPYBn2IKmJQu66s=".Decode64(), derived);
         }
 
         [Fact]
-        public void Generate_sha_512_returns_correct_result()
+        public void Pbkdf2Sha512_returns_correct_result()
         {
             var derived = Crypto.Pbkdf2Sha512("password", "saltsalt".ToBytes(), 13, 32);
             Assert.Equal("zpWyQNRZlkwRdVOkHlemEWCjT8P8js2m6sYqcakt+ns=".Decode64(), derived);
