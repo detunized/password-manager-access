@@ -58,7 +58,16 @@ namespace PasswordManagerAccess.Keeper
 
         internal struct Session
         {
-            [JsonProperty(PropertyName = "auth_response")]
+            [JsonProperty(PropertyName = "result")]
+            public string Result;
+
+            [JsonProperty(PropertyName = "result_code")]
+            public string ResultCode;
+
+            [JsonProperty(PropertyName = "message")]
+            public string Message;
+
+            [JsonProperty(PropertyName = "session_token")]
             public string Token;
         }
 
@@ -67,7 +76,15 @@ namespace PasswordManagerAccess.Keeper
             var parameters = SharedLoginParameters(username);
             parameters["auth_response"] = passwordHash.ToUrlSafeBase64NoPadding();
 
-            return jsonHttp.Post<Session>("", parameters);
+            var response = jsonHttp.Post<Session>("", parameters);
+            if (response.Result != "success")
+            {
+                var error = response.Message.IsNullOrEmpty() ? response.ResultCode : response.Message;
+                throw new ClientException(ClientException.FailureReason.InvalidResponse,
+                                          $"Login failed: '{error}'");
+            }
+
+            return response;
         }
 
         internal static Dictionary<string, object> SharedLoginParameters(string username)
