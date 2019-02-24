@@ -15,6 +15,11 @@ namespace PasswordManagerAccess.Common
         // string
         //
 
+        public static bool IsNullOrEmpty(this string s)
+        {
+            return string.IsNullOrEmpty(s);
+        }
+
         public static byte[] ToBytes(this string s)
         {
             return Encoding.UTF8.GetBytes(s);

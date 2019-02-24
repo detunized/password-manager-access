@@ -14,6 +14,13 @@ namespace PasswordManagerAccess.Common.Test
         //
 
         [Fact]
+        public void String_IsNullOrEmpty_returns_true()
+        {
+            Assert.True(((string)null).IsNullOrEmpty());
+            Assert.True("".IsNullOrEmpty());
+        }
+
+        [Fact]
         public void String_ToBytes_converts_string_to_utf8_bytes()
         {
             Assert.Equal(new byte[] { }, "".ToBytes());
