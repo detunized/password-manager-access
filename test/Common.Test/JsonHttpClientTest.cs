@@ -215,7 +215,7 @@ namespace PasswordManagerAccess.Common.Test
             VerifyGetUrl(http.Http, url);
         }
 
-        public static void VerifyGetUrl(IHttpClient http, string url)
+        internal static void VerifyGetUrl(IHttpClient http, string url)
         {
             Mock.Get(http).Verify(x => x.Get(It.Is<string>(s => s.Contains(url)),
                                              It.IsAny<Dictionary<string, string>>()));
@@ -256,7 +256,7 @@ namespace PasswordManagerAccess.Common.Test
             VerifyPostUrl(http.Http, url);
         }
 
-        public static void VerifyPostUrl(IHttpClient http, string url)
+        internal static void VerifyPostUrl(IHttpClient http, string url)
         {
             Mock.Get(http).Verify(x => x.Post(It.Is<string>(s => s.Contains(url)),
                                               It.IsAny<string>(),
