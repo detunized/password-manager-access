@@ -23,6 +23,9 @@ namespace PasswordManagerAccess.Keeper
 
             // 3. Login
             var session = Login(username, passwordHash, jsonHttp);
+
+            // 4. Get vault
+            var encryptedVault = RequestVault(username, session.Token, jsonHttp);
         }
 
         //
@@ -76,6 +79,48 @@ namespace PasswordManagerAccess.Keeper
                 {"client_version", ClientVersion},
                 {"username", username},
             };
+        }
+
+        internal struct EncryptedVault
+        {
+            [JsonProperty(PropertyName = "result")]
+            public string Result;
+
+            [JsonProperty(PropertyName = "full_sync")]
+            public bool FullSync;
+        }
+
+        internal static object RequestVault(string username, string token, JsonHttpClient jsonHttp)
+        {
+            var response = jsonHttp.Post<EncryptedVault>("", new Dictionary<string, object>
+            {
+                {"command", "sync_down"},
+                {"include", new []{"sfheaders", "sfrecords", "sfusers", "teams", "folders"}},
+                {"revision", 0},
+                {"client_time", GetCurrentTimeInMs()},
+                {"device_id", "Commander"},
+                {"device_name", "Commander"},
+                {"protocol_version", 1},
+                {"client_version", ClientVersion},
+                {"session_token", token},
+                {"username", username},
+            });
+
+            if (response.Result != "success")
+                throw new ClientException(ClientException.FailureReason.InvalidResponse,
+                                          "Login failed");
+
+            if (!response.FullSync)
+                throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
+                                          "Partial sync is not supported");
+
+            return response;
+        }
+
+        internal static uint GetCurrentTimeInMs()
+        {
+            // TODO: Implement
+            return 0;
         }
 
         //
