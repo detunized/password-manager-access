@@ -58,12 +58,21 @@ namespace PasswordManagerAccess.Common.Test
         //
 
         [Fact]
-        public void DecryptAes256_decrypts_ciphertext()
+        public void DecryptAes256Cbc_decrypts_ciphertext()
         {
-            var plaintext = Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                                 "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                                 "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
+            var plaintext = Crypto.DecryptAes256Cbc("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                                    "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                                    "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
             Assert.Equal("All your base are belong to us".ToBytes(), plaintext);
+        }
+
+        [Fact]
+        public void DecryptAes256CbcNoPadding_decrypts_ciphertext()
+        {
+            var plaintext = Crypto.DecryptAes256CbcNoPadding("TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=".Decode64(),
+                                                             "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                                             "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
+            Assert.Equal("All your base are belong to us!!".ToBytes(), plaintext);
         }
     }
 }

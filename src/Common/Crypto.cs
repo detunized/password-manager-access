@@ -46,27 +46,14 @@ namespace PasswordManagerAccess.Common
         // AES
         //
 
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] key)
+        public static byte[] DecryptAes256Cbc(byte[] ciphertext, byte[] iv, byte[] key)
         {
-            try
-            {
-                using (var aes = new AesManaged {KeySize = 256, Key = key, Mode = CipherMode.CBC, IV = iv})
-                using (var decryptor = aes.CreateDecryptor())
-                using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
-                                                           decryptor,
-                                                           CryptoStreamMode.Read))
-                using (var outputStream = new MemoryStream())
-                {
-                    cryptoStream.CopyTo(outputStream);
-                    return outputStream.ToArray();
-                }
-            }
-            catch (CryptographicException e)
-            {
-                throw new ClientException(ClientException.FailureReason.CryptoError,
-                                          "AES decryption failed",
-                                          e);
-            }
+            return DecryptAes256Cbc(ciphertext, iv, key, PaddingMode.PKCS7);
+        }
+
+        public static byte[] DecryptAes256CbcNoPadding(byte[] ciphertext, byte[] iv, byte[] key)
+        {
+            return DecryptAes256Cbc(ciphertext, iv, key, PaddingMode.None);
         }
 
         //
@@ -81,6 +68,37 @@ namespace PasswordManagerAccess.Common
         {
             using (var db = new Rfc2898DeriveBytes(password, salt, iterations, hash))
                 return db.GetBytes(byteCount);
+        }
+
+        private static byte[] DecryptAes256Cbc(byte[] ciphertext, byte[] iv, byte[] key, PaddingMode padding)
+        {
+            try
+            {
+                using (var aes = Aes.Create())
+                {
+                    aes.KeySize = 256;
+                    aes.Key = key;
+                    aes.Mode = CipherMode.CBC;
+                    aes.IV = iv;
+                    aes.Padding = padding;
+
+                    using (var decryptor = aes.CreateDecryptor())
+                    using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
+                                                               decryptor,
+                                                               CryptoStreamMode.Read))
+                    using (var outputStream = new MemoryStream())
+                    {
+                        cryptoStream.CopyTo(outputStream);
+                        return outputStream.ToArray();
+                    }
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new ClientException(ClientException.FailureReason.CryptoError,
+                                          "AES decryption failed",
+                                          e);
+            }
         }
     }
 }
