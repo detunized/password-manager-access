@@ -8,6 +8,24 @@ namespace PasswordManagerAccess.Common.Test
     public class CryptoTest
     {
         //
+        // SHA-256
+        //
+
+        [Fact]
+        public void Sha256_string_returns_hashed_message()
+        {
+            var sha = Crypto.Sha256("message");
+            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), sha);
+        }
+
+        [Fact]
+        public void Sha256_bytes_returns_hashed_message()
+        {
+            var sha = Crypto.Sha256("message".ToBytes());
+            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), sha);
+        }
+
+        //
         // PBKDF2
         //
         // Since we're not implementing the algorithm anymore, it doesn't make since

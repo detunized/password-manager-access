@@ -7,6 +7,17 @@ namespace PasswordManagerAccess.Common
 {
     internal static class Crypto
     {
+        public static byte[] Sha256(string message)
+        {
+            return Sha256(message.ToBytes());
+        }
+
+        public static byte[] Sha256(byte[] message)
+        {
+            using (var sha = SHA256.Create())
+                return sha.ComputeHash(message);
+        }
+
         public static byte[] Pbkdf2Sha1(string password, byte[] salt, int iterations, int byteCount)
         {
             return Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA1, byteCount);
