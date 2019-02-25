@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Keeper
@@ -11,7 +13,7 @@ namespace PasswordManagerAccess.Keeper
 
     internal static class Client
     {
-        public static void OpenVault(string username, string password, IHttpClient http)
+        public static Account[] OpenVault(string username, string password, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, "https://keepersecurity.com/api/v2/");
 
@@ -32,6 +34,11 @@ namespace PasswordManagerAccess.Keeper
             // 5. Decrypt vault key
             var vaultKey = Crypto.DecryptVaultKey(session.Keys.EncryptionParams.Decode64Loose(),
                                                   password);
+
+            // 6. Parse and decrypt accounts
+            var accounts = DecryptVault(encryptedVault, vaultKey);
+
+            return accounts;
         }
 
         //
@@ -96,6 +103,32 @@ namespace PasswordManagerAccess.Keeper
                                           "Partial sync is not supported");
 
             return response;
+        }
+
+        internal static Account[] DecryptVault(R.EncryptedVault vault, byte[] vaultKey)
+        {
+            var meta = vault.RecordMeta.ToDictionary(x => x.Id);
+            return vault.Records
+                .Select(x => DecryptAccount(x, DecryptAccountKey(meta[x.Id], vaultKey)))
+                .ToArray();
+        }
+
+        internal static byte[] DecryptAccountKey(R.RecordMeta meta, byte[] vaultKey)
+        {
+            return Crypto.DecryptContainer(meta.Key.Decode64Loose(), vaultKey);
+        }
+
+        internal static Account DecryptAccount(R.Record record, byte[] accountKey)
+        {
+            var json = Crypto.DecryptContainer(record.Data.Decode64Loose(), accountKey).ToUtf8();
+            var data = JsonConvert.DeserializeObject<R.RecordData>(json);
+            return new Account(id: record.Id,
+                               name: data.Name,
+                               username: data.Username,
+                               password: data.Password,
+                               url: data.Url,
+                               note: data.Note,
+                               folder: "TODO");
         }
 
         internal static long GetCurrentTimeInMs()
