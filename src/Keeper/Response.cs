@@ -57,5 +57,47 @@ namespace PasswordManagerAccess.Keeper.Response
 
         [JsonProperty(PropertyName = "full_sync")]
         public bool FullSync;
+
+        [JsonProperty(PropertyName = "records")]
+        public Record[] Records;
+
+        [JsonProperty(PropertyName = "record_meta_data")]
+        public RecordMeta[] RecordMeta;
+    }
+
+    internal struct Record
+    {
+        [JsonProperty(PropertyName = "record_uid")]
+        public string Id;
+
+        [JsonProperty(PropertyName = "data")]
+        public string Data;
+    }
+
+    internal struct RecordMeta
+    {
+        [JsonProperty(PropertyName = "record_uid")]
+        public string Id;
+
+        [JsonProperty(PropertyName = "record_key")]
+        public string Key;
+    }
+
+    internal struct RecordData
+    {
+        [JsonProperty(PropertyName = "title")]
+        public string Name;
+
+        [JsonProperty(PropertyName = "secret1")]
+        public string Username;
+
+        [JsonProperty(PropertyName = "secret2")]
+        public string Password;
+
+        [JsonProperty(PropertyName = "link")]
+        public string Url;
+
+        [JsonProperty(PropertyName = "notes")]
+        public string Note;
     }
 }
