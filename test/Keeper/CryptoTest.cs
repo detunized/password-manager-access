@@ -25,5 +25,16 @@ namespace PasswordManagerAccess.Keeper.Test
 
             Assert.Equal("AN21ZRN0e4Oy4J7+YdsAMxeCacvE2kOsRRSqDiaitqk=".Decode64(), key);
         }
+
+        [Fact]
+        public void DecryptContainer_returns_plaintext()
+        {
+            const string container = "1U6ZrnG6kPnaspVSY3gqJUi8Sc6DxOcHUpIZY1sFWaXMJebtoWbynhUX1mbQ2sXCj5jll" +
+                                     "UbTC0EvV3WcU1VsMA==";
+            const string key = "AN21ZRN0e4Oy4J7+YdsAMxeCacvE2kOsRRSqDiaitqk=";
+            var plaintext = Crypto.DecryptContainer(container.Decode64(), key.Decode64());
+
+            Assert.Equal("Fa3WeUAyn9uu/uybYb1qVCbSim2zRyCKRWlPxodR1LM=".Decode64(), plaintext);
+        }
     }
 }

@@ -39,5 +39,20 @@ namespace PasswordManagerAccess.Keeper
                 return vaultKey.ToArray();
             }
         }
+
+        // Container: 16 byte iv + padded ciphertext
+        internal static byte[] DecryptContainer(byte[] container, byte[] key)
+        {
+            var paddedPlaintext = C.DecryptAes256CbcNoPadding(container.Skip(16).ToArray(),
+                                                              container.Take(16).ToArray(),
+                                                              key);
+            return UnpadPlaintext(paddedPlaintext);
+        }
+
+        private static byte[] UnpadPlaintext(byte[] paddedPlaintext)
+        {
+            var paddingLength = paddedPlaintext.Last();
+            return paddedPlaintext.Take(paddedPlaintext.Length - paddingLength).ToArray();
+        }
     }
 }
