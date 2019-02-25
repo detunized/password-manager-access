@@ -1,6 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,7 +24,12 @@ namespace Keeper
         public static void Main()
         {
             var config = ReadConfig("../../../config.yaml");
-            Vault.Open(config["username"], config["password"]);
+            var accounts = Vault.Open(config["username"], config["password"]);
+            for (var i = 0; i < accounts.Length; i++)
+            {
+                var a = accounts[i];
+                Console.WriteLine($"{i + 1}: {a.Name} {a.Username} {a.Password} {a.Url} {a.Note}");
+            }
         }
     }
 }
