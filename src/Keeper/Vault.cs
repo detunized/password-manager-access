@@ -7,9 +7,9 @@ namespace PasswordManagerAccess.Keeper
 {
     public class Vault
     {
-        public static void Open(string username, string password)
+        public static Account[] Open(string username, string password)
         {
-            Client.OpenVault(username, password, new HttpClient());
+            return Client.OpenVault(username, password, new HttpClient());
         }
     }
 }
