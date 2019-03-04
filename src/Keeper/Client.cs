@@ -47,7 +47,13 @@ namespace PasswordManagerAccess.Keeper
 
         internal static R.KdfInfo RequestKdfInfo(string username, JsonHttpClient jsonHttp)
         {
-            return jsonHttp.Post<R.KdfInfo>("", SharedLoginParameters(username));
+            var response = jsonHttp.Post<R.KdfInfo>("", SharedLoginParameters(username));
+
+            // This is a special case. It responds with failure and it's ok.
+            if (response.Failed && response.ResultCode == "auth_failed")
+                return response;
+
+            throw MakeError(response, "KDF info");
         }
 
         internal static R.Session Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
@@ -56,11 +62,8 @@ namespace PasswordManagerAccess.Keeper
             parameters["auth_response"] = passwordHash.ToUrlSafeBase64NoPadding();
 
             var response = jsonHttp.Post<R.Session>("", parameters);
-            if (response.Result != "success")
-            {
-                var error = response.Message.IsNullOrEmpty() ? response.ResultCode : response.Message;
-                throw new InternalErrorException($"Login failed: '{error}'");
-            }
+            if (response.Failed)
+                throw MakeError(response, "login");
 
             return response;
         }
@@ -93,8 +96,8 @@ namespace PasswordManagerAccess.Keeper
                 {"username", username},
             });
 
-            if (response.Result != "success")
-                throw new InternalErrorException("Login failed, the server responded with error");
+            if (response.Failed)
+                throw MakeError(response, "vault");
 
             if (!response.FullSync)
                 throw new UnsupportedFeatureException("Partial sync is not supported");
@@ -131,6 +134,24 @@ namespace PasswordManagerAccess.Keeper
         internal static long GetCurrentTimeInMs()
         {
             return DateTimeOffset.Now.ToUnixTimeMilliseconds();
+        }
+
+        internal static BaseException MakeError(R.Status response, string requestName)
+        {
+            switch (response.ResultCode.ToLower())
+            {
+            case "failed_to_find_user":
+                return new BadCredentialsException("The username is invalid");
+            default:
+                return new InternalErrorException(string.Format("The '{0}' request failed: '{1}'",
+                                                                requestName,
+                                                                GetErrorMessage(response)));
+            }
+        }
+
+        internal static string GetErrorMessage(R.Status response)
+        {
+            return response.Message.IsNullOrEmpty() ? response.ResultCode : response.Message;
         }
 
         //
