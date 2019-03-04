@@ -40,5 +40,14 @@ namespace PasswordManagerAccess.Common
         {
             return AssertThrowsClientException(action, ClientException.FailureReason.InvalidOperation, message);
         }
+
+        public static InternalErrorException AssertThrowsInternalError(Action action, string message = "")
+        {
+            var e = Assert.Throws<InternalErrorException>(action);
+            Assert.NotNull(e.Message);
+            Assert.Contains(message, e.Message);
+
+            return e;
+        }
     }
 }

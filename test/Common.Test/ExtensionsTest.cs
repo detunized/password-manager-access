@@ -40,15 +40,13 @@ namespace PasswordManagerAccess.Common.Test
         [Fact]
         public void String_DecodeHex_throws_on_odd_length()
         {
-            Exceptions.AssertThrowsInvalidOperation(() => "0".DecodeHex(),
-                                                    "input length must be multiple of 2");
+            Exceptions.AssertThrowsInternalError(() => "0".DecodeHex(), "input length must be multiple of 2");
         }
 
         [Fact]
         public void String_DecodeHex_throws_on_non_hex_characters()
         {
-            Exceptions.AssertThrowsInvalidOperation(() => "xz".DecodeHex(),
-                                                    "invalid characters in hex");
+            Exceptions.AssertThrowsInternalError(() => "xz".DecodeHex(), "invalid characters in hex");
         }
 
         [Fact]
@@ -123,7 +121,7 @@ namespace PasswordManagerAccess.Common.Test
             };
 
             foreach (var i in invalidBase32)
-                Exceptions.AssertThrowsInvalidOperation(() => i.Decode32(), "invalid characters in base32");
+                Exceptions.AssertThrowsInternalError(() => i.Decode32(), "invalid characters in base32");
         }
 
         [Fact]

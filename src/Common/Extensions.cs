@@ -28,7 +28,7 @@ namespace PasswordManagerAccess.Common
         public static byte[] DecodeHex(this string s)
         {
             if (s.Length % 2 != 0)
-                throw ExceptionFactory.MakeInvalidOperation("input length must be multiple of 2");
+                throw new InternalErrorException("input length must be multiple of 2");
 
             var bytes = new byte[s.Length / 2];
             for (var i = 0; i < s.Length / 2; ++i)
@@ -43,7 +43,7 @@ namespace PasswordManagerAccess.Common
                     else if (c >= 'a' && c <= 'f')
                         b |= c - 'a' + 10;
                     else
-                        throw ExceptionFactory.MakeInvalidOperation("invalid characters in hex");
+                        throw new InternalErrorException("invalid characters in hex");
                 }
 
                 bytes[i] = (byte)b;
@@ -72,7 +72,7 @@ namespace PasswordManagerAccess.Common
                 else if (c >= '2' && c <= '7')
                     c += 26 - '2';
                 else
-                    throw ExceptionFactory.MakeInvalidOperation("invalid characters in base32");
+                    throw new InternalErrorException("invalid characters in base32");
 
                 currentByte <<= 5;
                 currentByte |= c & 31;
@@ -208,15 +208,6 @@ namespace PasswordManagerAccess.Common
         {
             var r = BigInteger.ModPow(b, e, m);
             return r >= 0 ? r : r + m;
-        }
-
-        // TODO: Get rid of this. It's just for porting.
-        private static class ExceptionFactory
-        {
-            public static ClientException MakeInvalidOperation(string message)
-            {
-                return new ClientException(ClientException.FailureReason.InvalidOperation, message);
-            }
         }
     }
 }
