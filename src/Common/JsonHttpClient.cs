@@ -134,7 +134,7 @@ namespace PasswordManagerAccess.Common
             }
             catch (JsonException e)
             {
-                throw MakeInvalidResponseError("Invalid JSON in response from '{0}'", url, e);
+                throw new InternalErrorException($"Invalid JSON in response from '{url}'", e);
             }
         }
 
@@ -151,40 +151,26 @@ namespace PasswordManagerAccess.Common
                                                                     WebUtility.UrlEncode(i.Value.ToString()))));
         }
 
-        internal static ClientException MakeNetworkError(string method,
-                                                         string url,
-                                                         WebException original)
+        internal static NetworkErrorException MakeNetworkError(string method, string url, WebException original)
         {
             if (original.Status == WebExceptionStatus.ProtocolError)
                 return MakeHttpError(method, url, (HttpWebResponse)original.Response, original);
 
-            return new ClientException(ClientException.FailureReason.NetworkError,
-                                       $"{method} request to '{url}' failed",
-                                       original);
+            return new NetworkErrorException($"{method} request to '{url}' failed", original);
         }
 
-        internal static ClientException MakeHttpError(string method,
-                                                      string url,
-                                                      HttpWebResponse response,
-                                                      WebException original)
+        internal static NetworkErrorException MakeHttpError(string method,
+                                                            string url,
+                                                            HttpWebResponse response,
+                                                            WebException original)
         {
-            return new ClientException(ClientException.FailureReason.NetworkError,
-                                       string.Format(
-                                           "{0} request to '{1}' failed with HTTP status code {2} ({3})",
-                                           method,
-                                           url,
-                                           response.StatusCode,
-                                           (int)response.StatusCode),
-                                       original);
-        }
-
-        internal static ClientException MakeInvalidResponseError(string format,
-                                                                 string url,
-                                                                 Exception original)
-        {
-            return new ClientException(ClientException.FailureReason.InvalidResponse,
-                                       string.Format(format, url),
-                                       original);
+            return new NetworkErrorException(
+                string.Format("{0} request to '{1}' failed with HTTP status code {2} ({3})",
+                              method,
+                              url,
+                              response.StatusCode,
+                              (int)response.StatusCode),
+                original);
         }
 
         //

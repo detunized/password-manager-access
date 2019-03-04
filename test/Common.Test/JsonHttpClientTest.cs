@@ -43,7 +43,7 @@ namespace PasswordManagerAccess.Common.Test
             var http = SetupGet("{}");
             var client = SetupClient(http);
 
-            Exceptions.AssertThrowsInvalidResponse(() => client.Get<ResponseObject>(Endpoint));
+            Exceptions.AssertThrowsInternalError(() => client.Get<ResponseObject>(Endpoint));
         }
 
         [Fact]
@@ -106,7 +106,7 @@ namespace PasswordManagerAccess.Common.Test
             var http = SetupPost("{}");
             var client = SetupClient(http);
 
-            Exceptions.AssertThrowsInvalidResponse(
+            Exceptions.AssertThrowsInternalError(
                 () => client.Post<ResponseObject>(Endpoint, new Dictionary<string, object>()));
         }
 

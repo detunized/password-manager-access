@@ -59,8 +59,7 @@ namespace PasswordManagerAccess.Keeper
             if (response.Result != "success")
             {
                 var error = response.Message.IsNullOrEmpty() ? response.ResultCode : response.Message;
-                throw new ClientException(ClientException.FailureReason.InvalidResponse,
-                                          $"Login failed: '{error}'");
+                throw new InternalErrorException($"Login failed: '{error}'");
             }
 
             return response;
@@ -95,12 +94,10 @@ namespace PasswordManagerAccess.Keeper
             });
 
             if (response.Result != "success")
-                throw new ClientException(ClientException.FailureReason.InvalidResponse,
-                                          "Login failed");
+                throw new InternalErrorException("Login failed, the server responded with error");
 
             if (!response.FullSync)
-                throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
-                                          "Partial sync is not supported");
+                throw new UnsupportedFeatureException("Partial sync is not supported");
 
             return response;
         }

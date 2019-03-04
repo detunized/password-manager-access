@@ -33,8 +33,7 @@ namespace PasswordManagerAccess.Keeper
                 var verification = plaintext.Skip(32).Take(32);
 
                 if (!vaultKey.SequenceEqual(verification))
-                    throw new ClientException(ClientException.FailureReason.CryptoError,
-                                              "Vault key decryption failed");
+                    throw new InternalErrorException("Vault key decryption failed");
 
                 return vaultKey.ToArray();
             }

@@ -95,9 +95,7 @@ namespace PasswordManagerAccess.Common
             }
             catch (CryptographicException e)
             {
-                throw new ClientException(ClientException.FailureReason.CryptoError,
-                                          "AES decryption failed",
-                                          e);
+                throw new CryptoException("AES decryption failed", e);
             }
         }
     }
