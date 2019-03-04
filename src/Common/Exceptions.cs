@@ -67,6 +67,8 @@ namespace PasswordManagerAccess.Common
     //
 
     // This is thrown by internal crypto code and should not leak outside. At least that the idea.
+    // TODO: Evaluate if it's a good idea. Maybe we should just throw the internal error here.
+    //       It's tedious to catch and rethrow all over the place.
     internal class CryptoException: BaseException
     {
         public CryptoException(string message, Exception inner = null) : base(message, inner) { }
