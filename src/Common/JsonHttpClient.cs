@@ -13,6 +13,20 @@ namespace PasswordManagerAccess.Common
     using HttpHeaders = Dictionary<string, string>;
     using PostParameters = Dictionary<string, object>;
 
+    // TODO: An idea is to return an Either-like object:
+    //
+    // internal class JsonResult<T>
+    // {
+    //     public T Response;
+    //     public string RawResponse;
+    //     public int HttpStatus;
+    //     public Exception Error;
+    // }
+    //
+    // It seems better than throwing exceptions around. The added benefit is that
+    // the response is always available, even on error, when the HttpClient throws
+    // an exception and we have to fish out the response content from it.
+
     internal class JsonHttpClient
     {
         public readonly IHttpClient Http;
