@@ -5,99 +5,92 @@ using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.Keeper.Response
 {
-    internal struct KdfInfo
+    internal class Status
     {
         [JsonProperty(PropertyName = "result")]
-        public string Result;
+        public readonly string Result;
 
         [JsonProperty(PropertyName = "result_code")]
-        public string ResultCode;
+        public readonly string ResultCode;
 
         [JsonProperty(PropertyName = "message")]
-        public string Message;
+        public readonly string Message;
 
-        [JsonProperty(PropertyName = "salt")]
-        public string Salt;
-
-        [JsonProperty(PropertyName = "iterations")]
-        public int Iterations;
+        public bool Failed => Result != "success";
     }
 
-    internal struct Session
+    internal class KdfInfo: Status
     {
-        [JsonProperty(PropertyName = "result")]
-        public string Result;
+        [JsonProperty(PropertyName = "salt")]
+        public readonly string Salt;
 
-        [JsonProperty(PropertyName = "result_code")]
-        public string ResultCode;
+        [JsonProperty(PropertyName = "iterations")]
+        public readonly int Iterations;
+    }
 
-        [JsonProperty(PropertyName = "message")]
-        public string Message;
-
+    internal class Session: Status
+    {
         [JsonProperty(PropertyName = "session_token")]
-        public string Token;
+        public readonly string Token;
 
         [JsonProperty(PropertyName = "keys")]
-        public Keys Keys;
+        public readonly Keys Keys;
     }
 
     internal struct Keys
     {
         [JsonProperty(PropertyName = "encryption_params")]
-        public string EncryptionParams;
+        public readonly string EncryptionParams;
 
         [JsonProperty(PropertyName = "encrypted_private_key")]
-        public string EncryptPrivateKey;
+        public readonly string EncryptPrivateKey;
     }
 
-    internal struct EncryptedVault
+    internal class EncryptedVault: Status
     {
-        [JsonProperty(PropertyName = "result")]
-        public string Result;
-
         [JsonProperty(PropertyName = "full_sync")]
-        public bool FullSync;
+        public readonly bool FullSync;
 
         [JsonProperty(PropertyName = "records")]
-        public Record[] Records;
+        public readonly Record[] Records;
 
         [JsonProperty(PropertyName = "record_meta_data")]
-        public RecordMeta[] RecordMeta;
+        public readonly RecordMeta[] RecordMeta;
     }
 
     internal struct Record
     {
         [JsonProperty(PropertyName = "record_uid")]
-        public string Id;
+        public readonly string Id;
 
         [JsonProperty(PropertyName = "data")]
-        public string Data;
+        public readonly string Data;
     }
 
     internal struct RecordMeta
     {
         [JsonProperty(PropertyName = "record_uid")]
-        public string Id;
+        public readonly string Id;
 
         [JsonProperty(PropertyName = "record_key")]
-        public string Key;
+        public readonly string Key;
     }
 
     internal struct RecordData
     {
         [JsonProperty(PropertyName = "title")]
-        public string Name;
+        public readonly string Name;
 
         [JsonProperty(PropertyName = "secret1")]
-        public string Username;
+        public readonly string Username;
 
         [JsonProperty(PropertyName = "secret2")]
-        public string Password;
+        public readonly string Password;
 
         [JsonProperty(PropertyName = "link")]
-        public string Url;
+        public readonly string Url;
 
         [JsonProperty(PropertyName = "notes")]
-        public string Note;
+        public readonly string Note;
     }
 }
