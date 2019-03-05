@@ -21,16 +21,16 @@ namespace PasswordManagerAccess.Keeper.Response
 
     internal class KdfInfo: Status
     {
-        [JsonProperty(PropertyName = "salt", Required = Required.Always)]
+        [JsonProperty(PropertyName = "salt")]
         public readonly string Salt;
 
-        [JsonProperty(PropertyName = "iterations", Required = Required.Always)]
+        [JsonProperty(PropertyName = "iterations")]
         public readonly int Iterations;
     }
 
     internal class Session: Status
     {
-        [JsonProperty(PropertyName = "session_token", Required = Required.Always)]
+        [JsonProperty(PropertyName = "session_token")]
         public readonly string Token;
 
         [JsonProperty(PropertyName = "keys")]

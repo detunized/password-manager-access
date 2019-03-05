@@ -142,6 +142,8 @@ namespace PasswordManagerAccess.Keeper
             {
             case "Failed_to_find_user":
                 return new BadCredentialsException("The username is invalid");
+            case "auth_failed":
+                return new BadCredentialsException("The password is invalid");
             default:
                 return new InternalErrorException(string.Format("The '{0}' request failed: '{1}'",
                                                                 requestName,

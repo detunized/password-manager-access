@@ -21,6 +21,18 @@ namespace PasswordManagerAccess.Keeper.Test
         }
 
         [Fact]
+        public void RequestKdfInfo_thorws_on_bad_username()
+        {
+            var http = new TestHttpClient()
+                .Post(KdfInfoBadUsernameResponse)
+                .ToJsonClient();
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.RequestKdfInfo("username", http),
+                "username is invalid");
+        }
+
+        [Fact]
         public void Login_returns_session()
         {
             var http = new TestHttpClient()
@@ -29,6 +41,18 @@ namespace PasswordManagerAccess.Keeper.Test
             var session = Client.Login("username", "hash".ToBytes(), http);
 
             Assert.Equal("token", session.Token);
+        }
+
+        [Fact]
+        public void Login_throws_on_bad_password()
+        {
+            var http = new TestHttpClient()
+                .Post(LoginBadPasswordResponse)
+                .ToJsonClient();
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.Login("username", "hash".ToBytes(), http),
+                "password is invalid");
         }
 
         [Fact]
@@ -56,6 +80,13 @@ namespace PasswordManagerAccess.Keeper.Test
                 'iterations': 1337
             }";
 
+        const string KdfInfoBadUsernameResponse =
+            @"{
+                'result': 'fail',
+                'result_code': 'Failed_to_find_user',
+                'message': ''
+            }";
+
         const string LoginResponse =
             @"{
                 'result': 'success',
@@ -63,6 +94,8 @@ namespace PasswordManagerAccess.Keeper.Test
 
                 'session_token': 'token'
             }";
+
+        const string LoginBadPasswordResponse = KdfInfoResponse;
 
         const string RequestVaultResponse =
             @"{

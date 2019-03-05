@@ -8,9 +8,19 @@ namespace PasswordManagerAccess.Common
 {
     internal static class Exceptions
     {
+        public static BadCredentialsException AssertThrowsBadCredentials(Action action, string message = "")
+        {
+            return AssertThrows<BadCredentialsException>(action, message);
+        }
+
         public static InternalErrorException AssertThrowsInternalError(Action action, string message = "")
         {
-            var e = Assert.Throws<InternalErrorException>(action);
+            return AssertThrows<InternalErrorException>(action, message);
+        }
+
+        private static T AssertThrows<T>(Action action, string message) where T: BaseException
+        {
+            var e = Assert.Throws<T>(action);
             Assert.NotNull(e.Message);
             Assert.Contains(message, e.Message);
 
