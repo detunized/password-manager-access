@@ -138,9 +138,9 @@ namespace PasswordManagerAccess.Keeper
 
         internal static BaseException MakeError(R.Status response, string requestName)
         {
-            switch (response.ResultCode.ToLower())
+            switch (response.ResultCode)
             {
-            case "failed_to_find_user":
+            case "Failed_to_find_user":
                 return new BadCredentialsException("The username is invalid");
             default:
                 return new InternalErrorException(string.Format("The '{0}' request failed: '{1}'",
@@ -151,7 +151,13 @@ namespace PasswordManagerAccess.Keeper
 
         internal static string GetErrorMessage(R.Status response)
         {
-            return response.Message.IsNullOrEmpty() ? response.ResultCode : response.Message;
+            if (!response.Message.IsNullOrEmpty())
+                return response.Message;
+
+            if (!response.ResultCode.IsNullOrEmpty())
+                return response.ResultCode;
+
+            return "unknown reason";
         }
 
         //
