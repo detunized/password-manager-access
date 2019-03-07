@@ -2,8 +2,9 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Xunit;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common.Test
+namespace PasswordManagerAccess.Test.Common
 {
     public class CryptoTest
     {

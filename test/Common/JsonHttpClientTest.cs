@@ -9,8 +9,9 @@ using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common.Test
+namespace PasswordManagerAccess.Test.Common
 {
     public class JsonHttpClientTest
     {

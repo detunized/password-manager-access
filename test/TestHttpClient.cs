@@ -1,10 +1,11 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Xunit;
 using System.Collections.Generic;
+using Xunit;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common
+namespace PasswordManagerAccess.Test
 {
     internal class TestHttpClient: IHttpClient
     {

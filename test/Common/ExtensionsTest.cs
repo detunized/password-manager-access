@@ -4,8 +4,9 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Xunit;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common.Test
+namespace PasswordManagerAccess.Test.Common
 {
     public class ExtensionsTest
     {

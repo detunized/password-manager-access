@@ -1,10 +1,11 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using PasswordManagerAccess.Common;
 using Xunit;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Keeper;
 
-namespace PasswordManagerAccess.Keeper.Test
+namespace PasswordManagerAccess.Test.Keeper
 {
     public class ClientTest
     {

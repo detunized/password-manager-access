@@ -2,8 +2,9 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Xunit;
+using PasswordManagerAccess.Keeper;
 
-namespace PasswordManagerAccess.Keeper.Test
+namespace PasswordManagerAccess.Test.Keeper
 {
     public class AccountTest
     {

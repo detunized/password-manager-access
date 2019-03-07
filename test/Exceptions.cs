@@ -3,8 +3,9 @@
 
 using System;
 using Xunit;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common
+namespace PasswordManagerAccess.Test
 {
     internal static class Exceptions
     {
