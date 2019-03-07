@@ -17,6 +17,9 @@ namespace PasswordManagerAccess.Common
     // an internal error as well, but it has a clear purpose: to gather information about what
     // features are needed and should be added in the future.
 
+    // Don't want to be warned about missing constructors. We're not using them.
+    #pragma warning disable RCS1194
+
     public abstract class BaseException: Exception
     {
         protected BaseException(string message, Exception inner) : base(message, inner) { }
