@@ -7,8 +7,21 @@ using PasswordManagerAccess.Keeper;
 
 namespace PasswordManagerAccess.Test.Keeper
 {
-    public class ClientTest
+    public class ClientTest: TestBase
     {
+        [Fact(Skip = "Need username and password")]
+        public void OpenVault_returns_accounts()
+        {
+            var http = new TestHttpClient()
+                .Post(GetFixture("01-kdf-info"))
+                .Post(GetFixture("02-login"))
+                .Post(GetFixture("03-vault"));
+
+            var accounts = Client.OpenVault("username", "password", http);
+
+            Assert.NotEmpty(accounts);
+        }
+
         [Fact]
         public void RequestKdfInfo_returns_kdf_info()
         {
