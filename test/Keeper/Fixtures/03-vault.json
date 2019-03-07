@@ -1,0 +1,54 @@
+{
+    "result": "success",
+    "full_sync": true,
+    "records": [
+        {
+            "record_uid": "6RKif-xKO9i-6BhGPAKeWQ",
+            "shared": false,
+            "data": "5Iy4pVGIZI3p32eprhQ0PU892Mbn0KuZgjKBERXPFxQJelX6DzO4ynwSV0etMSxkEMtZfZbEOGWaNIClSBTKK62kD2Kkr2gqHkUb99gNVLIiiqHaQiRdww-uktt33dsS",
+            "client_modified_time": 1549111738448,
+            "version": 2,
+            "revision": 299762012
+        },
+        {
+            "record_uid": "O-IAK6goVMOIpigae3LGzQ",
+            "shared": false,
+            "data": "StPYRpGdoY_qDVexE_pNQlRMOutMeWzQ3rZu94Xbc3Sz75F1esTR_T_yNkYE0Yby510QwI_Q4E2xQK89AlxTj-SYRWEFvTWsvHDqQMWNantu2pTWniDinKm_WzC_1ZoiblkvTeWr_Sh4Zw9uHy1AFQgpnRGHBYk3tQGkJhEUlZwIiLN1brCGrEnytUd_LzNd",
+            "client_modified_time": 1549880005435,
+            "version": 2,
+            "revision": 303375789
+        }
+    ],
+    "user_folder_records": [
+        {
+            "record_uid": "O-IAK6goVMOIpigae3LGzQ",
+            "revision": 303375789
+        },
+        {
+            "record_uid": "6RKif-xKO9i-6BhGPAKeWQ",
+            "revision": 299762012
+        }
+    ],
+    "result_code": "",
+    "message": "",
+    "command": "sync_down",
+    "revision": 303375789,
+    "record_meta_data": [
+        {
+            "record_uid": "6RKif-xKO9i-6BhGPAKeWQ",
+            "owner": true,
+            "record_key": "1U6ZrnG6kPnaspVSY3gqJUi8Sc6DxOcHUpIZY1sFWaXMJebtoWbynhUX1mbQ2sXCj5jllUbTC0EvV3WcU1VsMA",
+            "can_share": true,
+            "can_edit": true,
+            "record_key_type": 1
+        },
+        {
+            "record_uid": "O-IAK6goVMOIpigae3LGzQ",
+            "owner": true,
+            "record_key": "bk0dmsagOF3uePLbSe3QCh8pFTbpmcqExPLIg4VBWRmRgBAyfXkim6XN0qj9-uJfEC0KlHDil09w4e5ApBqNWg",
+            "can_share": true,
+            "can_edit": true,
+            "record_key_type": 1
+        }
+    ]
+}
