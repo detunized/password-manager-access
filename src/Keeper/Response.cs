@@ -56,6 +56,9 @@ namespace PasswordManagerAccess.Keeper.Response
 
         [JsonProperty(PropertyName = "record_meta_data")]
         public readonly RecordMeta[] RecordMeta;
+
+        [JsonProperty(PropertyName = "user_folders")]
+        public readonly Folder[] Folders;
     }
 
     internal struct Record
@@ -92,5 +95,29 @@ namespace PasswordManagerAccess.Keeper.Response
 
         [JsonProperty(PropertyName = "notes")]
         public readonly string Note;
+    }
+
+    internal struct Folder
+    {
+        [JsonProperty(PropertyName = "folder_uid")]
+        public readonly string Id;
+
+        [JsonProperty(PropertyName = "type")]
+        public readonly string Type;
+
+        [JsonProperty(PropertyName = "user_folder_key")]
+        public readonly string Key;
+
+        [JsonProperty(PropertyName = "key_type")]
+        public readonly int KeyType;
+
+        [JsonProperty(PropertyName = "data")]
+        public readonly string Data;
+    }
+
+    internal struct FolderData
+    {
+        [JsonProperty(PropertyName = "name")]
+        public readonly string Name;
     }
 }

@@ -107,10 +107,23 @@ namespace PasswordManagerAccess.Keeper
 
         internal static Account[] DecryptVault(R.EncryptedVault vault, byte[] vaultKey)
         {
+            var folders = vault.Folders
+                .Select(x => DecryptFolder(x, vaultKey))
+                .ToDictionary(x => x.Key, x => x.Value);
+
             var meta = vault.RecordMeta.ToDictionary(x => x.Id);
             return vault.Records
                 .Select(x => DecryptAccount(x, DecryptAccountKey(meta[x.Id], vaultKey)))
                 .ToArray();
+        }
+
+        // Returns (id, name)
+        internal static KeyValuePair<string, string> DecryptFolder(R.Folder folder, byte[] vaultKey)
+        {
+            var key = Crypto.DecryptContainer(folder.Key.Decode64Loose(), vaultKey);
+            var json = Crypto.DecryptContainer(folder.Data.Decode64Loose(), key).ToUtf8();
+            var data = JsonConvert.DeserializeObject<R.FolderData>(json);
+            return new KeyValuePair<string, string>(folder.Id, data.Name);
         }
 
         internal static byte[] DecryptAccountKey(R.RecordMeta meta, byte[] vaultKey)
