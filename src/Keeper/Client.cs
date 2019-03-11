@@ -16,26 +16,13 @@ namespace PasswordManagerAccess.Keeper
         public static Account[] OpenVault(string username, string password, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, "https://keepersecurity.com/api/v2/");
-
-            // 1. Get KDF info
             var kdfInfo = RequestKdfInfo(username, jsonHttp);
-
-            // 2. Hash the password to prove identity
             var passwordHash = Crypto.HashPassword(password,
                                                    kdfInfo.Salt.Decode64Loose(),
                                                    kdfInfo.Iterations);
-
-            // 3. Login
             var session = Login(username, passwordHash, jsonHttp);
-
-            // 4. Get vault
             var encryptedVault = RequestVault(username, session.Token, jsonHttp);
-
-            // 5. Decrypt vault key
-            var vaultKey = Crypto.DecryptVaultKey(session.Keys.EncryptionParams.Decode64Loose(),
-                                                  password);
-
-            // 6. Parse and decrypt accounts
+            var vaultKey = DecryptVaultKey(session, password);
             var accounts = DecryptVault(encryptedVault, vaultKey);
 
             return accounts;
@@ -105,13 +92,37 @@ namespace PasswordManagerAccess.Keeper
             return response;
         }
 
+        internal static byte[] DecryptVaultKey(R.Session session, string password)
+        {
+            return ExecCryptoCode(() =>
+                Crypto.DecryptVaultKey(session.Keys.EncryptionParams.Decode64Loose(), password)
+            );
+        }
+
         internal static Account[] DecryptVault(R.EncryptedVault vault, byte[] vaultKey)
         {
-            var idToPath = DecryptAccountFolderPaths(vault, vaultKey);
-            var meta = vault.RecordMeta.ToDictionary(x => x.Id);
-            return vault.Records
-                .Select(x => DecryptAccount(x, DecryptAccountKey(meta[x.Id], vaultKey), idToPath))
-                .ToArray();
+            return ExecCryptoCode(() => {
+                var idToPath = DecryptAccountFolderPaths(vault, vaultKey);
+                var meta = vault.RecordMeta.ToDictionary(x => x.Id);
+                return vault.Records
+                    .Select(x => DecryptAccount(x, DecryptAccountKey(meta[x.Id], vaultKey), idToPath))
+                    .ToArray();
+            });
+        }
+
+        // This function simply executes another function and re-throws
+        // any crypto exceptions as internal errors.
+        internal static T ExecCryptoCode<T>(Func<T> action)
+        {
+            try
+            {
+                return action();
+            }
+            catch (CryptoException e)
+            {
+                // CryptoException is internal, it's TMI for the user.
+                throw MakeCorruptedError(e);
+            }
         }
 
         internal static Dictionary<string, string> DecryptAccountFolderPaths(R.EncryptedVault vault, byte[] vaultKey)
@@ -127,7 +138,7 @@ namespace PasswordManagerAccess.Keeper
             }
             catch (KeyNotFoundException e)
             {
-                throw new InternalErrorException("The vault is invalid or corrupted", e);
+                throw MakeCorruptedError(e);
             }
         }
 
@@ -169,7 +180,7 @@ namespace PasswordManagerAccess.Keeper
             }
             catch (KeyNotFoundException e)
             {
-                throw new InternalErrorException("The vault is invalid or corrupted", e);
+                throw MakeCorruptedError(e);
             }
         }
 
@@ -212,6 +223,11 @@ namespace PasswordManagerAccess.Keeper
                                                                 requestName,
                                                                 GetErrorMessage(response)));
             }
+        }
+
+        internal static InternalErrorException MakeCorruptedError(Exception original)
+        {
+            throw new InternalErrorException("The vault is invalid or corrupted", original);
         }
 
         internal static string GetErrorMessage(R.Status response)
