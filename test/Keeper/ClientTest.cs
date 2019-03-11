@@ -9,7 +9,7 @@ namespace PasswordManagerAccess.Test.Keeper
 {
     public class ClientTest: TestBase
     {
-        [Fact(Skip = "Need username and password")]
+        [Fact]
         public void OpenVault_returns_accounts()
         {
             var http = new TestHttpClient()
@@ -17,7 +17,7 @@ namespace PasswordManagerAccess.Test.Keeper
                 .Post(GetFixture("02-login"))
                 .Post(GetFixture("03-vault"));
 
-            var accounts = Client.OpenVault("username", "password", http);
+            var accounts = Client.OpenVault(Username, Password, http);
 
             Assert.NotEmpty(accounts);
         }
@@ -84,6 +84,9 @@ namespace PasswordManagerAccess.Test.Keeper
         //
         // Data
         //
+
+        const string Username = "lastpass.ruby@gmail.com";
+        const string Password = "J7wSAB&NgP!Xuo7jdSAu4KSwmcj7YZi1soHvuurd&5YBm3Y5QV!oNCi7%@xVoDZ*";
 
         const string KdfInfoResponse =
             @"{
