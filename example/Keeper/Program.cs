@@ -2,29 +2,18 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Keeper;
+using PasswordManagerAccess.Example.Common;
 
-namespace Keeper
+namespace PasswordManagerAccess.Example.Keeper
 {
     static class Program
     {
-        public static Dictionary<string, string> ReadConfig(string filename)
-        {
-            return File.ReadAllLines(filename)
-                .Select(line => line.Trim())
-                .Where(line => line.Length > 0 && !line.StartsWith("#"))
-                .Select(line => line.Split(new[] {':'}, 2))
-                .Where(parts => parts.Length == 2)
-                .ToDictionary(parts => parts[0].Trim(), parts => parts[1].Trim());
-        }
-
         public static void Main()
         {
-            var config = ReadConfig("../../../config.yaml");
-            var accounts = Vault.Open(config["username"], config["password"]);
+            var config = Util.ReadConfig();
+            var accounts = OpenVault(config["username"], config["password"]);
             for (var i = 0; i < accounts.Length; i++)
             {
                 var a = accounts[i];
@@ -36,6 +25,22 @@ namespace Keeper
                 Console.WriteLine($"       url: {a.Url}");
                 Console.WriteLine($"      note: {a.Note}");
                 Console.WriteLine($"    folder: {a.Folder}");
+            }
+        }
+
+        private static Account[] OpenVault(string username, string password)
+        {
+            try
+            {
+                return Vault.Open(username, password);
+            }
+            catch (BaseException e)
+            {
+                Util.PrintException(e);
+                Environment.Exit(1);
+
+                // Exit doesn't return, just to mute the warning
+                return null;
             }
         }
     }

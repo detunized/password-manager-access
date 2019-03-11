@@ -2,11 +2,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PasswordManagerAccess.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net472</TargetFramework>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
 
 </Project>
