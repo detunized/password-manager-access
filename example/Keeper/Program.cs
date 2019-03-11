@@ -28,14 +28,14 @@ namespace Keeper
             for (var i = 0; i < accounts.Length; i++)
             {
                 var a = accounts[i];
-                Console.WriteLine($" - {i + 1}");
-                Console.WriteLine($"            id: {a.Id}");
-                Console.WriteLine($"          name: {a.Name}");
-                Console.WriteLine($"      username: {a.Username}");
-                Console.WriteLine($"      password: {a.Password}");
-                Console.WriteLine($"           url: {a.Url}");
-                Console.WriteLine($"          note: {a.Note}");
-                Console.WriteLine($"        folder: {a.Folder}");
+                Console.WriteLine($"====[ {i + 1} ]============");
+                Console.WriteLine($"        id: {a.Id}");
+                Console.WriteLine($"      name: {a.Name}");
+                Console.WriteLine($"  username: {a.Username}");
+                Console.WriteLine($"  password: {a.Password}");
+                Console.WriteLine($"       url: {a.Url}");
+                Console.WriteLine($"      note: {a.Note}");
+                Console.WriteLine($"    folder: {a.Folder}");
             }
         }
     }
