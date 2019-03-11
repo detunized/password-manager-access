@@ -116,12 +116,19 @@ namespace PasswordManagerAccess.Keeper
 
         internal static Dictionary<string, string> DecryptAccountFolderPaths(R.EncryptedVault vault, byte[] vaultKey)
         {
-            var folderIdToFolderPaths = DecryptFolders(vault.Folders, vaultKey);
-            var accountIdToFolderPath = vault.RecordFolderRairs.ToDictionary(
-                x => x.RecordId,
-                x => x.FolderId.IsNullOrEmpty() ? "" : folderIdToFolderPaths[x.FolderId]);
+            try
+            {
+                var folderIdToFolderPaths = DecryptFolders(vault.Folders, vaultKey);
+                var accountIdToFolderPath = vault.RecordFolderRairs.ToDictionary(
+                    x => x.RecordId,
+                    x => x.FolderId.IsNullOrEmpty() ? "" : folderIdToFolderPaths[x.FolderId]);
 
-            return accountIdToFolderPath;
+                return accountIdToFolderPath;
+            }
+            catch (KeyNotFoundException e)
+            {
+                throw new InternalErrorException("The vault is invalid or corrupted", e);
+            }
         }
 
         internal static Dictionary<string, string> DecryptFolders(R.Folder[] folders, byte[] vaultKey)
