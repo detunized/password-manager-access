@@ -108,6 +108,9 @@ namespace PasswordManagerAccess.Keeper.Response
         [JsonProperty(PropertyName = "type")]
         public readonly string Type;
 
+        [JsonProperty(PropertyName = "parent_uid")]
+        public readonly string ParentId;
+
         [JsonProperty(PropertyName = "user_folder_key")]
         public readonly string Key;
 

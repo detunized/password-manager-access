@@ -107,9 +107,7 @@ namespace PasswordManagerAccess.Keeper
 
         internal static Account[] DecryptVault(R.EncryptedVault vault, byte[] vaultKey)
         {
-            var folders = vault.Folders
-                .Select(x => DecryptFolder(x, vaultKey))
-                .ToDictionary(x => x.Key, x => x.Value);
+            var folders = DecryptFolders(vault.Folders, vaultKey);
 
             var meta = vault.RecordMeta.ToDictionary(x => x.Id);
             return vault.Records
@@ -117,8 +115,16 @@ namespace PasswordManagerAccess.Keeper
                 .ToArray();
         }
 
-        // Returns (id, name)
-        internal static KeyValuePair<string, string> DecryptFolder(R.Folder folder, byte[] vaultKey)
+        internal static Dictionary<string, string> DecryptFolders(R.Folder[] folders, byte[] vaultKey)
+        {
+            var idToName = folders.ToDictionary(x => x.Id, x => DecryptFolderName(x, vaultKey));
+            var idToParent = folders.ToDictionary(x => x.Id, x => x.ParentId);
+            var idToPath = folders.ToDictionary(x => x.Id, x => BuildFolderPath(x.Id, idToName, idToParent));
+
+            return idToPath;
+        }
+
+        internal static string DecryptFolderName(R.Folder folder, byte[] vaultKey)
         {
             if (folder.KeyType != 1)
                 throw new UnsupportedFeatureException($"Folder key type {folder.KeyType} is not supported");
@@ -129,7 +135,26 @@ namespace PasswordManagerAccess.Keeper
             var key = Crypto.DecryptContainer(folder.Key.Decode64Loose(), vaultKey);
             var json = Crypto.DecryptContainer(folder.Data.Decode64Loose(), key).ToUtf8();
             var data = JsonConvert.DeserializeObject<R.FolderData>(json);
-            return new KeyValuePair<string, string>(folder.Id, data.Name);
+
+            return data.Name;
+        }
+
+        private static string BuildFolderPath(string id,
+                                              Dictionary<string, string> idToName,
+                                              Dictionary<string, string> idToParent)
+        {
+            try
+            {
+                var path = idToName[id];
+                for (var parentId = idToParent[id]; !parentId.IsNullOrEmpty(); parentId = idToParent[parentId])
+                    path = $"{idToName[parentId]}/{path}";
+
+                return path;
+            }
+            catch (KeyNotFoundException e)
+            {
+                throw new InternalErrorException("The vault is invalid or corrupted", e);
+            }
         }
 
         internal static byte[] DecryptAccountKey(R.RecordMeta meta, byte[] vaultKey)
