@@ -107,12 +107,21 @@ namespace PasswordManagerAccess.Keeper
 
         internal static Account[] DecryptVault(R.EncryptedVault vault, byte[] vaultKey)
         {
-            var folders = DecryptFolders(vault.Folders, vaultKey);
-
+            var idToPath = DecryptAccountFolderPaths(vault, vaultKey);
             var meta = vault.RecordMeta.ToDictionary(x => x.Id);
             return vault.Records
-                .Select(x => DecryptAccount(x, DecryptAccountKey(meta[x.Id], vaultKey)))
+                .Select(x => DecryptAccount(x, DecryptAccountKey(meta[x.Id], vaultKey), idToPath))
                 .ToArray();
+        }
+
+        internal static Dictionary<string, string> DecryptAccountFolderPaths(R.EncryptedVault vault, byte[] vaultKey)
+        {
+            var folderIdToFolderPaths = DecryptFolders(vault.Folders, vaultKey);
+            var accountIdToFolderPath = vault.RecordFolderRairs.ToDictionary(
+                x => x.RecordId,
+                x => x.FolderId.IsNullOrEmpty() ? "" : folderIdToFolderPaths[x.FolderId]);
+
+            return accountIdToFolderPath;
         }
 
         internal static Dictionary<string, string> DecryptFolders(R.Folder[] folders, byte[] vaultKey)
@@ -165,7 +174,7 @@ namespace PasswordManagerAccess.Keeper
             return Crypto.DecryptContainer(meta.Key.Decode64Loose(), vaultKey);
         }
 
-        internal static Account DecryptAccount(R.Record record, byte[] accountKey)
+        internal static Account DecryptAccount(R.Record record, byte[] accountKey, Dictionary<string, string> idToPath)
         {
             var json = Crypto.DecryptContainer(record.Data.Decode64Loose(), accountKey).ToUtf8();
             var data = JsonConvert.DeserializeObject<R.RecordData>(json);
@@ -175,7 +184,7 @@ namespace PasswordManagerAccess.Keeper
                                password: data.Password,
                                url: data.Url,
                                note: data.Note,
-                               folder: "TODO");
+                               folder: idToPath[record.Id]);
         }
 
         internal static long GetCurrentTimeInMs()

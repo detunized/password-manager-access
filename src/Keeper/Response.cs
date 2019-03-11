@@ -59,6 +59,9 @@ namespace PasswordManagerAccess.Keeper.Response
 
         [JsonProperty(PropertyName = "user_folders")]
         public readonly Folder[] Folders;
+
+        [JsonProperty(PropertyName = "user_folder_records")]
+        public readonly RecordFolderPair[] RecordFolderRairs;
     }
 
     internal struct Record
@@ -125,5 +128,14 @@ namespace PasswordManagerAccess.Keeper.Response
     {
         [JsonProperty(PropertyName = "name")]
         public readonly string Name;
+    }
+
+    internal struct RecordFolderPair
+    {
+        [JsonProperty(PropertyName = "record_uid")]
+        public readonly string RecordId;
+
+        [JsonProperty(PropertyName = "folder_uid")]
+        public readonly string FolderId;
     }
 }
