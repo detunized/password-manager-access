@@ -77,6 +77,9 @@ namespace PasswordManagerAccess.Keeper.Response
 
         [JsonProperty(PropertyName = "record_key")]
         public readonly string Key;
+
+        [JsonProperty(PropertyName = "record_key_type")]
+        public readonly int KeyType;
     }
 
     internal struct RecordData

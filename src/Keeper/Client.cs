@@ -120,6 +120,12 @@ namespace PasswordManagerAccess.Keeper
         // Returns (id, name)
         internal static KeyValuePair<string, string> DecryptFolder(R.Folder folder, byte[] vaultKey)
         {
+            if (folder.KeyType != 1)
+                throw new UnsupportedFeatureException($"Folder key type {folder.KeyType} is not supported");
+
+            if (folder.Type != "user_folder")
+                throw new UnsupportedFeatureException($"Folder type '{folder.Type}' is not supported");
+
             var key = Crypto.DecryptContainer(folder.Key.Decode64Loose(), vaultKey);
             var json = Crypto.DecryptContainer(folder.Data.Decode64Loose(), key).ToUtf8();
             var data = JsonConvert.DeserializeObject<R.FolderData>(json);
@@ -128,6 +134,9 @@ namespace PasswordManagerAccess.Keeper
 
         internal static byte[] DecryptAccountKey(R.RecordMeta meta, byte[] vaultKey)
         {
+            if (meta.KeyType != 1)
+                throw new UnsupportedFeatureException($"Account key type {meta.KeyType} is not supported");
+
             return Crypto.DecryptContainer(meta.Key.Decode64Loose(), vaultKey);
         }
 
