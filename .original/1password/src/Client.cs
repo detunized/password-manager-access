@@ -558,7 +558,7 @@ namespace OnePassword
         {
             var overview = Decrypt(json.At("encOverview"), keychain);
             var details = Decrypt(json.At("encDetails"), keychain);
-            var fields = details.At("fields");
+            var fields = details.At("fields", new JArray());
 
             return new Account(json.StringAt("uuid", ""),
                                overview.StringAt("title", ""),
