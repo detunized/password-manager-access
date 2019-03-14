@@ -16,7 +16,8 @@ namespace PasswordManagerAccess.Keeper.Response
         [JsonProperty(PropertyName = "message")]
         public readonly string Message;
 
-        public bool Failed => Result != "success";
+        public bool Ok => Result == "success";
+        public bool Failed => !Ok;
     }
 
     internal class KdfInfo: Status
@@ -28,10 +29,13 @@ namespace PasswordManagerAccess.Keeper.Response
         public readonly int Iterations;
     }
 
-    internal class Session: Status
+    internal class Login: Status
     {
         [JsonProperty(PropertyName = "session_token")]
         public readonly string Token;
+
+        [JsonProperty(PropertyName = "channel")]
+        public readonly string Channel;
 
         [JsonProperty(PropertyName = "keys")]
         public readonly Keys Keys;

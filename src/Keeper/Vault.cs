@@ -5,11 +5,11 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Keeper
 {
-    public class Vault
+    public static class Vault
     {
-        public static Account[] Open(string username, string password)
+        public static Account[] Open(string username, string password, Ui ui)
         {
-            return Client.OpenVault(username, password, new HttpClient());
+            return Client.OpenVault(username, password, ui, new HttpClient());
         }
     }
 }

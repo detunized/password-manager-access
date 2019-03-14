@@ -17,7 +17,7 @@ namespace PasswordManagerAccess.Test.Keeper
                 .Post(GetFixture("02-login"))
                 .Post(GetFixture("03-vault"));
 
-            var accounts = Client.OpenVault(Username, Password, http);
+            var accounts = Client.OpenVault(Username, Password, null, http);
 
             Assert.NotEmpty(accounts);
         }
@@ -52,7 +52,7 @@ namespace PasswordManagerAccess.Test.Keeper
             var http = new TestHttpClient()
                 .Post(LoginResponse)
                 .ToJsonClient();
-            var session = Client.Login("username", "hash".ToBytes(), http);
+            var session = Client.Login("username", "hash".ToBytes(), null, http);
 
             Assert.Equal("token", session.Token);
         }
@@ -65,7 +65,7 @@ namespace PasswordManagerAccess.Test.Keeper
                 .ToJsonClient();
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.Login("username", "hash".ToBytes(), http),
+                () => Client.Login("username", "hash".ToBytes(), null, http),
                 "password is invalid");
         }
 

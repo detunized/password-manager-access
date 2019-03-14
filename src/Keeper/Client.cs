@@ -13,16 +13,16 @@ namespace PasswordManagerAccess.Keeper
 
     internal static class Client
     {
-        public static Account[] OpenVault(string username, string password, IHttpClient http)
+        public static Account[] OpenVault(string username, string password, Ui ui, IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, "https://keepersecurity.com/api/v2/");
             var kdfInfo = RequestKdfInfo(username, jsonHttp);
             var passwordHash = Crypto.HashPassword(password,
                                                    kdfInfo.Salt.Decode64Loose(),
                                                    kdfInfo.Iterations);
-            var session = Login(username, passwordHash, jsonHttp);
+            var session = Login(username, passwordHash, ui, jsonHttp);
             var encryptedVault = RequestVault(username, session.Token, jsonHttp);
-            var vaultKey = DecryptVaultKey(session, password);
+            var vaultKey = DecryptVaultKey(session.Keys, password);
             var accounts = DecryptVault(encryptedVault, vaultKey);
 
             return accounts;
@@ -43,16 +43,45 @@ namespace PasswordManagerAccess.Keeper
             throw MakeError(response, "KDF info");
         }
 
-        internal static R.Session Login(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        internal struct Session
+        {
+            public readonly string Token;
+            public readonly R.Keys Keys;
+
+            public Session(string token, R.Keys keys)
+            {
+                Token = token;
+                Keys = keys;
+            }
+        }
+
+        internal static Session Login(string username, byte[] passwordHash, Ui ui, JsonHttpClient jsonHttp)
         {
             var parameters = SharedLoginParameters(username);
             parameters["auth_response"] = passwordHash.ToUrlSafeBase64NoPadding();
 
-            var response = jsonHttp.Post<R.Session>("", parameters);
-            if (response.Failed)
-                throw MakeError(response, "login");
+            var response = jsonHttp.Post<R.Login>("", parameters);
+            if (response.Ok)
+                return new Session(response.Token, response.Keys);
 
-            return response;
+            if (response.ResultCode == "need_totp")
+            {
+                if (response.Channel != "two_factor_channel_google")
+                    throw new UnsupportedFeatureException($"MFA channel '{response.Channel}' is not supported");
+
+                var passcode = ui.ProvideGoogleAuthPasscode();
+                if (passcode == Ui.Passcode.Cancel)
+                    throw new CanceledMultiFactorException("MFA canceled by the user");
+
+                parameters["2fa_token"] = passcode.Code;
+                parameters["2fa_type"] = "one_time";
+
+                response = jsonHttp.Post<R.Login>("", parameters);
+                if (response.Ok)
+                    return new Session(response.Token, response.Keys);
+            }
+
+            throw MakeError(response, "login");
         }
 
         internal static Dictionary<string, object> SharedLoginParameters(string username)
@@ -92,10 +121,10 @@ namespace PasswordManagerAccess.Keeper
             return response;
         }
 
-        internal static byte[] DecryptVaultKey(R.Session session, string password)
+        internal static byte[] DecryptVaultKey(R.Keys keys, string password)
         {
             return ExecCryptoCode(() =>
-                Crypto.DecryptVaultKey(session.Keys.EncryptionParams.Decode64Loose(), password)
+                Crypto.DecryptVaultKey(keys.EncryptionParams.Decode64Loose(), password)
             );
         }
 

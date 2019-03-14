@@ -8,6 +8,18 @@ using PasswordManagerAccess.Example.Common;
 
 namespace PasswordManagerAccess.Example.Keeper
 {
+    class TextUi: Ui
+    {
+        public override void Close()
+        {
+        }
+
+        public override Passcode ProvideGoogleAuthPasscode()
+        {
+            return new Passcode("123456", false);
+        }
+    }
+
     static class Program
     {
         public static void Main()
@@ -32,7 +44,7 @@ namespace PasswordManagerAccess.Example.Keeper
         {
             try
             {
-                return Vault.Open(username, password);
+                return Vault.Open(username, password, new TextUi());
             }
             catch (BaseException e)
             {
