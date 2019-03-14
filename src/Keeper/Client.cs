@@ -103,7 +103,7 @@ namespace PasswordManagerAccess.Keeper
         {
             return ExecCryptoCode(() => {
                 var idToPath = DecryptAccountFolderPaths(vault, vaultKey);
-                var meta = vault.RecordMeta.ToDictionary(x => x.Id);
+                var meta = vault.RecordMeta.ToDictionary(k => k.Id);
                 return vault.Records
                     .Select(x => DecryptAccount(x, DecryptAccountKey(meta[x.Id], vaultKey), idToPath))
                     .ToArray();
@@ -127,14 +127,15 @@ namespace PasswordManagerAccess.Keeper
 
         internal static Dictionary<string, string> DecryptAccountFolderPaths(R.EncryptedVault vault, byte[] vaultKey)
         {
+            if (vault.Folders == null)
+                return new Dictionary<string, string>();
+
+            var folderIdToFolderPaths = DecryptFolders(vault.Folders, vaultKey);
             try
             {
-                var folderIdToFolderPaths = DecryptFolders(vault.Folders, vaultKey);
-                var accountIdToFolderPath = vault.RecordFolderRairs.ToDictionary(
-                    x => x.RecordId,
-                    x => x.FolderId.IsNullOrEmpty() ? "" : folderIdToFolderPaths[x.FolderId]);
-
-                return accountIdToFolderPath;
+                return vault.RecordFolderRairs.ToDictionary(
+                    k => k.RecordId,
+                    v => v.FolderId.IsNullOrEmpty() ? "" : folderIdToFolderPaths[v.FolderId]);
             }
             catch (KeyNotFoundException e)
             {
@@ -144,9 +145,9 @@ namespace PasswordManagerAccess.Keeper
 
         internal static Dictionary<string, string> DecryptFolders(R.Folder[] folders, byte[] vaultKey)
         {
-            var idToName = folders.ToDictionary(x => x.Id, x => DecryptFolderName(x, vaultKey));
-            var idToParent = folders.ToDictionary(x => x.Id, x => x.ParentId);
-            var idToPath = folders.ToDictionary(x => x.Id, x => BuildFolderPath(x.Id, idToName, idToParent));
+            var idToName = folders.ToDictionary(k => k.Id, v => DecryptFolderName(v, vaultKey));
+            var idToParent = folders.ToDictionary(k => k.Id, v => v.ParentId);
+            var idToPath = folders.ToDictionary(k => k.Id, v => BuildFolderPath(v.Id, idToName, idToParent));
 
             return idToPath;
         }
