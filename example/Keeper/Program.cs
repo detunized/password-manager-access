@@ -12,12 +12,43 @@ namespace PasswordManagerAccess.Example.Keeper
     {
         public override void Close()
         {
+            Info("Closing UI");
         }
 
         public override Passcode ProvideGoogleAuthPasscode()
         {
-            return new Passcode("123456", false);
+            return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
         }
+
+        private static Passcode GetPasscode(string prompt)
+        {
+            var passcode = GetAnswer(prompt);
+            return passcode == "" ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+        }
+
+        private static string GetAnswer(string prompt)
+        {
+            Console.WriteLine(prompt);
+            Console.Write("> ");
+            var input = Console.ReadLine();
+
+            return input == null ? "" : input.Trim();
+        }
+
+        private static bool GetRememberMe()
+        {
+            var remember = GetAnswer("Remember this device?").ToLower();
+            return remember == "y" || remember == "yes";
+        }
+
+        private static void Info(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+
+        private const string ToCancel = "or just press ENTER to cancel";
     }
 
     static class Program

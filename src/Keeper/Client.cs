@@ -70,6 +70,8 @@ namespace PasswordManagerAccess.Keeper
                     throw new UnsupportedFeatureException($"MFA channel '{response.Channel}' is not supported");
 
                 var passcode = ui.ProvideGoogleAuthPasscode();
+                ui.Close();
+
                 if (passcode == Ui.Passcode.Cancel)
                     throw new CanceledMultiFactorException("MFA canceled by the user");
 
