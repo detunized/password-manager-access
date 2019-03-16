@@ -551,7 +551,10 @@ namespace OnePassword
             var response = GetEncryptedJson(string.Format("v1/vault/{0}/0/items", id),
                                             sessionKey,
                                             jsonHttp);
-            return response.At("items", new JArray()).Select(i => ParseAccount(i, keychain)).ToArray();
+            return response.At("items", new JArray())
+                .Where(i => i.StringAt("templateUuid", "") == AccountTemplateId) // Keep only accounts/logins
+                .Select(i => ParseAccount(i, keychain))
+                .ToArray();
         }
 
         internal static Account ParseAccount(JToken json, Keychain keychain)
@@ -747,6 +750,7 @@ namespace OnePassword
 
         private const string MasterKeyId = "mp";
         private const string RememberMeTokenKey = "remember-me-token";
+        private const string AccountTemplateId = "001";
 
         private static readonly SecondFactor[] SecondFactorPriority = new[]
         {
