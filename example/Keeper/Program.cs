@@ -20,6 +20,11 @@ namespace PasswordManagerAccess.Example.Keeper
             return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
         }
 
+        public override Passcode ProvideSmsPasscode()
+        {
+            return GetPasscode($"Please enter SMS code {ToCancel}");
+        }
+
         private static Passcode GetPasscode(string prompt)
         {
             var passcode = GetAnswer(prompt);

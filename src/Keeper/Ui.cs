@@ -9,6 +9,7 @@ namespace PasswordManagerAccess.Keeper
     {
         // To cancel return Passcode.Cancel
         public abstract Passcode ProvideGoogleAuthPasscode();
+        public abstract Passcode ProvideSmsPasscode();
 
         // The UI will no longer be used and could be closed
         public abstract void Close();

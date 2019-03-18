@@ -15,7 +15,7 @@ namespace PasswordManagerAccess.Keeper
     {
         public static Account[] OpenVault(string username, string password, Ui ui, IHttpClient http)
         {
-            var jsonHttp = new JsonHttpClient(http, "https://keepersecurity.com/api/v2/");
+            var jsonHttp = new JsonHttpClient(http, ApiUrl);
             var kdfInfo = RequestKdfInfo(username, jsonHttp);
             var passwordHash = Crypto.HashPassword(password,
                                                    kdfInfo.Salt.Decode64Loose(),
@@ -65,12 +65,27 @@ namespace PasswordManagerAccess.Keeper
                 return new Session(response.Token, response.Keys);
 
             if (response.ResultCode == "need_totp")
-            {
-                if (response.Channel != "two_factor_channel_google")
-                    throw new UnsupportedFeatureException($"MFA channel '{response.Channel}' is not supported");
+                return MfaLogin(response.Channel, parameters, ui, jsonHttp);
 
-                var passcode = ui.ProvideGoogleAuthPasscode();
-                ui.Close();
+            throw MakeError(response, "login");
+        }
+
+        internal static Session MfaLogin(string method, Dictionary<string, object> parameters, Ui ui, JsonHttpClient jsonHttp)
+        {
+            try
+            {
+                var passcode = Ui.Passcode.Cancel;
+                switch (method)
+                {
+                case "two_factor_channel_google":
+                    passcode = ui.ProvideGoogleAuthPasscode();
+                    break;
+                case "two_factor_channel_sms":
+                    passcode = ui.ProvideSmsPasscode();
+                    break;
+                default:
+                    throw new UnsupportedFeatureException($"MFA method '{method}' is not supported");
+                }
 
                 if (passcode == Ui.Passcode.Cancel)
                     throw new CanceledMultiFactorException("MFA canceled by the user");
@@ -78,12 +93,16 @@ namespace PasswordManagerAccess.Keeper
                 parameters["2fa_token"] = passcode.Code;
                 parameters["2fa_type"] = "one_time";
 
-                response = jsonHttp.Post<R.Login>("", parameters);
+                var response = jsonHttp.Post<R.Login>("", parameters);
                 if (response.Ok)
                     return new Session(response.Token, response.Keys);
-            }
 
-            throw MakeError(response, "login");
+                throw MakeError(response, "MFA login");
+            }
+            finally
+            {
+                ui.Close();
+            }
         }
 
         internal static Dictionary<string, object> SharedLoginParameters(string username)
@@ -250,6 +269,8 @@ namespace PasswordManagerAccess.Keeper
                 return new BadCredentialsException("The username is invalid");
             case "auth_failed":
                 return new BadCredentialsException("The password is invalid");
+            case "invalid_totp":
+                return new BadMultiFactorException("The second factor code is invalid");
             default:
                 return new InternalErrorException(string.Format("The '{0}' request failed: '{1}'",
                                                                 requestName,
@@ -277,6 +298,7 @@ namespace PasswordManagerAccess.Keeper
         // Data
         //
 
+        private const string ApiUrl = "https://keepersecurity.com/api/v2/";
         private const string ClientVersion = "c13.0.0";
     }
 }
