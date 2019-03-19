@@ -80,7 +80,7 @@ namespace PasswordManagerAccess.Example.Keeper
         {
             try
             {
-                return Vault.Open(username, password, new TextUi());
+                return Vault.Open(username, password, new TextUi(), new PlainStorage());
             }
             catch (BaseException e)
             {

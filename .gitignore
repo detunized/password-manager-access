@@ -2,6 +2,7 @@
 /example/*/bin/
 /example/*/obj/
 /example/*/config.yaml
+/example/*/storage.yaml
 /src/bin/
 /src/obj/
 /test/bin/

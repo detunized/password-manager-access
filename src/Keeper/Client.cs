@@ -13,14 +13,18 @@ namespace PasswordManagerAccess.Keeper
 
     internal static class Client
     {
-        public static Account[] OpenVault(string username, string password, Ui ui, IHttpClient http)
+        public static Account[] OpenVault(string username,
+                                          string password,
+                                          Ui ui,
+                                          ISecureStorage storage,
+                                          IHttpClient http)
         {
             var jsonHttp = new JsonHttpClient(http, ApiUrl);
             var kdfInfo = RequestKdfInfo(username, jsonHttp);
             var passwordHash = Crypto.HashPassword(password,
                                                    kdfInfo.Salt.Decode64Loose(),
                                                    kdfInfo.Iterations);
-            var session = Login(username, passwordHash, ui, jsonHttp);
+            var session = Login(username, passwordHash, ui, storage, jsonHttp);
             var encryptedVault = RequestVault(username, session.Token, jsonHttp);
             var vaultKey = DecryptVaultKey(session.Keys, password);
             var accounts = DecryptVault(encryptedVault, vaultKey);
@@ -55,22 +59,49 @@ namespace PasswordManagerAccess.Keeper
             }
         }
 
-        internal static Session Login(string username, byte[] passwordHash, Ui ui, JsonHttpClient jsonHttp)
+        internal static Session Login(string username,
+                                      byte[] passwordHash,
+                                      Ui ui,
+                                      ISecureStorage storage,
+                                      JsonHttpClient jsonHttp)
         {
             var parameters = SharedLoginParameters(username);
             parameters["auth_response"] = passwordHash.ToUrlSafeBase64NoPadding();
+
+            // If have a "remember me" token stored from one of the previous sessions,
+            // we need to send it along
+            var rememberMeToken = storage.LoadString(RememberMeTokenKey);
+            if (!rememberMeToken.IsNullOrEmpty())
+            {
+                parameters["2fa_token"] = rememberMeToken;
+                parameters["2fa_type"] = "device_token";
+            }
 
             var response = jsonHttp.Post<R.Login>("", parameters);
             if (response.Ok)
                 return new Session(response.Token, response.Keys);
 
-            if (response.ResultCode == "need_totp")
-                return MfaLogin(response.Channel, parameters, ui, jsonHttp);
+            // need_totp means MFA is required
+            bool needMfa = response.ResultCode == "need_totp";
+
+            // The token is expired or invalid
+            if (response.ResultCode == "invalid_device_token")
+            {
+                storage.StoreString(RememberMeTokenKey, null);
+                needMfa = true;
+            }
+
+            if (needMfa)
+                return MfaLogin(response.Channel, parameters, ui, storage, jsonHttp);
 
             throw MakeError(response, "login");
         }
 
-        internal static Session MfaLogin(string method, Dictionary<string, object> parameters, Ui ui, JsonHttpClient jsonHttp)
+        internal static Session MfaLogin(string method,
+                                         Dictionary<string, object> parameters,
+                                         Ui ui,
+                                         ISecureStorage storage,
+                                         JsonHttpClient jsonHttp)
         {
             try
             {
@@ -95,7 +126,11 @@ namespace PasswordManagerAccess.Keeper
 
                 var response = jsonHttp.Post<R.Login>("", parameters);
                 if (response.Ok)
+                {
+                    storage.StoreString(RememberMeTokenKey,
+                                        passcode.RememberMe ? response.DeviceToken : null);
                     return new Session(response.Token, response.Keys);
+                }
 
                 throw MakeError(response, "MFA login");
             }
@@ -300,5 +335,6 @@ namespace PasswordManagerAccess.Keeper
 
         private const string ApiUrl = "https://keepersecurity.com/api/v2/";
         private const string ClientVersion = "c13.0.0";
+        private const string RememberMeTokenKey = "remember-me-token";
     }
 }

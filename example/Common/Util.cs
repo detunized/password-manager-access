@@ -14,16 +14,11 @@ namespace PasswordManagerAccess.Example.Common
         // Look for config.yaml starting form current directory and up to 4 levels and then load it
         public static Dictionary<string, string> ReadConfig()
         {
-            var filename = "config.yaml";
-            for (int i = 0; i < 4; ++i)
-            {
-                if (File.Exists(filename))
-                    return ReadConfig(filename);
+            var filename = FindFile("config.yaml", 3);
+            if (filename == null)
+                throw new InvalidOperationException("config.yaml not found");
 
-                filename = $"../{filename}";
-            }
-
-            throw new InvalidOperationException("config.yaml not found");
+            return ReadConfig(filename);
         }
 
 
@@ -39,6 +34,20 @@ namespace PasswordManagerAccess.Example.Common
                 .Select(line => line.Split(new[] {':'}, 2))
                 .Where(parts => parts.Length == 2)
                 .ToDictionary(parts => parts[0].Trim(), parts => parts[1].Trim());
+        }
+
+        public static string FindFile(string basename, int levelsUp)
+        {
+            var filename = basename;
+            for (int i = 0; i <= levelsUp; ++i)
+            {
+                if (File.Exists(filename))
+                    return filename;
+
+                filename = $"../{filename}";
+            }
+
+            return null;
         }
 
         public static void PrintException(BaseException e)

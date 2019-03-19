@@ -34,11 +34,14 @@ namespace PasswordManagerAccess.Keeper.Response
         [JsonProperty(PropertyName = "session_token")]
         public readonly string Token;
 
-        [JsonProperty(PropertyName = "channel")]
-        public readonly string Channel;
-
         [JsonProperty(PropertyName = "keys")]
         public readonly Keys Keys;
+
+        [JsonProperty(PropertyName = "device_token")]
+        public readonly string DeviceToken;
+
+        [JsonProperty(PropertyName = "channel")]
+        public readonly string Channel;
     }
 
     internal struct Keys
