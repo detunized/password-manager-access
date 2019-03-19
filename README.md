@@ -11,12 +11,13 @@ detunized/lastpass-sharp, detunized/1password-sharp and many more).
 Example:
 
 ```c#
-var accounts = Keeper.Vault.Open(username, password);
+var accounts = Keeper.Vault.Open(username, password, ui, storage);
 foreach (var i in accounts)
     Console.WriteLine($"{i.Name} {i.Username} {i.Password} {i.Url} {i.Notes} {i.Folder}");
 ```
 
-For more details please see example/Keeper project.
+To see what the `ui` and `storage` are for and for more details please see
+example/Keeper project.
 
 ## License
 
