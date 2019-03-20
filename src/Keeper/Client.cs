@@ -212,10 +212,10 @@ namespace PasswordManagerAccess.Keeper
 
         internal static Dictionary<string, string> DecryptAccountFolderPaths(R.EncryptedVault vault, byte[] vaultKey)
         {
-            if (vault.Folders == null)
-                return new Dictionary<string, string>();
+            var folderIdToFolderPaths = vault.Folders == null
+                ? new Dictionary<string, string>()
+                : DecryptFolders(vault.Folders, vaultKey);
 
-            var folderIdToFolderPaths = DecryptFolders(vault.Folders, vaultKey);
             try
             {
                 return vault.RecordFolderRairs.ToDictionary(
