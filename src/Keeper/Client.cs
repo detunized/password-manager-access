@@ -103,41 +103,55 @@ namespace PasswordManagerAccess.Keeper
                                          ISecureStorage storage,
                                          JsonHttpClient jsonHttp)
         {
-            try
+            int attempt = 0;
+            while (true)
             {
-                var passcode = Ui.Passcode.Cancel;
-                switch (method)
+                try
                 {
-                case "two_factor_channel_google":
-                    passcode = ui.ProvideGoogleAuthPasscode();
-                    break;
-                case "two_factor_channel_sms":
-                    passcode = ui.ProvideSmsPasscode();
-                    break;
-                default:
-                    throw new UnsupportedFeatureException($"MFA method '{method}' is not supported");
+                    return MfaLoginAttempt(attempt++, method, parameters, ui, storage, jsonHttp);
                 }
-
-                if (passcode == Ui.Passcode.Cancel)
-                    throw new CanceledMultiFactorException("MFA canceled by the user");
-
-                parameters["2fa_token"] = passcode.Code;
-                parameters["2fa_type"] = "one_time";
-
-                var response = jsonHttp.Post<R.Login>("", parameters);
-                if (response.Ok)
+                catch (BadMultiFactorException) when (attempt < MaxMfaAttempts)
                 {
-                    storage.StoreString(RememberMeTokenKey,
-                                        passcode.RememberMe ? response.DeviceToken : null);
-                    return new Session(response.Token, response.Keys);
+                    // Ignore the exception
                 }
-
-                throw MakeError(response, "MFA login");
             }
-            finally
+        }
+
+        internal static Session MfaLoginAttempt(int attempt,
+                                                string method,
+                                                Dictionary<string, object> parameters,
+                                                Ui ui,
+                                                ISecureStorage storage,
+                                                JsonHttpClient jsonHttp)
+        {
+            var passcode = Ui.Passcode.Cancel;
+            switch (method)
             {
-                ui.Close();
+            case "two_factor_channel_google":
+                passcode = ui.ProvideGoogleAuthPasscode(attempt);
+                break;
+            case "two_factor_channel_sms":
+                passcode = ui.ProvideSmsPasscode(attempt);
+                break;
+            default:
+                throw new UnsupportedFeatureException($"MFA method '{method}' is not supported");
             }
+
+            if (passcode == Ui.Passcode.Cancel)
+                throw new CanceledMultiFactorException("MFA canceled by the user");
+
+            parameters["2fa_token"] = passcode.Code;
+            parameters["2fa_type"] = "one_time";
+
+            var response = jsonHttp.Post<R.Login>("", parameters);
+            if (response.Ok)
+            {
+                storage.StoreString(RememberMeTokenKey,
+                                    passcode.RememberMe ? response.DeviceToken : null);
+                return new Session(response.Token, response.Keys);
+            }
+
+            throw MakeError(response, "MFA login");
         }
 
         internal static Dictionary<string, object> SharedLoginParameters(string username)
@@ -336,5 +350,6 @@ namespace PasswordManagerAccess.Keeper
         private const string ApiUrl = "https://keepersecurity.com/api/v2/";
         private const string ClientVersion = "c13.0.0";
         private const string RememberMeTokenKey = "remember-me-token";
+        private const int MaxMfaAttempts = 3;
     }
 }

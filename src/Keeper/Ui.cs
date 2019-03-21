@@ -1,21 +1,14 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using PasswordManagerAccess.Common;
-
 namespace PasswordManagerAccess.Keeper
 {
     public abstract class Ui
     {
-        // To cancel return Passcode.Cancel
-        public abstract Passcode ProvideGoogleAuthPasscode();
-        public abstract Passcode ProvideSmsPasscode();
-
-        // The UI will no longer be used and could be closed
-        public abstract void Close();
-
+        // Passcode result
         public class Passcode
         {
+            // Return this to signal the cancellation of the operation
             public static readonly Passcode Cancel = new Passcode("cancel", false);
 
             public readonly string Code;
@@ -27,5 +20,9 @@ namespace PasswordManagerAccess.Keeper
                 RememberMe = rememberMe;
             }
         }
+
+        // To cancel return Passcode.Cancel
+        public abstract Passcode ProvideGoogleAuthPasscode(int attempt);
+        public abstract Passcode ProvideSmsPasscode(int attempt);
     }
 }

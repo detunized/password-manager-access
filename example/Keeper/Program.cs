@@ -10,20 +10,25 @@ namespace PasswordManagerAccess.Example.Keeper
 {
     class TextUi: Ui
     {
-        public override void Close()
+        public override Passcode ProvideGoogleAuthPasscode(int attempt)
         {
-            Info("Closing UI");
-        }
+            if (attempt > 0)
+                Bad("Google Authenticator code is invalid, try again");
 
-        public override Passcode ProvideGoogleAuthPasscode()
-        {
             return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
         }
 
-        public override Passcode ProvideSmsPasscode()
+        public override Passcode ProvideSmsPasscode(int attempt)
         {
+            if (attempt > 0)
+                Bad("SMS code is invalid, try again");
+
             return GetPasscode($"Please enter SMS code {ToCancel}");
         }
+
+        //
+        // Private
+        //
 
         private static Passcode GetPasscode(string prompt)
         {
@@ -46,9 +51,14 @@ namespace PasswordManagerAccess.Example.Keeper
             return remember == "y" || remember == "yes";
         }
 
-        private static void Info(string text)
+        private static void Bad(string text)
         {
-            Console.ForegroundColor = ConsoleColor.DarkGray;
+            WriteLine(ConsoleColor.Red, text);
+        }
+
+        private static void WriteLine(ConsoleColor color, string text)
+        {
+            Console.ForegroundColor = color;
             Console.WriteLine(text);
             Console.ResetColor();
         }
