@@ -1,11 +1,11 @@
-// Copyright (C) 2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Bitwarden
+namespace PasswordManagerAccess.Bitwarden
 {
     // Very-very basic ASN.1 parser. Just enough to extract the RSA key
     // parameters stored in a vault. Supports only sequences, octet strings

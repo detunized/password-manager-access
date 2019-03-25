@@ -1,14 +1,15 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using HtmlAgilityPack;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using HtmlAgilityPack;
+using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
-namespace Bitwarden
+namespace PasswordManagerAccess.Bitwarden
 {
     internal static class Duo
     {
@@ -148,7 +149,7 @@ namespace Bitwarden
         // Returns the transaction id
         internal static string SubmitFactor(string sid, Ui.DuoChoice choice, string passcode, JsonHttpClient jsonHttp)
         {
-            var parameters = new Dictionary<string, string>
+            var parameters = new Dictionary<string, object>
             {
                 {"sid", sid},
                 {"device", choice.Device.Id},
@@ -195,7 +196,7 @@ namespace Bitwarden
             for (var i = 0; i < MaxPollAttempts; i += 1)
             {
                 var response = PostForm("frame/status",
-                                        new Dictionary<string, string> {{"sid", sid}, {"txid", txid}},
+                                        new Dictionary<string, object> {{"sid", sid}, {"txid", txid}},
                                         jsonHttp);
 
                 var responseStatus = GetResponseStatus(response);
@@ -220,7 +221,7 @@ namespace Bitwarden
 
         internal static string FetchToken(string sid, string url, Ui ui, JsonHttpClient jsonHttp)
         {
-            var response = PostForm(url, new Dictionary<string, string> {{"sid", sid}}, jsonHttp);
+            var response = PostForm(url, new Dictionary<string, object> {{"sid", sid}}, jsonHttp);
 
             UpdateUi(response, ui);
 
@@ -231,7 +232,7 @@ namespace Bitwarden
             return token;
         }
 
-        internal static JObject PostForm(string endpoint, Dictionary<string, string> parameters, JsonHttpClient jsonHttp)
+        internal static JObject PostForm(string endpoint, Dictionary<string, object> parameters, JsonHttpClient jsonHttp)
         {
             var response = jsonHttp.PostForm(endpoint, parameters);
 
@@ -364,24 +365,22 @@ namespace Bitwarden
             return "";
         }
 
-        internal static ClientException MakeNetworkError(string message, Exception original = null)
+        internal static NetworkErrorException MakeNetworkError(string message, Exception original = null)
         {
-            return new ClientException(ClientException.FailureReason.NetworkError, message, original);
+            return new NetworkErrorException(message, original);
         }
 
-        internal static ClientException MakeInvalidResponseError(string message, Exception original = null)
+        internal static InternalErrorException MakeInvalidResponseError(string message, Exception original = null)
         {
-            return new ClientException(ClientException.FailureReason.InvalidResponse, message, original);
+            return new InternalErrorException(message, original);
         }
 
-        internal static ClientException MakeRespondedWithError(string message,
-                                                               JObject response,
-                                                               Exception original = null)
+        internal static InternalErrorException MakeRespondedWithError(string message,
+                                                                      JObject response,
+                                                                      Exception original = null)
         {
             var serverMessage = (string)response["message"] ?? "none";
-            return new ClientException(ClientException.FailureReason.RespondedWithError,
-                                       $"{message} Server message: {serverMessage}",
-                                       original);
+            return new InternalErrorException($"{message} Server message: {serverMessage}", original);
         }
     }
 }

@@ -1,12 +1,13 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
-namespace Bitwarden
+namespace PasswordManagerAccess.Bitwarden
 {
     internal static class Crypto
     {
@@ -38,6 +39,7 @@ namespace Bitwarden
         {
             var enc = HkdfExpand(key, "enc".ToBytes());
             var mac = HkdfExpand(key, "mac".ToBytes());
+
             return enc.Concat(mac).ToArray();
         }
 
@@ -53,12 +55,13 @@ namespace Bitwarden
                 using (var outputStream = new MemoryStream())
                 {
                     cryptoStream.CopyTo(outputStream);
+
                     return outputStream.ToArray();
                 }
             }
             catch (CryptographicException e)
             {
-                throw new ClientException(ClientException.FailureReason.CryptoError, "AES decryption failed", e);
+                throw new CryptoException("AES decryption failed", e);
             }
         }
 
@@ -79,7 +82,7 @@ namespace Bitwarden
             }
             catch (CryptographicException e)
             {
-                throw new ClientException(ClientException.FailureReason.CryptoError, "RSA decryption failed", e);
+                throw new CryptoException("RSA decryption failed", e);
             }
         }
 
@@ -90,6 +93,7 @@ namespace Bitwarden
             var privateKey = privateKeyInfo.Open(reader => {
                 ExtractAsn1Item(reader, Asn1.Kind.Integer); // Discard the version
                 ExtractAsn1Item(reader, Asn1.Kind.Sequence); // Discard the algorithm
+
                 return ExtractAsn1Item(reader, Asn1.Kind.OctetString);
             });
             var berEncodedPrivateKey = ExtractAsn1Item(privateKey, Asn1.Kind.Sequence);
@@ -129,8 +133,7 @@ namespace Bitwarden
         {
             var item = Asn1.ExtractItem(reader);
             if (item.Key != expectedKind)
-                throw new ClientException(ClientException.FailureReason.InvalidFormat,
-                                          $"ASN1 decoding failed, expected {expectedKind}, got {item.Key}");
+                throw new InternalErrorException($"ASN1 decoding failed, expected {expectedKind}, got {item.Key}");
 
             return item.Value;
         }

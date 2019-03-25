@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 // Everything in this namespace is public on purpose, even though it's only used internally.
 // This is done to avoid problems with code obfuscation. The deserialization doesn't work when
 // any names here get changed.
-namespace Bitwarden.Response
+namespace PasswordManagerAccess.Bitwarden.Response
 {
     public enum KdfMethod
     {

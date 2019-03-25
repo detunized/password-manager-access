@@ -1,11 +1,14 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.Diagnostics;
 using System.Linq;
+using PasswordManagerAccess.Common;
 
-namespace Bitwarden
+// TODO: Here and everywhere else in Bitwarden: remove System.Exceptions
+
+namespace PasswordManagerAccess.Bitwarden
 {
     internal enum CipherMode
     {
@@ -158,9 +161,9 @@ namespace Bitwarden
                 throw MakeError($"IV must be 16 bytes long in AES modes, got {iv.Length}");
         }
 
-        private static ClientException MakeError(string message)
+        private static InternalErrorException MakeError(string message)
         {
-            return new ClientException(ClientException.FailureReason.InvalidFormat, message);
+            return new InternalErrorException(message);
         }
 
         private byte[] DecryptAes256Cbc(byte[] key)
@@ -177,8 +180,7 @@ namespace Bitwarden
         {
             Debug.Assert(Mode == CipherMode.Aes128CbcHmacSha256);
 
-            throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
-                                      "AES-128-CBC-HMAC-SHA-256 is not supported");
+            throw new UnsupportedFeatureException("AES-128-CBC-HMAC-SHA-256 is not supported");
         }
 
         private byte[] DecryptAes256CbcHmacSha256(byte[] key)
@@ -198,8 +200,7 @@ namespace Bitwarden
             // Encrypt-then-MAC scheme
             var mac = Crypto.Hmac(macKey, Iv.Concat(Ciphertext).ToArray());
             if (!mac.SequenceEqual(Mac))
-                throw new ClientException(ClientException.FailureReason.CryptoError,
-                                          "MAC doesn't match. The vault is most likely corrupted.");
+                throw new CryptoException("MAC doesn't match. The vault is most likely corrupted.");
 
             return Crypto.DecryptAes256(Ciphertext, Iv, encKey);
         }

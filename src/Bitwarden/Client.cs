@@ -1,7 +1,6 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,8 +8,9 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
-namespace Bitwarden
+namespace PasswordManagerAccess.Bitwarden
 {
     internal static class Client
     {
@@ -59,8 +59,7 @@ namespace Bitwarden
         {
             var info = RequestKdfInfo(username, jsonHttp);
             if (info.Kdf != Response.KdfMethod.Pbkdf2Sha256)
-                throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
-                                          $"KDF method {info.Kdf} is not supported");
+                throw new UnsupportedFeatureException($"KDF method {info.Kdf} is not supported");
 
             return info.KdfIterations;
         }
@@ -70,9 +69,9 @@ namespace Bitwarden
             try
             {
                 return jsonHttp.Post<Response.KdfInfo>("api/accounts/prelogin",
-                                                       new Dictionary<string, string> { { "email", username } });
+                                                       new Dictionary<string, object> {{"email", username}});
             }
-            catch (ClientException e)
+            catch (NetworkErrorException e)
             {
                 // The web client seems to ignore network errors. Default to 5000 iterations.
                 if (IsHttp400To500(e))
@@ -100,8 +99,7 @@ namespace Bitwarden
 
             var secondFactor = response.SecondFactor;
             if (secondFactor.Methods == null || secondFactor.Methods.Count == 0)
-                throw new ClientException(ClientException.FailureReason.InvalidResponse,
-                                          "Expected a non empty list of available 2FA methods");
+                throw new InternalErrorException("Expected a non empty list of available 2FA methods");
 
             // We had a "remember me" token saved, but the login failed anyway. This token is not valid anymore.
             if (rememberMeOptions != null)
@@ -117,8 +115,9 @@ namespace Bitwarden
                 break;
             case Response.SecondFactorMethod.Email:
                 if (secondFactor.Methods.Count != 1)
-                    throw new InvalidOperationException("Logical error: email 2FA method should be chosen " +
-                                                        "only when there are no other options left");
+                    throw new InternalErrorException(
+                        "Logical error: email 2FA method should be chosen only when there are no other options left");
+
                 // When only email 2FA present, the email is sent by the server right away
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
                 passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
@@ -133,16 +132,14 @@ namespace Bitwarden
                 passcode = ui.ProvideYubiKeyPasscode();
                 break;
             default:
-                throw new ClientException(ClientException.FailureReason.UnsupportedFeature,
-                                          $"2FA method {method} is not supported");
+                throw new UnsupportedFeatureException($"2FA method {method} is not supported");
             }
 
             // We're done interacting with the UI
             ui.Close();
 
             if (passcode == null)
-                throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
-                                          "Second factor step is canceled by the user");
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             var secondFactorResponse = RequestAuthToken(username,
                                                         passwordHash,
@@ -159,8 +156,7 @@ namespace Bitwarden
                 return secondFactorResponse.AuthToken;
             }
 
-            throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
-                                      "Second factor code is not correct");
+            throw new BadMultiFactorException("Second factor code is not correct");
         }
 
         internal static SecondFactorOptions GetRememberMeOptions(ISecureStorage storage)
@@ -188,7 +184,7 @@ namespace Bitwarden
         {
             var methods = secondFactor.Methods;
             if (methods == null || methods.Count == 0)
-                throw new InvalidOperationException("Logical error: should be called with non empty list of methods");
+                throw new InternalErrorException("Logical error: should be called with non empty list of methods");
 
             if (methods.Count == 1)
                 return methods.ElementAt(0).Key;
@@ -252,7 +248,7 @@ namespace Bitwarden
         {
             try
             {
-                var parameters = new Dictionary<string, string>
+                var parameters = new Dictionary<string, object>
                 {
                     {"username", username},
                     {"password", passwordHash.ToBase64()},
@@ -274,7 +270,7 @@ namespace Bitwarden
                 var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token", parameters);
                 return new TokenOrSecondFactor($"{response.TokenType} {response.AccessToken}", response.TwoFactorToken);
             }
-            catch (ClientException e)
+            catch (NetworkErrorException e)
             {
                 // .NET WebClinet throws exceptions on HTTP errors. In the case of 2FA the server
                 // returns some 400+ HTTP error and the response contains extra information about
@@ -291,7 +287,7 @@ namespace Bitwarden
             }
         }
 
-        internal static Response.SecondFactor? ExtractSecondFactorFromResponse(ClientException e)
+        internal static Response.SecondFactor? ExtractSecondFactorFromResponse(NetworkErrorException e)
         {
             if (!IsHttp400To500(e))
                 return null;
@@ -316,7 +312,7 @@ namespace Bitwarden
             {
                 return jsonHttp.Get<Response.Vault>("api/sync?excludeDomains=true");
             }
-            catch (ClientException e)
+            catch (NetworkErrorException e)
             {
                 throw MakeSpecializedError(e);
             }
@@ -405,11 +401,8 @@ namespace Bitwarden
             return s == null ? "" : DecryptToString(s, key);
         }
 
-        internal static HttpStatusCode? GetHttpStatus(ClientException e)
+        internal static HttpStatusCode? GetHttpStatus(NetworkErrorException e)
         {
-            if (e.Reason != ClientException.FailureReason.NetworkError)
-                return null;
-
             var we = e.InnerException as WebException;
             if (we == null || we.Status != WebExceptionStatus.ProtocolError)
                 return null;
@@ -421,17 +414,14 @@ namespace Bitwarden
             return wr.StatusCode;
         }
 
-        internal static bool IsHttp400To500(ClientException e)
+        internal static bool IsHttp400To500(NetworkErrorException e)
         {
             var status = GetHttpStatus(e);
             return status != null && (int)status.Value / 100 == 4;
         }
 
-        internal static string GetHttpResponse(ClientException e)
+        internal static string GetHttpResponse(NetworkErrorException e)
         {
-            if (e.Reason != ClientException.FailureReason.NetworkError)
-                return null;
-
             var we = e.InnerException as WebException;
             if (we == null || we.Status != WebExceptionStatus.ProtocolError)
                 return null;
@@ -461,7 +451,7 @@ namespace Bitwarden
             }
         }
 
-        internal static string GetServerErrorMessage(ClientException e)
+        internal static string GetServerErrorMessage(NetworkErrorException e)
         {
             var response = GetHttpResponse(e);
             if (response == null)
@@ -478,7 +468,7 @@ namespace Bitwarden
             }
         }
 
-        internal static ClientException MakeSpecializedError(ClientException e)
+        internal static BaseException MakeSpecializedError(NetworkErrorException e)
         {
             if (!IsHttp400To500(e))
                 return e;
@@ -488,12 +478,12 @@ namespace Bitwarden
                 return e;
 
             if (message.Contains("Username or password is incorrect"))
-                return new ClientException(ClientException.FailureReason.IncorrectCredentials, message, e);
+                return new BadCredentialsException(message, e);
 
             if (message.Contains("Two-step token is invalid"))
-                return new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode, message, e);
+                return new BadMultiFactorException(message, e);
 
-            return new ClientException(ClientException.FailureReason.RespondedWithError, message, e);
+            return new InternalErrorException(message, e);
         }
 
         //
