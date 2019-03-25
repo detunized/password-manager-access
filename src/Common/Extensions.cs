@@ -3,6 +3,7 @@
 
 using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -183,6 +184,18 @@ namespace PasswordManagerAccess.Common
             // as positive, like OpenSSL does. Otherwise if the last byte is greater or
             // equal to 0x80 it will be negative.
             return new BigInteger(x.Reverse().Concat(new byte[] { 0 }).ToArray());
+        }
+
+        public static void Open(this byte[] bytes, Action<BinaryReader> action)
+        {
+            bytes.Open(reader => action(reader));
+        }
+
+        public static TResult Open<TResult>(this byte[] bytes, Func<BinaryReader, TResult> action)
+        {
+            using (var stream = new MemoryStream(bytes, false))
+            using (var reader = new BinaryReader(stream))
+                return action(reader);
         }
 
         //

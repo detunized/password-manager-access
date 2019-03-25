@@ -236,6 +236,23 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(new BigInteger(0xDEADBEEF), new byte[] { 0xDE, 0xAD, 0xBE, 0xEF }.ToBigInt());
         }
 
+        [Fact]
+        public void ByteArray_Open_provides_binary_read()
+        {
+            byte result = 0;
+            new byte[] {13}.Open(reader => result = reader.ReadByte());
+
+            Assert.Equal(13, result);
+        }
+
+        [Fact]
+        public void ByteArray_Open_returns_result()
+        {
+            byte result = new byte[] {13}.Open(reader => reader.ReadByte());
+
+            Assert.Equal(13, result);
+        }
+
         //
         // BigInteger
         //
