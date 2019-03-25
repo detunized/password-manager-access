@@ -1,67 +1,66 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using Xunit;
 
 namespace Bitwarden.Test
 {
-    [TestFixture]
     public class CipherStringTest
     {
-        [Test]
+        [Fact]
         public void Parse_handles_default_cipher_mode()
         {
             var cs = CipherString.Parse("aXZpdml2aXZpdml2aXZpdg==|Y2lwaGVydGV4dA==");
 
-            Assert.That(cs.Mode, Is.EqualTo(CipherMode.Aes256Cbc));
-            Assert.That(cs.Iv, Is.EqualTo(Iv));
-            Assert.That(cs.Ciphertext, Is.EqualTo(Ciphertext));
+            Assert.Equal(CipherMode.Aes256Cbc, cs.Mode);
+            Assert.Equal(Iv, cs.Iv);
+            Assert.Equal(Ciphertext, cs.Ciphertext);
         }
 
-        [Test]
+        [Fact]
         public void Parse_handles_cipher_mode_0()
         {
             var cs = CipherString.Parse("0.aXZpdml2aXZpdml2aXZpdg==|Y2lwaGVydGV4dA==");
 
-            Assert.That(cs.Mode, Is.EqualTo(CipherMode.Aes256Cbc));
-            Assert.That(cs.Iv, Is.EqualTo(Iv));
-            Assert.That(cs.Ciphertext, Is.EqualTo(Ciphertext));
+            Assert.Equal(CipherMode.Aes256Cbc, cs.Mode);
+            Assert.Equal(Iv, cs.Iv);
+            Assert.Equal(Ciphertext, cs.Ciphertext);
         }
 
-        [Test]
+        [Fact]
         public void Parse_handles_cipher_mode_1()
         {
             var cs = CipherString.Parse("1.aXZpdml2aXZpdml2aXZpdg==|Y2lwaGVydGV4dA==|bWFjIG1hYyBtYWMgbWFjIG1hYyBtYWMgbWFjIG1hYyA=");
 
-            Assert.That(cs.Mode, Is.EqualTo(CipherMode.Aes128CbcHmacSha256));
-            Assert.That(cs.Iv, Is.EqualTo(Iv));
-            Assert.That(cs.Ciphertext, Is.EqualTo(Ciphertext));
-            Assert.That(cs.Mac, Is.EqualTo(Mac));
+            Assert.Equal(CipherMode.Aes128CbcHmacSha256, cs.Mode);
+            Assert.Equal(Iv, cs.Iv);
+            Assert.Equal(Ciphertext, cs.Ciphertext);
+            Assert.Equal(Mac, cs.Mac);
         }
 
-        [Test]
+        [Fact]
         public void Parse_handles_cipher_mode_2()
         {
             var cs = CipherString.Parse("2.aXZpdml2aXZpdml2aXZpdg==|Y2lwaGVydGV4dA==|bWFjIG1hYyBtYWMgbWFjIG1hYyBtYWMgbWFjIG1hYyA=");
 
-            Assert.That(cs.Mode, Is.EqualTo(CipherMode.Aes256CbcHmacSha256));
-            Assert.That(cs.Iv, Is.EqualTo(Iv));
-            Assert.That(cs.Ciphertext, Is.EqualTo(Ciphertext));
-            Assert.That(cs.Mac, Is.EqualTo(Mac));
+            Assert.Equal(CipherMode.Aes256CbcHmacSha256, cs.Mode);
+            Assert.Equal(Iv, cs.Iv);
+            Assert.Equal(Ciphertext, cs.Ciphertext);
+            Assert.Equal(Mac, cs.Mac);
         }
 
-        [Test]
+        [Fact]
         public void Parse_handles_cipher_mode_4()
         {
             var cs = CipherString.Parse("4.dcGElncBCW/5N+J9gcO0StC+TvUbRgAaV6PrWked/ejcmjqZxZTlFJ/K7mt1lcyEOz4aq/+2wrveHois5hvDv2Ft0M+MMk6iLiSc+TwHFjxX1jINVymRQMQwEsLF6HA2sTPyhi+HhebWXI0c+jBOW2m17DItEipUXODeCjGa6skWPb+U3+eFV0Un+GObaYP6/BmJw2jVePzudgwJ6b0ai1OtQMvIVlTaE/p3lJiEMhCPw5LGcLxe2Kmjer2Z1jABr+zmowveSnZ35sJcvpUHQLPi4j5Sj66PEPv6I0A+h7f0Jlm1S/MB+ViZN5k2KGNGIGfisGvCIl0GU+rmg8wFnw==");
 
-            Assert.That(cs.Mode, Is.EqualTo(CipherMode.Rsa2048OaepSha1));
-            Assert.That(cs.Iv.Length, Is.EqualTo(0));
-            Assert.That(cs.Ciphertext.Length, Is.EqualTo(256));
-            Assert.That(cs.Mac.Length, Is.EqualTo(0));
+            Assert.Equal(CipherMode.Rsa2048OaepSha1, cs.Mode);
+            Assert.Equal(0, cs.Iv.Length);
+            Assert.Equal(256, cs.Ciphertext.Length);
+            Assert.Equal(0, cs.Mac.Length);
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_malformed_input()
         {
             var invalid = new[] {"0..", "0.|||"};
@@ -69,7 +68,7 @@ namespace Bitwarden.Test
                 VerifyThrowsInvalidFormat(i, "Invalid/unsupported cipher string format");
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_invalid_cipher_mode()
         {
             var invalid = new[] {"3.", "A."};
@@ -77,19 +76,19 @@ namespace Bitwarden.Test
                 VerifyThrowsInvalidFormat(i, "Invalid/unsupported cipher mode");
         }
 
-        [Test]
+        [Fact]
         public void Properties_are_set()
         {
             var mode = CipherMode.Aes256CbcHmacSha256;
             var cs = new CipherString(mode, Iv, Ciphertext, Mac);
 
-            Assert.That(cs.Mode, Is.EqualTo(mode));
-            Assert.That(cs.Iv, Is.EqualTo(Iv));
-            Assert.That(cs.Ciphertext, Is.EqualTo(Ciphertext));
-            Assert.That(cs.Mac, Is.EqualTo(Mac));
+            Assert.Equal(mode, cs.Mode);
+            Assert.Equal(Iv, cs.Iv);
+            Assert.Equal(Ciphertext, cs.Ciphertext);
+            Assert.Equal(Mac, cs.Mac);
         }
 
-        [Test]
+        [Fact]
         public void Ctor_throws_on_nulls()
         {
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
@@ -111,7 +110,7 @@ namespace Bitwarden.Test
                                       expectedMessage: "IV, ciphertext and MAC must not be null");
         }
 
-        [Test]
+        [Fact]
         public void Ctor_throws_on_invalid_aes_256_cbc()
         {
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes256Cbc,
@@ -127,7 +126,7 @@ namespace Bitwarden.Test
                                       expectedMessage: "MAC is not supported");
         }
 
-        [Test]
+        [Fact]
         public void Ctor_throws_on_invalid_aes_128_cbc_hmac_sha_256()
         {
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes128CbcHmacSha256,
@@ -143,7 +142,7 @@ namespace Bitwarden.Test
                                       expectedMessage: "MAC must be 32 bytes long");
         }
 
-        [Test]
+        [Fact]
         public void Ctor_throws_on_invalid_aes_256_cbc_hmac_sha_256()
         {
             VerifyThrowsInvalidFormat(mode: CipherMode.Aes256CbcHmacSha256,
@@ -159,7 +158,7 @@ namespace Bitwarden.Test
                                       expectedMessage: "MAC must be 32 bytes long");
         }
 
-        [Test]
+        [Fact]
         public void Ctor_throws_on_invalid_rsa_2048_oaep_sha_1()
         {
             VerifyThrowsInvalidFormat(mode: CipherMode.Rsa2048OaepSha1,
@@ -181,7 +180,7 @@ namespace Bitwarden.Test
                                     expectedMessage: "MAC is not supported");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_decrypts_ciphertext_without_mac()
         {
             var cs = new CipherString(mode: CipherMode.Aes256Cbc,
@@ -190,10 +189,10 @@ namespace Bitwarden.Test
                                       mac: "".ToBytes());
             var plaintext = cs.Decrypt("OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
 
-            Assert.That(plaintext, Is.EqualTo("All your base are belong to us".ToBytes()));
+            Assert.Equal("All your base are belong to us".ToBytes(), plaintext);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_decrypts_ciphertext_with_expanded_key()
         {
             var key = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
@@ -205,10 +204,10 @@ namespace Bitwarden.Test
             var cs = new CipherString(mode: CipherMode.Aes256CbcHmacSha256, iv: iv, ciphertext: ciphertext, mac: mac);
             var plaintext = cs.Decrypt(key);
 
-            Assert.That(plaintext, Is.EqualTo(expected));
+            Assert.Equal(expected, plaintext);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_mismatching_mac()
         {
             var key = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();

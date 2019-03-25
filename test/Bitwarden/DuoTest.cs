@@ -1,23 +1,22 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using Xunit;
 
 namespace Bitwarden.Test
 {
-    [TestFixture]
     class DuoTest
     {
-        [Test]
+        [Fact]
         public void ParseSignature_returns_parts()
         {
             var parsed = Duo.ParseSignature("tx:app");
 
-            Assert.That(parsed.Tx, Is.EqualTo("tx"));
-            Assert.That(parsed.App, Is.EqualTo("app"));
+            Assert.Equal("tx", parsed.Tx);
+            Assert.Equal("app", parsed.App);
         }
 
-        [Test]
+        [Fact]
         public void ParseSignature_throws_on_invalid_signature()
         {
             var cases = new[]
@@ -32,16 +31,16 @@ namespace Bitwarden.Test
                             Throws.InstanceOf<ClientException>().And.Message.Contains("signature is invalid"));
         }
 
-        [Test]
+        [Fact]
         public void DownloadFrame_returns_html_document()
         {
             var http = JsonHttpClientTest.SetupPost("<html></html>");
             var html = Duo.DownloadFrame("host.com", "tx", http.Object);
 
-            Assert.That(html.DocumentNode.InnerHtml, Is.EqualTo("<html></html>"));
+            Assert.Equal("<html></html>", html.DocumentNode.InnerHtml);
         }
 
-        [Test]
+        [Fact]
         public void DownloadFrame_throws_on_network_error()
         {
             var http = JsonHttpClientTest.SetupPostWithFailure();

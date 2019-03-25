@@ -4,22 +4,21 @@
 using System.Collections.Generic;
 using Moq;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 
 namespace Bitwarden.Test
 {
-    [TestFixture]
     public class ClientTest
     {
-        [Test]
+        [Fact]
         public void RequestKdfIterationCount_returns_iteration_count()
         {
             var count = Client.RequestKdfIterationCount(Username, SetupKdfRequest(1337));
 
-            Assert.That(count, Is.EqualTo(1337));
+            Assert.Equal(1337, count);
         }
 
-        [Test]
+        [Fact]
         public void RequestKdfIterationCount_makes_POST_request_to_specific_endpoint()
         {
             var jsonHttp = SetupKdfRequest(1337);
@@ -28,7 +27,7 @@ namespace Bitwarden.Test
             JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/api/accounts/prelogin");
         }
 
-        [Test]
+        [Fact]
         public void RequestKdfIterationCount_throws_on_unsupported_kdf_method()
         {
             var jsonHttp = SetupKdfRequest(1337, 13);
@@ -38,7 +37,7 @@ namespace Bitwarden.Test
                             .And.Property("Reason").EqualTo(ClientException.FailureReason.UnsupportedFeature));
         }
 
-        [Test]
+        [Fact]
         public void Login_returns_auth_token_on_non_2fa_login()
         {
             var token = Client.Login(Username,
@@ -48,10 +47,10 @@ namespace Bitwarden.Test
                                      SetupSecureStorage(null),
                                      SetupAuthTokenRequest());
 
-            Assert.That(token, Is.EqualTo("Bearer wa-wa-wee-wa"));
+            Assert.Equal("Bearer wa-wa-wee-wa", token);
         }
 
-        [Test]
+        [Fact]
         public void Login_sends_remember_me_token_when_available()
         {
             var jsonHttp = SetupAuthTokenRequest();
@@ -64,7 +63,7 @@ namespace Bitwarden.Test
                 It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void Login_does_not_send_remember_me_token_when_not_available()
         {
             var jsonHttp = SetupAuthTokenRequest();
@@ -76,17 +75,17 @@ namespace Bitwarden.Test
                 It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void RequestAuthToken_returns_auth_token_response()
         {
             var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, SetupAuthTokenRequest());
 
-            Assert.That(response.AuthToken, Is.EqualTo("Bearer wa-wa-wee-wa"));
+            Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
             Assert.That(response.RememberMeToken, Is.Null);
             Assert.That(response.SecondFactor.Methods, Is.Null);
         }
 
-        [Test]
+        [Fact]
         public void RequestAuthToken_returns_remember_me_token_when_present()
         {
             var response = Client.RequestAuthToken(Username,
@@ -94,12 +93,12 @@ namespace Bitwarden.Test
                                                    DeviceId,
                                                    SetupAuthTokenRequestWithRememberMeToken());
 
-            Assert.That(response.AuthToken, Is.EqualTo("Bearer wa-wa-wee-wa"));
-            Assert.That(response.RememberMeToken, Is.EqualTo(RememberMeToken));
+            Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
+            Assert.Equal(RememberMeToken, response.RememberMeToken);
             Assert.That(response.SecondFactor.Methods, Is.Null);
         }
 
-        [Test]
+        [Fact]
         public void RequestAuthToken_makes_POST_request_to_specific_endpoint()
         {
             var jsonHttp = SetupAuthTokenRequest();
@@ -108,7 +107,7 @@ namespace Bitwarden.Test
             JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/identity/connect/token");
         }
 
-        [Test]
+        [Fact]
         public void RequestAuthToken_sends_device_id()
         {
             var jsonHttp = SetupAuthTokenRequest();
@@ -120,7 +119,7 @@ namespace Bitwarden.Test
                 It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void RequestAuthToken_with_second_factor_options_adds_extra_parameters()
         {
             var jsonHttp = SetupAuthTokenRequest();
@@ -138,18 +137,18 @@ namespace Bitwarden.Test
                 It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void DownloadVault_returns_parsed_response()
         {
             var jsonHttp = SetupDownloadVault();
             var response = Client.DownloadVault(jsonHttp);
 
             Assert.That(response.Profile.Key, Is.StringStarting("2.XZ2v"));
-            Assert.That(response.Ciphers.Length, Is.EqualTo(6));
-            Assert.That(response.Folders.Length, Is.EqualTo(2));
+            Assert.Equal(6, response.Ciphers.Length);
+            Assert.Equal(2, response.Folders.Length);
         }
 
-        [Test]
+        [Fact]
         public void DownloadVault_makes_GET_request_to_specific_endpoint()
         {
             var jsonHttp = SetupDownloadVault();
@@ -158,33 +157,33 @@ namespace Bitwarden.Test
             JsonHttpClientTest.VerifyGetUrl(jsonHttp, ".com/api/sync");
         }
 
-        [Test]
+        [Fact]
         public void DecryptVault_returns_accounts()
         {
             var accounts = Client.DecryptVault(LoadVaultFixture(), Kek);
 
-            Assert.That(accounts.Length, Is.EqualTo(3));
-            Assert.That(accounts[0].Name, Is.EqualTo("Facebook"));
-            Assert.That(accounts[1].Name, Is.EqualTo("Google"));
-            Assert.That(accounts[2].Name, Is.EqualTo("only name"));
+            Assert.Equal(3, accounts.Length);
+            Assert.Equal("Facebook", accounts[0].Name);
+            Assert.Equal("Google", accounts[1].Name);
+            Assert.Equal("only name", accounts[2].Name);
         }
 
-        [Test]
+        [Fact]
         public void DecryptVault_assigns_folders()
         {
             var accounts = Client.DecryptVault(LoadVaultFixture(), Kek);
 
-            Assert.That(accounts[0].Name, Is.EqualTo("Facebook"));
-            Assert.That(accounts[0].Folder, Is.EqualTo("folder2"));
+            Assert.Equal("Facebook", accounts[0].Name);
+            Assert.Equal("folder2", accounts[0].Folder);
 
-            Assert.That(accounts[1].Name, Is.EqualTo("Google"));
-            Assert.That(accounts[1].Folder, Is.EqualTo(""));
+            Assert.Equal("Google", accounts[1].Name);
+            Assert.Equal("", accounts[1].Folder);
 
-            Assert.That(accounts[2].Name, Is.EqualTo("only name"));
-            Assert.That(accounts[2].Folder, Is.EqualTo("folder1"));
+            Assert.Equal("only name", accounts[2].Name);
+            Assert.Equal("folder1", accounts[2].Folder);
         }
 
-        [Test]
+        [Fact]
         public void ParseAccountItem_returns_account()
         {
             var vault = LoadVaultFixture();
@@ -195,41 +194,41 @@ namespace Bitwarden.Test
             };
             var account = Client.ParseAccountItem(vault.Ciphers[0], Key, null, folders);
 
-            Assert.That(account.Id, Is.EqualTo("a323db80-891a-4d91-9304-a981014cf3ca"));
-            Assert.That(account.Name, Is.EqualTo("Facebook"));
-            Assert.That(account.Username, Is.EqualTo("mark"));
-            Assert.That(account.Password, Is.EqualTo("zuckerberg"));
-            Assert.That(account.Url, Is.EqualTo("https://facebook.com"));
-            Assert.That(account.Note, Is.EqualTo("Hey, check this out!"));
-            Assert.That(account.Folder, Is.EqualTo("folder2"));
+            Assert.Equal("a323db80-891a-4d91-9304-a981014cf3ca", account.Id);
+            Assert.Equal("Facebook", account.Name);
+            Assert.Equal("mark", account.Username);
+            Assert.Equal("zuckerberg", account.Password);
+            Assert.Equal("https://facebook.com", account.Url);
+            Assert.Equal("Hey, check this out!", account.Note);
+            Assert.Equal("folder2", account.Folder);
         }
 
-        [Test]
+        [Fact]
         public void DecryptToBytes_returns_decrypted_input()
         {
             var plaintext = Client.DecryptToBytes(EncryptedString, Key);
-            Assert.That(plaintext, Is.EqualTo(Plaintext.ToBytes()));
+            Assert.Equal(Plaintext.ToBytes(), plaintext);
         }
 
-        [Test]
+        [Fact]
         public void DecryptToString_returns_decrypted_input()
         {
             var plaintext = Client.DecryptToString(EncryptedString, Key);
-            Assert.That(plaintext, Is.EqualTo(Plaintext));
+            Assert.Equal(Plaintext, plaintext);
         }
 
-        [Test]
+        [Fact]
         public void DecryptToStringOrBlank_returns_decrypted_input()
         {
             var plaintext = Client.DecryptToStringOrBlank(EncryptedString, Key);
-            Assert.That(plaintext, Is.EqualTo(Plaintext));
+            Assert.Equal(Plaintext, plaintext);
         }
 
-        [Test]
+        [Fact]
         public void DecryptToStringOrBlank_returns_blank_for_null_input()
         {
             var blank = Client.DecryptToStringOrBlank(null, Key);
-            Assert.That(blank, Is.EqualTo(""));
+            Assert.Equal("", blank);
         }
 
         //

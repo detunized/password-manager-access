@@ -2,66 +2,59 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Security.Cryptography;
-using NUnit.Framework;
+using Xunit;
 
 namespace Bitwarden.Test
 {
-    [TestFixture]
     public class CryptoTest
     {
-        [Test]
+        [Fact]
         public void DeriveKey_returns_derived_key()
         {
             var key = Crypto.DeriveKey(Username, Password, 100);
-            Assert.That(key, Is.EqualTo(DerivedKey.Decode64()));
+            Assert.Equal(DerivedKey.Decode64(), key);
         }
 
-        [Test]
+        [Fact]
         public void DeriveKey_trims_whitespace_and_lowercases_username()
         {
             var key = Crypto.DeriveKey(" UsErNaMe ", Password, 100);
-            Assert.That(key, Is.EqualTo(DerivedKey.Decode64()));
+            Assert.Equal(DerivedKey.Decode64(), key);
         }
 
-        [Test]
+        [Fact]
         public void HashPassword_returns_hashed_password()
         {
             var hash = Crypto.HashPassword(Password, DerivedKey.Decode64());
-            Assert.That(hash, Is.EqualTo(PasswordHash.Decode64()));
+            Assert.Equal(PasswordHash.Decode64(), hash);
         }
 
-        [Test]
+        [Fact]
         public void Hmac256_bytes_returns_hashed_message()
         {
-            Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
-                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64(), Crypto.Hmac("salt".ToBytes(), "message".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void HkdfExpand_returns_expected_result()
         {
-            Assert.That(Crypto.HkdfExpand("prk".ToBytes(), "info".ToBytes()),
-                        Is.EqualTo("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64()));
+            Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(), Crypto.HkdfExpand("prk".ToBytes(), "info".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void ExpandKey_expands_key_to_64_bytes()
         {
             var expected = "GKPlyJlfe4rO+RNeBj6P4Jm1Ds4QFB23rN2WvwVcb5Iw0U+9uVf7jwQ04Yq75uCrOSsL7HonzBzNdYi1hO/mlQ==";
-            Assert.That(Crypto.ExpandKey("key".ToBytes()), Is.EqualTo(expected.Decode64()));
+            Assert.Equal(expected.Decode64(), Crypto.ExpandKey("key".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256_decrypts_ciphertext()
         {
-            Assert.That(
-                Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                     "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                     "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()),
-                Is.EqualTo("All your base are belong to us".ToBytes()));
+            Assert.Equal("All your base are belong to us".ToBytes(), Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(), "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(), "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256_throws_on_incorrect_encryption_key()
         {
             Assert.That(() => Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
@@ -74,7 +67,7 @@ namespace Bitwarden.Test
                             .And.InnerException.InstanceOf<CryptographicException>());
         }
 
-        [Test]
+        [Fact]
         public void ParsePrivateKeyPkcs8_parses_openssl_generated_key()
         {
             // Generate with
