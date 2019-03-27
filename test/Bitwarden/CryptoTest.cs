@@ -1,10 +1,11 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 using Xunit;
+using Crypto = PasswordManagerAccess.Bitwarden.Crypto;
 
-namespace Bitwarden.Test
+namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class CryptoTest
     {
@@ -57,14 +58,10 @@ namespace Bitwarden.Test
         [Fact]
         public void DecryptAes256_throws_on_incorrect_encryption_key()
         {
-            Assert.That(() => Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                                   "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                                   "Incorrect key must be 32 bytes!!".ToBytes()),
-                        Throws
-                            .InstanceOf<ClientException>()
-                            .And.Property("Reason").EqualTo(ClientException.FailureReason.CryptoError)
-                            .And.Message.EqualTo("AES decryption failed")
-                            .And.InnerException.InstanceOf<CryptographicException>());
+            Exceptions.AssertThrowsCrypto(() => Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                                                     "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                                                     "Incorrect key must be 32 bytes!!".ToBytes()),
+                                          "AES decryption failed");
         }
 
         [Fact]

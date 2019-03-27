@@ -1,9 +1,11 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Bitwarden;
+using PasswordManagerAccess.Common;
 using Xunit;
 
-namespace Bitwarden.Test
+namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class CipherStringTest
     {
@@ -55,9 +57,9 @@ namespace Bitwarden.Test
             var cs = CipherString.Parse("4.dcGElncBCW/5N+J9gcO0StC+TvUbRgAaV6PrWked/ejcmjqZxZTlFJ/K7mt1lcyEOz4aq/+2wrveHois5hvDv2Ft0M+MMk6iLiSc+TwHFjxX1jINVymRQMQwEsLF6HA2sTPyhi+HhebWXI0c+jBOW2m17DItEipUXODeCjGa6skWPb+U3+eFV0Un+GObaYP6/BmJw2jVePzudgwJ6b0ai1OtQMvIVlTaE/p3lJiEMhCPw5LGcLxe2Kmjer2Z1jABr+zmowveSnZ35sJcvpUHQLPi4j5Sj66PEPv6I0A+h7f0Jlm1S/MB+ViZN5k2KGNGIGfisGvCIl0GU+rmg8wFnw==");
 
             Assert.Equal(CipherMode.Rsa2048OaepSha1, cs.Mode);
-            Assert.Equal(0, cs.Iv.Length);
+            Assert.Empty(cs.Iv);
             Assert.Equal(256, cs.Ciphertext.Length);
-            Assert.Equal(0, cs.Mac.Length);
+            Assert.Empty(cs.Mac);
         }
 
         [Fact]
@@ -216,23 +218,17 @@ namespace Bitwarden.Test
             var mac = "mismatching MAC, mismatching MAC".ToBytes();
             var cs = new CipherString(mode: CipherMode.Aes256CbcHmacSha256, iv: iv, ciphertext: ciphertext, mac: mac);
 
-            Assert.That(() => cs.Decrypt(key),
-                        Throws.InstanceOf<ClientException>()
-                            .And.Message.Contains("MAC doesn't match")
-                            .And.Property("Reason").EqualTo(ClientException.FailureReason.CryptoError));
+            Exceptions.AssertThrowsCrypto(() => cs.Decrypt(key), "MAC doesn't match");
         }
 
         //
         // Helper
         //
 
+        // TODO: Get rid of
         private static void VerifyThrowsInvalidFormat(string input, string expectedMessage)
         {
-            Assert.That(() => CipherString.Parse(input),
-                        Throws.InstanceOf<ClientException>()
-                            .And.Message.Contains(expectedMessage)
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.InvalidFormat));
+            Exceptions.AssertThrowsInternalError(() => CipherString.Parse(input), expectedMessage);
         }
 
         private static void VerifyThrowsInvalidFormat(CipherMode mode,
@@ -241,11 +237,7 @@ namespace Bitwarden.Test
                                                       byte[] mac,
                                                       string expectedMessage)
         {
-            Assert.That(() => new CipherString(mode, iv, ciphertext, mac),
-                        Throws.InstanceOf<ClientException>()
-                            .And.Message.Contains(expectedMessage)
-                            .And.Property("Reason")
-                            .EqualTo(ClientException.FailureReason.InvalidFormat));
+            Exceptions.AssertThrowsInternalError(() => new CipherString(mode, iv, ciphertext, mac), expectedMessage);
         }
 
         //

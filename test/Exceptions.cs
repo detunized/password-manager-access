@@ -14,9 +14,24 @@ namespace PasswordManagerAccess.Test
             return AssertThrows<BadCredentialsException>(action, message);
         }
 
+        public static NetworkErrorException AssertThrowsNetworkError(Action action, string message = "")
+        {
+            return AssertThrows<NetworkErrorException>(action, message);
+        }
+
+        public static UnsupportedFeatureException AssertThrowsUnsupportedFeature(Action action, string message = "")
+        {
+            return AssertThrows<UnsupportedFeatureException>(action, message);
+        }
+
         public static InternalErrorException AssertThrowsInternalError(Action action, string message = "")
         {
             return AssertThrows<InternalErrorException>(action, message);
+        }
+
+        public static CryptoException AssertThrowsCrypto(Action action, string message = "")
+        {
+            return AssertThrows<CryptoException>(action, message);
         }
 
         private static T AssertThrows<T>(Action action, string message) where T: BaseException

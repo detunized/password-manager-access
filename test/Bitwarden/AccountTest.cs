@@ -2,10 +2,11 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Xunit;
+using PasswordManagerAccess.Bitwarden;
 
-namespace Bitwarden.Test
+namespace PasswordManagerAccess.Test.Bitwarden
 {
-    class AccountTest
+    public class AccountTest
     {
         [Fact]
         public void Account_properties_are_set()

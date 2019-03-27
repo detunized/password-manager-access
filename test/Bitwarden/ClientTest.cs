@@ -5,8 +5,12 @@ using System.Collections.Generic;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Bitwarden;
+using PasswordManagerAccess.Test.Common;
+using Response = PasswordManagerAccess.Bitwarden.Response;
 
-namespace Bitwarden.Test
+namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class ClientTest
     {
@@ -31,10 +35,7 @@ namespace Bitwarden.Test
         public void RequestKdfIterationCount_throws_on_unsupported_kdf_method()
         {
             var jsonHttp = SetupKdfRequest(1337, 13);
-            Assert.That(() => Client.RequestKdfIterationCount(Username, jsonHttp),
-                        Throws.InstanceOf<ClientException>()
-                            .And.Message.Contains("not supported")
-                            .And.Property("Reason").EqualTo(ClientException.FailureReason.UnsupportedFeature));
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestKdfIterationCount(Username, jsonHttp), "KDF");
         }
 
         [Fact]
@@ -81,8 +82,8 @@ namespace Bitwarden.Test
             var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, SetupAuthTokenRequest());
 
             Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
-            Assert.That(response.RememberMeToken, Is.Null);
-            Assert.That(response.SecondFactor.Methods, Is.Null);
+            Assert.Null(response.RememberMeToken);
+            Assert.Null(response.SecondFactor.Methods);
         }
 
         [Fact]
@@ -95,7 +96,7 @@ namespace Bitwarden.Test
 
             Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
             Assert.Equal(RememberMeToken, response.RememberMeToken);
-            Assert.That(response.SecondFactor.Methods, Is.Null);
+            Assert.Null(response.SecondFactor.Methods);
         }
 
         [Fact]
@@ -143,7 +144,7 @@ namespace Bitwarden.Test
             var jsonHttp = SetupDownloadVault();
             var response = Client.DownloadVault(jsonHttp);
 
-            Assert.That(response.Profile.Key, Is.StringStarting("2.XZ2v"));
+            Assert.StartsWith("2.XZ2v", response.Profile.Key);
             Assert.Equal(6, response.Ciphers.Length);
             Assert.Equal(2, response.Folders.Length);
         }

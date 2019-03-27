@@ -1,11 +1,13 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Bitwarden;
+using PasswordManagerAccess.Test.Common;
 using Xunit;
 
-namespace Bitwarden.Test
+namespace PasswordManagerAccess.Test.Bitwarden
 {
-    class DuoTest
+    public class DuoTest
     {
         [Fact]
         public void ParseSignature_returns_parts()
@@ -27,8 +29,7 @@ namespace Bitwarden.Test
             };
 
             foreach (var i in cases)
-                Assert.That(() => Duo.ParseSignature(i),
-                            Throws.InstanceOf<ClientException>().And.Message.Contains("signature is invalid"));
+                Exceptions.AssertThrowsInternalError(() => Duo.ParseSignature(i), "signature is invalid");
         }
 
         [Fact]
@@ -45,10 +46,7 @@ namespace Bitwarden.Test
         {
             var http = JsonHttpClientTest.SetupPostWithFailure();
 
-            Assert.That(() => Duo.DownloadFrame("host.com", "tx", http.Object),
-                        Throws.InstanceOf<ClientException>()
-                            .And.Message.Contains("Network error")
-                            .And.Property("Reason").EqualTo(ClientException.FailureReason.NetworkError));
+            Exceptions.AssertThrowsNetworkError(() => Duo.DownloadFrame("host.com", "tx", http.Object), "Network error");
         }
     }
 }

@@ -2,11 +2,12 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using PasswordManagerAccess.Bitwarden;
 using Xunit;
 
-namespace Bitwarden.Test
+namespace PasswordManagerAccess.Test.Bitwarden
 {
-    class Asn1Test
+    public class Asn1Test
     {
         [Fact]
         public void Asn1_ExtractItem_returns_integer()
@@ -35,8 +36,8 @@ namespace Bitwarden.Test
         [Fact]
         public void Asn1_ExtractItem_throws_on_invalid_tag()
         {
-            Assert.That(() => Asn1.ExtractItem("0D04DEADBEEF".DecodeHex()),
-                        Throws.ArgumentException.And.Message.EqualTo("Unknown ASN.1 tag 13"));
+            var e = Assert.Throws<ArgumentException>(() => Asn1.ExtractItem("0D04DEADBEEF".DecodeHex()));
+            Assert.Equal("Unknown ASN.1 tag 13", e.Message);
         }
 
         [Fact]
