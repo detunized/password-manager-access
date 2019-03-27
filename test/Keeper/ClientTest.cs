@@ -1,9 +1,10 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Xunit;
+using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Keeper;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.Keeper
 {
@@ -17,7 +18,7 @@ namespace PasswordManagerAccess.Test.Keeper
                 .Post(GetFixture("02-login"))
                 .Post(GetFixture("03-vault"));
 
-            var accounts = Client.OpenVault(Username, Password, null, null, http);
+            var accounts = Client.OpenVault(Username, Password, null, NoRememberMeToken, http);
 
             Assert.NotEmpty(accounts);
         }
@@ -52,7 +53,7 @@ namespace PasswordManagerAccess.Test.Keeper
             var http = new TestHttpClient()
                 .Post(LoginResponse)
                 .ToJsonClient();
-            var session = Client.Login("username", "hash".ToBytes(), null, null, http);
+            var session = Client.Login("username", "hash".ToBytes(), null, NoRememberMeToken, http);
 
             Assert.Equal("token", session.Token);
         }
@@ -65,7 +66,7 @@ namespace PasswordManagerAccess.Test.Keeper
                 .ToJsonClient();
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.Login("username", "hash".ToBytes(), null, null, http),
+                () => Client.Login("username", "hash".ToBytes(), null, NoRememberMeToken, http),
                 "password is invalid");
         }
 
@@ -79,6 +80,18 @@ namespace PasswordManagerAccess.Test.Keeper
 
             Assert.Empty(vault.Records);
             Assert.Empty(vault.RecordMeta);
+        }
+
+        //
+        // Helpers
+        //
+
+        private static ISecureStorage SetupStorage(string rememberMeToken)
+        {
+            var m = new Mock<ISecureStorage>();
+            m.Setup(x => x.LoadString(It.IsAny<string>())).Returns(rememberMeToken);
+
+            return m.Object;
         }
 
         //
@@ -123,5 +136,8 @@ namespace PasswordManagerAccess.Test.Keeper
                 'records': [],
                 'record_meta_data': []
             }";
+
+        private readonly ISecureStorage NoRememberMeToken = SetupStorage(null);
+        private readonly ISecureStorage WithRememberMeToken = SetupStorage("token");
     }
 }
