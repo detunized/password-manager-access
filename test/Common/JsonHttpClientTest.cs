@@ -2,14 +2,13 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Xunit;
 using PasswordManagerAccess.Common;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
 {
@@ -187,11 +186,6 @@ namespace PasswordManagerAccess.Test.Common
         // - GET
         //
 
-        public static Mock<IHttpClient> SetupGetWithFixture(string name)
-        {
-            return SetupGet(ReadFixture(name));
-        }
-
         // TODO: Remove copy paste and factor out network testing helpers
         public static Mock<IHttpClient> SetupGet(string response = Response)
         {
@@ -226,11 +220,6 @@ namespace PasswordManagerAccess.Test.Common
         // - POST
         //
 
-        public static Mock<IHttpClient> SetupPostWithFixture(string name)
-        {
-            return SetupPost(ReadFixture(name));
-        }
-
         public static Mock<IHttpClient> SetupPost(string response = Response)
         {
             var mock = new Mock<IHttpClient>();
@@ -262,11 +251,6 @@ namespace PasswordManagerAccess.Test.Common
             Mock.Get(http).Verify(x => x.Post(It.Is<string>(s => s.Contains(url)),
                                               It.IsAny<string>(),
                                               It.IsAny<Dictionary<string, string>>()));
-        }
-
-        public static string ReadFixture(string name, string extension = "json")
-        {
-            return File.ReadAllText($"Fixtures/{name}.{extension}");
         }
 
         //

@@ -12,7 +12,7 @@ using Response = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
-    public class ClientTest
+    public class ClientTest: TestBase
     {
         [Fact]
         public void RequestKdfIterationCount_returns_iteration_count()
@@ -236,51 +236,51 @@ namespace PasswordManagerAccess.Test.Bitwarden
         // Helpers
         //
 
-        private static ISecureStorage SetupSecureStorage(string token)
+        private ISecureStorage SetupSecureStorage(string token)
         {
             var mock = new Mock<ISecureStorage>();
             mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns(token);
             return mock.Object;
         }
 
-        private static JsonHttpClient SetupKdfRequest(int iteratons, int method = (int)Response.KdfMethod.Pbkdf2Sha256)
+        private JsonHttpClient SetupKdfRequest(int iteratons, int method = (int)Response.KdfMethod.Pbkdf2Sha256)
         {
             return SetupPost($"{{'Kdf': {method}, 'KdfIterations': {iteratons}}}");
         }
 
-        private static JsonHttpClient SetupAuthTokenRequest()
+        private JsonHttpClient SetupAuthTokenRequest()
         {
             return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}");
         }
 
-        private static JsonHttpClient SetupAuthTokenRequestWithRememberMeToken()
+        private JsonHttpClient SetupAuthTokenRequestWithRememberMeToken()
         {
             return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'TwoFactorToken': 'remember-me-token'}");
         }
 
-        private static JsonHttpClient SetupDownloadVault()
+        private JsonHttpClient SetupDownloadVault()
         {
             return SetupGetWithFixture("vault");
         }
 
-        private static JsonHttpClient SetupGetWithFixture(string name)
+        private JsonHttpClient SetupGetWithFixture(string name)
         {
-            return MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture(name));
+            return MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture(name)));
         }
 
-        private static JsonHttpClient SetupPost(string response)
+        private JsonHttpClient SetupPost(string response)
         {
             return MakeJsonHttp(JsonHttpClientTest.SetupPost(response));
         }
 
-        private static JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
+        private JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
         {
             return new JsonHttpClient(http.Object, "https://vault.bitwarden.com");
         }
 
-        private static Response.Vault LoadVaultFixture()
+        private Response.Vault LoadVaultFixture()
         {
-            return JsonConvert.DeserializeObject<Response.Vault>(JsonHttpClientTest.ReadFixture("vault"));
+            return JsonConvert.DeserializeObject<Response.Vault>(GetFixture("vault"));
         }
 
         //

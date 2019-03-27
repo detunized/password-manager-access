@@ -5,6 +5,7 @@ using System.IO;
 
 namespace PasswordManagerAccess.Test
 {
+    // Inherit this when fixtures are needed in the test
     public class TestBase
     {
         public string GetFixture(string name, string extension = "json")
