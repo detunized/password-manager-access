@@ -49,6 +49,11 @@ namespace PasswordManagerAccess.Common
         // Get
         //
 
+        public string GetRaw(string endpoint)
+        {
+            return Get(endpoint, RequestRaw);
+        }
+
         public JObject Get(string endpoint)
         {
             return Get(endpoint, Request);
@@ -62,6 +67,11 @@ namespace PasswordManagerAccess.Common
         //
         // Post
         //
+
+        public string PostRaw(string endpoint, PostParameters parameters)
+        {
+            return Post(endpoint, parameters, JsonContentType, JsonConvert.SerializeObject, RequestRaw);
+        }
 
         public JObject Post(string endpoint, PostParameters parameters)
         {
@@ -113,6 +123,14 @@ namespace PasswordManagerAccess.Common
                            endpoint,
                            jsonHeaders,
                            (url, headers) => Http.Post(url, serialize(parameters), headers));
+        }
+
+        internal string RequestRaw(string method,
+                                   string endpoint,
+                                   HttpHeaders headers,
+                                   Func<string, HttpHeaders, string> request)
+        {
+            return Request(method, endpoint, headers, request, s => s);
         }
 
         internal JObject Request(string method,

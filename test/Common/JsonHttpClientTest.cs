@@ -28,6 +28,16 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
+        public void GetRaw_returns_raw_response()
+        {
+            var http = SetupGet("response");
+            var client = SetupClient(http);
+            var response = client.GetRaw(Endpoint);
+
+            Assert.Equal("response", response);
+        }
+
+        [Fact]
         public void Get_returns_deserialized_object()
         {
             var http = SetupGet();
@@ -88,6 +98,16 @@ namespace PasswordManagerAccess.Test.Common
                                     It.Is<Dictionary<string, string>>(d => AreEqual(d, FormHeaders))));
 
             Assert.True(JToken.DeepEquals(response, ResponseJson));
+        }
+
+        [Fact]
+        public void PostRaw_returns_raw_response()
+        {
+            var http = SetupPost("response");
+            var client = SetupClient(http);
+            var response = client.PostRaw(Endpoint, new Dictionary<string, object>());
+
+            Assert.Equal("response", response);
         }
 
         [Fact]

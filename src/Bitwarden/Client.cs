@@ -115,11 +115,11 @@ namespace PasswordManagerAccess.Bitwarden
                 passcode = ui.ProvideGoogleAuthPasscode();
                 break;
             case Response.SecondFactorMethod.Email:
+                // When only the email 2FA present, the email is sent by the server right away.
+                // Trigger only when other methods are present.
                 if (secondFactor.Methods.Count != 1)
-                    throw new NotImplementedException(); // TODO: Implement email trigger
+                    TriggerEmailMfaPasscode(username, passwordHash, jsonHttp);
 
-                // When only email 2FA present, the email is sent by the server right away
-                // and we don't need to trigger it. Otherwise we don't support it at the moment.
                 passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
                 break;
             case Response.SecondFactorMethod.Duo:
@@ -339,6 +339,24 @@ namespace PasswordManagerAccess.Bitwarden
             catch (JsonException)
             {
                 return null;
+            }
+        }
+
+        internal static void TriggerEmailMfaPasscode(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                {"email", username},
+                {"masterPasswordHash", passwordHash.ToBase64()},
+            };
+
+            try
+            {
+                jsonHttp.PostRaw("api/two-factor/send-email-login", parameters);
+            }
+            catch (NetworkErrorException e)
+            {
+                throw MakeSpecializedError(e);
             }
         }
 
