@@ -1,15 +1,14 @@
 // Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Bitwarden;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using PasswordManagerAccess.Bitwarden;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Example.Common;
 
-namespace Example
+namespace PasswordManagerAccess.Example.Keeper
 {
-    public class Program
+    public static class Program
     {
         private class TextUi: Ui
         {
@@ -116,75 +115,35 @@ namespace Example
             }
         }
 
-        // A primitive not-so-secure secure storage implementation. It stores a dictionary
-        // as a list of strings in a text file. It could be JSON or something but we don't
-        // want any extra dependencies.
-        private class PlainStorage: ISecureStorage
-        {
-            public PlainStorage(string filename)
-            {
-                _filename = filename;
-
-                var lines = File.Exists(filename) ? File.ReadAllLines(filename) : new string[0];
-                for (var i = 0; i < lines.Length / 2; ++i)
-                    _storage[lines[i * 2]] = lines[i * 2 + 1];
-            }
-
-            public void StoreString(string name, string value)
-            {
-                _storage[name] = value;
-                Save();
-            }
-
-            public string LoadString(string name)
-            {
-                return _storage.ContainsKey(name) ? _storage[name] : null;
-            }
-
-            private void Save()
-            {
-                File.WriteAllLines(_filename, _storage.SelectMany(i => new[] { i.Key, i.Value }));
-            }
-
-            private readonly string _filename;
-            private readonly Dictionary<string, string> _storage = new Dictionary<string, string>();
-        }
-
         public static void Main(string[] args)
         {
-            // Read Bitwarden credentials from a file
-            // The file should contain 2 or 3 lines:
-            //   - username
-            //   - password
-            //   - device ID (optional)
-            //   - base URL (optional)
-            // See credentials.txt.example for an example.
-            var credentials = File.ReadAllLines("../../credentials.txt");
-            var username = credentials[0];
-            var password = credentials[1];
+            var config = Util.ReadConfig();
 
             // The device is required. The first time it should be generated using
             // Vault.GenerateRandomDeviceId and stored for later reuse. It's not a
             // good idea to generate a new device ID on every run.
-            var deviceId = credentials.ElementAtOrDefault(2);
-            if (string.IsNullOrWhiteSpace(deviceId))
+            var deviceId = config.ContainsKey("device-id") ? config["device-id"] : "";
+            if (string.IsNullOrEmpty(deviceId))
             {
                 deviceId = Vault.GenerateRandomDeviceId();
                 Console.WriteLine($"Your newly generated device ID is {deviceId}. " +
                                   "Store it and use it for subsequent runs.");
             }
 
-            // This one is optional. Must be set to null or "" for the default value.
-            var baseUrl = credentials.ElementAtOrDefault(3);
+            // This one is optional
+            var baseUrl = config.ContainsKey("base-url") ? config["base-url"] : "";
             if (!string.IsNullOrEmpty(baseUrl))
                 Console.WriteLine($"Using a custom base URL {baseUrl}");
 
-            // File backed secure storage that keeps things between sessions.
-            var storage = new PlainStorage("../../storage.txt");
-
             try
             {
-                var vault = Vault.Open(username, password, deviceId, baseUrl, new TextUi(), storage);
+                var vault = Vault.Open(config["username"],
+                                       config["password"],
+                                       deviceId,
+                                       baseUrl,
+                                       new TextUi(),
+                                       new PlainStorage());
+
                 for (int i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];
@@ -206,9 +165,9 @@ namespace Example
                                       account.Folder);
                 }
             }
-            catch (ClientException e)
+            catch (BaseException e)
             {
-                Console.WriteLine(e);
+                Util.PrintException(e);
             }
         }
     }
