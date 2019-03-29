@@ -1,7 +1,8 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Linq;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
@@ -16,6 +17,33 @@ namespace PasswordManagerAccess.Example.Keeper
 
             public override void Close()
             {
+            }
+
+            public override MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
+            {
+                var methods = availableMethods.Where(m => m != MfaMethod.Cancel).OrderBy(m => m).ToArray();
+                var lines = methods.Select((m, i) => $"{i + 1} {m}");
+                var prompt = $"Please choose the second factor method {ToCancel}\n\n" +
+                             string.Join("\n", lines);
+
+                while (true)
+                {
+                    var answer = GetAnswer(prompt);
+
+                    // Blank means canceled by the user
+                    if (string.IsNullOrWhiteSpace(answer))
+                        return MfaMethod.Cancel;
+
+                    int choice;
+                    if (int.TryParse(answer, out choice))
+                    {
+                        choice--;
+                        if (choice >= 0 && choice < methods.Length)
+                            return methods[choice];
+                    }
+
+                    Console.WriteLine("Wrong input, try again");
+                }
             }
 
             public override Passcode ProvideGoogleAuthPasscode()

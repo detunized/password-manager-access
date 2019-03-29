@@ -8,6 +8,20 @@ namespace PasswordManagerAccess.Bitwarden
         // The UI will no longer be used and could be closed
         public abstract void Close();
 
+        public enum MfaMethod
+        {
+            // Always available
+            Cancel,
+
+            GoogleAuth,
+            Email,
+            Duo,
+            YubiKey,
+        }
+
+        // To cancel return Method.Cancel (always available)
+        public abstract MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods);
+
         public class Passcode
         {
             public readonly string Code;

@@ -1,6 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -105,7 +106,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (rememberMeOptions != null)
                 EraseRememberMeToken(storage);
 
-            var method = ChooseSecondFactorMethod(secondFactor);
+            var method = ChooseSecondFactorMethod(secondFactor, ui);
             var extra = secondFactor.Methods[method];
             Ui.Passcode passcode;
             switch (method)
@@ -115,8 +116,7 @@ namespace PasswordManagerAccess.Bitwarden
                 break;
             case Response.SecondFactorMethod.Email:
                 if (secondFactor.Methods.Count != 1)
-                    throw new InternalErrorException(
-                        "Logical error: email 2FA method should be chosen only when there are no other options left");
+                    throw new NotImplementedException(); // TODO: Implement email trigger
 
                 // When only email 2FA present, the email is sent by the server right away
                 // and we don't need to trigger it. Otherwise we don't support it at the moment.
@@ -180,7 +180,7 @@ namespace PasswordManagerAccess.Bitwarden
             storage.StoreString(RememberMeTokenKey, "");
         }
 
-        internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor)
+        internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor, Ui ui)
         {
             var methods = secondFactor.Methods;
             if (methods == null || methods.Count == 0)
@@ -189,11 +189,47 @@ namespace PasswordManagerAccess.Bitwarden
             if (methods.Count == 1)
                 return methods.ElementAt(0).Key;
 
-            foreach (var i in SecondFactorMethodPreferenceOrder)
-                if (methods.ContainsKey(i))
-                    return i;
+            var availableMethods = new List<Ui.MfaMethod>();
+            availableMethods.Add(Ui.MfaMethod.Cancel);
 
-            return methods.ElementAt(0).Key;
+            foreach (var m in methods.Keys)
+            {
+                switch (m)
+                {
+                case Response.SecondFactorMethod.GoogleAuth:
+                    availableMethods.Add(Ui.MfaMethod.GoogleAuth);
+                    break;
+                case Response.SecondFactorMethod.Email:
+                    availableMethods.Add(Ui.MfaMethod.Email);
+                    break;
+                case Response.SecondFactorMethod.Duo:
+                    availableMethods.Add(Ui.MfaMethod.Duo);
+                    break;
+                case Response.SecondFactorMethod.YubiKey:
+                    availableMethods.Add(Ui.MfaMethod.YubiKey);
+                    break;
+                case Response.SecondFactorMethod.RememberMe:
+                    break;
+                default:
+                    throw new UnsupportedFeatureException("TODO");
+                }
+            }
+
+            switch (ui.ChooseMfaMethod(availableMethods.ToArray()))
+            {
+            case Ui.MfaMethod.Cancel:
+                throw new CanceledMultiFactorException("TODO");
+            case Ui.MfaMethod.GoogleAuth:
+                return Response.SecondFactorMethod.GoogleAuth;
+            case Ui.MfaMethod.Email:
+                return Response.SecondFactorMethod.Email;
+            case Ui.MfaMethod.Duo:
+                return Response.SecondFactorMethod.Duo;
+            case Ui.MfaMethod.YubiKey:
+                return Response.SecondFactorMethod.YubiKey;
+            default:
+                throw new InternalErrorException("TODO");
+            }
         }
 
         internal struct TokenOrSecondFactor
@@ -492,14 +528,6 @@ namespace PasswordManagerAccess.Bitwarden
 
         private const string BaseUrl = "https://vault.bitwarden.com";
         private const string RememberMeTokenKey = "remember-me-token";
-
-        private static readonly Response.SecondFactorMethod[] SecondFactorMethodPreferenceOrder =
-        {
-            Response.SecondFactorMethod.YubiKey,
-            Response.SecondFactorMethod.Duo,
-            Response.SecondFactorMethod.GoogleAuth,
-            Response.SecondFactorMethod.Email // Must be the last one!
-        };
 
         private static readonly Response.KdfInfo DefaultKdfInfo = new Response.KdfInfo
         {
