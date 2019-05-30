@@ -1,10 +1,17 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-namespace ZohoVault
+namespace PasswordManagerAccess.ZohoVault
 {
     public class Account
     {
+        public readonly string Id;
+        public readonly string Name;
+        public readonly string Username;
+        public readonly string Password;
+        public readonly string Url;
+        public readonly string Note;
+
         public Account(string id, string name, string username, string password, string url, string note)
         {
             Id = id;
@@ -14,12 +21,5 @@ namespace ZohoVault
             Url = url;
             Note = note;
         }
-
-        public string Id { get; private set; }
-        public string Name { get; private set; }
-        public string Username { get; private set; }
-        public string Password { get; private set; }
-        public string Url { get; private set; }
-        public string Note { get; private set; }
     }
 }

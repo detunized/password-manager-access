@@ -1,4 +1,4 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -7,8 +7,9 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
-namespace ZohoVault
+namespace PasswordManagerAccess.ZohoVault
 {
     public static class Remote
     {
@@ -57,7 +58,7 @@ namespace ZohoVault
             // original page. "showsuccess" is called when everything went well.
             var responseText = response.ToUtf8();
             if (!responseText.StartsWith("showsuccess"))
-                throw new FetchException(FetchException.FailureReason.InvalidCredentials, "Login failed, most likely the credentials are invalid");
+                throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
 
             // Extract the token from the response headers
             var cookies = webClient.ResponseHeaders[HttpResponseHeader.SetCookie];
@@ -110,7 +111,7 @@ namespace ZohoVault
 
             // This would be null in case of JSON exception or if Parse returned null (would it?)
             if (parsed == null)
-                throw new FetchException(FetchException.FailureReason.InvalidPassphrase, "Passphrase is incorrect");
+                throw new BadCredentialsException("Passphrase is incorrect");
 
             return key;
         }
@@ -192,19 +193,19 @@ namespace ZohoVault
             return details;
         }
 
-        private static FetchException MakeNetworkError(WebException innerException)
+        private static NetworkErrorException MakeNetworkError(WebException original)
         {
-            return new FetchException(FetchException.FailureReason.NetworkError, "Network error occurred", innerException);
+            return new NetworkErrorException("Network error occurred", original);
         }
 
-        private static FetchException MakeInvalidResponseFormat()
+        private static InternalErrorException MakeInvalidResponseFormat()
         {
             return MakeInvalidResponse("Invalid response format");
         }
 
-        private static FetchException MakeInvalidResponse(string message, Exception innerException = null)
+        private static InternalErrorException MakeInvalidResponse(string message, Exception original = null)
         {
-            return new FetchException(FetchException.FailureReason.InvalidResponse, message, innerException);
+            return new InternalErrorException(message, original);
         }
     }
 }
