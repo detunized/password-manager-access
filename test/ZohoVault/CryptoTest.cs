@@ -1,14 +1,15 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using Xunit;
+using Crypto = PasswordManagerAccess.ZohoVault.Crypto;
 
-namespace ZohoVault.Test
+namespace PasswordManagerAccess.Test.ZohoVault
 {
-    [TestFixture]
-    class CryptoTest
+    public class CryptoTest
     {
         // From http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
         public readonly byte[] NistKey = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4".DecodeHex();
@@ -22,61 +23,61 @@ namespace ZohoVault.Test
                                                 "30c81c46a35ce411e5fbc1191a0a52ef" +
                                                 "f69f2445df4f9b17ad2b417be66c3710").DecodeHex();
 
-        [Test]
+        [Fact]
         public void ComputeKey_returns_key()
         {
             var key = Crypto.ComputeKey(
                 TestData.Passphrase,
                 "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
                 1000);
-            Assert.That(key, Is.EqualTo(TestData.Key));
+            Assert.Equal(TestData.Key, key);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_returns_plaintext()
         {
             // Calculated with the original Js code
             var plaintext = Crypto.Decrypt(
                 "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(),
                 TestData.Key).ToUtf8();
-            Assert.That(plaintext, Is.EqualTo("{\"date\":\"2016-08-30T15:05:42.874Z\"}"));
+            Assert.Equal("{\"date\":\"2016-08-30T15:05:42.874Z\"}", plaintext);
         }
 
 
-        [Test]
+        [Fact]
         public void ComputeAesCtrKey_returns_key()
         {
             // Calculated with the original Js code
             var ctrKey = "1fad494b86d62e89f945e8cfb9925e341fad494b86d62e89f945e8cfb9925e34".DecodeHex();
-            Assert.That(Crypto.ComputeAesCtrKey(TestData.Key), Is.EqualTo(ctrKey));
+            Assert.Equal(ctrKey, Crypto.ComputeAesCtrKey(TestData.Key));
         }
 
         //
         // AES-256 CTR
         //
 
-        [Test]
+        [Fact]
         public void DecryptAes256Ctr_decrypts_one_block()
         {
             var ciphertext = NistCiphertext.Take(16).ToArray();
             var plaintext = NistPlaintext.Take(16).ToArray();
 
-            Assert.That(Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr), Is.EqualTo(plaintext));
+            Assert.Equal(plaintext, Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256Ctr_decrypts_multiple_blocks()
         {
-            Assert.That(Crypto.DecryptAes256Ctr(NistCiphertext, NistKey, NistCtr), Is.EqualTo(NistPlaintext));
+            Assert.Equal(NistPlaintext, Crypto.DecryptAes256Ctr(NistCiphertext, NistKey, NistCtr));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256Ctr_decrypts_empty_input()
         {
-            Assert.That(Crypto.DecryptAes256Ctr(new byte[0], NistKey, NistCtr), Is.EqualTo(new byte[0]));
+            Assert.Equal(new byte[0], Crypto.DecryptAes256Ctr(new byte[0], NistKey, NistCtr));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256Ctr_decrypts_unaligned_input()
         {
             for (var i = 1; i < NistCiphertext.Length - 1; i += 1)
@@ -84,11 +85,11 @@ namespace ZohoVault.Test
                 var ciphertext = NistCiphertext.Take(i).ToArray();
                 var plaintext = NistPlaintext.Take(i).ToArray();
 
-                Assert.That(Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr), Is.EqualTo(plaintext));
+                Assert.Equal(plaintext, Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr));
             }
         }
 
-        [Test]
+        [Fact]
         public void IncrementCounter_adds_one()
         {
             var testCases = new Dictionary<string, string>
@@ -110,7 +111,7 @@ namespace ZohoVault.Test
             {
                 var counter = i.Key.DecodeHex();
                 Crypto.IncrementCounter(counter);
-                Assert.That(counter, Is.EqualTo(i.Value.DecodeHex()));
+                Assert.Equal(i.Value.DecodeHex(), counter);
             }
         }
     }

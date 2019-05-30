@@ -1,17 +1,17 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.Collections.Specialized;
-using System.IO;
 using System.Net;
 using Moq;
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.ZohoVault;
+using Xunit;
 
-namespace ZohoVault.Test
+namespace PasswordManagerAccess.Test.ZohoVault
 {
-    [TestFixture]
-    class RemoteTest
+    public class RemoteTest: TestBase
     {
         public const string Username = "lebowski";
         public const string Password = "logjammin";
@@ -20,15 +20,13 @@ namespace ZohoVault.Test
         public const string LogoutUrlPrefix = "https://accounts.zoho.com/apiauthtoken/delete?";
         public const string LogoutResponse = "RESULT=TRUE";
 
-        [Test]
+        [Fact]
         public void Login_returns_token()
         {
-            Assert.That(
-                Remote.Login(Username, Password, SetupWebClientWithSuccess().Object),
-                Is.EqualTo(Token));
+            Assert.Equal(Token, Remote.Login(Username, Password, SetupWebClientWithSuccess().Object));
         }
 
-        [Test]
+        [Fact]
         public void Login_makes_post_request_to_specific_url()
         {
             var webClient = SetupWebClientWithSuccess();
@@ -39,7 +37,7 @@ namespace ZohoVault.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void Login_makes_post_request_with_correct_username_and_password()
         {
             var webClient = SetupWebClientWithSuccess();
@@ -52,40 +50,32 @@ namespace ZohoVault.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void Login_makes_post_request_with_cookie_set()
         {
             var webClient = SetupWebClientWithSuccess();
             Remote.Login(Username, Password, webClient.Object);
 
-            Assert.That(webClient.Object.Headers["Cookie"], Is.StringContaining("iamcsr=12345678"));
+            Assert.Contains("iamcsr=12345678", webClient.Object.Headers["Cookie"]);
         }
 
-        [Test]
+        [Fact]
         public void Login_throws_on_network_error()
         {
             var webClient = SetupWebClient(new WebException());
-            Assert.That(
-                () => Remote.Login(Username, Password, webClient.Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.NetworkError)
-                    .And.Message.EqualTo("Network error occurred")
-                    .And.InnerException.TypeOf<WebException>());
+            Exceptions.AssertThrowsNetworkError(() => Remote.Login(Username, Password, webClient.Object),
+                                                "Network error occurred");
         }
 
-        [Test]
+        [Fact]
         public void Login_throws_on_error()
         {
-            Assert.That(
-                () => Remote.Login(Username, Password, SetupWebClient("showerror('It failed')").Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidCredentials)
-                    .And.Message.EqualTo("Login failed, most likely the credentials are invalid"));
+            var webClient = SetupWebClient("showerror('It failed')");
+            Exceptions.AssertThrowsBadCredentials(() => Remote.Login(Username, Password, webClient.Object),
+                                                  "Login failed, most likely the credentials are invalid");
         }
 
-        [Test]
+        [Fact]
         public void Logout_makes_get_request_to_specific_url()
         {
             var webClient = SetupWebClientForGet(LogoutResponse);
@@ -96,7 +86,7 @@ namespace ZohoVault.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void Logout_makes_get_request_with_token()
         {
             var webClient = SetupWebClientForGet(LogoutResponse);
@@ -108,66 +98,48 @@ namespace ZohoVault.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void Authenticate_returns_key()
         {
             var webClient = SetupWebClientForGetWithFixture("auth-info-response");
-            Assert.That(
-                Remote.Authenticate(Token, TestData.Passphrase, webClient.Object),
-                Is.EqualTo(TestData.Key));
+            Assert.Equal(TestData.Key, Remote.Authenticate(Token, TestData.Passphrase, webClient.Object));
         }
 
-        [Test]
+        [Fact]
         public void Authenticate_throws_on_incorrect_passphrase()
         {
             var webClient = SetupWebClientForGetWithFixture("auth-info-response");
-            Assert.That(
+            Exceptions.AssertThrowsBadCredentials(
                 () => Remote.Authenticate(Token, "Not really a passphrase", webClient.Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidPassphrase)
-                    .And.Message.EqualTo("Passphrase is incorrect"));
+                "Passphrase is incorrect");
         }
 
-        [Test]
+        [Fact]
         public void DownloadVault_returns_vault_json()
         {
             var webClient = SetupWebClientForGetWithFixture("vault-response");
-            Assert.That(
-                Remote.DownloadVault(Token, TestData.Key, webClient.Object),
-                Is.Not.Null);
+            Assert.NotNull(Remote.DownloadVault(Token, TestData.Key, webClient.Object));
         }
 
-        [Test]
+        [Fact]
         public void DownloadVault_throws_on_network_error()
         {
             var webClient = SetupWebClientForGet(new WebException());
-            Assert.That(
-                () => Remote.DownloadVault(Token, TestData.Key, webClient.Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.NetworkError)
-                    .And.Message.EqualTo("Network error occurred")
-                    .And.InnerException.TypeOf<WebException>());
+            Exceptions.AssertThrowsNetworkError(() => Remote.DownloadVault(Token, TestData.Key, webClient.Object),
+                                                "Network error occurred");
         }
 
         // TODO: Add more GetAuthInfo tests
 
-        [Test]
+        [Fact]
         public void GetAuthInfo_returns_auth_info()
         {
             var webClient = SetupWebClientForGetWithFixture("auth-info-response");
             var info = Remote.GetAuthInfo(Token, webClient.Object);
 
-            Assert.That(
-                info.IterationCount,
-                Is.EqualTo(1000));
-            Assert.That(
-                info.Salt,
-                Is.EqualTo("f78e6ffce8e57501a02c9be303db2c68".ToBytes()));
-            Assert.That(
-                info.EncryptionCheck,
-                Is.EqualTo("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64()));
+            Assert.Equal(1000, info.IterationCount);
+            Assert.Equal("f78e6ffce8e57501a02c9be303db2c68".ToBytes(), info.Salt);
+            Assert.Equal("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(), info.EncryptionCheck);
         }
 
         //
@@ -215,11 +187,6 @@ namespace ZohoVault.Test
             return webClient;
         }
 
-        private static Mock<IWebClient> SetupWebClientForGetWithFixture(string filename)
-        {
-            return SetupWebClientForGet(File.ReadAllText(string.Format("Fixtures/{0}.json", filename)));
-        }
-
         private static Mock<IWebClient> SetupWebClientForGet(string response)
         {
             var webClient = new Mock<IWebClient>();
@@ -244,6 +211,11 @@ namespace ZohoVault.Test
                 .Throws(e);
 
             return webClient;
+        }
+
+        private Mock<IWebClient> SetupWebClientForGetWithFixture(string filename)
+        {
+            return SetupWebClientForGet(GetFixture(filename));
         }
     }
 }
