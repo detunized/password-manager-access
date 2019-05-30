@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ZohoVault
 {
