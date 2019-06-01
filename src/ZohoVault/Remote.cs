@@ -11,6 +11,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ZohoVault
 {
+    // TODO: Rename to Client to align with the other libraries
     public static class Remote
     {
         private const string LoginUrl =
@@ -57,8 +58,32 @@ namespace PasswordManagerAccess.ZohoVault
             // The returned text is JavaScript which is supposed to call some functions on the
             // original page. "showsuccess" is called when everything went well.
             var responseText = response.ToUtf8();
-            if (!responseText.StartsWith("showsuccess"))
+
+            // MFA poor man's redirect
+            if (responseText.StartsWith("switchto("))
+            {
+                var url = ParseSwitchTo(responseText);
+                var mfaPage = webClient.DownloadData(url).ToUtf8();
+                try
+                {
+                    var res = webClient.UploadValues("https://accounts.zoho.com/tfa/verify", new NameValueCollection
+                    {
+                        {"remembertfa", "false"},
+                        {"code", "410325"},
+                        {"iamcsrcoo", iamcsrcoo},
+                    });
+                }
+                catch (WebException e)
+                {
+                    throw MakeNetworkError(e);
+                }
+
+                throw new NotImplementedException("TODO");
+            }
+            else if (!responseText.StartsWith("showsuccess"))
+            {
                 throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
+            }
 
             // Extract the token from the response headers
             var cookies = webClient.ResponseHeaders[HttpResponseHeader.SetCookie];
@@ -119,6 +144,22 @@ namespace PasswordManagerAccess.ZohoVault
         public static JToken DownloadVault(string token, byte[] key, IWebClient webClient)
         {
             return GetJsonObject(VaultUrl, token, webClient);
+        }
+
+        //
+        // Internal
+        //
+
+        internal static string ParseSwitchTo(string response)
+        {
+            // Decode "switchto('https\\x3A\\x2F\\x2Faccounts.zoho.com\\x2Ftfa\\x2Fauth\\x3Fserviceurl\\x3Dhttps\\x253A\\x252F\\x252Fvault.zoho.com');"
+            // to "https://accounts.zoho.com/tfa/auth?serviceurl=https%3A%2F%2Fvault.zoho.com"
+            var findString = Regex.Match(response, "switchto\\('(.*)'\\)");
+            if (!findString.Success)
+                throw MakeInvalidResponse("Unexpected 'switchto' format");
+
+            var escaped = findString.Groups[1].Value;
+            return Regex.Replace(escaped, "\\\\x(..)", m => m.Groups[1].Value.DecodeHex().ToUtf8());
         }
 
         internal struct AuthInfo

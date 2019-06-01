@@ -142,6 +142,16 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(), info.EncryptionCheck);
         }
 
+        [Fact]
+        public void ParseSwitchTo_decodes_url()
+        {
+            var encoded = "switchto('https\\x3A\\x2F\\x2Faccounts.zoho.com\\x2Ftfa\\x2Fauth" +
+                          "\\x3Fserviceurl\\x3Dhttps\\x253A\\x252F\\x252Fvault.zoho.com');";
+            var url = Remote.ParseSwitchTo(encoded);
+
+            Assert.Equal("https://accounts.zoho.com/tfa/auth?serviceurl=https%3A%2F%2Fvault.zoho.com", url);
+        }
+
         //
         // Helpers
         //
