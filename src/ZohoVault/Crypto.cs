@@ -57,6 +57,7 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
+        // TODO: Move this to the common crypto module
         public static byte[] DecryptAes256Ctr(byte[] ciphertext, byte[] key, byte[] initialCounter)
         {
             var length = ciphertext.Length;
