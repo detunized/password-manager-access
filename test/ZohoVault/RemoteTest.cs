@@ -2,11 +2,13 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault;
+using RestSharp;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.ZohoVault
@@ -33,7 +35,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Remote.Login(Username, Password, webClient.Object);
 
             webClient.Verify(
-                x => x.UploadValues(It.Is<string>(s => s.StartsWith(LoginUrlPrefix)), It.IsAny<NameValueCollection>()),
+                x => x.Post(It.Is<string>(s => s.StartsWith(LoginUrlPrefix)),
+                            It.IsAny<Dictionary<string, object>>(),
+                            It.IsAny<Dictionary<string, string>>(),
+                            It.IsAny<Dictionary<string, string>>()),
                 Times.Once);
         }
 
@@ -44,9 +49,12 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Remote.Login(Username, Password, webClient.Object);
 
             webClient.Verify(
-                x => x.UploadValues(
+                x => x.Post(
                     It.IsAny<string>(),
-                    It.Is<NameValueCollection>(p => p["LOGIN_ID"] == Username && p["PASSWORD"] == Password)),
+                    It.Is<Dictionary<string, object>>(p => p["LOGIN_ID"] as string == Username &&
+                                                           p["PASSWORD"] as string == Password),
+                    It.IsAny<Dictionary<string, string>>(),
+                    It.IsAny<Dictionary<string, string>>()),
                 Times.Once);
         }
 
@@ -56,7 +64,13 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var webClient = SetupWebClientWithSuccess();
             Remote.Login(Username, Password, webClient.Object);
 
-            Assert.Contains("iamcsr=12345678", webClient.Object.Headers["Cookie"]);
+            webClient.Verify(
+                x => x.Post(
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, string>>(),
+                    It.Is<Dictionary<string, string>>(c => c["iamcsr"].StartsWith("12345678"))),
+                Times.Once);
         }
 
         [Fact]
@@ -82,7 +96,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Remote.Logout(Token, webClient.Object);
 
             webClient.Verify(
-                x => x.DownloadData(It.Is<string>(s => s.StartsWith(LogoutUrlPrefix))),
+                x => x.Get(
+                    It.Is<string>(s => s.StartsWith(LogoutUrlPrefix)),
+                    It.IsAny<Dictionary<string, string>>(),
+                    It.IsAny<Dictionary<string, string>>()),
                 Times.Once);
         }
 
@@ -94,7 +111,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
             var authToken = string.Format("AUTHTOKEN={0}", Token);
             webClient.Verify(
-                x => x.DownloadData(It.Is<string>(s => s.EndsWith(authToken))),
+                x => x.Get(
+                    It.Is<string>(s => s.EndsWith(authToken)),
+                    It.IsAny<Dictionary<string, string>>(),
+                    It.IsAny<Dictionary<string, string>>()),
                 Times.Once);
         }
 
@@ -156,6 +176,35 @@ namespace PasswordManagerAccess.Test.ZohoVault
         // Helpers
         //
 
+        private static MockRestResponse Response(string content)
+        {
+            // TODO: See if we need more, maybe fill all of them for completeness
+            return new MockRestResponse()
+            {
+                Content = content,
+                RawBytes = content.ToBytes(),
+                StatusCode = HttpStatusCode.OK,
+                ResponseStatus = ResponseStatus.Completed,
+                Cookies = new List<RestResponseCookie>
+                {
+                    new RestResponseCookie() { Name = "IAMAUTHTOKEN", Value = Token }
+                },
+            };
+        }
+
+        private static MockRestResponse Response(Exception e)
+        {
+            // TODO: See if we need more, maybe fill all of them for completeness
+            return new MockRestResponse()
+            {
+                Content = "",
+                RawBytes = "".ToBytes(),
+                StatusCode = HttpStatusCode.InternalServerError,
+                ResponseStatus = ResponseStatus.Error,
+                ErrorException = e,
+            };
+        }
+
         private static Mock<IWebClient> SetupWebClientWithSuccess()
         {
             return SetupWebClient("showsuccess('')");
@@ -163,36 +212,26 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
         private static Mock<IWebClient> SetupWebClient(string response)
         {
-            var webClient = SetupWebClientHeaders();
+            var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(response.ToBytes());
+                .Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<Dictionary<string, object>>(),
+                                   It.IsAny<Dictionary<string, string>>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Returns(Response(response));
 
             return webClient;
         }
 
         private static Mock<IWebClient> SetupWebClient(Exception e)
         {
-            var webClient = SetupWebClientHeaders();
-            webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Throws(e);
-
-            return webClient;
-        }
-
-        private static Mock<IWebClient> SetupWebClientHeaders()
-        {
-            var responseHeaders = new WebHeaderCollection();
-            responseHeaders[HttpResponseHeader.SetCookie] = string.Format("IAMAUTHTOKEN={0};", Token);
-
             var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.Headers)
-                .Returns(new WebHeaderCollection());
-            webClient
-                .Setup(x => x.ResponseHeaders)
-                .Returns(responseHeaders);
+                .Setup(x => x.Post(It.IsAny<string>(),
+                                   It.IsAny<Dictionary<string, object>>(),
+                                   It.IsAny<Dictionary<string, string>>(),
+                                   It.IsAny<Dictionary<string, string>>()))
+                .Returns(Response(e));
 
             return webClient;
         }
@@ -201,11 +240,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.Headers)
-                .Returns(new WebHeaderCollection());
-            webClient
-                .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Returns(response.ToBytes());
+                .Setup(x => x.Get(It.IsAny<string>(),
+                                  It.IsAny<Dictionary<string, string>>(),
+                                  It.IsAny<Dictionary<string, string>>()))
+                .Returns(Response(response));
 
             return webClient;
         }
@@ -214,11 +252,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var webClient = new Mock<IWebClient>();
             webClient
-                .Setup(x => x.Headers)
-                .Returns(new WebHeaderCollection());
-            webClient
-                .Setup(x => x.DownloadData(It.IsAny<string>()))
-                .Throws(e);
+                .Setup(x => x.Get(It.IsAny<string>(),
+                                  It.IsAny<Dictionary<string, string>>(),
+                                  It.IsAny<Dictionary<string, string>>()))
+                .Returns(Response(e));
 
             return webClient;
         }
@@ -227,5 +264,29 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             return SetupWebClientForGet(GetFixture(filename));
         }
+    }
+
+    internal class MockRestResponse: IRestResponse
+    {
+        public IRestRequest Request { get; set; }
+        public string ContentType { get; set; }
+        public long ContentLength { get; set; }
+        public string ContentEncoding { get; set; }
+        public string Content { get; set; }
+        public HttpStatusCode StatusCode { get; set; }
+        public string StatusDescription { get; set; }
+        public byte[] RawBytes { get; set; }
+        public Uri ResponseUri { get; set; }
+        public string Server { get; set; }
+        public IList<RestResponseCookie> Cookies { get; set; }
+        public IList<Parameter> Headers { get; set; }
+        public ResponseStatus ResponseStatus { get; set; }
+        public string ErrorMessage { get; set; }
+        public Exception ErrorException { get; set; }
+        public Version ProtocolVersion { get; set; }
+
+        // Mimic RestSharp.RestResponse
+        public bool IsSuccessful => StatusCode == HttpStatusCode.OK &&
+                                    ResponseStatus == ResponseStatus.Completed;
     }
 }

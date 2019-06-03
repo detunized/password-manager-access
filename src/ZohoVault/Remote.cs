@@ -2,7 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
@@ -14,6 +15,7 @@ namespace PasswordManagerAccess.ZohoVault
     // TODO: Rename to Client to align with the other libraries
     public static class Remote
     {
+        // TODO: Simplify this url
         private const string LoginUrl =
             "https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false";
         private const string LogoutUrl = "https://accounts.zoho.com/apiauthtoken/delete";
@@ -34,13 +36,12 @@ namespace PasswordManagerAccess.ZohoVault
             const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
 
             // Set a cookie with some random gibberish
-            webClient.Headers.Add(HttpRequestHeader.Cookie, string.Format("iamcsr={0}", iamcsrcoo));
+            var defaultCookies = new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }};
 
             // POST
-            byte[] response;
-            try
-            {
-                response = webClient.UploadValues(LoginUrl, new NameValueCollection
+            var response = webClient.Post(
+                LoginUrl,
+                new Dictionary<string, object>
                 {
                     {"LOGIN_ID", username},
                     {"PASSWORD", password},
@@ -48,30 +49,35 @@ namespace PasswordManagerAccess.ZohoVault
                     {"remember", "-1"},
                     {"hide_reg_link", "false"},
                     {"iamcsrcoo", iamcsrcoo}
-                });
-            }
-            catch (WebException e)
-            {
-                throw MakeNetworkError(e);
-            }
+                },
+                null,
+                defaultCookies);
+
+            // TODO: Should not throw network errors on HTTP 404 and stuff like that
+            if (!response.IsSuccessful)
+                throw MakeNetworkError(response.ErrorException);
 
             // The returned text is JavaScript which is supposed to call some functions on the
             // original page. "showsuccess" is called when everything went well.
-            var responseText = response.ToUtf8();
+            var responseText = response.Content;
 
             // MFA poor man's redirect
             if (responseText.StartsWith("switchto("))
             {
                 var url = ParseSwitchTo(responseText);
-                var mfaPage = webClient.DownloadData(url).ToUtf8();
+                var mfaPage = webClient.Get(url, null, null).Content;
                 try
                 {
-                    var res = webClient.UploadValues("https://accounts.zoho.com/tfa/verify", new NameValueCollection
-                    {
-                        {"remembertfa", "false"},
-                        {"code", "410325"},
-                        {"iamcsrcoo", iamcsrcoo},
-                    });
+                    var res = webClient.Post(
+                        "https://accounts.zoho.com/tfa/verify",
+                        new Dictionary<string, object>
+                        {
+                            {"remembertfa", "false"},
+                            {"code", "TODO: MFA code"},
+                            {"iamcsrcoo", iamcsrcoo},
+                        },
+                        null,
+                        null);
                 }
                 catch (WebException e)
                 {
@@ -85,13 +91,12 @@ namespace PasswordManagerAccess.ZohoVault
                 throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
             }
 
-            // Extract the token from the response headers
-            var cookies = webClient.ResponseHeaders[HttpResponseHeader.SetCookie];
-            var match = Regex.Match(cookies, "\\bIAMAUTHTOKEN=(\\w+);");
-            if (!match.Success)
-                throw MakeInvalidResponse("Unsupported cookie format");
+            // Extract the token from the response cookies
+            var cookie = response.Cookies.Where(x => x.Name == "IAMAUTHTOKEN").FirstOrDefault()?.Value;
+            if (cookie.IsNullOrEmpty())
+                throw MakeInvalidResponse("Auth cookie not found");
 
-            return match.Groups[1].Value;
+            return cookie;
         }
 
         public static void Logout(string token)
@@ -197,19 +202,19 @@ namespace PasswordManagerAccess.ZohoVault
         internal static string Get(string url, string token, IWebClient webClient)
         {
             // Set headers
-            webClient.Headers[HttpRequestHeader.Authorization] = string.Format("Zoho-authtoken {0}", token);
-            webClient.Headers[HttpRequestHeader.UserAgent] = "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1";
-            webClient.Headers["requestFrom"] = "vaultmobilenative";
+            var headers = new Dictionary<string, string>
+            {
+                { "Authorization", $"Zoho-authtoken {token}" },
+                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1" },
+                { "requestFrom", "vaultmobilenative" },
+            };
 
-            try
-            {
-                // GET
-                return webClient.DownloadData(url).ToUtf8();
-            }
-            catch (WebException e)
-            {
-                throw MakeNetworkError(e);
-            }
+            // GET
+            var response = webClient.Get(url, headers, null);
+            if (!response.IsSuccessful)
+                throw MakeNetworkError(response.ErrorException);
+
+            return response.Content;
         }
 
         internal static JToken GetJsonObject(string url, string token, IWebClient webClient)
@@ -234,7 +239,7 @@ namespace PasswordManagerAccess.ZohoVault
             return details;
         }
 
-        private static NetworkErrorException MakeNetworkError(WebException original)
+        private static NetworkErrorException MakeNetworkError(Exception original)
         {
             return new NetworkErrorException("Network error occurred", original);
         }
