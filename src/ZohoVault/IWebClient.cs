@@ -10,6 +10,10 @@ namespace PasswordManagerAccess.ZohoVault
     {
         IRestResponse Get(string url, Dictionary<string, string> headers, Dictionary<string, string> cookies);
 
+        IRestResponse<T> Get<T>(string url,
+                                Dictionary<string, string> headers,
+                                Dictionary<string, string> cookies) where T : new();
+
         IRestResponse Post(string url,
                            Dictionary<string, object> parameters,
                            Dictionary<string, string> headers,

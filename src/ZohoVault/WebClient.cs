@@ -14,6 +14,13 @@ namespace PasswordManagerAccess.ZohoVault
             return _restClient.Get(MakeRequest(url, headers, cookies));
         }
 
+        public IRestResponse<T> Get<T>(string url,
+                                       Dictionary<string, string> headers,
+                                       Dictionary<string, string> cookies) where T: new()
+        {
+            return _restClient.Get<T>(MakeRequest(url, headers, cookies));
+        }
+
         public IRestResponse Post(string url,
                                   Dictionary<string, object> parameters,
                                   Dictionary<string, string> headers,

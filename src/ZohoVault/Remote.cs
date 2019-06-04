@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
+using RestSharp;
 
 namespace PasswordManagerAccess.ZohoVault
 {
@@ -176,13 +177,16 @@ namespace PasswordManagerAccess.ZohoVault
                 EncryptionCheck = encryptionCheck;
             }
 
-            public int IterationCount;
+            [RestSharp.Deserializers.DeserializeAs(Name = "ITERATION")]
+            public int IterationCount { get; }
             public byte[] Salt;
             public byte[] EncryptionCheck;
         }
 
         internal static AuthInfo GetAuthInfo(string token, IWebClient webClient)
         {
+            return GetJsonObject<AuthInfo>(AuthUrl, token, webClient);
+
             var response = GetJsonObject(AuthUrl, token, webClient);
 
             if (response.StringAtOrNull("LOGIN") != "PBKDF2_AES")
@@ -197,6 +201,24 @@ namespace PasswordManagerAccess.ZohoVault
                 throw MakeInvalidResponseFormat();
 
             return new AuthInfo(iterations.Value, salt.ToBytes(), passphrase.Decode64());
+        }
+
+        internal static IRestResponse<T> Get<T>(string url, string token, IWebClient webClient) where T: new()
+        {
+            // Set headers
+            var headers = new Dictionary<string, string>
+            {
+                { "Authorization", $"Zoho-authtoken {token}" },
+                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1" },
+                { "requestFrom", "vaultmobilenative" },
+            };
+
+            // GET
+            var response = webClient.Get<T>(url, headers, null);
+            if (!response.IsSuccessful)
+                throw MakeNetworkError(response.ErrorException);
+
+            return response;
         }
 
         internal static string Get(string url, string token, IWebClient webClient)
@@ -215,6 +237,33 @@ namespace PasswordManagerAccess.ZohoVault
                 throw MakeNetworkError(response.ErrorException);
 
             return response.Content;
+        }
+
+        class ResponseEnvelope<T>
+        {
+            public readonly Operation operation;
+            public readonly T details;
+        }
+
+        struct Operation
+        {
+            public readonly string name;
+            public readonly Result result;
+        }
+
+        struct Result
+        {
+            public readonly string status;
+            public readonly string message;
+        }
+
+        internal static T GetJsonObject<T>(string url, string token, IWebClient webClient)
+        {
+            var response = Get<ResponseEnvelope<T>>(url, token, webClient).Data;
+            if (response.operation.result.status != "success")
+                throw MakeInvalidResponseFormat();
+
+            return response.details;
         }
 
         internal static JToken GetJsonObject(string url, string token, IWebClient webClient)
