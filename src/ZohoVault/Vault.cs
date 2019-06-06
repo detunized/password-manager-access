@@ -12,23 +12,23 @@ namespace PasswordManagerAccess.ZohoVault
     {
         public static Vault Open(string username, string password, string passphrase)
         {
-            using (var webClient = new WebClient())
-                return Open(username, password, passphrase, webClient);
+            using (var rest = new RestClient())
+                return Open(username, password, passphrase, rest);
         }
 
-        public static Vault Open(string username, string password, string passphrase, IWebClient webClient)
+        internal static Vault Open(string username, string password, string passphrase, RestClient rest)
         {
-            var token = Remote.Login(username, password, webClient);
+            var token = Remote.Login(username, password, rest);
             try
             {
-                var key = Remote.Authenticate(token, passphrase, webClient);
-                var vaultJson = Remote.DownloadVault(token, key, webClient);
+                var key = Remote.Authenticate(token, passphrase, rest);
+                var vaultJson = Remote.DownloadVault(token, rest);
 
                 return Open(vaultJson, key);
             }
             finally
             {
-                Remote.Logout(token, webClient);
+                Remote.Logout(token, rest);
             }
         }
 

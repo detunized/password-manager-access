@@ -3,18 +3,18 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
-using RestSharp;
 
 namespace PasswordManagerAccess.ZohoVault
 {
+    using R = Response;
+
     // TODO: Rename to Client to align with the other libraries
-    public static class Remote
+    internal static class Remote
     {
         // TODO: Simplify this url
         private const string LoginUrl =
@@ -25,13 +25,7 @@ namespace PasswordManagerAccess.ZohoVault
         private const string VaultUrl =
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
 
-        public static string Login(string username, string password)
-        {
-            using (var webClient = new WebClient())
-                return Login(username, password, webClient);
-        }
-
-        public static string Login(string username, string password, IWebClient webClient)
+        public static string Login(string username, string password, RestClient rest)
         {
             // TODO: This should probably be random
             const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
@@ -40,7 +34,7 @@ namespace PasswordManagerAccess.ZohoVault
             var defaultCookies = new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }};
 
             // POST
-            var response = webClient.Post(
+            var response = rest.PostForm(
                 LoginUrl,
                 new Dictionary<string, object>
                 {
@@ -56,7 +50,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // TODO: Should not throw network errors on HTTP 404 and stuff like that
             if (!response.IsSuccessful)
-                throw MakeNetworkError(response.ErrorException);
+                throw MakeNetworkError(response.Error);
 
             // The returned text is JavaScript which is supposed to call some functions on the
             // original page. "showsuccess" is called when everything went well.
@@ -66,10 +60,11 @@ namespace PasswordManagerAccess.ZohoVault
             if (responseText.StartsWith("switchto("))
             {
                 var url = ParseSwitchTo(responseText);
-                var mfaPage = webClient.Get(url, null, null).Content;
+                var mfaPage = rest.Get(url, null, defaultCookies).Content;
                 try
                 {
-                    var res = webClient.Post(
+                    // TODO: POST JSON here
+                    var res = rest.PostForm(
                         "https://accounts.zoho.com/tfa/verify",
                         new Dictionary<string, object>
                         {
@@ -93,31 +88,24 @@ namespace PasswordManagerAccess.ZohoVault
             }
 
             // Extract the token from the response cookies
-            var cookie = response.Cookies.Where(x => x.Name == "IAMAUTHTOKEN").FirstOrDefault()?.Value;
+            var cookie = response.Cookies.GetOrDefault("IAMAUTHTOKEN", "");
             if (cookie.IsNullOrEmpty())
                 throw MakeInvalidResponse("Auth cookie not found");
 
             return cookie;
         }
 
-        public static void Logout(string token)
+        public static void Logout(string token, RestClient rest)
         {
-            using (var webClient = new WebClient())
-                Logout(token, webClient);
-        }
-
-        public static void Logout(string token, IWebClient webClient)
-        {
-            var url = string.Format("{0}?AUTHTOKEN={1}", LogoutUrl, token);
-            Get(url, token, webClient);
+            Get($"{LogoutUrl}?AUTHTOKEN={token}", token, rest);
         }
 
         // TODO: Rather return a session object or something like that
         // Returns the encryption key
-        public static byte[] Authenticate(string token, string passphrase, IWebClient webClient)
+        public static byte[] Authenticate(string token, string passphrase, RestClient rest)
         {
             // Fetch key derivation parameters and some other stuff
-            var info = GetAuthInfo(token, webClient);
+            var info = GetAuthInfo(token, rest);
 
             // Decryption key
             var key = Crypto.ComputeKey(passphrase, info.Salt, info.IterationCount);
@@ -147,9 +135,9 @@ namespace PasswordManagerAccess.ZohoVault
             return key;
         }
 
-        public static JToken DownloadVault(string token, byte[] key, IWebClient webClient)
+        public static JToken DownloadVault(string token, RestClient rest)
         {
-            return GetJsonObject(VaultUrl, token, webClient);
+            return GetJsonObject(VaultUrl, token, rest);
         }
 
         //
@@ -177,101 +165,57 @@ namespace PasswordManagerAccess.ZohoVault
                 EncryptionCheck = encryptionCheck;
             }
 
-            [RestSharp.Deserializers.DeserializeAs(Name = "ITERATION")]
             public int IterationCount { get; }
             public byte[] Salt;
             public byte[] EncryptionCheck;
         }
 
-        internal static AuthInfo GetAuthInfo(string token, IWebClient webClient)
+        internal static AuthInfo GetAuthInfo(string token, RestClient rest)
         {
-            return GetJsonObject<AuthInfo>(AuthUrl, token, webClient);
+            var info = Get<R.AuthInfo>(AuthUrl, token, rest);
 
-            var response = GetJsonObject(AuthUrl, token, webClient);
-
-            if (response.StringAtOrNull("LOGIN") != "PBKDF2_AES")
+            if (info.KdfMethod != "PBKDF2_AES")
                 throw MakeInvalidResponse("Only PBKDF2/AES is supported");
 
-            // Extract and convert important information
-            var iterations = response.IntAtOrNull("ITERATION");
-            var salt = response.StringAtOrNull("SALT");
-            var passphrase = response.StringAtOrNull("PASSPHRASE");
-
-            if (iterations == null || salt == null || passphrase == null)
-                throw MakeInvalidResponseFormat();
-
-            return new AuthInfo(iterations.Value, salt.ToBytes(), passphrase.Decode64());
+            return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
         }
 
-        internal static IRestResponse<T> Get<T>(string url, string token, IWebClient webClient) where T: new()
+        internal static string Get(string url, string token, RestClient rest)
         {
             // Set headers
             var headers = new Dictionary<string, string>
             {
                 { "Authorization", $"Zoho-authtoken {token}" },
-                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1" },
+                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1)" },
                 { "requestFrom", "vaultmobilenative" },
             };
 
             // GET
-            var response = webClient.Get<T>(url, headers, null);
+            var response = rest.Get(url, headers, null);
             if (!response.IsSuccessful)
-                throw MakeNetworkError(response.ErrorException);
-
-            return response;
-        }
-
-        internal static string Get(string url, string token, IWebClient webClient)
-        {
-            // Set headers
-            var headers = new Dictionary<string, string>
-            {
-                { "Authorization", $"Zoho-authtoken {token}" },
-                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1" },
-                { "requestFrom", "vaultmobilenative" },
-            };
-
-            // GET
-            var response = webClient.Get(url, headers, null);
-            if (!response.IsSuccessful)
-                throw MakeNetworkError(response.ErrorException);
+                throw MakeNetworkError(response.Error);
 
             return response.Content;
         }
 
-        class ResponseEnvelope<T>
+        internal static T Get<T>(string url, string token, RestClient rest)
         {
-            public readonly Operation operation;
-            public readonly T details;
-        }
-
-        struct Operation
-        {
-            public readonly string name;
-            public readonly Result result;
-        }
-
-        struct Result
-        {
-            public readonly string status;
-            public readonly string message;
-        }
-
-        internal static T GetJsonObject<T>(string url, string token, IWebClient webClient)
-        {
-            var response = Get<ResponseEnvelope<T>>(url, token, webClient).Data;
-            if (response.operation.result.status != "success")
+            var encoded = Get(url, token, rest);
+            // TODO: Handle JSON errors
+            var envelope = JsonConvert.DeserializeObject<R.ResponseEnvelope<T>>(encoded);
+            if (envelope.Operation.Result.Status != "success")
                 throw MakeInvalidResponseFormat();
 
-            return response.details;
+            return envelope.Payload;
         }
 
-        internal static JToken GetJsonObject(string url, string token, IWebClient webClient)
+        // TODO: Refactor this and remove
+        internal static JToken GetJsonObject(string url, string token, RestClient rest)
         {
             JObject parsed;
             try
             {
-                parsed = JObject.Parse(Get(url, token, webClient));
+                parsed = JObject.Parse(Get(url, token, rest));
             }
             catch (JsonException e)
             {

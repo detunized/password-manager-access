@@ -27,6 +27,8 @@ namespace PasswordManagerAccess.Common
     // the response is always available, even on error, when the HttpClient throws
     // an exception and we have to fish out the response content from it.
 
+    // TODO: Maybe not such a good idea to call this JsonHttp as it handles forms and raw requests now.
+    //       Rename it to something more appropriate.
     internal class JsonHttpClient
     {
         public readonly IHttpClient Http;
