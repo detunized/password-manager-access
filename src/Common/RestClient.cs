@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using H = System.Net.Http;
 
 namespace PasswordManagerAccess.Common
@@ -23,7 +24,22 @@ namespace PasswordManagerAccess.Common
         public Exception Error { get; internal set; }
         public Dictionary<string, string> Cookies { get; internal set; }
 
-        public bool IsSuccessful => (int)StatusCode / 100 == 2 && Error == null;
+        // On HTTP 2xx and no exceptions
+        public bool IsSuccessful => IsHttpOk && !HasError;
+
+        // On HTTP 2xx
+        public bool IsHttpOk => (int)StatusCode / 100 == 2;
+
+        // On HTTP other than 2xx, but not other exceptions
+        public bool IsHttpError => !IsHttpOk && !HasError;
+
+        // On other error
+        public bool HasError => Error != null;
+    }
+
+    internal class RestResponse<T>: RestResponse
+    {
+        public T Data { get; internal set; }
     }
 
     internal class RestMessageHandler: H.HttpMessageHandler
@@ -61,6 +77,11 @@ namespace PasswordManagerAccess.Common
             return MakeRequest(url, H.HttpMethod.Get, null, headers, cookies);
         }
 
+        public RestResponse<T> Get<T>(string url, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            return MakeRequest<T>(url, H.HttpMethod.Get, null, headers, cookies, JsonConvert.DeserializeObject<T>);
+        }
+
         public RestResponse PostForm(string url,
                                      PostParameters parameters,
                                      HttpHeaders headers = null,
@@ -69,16 +90,50 @@ namespace PasswordManagerAccess.Common
             var content = new H.FormUrlEncodedContent(
                 parameters.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())));
 
-            return MakeRequest(url, H.HttpMethod.Post, content, headers, cookies);
+            return MakeRequest(url, H.HttpMethod.Post, content, headers, cookies, () => new RestResponse());
+        }
+
+        private RestResponse<T> MakeRequest<T>(string url,
+                                               H.HttpMethod method,
+                                               H.HttpContent content,
+                                               HttpHeaders headers,
+                                               HttpCookies cookies,
+                                               Func<string, T> deserialize)
+        {
+            var response = MakeRequest(url, method, content, headers, cookies, () => new RestResponse<T>());
+            if (response.Error != null)
+                return response;
+
+            // Only deserialize when HTTP call succeeded, even with non 2XX code
+            try
+            {
+                response.Data = deserialize(response.Content);
+            }
+            catch (Exception e) // TODO: Not a good practice, see how to catch only specific exceptions
+            {
+                response.Error = e;
+            }
+
+            return response;
         }
 
         private RestResponse MakeRequest(string url,
                                          H.HttpMethod method,
-                                         H.HttpContent content = null,
-                                         HttpHeaders headers = null,
-                                         HttpCookies cookies = null)
+                                         H.HttpContent content,
+                                         HttpHeaders headers,
+                                         HttpCookies cookies)
         {
-            var response = new RestResponse();
+            return MakeRequest(url, method, content, headers, cookies, () => new RestResponse());
+        }
+
+        private TResponse MakeRequest<TResponse>(string url,
+                                                 H.HttpMethod method,
+                                                 H.HttpContent content,
+                                                 HttpHeaders headers,
+                                                 HttpCookies cookies,
+                                                 Func<TResponse> responseFactory) where TResponse: RestResponse
+        {
+            var response = responseFactory();
             try
             {
                 var uri = new Uri(url);

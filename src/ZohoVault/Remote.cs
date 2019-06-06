@@ -182,16 +182,8 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static string Get(string url, string token, RestClient rest)
         {
-            // Set headers
-            var headers = new Dictionary<string, string>
-            {
-                { "Authorization", $"Zoho-authtoken {token}" },
-                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1)" },
-                { "requestFrom", "vaultmobilenative" },
-            };
-
             // GET
-            var response = rest.Get(url, headers, null);
+            var response = rest.Get(url, HeadersForGet(token));
             if (!response.IsSuccessful)
                 throw MakeNetworkError(response.Error);
 
@@ -200,13 +192,27 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static T Get<T>(string url, string token, RestClient rest)
         {
-            var encoded = Get(url, token, rest);
-            // TODO: Handle JSON errors
-            var envelope = JsonConvert.DeserializeObject<R.ResponseEnvelope<T>>(encoded);
+            // GET
+            var response = rest.Get<R.ResponseEnvelope<T>>(url, HeadersForGet(token));
+            if (!response.IsSuccessful)
+                throw MakeNetworkError(response.Error);
+
+            // Check operation status
+            var envelope = response.Data;
             if (envelope.Operation.Result.Status != "success")
                 throw MakeInvalidResponseFormat();
 
             return envelope.Payload;
+        }
+
+        internal static Dictionary<string, string> HeadersForGet(string token)
+        {
+            return new Dictionary<string, string>
+            {
+                { "Authorization", $"Zoho-authtoken {token}" },
+                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1)" },
+                { "requestFrom", "vaultmobilenative" },
+            };
         }
 
         // TODO: Refactor this and remove
