@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -196,6 +197,18 @@ namespace PasswordManagerAccess.Common
             using (var stream = new MemoryStream(bytes, false))
             using (var reader = new BinaryReader(stream))
                 return action(reader);
+        }
+
+        //
+        // Dictionary
+        //
+
+        public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dictionary,
+                                                        TKey key,
+                                                        TValue defaultValue)
+        {
+            TValue v;
+            return dictionary.TryGetValue(key, out v) ? v : defaultValue;
         }
 
         //
