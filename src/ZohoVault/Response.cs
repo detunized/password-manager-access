@@ -49,4 +49,37 @@ namespace PasswordManagerAccess.ZohoVault.Response
         [JsonProperty("SALT", Required = Required.Always)]
         public readonly string Salt;
     }
+
+    internal struct Vault
+    {
+        [JsonProperty("SECRETS", Required = Required.Always)]
+        public readonly Secret[] Secrets;
+    }
+
+    internal struct Secret
+    {
+        [JsonProperty("SECRETID", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty("SECRETNAME", Required = Required.Always)]
+        public readonly string Name;
+
+        [JsonProperty("SECRETURL", Required = Required.Always)]
+        public readonly string Url;
+
+        [JsonProperty("SECURENOTE", Required = Required.Always)]
+        public readonly string Note;
+
+        [JsonProperty("SECRETDATA", Required = Required.Always)]
+        public readonly string Data;
+    }
+
+    internal struct SecretData
+    {
+        [JsonProperty("username", Required = Required.Always)]
+        public readonly string Username;
+
+        [JsonProperty("password", Required = Required.Always)]
+        public readonly string Password;
+    }
 }

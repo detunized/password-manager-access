@@ -23,6 +23,16 @@ namespace PasswordManagerAccess.ZohoVault
             return key.ToHex().Substring(0, 32).ToBytes();
         }
 
+        public static string DecryptString(string ctrCiphertextBase64, byte[] key)
+        {
+            return Decrypt(ctrCiphertextBase64.Decode64(), key).ToUtf8();
+        }
+
+        public static byte[] Decrypt(string ctrCiphertextBase64, byte[] key)
+        {
+            return Decrypt(ctrCiphertextBase64.Decode64(), key);
+        }
+
         // TODO: See if this "key derivation" could be moved out of here
         //       not to recalculate it every time.
         public static byte[] Decrypt(byte[] ctrCiphertext, byte[] key)

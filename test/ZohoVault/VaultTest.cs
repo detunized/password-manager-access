@@ -4,6 +4,7 @@
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.ZohoVault;
 using Xunit;
+using R = PasswordManagerAccess.ZohoVault.Response;
 
 namespace PasswordManagerAccess.Test.ZohoVault
 {
@@ -12,8 +13,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [Fact]
         public void Open_with_json_returns_vault()
         {
-            var parsed = JObject.Parse(GetFixture("vault-response"));
-            var vault = Vault.Open(parsed.At("operation/details"), TestData.Key);
+            var parsed = JObject.Parse(GetFixture("vault-response"))["operation"]["details"].ToObject<R.Vault>();
+            var vault = Vault.Open(parsed, TestData.Key);
             var accounts = vault.Accounts;
 
             Assert.Equal(2, accounts.Length);

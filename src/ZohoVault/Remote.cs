@@ -135,9 +135,9 @@ namespace PasswordManagerAccess.ZohoVault
             return key;
         }
 
-        public static JToken DownloadVault(string token, RestClient rest)
+        public static R.Vault DownloadVault(string token, RestClient rest)
         {
-            return GetJsonObject(VaultUrl, token, rest);
+            return Get<R.Vault>(VaultUrl, token, rest);
         }
 
         //
@@ -213,29 +213,6 @@ namespace PasswordManagerAccess.ZohoVault
                 { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1)" },
                 { "requestFrom", "vaultmobilenative" },
             };
-        }
-
-        // TODO: Refactor this and remove
-        internal static JToken GetJsonObject(string url, string token, RestClient rest)
-        {
-            JObject parsed;
-            try
-            {
-                parsed = JObject.Parse(Get(url, token, rest));
-            }
-            catch (JsonException e)
-            {
-                throw MakeInvalidResponse("Invalid JSON in response", e);
-            }
-
-            if (parsed.StringAtOrNull("operation/result/status") != "success")
-                throw MakeInvalidResponseFormat();
-
-            var details = parsed.AtOrNull("operation/details");
-            if (details == null || details.Type != JTokenType.Object)
-                throw MakeInvalidResponseFormat();
-
-            return details;
         }
 
         private static NetworkErrorException MakeNetworkError(Exception original)
