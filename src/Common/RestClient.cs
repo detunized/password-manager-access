@@ -166,8 +166,9 @@ namespace PasswordManagerAccess.Common
 
                 // Parse cookies
                 var jar = new CookieContainer();
-                foreach (var h in result.Headers.GetValues("Set-Cookie"))
-                    jar.SetCookies(uri, h);
+                if (result.Headers.Contains(SetCookieHeader))
+                    foreach (var h in result.Headers.GetValues(SetCookieHeader))
+                        jar.SetCookies(uri, h);
 
                 response.Cookies = jar.GetCookies(uri)
                     .Cast<Cookie>()
@@ -180,6 +181,8 @@ namespace PasswordManagerAccess.Common
 
             return response;
         }
+
+        private const string SetCookieHeader = "Set-Cookie";
 
         //
         // IDsposable
