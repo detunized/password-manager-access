@@ -16,6 +16,9 @@ namespace PasswordManagerAccess.Keeper.Response
         [JsonProperty(PropertyName = "message")]
         public readonly string Message;
 
+        [JsonProperty(PropertyName = "region_host")]
+        public readonly string RegionHost;
+
         public bool Ok => Result == "success";
         public bool Failed => !Ok;
     }

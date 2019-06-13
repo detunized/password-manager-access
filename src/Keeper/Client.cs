@@ -19,8 +19,9 @@ namespace PasswordManagerAccess.Keeper
                                           ISecureStorage storage,
                                           IHttpClient http)
         {
-            var jsonHttp = new JsonHttpClient(http, ApiUrl);
-            var kdfInfo = RequestKdfInfo(username, jsonHttp);
+            var jsonHttp = new JsonHttpClient(http, GetApiUrl(DefaultRegionHost));
+            var kdfInfo = RequestKdfInfo(username, ref jsonHttp);
+
             var passwordHash = Crypto.HashPassword(password,
                                                    kdfInfo.Salt.Decode64Loose(),
                                                    kdfInfo.Iterations);
@@ -36,13 +37,24 @@ namespace PasswordManagerAccess.Keeper
         // Internal
         //
 
-        internal static R.KdfInfo RequestKdfInfo(string username, JsonHttpClient jsonHttp)
+        // This function has a side effect: it might change jsonHttp when there's a region redirect.
+        internal static R.KdfInfo RequestKdfInfo(string username, ref JsonHttpClient jsonHttp)
         {
             var response = jsonHttp.Post<R.KdfInfo>("", SharedLoginParameters(username));
 
-            // This is a special case. It responds with failure and it's ok.
-            if (response.Failed && response.ResultCode == "auth_failed")
-                return response;
+            // It's not supposed to succeed at this point. So success is a failure.
+            if (response.Failed)
+            {
+                switch (response.ResultCode)
+                {
+                case "auth_failed":
+                    return response; // It responds with failure and it's ok. Done.
+
+                case "region_redirect": // Region redirect. Need to change the API URL and try again.
+                    jsonHttp = new JsonHttpClient(jsonHttp.Http, GetApiUrl(response.RegionHost), jsonHttp.Headers);
+                    return RequestKdfInfo(username, ref jsonHttp);
+                }
+            }
 
             throw MakeError(response, "KDF info");
         }
@@ -343,11 +355,17 @@ namespace PasswordManagerAccess.Keeper
             return "unknown reason";
         }
 
+        internal static string GetApiUrl(string regionHost = DefaultRegionHost)
+        {
+            return string.Format(ApiUrlFormat, regionHost);
+        }
+
         //
         // Data
         //
 
-        private const string ApiUrl = "https://keepersecurity.com/api/v2/";
+        private const string DefaultRegionHost = "keepersecurity.com";
+        private const string ApiUrlFormat = "https://{0}/api/v2/";
         private const string ClientVersion = "c13.0.0";
         private const string RememberMeTokenKey = "remember-me-token";
         private const int MaxMfaAttempts = 3;

@@ -24,15 +24,39 @@ namespace PasswordManagerAccess.Test.Keeper
         }
 
         [Fact]
-        public void RequestKdfInfo_returns_kdf_info()
+        public void RequestKdfInfo_returns_kdf_info_and_does_not_change_base_url()
         {
             var http = new TestHttpClient()
                 .Post(KdfInfoResponse)
                 .ToJsonClient();
-            var info = Client.RequestKdfInfo("username", http);
+            var originalHttp = http;
+            var originalUrl = http.BaseUrl;
+
+            var info = Client.RequestKdfInfo("username", ref http);
 
             Assert.Equal("c2FsdA", info.Salt);
             Assert.Equal(1337, info.Iterations);
+
+            Assert.Same(originalHttp, http);
+            Assert.Equal(originalUrl, http.BaseUrl);
+        }
+
+        [Fact]
+        public void RequestKdfInfo_returns_kdf_info_and_updates_json_http_with_new_region_url_on_region_redirect()
+        {
+            var http = new TestHttpClient()
+                .Post(KdfInfoRegionRedirectResponse)
+                .Post(KdfInfoResponse)
+                .ToJsonClient();
+            var originalHttp = http;
+
+            var info = Client.RequestKdfInfo("username", ref http);
+
+            Assert.Equal("c2FsdA", info.Salt);
+            Assert.Equal(1337, info.Iterations);
+
+            Assert.NotSame(originalHttp, http);
+            Assert.Equal("https://other.region/api/v2", http.BaseUrl);
         }
 
         [Fact]
@@ -43,7 +67,7 @@ namespace PasswordManagerAccess.Test.Keeper
                 .ToJsonClient();
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.RequestKdfInfo("username", http),
+                () => Client.RequestKdfInfo("username", ref http),
                 "username is invalid");
         }
 
@@ -108,6 +132,14 @@ namespace PasswordManagerAccess.Test.Keeper
 
                 'salt': 'c2FsdA',
                 'iterations': 1337
+            }";
+
+        const string KdfInfoRegionRedirectResponse =
+            @"{
+                'result': 'fail',
+                'result_code': 'region_redirect',
+                'region_host': 'other.region',
+                'message': ''
             }";
 
         const string KdfInfoBadUsernameResponse =
