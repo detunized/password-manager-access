@@ -28,15 +28,12 @@ namespace PasswordManagerAccess.ZohoVault
         public static string Login(string username, string password, RestClient rest)
         {
             // TODO: This should probably be random
-            const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
-
-            // Set a cookie with some random gibberish
-            var defaultCookies = new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }};
+            const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ac";
 
             // POST
             var response = rest.PostForm(
-                LoginUrl,
-                new Dictionary<string, object>
+                url: LoginUrl,
+                parameters: new Dictionary<string, object>
                 {
                     {"LOGIN_ID", username},
                     {"PASSWORD", password},
@@ -45,47 +42,20 @@ namespace PasswordManagerAccess.ZohoVault
                     {"hide_reg_link", "false"},
                     {"iamcsrcoo", iamcsrcoo}
                 },
-                null,
-                defaultCookies);
+                cookies: new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }});
 
             // TODO: Should not throw network errors on HTTP 404 and stuff like that
             if (!response.IsSuccessful)
                 throw MakeNetworkError(response.Error);
 
             // The returned text is JavaScript which is supposed to call some functions on the
-            // original page. "showsuccess" is called when everything went well.
-            var responseText = response.Content;
+            // original page. "showsuccess" is called when everything went well. "switchto" is a
+            // MFA poor man's redirect.
+            if (response.Content.StartsWith("switchto("))
+                response = LoginMfa(response, iamcsrcoo, rest);
 
-            // MFA poor man's redirect
-            if (responseText.StartsWith("switchto("))
-            {
-                var url = ParseSwitchTo(responseText);
-                var mfaPage = rest.Get(url, null, defaultCookies).Content;
-                try
-                {
-                    // TODO: POST JSON here
-                    var res = rest.PostForm(
-                        "https://accounts.zoho.com/tfa/verify",
-                        new Dictionary<string, object>
-                        {
-                            {"remembertfa", "false"},
-                            {"code", "TODO: MFA code"},
-                            {"iamcsrcoo", iamcsrcoo},
-                        },
-                        null,
-                        null);
-                }
-                catch (WebException e)
-                {
-                    throw MakeNetworkError(e);
-                }
-
-                throw new NotImplementedException("TODO");
-            }
-            else if (!responseText.StartsWith("showsuccess"))
-            {
+            if (!response.Content.StartsWith("showsuccess"))
                 throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
-            }
 
             // Extract the token from the response cookies
             var cookie = response.Cookies.GetOrDefault("IAMAUTHTOKEN", "");
@@ -93,6 +63,56 @@ namespace PasswordManagerAccess.ZohoVault
                 throw MakeInvalidResponse("Auth cookie not found");
 
             return cookie;
+        }
+
+        private static RestResponse LoginMfa(RestResponse loginResponse, string iamcsrcoo, RestClient rest)
+        {
+            // We need this cookie to get the page
+            var iamtt = loginResponse.Cookies.GetOrDefault("_iamtt", "");
+            if (iamtt.IsNullOrEmpty())
+                throw MakeInvalidResponse("_iamtt cookie not found");
+
+            var url = ParseSwitchTo(loginResponse.Content);
+            var cookies = new Dictionary<string, string>
+            {
+                {"_iamtt", iamtt},
+                {"iamcsr", iamcsrcoo},
+            };
+
+            // First get the MFA page
+            var page = rest.Get(url: url, cookies: cookies);
+            if (!page.IsSuccessful)
+                throw MakeNetworkError(page.Error);
+
+            // TODO: Get this from the user
+            string code = "";
+            if (page.Content.Contains("Google Authenticator"))
+                code = "098825";
+            else if (page.Content.Contains("Yubikey"))
+                code = "vvggkvbtiirkkvjfffflguduchlifvcurbevkuvkjgvl";
+            else
+                throw new UnsupportedFeatureException("MFA method is not supported");
+
+            // Now submit the form with the MFA code
+            var verifyResponse = rest.PostForm(
+                url: "https://accounts.zoho.com/tfa/verify",
+                parameters: new Dictionary<string, object>
+                {
+                    {"remembertfa", "false"},
+                    {"code", code},
+                    {"iamcsrcoo", iamcsrcoo},
+                },
+                cookies: cookies);
+
+            // Specific error: means the MFA code wasn't correct
+            if (verifyResponse.Content == "invalid_code")
+                throw new BadMultiFactorException("Invalid second factor code");
+
+            // Generic error
+            if (!verifyResponse.IsSuccessful)
+                throw MakeNetworkError(verifyResponse.Error);
+
+            return verifyResponse;
         }
 
         public static void Logout(string token, RestClient rest)
