@@ -59,17 +59,9 @@ namespace PasswordManagerAccess.ZohoVault
         private static RestResponse LoginMfa(RestResponse loginResponse, string iamcsrcoo, RestClient rest)
         {
             var url = ParseSwitchTo(loginResponse.Content);
-            var cookies = new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }};
 
-            // We need these additional cookies to get the page and submit the code
-            foreach (var name in MfaCookieNames)
-            {
-                var cookie = loginResponse.Cookies.GetOrDefault(name, "");
-                if (cookie.IsNullOrEmpty())
-                    throw MakeInvalidResponse($"{name} cookie not found in login response");
-
-                cookies[name] = cookie;
-            }
+            // We need use all the cookies from the login to get the page and submit the code
+            var cookies = new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }}.Merge(loginResponse.Cookies);
 
             // First get the MFA page
             var page = rest.Get(url: url, cookies: cookies);
@@ -262,7 +254,5 @@ namespace PasswordManagerAccess.ZohoVault
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN";
         private const string VaultUrl =
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
-
-        private static readonly string[] MfaCookieNames = new[] { "_iamtt", "stk", "JSESSIONID", "tfa_ac" };
     }
 }
