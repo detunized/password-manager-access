@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net;
+using System.IO;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -16,15 +16,6 @@ namespace PasswordManagerAccess.ZohoVault
     // TODO: Rename to Client to align with the other libraries
     internal static class Remote
     {
-        // TODO: Simplify this url
-        private const string LoginUrl =
-            "https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false";
-        private const string LogoutUrl = "https://accounts.zoho.com/apiauthtoken/delete";
-        private const string AuthUrl =
-            "https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN";
-        private const string VaultUrl =
-            "https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
-
         public static string Login(string username, string password, RestClient rest)
         {
             // TODO: This should probably be random
@@ -67,17 +58,18 @@ namespace PasswordManagerAccess.ZohoVault
 
         private static RestResponse LoginMfa(RestResponse loginResponse, string iamcsrcoo, RestClient rest)
         {
-            // We need this cookie to get the page
-            var iamtt = loginResponse.Cookies.GetOrDefault("_iamtt", "");
-            if (iamtt.IsNullOrEmpty())
-                throw MakeInvalidResponse("_iamtt cookie not found");
-
             var url = ParseSwitchTo(loginResponse.Content);
-            var cookies = new Dictionary<string, string>
+            var cookies = new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }};
+
+            // We need these additional cookies to get the page and submit the code
+            foreach (var name in MfaCookieNames)
             {
-                {"_iamtt", iamtt},
-                {"iamcsr", iamcsrcoo},
-            };
+                var cookie = loginResponse.Cookies.GetOrDefault(name, "");
+                if (cookie.IsNullOrEmpty())
+                    throw MakeInvalidResponse($"{name} cookie not found in login response");
+
+                cookies[name] = cookie;
+            }
 
             // First get the MFA page
             var page = rest.Get(url: url, cookies: cookies);
@@ -85,9 +77,10 @@ namespace PasswordManagerAccess.ZohoVault
                 throw MakeNetworkError(page.Error);
 
             // TODO: Get this from the user
+            Console.Write("Enter MFA code: ");
             string code = "";
             if (page.Content.Contains("Google Authenticator"))
-                code = "098825";
+                code = Console.ReadLine().Trim();
             else if (page.Content.Contains("Yubikey"))
                 code = "vvggkvbtiirkkvjfffflguduchlifvcurbevkuvkjgvl";
             else
@@ -217,6 +210,9 @@ namespace PasswordManagerAccess.ZohoVault
             if (!response.IsSuccessful)
                 throw MakeNetworkError(response.Error);
 
+            if (url == VaultUrl)
+                File.WriteAllText("c:/devel/vault.json", response.Content);
+
             // Check operation status
             var envelope = response.Data;
             if (envelope.Operation.Result.Status != "success")
@@ -235,6 +231,10 @@ namespace PasswordManagerAccess.ZohoVault
             };
         }
 
+        //
+        // Private
+        //
+
         private static NetworkErrorException MakeNetworkError(Exception original)
         {
             return new NetworkErrorException("Network error occurred", original);
@@ -249,5 +249,20 @@ namespace PasswordManagerAccess.ZohoVault
         {
             return new InternalErrorException(message, original);
         }
+
+        //
+        // Data
+        //
+
+        // TODO: Simplify this url
+        private const string LoginUrl =
+            "https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false";
+        private const string LogoutUrl = "https://accounts.zoho.com/apiauthtoken/delete";
+        private const string AuthUrl =
+            "https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN";
+        private const string VaultUrl =
+            "https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
+
+        private static readonly string[] MfaCookieNames = new[] { "_iamtt", "stk", "JSESSIONID", "tfa_ac" };
     }
 }
