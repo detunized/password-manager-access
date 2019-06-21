@@ -144,11 +144,6 @@ namespace PasswordManagerAccess.Common
                     foreach (var h in headers)
                         request.Headers.Add(h.Key, h.Value);
 
-                //HttpHandler.CookieContainer = new CookieContainer();
-                //if (cookies != null)
-                //    foreach (var c in cookies)
-                //        HttpHandler.CookieContainer.Add(new Cookie(c.Key, c.Value, "/", uri.Host));
-
                 // Set cookies
                 if (cookies != null)
                 {
