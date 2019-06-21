@@ -276,6 +276,58 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal("13", dictionary.GetOrDefault("three", "13"));
         }
 
+        [Fact]
+        public void Dictionary_Merge_merges_empty_dictionaries()
+        {
+            var e1 = new Dictionary<string, string>();
+            var e2 = new Dictionary<string, string>();
+
+            Assert.Empty(e1.Merge(e2));
+        }
+
+        [Fact]
+        public void Dictionary_Merge_merges_empty_and_non_empty_dictionary()
+        {
+            var e = new Dictionary<string, string>();
+            var d = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
+
+            Assert.Equal(d, e.Merge(d));
+            Assert.Equal(d, d.Merge(e));
+        }
+
+        [Fact]
+        public void Dictionary_Merge_merges_non_overlapping_dictionaries()
+        {
+            var d1 = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
+            var d2 = new Dictionary<string, string>() { { "three", "3" }, { "four", "4" } };
+            var r = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" }, { "three", "3" }, { "four", "4" } };
+
+            Assert.Equal(r, d1.Merge(d2));
+            Assert.Equal(r, d2.Merge(d1));
+        }
+
+        [Fact]
+        public void Dictionary_Merge_merges_overlapping_dictionaries()
+        {
+            var d1 = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
+            var d2 = new Dictionary<string, string>() { { "three", "3" }, { "two", "2!" } };
+
+            var r12 = d1.Merge(d2);
+            var r21 = d2.Merge(d1);
+
+            Assert.Equal(3, r12.Count);
+            Assert.Equal(3, r21.Count);
+
+            Assert.Equal("1", r12["one"]);
+            Assert.Equal("1", r21["one"]);
+
+            Assert.Equal("2!", r12["two"]);
+            Assert.Equal("2", r21["two"]);
+
+            Assert.Equal("3", r12["three"]);
+            Assert.Equal("3", r21["three"]);
+        }
+
         //
         // BigInteger
         //

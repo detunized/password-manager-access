@@ -211,6 +211,20 @@ namespace PasswordManagerAccess.Common
             return dictionary.TryGetValue(key, out v) ? v : defaultValue;
         }
 
+        public static Dictionary<TKey, TValue> Merge<TKey, TValue>(this Dictionary<TKey, TValue> self,
+                                                                   Dictionary<TKey, TValue> other)
+        {
+            var merged = new Dictionary<TKey, TValue>(self.Count + other.Count);
+
+            foreach (var i in self)
+                merged[i.Key] = i.Value;
+
+            foreach (var i in other)
+                merged[i.Key] = i.Value;
+
+            return merged;
+        }
+
         //
         // BigInteger
         //
