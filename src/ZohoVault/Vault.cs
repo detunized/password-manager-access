@@ -11,15 +11,15 @@ namespace PasswordManagerAccess.ZohoVault
 
     public class Vault
     {
-        public static Vault Open(string username, string password, string passphrase)
+        public static Vault Open(string username, string password, string passphrase, Ui ui)
         {
             using (var rest = new RestClient())
-                return Open(username, password, passphrase, rest);
+                return Open(username, password, passphrase, ui, rest);
         }
 
-        internal static Vault Open(string username, string password, string passphrase, RestClient rest)
+        internal static Vault Open(string username, string password, string passphrase, Ui ui, RestClient rest)
         {
-            var token = Remote.Login(username, password, rest);
+            var token = Remote.Login(username, password, ui, rest);
             try
             {
                 var key = Remote.Authenticate(token, passphrase, rest);

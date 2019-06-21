@@ -16,10 +16,10 @@ namespace PasswordManagerAccess.ZohoVault
     // TODO: Rename to Client to align with the other libraries
     internal static class Remote
     {
-        public static string Login(string username, string password, RestClient rest)
+        public static string Login(string username, string password, Ui ui, RestClient rest)
         {
             // TODO: This should probably be random
-            const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ac";
+            const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
 
             // POST
             var response = rest.PostForm(
@@ -43,7 +43,7 @@ namespace PasswordManagerAccess.ZohoVault
             // original page. "showsuccess" is called when everything went well. "switchto" is a
             // MFA poor man's redirect.
             if (response.Content.StartsWith("switchto("))
-                response = LoginMfa(response, iamcsrcoo, rest);
+                response = LoginMfa(response, iamcsrcoo, ui, rest);
 
             if (!response.Content.StartsWith("showsuccess"))
                 throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
@@ -56,7 +56,7 @@ namespace PasswordManagerAccess.ZohoVault
             return cookie;
         }
 
-        private static RestResponse LoginMfa(RestResponse loginResponse, string iamcsrcoo, RestClient rest)
+        internal static RestResponse LoginMfa(RestResponse loginResponse, string iamcsrcoo, Ui ui, RestClient rest)
         {
             var url = ParseSwitchTo(loginResponse.Content);
 
@@ -68,15 +68,8 @@ namespace PasswordManagerAccess.ZohoVault
             if (!page.IsSuccessful)
                 throw MakeNetworkError(page.Error);
 
-            // TODO: Get this from the user
-            Console.Write("Enter MFA code: ");
-            string code = "";
-            if (page.Content.Contains("Google Authenticator"))
-                code = Console.ReadLine().Trim();
-            else if (page.Content.Contains("Yubikey"))
-                code = "vvggkvbtiirkkvjfffflguduchlifvcurbevkuvkjgvl";
-            else
-                throw new UnsupportedFeatureException("MFA method is not supported");
+            // Ask the user to enter the code
+            var code = RequestMfaCode(page, ui);
 
             // Now submit the form with the MFA code
             var verifyResponse = rest.PostForm(
@@ -84,7 +77,7 @@ namespace PasswordManagerAccess.ZohoVault
                 parameters: new Dictionary<string, object>
                 {
                     {"remembertfa", "false"},
-                    {"code", code},
+                    {"code", code.Code},
                     {"iamcsrcoo", iamcsrcoo},
                 },
                 cookies: cookies);
@@ -98,6 +91,24 @@ namespace PasswordManagerAccess.ZohoVault
                 throw MakeNetworkError(verifyResponse.Error);
 
             return verifyResponse;
+        }
+
+        internal static Ui.Passcode RequestMfaCode(RestResponse mfaPage, Ui ui)
+        {
+            Ui.Passcode code = null;
+            var html = mfaPage.Content;
+
+            if (html.Contains("Google Authenticator"))
+                code = ui.ProvideGoogleAuthPasscode(0);
+            else if (html.Contains("Yubikey"))
+                code = ui.ProvideYubiKeyPasscode(0);
+            else
+                throw new UnsupportedFeatureException("MFA method is not supported");
+
+            if (code == Ui.Passcode.Cancel)
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+
+            return code;
         }
 
         public static void Logout(string token, RestClient rest)
