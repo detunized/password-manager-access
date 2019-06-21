@@ -61,10 +61,12 @@ namespace PasswordManagerAccess.Common
     internal class RestClient: IDisposable
     {
         public readonly H.HttpClient Http;
+        private readonly H.HttpClientHandler Handler;
 
         public RestClient()
         {
-            Http = new H.HttpClient(new H.HttpClientHandler() { UseCookies = false }, true);
+            Handler = new H.HttpClientHandler() { UseCookies = true, AllowAutoRedirect = true };
+            Http = new H.HttpClient(Handler, true);
         }
 
         public RestClient(SendAsyncType sendAsync)
@@ -144,11 +146,17 @@ namespace PasswordManagerAccess.Common
                     foreach (var h in headers)
                         request.Headers.Add(h.Key, h.Value);
 
+                // Make sure the cookie jar is always empty for each new request.
+                // We only want cookies to accumulate during redirects. What we don't want is
+                // any old cookies to be used for the other (possibly) unrelated requests.
+                // When you need to carry the cookies over to other requests, pass them as a parameter.
+                Handler.CookieContainer = new CookieContainer();
+
                 // Set cookies
                 if (cookies != null)
                 {
                     var headerValue = string.Join("; ", cookies.Select(x => $"{x.Key}={x.Value}"));
-                    request.Headers.TryAddWithoutValidation("Cookie", headerValue);
+                    Handler.CookieContainer.SetCookies(uri, headerValue);
                 }
 
                 // Don't use .Result here but rather .GetAwaiter().GetResult()
@@ -159,13 +167,8 @@ namespace PasswordManagerAccess.Common
                 response.StatusCode = result.StatusCode;
                 response.Content = result.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
-                // Parse cookies
-                var jar = new CookieContainer();
-                if (result.Headers.Contains(SetCookieHeader))
-                    foreach (var h in result.Headers.GetValues(SetCookieHeader))
-                        jar.SetCookies(uri, h);
-
-                response.Cookies = jar.GetCookies(uri)
+                // Extract cookies
+                response.Cookies = Handler.CookieContainer.GetCookies(uri)
                     .Cast<Cookie>()
                     .ToDictionary(x => x.Name, x => x.Value);
             }
@@ -176,8 +179,6 @@ namespace PasswordManagerAccess.Common
 
             return response;
         }
-
-        private const string SetCookieHeader = "Set-Cookie";
 
         //
         // IDsposable
