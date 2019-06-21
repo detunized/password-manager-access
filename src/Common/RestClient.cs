@@ -61,12 +61,11 @@ namespace PasswordManagerAccess.Common
     internal class RestClient: IDisposable
     {
         public readonly H.HttpClient Http;
-        private readonly H.HttpClientHandler Handler;
 
         public RestClient()
         {
-            Handler = new H.HttpClientHandler() { UseCookies = true, AllowAutoRedirect = true };
-            Http = new H.HttpClient(Handler, true);
+            var handler = new H.HttpClientHandler() { UseCookies = false, AllowAutoRedirect = false };
+            Http = new H.HttpClient(handler, true);
         }
 
         public RestClient(SendAsyncType sendAsync)
@@ -76,12 +75,18 @@ namespace PasswordManagerAccess.Common
 
         public RestResponse Get(string url, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return MakeRequest(url, H.HttpMethod.Get, null, headers, cookies);
+            return MakeRequest(url, H.HttpMethod.Get, null, headers ?? NoHeaders, cookies ?? NoCookies, MaxRedirects);
         }
 
         public RestResponse<T> Get<T>(string url, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return MakeRequest<T>(url, H.HttpMethod.Get, null, headers, cookies, JsonConvert.DeserializeObject<T>);
+            return MakeRequest<T>(url,
+                                  H.HttpMethod.Get,
+                                  null,
+                                  headers ?? NoHeaders,
+                                  cookies ?? NoCookies,
+                                  MaxRedirects,
+                                  JsonConvert.DeserializeObject<T>);
         }
 
         public RestResponse PostForm(string url,
@@ -92,7 +97,13 @@ namespace PasswordManagerAccess.Common
             var content = new H.FormUrlEncodedContent(
                 parameters.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())));
 
-            return MakeRequest(url, H.HttpMethod.Post, content, headers, cookies, () => new RestResponse());
+            return MakeRequest(url,
+                               H.HttpMethod.Post,
+                               content,
+                               headers ?? NoHeaders,
+                               cookies ?? NoCookies,
+                               NoRedirects,
+                               () => new RestResponse());
         }
 
         private RestResponse<T> MakeRequest<T>(string url,
@@ -100,9 +111,16 @@ namespace PasswordManagerAccess.Common
                                                H.HttpContent content,
                                                HttpHeaders headers,
                                                HttpCookies cookies,
+                                               int maxRedirectCount,
                                                Func<string, T> deserialize)
         {
-            var response = MakeRequest(url, method, content, headers, cookies, () => new RestResponse<T>());
+            var response = MakeRequest(url,
+                                       method,
+                                       content,
+                                       headers,
+                                       cookies,
+                                       maxRedirectCount,
+                                       () => new RestResponse<T>());
             if (response.Error != null)
                 return response;
 
@@ -123,9 +141,10 @@ namespace PasswordManagerAccess.Common
                                          H.HttpMethod method,
                                          H.HttpContent content,
                                          HttpHeaders headers,
-                                         HttpCookies cookies)
+                                         HttpCookies cookies,
+                                         int maxRedirectCount)
         {
-            return MakeRequest(url, method, content, headers, cookies, () => new RestResponse());
+            return MakeRequest(url, method, content, headers, cookies, maxRedirectCount, () => new RestResponse());
         }
 
         private TResponse MakeRequest<TResponse>(string url,
@@ -133,52 +152,83 @@ namespace PasswordManagerAccess.Common
                                                  H.HttpContent content,
                                                  HttpHeaders headers,
                                                  HttpCookies cookies,
+                                                 int maxRedirectCount,
+                                                 Func<TResponse> responseFactory) where TResponse : RestResponse
+        {
+            return MakeRequest(new Uri(url), method, content, headers, cookies, maxRedirectCount, responseFactory);
+        }
+
+        private TResponse MakeRequest<TResponse>(Uri uri,
+                                                 H.HttpMethod method,
+                                                 H.HttpContent content,
+                                                 HttpHeaders headers,
+                                                 HttpCookies cookies,
+                                                 int maxRedirectCount,
                                                  Func<TResponse> responseFactory) where TResponse: RestResponse
         {
-            var response = responseFactory();
+            var result = responseFactory();
             try
             {
-                var uri = new Uri(url);
-                var request = new H.HttpRequestMessage(method, url) { Content = content };
+                var request = new H.HttpRequestMessage(method, uri) { Content = content };
 
                 // Set headers
-                if (headers != null)
-                    foreach (var h in headers)
-                        request.Headers.Add(h.Key, h.Value);
-
-                // Make sure the cookie jar is always empty for each new request.
-                // We only want cookies to accumulate during redirects. What we don't want is
-                // any old cookies to be used for the other (possibly) unrelated requests.
-                // When you need to carry the cookies over to other requests, pass them as a parameter.
-                Handler.CookieContainer = new CookieContainer();
+                foreach (var h in headers)
+                    request.Headers.Add(h.Key, h.Value);
 
                 // Set cookies
-                if (cookies != null)
-                {
-                    var headerValue = string.Join("; ", cookies.Select(x => $"{x.Key}={x.Value}"));
-                    Handler.CookieContainer.SetCookies(uri, headerValue);
-                }
+                var cookieHeaderValue = string.Join("; ", cookies.Select(x => $"{x.Key}={x.Value}"));
+                request.Headers.TryAddWithoutValidation("Cookie", cookieHeaderValue);
 
                 // Don't use .Result here but rather .GetAwaiter().GetResult()
                 // It produces a nicer call stack and no AggregateException nonsense
                 // https://stackoverflow.com/a/36427080/362938
-                var result = Http.SendAsync(request).GetAwaiter().GetResult();
+                var response = Http.SendAsync(request).GetAwaiter().GetResult();
 
-                response.StatusCode = result.StatusCode;
-                response.Content = result.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var responseCookies = ParseResponseCookies(response, uri);
+                var allCookies = cookies.Merge(responseCookies);
 
-                // Extract cookies
-                response.Cookies = Handler.CookieContainer.GetCookies(uri)
-                    .Cast<Cookie>()
-                    .ToDictionary(x => x.Name, x => x.Value);
+                // Redirect if still possible (HTTP Status 300..399)
+                if ((int)response.StatusCode / 100 == 3 && maxRedirectCount > 0)
+                    return MakeRequest(response.Headers.Location,
+                                       method,
+                                       content,
+                                       headers,
+                                       allCookies,
+                                       maxRedirectCount - 1,
+                                       responseFactory);
+
+                // Set up the result
+                result.StatusCode = response.StatusCode;
+                result.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                result.Cookies = allCookies;
             }
             catch (H.HttpRequestException e)
             {
-                response.Error = e;
+                result.Error = e;
             }
 
-            return response;
+            return result;
         }
+
+        private Dictionary<string, string> ParseResponseCookies(H.HttpResponseMessage response, Uri uri)
+        {
+            // Parse cookies
+            var jar = new CookieContainer();
+            if (response.Headers.Contains(SetCookieHeader))
+                foreach (var h in response.Headers.GetValues(SetCookieHeader))
+                    jar.SetCookies(uri, h);
+
+            // Extract cookies
+            return jar.GetCookies(uri)
+                .Cast<Cookie>()
+                .ToDictionary(x => x.Name, x => x.Value);
+        }
+
+        private const string SetCookieHeader = "Set-Cookie";
+        private static readonly HttpHeaders NoHeaders = new HttpHeaders();
+        private static readonly HttpCookies NoCookies = new HttpCookies();
+        private const int MaxRedirects = 3;
+        private const int NoRedirects = 0;
 
         //
         // IDsposable
