@@ -189,7 +189,7 @@ namespace PasswordManagerAccess.Common
 
                 // Redirect if still possible (HTTP Status 300..399)
                 if ((int)response.StatusCode / 100 == 3 && maxRedirectCount > 0)
-                    return MakeRequest(response.Headers.Location,
+                    return MakeRequest(response.Headers.Location, // TODO: The URL might be relative!
                                        method,
                                        content,
                                        headers,
