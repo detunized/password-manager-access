@@ -75,7 +75,7 @@ namespace PasswordManagerAccess.Example.ZohoVault
             try
             {
                 // Open the remote vault
-                var vault = Vault.Open(config["username"], config["password"], config["passphrase"], null); // TODO: Pass a UI
+                var vault = Vault.Open(config["username"], config["password"], config["passphrase"], new TextUi());
 
                 // Print the decrypted accounts
                 for (int i = 0; i < vault.Accounts.Length; ++i)
