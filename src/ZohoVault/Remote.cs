@@ -13,27 +13,77 @@ namespace PasswordManagerAccess.ZohoVault
 {
     using R = Response;
 
+    public class ClientInfo
+    {
+        public readonly string ClientId;
+        public readonly string RedirectUrl;
+
+        public ClientInfo(string clientId, string redirectUrl)
+        {
+            ClientId = clientId;
+            RedirectUrl = redirectUrl;
+        }
+    }
+
     // TODO: Rename to Client to align with the other libraries
     internal static class Remote
     {
+        // Important! Most of the requests fail without a valid User-Agent header
+        private const string UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
+        private static readonly Dictionary<string, string> Headers = new Dictionary<string, string> { { "User-Agent", UserAgent } };
+
+        private const string ServiceName = "ZohoVault";
+        private const string OAuthScope = "ZohoVault.secrets.READ";
+
+        private static string GetLoginPageUrl(ClientInfo clientInfo)
+        {
+            return $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id={clientInfo.ClientId}&scope={OAuthScope}&redirect_uri={clientInfo.RedirectUrl}&prompt=consent";
+        }
+
+        private static string GetServiceUrl(ClientInfo clientInfo)
+        {
+            return "https://vault.zoho.com";
+        }
+
         public static string Login(string username, string password, Ui ui, RestClient rest)
         {
-            // TODO: This should probably be random
-            const string iamcsrcoo = "12345678-1234-1234-1234-1234567890ab";
+            var clientInfo = new ClientInfo("1000.BEAP2L2VJXF340958YSBLH69MCVXIH",
+                                            "https://detunized.net/zohooauth");
 
-            // POST
+            // OAuth flow:
+            //   1. login page (potential captcha)
+            //   2. MFA page (optional, only when MFA is enabled)
+            //   3. Approve page
+            //   4. Redirect URL with OAuth temporary token
+            //   5. Exchange token for permanent token
+
+            // TODO: Check for errors
+            // 1a. Fetch the login page for cookies
+            var loginPage = rest.Get(GetLoginPageUrl(clientInfo), Headers);
+            if (!loginPage.IsSuccessful)
+                throw MakeNetworkError(loginPage.Error); // TODO: Make an internal error!
+
+            // TODO: Check for errors
+            var csrToken = loginPage.Cookies["iamcsr"];
+
+            // 1b. Submit the login form
             var response = rest.PostForm(
-                url: LoginUrl,
+                "https://accounts.zoho.com/signin/auth",
                 parameters: new Dictionary<string, object>
                 {
                     {"LOGIN_ID", username},
                     {"PASSWORD", password},
-                    {"IS_AJAX", "true"},
-                    {"remember", "-1"},
-                    {"hide_reg_link", "false"},
-                    {"iamcsrcoo", iamcsrcoo}
+                    {"cli_time", DateTimeOffset.Now.ToUnixTimeMilliseconds()},
+                    {"iamcsrcoo", csrToken},
+                    {"servicename", ServiceName},
+                    {"serviceurl", GetServiceUrl(clientInfo)},
                 },
-                cookies: new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }});
+                headers: Headers,
+                cookies: loginPage.Cookies); // TODO: See if we need all the cookies
+
+            // TODO: Handle captcha
+            // Need to show captcha: showhiperror('HIP_REQUIRED')
+            // Captcha is invalid: showhiperror('HIP_INVALID')
 
             // TODO: Should not throw network errors on HTTP 404 and stuff like that
             if (!response.IsSuccessful)
@@ -43,72 +93,33 @@ namespace PasswordManagerAccess.ZohoVault
             // original page. "showsuccess" is called when everything went well. "switchto" is a
             // MFA poor man's redirect.
             if (response.Content.StartsWith("switchto("))
-                response = LoginMfa(response, iamcsrcoo, ui, rest);
+            {
+                // Sometimes the web login redirects to some kind of message or announcement or whatever.
+                // Probably the only way to deal with that is either show the actual browser or tell
+                // the user to login manually and dismiss the message.
+                var url = ExtractSwitchToUrl(response.Content);
+                if (url.StartsWith("https://accounts.zoho.com/tfa/auth"))
+                    response = LoginMfa(response, clientInfo, ui, rest);
+                else
+                    throw MakeInvalidResponse($"Unexpected 'switchto' url: '{url}'");
+            }
 
-            if (!response.Content.StartsWith("showsuccess"))
+            // Should be when all is good!
+            if (response.Content.StartsWith("showsuccess("))
+            {
+                var url = ExtractShowSuccessUrl(response.Content);
+                if (url.StartsWith("https://accounts.zoho.com/oauth/v2/approve"))
+                    response = Approve(response, clientInfo, rest);
+                else
+                    throw MakeInvalidResponse($"Unexpected 'showsuccess' url: '{url}'");
+            }
+            else
+            {
                 throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
+            }
 
             // Extract the token from the response cookies
-            var cookie = response.Cookies.GetOrDefault("IAMAUTHTOKEN", "");
-            if (cookie.IsNullOrEmpty())
-                throw MakeInvalidResponse("Auth cookie not found");
-
-            return cookie;
-        }
-
-        internal static RestResponse LoginMfa(RestResponse loginResponse, string iamcsrcoo, Ui ui, RestClient rest)
-        {
-            var url = ParseSwitchTo(loginResponse.Content);
-
-            // We need use all the cookies from the login to get the page and submit the code
-            var cookies = new Dictionary<string, string> {{ "iamcsr", iamcsrcoo }}.Merge(loginResponse.Cookies);
-
-            // First get the MFA page
-            var page = rest.Get(url: url, cookies: cookies);
-            if (!page.IsSuccessful)
-                throw MakeNetworkError(page.Error);
-
-            // Ask the user to enter the code
-            var code = RequestMfaCode(page, ui);
-
-            // Now submit the form with the MFA code
-            var verifyResponse = rest.PostForm(
-                url: "https://accounts.zoho.com/tfa/verify",
-                parameters: new Dictionary<string, object>
-                {
-                    {"remembertfa", "false"},
-                    {"code", code.Code},
-                    {"iamcsrcoo", iamcsrcoo},
-                },
-                cookies: cookies);
-
-            // Specific error: means the MFA code wasn't correct
-            if (verifyResponse.Content == "invalid_code")
-                throw new BadMultiFactorException("Invalid second factor code");
-
-            // Generic error
-            if (!verifyResponse.IsSuccessful)
-                throw MakeNetworkError(verifyResponse.Error);
-
-            return verifyResponse;
-        }
-
-        internal static Ui.Passcode RequestMfaCode(RestResponse mfaPage, Ui ui)
-        {
-            Ui.Passcode code = null;
-            var html = mfaPage.Content;
-
-            if (html.Contains("Google Authenticator"))
-                code = ui.ProvideGoogleAuthPasscode(0);
-            else if (html.Contains("Yubikey"))
-                code = ui.ProvideYubiKeyPasscode(0);
-            else
-                throw new UnsupportedFeatureException("MFA method is not supported");
-
-            if (code == Ui.Passcode.Cancel)
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
-
-            return code;
+            return response.Content;
         }
 
         public static void Logout(string token, RestClient rest)
@@ -160,7 +171,74 @@ namespace PasswordManagerAccess.ZohoVault
         // Internal
         //
 
-        internal static string ParseSwitchTo(string response)
+        internal static RestResponse LoginMfa(RestResponse loginResponse,
+                                              ClientInfo clientInfo,
+                                              Ui ui,
+                                              RestClient rest)
+        {
+            var url = ExtractSwitchToUrl(loginResponse.Content);
+
+            // First get the MFA page. We need use all the cookies
+            // from the login to get the page and submit the code.
+            var page = rest.Get(url: url, headers: Headers, cookies: loginResponse.Cookies);
+            if (!page.IsSuccessful)
+                throw MakeNetworkError(page.Error);
+
+            // Ask the user to enter the code
+            var code = RequestMfaCode(page, ui);
+
+            // TODO: See which cookies are needed
+            var cookies = new Dictionary<string, string>();
+            foreach (var name in "_iamtt dcl_pfx_lcnt iamcsr JSESSIONID stk tfa_ac".Split(' '))
+                cookies[name] = loginResponse.Cookies[name];
+
+            // Now submit the form with the MFA code
+            var verifyResponse = rest.PostForm(
+                url: "https://accounts.zoho.com/tfa/verify",
+                parameters: new Dictionary<string, object>
+                {
+                    {"remembertfa", "false"},
+                    {"code", code.Code},
+                    {"iamcsrcoo", cookies["iamcsr"]},
+                    {"servicename", ServiceName},
+                    {"serviceurl", GetServiceUrl(clientInfo)},
+                },
+                headers: Headers,
+                cookies: cookies);
+
+            // Specific error: means the MFA code wasn't correct
+            if (verifyResponse.Content == "invalid_code")
+                throw new BadMultiFactorException("Invalid second factor code");
+
+            // Generic error
+            if (!verifyResponse.IsSuccessful)
+                throw MakeNetworkError(verifyResponse.Error);
+
+            if (!verifyResponse.Content.StartsWith("showsuccess("))
+                throw MakeInvalidResponse("Verify MFA failed");
+
+            return verifyResponse;
+        }
+
+        internal static Ui.Passcode RequestMfaCode(RestResponse mfaPage, Ui ui)
+        {
+            Ui.Passcode code = null;
+            var html = mfaPage.Content;
+
+            if (html.Contains("Google Authenticator"))
+                code = ui.ProvideGoogleAuthPasscode(0);
+            else if (html.Contains("Yubikey"))
+                code = ui.ProvideYubiKeyPasscode(0);
+            else
+                throw new UnsupportedFeatureException("MFA method is not supported");
+
+            if (code == Ui.Passcode.Cancel)
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+
+            return code;
+        }
+
+        internal static string ExtractSwitchToUrl(string response)
         {
             // Decode "switchto('https\\x3A\\x2F\\x2Faccounts.zoho.com\\x2Ftfa\\x2Fauth\\x3Fserviceurl\\x3Dhttps\\x253A\\x252F\\x252Fvault.zoho.com');"
             // to "https://accounts.zoho.com/tfa/auth?serviceurl=https%3A%2F%2Fvault.zoho.com"
@@ -168,8 +246,49 @@ namespace PasswordManagerAccess.ZohoVault
             if (!findString.Success)
                 throw MakeInvalidResponse("Unexpected 'switchto' format");
 
-            var escaped = findString.Groups[1].Value;
+            return UnescapeJsUrl(findString.Groups[1].Value);
+        }
+
+        internal static string ExtractShowSuccessUrl(string response)
+        {
+            // Decode "TODO: "
+            // to "TODO: "
+            var findString = Regex.Match(response, "showsuccess\\('(.*?)',");
+            if (!findString.Success)
+                throw MakeInvalidResponse("Unexpected 'showsuccess' format");
+
+            return UnescapeJsUrl(findString.Groups[1].Value);
+        }
+
+        internal static string UnescapeJsUrl(string escaped)
+        {
             return Regex.Replace(escaped, "\\\\x(..)", m => m.Groups[1].Value.DecodeHex().ToUtf8());
+        }
+
+        internal static RestResponse Approve(RestResponse loginResponse, ClientInfo clientInfo, RestClient rest)
+        {
+            var response = rest.PostForm(
+                url: "https://accounts.zoho.com/oauth/v2/approve",
+                parameters: new Dictionary<string, object>
+                {
+                    {"response_type", "code"},
+                    {"client_id", clientInfo.ClientId},
+                    {"scope", OAuthScope},
+                    {"redirect_uri", clientInfo.RedirectUrl},
+                    {"prompt", "consent"},
+                    {"approvedScope", OAuthScope},
+                    {"iamcsrcoo", loginResponse.Cookies["iamcsr"]},
+                    {"is_ajax", "true"},
+                    {"approvedOrgs", ""},
+                    {"implicitGranted", "false"},
+                },
+                headers: Headers,
+                cookies: loginResponse.Cookies); // TODO: See if need all the cookies
+
+            if (!response.IsSuccessful)
+                throw MakeInvalidResponse("Unexpected response from 'approve'");
+
+            return response;
         }
 
         internal struct AuthInfo
@@ -213,6 +332,7 @@ namespace PasswordManagerAccess.ZohoVault
             if (!response.IsSuccessful)
                 throw MakeNetworkError(response.Error);
 
+            // TODO: Remove this!
             if (url == VaultUrl)
                 File.WriteAllText("c:/devel/vault.json", response.Content);
 
@@ -228,6 +348,7 @@ namespace PasswordManagerAccess.ZohoVault
         {
             return new Dictionary<string, string>
             {
+                // TODO: This is probably not needed anymore
                 { "Authorization", $"Zoho-authtoken {token}" },
                 { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1)" },
                 { "requestFrom", "vaultmobilenative" },
