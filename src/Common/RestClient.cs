@@ -23,6 +23,7 @@ namespace PasswordManagerAccess.Common
         public string Content { get; internal set; }
         public Exception Error { get; internal set; }
         public Dictionary<string, string> Cookies { get; internal set; }
+        public Uri RequestUri { get; internal set; }
 
         // On HTTP 2xx and no exceptions
         public bool IsSuccessful => IsHttpOk && !HasError;
@@ -198,6 +199,7 @@ namespace PasswordManagerAccess.Common
                                        responseFactory);
 
                 // Set up the result
+                result.RequestUri = uri;
                 result.StatusCode = response.StatusCode;
                 result.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 result.Cookies = allCookies;

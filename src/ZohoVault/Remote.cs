@@ -57,11 +57,10 @@ namespace PasswordManagerAccess.ZohoVault
             //   4. Redirect URL with OAuth temporary token
             //   5. Exchange token for permanent token
 
-            // TODO: Check for errors
             // 1a. Fetch the login page for cookies
             var loginPage = rest.Get(GetLoginPageUrl(clientInfo), Headers);
             if (!loginPage.IsSuccessful)
-                throw MakeNetworkError(loginPage.Error); // TODO: Make an internal error!
+                throw MakeErrorOnFailedRequest(loginPage);
 
             // TODO: Check for errors
             var csrToken = loginPage.Cookies["iamcsr"];
@@ -85,9 +84,8 @@ namespace PasswordManagerAccess.ZohoVault
             // Need to show captcha: showhiperror('HIP_REQUIRED')
             // Captcha is invalid: showhiperror('HIP_INVALID')
 
-            // TODO: Should not throw network errors on HTTP 404 and stuff like that
             if (!response.IsSuccessful)
-                throw MakeNetworkError(response.Error);
+                throw MakeErrorOnFailedRequest(response);
 
             // The returned text is JavaScript which is supposed to call some functions on the
             // original page. "showsuccess" is called when everything went well. "switchto" is a
@@ -182,7 +180,7 @@ namespace PasswordManagerAccess.ZohoVault
             // from the login to get the page and submit the code.
             var page = rest.Get(url: url, headers: Headers, cookies: loginResponse.Cookies);
             if (!page.IsSuccessful)
-                throw MakeNetworkError(page.Error);
+                throw MakeErrorOnFailedRequest(page);
 
             // Ask the user to enter the code
             var code = RequestMfaCode(page, ui);
@@ -212,7 +210,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // Generic error
             if (!verifyResponse.IsSuccessful)
-                throw MakeNetworkError(verifyResponse.Error);
+                throw MakeErrorOnFailedRequest(verifyResponse);
 
             if (!verifyResponse.Content.StartsWith("showsuccess("))
                 throw MakeInvalidResponse("Verify MFA failed");
@@ -286,7 +284,7 @@ namespace PasswordManagerAccess.ZohoVault
                 cookies: loginResponse.Cookies); // TODO: See if need all the cookies
 
             if (!response.IsSuccessful)
-                throw MakeInvalidResponse("Unexpected response from 'approve'");
+                throw MakeErrorOnFailedRequest(response);
 
             return response;
         }
@@ -320,7 +318,7 @@ namespace PasswordManagerAccess.ZohoVault
             // GET
             var response = rest.Get(url, HeadersForGet(token));
             if (!response.IsSuccessful)
-                throw MakeNetworkError(response.Error);
+                throw MakeErrorOnFailedRequest(response);
 
             return response.Content;
         }
@@ -330,11 +328,15 @@ namespace PasswordManagerAccess.ZohoVault
             // GET
             var response = rest.Get<R.ResponseEnvelope<T>>(url, HeadersForGet(token));
             if (!response.IsSuccessful)
-                throw MakeNetworkError(response.Error);
+                throw MakeErrorOnFailedRequest(response);
 
             // TODO: Remove this!
             if (url == VaultUrl)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("I'm writing file to the disk. REMOVE ME!!!");
                 File.WriteAllText("c:/devel/vault.json", response.Content);
+            }
 
             // Check operation status
             var envelope = response.Data;
@@ -359,9 +361,14 @@ namespace PasswordManagerAccess.ZohoVault
         // Private
         //
 
-        private static NetworkErrorException MakeNetworkError(Exception original)
+        private static BaseException MakeErrorOnFailedRequest(RestResponse response)
         {
-            return new NetworkErrorException("Network error occurred", original);
+            if (response.Error == null)
+                return new InternalErrorException(
+                    $"Request to {response.RequestUri} failed with HTTP status {(int)response.StatusCode}");
+
+            return new NetworkErrorException($"Request to {response.RequestUri} failed with a network error",
+                                             response.Error);
         }
 
         private static InternalErrorException MakeInvalidResponseFormat()
