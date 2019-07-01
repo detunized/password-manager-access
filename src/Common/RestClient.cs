@@ -217,8 +217,20 @@ namespace PasswordManagerAccess.Common
             // Parse cookies
             var jar = new CookieContainer();
             if (response.Headers.Contains(SetCookieHeader))
+            {
                 foreach (var h in response.Headers.GetValues(SetCookieHeader))
-                    jar.SetCookies(uri, h);
+                {
+                    try
+                    {
+                        jar.SetCookies(uri, h);
+                    }
+                    catch (CookieException)
+                    {
+                        // Sometimes the domain on a cookie is invalid. CookieContainer doesn't like that.
+                        // Just ignore those cookies.
+                    }
+                }
+            }
 
             // Extract cookies
             return jar.GetCookies(uri)
