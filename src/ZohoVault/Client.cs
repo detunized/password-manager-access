@@ -25,8 +25,7 @@ namespace PasswordManagerAccess.ZohoVault
         }
     }
 
-    // TODO: Rename to Client to align with the other libraries
-    internal static class Remote
+    internal static class Client
     {
         // Important! Most of the requests fail without a valid User-Agent header
         private const string UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";

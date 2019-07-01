@@ -19,17 +19,17 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static Vault Open(string username, string password, string passphrase, Ui ui, RestClient rest)
         {
-            var token = Remote.Login(username, password, ui, rest);
+            var token = Client.Login(username, password, ui, rest);
             try
             {
-                var key = Remote.Authenticate(token, passphrase, rest);
-                var vaultResponse = Remote.DownloadVault(token, rest);
+                var key = Client.Authenticate(token, passphrase, rest);
+                var vaultResponse = Client.DownloadVault(token, rest);
 
                 return Open(vaultResponse, key);
             }
             finally
             {
-                Remote.Logout(token, rest);
+                Client.Logout(token, rest);
             }
         }
 
