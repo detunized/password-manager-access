@@ -23,6 +23,31 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public const string LogoutUrlPrefix = "https://accounts.zoho.com/apiauthtoken/delete?";
         public const string LogoutResponse = "RESULT=TRUE";
 
+        // Copied from VaultTest (RIP)
+        [Fact]
+        public void Open_with_json_returns_vault()
+        {
+            var parsed = JObject.Parse(GetFixture("vault-response"))["operation"]["details"].ToObject<R.Vault>();
+            var vault = Vault.Open(parsed, TestData.Key);
+            var accounts = vault.Accounts;
+
+            Assert.Equal(2, accounts.Length);
+
+            Assert.Equal("30024000000008008", accounts[0].Id);
+            Assert.Equal("facebook", accounts[0].Name);
+            Assert.Equal("mark", accounts[0].Username);
+            Assert.Equal("zuckerberg", accounts[0].Password);
+            Assert.Equal("http://facebook.com", accounts[0].Url);
+            Assert.Equal("", accounts[0].Note);
+
+            Assert.Equal("30024000000008013", accounts[1].Id);
+            Assert.Equal("microsoft", accounts[1].Name);
+            Assert.Equal("bill", accounts[1].Username);
+            Assert.Equal("gates", accounts[1].Password);
+            Assert.Equal("http://microsoft.com", accounts[1].Url);
+            Assert.Equal("", accounts[1].Note);
+        }
+
         [Fact]
         public void Login_returns_token()
         {

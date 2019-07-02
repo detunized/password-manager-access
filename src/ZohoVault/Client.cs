@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -12,6 +13,7 @@ using PasswordManagerAccess.Common;
 namespace PasswordManagerAccess.ZohoVault
 {
     using R = Response;
+    using HttpCookies = Dictionary<string, string>;
 
     public class ClientInfo
     {
@@ -32,20 +34,37 @@ namespace PasswordManagerAccess.ZohoVault
         private static readonly Dictionary<string, string> Headers = new Dictionary<string, string> { { "User-Agent", UserAgent } };
 
         private const string ServiceName = "ZohoVault";
+        private const string ServiceUrl = "https://vault.zoho.com";
         private const string OAuthScope = "ZohoVault.secrets.READ";
 
         private static string GetLoginPageUrl(ClientInfo clientInfo)
         {
-            return $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id={clientInfo.ClientId}&scope={OAuthScope}&redirect_uri={clientInfo.RedirectUrl}&prompt=consent";
+            return $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
         }
 
-        private static string GetServiceUrl(ClientInfo clientInfo)
+        public static Account[] OpenVault(string username, string password, string passphrase, Ui ui, RestClient rest)
         {
-            return "https://vault.zoho.com";
+            var cookies = Login(username, password, ui, rest);
+            try
+            {
+                var key = Authenticate(passphrase, cookies, rest);
+                var vaultResponse = DownloadVault(cookies, rest);
+
+                return ParseAccounts(vaultResponse, key);
+            }
+            finally
+            {
+                Logout(cookies, rest);
+            }
         }
 
-        public static string Login(string username, string password, Ui ui, RestClient rest)
+        //
+        // Internal
+        //
+
+        internal static HttpCookies Login(string username, string password, Ui ui, RestClient rest)
         {
+            // TODO: Must be passed in
             var clientInfo = new ClientInfo("1000.BEAP2L2VJXF340958YSBLH69MCVXIH",
                                             "https://detunized.net/zohooauth");
 
@@ -74,7 +93,7 @@ namespace PasswordManagerAccess.ZohoVault
                     {"cli_time", DateTimeOffset.Now.ToUnixTimeMilliseconds()},
                     {"iamcsrcoo", csrToken},
                     {"servicename", ServiceName},
-                    {"serviceurl", GetServiceUrl(clientInfo)},
+                    {"serviceurl", ServiceUrl},
                 },
                 headers: Headers,
                 cookies: loginPage.Cookies); // TODO: See if we need all the cookies
@@ -106,30 +125,35 @@ namespace PasswordManagerAccess.ZohoVault
             {
                 var url = ExtractShowSuccessUrl(response.Content);
                 if (url.StartsWith("https://accounts.zoho.com/oauth/v2/approve"))
+                {
                     response = Approve(response, clientInfo, rest);
-                else
-                    throw MakeInvalidResponse($"Unexpected 'showsuccess' url: '{url}'");
-            }
-            else
-            {
-                throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
+                    if (!response.Content.StartsWith("showsuccess("))
+                        throw MakeInvalidResponse($"Unexpected response: {response.Content}");
+                }
+
+                return response.Cookies;
             }
 
-            // Extract the token from the response cookies
-            return response.Content;
+            throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
         }
 
-        public static void Logout(string token, RestClient rest)
+        internal static void Logout(HttpCookies cookies, RestClient rest)
         {
-            Get($"{LogoutUrl}?AUTHTOKEN={token}", token, rest);
+            var response = rest.Get(
+                "https://accounts.zoho.com/logout?servicename=ZohoVault&serviceurl=https://www.zoho.com/vault/",
+                Headers,
+                cookies);
+
+            if (!response.IsSuccessful)
+                throw MakeErrorOnFailedRequest(response);
         }
 
         // TODO: Rather return a session object or something like that
         // Returns the encryption key
-        public static byte[] Authenticate(string token, string passphrase, RestClient rest)
+        internal static byte[] Authenticate(string passphrase, HttpCookies cookies, RestClient rest)
         {
             // Fetch key derivation parameters and some other stuff
-            var info = GetAuthInfo(token, rest);
+            var info = GetAuthInfo(cookies, rest);
 
             // Decryption key
             var key = Crypto.ComputeKey(passphrase, info.Salt, info.IterationCount);
@@ -159,14 +183,40 @@ namespace PasswordManagerAccess.ZohoVault
             return key;
         }
 
-        public static R.Vault DownloadVault(string token, RestClient rest)
+        internal static R.Vault DownloadVault(HttpCookies cookies, RestClient rest)
         {
-            return Get<R.Vault>(VaultUrl, token, rest);
+            return GetWrapped<R.Vault>(VaultUrl, cookies, rest);
         }
 
-        //
-        // Internal
-        //
+        internal static Account[] ParseAccounts(R.Vault vaultResponse, byte[] key)
+        {
+            // TODO: Test on non account type secrets!
+            // TODO: Test on accounts with missing fields!
+            return vaultResponse.Secrets
+                .Select(x => ParseAccount(x, key))
+                .Where(x => x != null)
+                .ToArray();
+        }
+
+        // Returns null on accounts that don't parse
+        internal static Account ParseAccount(R.Secret secret, byte[] key)
+        {
+            try
+            {
+                var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data);
+                return new Account(secret.Id,
+                                   secret.Name,
+                                   Crypto.DecryptString(data.Username, key),
+                                   Crypto.DecryptString(data.Password, key),
+                                   secret.Url,
+                                   Crypto.DecryptString(secret.Note, key));
+            }
+            catch (JsonException)
+            {
+                // If it doesn't parse then it's some other kind of unsupported secret type. Ignore.
+                return null;
+            }
+        }
 
         internal static RestResponse LoginMfa(RestResponse loginResponse,
                                               ClientInfo clientInfo,
@@ -198,7 +248,7 @@ namespace PasswordManagerAccess.ZohoVault
                     {"code", code.Code},
                     {"iamcsrcoo", cookies["iamcsr"]},
                     {"servicename", ServiceName},
-                    {"serviceurl", GetServiceUrl(clientInfo)},
+                    {"serviceurl", ServiceUrl},
                 },
                 headers: Headers,
                 cookies: cookies);
@@ -302,9 +352,9 @@ namespace PasswordManagerAccess.ZohoVault
             public byte[] EncryptionCheck;
         }
 
-        internal static AuthInfo GetAuthInfo(string token, RestClient rest)
+        internal static AuthInfo GetAuthInfo(HttpCookies cookies, RestClient rest)
         {
-            var info = Get<R.AuthInfo>(AuthUrl, token, rest);
+            var info = GetWrapped<R.AuthInfo>(AuthUrl, cookies, rest);
 
             if (info.KdfMethod != "PBKDF2_AES")
                 throw MakeInvalidResponse("Only PBKDF2/AES is supported");
@@ -312,20 +362,10 @@ namespace PasswordManagerAccess.ZohoVault
             return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
         }
 
-        internal static string Get(string url, string token, RestClient rest)
+        internal static T GetWrapped<T>(string url, HttpCookies cookies, RestClient rest)
         {
             // GET
-            var response = rest.Get(url, HeadersForGet(token));
-            if (!response.IsSuccessful)
-                throw MakeErrorOnFailedRequest(response);
-
-            return response.Content;
-        }
-
-        internal static T Get<T>(string url, string token, RestClient rest)
-        {
-            // GET
-            var response = rest.Get<R.ResponseEnvelope<T>>(url, HeadersForGet(token));
+            var response = rest.Get<R.ResponseEnvelope<T>>(url, Headers, cookies);
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
 
