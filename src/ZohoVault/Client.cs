@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
@@ -15,33 +14,8 @@ namespace PasswordManagerAccess.ZohoVault
     using R = Response;
     using HttpCookies = Dictionary<string, string>;
 
-    public class ClientInfo
-    {
-        public readonly string ClientId;
-        public readonly string RedirectUrl;
-
-        public ClientInfo(string clientId, string redirectUrl)
-        {
-            ClientId = clientId;
-            RedirectUrl = redirectUrl;
-        }
-    }
-
     internal static class Client
     {
-        // Important! Most of the requests fail without a valid User-Agent header
-        private const string UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
-        private static readonly Dictionary<string, string> Headers = new Dictionary<string, string> { { "User-Agent", UserAgent } };
-
-        private const string ServiceName = "ZohoVault";
-        private const string ServiceUrl = "https://vault.zoho.com";
-        private const string OAuthScope = "ZohoVault.secrets.READ";
-
-        private static string GetLoginPageUrl(ClientInfo clientInfo)
-        {
-            return $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
-        }
-
         public static Account[] OpenVault(string username, string password, string passphrase, Ui ui, RestClient rest)
         {
             var cookies = Login(username, password, ui, rest);
@@ -64,10 +38,6 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static HttpCookies Login(string username, string password, Ui ui, RestClient rest)
         {
-            // TODO: Must be passed in
-            var clientInfo = new ClientInfo("1000.BEAP2L2VJXF340958YSBLH69MCVXIH",
-                                            "https://detunized.net/zohooauth");
-
             // OAuth flow:
             //   1. login page (potential captcha)
             //   2. MFA page (optional, only when MFA is enabled)
@@ -76,7 +46,7 @@ namespace PasswordManagerAccess.ZohoVault
             //   5. Exchange token for permanent token
 
             // 1a. Fetch the login page for cookies
-            var loginPage = rest.Get(GetLoginPageUrl(clientInfo), Headers);
+            var loginPage = rest.Get(LoginPageUrl, Headers);
             if (!loginPage.IsSuccessful)
                 throw MakeErrorOnFailedRequest(loginPage);
 
@@ -85,7 +55,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // 1b. Submit the login form
             var response = rest.PostForm(
-                "https://accounts.zoho.com/signin/auth",
+                AuthUrl,
                 parameters: new Dictionary<string, object>
                 {
                     {"LOGIN_ID", username},
@@ -115,7 +85,7 @@ namespace PasswordManagerAccess.ZohoVault
                 // the user to login manually and dismiss the message.
                 var url = ExtractSwitchToUrl(response.Content);
                 if (url.StartsWith("https://accounts.zoho.com/tfa/auth"))
-                    response = LoginMfa(response, clientInfo, ui, rest);
+                    response = LoginMfa(response, ui, rest);
                 else
                     throw MakeInvalidResponse($"Unexpected 'switchto' url: '{url}'");
             }
@@ -126,7 +96,7 @@ namespace PasswordManagerAccess.ZohoVault
                 var url = ExtractShowSuccessUrl(response.Content);
                 if (url.StartsWith("https://accounts.zoho.com/oauth/v2/approve"))
                 {
-                    response = Approve(response, clientInfo, rest);
+                    response = Approve(response, rest);
                     if (!response.Content.StartsWith("showsuccess("))
                         throw MakeInvalidResponse($"Unexpected response: {response.Content}");
                 }
@@ -140,7 +110,7 @@ namespace PasswordManagerAccess.ZohoVault
         internal static void Logout(HttpCookies cookies, RestClient rest)
         {
             var response = rest.Get(
-                "https://accounts.zoho.com/logout?servicename=ZohoVault&serviceurl=https://www.zoho.com/vault/",
+                LogoutUrl,
                 Headers,
                 cookies);
 
@@ -218,10 +188,7 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        internal static RestResponse LoginMfa(RestResponse loginResponse,
-                                              ClientInfo clientInfo,
-                                              Ui ui,
-                                              RestClient rest)
+        internal static RestResponse LoginMfa(RestResponse loginResponse, Ui ui, RestClient rest)
         {
             var url = ExtractSwitchToUrl(loginResponse.Content);
 
@@ -241,7 +208,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // Now submit the form with the MFA code
             var verifyResponse = rest.PostForm(
-                url: "https://accounts.zoho.com/tfa/verify",
+                url: VerifyUrl,
                 parameters: new Dictionary<string, object>
                 {
                     {"remembertfa", "false"},
@@ -312,16 +279,18 @@ namespace PasswordManagerAccess.ZohoVault
             return Regex.Replace(escaped, "\\\\x(..)", m => m.Groups[1].Value.DecodeHex().ToUtf8());
         }
 
-        internal static RestResponse Approve(RestResponse loginResponse, ClientInfo clientInfo, RestClient rest)
+        // TODO: OAuth is currently not working with the Zoho server, so this method should not be called.
+        //       It requires some additional info that should be provided by the app.
+        internal static RestResponse Approve(RestResponse loginResponse, RestClient rest)
         {
             var response = rest.PostForm(
                 url: "https://accounts.zoho.com/oauth/v2/approve",
                 parameters: new Dictionary<string, object>
                 {
                     {"response_type", "code"},
-                    {"client_id", clientInfo.ClientId},
+                    {"client_id", "TODO: ClientId"},
                     {"scope", OAuthScope},
-                    {"redirect_uri", clientInfo.RedirectUrl},
+                    {"redirect_uri", "TODO: RedirectUrl"},
                     {"prompt", "consent"},
                     {"approvedScope", OAuthScope},
                     {"iamcsrcoo", loginResponse.Cookies["iamcsr"]},
@@ -354,7 +323,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static AuthInfo GetAuthInfo(HttpCookies cookies, RestClient rest)
         {
-            var info = GetWrapped<R.AuthInfo>(AuthUrl, cookies, rest);
+            var info = GetWrapped<R.AuthInfo>(AuthInfoUrl, cookies, rest);
 
             if (info.KdfMethod != "PBKDF2_AES")
                 throw MakeInvalidResponse("Only PBKDF2/AES is supported");
@@ -369,31 +338,12 @@ namespace PasswordManagerAccess.ZohoVault
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
 
-            // TODO: Remove this!
-            if (url == VaultUrl)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("I'm writing file to the disk. REMOVE ME!!!");
-                File.WriteAllText("c:/devel/vault.json", response.Content);
-            }
-
             // Check operation status
             var envelope = response.Data;
             if (envelope.Operation.Result.Status != "success")
                 throw MakeInvalidResponseFormat();
 
             return envelope.Payload;
-        }
-
-        internal static Dictionary<string, string> HeadersForGet(string token)
-        {
-            return new Dictionary<string, string>
-            {
-                // TODO: This is probably not needed anymore
-                { "Authorization", $"Zoho-authtoken {token}" },
-                { "User-Agent", "ZohoVault/2.5.1 (Android 4.4.4; LGE/Nexus 5/19/2.5.1)" },
-                { "requestFrom", "vaultmobilenative" },
-            };
         }
 
         //
@@ -425,12 +375,33 @@ namespace PasswordManagerAccess.ZohoVault
         //
 
         // TODO: Simplify this url
-        private const string LoginUrl =
-            "https://accounts.zoho.com/login?scopes=ZohoVault/vaultapi,ZohoContacts/photoapi&appname=zohovault/2.5.1&serviceurl=https://vault.zoho.com&hide_remember=true&hide_logo=true&hidegooglesignin=false&hide_signup=false";
-        private const string LogoutUrl = "https://accounts.zoho.com/apiauthtoken/delete";
+        private const string ServiceName = "ZohoVault";
+        private const string ServiceUrl = "https://vault.zoho.com";
+        private const string OAuthScope = "ZohoVault.secrets.READ";
+
+        private static readonly string LoginPageUrl =
+            $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
+
         private const string AuthUrl =
+            "https://accounts.zoho.com/signin/auth";
+
+        private const string AuthInfoUrl =
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN";
+
+        private const string VerifyUrl =
+            "https://accounts.zoho.com/tfa/verify";
+
         private const string VaultUrl =
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
+
+        private const string LogoutUrl =
+            "https://accounts.zoho.com/logout?servicename=ZohoVault&serviceurl=https://www.zoho.com/vault/";
+
+        private const string UserAgent =
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
+
+        // Important! Most of the requests fail without a valid User-Agent header
+        private static readonly Dictionary<string, string> Headers =
+            new Dictionary<string, string> { { "User-Agent", UserAgent } };
     }
 }
