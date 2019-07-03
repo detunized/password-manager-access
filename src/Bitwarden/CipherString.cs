@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using PasswordManagerAccess.Common;
 
@@ -18,9 +17,12 @@ namespace PasswordManagerAccess.Bitwarden
         Aes256CbcHmacSha256 = 2,
 
         // Asymmetric
+        Rsa2048OaepSha256 = 3,
         Rsa2048OaepSha1 = 4,
 
-        // TODO: Support other RSA modes. They don't seem to be used, so it's ok for now.
+        // RSA/HMAC modes seem to be deprecated (why?)
+        Rsa2048OaepSha256HmacSha256 = 5,
+        Rsa2048OaepSha1HmacSha256 = 6,
     }
 
     internal class CipherString
@@ -96,10 +98,16 @@ namespace PasswordManagerAccess.Bitwarden
                 return DecryptAes128CbcHmacSha256(key);
             case CipherMode.Aes256CbcHmacSha256:
                 return DecryptAes256CbcHmacSha256(key);
+            case CipherMode.Rsa2048OaepSha256:
+                return DecryptRsa2048OaepSha256(key);
             case CipherMode.Rsa2048OaepSha1:
                 return DecryptRsa2048OaepSha1(key);
+            case CipherMode.Rsa2048OaepSha256HmacSha256:
+                return DecryptRsa2048OaepSha256HmacSha256(key);
+            case CipherMode.Rsa2048OaepSha1HmacSha256:
+                return DecryptRsa2048OaepSha1HmacSha256(key);
             default:
-                throw new InvalidOperationException("Invalid cipher mode");
+                throw new InvalidOperationException($"Invalid cipher mode: {Mode}");
             }
         }
 
@@ -117,8 +125,14 @@ namespace PasswordManagerAccess.Bitwarden
                 return CipherMode.Aes128CbcHmacSha256;
             case "2":
                 return CipherMode.Aes256CbcHmacSha256;
+            case "3":
+                return CipherMode.Rsa2048OaepSha256;
             case "4":
                 return CipherMode.Rsa2048OaepSha1;
+            case "5":
+                return CipherMode.Rsa2048OaepSha256HmacSha256;
+            case "6":
+                return CipherMode.Rsa2048OaepSha1HmacSha256;
             }
 
             throw MakeError($"Invalid/unsupported cipher mode: {s}");
@@ -142,13 +156,23 @@ namespace PasswordManagerAccess.Bitwarden
                 if (mac.Length != 32)
                     throw MakeError($"MAC must be 32 bytes long, got {mac.Length}");
                 break;
+            case CipherMode.Rsa2048OaepSha256:
             case CipherMode.Rsa2048OaepSha1:
                 if (iv.Length != 0)
                     throw MakeError("IV is not supported in RSA modes");
                 if (ciphertext.Length != 256)
                     throw MakeError($"Ciphertext must be 256 bytes long, got {ciphertext.Length}");
                 if (mac.Length != 0)
-                    throw MakeError("MAC is not supported in RSA modes");
+                    throw MakeError("MAC is not supported in unsigned RSA modes");
+                break;
+            case CipherMode.Rsa2048OaepSha256HmacSha256:
+            case CipherMode.Rsa2048OaepSha1HmacSha256:
+                if (iv.Length != 0)
+                    throw MakeError("IV is not supported in RSA modes");
+                if (ciphertext.Length != 256)
+                    throw MakeError($"Ciphertext must be 256 bytes long, got {ciphertext.Length}");
+                if (mac.Length != 32)
+                    throw MakeError($"MAC must be 32 bytes long, got {mac.Length}");
                 break;
             default:
                 throw MakeError("Invalid cipher mode");
@@ -168,8 +192,6 @@ namespace PasswordManagerAccess.Bitwarden
 
         private byte[] DecryptAes256Cbc(byte[] key)
         {
-            Debug.Assert(Mode == CipherMode.Aes256Cbc);
-
             if (key.Length != 32)
                 throw new InvalidOperationException($"Key must be 32 bytes long, got {key.Length}");
 
@@ -178,15 +200,11 @@ namespace PasswordManagerAccess.Bitwarden
 
         private byte[] DecryptAes128CbcHmacSha256(byte[] key)
         {
-            Debug.Assert(Mode == CipherMode.Aes128CbcHmacSha256);
-
             throw new UnsupportedFeatureException("AES-128-CBC-HMAC-SHA-256 is not supported");
         }
 
         private byte[] DecryptAes256CbcHmacSha256(byte[] key)
         {
-            Debug.Assert(Mode == CipherMode.Aes256CbcHmacSha256);
-
             if (key.Length == 32)
                 key = Crypto.ExpandKey(key);
 
@@ -205,14 +223,32 @@ namespace PasswordManagerAccess.Bitwarden
             return Crypto.DecryptAes256(Ciphertext, Iv, encKey);
         }
 
-        private byte[] DecryptRsa2048OaepSha1(byte[] key)
+        private byte[] DecryptRsa2048OaepSha256(byte[] key)
         {
-            Debug.Assert(Mode == CipherMode.Rsa2048OaepSha1);
-
             if (Ciphertext.Length != 256)
                 throw new InvalidOperationException($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
 
-            return Crypto.DecryptRsa(Ciphertext, key);
+            return Crypto.DecryptRsaSha256(Ciphertext, key);
+        }
+
+        private byte[] DecryptRsa2048OaepSha1(byte[] key)
+        {
+            if (Ciphertext.Length != 256)
+                throw new InvalidOperationException($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
+
+            return Crypto.DecryptRsaSha1(Ciphertext, key);
+        }
+
+        private byte[] DecryptRsa2048OaepSha256HmacSha256(byte[] key)
+        {
+            // The original code ignores the MAC
+            return DecryptRsa2048OaepSha256(key);
+        }
+
+        private byte[] DecryptRsa2048OaepSha1HmacSha256(byte[] key)
+        {
+            // The original code ignores the MAC
+            return DecryptRsa2048OaepSha1(key);
         }
     }
 }

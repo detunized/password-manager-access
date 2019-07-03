@@ -73,7 +73,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void Parse_throws_on_invalid_cipher_mode()
         {
-            var invalid = new[] {"3.", "A."};
+            var invalid = new[] {"7.", "A."};
             foreach (var i in invalid)
                 VerifyThrowsInvalidFormat(i, "Invalid/unsupported cipher mode");
         }

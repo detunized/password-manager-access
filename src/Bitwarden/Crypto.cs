@@ -65,19 +65,24 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        public static byte[] DecryptRsa(byte[] ciphertext, byte[] privateKey)
+        public static byte[] DecryptRsaSha1(byte[] ciphertext, byte[] privateKey)
         {
-            return DecryptRsa(ciphertext, ParsePrivateKeyPkcs8(privateKey));
+            return DecryptRsa(ciphertext, ParsePrivateKeyPkcs8(privateKey), RSAEncryptionPadding.OaepSHA1);
         }
 
-        public static byte[] DecryptRsa(byte[] ciphertext, RSAParameters privateKey)
+        public static byte[] DecryptRsaSha256(byte[] ciphertext, byte[] privateKey)
+        {
+            return DecryptRsa(ciphertext, ParsePrivateKeyPkcs8(privateKey), RSAEncryptionPadding.OaepSHA256);
+        }
+
+        public static byte[] DecryptRsa(byte[] ciphertext, RSAParameters privateKey, RSAEncryptionPadding padding)
         {
             try
             {
                 using (var rsa = new RSACryptoServiceProvider())
                 {
                     rsa.ImportParameters(privateKey);
-                    return rsa.Decrypt(ciphertext, true);
+                    return rsa.Decrypt(ciphertext, padding);
                 }
             }
             catch (CryptographicException e)
