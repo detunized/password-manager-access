@@ -29,17 +29,17 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Pbkdf2Sha1(string password, byte[] salt, int iterations, int byteCount)
         {
-            return Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA1, byteCount);
+            return Pbkdf2.GenerateSha1(password.ToBytes(), salt, iterations, byteCount);
         }
 
         public static byte[] Pbkdf2Sha256(string password, byte[] salt, int iterations, int byteCount)
         {
-            return Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, byteCount);
+            return Pbkdf2.GenerateSha256(password.ToBytes(), salt, iterations, byteCount);
         }
 
         public static byte[] Pbkdf2Sha512(string password, byte[] salt, int iterations, int byteCount)
         {
-            return Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA512, byteCount);
+            return Pbkdf2.GenerateSha512(password.ToBytes(), salt, iterations, byteCount);
         }
 
         //
@@ -59,16 +59,6 @@ namespace PasswordManagerAccess.Common
         //
         // Private
         //
-
-        private static byte[] Pbkdf2(string password,
-                                     byte[] salt,
-                                     int iterations,
-                                     HashAlgorithmName hash,
-                                     int byteCount)
-        {
-            using (var db = new Rfc2898DeriveBytes(password, salt, iterations, hash))
-                return db.GetBytes(byteCount);
-        }
 
         private static byte[] DecryptAes256Cbc(byte[] ciphertext, byte[] iv, byte[] key, PaddingMode padding)
         {

@@ -29,9 +29,9 @@ namespace PasswordManagerAccess.Test.Common
         //
         // PBKDF2
         //
-        // Since we're not implementing the algorithm anymore, it doesn't make since
-        // to have an exhaustive test suite. Just to see that we're calling the .NET
-        // functions correctly.
+        // We're not implementing the algorithm in Crypto and it doesn't make sense to have
+        // an exhaustive test suite here. PBKDF2 is tested elsewhere. We just need to check
+        // that we're calling the functions correctly.
 
         [Fact]
         public void Pbkdf2Sha1_returns_correct_result()
