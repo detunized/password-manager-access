@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -36,6 +38,8 @@ namespace PasswordManagerAccess.Common
 
         // On other error
         public bool HasError => Error != null;
+
+        public bool IsNetworkError => HasError && Error is HttpRequestException;
     }
 
     internal class RestResponse<T>: RestResponse
@@ -74,6 +78,10 @@ namespace PasswordManagerAccess.Common
             Http = new H.HttpClient(new RestMessageHandler(sendAsync), true);
         }
 
+        //
+        // GET
+        //
+
         public RestResponse Get(string url, HttpHeaders headers = null, HttpCookies cookies = null)
         {
             return MakeRequest(url, H.HttpMethod.Get, null, headers ?? NoHeaders, cookies ?? NoCookies, MaxRedirects);
@@ -90,22 +98,72 @@ namespace PasswordManagerAccess.Common
                                   JsonConvert.DeserializeObject<T>);
         }
 
+        //
+        // POST JSON
+        //
+
+        public RestResponse PostJson(string url,
+                                     PostParameters parameters,
+                                     HttpHeaders headers = null,
+                                     HttpCookies cookies = null)
+        {
+            return MakeRequest(url,
+                               H.HttpMethod.Post,
+                               ToJsonContent(parameters),
+                               headers ?? NoHeaders,
+                               cookies ?? NoCookies,
+                               MaxRedirects);
+        }
+
+        public RestResponse<T> PostJson<T>(string url,
+                                           PostParameters parameters,
+                                           HttpHeaders headers = null,
+                                           HttpCookies cookies = null)
+        {
+            return MakeRequest(url,
+                               H.HttpMethod.Post,
+                               ToJsonContent(parameters),
+                               headers ?? NoHeaders,
+                               cookies ?? NoCookies,
+                               MaxRedirects,
+                               JsonConvert.DeserializeObject<T>);
+        }
+
+        //
+        // POST form
+        //
+
         public RestResponse PostForm(string url,
                                      PostParameters parameters,
                                      HttpHeaders headers = null,
                                      HttpCookies cookies = null)
         {
-            var content = new H.FormUrlEncodedContent(
-                parameters.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())));
-
             return MakeRequest(url,
                                H.HttpMethod.Post,
-                               content,
+                               ToFormContent(parameters),
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
                                NoRedirects,
                                () => new RestResponse());
         }
+
+        public RestResponse<T> PostForm<T>(string url,
+                                           PostParameters parameters,
+                                           HttpHeaders headers = null,
+                                           HttpCookies cookies = null)
+        {
+            return MakeRequest(url,
+                               H.HttpMethod.Post,
+                               ToFormContent(parameters),
+                               headers ?? NoHeaders,
+                               cookies ?? NoCookies,
+                               NoRedirects,
+                               JsonConvert.DeserializeObject<T>);
+        }
+
+        //
+        // Private
+        //
 
         private RestResponse<T> MakeRequest<T>(string url,
                                                H.HttpMethod method,
@@ -212,7 +270,20 @@ namespace PasswordManagerAccess.Common
             return result;
         }
 
-        private Dictionary<string, string> ParseResponseCookies(H.HttpResponseMessage response, Uri uri)
+        private static H.HttpContent ToJsonContent(PostParameters parameters)
+        {
+            return new H.StringContent(JsonConvert.SerializeObject(parameters),
+                                       Encoding.UTF8,
+                                       "application/json");
+        }
+
+        private static H.HttpContent ToFormContent(PostParameters parameters)
+        {
+            return new H.FormUrlEncodedContent(
+                parameters.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())));
+        }
+
+        private static Dictionary<string, string> ParseResponseCookies(H.HttpResponseMessage response, Uri uri)
         {
             // Parse cookies
             var jar = new CookieContainer();
