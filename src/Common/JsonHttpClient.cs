@@ -13,6 +13,9 @@ namespace PasswordManagerAccess.Common
     using HttpHeaders = Dictionary<string, string>;
     using PostParameters = Dictionary<string, object>;
 
+    // Deprecated! See RestClient.
+    // TODO: Replace everywhere with RestClient.
+
     // TODO: An idea is to return an Either-like object:
     //
     // internal class JsonResult<T>
