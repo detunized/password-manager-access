@@ -66,30 +66,33 @@ namespace PasswordManagerAccess.Common
     internal class RestClient: IDisposable
     {
         public readonly H.HttpClient Http;
+        public readonly string BaseUrl;
 
-        public RestClient()
+        public RestClient(string baseUrl = ""): this(MakeDefaultHttpClient(), baseUrl)
         {
-            var handler = new H.HttpClientHandler() { UseCookies = false, AllowAutoRedirect = false };
-            Http = new H.HttpClient(handler, true);
         }
 
-        public RestClient(SendAsyncType sendAsync)
+        public RestClient(SendAsyncType sendAsync, string baseUrl = ""): this(MakeHttpClient(sendAsync), baseUrl)
         {
-            Http = new H.HttpClient(new RestMessageHandler(sendAsync), true);
         }
 
         //
         // GET
         //
 
-        public RestResponse Get(string url, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse Get(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return MakeRequest(url, H.HttpMethod.Get, null, headers ?? NoHeaders, cookies ?? NoCookies, MaxRedirects);
+            return MakeRequest(endpoint,
+                               H.HttpMethod.Get,
+                               null,
+                               headers ?? NoHeaders,
+                               cookies ?? NoCookies,
+                               MaxRedirects);
         }
 
-        public RestResponse<T> Get<T>(string url, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse<T> Get<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return MakeRequest<T>(url,
+            return MakeRequest<T>(endpoint,
                                   H.HttpMethod.Get,
                                   null,
                                   headers ?? NoHeaders,
@@ -102,12 +105,12 @@ namespace PasswordManagerAccess.Common
         // POST JSON
         //
 
-        public RestResponse PostJson(string url,
+        public RestResponse PostJson(string endpoint,
                                      PostParameters parameters,
                                      HttpHeaders headers = null,
                                      HttpCookies cookies = null)
         {
-            return MakeRequest(url,
+            return MakeRequest(endpoint,
                                H.HttpMethod.Post,
                                ToJsonContent(parameters),
                                headers ?? NoHeaders,
@@ -115,12 +118,12 @@ namespace PasswordManagerAccess.Common
                                MaxRedirects);
         }
 
-        public RestResponse<T> PostJson<T>(string url,
+        public RestResponse<T> PostJson<T>(string endpoint,
                                            PostParameters parameters,
                                            HttpHeaders headers = null,
                                            HttpCookies cookies = null)
         {
-            return MakeRequest(url,
+            return MakeRequest(endpoint,
                                H.HttpMethod.Post,
                                ToJsonContent(parameters),
                                headers ?? NoHeaders,
@@ -133,12 +136,12 @@ namespace PasswordManagerAccess.Common
         // POST form
         //
 
-        public RestResponse PostForm(string url,
+        public RestResponse PostForm(string endpoint,
                                      PostParameters parameters,
                                      HttpHeaders headers = null,
                                      HttpCookies cookies = null)
         {
-            return MakeRequest(url,
+            return MakeRequest(endpoint,
                                H.HttpMethod.Post,
                                ToFormContent(parameters),
                                headers ?? NoHeaders,
@@ -147,12 +150,12 @@ namespace PasswordManagerAccess.Common
                                () => new RestResponse());
         }
 
-        public RestResponse<T> PostForm<T>(string url,
+        public RestResponse<T> PostForm<T>(string endpoint,
                                            PostParameters parameters,
                                            HttpHeaders headers = null,
                                            HttpCookies cookies = null)
         {
-            return MakeRequest(url,
+            return MakeRequest(endpoint,
                                H.HttpMethod.Post,
                                ToFormContent(parameters),
                                headers ?? NoHeaders,
@@ -162,10 +165,41 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // Internal
+        //
+
+        internal Uri MakeAbsoluteUri(string endpoint)
+        {
+            // It's allowed to have no base URL and then the endpoint is an absolute URL
+            // The Uri constructor should take care of broken URL formats and throw.
+            if (BaseUrl.IsNullOrEmpty())
+                return new Uri(endpoint);
+
+            return new Uri(new Uri(BaseUrl), endpoint);
+        }
+
+        //
         // Private
         //
 
-        private RestResponse<T> MakeRequest<T>(string url,
+        private static H.HttpClient MakeDefaultHttpClient()
+        {
+            var handler = new HttpClientHandler() { UseCookies = false, AllowAutoRedirect = false };
+            return new H.HttpClient(handler, true);
+        }
+
+        private static H.HttpClient MakeHttpClient(SendAsyncType sendAsync)
+        {
+            return new H.HttpClient(new RestMessageHandler(sendAsync), true);
+        }
+
+        private RestClient(H.HttpClient http, string baseUrl)
+        {
+            Http = http;
+            BaseUrl = baseUrl.TrimEnd('/');
+        }
+
+        private RestResponse<T> MakeRequest<T>(string endpoint,
                                                H.HttpMethod method,
                                                H.HttpContent content,
                                                HttpHeaders headers,
@@ -173,7 +207,7 @@ namespace PasswordManagerAccess.Common
                                                int maxRedirectCount,
                                                Func<string, T> deserialize)
         {
-            var response = MakeRequest(url,
+            var response = MakeRequest(endpoint,
                                        method,
                                        content,
                                        headers,
@@ -196,17 +230,23 @@ namespace PasswordManagerAccess.Common
             return response;
         }
 
-        private RestResponse MakeRequest(string url,
+        private RestResponse MakeRequest(string endpoint,
                                          H.HttpMethod method,
                                          H.HttpContent content,
                                          HttpHeaders headers,
                                          HttpCookies cookies,
                                          int maxRedirectCount)
         {
-            return MakeRequest(url, method, content, headers, cookies, maxRedirectCount, () => new RestResponse());
+            return MakeRequest(endpoint,
+                               method,
+                               content,
+                               headers,
+                               cookies,
+                               maxRedirectCount,
+                               () => new RestResponse());
         }
 
-        private TResponse MakeRequest<TResponse>(string url,
+        private TResponse MakeRequest<TResponse>(string endpoint,
                                                  H.HttpMethod method,
                                                  H.HttpContent content,
                                                  HttpHeaders headers,
@@ -214,7 +254,13 @@ namespace PasswordManagerAccess.Common
                                                  int maxRedirectCount,
                                                  Func<TResponse> responseFactory) where TResponse : RestResponse
         {
-            return MakeRequest(new Uri(url), method, content, headers, cookies, maxRedirectCount, responseFactory);
+            return MakeRequest(MakeAbsoluteUri(endpoint),
+                               method,
+                               content,
+                               headers,
+                               cookies,
+                               maxRedirectCount,
+                               responseFactory);
         }
 
         private TResponse MakeRequest<TResponse>(Uri uri,

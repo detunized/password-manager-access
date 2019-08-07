@@ -194,7 +194,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // First get the MFA page. We need use all the cookies
             // from the login to get the page and submit the code.
-            var page = rest.Get(url: url, headers: Headers, cookies: loginResponse.Cookies);
+            var page = rest.Get(endpoint: url, headers: Headers, cookies: loginResponse.Cookies);
             if (!page.IsSuccessful)
                 throw MakeErrorOnFailedRequest(page);
 
@@ -208,7 +208,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // Now submit the form with the MFA code
             var verifyResponse = rest.PostForm(
-                url: VerifyUrl,
+                endpoint: VerifyUrl,
                 parameters: new Dictionary<string, object>
                 {
                     {"remembertfa", "false"},
@@ -284,7 +284,7 @@ namespace PasswordManagerAccess.ZohoVault
         internal static RestResponse Approve(RestResponse loginResponse, RestClient rest)
         {
             var response = rest.PostForm(
-                url: "https://accounts.zoho.com/oauth/v2/approve",
+                endpoint: "https://accounts.zoho.com/oauth/v2/approve",
                 parameters: new Dictionary<string, object>
                 {
                     {"response_type", "code"},

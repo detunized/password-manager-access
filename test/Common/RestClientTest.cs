@@ -110,6 +110,42 @@ namespace PasswordManagerAccess.Test.Common
                 });
         }
 
+        [Fact]
+        public void MakeAbsoluteUri_joins_url_with_slashes()
+        {
+            string[] bases = { "http://all.your.base", "http://all.your.base/" };
+            string[] endpoints = { "are/belong/to/us", "/are/belong/to/us" };
+
+            foreach (var b in bases)
+                foreach (var e in endpoints)
+                    using (var rest = new RestClient(null, b))
+                        Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(e).AbsoluteUri);
+        }
+
+        [Fact]
+        public void MakeAbsoluteUri_allows_empty_base()
+        {
+            using (var rest = new RestClient(null, ""))
+            {
+                Assert.Equal("http://all.your.base/are/belong/to/us",
+                             rest.MakeAbsoluteUri("http://all.your.base/are/belong/to/us").AbsoluteUri);
+            }
+        }
+
+        [Fact]
+        public void MakeAbsoluteUri_allows_empty_endpoint()
+        {
+            using (var rest = new RestClient(null, "http://all.your.base/are/belong/to/us"))
+                Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri("").AbsoluteUri);
+        }
+
+        [Fact]
+        public void MakeAbsoluteUri_throws_on_invalid_format()
+        {
+            using (var rest = new RestClient(null, "not an url"))
+                Assert.Throws<UriFormatException>(() => rest.MakeAbsoluteUri("not an endpoint"));
+        }
+
         //
         // Helpers
         //
