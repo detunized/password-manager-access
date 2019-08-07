@@ -214,7 +214,7 @@ namespace PasswordManagerAccess.Common
                                        cookies,
                                        maxRedirectCount,
                                        () => new RestResponse<T>());
-            if (response.Error != null)
+            if (response.HasError)
                 return response;
 
             // Only deserialize when HTTP call succeeded, even with non 2XX code
