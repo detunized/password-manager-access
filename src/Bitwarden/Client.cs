@@ -2,10 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
@@ -437,90 +434,9 @@ namespace PasswordManagerAccess.Bitwarden
             return s == null ? "" : DecryptToString(s, key);
         }
 
-        internal static HttpStatusCode? GetHttpStatus(NetworkErrorException e)
-        {
-            var we = e.InnerException as WebException;
-            if (we == null || we.Status != WebExceptionStatus.ProtocolError)
-                return null;
-
-            var wr = we.Response as HttpWebResponse;
-            if (wr == null)
-                return null;
-
-            return wr.StatusCode;
-        }
-
-        internal static bool IsHttp400To500(NetworkErrorException e)
-        {
-            var status = GetHttpStatus(e);
-            return status != null && (int)status.Value / 100 == 4;
-        }
-
-        internal static string GetHttpResponse(NetworkErrorException e)
-        {
-            var we = e.InnerException as WebException;
-            if (we == null || we.Status != WebExceptionStatus.ProtocolError)
-                return null;
-
-            var wr = we.Response as HttpWebResponse;
-            if (wr == null)
-                return null;
-
-            var stream = wr.GetResponseStream();
-            if (stream == null)
-                return null;
-
-            // Leave the response stream open to be able to read it again later
-            using (var r = new StreamReader(stream,
-                                            Encoding.UTF8,
-                                            detectEncodingFromByteOrderMarks: true,
-                                            bufferSize: 1024,
-                                            leaveOpen: true))
-            {
-                var response = r.ReadToEnd();
-
-                // Rewind it back not to make someone very confused when they try to read from it
-                if (stream.CanSeek)
-                    stream.Seek(0, SeekOrigin.Begin);
-
-                return response;
-            }
-        }
-
-        internal static string GetServerErrorMessage(NetworkErrorException e)
-        {
-            var response = GetHttpResponse(e);
-            if (response == null)
-                return null;
-
-            try
-            {
-                var parsed = JObject.Parse(response);
-                return (string)(parsed["ErrorModel"] ?? parsed)["Message"];
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
-
-        internal static BaseException MakeSpecializedError(NetworkErrorException e)
-        {
-            if (!IsHttp400To500(e))
-                return e;
-
-            var message = GetServerErrorMessage(e);
-            if (message == null)
-                return e;
-
-            if (message.Contains("Username or password is incorrect"))
-                return new BadCredentialsException(message, e);
-
-            if (message.Contains("Two-step token is invalid"))
-                return new BadMultiFactorException(message, e);
-
-            return new InternalErrorException(message, e);
-        }
+        //
+        // Error handling
+        //
 
         internal static bool IsHttp4XX(RestResponse response)
         {
