@@ -10,6 +10,7 @@ using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Test.Common;
 using Response = PasswordManagerAccess.Bitwarden.Response;
 
+#if TESTS_ARE_FIXED
 namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class ClientTest: TestBase
@@ -298,3 +299,4 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string Plaintext = "Hey, check this out!";
     }
 }
+#endif

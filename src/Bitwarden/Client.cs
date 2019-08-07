@@ -20,65 +20,59 @@ namespace PasswordManagerAccess.Bitwarden
                                           string baseUrl,
                                           Ui ui,
                                           ISecureStorage storage,
-                                          IHttpClient http)
+                                          IHttpClient http) // TODO: Port Duo to RestClient and get rid of HttpClient
         {
             // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
             if (baseUrl.IsNullOrEmpty())
-                baseUrl = BaseUrl;
+                baseUrl = DefaultBaseUrl;
 
-            var jsonHttp = new JsonHttpClient(http, baseUrl);
+            using (var rest = new RestClient(baseUrl))
+            {
+                // 1. Request the number of KDF iterations needed to derive the key
+                var iterations = RequestKdfIterationCount(username, rest);
 
-            // 1. Request the number of KDF iterations needed to derive the key
-            var iterations = RequestKdfIterationCount(username, jsonHttp);
+                // 2. Derive the master encryption key or KEK (key encryption key)
+                var key = Crypto.DeriveKey(username, password, iterations);
 
-            // 2. Derive the master encryption key or KEK (key encryption key)
-            var key = Crypto.DeriveKey(username, password, iterations);
+                // 3. Hash the password that is going to be sent to the server
+                var hash = Crypto.HashPassword(password, key);
 
-            // 3. Hash the password that is going to be sent to the server
-            var hash = Crypto.HashPassword(password, key);
+                // 4. Authenticate with the server and get the token
+                var token = Login(username, hash, deviceId, ui, storage, rest, http);
 
-            // 4. Authenticate with the server and get the token
-            var token = Login(username, hash, deviceId, ui, storage, jsonHttp);
+                // 5. Fetch the vault
+                var encryptedVault = DownloadVault(rest, token);
 
-            // 5. All subsequent requests are signed with this header
-            var authJsonHttp = new JsonHttpClient(http,
-                                                  baseUrl,
-                                                  new Dictionary<string, string> {{"Authorization", token}});
-
-            // 6. Fetch the vault
-            var encryptedVault = DownloadVault(authJsonHttp);
-
-            return DecryptVault(encryptedVault, key);
+                // 6. Decrypt and parse the vault. Done!
+                return DecryptVault(encryptedVault, key);
+            }
         }
 
         //
         // Internal
         //
 
-        internal static int RequestKdfIterationCount(string username, JsonHttpClient jsonHttp)
+        internal static int RequestKdfIterationCount(string username, RestClient rest)
         {
-            var info = RequestKdfInfo(username, jsonHttp);
+            var info = RequestKdfInfo(username, rest);
             if (info.Kdf != Response.KdfMethod.Pbkdf2Sha256)
                 throw new UnsupportedFeatureException($"KDF method {info.Kdf} is not supported");
 
             return info.KdfIterations;
         }
 
-        internal static Response.KdfInfo RequestKdfInfo(string username, JsonHttpClient jsonHttp)
+        internal static Response.KdfInfo RequestKdfInfo(string username, RestClient rest)
         {
-            try
-            {
-                return jsonHttp.Post<Response.KdfInfo>("api/accounts/prelogin",
-                                                       new Dictionary<string, object> {{"email", username}});
-            }
-            catch (NetworkErrorException e)
-            {
-                // The web client seems to ignore network errors. Default to 5000 iterations.
-                if (IsHttp400To500(e))
-                    return DefaultKdfInfo;
+            var response = rest.PostJson<Response.KdfInfo>("api/accounts/prelogin",
+                                                           new Dictionary<string, object> {{"email", username}});
+            if (response.IsSuccessful)
+                return response.Data;
 
-                throw MakeSpecializedError(e);
-            }
+            // Special case: when the HTTP status is 4XX we should fall back to the default settings
+            if (IsHttp4XX(response))
+                return DefaultKdfInfo;
+
+            throw MakeSpecializedError(response);
         }
 
         internal static string Login(string username,
@@ -86,12 +80,13 @@ namespace PasswordManagerAccess.Bitwarden
                                      string deviceId,
                                      Ui ui,
                                      ISecureStorage storage,
-                                     JsonHttpClient jsonHttp)
+                                     RestClient rest,
+                                     IHttpClient http)
         {
             // Try simple password login, potentially with a stored second factor token if
             // "remember me" was used before.
             var rememberMeOptions = GetRememberMeOptions(storage);
-            var response = RequestAuthToken(username, passwordHash, deviceId, rememberMeOptions, jsonHttp);
+            var response = RequestAuthToken(username, passwordHash, deviceId, rememberMeOptions, rest);
 
             // Simple password login (no 2FA) succeeded
             if (response.AuthToken != null)
@@ -117,7 +112,7 @@ namespace PasswordManagerAccess.Bitwarden
                 // When only the email 2FA present, the email is sent by the server right away.
                 // Trigger only when other methods are present.
                 if (secondFactor.Methods.Count != 1)
-                    TriggerEmailMfaPasscode(username, passwordHash, jsonHttp);
+                    TriggerEmailMfaPasscode(username, passwordHash, rest);
 
                 passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
                 break;
@@ -125,7 +120,7 @@ namespace PasswordManagerAccess.Bitwarden
                 passcode = Duo.Authenticate((string)extra["Host"] ?? "",
                                             (string)extra["Signature"] ?? "",
                                             ui,
-                                            jsonHttp.Http);
+                                            http); // TODO: Port to RestClient
                 break;
             case Response.SecondFactorMethod.YubiKey:
                 passcode = ui.ProvideYubiKeyPasscode();
@@ -146,7 +141,7 @@ namespace PasswordManagerAccess.Bitwarden
                                                         new SecondFactorOptions(method,
                                                                                 passcode.Code,
                                                                                 passcode.RememberMe),
-                                                        jsonHttp);
+                                                        rest);
 
             // Password + 2FA is successful
             if (secondFactorResponse.AuthToken != null)
@@ -269,9 +264,9 @@ namespace PasswordManagerAccess.Bitwarden
         internal static TokenOrSecondFactor RequestAuthToken(string username,
                                                              byte[] passwordHash,
                                                              string deviceId,
-                                                             JsonHttpClient jsonHttp)
+                                                             RestClient rest)
         {
-            return RequestAuthToken(username, passwordHash, deviceId, null, jsonHttp);
+            return RequestAuthToken(username, passwordHash, deviceId, null, rest);
         }
 
         // secondFactorOptions is optional
@@ -279,61 +274,54 @@ namespace PasswordManagerAccess.Bitwarden
                                                              byte[] passwordHash,
                                                              string deviceId,
                                                              SecondFactorOptions secondFactorOptions,
-                                                             JsonHttpClient jsonHttp)
+                                                             RestClient rest)
         {
-            try
+            var parameters = new Dictionary<string, object>
             {
-                var parameters = new Dictionary<string, object>
-                {
-                    {"username", username},
-                    {"password", passwordHash.ToBase64()},
-                    {"grant_type", "password"},
-                    {"scope", "api offline_access"},
-                    {"client_id", "web"},
-                    {"deviceType", "9"},
-                    {"deviceName", "chrome"},
-                    {"deviceIdentifier", deviceId},
-                };
+                {"username", username},
+                {"password", passwordHash.ToBase64()},
+                {"grant_type", "password"},
+                {"scope", "api offline_access"},
+                {"client_id", "web"},
+                {"deviceType", "9"},
+                {"deviceName", "chrome"},
+                {"deviceIdentifier", deviceId},
+            };
 
-                if (secondFactorOptions != null)
-                {
-                    parameters["twoFactorProvider"] = secondFactorOptions.Method.ToString("d");
-                    parameters["twoFactorToken"] = secondFactorOptions.Passcode;
-                    parameters["twoFactorRemember"] = secondFactorOptions.RememberMe ? "1" : "0";
-                }
-
-                var response = jsonHttp.PostForm<Response.AuthToken>("identity/connect/token", parameters);
-                return new TokenOrSecondFactor($"{response.TokenType} {response.AccessToken}", response.TwoFactorToken);
-            }
-            catch (NetworkErrorException e)
+            if (secondFactorOptions != null)
             {
-                // .NET WebClinet throws exceptions on HTTP errors. In the case of 2FA the server
-                // returns some 400+ HTTP error and the response contains extra information about
-                // the available 2FA methods. JsonHttpClient doesn't handle parsing of the response
-                // on error. So we have to fish it out of the original exception and the attached
-                // HTTP response object.
-                // TODO: Write a test for this situation. It's not very easy at the moment, since
-                //       we have to throw some pretty complex made up exceptions.
-                var secondFactor = ExtractSecondFactorFromResponse(e);
-                if (secondFactor.HasValue)
-                    return new TokenOrSecondFactor(secondFactor.Value);
-
-                throw MakeSpecializedError(e);
+                parameters["twoFactorProvider"] = secondFactorOptions.Method.ToString("d");
+                parameters["twoFactorToken"] = secondFactorOptions.Passcode;
+                parameters["twoFactorRemember"] = secondFactorOptions.RememberMe ? "1" : "0";
             }
+
+            var response = rest.PostForm<Response.AuthToken>("identity/connect/token", parameters);
+            if (response.IsSuccessful)
+            {
+                var token = response.Data;
+                return new TokenOrSecondFactor($"{token.TokenType} {token.AccessToken}", token.TwoFactorToken);
+            }
+
+            // TODO: Write a test for this situation.
+            var secondFactor = ExtractSecondFactorFromResponse(response);
+            if (secondFactor.HasValue)
+                return new TokenOrSecondFactor(secondFactor.Value);
+
+            throw MakeSpecializedError(response);
         }
 
-        internal static Response.SecondFactor? ExtractSecondFactorFromResponse(NetworkErrorException e)
+        internal static Response.SecondFactor? ExtractSecondFactorFromResponse(RestResponse response)
         {
-            if (!IsHttp400To500(e))
+            // In the case of 2FA the server returns some 400+ HTTP error and the response contains
+            // extra information about the available 2FA methods.
+            if (!IsHttp4XX(response))
                 return null;
 
-            var response = GetHttpResponse(e);
-            if (response == null)
-                return null;
-
+            // TODO: A refactoring opportunity here. This pattern could be converted to
+            //       RestResponse<U> RestResponse<T>.CastTo<U>() { ... }
             try
             {
-                return JsonConvert.DeserializeObject<Response.SecondFactor>(response);
+                return JsonConvert.DeserializeObject<Response.SecondFactor>(response.Content);
             }
             catch (JsonException)
             {
@@ -341,7 +329,7 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        internal static void TriggerEmailMfaPasscode(string username, byte[] passwordHash, JsonHttpClient jsonHttp)
+        internal static void TriggerEmailMfaPasscode(string username, byte[] passwordHash, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -349,26 +337,21 @@ namespace PasswordManagerAccess.Bitwarden
                 {"masterPasswordHash", passwordHash.ToBase64()},
             };
 
-            try
-            {
-                jsonHttp.PostRaw("api/two-factor/send-email-login", parameters);
-            }
-            catch (NetworkErrorException e)
-            {
-                throw MakeSpecializedError(e);
-            }
+            var response = rest.PostJson("api/two-factor/send-email-login", parameters);
+            if (response.IsSuccessful)
+                return;
+
+            throw MakeSpecializedError(response);
         }
 
-        internal static Response.Vault DownloadVault(JsonHttpClient jsonHttp)
+        internal static Response.Vault DownloadVault(RestClient rest, string token)
         {
-            try
-            {
-                return jsonHttp.Get<Response.Vault>("api/sync?excludeDomains=true");
-            }
-            catch (NetworkErrorException e)
-            {
-                throw MakeSpecializedError(e);
-            }
+            var response = rest.Get<Response.Vault>("api/sync?excludeDomains=true",
+                                                    new Dictionary<string, string> {{"Authorization", token}});
+            if (response.IsSuccessful)
+                return response.Data;
+
+            throw MakeSpecializedError(response);
         }
 
         internal static Account[] DecryptVault(Response.Vault vault, byte[] key)
@@ -539,11 +522,53 @@ namespace PasswordManagerAccess.Bitwarden
             return new InternalErrorException(message, e);
         }
 
+        internal static bool IsHttp4XX(RestResponse response)
+        {
+            return (int)response.StatusCode / 100 == 4;
+        }
+
+        internal static BaseException MakeSpecializedError(RestResponse response)
+        {
+            if (response.IsNetworkError)
+                return new NetworkErrorException("Network error has occured", response.Error);
+
+            if (response.HasError)
+                return new InternalErrorException("Network request or response parsing failed", response.Error);
+
+            if (!IsHttp4XX(response))
+                return new InternalErrorException($"Unexpected response from the server ({response.StatusCode})");
+
+            var message = GetServerErrorMessage(response);
+            if (message.IsNullOrEmpty())
+                return new InternalErrorException("Unexpected response from the server");
+
+            if (message.Contains("Username or password is incorrect"))
+                return new BadCredentialsException(message);
+
+            if (message.Contains("Two-step token is invalid"))
+                return new BadMultiFactorException(message);
+
+            return new InternalErrorException($"Server responded with an error: '{message}'");
+        }
+
+        internal static string GetServerErrorMessage(RestResponse response)
+        {
+            try
+            {
+                var parsed = JObject.Parse(response.Content ?? "{}");
+                return (string)(parsed["ErrorModel"] ?? parsed)["Message"];
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
         //
         // Private
         //
 
-        private const string BaseUrl = "https://vault.bitwarden.com";
+        private const string DefaultBaseUrl = "https://vault.bitwarden.com";
         private const string RememberMeTokenKey = "remember-me-token";
 
         private static readonly Response.KdfInfo DefaultKdfInfo = new Response.KdfInfo

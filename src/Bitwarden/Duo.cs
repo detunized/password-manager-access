@@ -11,6 +11,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Bitwarden
 {
+    // TODO: Port to RestClient
     internal static class Duo
     {
         // Returns the second factor token from Duo or blank when canceled by the user.
