@@ -279,6 +279,8 @@ namespace PasswordManagerAccess.Common
 
         private static H.HttpContent ToFormContent(PostParameters parameters)
         {
+            // TODO: FormUrlEncodedContent doesn't add "charset=utf-8"
+            //       Maybe a better option would be to send it as StringContent with forced encoding.
             return new H.FormUrlEncodedContent(
                 parameters.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())));
         }

@@ -58,12 +58,56 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void Get_T_works()
+        public void Get_decodes_json()
         {
             var response = Serve("{'Key': 'k', 'Value': 'v'}").Get<KeyValuePair<string, string>>(Url);
 
             Assert.True(response.IsSuccessful);
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
+        }
+
+        [Fact]
+        public void PostJson_sends_json_headers()
+        {
+            InRequest(
+                rest => rest.PostJson(Url, new Dictionary<string, object>()),
+                request => {
+                    Assert.Equal(new[] { "application/json; charset=utf-8" },
+                                 request.Content.Headers.GetValues("Content-type"));
+                });
+        }
+
+        [Fact]
+        public void PostJson_encodes_json()
+        {
+            InRequest(
+                rest => rest.PostJson(Url, new Dictionary<string, object>() { { "k", "v" } }),
+                request => {
+                    Assert.Equal("{\"k\":\"v\"}",
+                                 request.Content.ReadAsStringAsync().Result);
+                });
+        }
+
+        [Fact]
+        public void PostForm_sends_form_headers()
+        {
+            InRequest(
+                rest => rest.PostForm(Url, new Dictionary<string, object>()),
+                request => {
+                    Assert.Equal(new[] { "application/x-www-form-urlencoded" },
+                                 request.Content.Headers.GetValues("Content-type"));
+                });
+        }
+
+        [Fact]
+        public void PostJson_encodes_form()
+        {
+            InRequest(
+                rest => rest.PostForm(Url, new Dictionary<string, object>() { { "k", "v" } }),
+                request => {
+                    Assert.Equal("k=v",
+                                 request.Content.ReadAsStringAsync().Result);
+                });
         }
 
         //
