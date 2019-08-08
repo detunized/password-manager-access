@@ -117,33 +117,33 @@ namespace PasswordManagerAccess.Test.Common
             string[] endpoints = { "are/belong/to/us", "/are/belong/to/us" };
 
             foreach (var b in bases)
+            {
+                RestClient rest = new RestClient(null, b);
                 foreach (var e in endpoints)
-                    using (var rest = new RestClient(null, b))
-                        Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(e).AbsoluteUri);
+                    Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(e).AbsoluteUri);
+            }
         }
 
         [Fact]
         public void MakeAbsoluteUri_allows_empty_base()
         {
-            using (var rest = new RestClient(null, ""))
-            {
-                Assert.Equal("http://all.your.base/are/belong/to/us",
-                             rest.MakeAbsoluteUri("http://all.your.base/are/belong/to/us").AbsoluteUri);
-            }
+            RestClient rest = new RestClient(null, "");
+            Assert.Equal("http://all.your.base/are/belong/to/us",
+                         rest.MakeAbsoluteUri("http://all.your.base/are/belong/to/us").AbsoluteUri);
         }
 
         [Fact]
         public void MakeAbsoluteUri_allows_empty_endpoint()
         {
-            using (var rest = new RestClient(null, "http://all.your.base/are/belong/to/us"))
-                Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri("").AbsoluteUri);
+            var rest = new RestClient(null, "http://all.your.base/are/belong/to/us");
+            Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri("").AbsoluteUri);
         }
 
         [Fact]
         public void MakeAbsoluteUri_throws_on_invalid_format()
         {
-            using (var rest = new RestClient(null, "not an url"))
-                Assert.Throws<UriFormatException>(() => rest.MakeAbsoluteUri("not an endpoint"));
+            var rest = new RestClient(null, "not an url");
+            Assert.Throws<UriFormatException>(() => rest.MakeAbsoluteUri("not an endpoint"));
         }
 
         //
@@ -160,10 +160,13 @@ namespace PasswordManagerAccess.Test.Common
                                        string responseContent,
                                        Action<HttpRequestMessage> assertRequest)
         {
-            restCall(new RestClient(request => {
+            using (var transport = new RestTransport(request => {
                 assertRequest(request);
                 return RespondWith(responseContent)(request);
-            }));
+            }))
+            {
+                restCall(new RestClient(transport));
+            }
         }
 
         internal static void InRequest(Action<RestClient> restCall, Action<HttpRequestMessage> assertRequest)
@@ -173,7 +176,7 @@ namespace PasswordManagerAccess.Test.Common
 
         internal static RestClient Serve(string response, string baseUrl = "")
         {
-            return new RestClient(RespondWith(response), baseUrl);
+            return new RestClient(new RestTransport(RespondWith(response)), baseUrl);
         }
 
         private static SendAsyncType RespondWith(string response, HttpStatusCode status = HttpStatusCode.OK)

@@ -23,8 +23,10 @@ namespace PasswordManagerAccess.Bitwarden
             if (baseUrl.IsNullOrEmpty())
                 baseUrl = DefaultBaseUrl;
 
-            using (var rest = new RestClient(baseUrl))
+            using (var transport = new RestTransport())
             {
+                var rest = new RestClient(transport, baseUrl);
+
                 // 1. Request the number of KDF iterations needed to derive the key
                 var iterations = RequestKdfIterationCount(username, rest);
 
