@@ -17,34 +17,32 @@ namespace PasswordManagerAccess.Bitwarden
                                           string baseUrl,
                                           Ui ui,
                                           ISecureStorage storage,
+                                          IRestTransport transport,
                                           IHttpClient http) // TODO: Port Duo to RestClient and get rid of HttpClient
         {
             // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
             if (baseUrl.IsNullOrEmpty())
                 baseUrl = DefaultBaseUrl;
 
-            using (var transport = new RestTransport())
-            {
-                var rest = new RestClient(transport, baseUrl);
+            var rest = new RestClient(transport, baseUrl);
 
-                // 1. Request the number of KDF iterations needed to derive the key
-                var iterations = RequestKdfIterationCount(username, rest);
+            // 1. Request the number of KDF iterations needed to derive the key
+            var iterations = RequestKdfIterationCount(username, rest);
 
-                // 2. Derive the master encryption key or KEK (key encryption key)
-                var key = Crypto.DeriveKey(username, password, iterations);
+            // 2. Derive the master encryption key or KEK (key encryption key)
+            var key = Crypto.DeriveKey(username, password, iterations);
 
-                // 3. Hash the password that is going to be sent to the server
-                var hash = Crypto.HashPassword(password, key);
+            // 3. Hash the password that is going to be sent to the server
+            var hash = Crypto.HashPassword(password, key);
 
-                // 4. Authenticate with the server and get the token
-                var token = Login(username, hash, deviceId, ui, storage, rest, http);
+            // 4. Authenticate with the server and get the token
+            var token = Login(username, hash, deviceId, ui, storage, rest, http);
 
-                // 5. Fetch the vault
-                var encryptedVault = DownloadVault(rest, token);
+            // 5. Fetch the vault
+            var encryptedVault = DownloadVault(rest, token);
 
-                // 6. Decrypt and parse the vault. Done!
-                return DecryptVault(encryptedVault, key);
-            }
+            // 6. Decrypt and parse the vault. Done!
+            return DecryptVault(encryptedVault, key);
         }
 
         //

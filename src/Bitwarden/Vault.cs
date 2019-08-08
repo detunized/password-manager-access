@@ -20,9 +20,22 @@ namespace PasswordManagerAccess.Bitwarden
         }
 
         // This version allows custom base URL. baseUrl could be set to null or "" for a default value.
-        public static Vault Open(string username, string password, string deviceId, string baseUrl, Ui ui, ISecureStorage storage)
+        public static Vault Open(string username,
+                                 string password,
+                                 string deviceId,
+                                 string baseUrl,
+                                 Ui ui,
+                                 ISecureStorage storage)
         {
-            return new Vault(Client.OpenVault(username, password, deviceId, baseUrl, ui, storage, new HttpClient()));
+            using (var transport = new RestTransport())
+                return new Vault(Client.OpenVault(username,
+                                                  password,
+                                                  deviceId,
+                                                  baseUrl,
+                                                  ui,
+                                                  storage,
+                                                  transport,
+                                                  new HttpClient()));
         }
 
         public static string GenerateRandomDeviceId()
