@@ -132,9 +132,15 @@ namespace PasswordManagerAccess.Common
                 // Redirect if still possible (HTTP Status 3XX)
                 if ((int)response.StatusCode / 100 == 3 && maxRedirectCount > 0)
                 {
-                    MakeRequest(response.Headers.Location, // TODO: The URL might be relative!
-                                method,
-                                content,
+                    // Handle relative redirects (both local and starting at the root)
+                    var newUri = response.Headers.Location;
+                    if (!newUri.IsAbsoluteUri)
+                        newUri = new Uri(uri, newUri);
+
+                    // Redirect always does a GET with no content
+                    MakeRequest(newUri,
+                                HttpMethod.Get,
+                                null,
                                 headers,
                                 allCookies,
                                 maxRedirectCount - 1,
@@ -290,7 +296,7 @@ namespace PasswordManagerAccess.Common
                                ToJsonContent(parameters),
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
-                               NoRedirects);
+                               MaxRedirects);
         }
 
         public RestResponse<T> PostJson<T>(string endpoint,
@@ -303,7 +309,7 @@ namespace PasswordManagerAccess.Common
                                   ToJsonContent(parameters),
                                   headers ?? NoHeaders,
                                   cookies ?? NoCookies,
-                                  NoRedirects,
+                                  MaxRedirects,
                                   JsonConvert.DeserializeObject<T>);
         }
 
@@ -321,7 +327,7 @@ namespace PasswordManagerAccess.Common
                                ToFormContent(parameters),
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
-                               NoRedirects,
+                               MaxRedirects,
                                () => new RestResponse());
         }
 
@@ -335,7 +341,7 @@ namespace PasswordManagerAccess.Common
                                   ToFormContent(parameters),
                                   headers ?? NoHeaders,
                                   cookies ?? NoCookies,
-                                  NoRedirects,
+                                  MaxRedirects,
                                   JsonConvert.DeserializeObject<T>);
         }
 
