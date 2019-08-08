@@ -153,19 +153,27 @@ namespace PasswordManagerAccess.Test.Common
         // This is for asserting inside a request like this:
         // InRequest(
         //     rest => rest.Get(url),                    // <- perform a rest call
+        //     "<html><head>...",                        // <- respond with this content
         //     req => Assert.Equal(url, req.RequestUri)  // <- verify that the request is as expected
         // );
-        private static void InRequest(Action<RestClient> restCall, Action<HttpRequestMessage> assertRequest)
+        internal static void InRequest(Action<RestClient> restCall,
+                                       string responseContent,
+                                       Action<HttpRequestMessage> assertRequest)
         {
             restCall(new RestClient(request => {
                 assertRequest(request);
-                return RespondWith("")(request);
+                return RespondWith(responseContent)(request);
             }));
         }
 
-        private static RestClient Serve(string response)
+        internal static void InRequest(Action<RestClient> restCall, Action<HttpRequestMessage> assertRequest)
         {
-            return new RestClient(RespondWith(response));
+            InRequest(restCall, "", assertRequest);
+        }
+
+        internal static RestClient Serve(string response, string baseUrl = "")
+        {
+            return new RestClient(RespondWith(response), baseUrl);
         }
 
         private static SendAsyncType RespondWith(string response, HttpStatusCode status = HttpStatusCode.OK)
