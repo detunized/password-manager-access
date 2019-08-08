@@ -290,7 +290,7 @@ namespace PasswordManagerAccess.Common
                                ToJsonContent(parameters),
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
-                               MaxRedirects);
+                               NoRedirects);
         }
 
         public RestResponse<T> PostJson<T>(string endpoint,
@@ -303,7 +303,7 @@ namespace PasswordManagerAccess.Common
                                   ToJsonContent(parameters),
                                   headers ?? NoHeaders,
                                   cookies ?? NoCookies,
-                                  MaxRedirects,
+                                  NoRedirects,
                                   JsonConvert.DeserializeObject<T>);
         }
 
