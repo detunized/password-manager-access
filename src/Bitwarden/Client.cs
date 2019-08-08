@@ -17,8 +17,7 @@ namespace PasswordManagerAccess.Bitwarden
                                           string baseUrl,
                                           Ui ui,
                                           ISecureStorage storage,
-                                          IRestTransport transport,
-                                          IHttpClient http) // TODO: Port Duo to RestClient and get rid of HttpClient
+                                          IRestTransport transport)
         {
             // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
             if (baseUrl.IsNullOrEmpty())
@@ -36,7 +35,7 @@ namespace PasswordManagerAccess.Bitwarden
             var hash = Crypto.HashPassword(password, key);
 
             // 4. Authenticate with the server and get the token
-            var token = Login(username, hash, deviceId, ui, storage, rest, http);
+            var token = Login(username, hash, deviceId, ui, storage, rest);
 
             // 5. Fetch the vault
             var encryptedVault = DownloadVault(rest, token);
@@ -77,8 +76,7 @@ namespace PasswordManagerAccess.Bitwarden
                                      string deviceId,
                                      Ui ui,
                                      ISecureStorage storage,
-                                     RestClient rest,
-                                     IHttpClient http)
+                                     RestClient rest)
         {
             // Try simple password login, potentially with a stored second factor token if
             // "remember me" was used before.
@@ -117,7 +115,7 @@ namespace PasswordManagerAccess.Bitwarden
                 passcode = Duo.Authenticate((string)extra["Host"] ?? "",
                                             (string)extra["Signature"] ?? "",
                                             ui,
-                                            http); // TODO: Port to RestClient
+                                            rest.Transport);
                 break;
             case Response.SecondFactorMethod.YubiKey:
                 passcode = ui.ProvideYubiKeyPasscode();

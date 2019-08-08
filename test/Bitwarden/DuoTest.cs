@@ -4,6 +4,7 @@
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Test.Common;
 using Xunit;
+using System.Net;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -35,8 +36,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DownloadFrame_returns_html_document()
         {
-            var http = JsonHttpClientTest.SetupPost("<html></html>");
-            var html = Duo.DownloadFrame("host.com", "tx", http.Object);
+            var rest = RestClientTest.Serve("<html></html>", BaseUrl);
+            var html = Duo.DownloadFrame("tx", rest);
 
             Assert.Equal("<html></html>", html.DocumentNode.InnerHtml);
         }
@@ -44,9 +45,15 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DownloadFrame_throws_on_network_error()
         {
-            var http = JsonHttpClientTest.SetupPostWithFailure();
+            var rest = RestClientTest.Fail(HttpStatusCode.BadRequest, BaseUrl);
 
-            Exceptions.AssertThrowsNetworkError(() => Duo.DownloadFrame("host.com", "tx", http.Object), "Network error");
+            Exceptions.AssertThrowsInternalError(() => Duo.DownloadFrame("tx", rest));
         }
+
+        //
+        // Data
+        //
+
+        private const string BaseUrl = "http://base.url";
     }
 }

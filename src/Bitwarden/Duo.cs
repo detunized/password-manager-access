@@ -4,23 +4,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using HtmlAgilityPack;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Bitwarden
 {
-    // TODO: Port to RestClient
+    // TODO: Move Duo out of Bitwarden
     internal static class Duo
     {
         // Returns the second factor token from Duo or blank when canceled by the user.
-        public static Ui.Passcode Authenticate(string host, string signature, Ui ui, IHttpClient http)
+        public static Ui.Passcode Authenticate(string host, string signature, Ui ui, IRestTransport transport)
         {
-            var jsonHttp = new JsonHttpClient(http, $"https://{host}");
+            var rest = new RestClient(transport, $"https://{host}");
 
             var parsedSignature = ParseSignature(signature);
-            var html = DownloadFrame(host, parsedSignature.Tx, http);
+            var html = DownloadFrame(parsedSignature.Tx, rest);
             var parsedFrame = ParseFrame(html);
 
             while (true)
@@ -34,7 +34,7 @@ namespace PasswordManagerAccess.Bitwarden
                 // a new batch of passcodes to the phone via SMS.
                 if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
                 {
-                    SubmitFactor(parsedFrame.Sid, choice, "", jsonHttp);
+                    SubmitFactor(parsedFrame.Sid, choice, "", rest);
                     choice = new Ui.DuoChoice(choice.Device, Ui.DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -47,7 +47,7 @@ namespace PasswordManagerAccess.Bitwarden
                         return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(parsedFrame.Sid, choice, passcode, ui, jsonHttp);
+                var token = SubmitFactorAndWaitForToken(parsedFrame.Sid, choice, passcode, ui, rest);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
@@ -80,25 +80,21 @@ namespace PasswordManagerAccess.Bitwarden
             return new ParsedSignature(parts[0], parts[1]);
         }
 
-        internal static HtmlDocument DownloadFrame(string host, string tx, IHttpClient http)
+        internal static HtmlDocument DownloadFrame(string tx, RestClient rest)
         {
             const string parent = "https%3A%2F%2Fvault.bitwarden.com%2F%23%2F2fa";
             const string version = "2.6";
 
-            var url = $"https://{host}/frame/web/v1/auth?tx={tx}&parent={parent}&v={version}";
-            return Parse(Post(url, http));
+            return Parse(Post($"frame/web/v1/auth?tx={tx}&parent={parent}&v={version}", rest));
         }
 
-        internal static string Post(string url, IHttpClient http)
+        internal static string Post(string url, RestClient rest)
         {
-            try
-            {
-                return http.Post(url, "", new Dictionary<string, string>());
-            }
-            catch (WebException e)
-            {
-                throw MakeNetworkError("Network error occurred", e);
-            }
+            var response = rest.PostForm(url, new Dictionary<string, object>());
+            if (response.IsSuccessful)
+                return response.Content;
+
+            throw MakeSpecializedError(response);
         }
 
         internal static HtmlDocument Parse(string html)
@@ -148,7 +144,7 @@ namespace PasswordManagerAccess.Bitwarden
         }
 
         // Returns the transaction id
-        internal static string SubmitFactor(string sid, Ui.DuoChoice choice, string passcode, JsonHttpClient jsonHttp)
+        internal static string SubmitFactor(string sid, Ui.DuoChoice choice, string passcode, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -160,13 +156,13 @@ namespace PasswordManagerAccess.Bitwarden
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = PostForm("frame/prompt", parameters, jsonHttp);
+            var response = PostForm<R.SubmitFactor>("frame/prompt", parameters, rest);
 
-            var txid = (string)response["response"]?["txid"];
-            if (txid.IsNullOrEmpty())
-                throw MakeInvalidResponseError("Duo: transaction ID (txid) is expected by wasn't found");
+            var id = response.TransactionId;
+            if (id.IsNullOrEmpty())
+                throw MakeInvalidResponseError("Duo: transaction ID (txid) is expected but wasn't found");
 
-            return txid;
+            return id;
         }
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
@@ -175,30 +171,30 @@ namespace PasswordManagerAccess.Bitwarden
                                                            Ui.DuoChoice choice,
                                                            string passcode,
                                                            Ui ui,
-                                                           JsonHttpClient jsonHttp)
+                                                           RestClient rest)
         {
-            var txid = SubmitFactor(sid, choice, passcode, jsonHttp);
+            var txid = SubmitFactor(sid, choice, passcode, rest);
 
-            var url = PollForResultUrl(sid, txid, ui, jsonHttp);
+            var url = PollForResultUrl(sid, txid, ui, rest);
             if (url.IsNullOrEmpty())
                 return null;
 
-            return FetchToken(sid, url, ui, jsonHttp);
+            return FetchToken(sid, url, ui, rest);
         }
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string PollForResultUrl(string sid, string txid, Ui ui, JsonHttpClient jsonHttp)
+        internal static string PollForResultUrl(string sid, string txid, Ui ui, RestClient rest)
         {
             const int MaxPollAttempts = 100;
 
             // Normally it wouldn't poll nearly as many times. Just a few at most. It either bails on error or
-            // returns the result. This number here just to prevent an infinite loop, while is never a good idea.
+            // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
             for (var i = 0; i < MaxPollAttempts; i += 1)
             {
-                var response = PostForm("frame/status",
-                                        new Dictionary<string, object> {{"sid", sid}, {"txid", txid}},
-                                        jsonHttp);
+                var response = PostForm<R.Poll>("frame/status",
+                                                new Dictionary<string, object> {{"sid", sid}, {"txid", txid}},
+                                                rest);
 
                 var responseStatus = GetResponseStatus(response);
                 UpdateUi(responseStatus, ui);
@@ -206,7 +202,7 @@ namespace PasswordManagerAccess.Bitwarden
                 switch (responseStatus.Status)
                 {
                 case Ui.DuoStatus.Success:
-                    var url = (string)response["response"]?["result_url"];
+                    var url = response.Url;
                     if (url.IsNullOrEmpty())
                         throw MakeInvalidResponseError("Duo: result URL (result_url) was expected but wasn't found");
 
@@ -220,31 +216,31 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeInvalidResponseError("Duo: expected to receive a valid result or error, got none of it");
         }
 
-        internal static string FetchToken(string sid, string url, Ui ui, JsonHttpClient jsonHttp)
+        internal static string FetchToken(string sid, string url, Ui ui, RestClient rest)
         {
-            var response = PostForm(url, new Dictionary<string, object> {{"sid", sid}}, jsonHttp);
+            var response = PostForm<R.FetchToken>(url, new Dictionary<string, object> {{"sid", sid}}, rest);
 
             UpdateUi(response, ui);
 
-            var token = (string)response["response"]?["cookie"];
+            var token = response.Cookie;
             if (token.IsNullOrEmpty())
                 throw MakeInvalidResponseError("Duo: authentication token expected in response but wasn't found");
 
             return token;
         }
 
-        internal static JObject PostForm(string endpoint, Dictionary<string, object> parameters, JsonHttpClient jsonHttp)
+        internal static T PostForm<T>(string endpoint, Dictionary<string, object> parameters, RestClient rest)
         {
-            var response = jsonHttp.PostForm(endpoint, parameters);
+            var response = rest.PostForm<R.Envelope<T>>(endpoint, parameters);
 
-            // Something went wrong
-            if ((string)response["stat"] != "OK")
-                throw MakeRespondedWithError($"Duo: POST to {jsonHttp.BaseUrl}/{endpoint} failed", response);
+            // All good
+            if (response.IsSuccessful && response.Data.Status == "OK" && response.Data.Payload != null)
+                return response.Data.Payload;
 
-            return response;
+            throw MakeSpecializedError(response);
         }
 
-        internal static void UpdateUi(JObject response, Ui ui)
+        internal static void UpdateUi(R.Status response, Ui ui)
         {
             UpdateUi(GetResponseStatus(response), ui);
         }
@@ -270,10 +266,10 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        internal static ResponseStatus GetResponseStatus(JObject response)
+        internal static ResponseStatus GetResponseStatus(R.Status response)
         {
             var status = Ui.DuoStatus.Info;
-            switch ((string)response["response"]?["result"])
+            switch (response.Result)
             {
             case "SUCCESS":
                 status = Ui.DuoStatus.Success;
@@ -283,9 +279,7 @@ namespace PasswordManagerAccess.Bitwarden
                 break;
             }
 
-            var text = (string)response["response"]?["status"] ?? "";
-
-            return new ResponseStatus(status, text);
+            return new ResponseStatus(status, response.Message ?? "");
         }
 
         // Extracts all devices listed in the login form.
@@ -366,22 +360,74 @@ namespace PasswordManagerAccess.Bitwarden
             return "";
         }
 
-        internal static NetworkErrorException MakeNetworkError(string message, Exception original = null)
+        internal static InternalErrorException MakeInvalidResponseError(string message)
         {
-            return new NetworkErrorException(message, original);
+            return new InternalErrorException(message);
         }
 
-        internal static InternalErrorException MakeInvalidResponseError(string message, Exception original = null)
+        internal static BaseException MakeSpecializedError(RestResponse response, string extraInfo = "")
         {
-            return new InternalErrorException(message, original);
+            var text = $"Duo: rest call to {response.RequestUri} failed";
+
+            if (response.IsHttpError)
+                text += " (HTTP status: ${ response.StatusCode})";
+
+            if (!extraInfo.IsNullOrEmpty())
+                text += extraInfo;
+
+            return new InternalErrorException(text, response.Error);
         }
 
-        internal static InternalErrorException MakeRespondedWithError(string message,
-                                                                      JObject response,
-                                                                      Exception original = null)
+        internal static BaseException MakeSpecializedError<T>(RestResponse<R.Envelope<T>> response)
         {
-            var serverMessage = (string)response["message"] ?? "none";
-            return new InternalErrorException($"{message} Server message: {serverMessage}", original);
+            var message = response.Data.Message.IsNullOrEmpty() ? "none" : response.Data.Message;
+            return MakeSpecializedError(response, $"Server message: {message}");
+        }
+
+        //
+        // Response models
+        //
+
+        internal static class R
+        {
+            public struct Envelope<T>
+            {
+                [JsonProperty(PropertyName = "stat", Required = Required.Always)]
+                public string Status;
+
+                [JsonProperty(PropertyName = "message")]
+                public string Message;
+
+                [JsonProperty(PropertyName = "response")]
+                public T Payload;
+            }
+
+            public class SubmitFactor
+            {
+                [JsonProperty(PropertyName = "txid")]
+                public string TransactionId;
+            }
+
+            public class Status
+            {
+                [JsonProperty(PropertyName = "result")]
+                public string Result;
+
+                [JsonProperty(PropertyName = "status")]
+                public string Message;
+            }
+
+            public class FetchToken: Status
+            {
+                [JsonProperty(PropertyName = "cookie")]
+                public string Cookie;
+            }
+
+            public class Poll: Status
+            {
+                [JsonProperty(PropertyName = "result_url")]
+                public string Url;
+            }
         }
     }
 }

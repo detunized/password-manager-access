@@ -179,6 +179,11 @@ namespace PasswordManagerAccess.Test.Common
             return new RestClient(new RestTransport(RespondWith(response)), baseUrl);
         }
 
+        internal static RestClient Fail(HttpStatusCode status, string baseUrl = "")
+        {
+            return new RestClient(new RestTransport(RespondWith("", status)), baseUrl);
+        }
+
         private static SendAsyncType RespondWith(string response, HttpStatusCode status = HttpStatusCode.OK)
         {
             return (request) => Task.FromResult(new HttpResponseMessage(status)

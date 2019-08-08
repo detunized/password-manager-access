@@ -28,14 +28,7 @@ namespace PasswordManagerAccess.Bitwarden
                                  ISecureStorage storage)
         {
             using (var transport = new RestTransport())
-                return new Vault(Client.OpenVault(username,
-                                                  password,
-                                                  deviceId,
-                                                  baseUrl,
-                                                  ui,
-                                                  storage,
-                                                  transport,
-                                                  new HttpClient()));
+                return new Vault(Client.OpenVault(username, password, deviceId, baseUrl, ui, storage, transport));
         }
 
         public static string GenerateRandomDeviceId()
