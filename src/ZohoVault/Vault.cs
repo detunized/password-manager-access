@@ -12,16 +12,16 @@ namespace PasswordManagerAccess.ZohoVault
         public static Vault Open(string username, string password, string passphrase, Ui ui)
         {
             using (var transport = new RestTransport())
-                return Open(username, password, passphrase, ui, new RestClient(transport));
+                return Open(username, password, passphrase, ui, transport);
         }
 
         //
         // Private
         //
 
-        private static Vault Open(string username, string password, string passphrase, Ui ui, RestClient rest)
+        private static Vault Open(string username, string password, string passphrase, Ui ui, IRestTransport transport)
         {
-            return new Vault(Client.OpenVault(username, password, passphrase, ui, rest));
+            return new Vault(Client.OpenVault(username, password, passphrase, ui, transport));
         }
 
         private Vault(Account[] accounts)

@@ -16,8 +16,13 @@ namespace PasswordManagerAccess.ZohoVault
 
     internal static class Client
     {
-        public static Account[] OpenVault(string username, string password, string passphrase, Ui ui, RestClient rest)
+        public static Account[] OpenVault(string username,
+                                          string password,
+                                          string passphrase,
+                                          Ui ui,
+                                          IRestTransport transport)
         {
+            var rest = new RestClient(transport);
             var cookies = Login(username, password, ui, rest);
             try
             {
