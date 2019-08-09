@@ -10,7 +10,6 @@ using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Test.Common;
 using Response = PasswordManagerAccess.Bitwarden.Response;
 
-#if TESTS_ARE_FIXED
 namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class ClientTest: TestBase
@@ -18,40 +17,43 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void RequestKdfIterationCount_returns_iteration_count()
         {
-            var count = Client.RequestKdfIterationCount(Username, SetupKdfRequest(1337));
+            var rest = new TestRestTransport()
+                .Post("/api/accounts/prelogin", "{'Kdf': 0, 'KdfIterations': 1337}")
+                .ToRestClient();
+
+            var count = Client.RequestKdfIterationCount(Username, rest);
 
             Assert.Equal(1337, count);
         }
 
         [Fact]
-        public void RequestKdfIterationCount_makes_POST_request_to_specific_endpoint()
-        {
-            var jsonHttp = SetupKdfRequest(1337);
-            Client.RequestKdfIterationCount(Username, jsonHttp);
-
-            JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/api/accounts/prelogin");
-        }
-
-        [Fact]
         public void RequestKdfIterationCount_throws_on_unsupported_kdf_method()
         {
-            var jsonHttp = SetupKdfRequest(1337, 13);
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestKdfIterationCount(Username, jsonHttp), "KDF");
+            var rest = new TestRestTransport()
+                .Post("/api/accounts/prelogin", "{'Kdf': 13, 'KdfIterations': 1337}")
+                .ToRestClient();
+
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestKdfIterationCount(Username, rest), "KDF");
         }
 
         [Fact]
         public void Login_returns_auth_token_on_non_2fa_login()
         {
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                .ToRestClient();
+
             var token = Client.Login(Username,
                                      PasswordHash,
                                      DeviceId,
                                      null,
                                      SetupSecureStorage(null),
-                                     SetupAuthTokenRequest());
+                                     rest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
         }
 
+#if TESTS_ARE_FIXED
         [Fact]
         public void Login_sends_remember_me_token_when_available()
         {
@@ -232,6 +234,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var blank = Client.DecryptToStringOrBlank(null, Key);
             Assert.Equal("", blank);
         }
+#endif
 
         //
         // Helpers
@@ -242,11 +245,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var mock = new Mock<ISecureStorage>();
             mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns(token);
             return mock.Object;
-        }
-
-        private JsonHttpClient SetupKdfRequest(int iteratons, int method = (int)Response.KdfMethod.Pbkdf2Sha256)
-        {
-            return SetupPost($"{{'Kdf': {method}, 'KdfIterations': {iteratons}}}");
         }
 
         private JsonHttpClient SetupAuthTokenRequest()
@@ -299,4 +297,3 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string Plaintext = "Hey, check this out!";
     }
 }
-#endif
