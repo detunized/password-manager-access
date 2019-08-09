@@ -18,7 +18,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void RequestKdfIterationCount_returns_iteration_count()
         {
             var rest = new TestRestTransport()
-                .Post("/api/accounts/prelogin", "{'Kdf': 0, 'KdfIterations': 1337}")
+                .Post("{'Kdf': 0, 'KdfIterations': 1337}")
                 .ToRestClient();
 
             var count = Client.RequestKdfIterationCount(Username, rest);
@@ -30,7 +30,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void RequestKdfIterationCount_throws_on_unsupported_kdf_method()
         {
             var rest = new TestRestTransport()
-                .Post("/api/accounts/prelogin", "{'Kdf': 13, 'KdfIterations': 1337}")
+                .Post("{'Kdf': 13, 'KdfIterations': 1337}")
                 .ToRestClient();
 
             Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestKdfIterationCount(Username, rest), "KDF");
@@ -53,20 +53,18 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal("Bearer wa-wa-wee-wa", token);
         }
 
-#if TESTS_ARE_FIXED
         [Fact]
         public void Login_sends_remember_me_token_when_available()
         {
-            var jsonHttp = SetupAuthTokenRequest();
-            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(RememberMeToken), jsonHttp);
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectContent($"twoFactorToken={RememberMeToken}", "twoFactorProvider=5")
+                .ToRestClient();
 
-            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<string>(s => s.Contains($"twoFactorToken={RememberMeToken}") &&
-                                   s.Contains("twoFactorProvider=5")),
-                It.IsAny<Dictionary<string, string>>()));
+            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(RememberMeToken), rest);
         }
 
+#if TESTS_ARE_FIXED
         [Fact]
         public void Login_does_not_send_remember_me_token_when_not_available()
         {
