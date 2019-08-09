@@ -11,14 +11,13 @@ using System.Linq;
 
 namespace PasswordManagerAccess.Test
 {
-    // TODO: Stupid name, come up with a better one!
-    internal class TestRestTransport: IRestTransport
+    internal class RestFlow: IRestTransport
     {
         //
         // GET
         //
 
-        public TestRestTransport Get(string response, HttpStatusCode status = HttpStatusCode.OK)
+        public RestFlow Get(string response, HttpStatusCode status = HttpStatusCode.OK)
         {
             _responses.Add(new Response(HttpMethod.Get, response, status));
             return this;
@@ -28,7 +27,7 @@ namespace PasswordManagerAccess.Test
         // POST
         //
 
-        public TestRestTransport Post(string response, HttpStatusCode status = HttpStatusCode.OK)
+        public RestFlow Post(string response, HttpStatusCode status = HttpStatusCode.OK)
         {
             _responses.Add(new Response(HttpMethod.Post, response, status));
             return this;
@@ -43,45 +42,45 @@ namespace PasswordManagerAccess.Test
         // Expect
         //
 
-        public TestRestTransport ExpectUrl(params string[] urlFragments)
+        public RestFlow ExpectUrl(params string[] urlFragments)
         {
             var e = GetLastExpected();
             e.UrlFragments = e.UrlFragments.Concat(urlFragments).ToArray();
             return this;
         }
 
-        public TestRestTransport ExpectContent(params string[] contentFragments)
+        public RestFlow ExpectContent(params string[] contentFragments)
         {
             var e = GetLastExpected();
             e.ContentFragments = e.ContentFragments.Concat(contentFragments).ToArray();
             return this;
         }
 
-        public TestRestTransport ExpectContent(Action<string> verify)
+        public RestFlow ExpectContent(Action<string> verify)
         {
             var e = GetLastExpected();
             e.ContentVerifiers.Add(verify);
             return this;
         }
 
-        public TestRestTransport ExpectHeader(string name, string value)
+        public RestFlow ExpectHeader(string name, string value)
         {
             return ExpectHeaders(new Dictionary<string, string> {{name, value}});
         }
 
-        public TestRestTransport ExpectHeaders(Dictionary<string, string> partialHeaders)
+        public RestFlow ExpectHeaders(Dictionary<string, string> partialHeaders)
         {
             var e = GetLastExpected();
             e.PartialHeaders = e.PartialHeaders.Merge(partialHeaders);
             return this;
         }
 
-        public TestRestTransport ExpectCookie(string name, string value)
+        public RestFlow ExpectCookie(string name, string value)
         {
             return ExpectCookies(new Dictionary<string, string> {{name, value}});
         }
 
-        public TestRestTransport ExpectCookies(Dictionary<string, string> partialCookies)
+        public RestFlow ExpectCookies(Dictionary<string, string> partialCookies)
         {
             var e = GetLastExpected();
             e.PartialCookies = e.PartialCookies.Merge(partialCookies);
