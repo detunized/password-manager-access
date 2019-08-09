@@ -79,32 +79,23 @@ namespace LastPass
 
             return WithBytes(chunk.Payload, reader =>
             {
+                // Id
                 var id = ReadItem(reader).ToUtf8();
+
+                // Key
                 var rsaEncryptedFolderKey = ReadItem(reader);
+                byte[] key;
+                using (var rsa = new RSACryptoServiceProvider())
+                {
+                    rsa.ImportParameters(rsaKey);
+                    key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
+                }
+
+                // Name
                 var encryptedName = ReadItem(reader);
-                2.Times(() => SkipItem(reader));
-                var aesEncryptedFolderKey = ReadItem(reader);
+                var name = DecryptAes256Base64(encryptedName, key);
 
-                byte[] key = null;
-
-                // Shared folder encryption key might come already in pre-decrypted form,
-                // where it's only AES encrypted with the regular encryption key.
-                if (aesEncryptedFolderKey.Length > 0)
-                {
-                    key = DecryptAes256Plain(aesEncryptedFolderKey, encryptionKey).DecodeHex();
-                }
-                else
-                {
-                    // When the key is blank, then there's an RSA encrypted key, which has to
-                    // be decrypted first before use.
-                    using (var rsa = new RSACryptoServiceProvider())
-                    {
-                        rsa.ImportParameters(rsaKey);
-                        key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
-                    }
-                }
-
-                return new SharedFolder(id, DecryptAes256Base64(encryptedName, key), key);
+                return new SharedFolder(id, name, key);
             });
         }
 
