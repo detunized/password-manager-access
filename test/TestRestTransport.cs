@@ -19,7 +19,15 @@ namespace PasswordManagerAccess.Test
 
         public TestRestTransport Get(string url, string response, HttpStatusCode status = HttpStatusCode.OK)
         {
-            _responses.Add(new Response(HttpMethod.Get, url, response, status));
+            return Get(url, response, NoHeaders, status);
+        }
+
+        public TestRestTransport Get(string url,
+                                     string response,
+                                     Dictionary<string, string> partialHeaders,
+                                     HttpStatusCode status = HttpStatusCode.OK)
+        {
+            _responses.Add(new Response(HttpMethod.Get, url, partialHeaders ?? NoHeaders, response, status));
             return this;
         }
 
@@ -30,7 +38,15 @@ namespace PasswordManagerAccess.Test
 
         public TestRestTransport Post(string url, string response, HttpStatusCode status = HttpStatusCode.OK)
         {
-            _responses.Add(new Response(HttpMethod.Post, url, response, status));
+            return Post(url, response, NoHeaders, status);
+        }
+
+        public TestRestTransport Post(string url,
+                                      string response,
+                                      Dictionary<string, string> partialHeaders,
+                                      HttpStatusCode status = HttpStatusCode.OK)
+        {
+            _responses.Add(new Response(HttpMethod.Post, url, partialHeaders ?? NoHeaders, response, status));
             return this;
         }
 
@@ -45,15 +61,25 @@ namespace PasswordManagerAccess.Test
 
         class Response
         {
+            // Expected
             public readonly HttpMethod Method;
             public readonly string UrlFragment;
+            public readonly Dictionary<string, string> PartialHeaders;
+
+            // Return
             public readonly string Content;
             public readonly HttpStatusCode Status;
 
-            public Response(HttpMethod method, string urlFragment, string content, HttpStatusCode status)
+            public Response(HttpMethod method,
+                            string urlFragment,
+                            Dictionary<string, string> partialHeaders,
+                            string content,
+                            HttpStatusCode status)
             {
                 Method = method;
                 UrlFragment = urlFragment;
+                PartialHeaders = partialHeaders;
+
                 Content = content;
                 Status = status;
             }
@@ -77,6 +103,12 @@ namespace PasswordManagerAccess.Test
             Assert.Equal(r.Method, method);
             Assert.Contains(r.UrlFragment, uri.AbsoluteUri);
 
+            foreach (var header in r.PartialHeaders)
+            {
+                Assert.Contains(header.Key, headers.Keys);
+                Assert.Equal(header.Value, headers[header.Key]);
+            }
+
             // Response
             allocatedResult.StatusCode = r.Status;
             allocatedResult.Content = r.Content;
@@ -87,6 +119,8 @@ namespace PasswordManagerAccess.Test
         void IDisposable.Dispose()
         {
         }
+
+        private static readonly Dictionary<string, string> NoHeaders = new Dictionary<string, string>();
 
         private int _currentIndex = 0;
         private List<Response> _responses = new List<Response>();
