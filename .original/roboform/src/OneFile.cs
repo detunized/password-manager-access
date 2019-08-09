@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -51,24 +52,23 @@ namespace RoboForm
                 if (checksumType != 1)
                     throw ParseError("Invalid checksum type: {0}", checksumType);
 
-                // 10-13 (4): encrypted content length (LE)
-                var contentLength = (int)io.ReadUInt32LittleEndian();
-                if (contentLength < 0)
-                    throw ParseError("Content length is negative");
+                // blob.Length is a few bytes too many, but this avoids reallocations.
+                var content = new List<byte>(blob.Length);
 
-                // 14-29: (16) MD5 checksum
-                var storedChecksum = io.ReadBytes(16);
+                // The content is split up into 8k blocks. The last block has the remaining
+                // bytes. And the whole sequence is terminated with an empty block.
+                for (; ; )
+                {
+                    var blockContent = ReadBlock(io);
 
-                // 30-end: (contentLength): encrypted content
-                var content = io.ReadBytes(contentLength);
-                if (content.Length != contentLength)
-                    throw ParseError("Content is too short");
+                    // The last block is always empty
+                    if (blockContent.Length == 0)
+                        break;
 
-                var actualChecksum = Crypto.Md5(content);
-                if (!actualChecksum.SequenceEqual(storedChecksum))
-                    throw ParseError("Checksum doesn't match");
+                    content.AddRange(blockContent);
+                }
 
-                var compressed = Decrypt(content, password);
+                var compressed = Decrypt(content.ToArray(), password);
                 var raw = isCompressed ? Decompress(compressed) : compressed;
 
                 return ParseJson(raw);
@@ -78,6 +78,33 @@ namespace RoboForm
         //
         // Internal
         //
+
+        internal static byte[] ReadBlock(BinaryReader io)
+        {
+            // All the offsets here are for the first block only.
+            // 10-13 (4): encrypted content length (LE)
+            var length = (int)io.ReadUInt32LittleEndian();
+            if (length < 0)
+                throw ParseError("Content length is negative");
+
+            // The last block is always empty
+            if (length == 0)
+                return new byte[0];
+
+            // 14-29: (16) MD5 checksum
+            var storedChecksum = io.ReadBytes(16);
+
+            // 30-end: (contentLength): encrypted content
+            var content = io.ReadBytes(length);
+            if (content.Length != length)
+                throw ParseError("Content is too short");
+
+            var actualChecksum = Crypto.Md5(content);
+            if (!actualChecksum.SequenceEqual(storedChecksum))
+                throw ParseError("Checksum doesn't match");
+
+            return content;
+        }
 
         internal static byte[] Decrypt(byte[] content, string password)
         {
