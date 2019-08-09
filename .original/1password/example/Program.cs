@@ -11,7 +11,7 @@ namespace Example
 {
     public static class Program
     {
-        class TextUi: Ui
+        private class TextUi: Ui
         {
             private const string ToCancel = "or just press ENTER to cancel";
 
@@ -79,6 +79,24 @@ namespace Example
             private readonly Dictionary<string, string> _storage = new Dictionary<string, string>();
         }
 
+        private class ConsoleLogger: ILogger
+        {
+            public void Log(DateTime timestamp, string text)
+            {
+                var originalColor = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Green;
+
+                try
+                {
+                    Console.WriteLine($"{timestamp}: {text}");
+                }
+                finally
+                {
+                    Console.ForegroundColor = originalColor;
+                }
+            }
+        }
+
         public static void Main()
         {
             // Read 1Password credentials from a file
@@ -118,7 +136,8 @@ namespace Example
                                               uuid,
                                               domain,
                                               new TextUi(),
-                                              new PlainStorage("../../storage.txt"));
+                                              new PlainStorage("../../storage.txt"),
+                                              new ConsoleLogger());
 
             foreach (var vault in vaults)
             {

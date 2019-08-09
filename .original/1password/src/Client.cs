@@ -30,21 +30,20 @@ namespace OnePassword
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
         // Valid domains are: my.1password.com, my.1password.eu, my.1password.ca
+        // The logger is optional, could be null
         public static Vault[] OpenAllVaults(string username,
                                             string password,
                                             string accountKey,
                                             string uuid,
                                             string domain,
                                             Ui ui,
-                                            ISecureStorage storage)
+                                            ISecureStorage storage,
+                                            ILogger logger = null)
         {
-            return OpenAllVaults(username,
-                                 password,
-                                 accountKey,
-                                 uuid,
-                                 domain,
+            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain),
                                  ui,
                                  storage,
+                                 logger,
                                  new HttpClient());
         }
 
@@ -55,7 +54,8 @@ namespace OnePassword
                                             string uuid,
                                             Region region,
                                             Ui ui,
-                                            ISecureStorage storage)
+                                            ISecureStorage storage,
+                                            ILogger logger = null)
         {
             return OpenAllVaults(username,
                                  password,
@@ -64,19 +64,7 @@ namespace OnePassword
                                  GetDomain(region),
                                  ui,
                                  storage,
-                                 new HttpClient());
-        }
-
-        public static Vault[] OpenAllVaults(string username,
-                                            string password,
-                                            string accountKey,
-                                            string uuid,
-                                            string domain,
-                                            Ui ui,
-                                            ISecureStorage storage,
-                                            IHttpClient http)
-        {
-            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain), ui, storage, http);
+                                 logger);
         }
 
         // Use this function to generate a unique random identifier for each new client.
@@ -104,7 +92,13 @@ namespace OnePassword
         // Internal
         //
 
-        internal static Vault[] OpenAllVaults(ClientInfo clientInfo, Ui ui, ISecureStorage storage, IHttpClient http)
+        // TODO: Should we make the logger a global service or a member variable not to pass it around?
+
+        internal static Vault[] OpenAllVaults(ClientInfo clientInfo,
+                                              Ui ui,
+                                              ISecureStorage storage,
+                                              ILogger logger,
+                                              IHttpClient http)
         {
             // Step 1: Login is multi-step process in itself, which might iterate for a few times internally.
             var login = Login(clientInfo, ui, storage, http);
@@ -125,7 +119,7 @@ namespace OnePassword
                 var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
 
                 // Step 4: Get and decrypt vaults
-                var vaults = GetVaults(accountInfo, login.SessionKey, keychain, login.JsonHttp);
+                var vaults = GetVaults(accountInfo, login.SessionKey, keychain, login.JsonHttp, logger);
 
                 // Done
                 return vaults;
@@ -508,13 +502,26 @@ namespace OnePassword
         internal static Vault[] GetVaults(JToken accountInfo,
                                           AesKey sessionKey,
                                           Keychain keychain,
-                                          JsonHttpClient jsonHttp)
+                                          JsonHttpClient jsonHttp,
+                                          ILogger logger)
         {
             var accessibleVaults = new HashSet<string>(BuildListOfAccessibleVaults(accountInfo));
+            var allVaults = (JArray)accountInfo.At("vaults");
 
-            return accountInfo.At("vaults")
+            if (logger != null)
+            {
+                var access = AbbreviateIds(accessibleVaults);
+                logger.Log(DateTime.Now, $"accessible vaults: {access}");
+
+                var noAccess = AbbreviateIds(allVaults
+                    .Select(x => x.StringAt("uuid", "unknown"))
+                    .Except(accessibleVaults));
+                logger.Log(DateTime.Now, $"inaccessible vaults: {noAccess}");
+            }
+
+            return allVaults
                 .Where(i => accessibleVaults.Contains(i.StringAt("uuid", "")))
-                .Select(i => GetVault(i, sessionKey, keychain, jsonHttp))
+                .Select(i => GetVault(i, sessionKey, keychain, jsonHttp, logger))
                 .ToArray();
         }
 
@@ -532,7 +539,8 @@ namespace OnePassword
         internal static Vault GetVault(JToken json,
                                        AesKey sessionKey,
                                        Keychain keychain,
-                                       JsonHttpClient jsonHttp)
+                                       JsonHttpClient jsonHttp,
+                                       ILogger logger)
         {
             var id = json.StringAt("uuid");
             var attributes = Decrypt(json.At("encAttrs"), keychain);
@@ -540,18 +548,39 @@ namespace OnePassword
             return new Vault(id: id,
                              name: attributes.StringAt("name", ""),
                              description: attributes.StringAt("desc", ""),
-                             accounts: GetVaultAccounts(id, sessionKey, keychain, jsonHttp));
+                             accounts: GetVaultAccounts(id, sessionKey, keychain, jsonHttp, logger));
         }
 
         internal static Account[] GetVaultAccounts(string id,
                                                    AesKey sessionKey,
                                                    Keychain keychain,
-                                                   JsonHttpClient jsonHttp)
+                                                   JsonHttpClient jsonHttp,
+                                                   ILogger logger)
         {
             var response = GetEncryptedJson(string.Format("v1/vault/{0}/0/items", id),
                                             sessionKey,
                                             jsonHttp);
-            return response.At("items", new JArray())
+            var items = response.At("items", new JArray());
+
+            if (logger != null)
+            {
+                var stats = new Dictionary<string, int>();
+                foreach (var i in items)
+                {
+                    var key = i.StringAt("templateUuid", "unknown");
+                    if (stats.ContainsKey(key))
+                        stats[key]++;
+                    else
+                        stats.Add(key, 1);
+                }
+
+                var safeId = AbbreviateId(id);
+                var text = string.Join(", ", stats.OrderBy(x => x.Key).Select(x => $"{x.Key}: {x.Value}"));
+
+                logger.Log(DateTime.Now, $"item template count in '{safeId}': {text}");
+            }
+
+            return items
                 .Where(i => i.StringAt("templateUuid", "") == AccountTemplateId) // Keep only accounts/logins
                 .Select(i => ParseAccount(i, keychain))
                 .ToArray();
@@ -770,6 +799,16 @@ namespace OnePassword
             {
                 return false;
             }
+        }
+
+        internal static string AbbreviateId(string id)
+        {
+            return id.Length > 4 ? id.Substring(0, 4) + "..." : id;
+        }
+
+        internal static string AbbreviateIds(IEnumerable<string> ids)
+        {
+            return string.Join(", ", ids.OrderBy(x => x).Select(x => $"'{AbbreviateId(x)}'"));
         }
 
         //
