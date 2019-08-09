@@ -330,8 +330,10 @@ namespace RoboForm.Test
         private const string Step1Header = "WWW-Authenticate-step1";
         private static readonly string[] Step2Cookies =
         {
-            "sib-auth=AQAUABAAdN_MjkCW; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure",
-            "sib-deviceid=B972fc9818e7; path=/; expires=Wed, 07 Nov 2018 23:27:20 GMT; HttpOnly; Secure"
+            // The cookies must be in the distant future, otherwise the tests stop working,
+            // because the System.Net.CookieContainer ignores expired cookies.
+            "sib-auth=AQAUABAAdN_MjkCW; path=/; expires=Wed, 07 Nov 2179 23:27:20 GMT; HttpOnly; Secure",
+            "sib-deviceid=B972fc9818e7; path=/; expires=Wed, 07 Nov 2179 23:27:20 GMT; HttpOnly; Secure"
         };
         private static readonly Session Session = new Session("AQAUABAAdN_MjkCW", "B972fc9818e7");
     }
