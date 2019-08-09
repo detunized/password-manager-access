@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 using Xunit;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Bitwarden;
-using PasswordManagerAccess.Test.Common;
 using Response = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
@@ -188,7 +187,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Client.DownloadVault(rest, "token");
         }
 
-#if TESTS_ARE_FIXED
         [Fact]
         public void DecryptVault_returns_accounts()
         {
@@ -262,7 +260,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var blank = Client.DecryptToStringOrBlank(null, Key);
             Assert.Equal("", blank);
         }
-#endif
 
         //
         // Helpers
