@@ -11,6 +11,7 @@ using System.Linq;
 
 namespace PasswordManagerAccess.Test
 {
+    // TODO: Stupid name, come up with a better one!
     internal class TestRestTransport: IRestTransport
     {
         //
