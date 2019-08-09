@@ -64,6 +64,30 @@ namespace PasswordManagerAccess.Test
             return this;
         }
 
+        public TestRestTransport ExpectHeader(string name, string value)
+        {
+            return ExpectHeaders(new Dictionary<string, string> {{name, value}});
+        }
+
+        public TestRestTransport ExpectHeaders(Dictionary<string, string> partialHeaders)
+        {
+            var e = GetLastExpected();
+            e.PartialHeaders = e.PartialHeaders.Merge(partialHeaders);
+            return this;
+        }
+
+        public TestRestTransport ExpectCookie(string name, string value)
+        {
+            return ExpectCookies(new Dictionary<string, string> {{name, value}});
+        }
+
+        public TestRestTransport ExpectCookies(Dictionary<string, string> partialCookies)
+        {
+            var e = GetLastExpected();
+            e.PartialCookies = e.PartialCookies.Merge(partialCookies);
+            return this;
+        }
+
         //
         // Private
         //
@@ -136,12 +160,16 @@ namespace PasswordManagerAccess.Test
             foreach (var u in e.UrlFragments)
                 Assert.Contains(u, uri.AbsoluteUri);
 
-            var contentStr = content.ReadAsStringAsync().Result;
-            foreach (var c in e.ContentFragments)
-                Assert.Contains(c, contentStr);
+            // Not all requests have content (GET has none, for example)
+            if (content != null)
+            {
+                var contentStr = content.ReadAsStringAsync().Result;
+                foreach (var c in e.ContentFragments)
+                    Assert.Contains(c, contentStr);
 
-            foreach (var v in e.ContentVerifiers)
-                v(contentStr);
+                foreach (var v in e.ContentVerifiers)
+                    v(contentStr);
+            }
 
             // TODO: Better messages
             foreach (var header in e.PartialHeaders)

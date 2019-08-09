@@ -27,6 +27,17 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void RequestKdfIterationCount_makes_POST_request_to_specific_endpoint()
+        {
+            var rest = new TestRestTransport()
+                .Post("{'Kdf': 0, 'KdfIterations': 1337}")
+                    .ExpectUrl("/api/accounts/prelogin")
+                .ToRestClient();
+
+            Client.RequestKdfIterationCount(Username, rest);
+        }
+
+        [Fact]
         public void RequestKdfIterationCount_throws_on_unsupported_kdf_method()
         {
             var rest = new TestRestTransport()
@@ -76,11 +87,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest);
         }
 
-#if TESTS_ARE_FIXED
         [Fact]
         public void RequestAuthToken_returns_auth_token_response()
         {
-            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, SetupAuthTokenRequest());
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                .ToRestClient();
+
+            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
             Assert.Null(response.RememberMeToken);
@@ -90,60 +104,62 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void RequestAuthToken_returns_remember_me_token_when_present()
         {
-            var response = Client.RequestAuthToken(Username,
-                                                   PasswordHash,
-                                                   DeviceId,
-                                                   SetupAuthTokenRequestWithRememberMeToken());
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'TwoFactorToken': 'remember-me-token'}")
+                .ToRestClient();
+
+            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
-            Assert.Equal(RememberMeToken, response.RememberMeToken);
+            Assert.Equal("remember-me-token", response.RememberMeToken);
             Assert.Null(response.SecondFactor.Methods);
         }
 
         [Fact]
         public void RequestAuthToken_makes_POST_request_to_specific_endpoint()
         {
-            var jsonHttp = SetupAuthTokenRequest();
-            Client.RequestAuthToken(Username, PasswordHash, DeviceId, jsonHttp);
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectUrl("/identity/connect/token")
+                .ToRestClient();
 
-            JsonHttpClientTest.VerifyPostUrl(jsonHttp, ".com/identity/connect/token");
+            Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
         }
 
         [Fact]
         public void RequestAuthToken_sends_device_id()
         {
-            var jsonHttp = SetupAuthTokenRequest();
-            Client.RequestAuthToken(Username, PasswordHash, DeviceId, jsonHttp);
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectContent("deviceIdentifier=device-id")
+                .ToRestClient();
 
-            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<string>(s => s.Contains("deviceIdentifier=device-id")),
-                It.IsAny<Dictionary<string, string>>()));
+            Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
         }
 
         [Fact]
         public void RequestAuthToken_with_second_factor_options_adds_extra_parameters()
         {
-            var jsonHttp = SetupAuthTokenRequest();
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectContent("twoFactorToken=code", "twoFactorProvider=2", "twoFactorRemember=1")
+                .ToRestClient();
+
             Client.RequestAuthToken(Username,
                                     PasswordHash,
                                     DeviceId,
                                     new Client.SecondFactorOptions(Response.SecondFactorMethod.Duo, "code", true),
-                                    jsonHttp);
-
-            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<string>(s => s.Contains("twoFactorToken=code") &&
-                                   s.Contains("twoFactorProvider=2") &&
-                                   s.Contains("twoFactorRemember=1")),
-                It.IsAny<Dictionary<string, string>>()));
+                                    rest);
         }
 
         [Fact]
         public void DownloadVault_returns_parsed_response()
         {
-            var jsonHttp = SetupDownloadVault();
-            var response = Client.DownloadVault(jsonHttp);
+            var rest = new TestRestTransport()
+                .Get(GetFixture("vault"))
+                .ToRestClient();
+
+            var response = Client.DownloadVault(rest, "token");
 
             Assert.StartsWith("2.XZ2v", response.Profile.Key);
             Assert.Equal(6, response.Ciphers.Length);
@@ -153,12 +169,26 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DownloadVault_makes_GET_request_to_specific_endpoint()
         {
-            var jsonHttp = SetupDownloadVault();
-            Client.DownloadVault(jsonHttp);
+            var rest = new TestRestTransport()
+                .Get(GetFixture("vault"))
+                    .ExpectUrl("/api/sync")
+                .ToRestClient();
 
-            JsonHttpClientTest.VerifyGetUrl(jsonHttp, ".com/api/sync");
+            Client.DownloadVault(rest, "token");
         }
 
+        [Fact]
+        public void DownloadVault_sets_auth_header()
+        {
+            var rest = new TestRestTransport()
+                .Get(GetFixture("vault"))
+                    .ExpectHeader("Authorization", "token")
+                .ToRestClient();
+
+            Client.DownloadVault(rest, "token");
+        }
+
+#if TESTS_ARE_FIXED
         [Fact]
         public void DecryptVault_returns_accounts()
         {
@@ -243,36 +273,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var mock = new Mock<ISecureStorage>();
             mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns(token);
             return mock.Object;
-        }
-
-        private JsonHttpClient SetupAuthTokenRequest()
-        {
-            return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}");
-        }
-
-        private JsonHttpClient SetupAuthTokenRequestWithRememberMeToken()
-        {
-            return SetupPost("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'TwoFactorToken': 'remember-me-token'}");
-        }
-
-        private JsonHttpClient SetupDownloadVault()
-        {
-            return SetupGetWithFixture("vault");
-        }
-
-        private JsonHttpClient SetupGetWithFixture(string name)
-        {
-            return MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture(name)));
-        }
-
-        private JsonHttpClient SetupPost(string response)
-        {
-            return MakeJsonHttp(JsonHttpClientTest.SetupPost(response));
-        }
-
-        private JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
-        {
-            return new JsonHttpClient(http.Object, "https://vault.bitwarden.com");
         }
 
         private Response.Vault LoadVaultFixture()
