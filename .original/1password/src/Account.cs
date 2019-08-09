@@ -5,26 +5,59 @@ namespace OnePassword
 {
     public class Account
     {
+        public struct Url
+        {
+            public readonly string Name;
+            public readonly string Value;
+
+            public Url(string name, string value)
+            {
+                Name = name;
+                Value = value;
+            }
+        }
+
+        public struct Field
+        {
+            public readonly string Name;
+            public readonly string Value;
+            public readonly string Section;
+
+            public Field(string name, string value, string section)
+            {
+                Name = name;
+                Value = value;
+                Section = section;
+            }
+        }
+
         public readonly string Id;
         public readonly string Name;
         public readonly string Username;
         public readonly string Password;
-        public readonly string Url;
+        public readonly string MainUrl;
         public readonly string Note;
+
+        public readonly Url[] Urls;
+        public readonly Field[] Fields;
 
         public Account(string id,
                        string name,
                        string username,
                        string password,
-                       string url,
-                       string note)
+                       string mainUrl,
+                       string note,
+                       Url[] urls,
+                       Field[] fields)
         {
             Id = id;
             Name = name;
             Username = username;
             Password = password;
-            Url = url;
+            MainUrl = mainUrl;
             Note = note;
+            Urls = urls;
+            Fields = fields;
         }
     }
 }

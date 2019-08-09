@@ -138,7 +138,7 @@ namespace Example
                                       account.Name,
                                       account.Username,
                                       account.Password,
-                                      account.Url,
+                                      account.MainUrl,
                                       account.Note);
                 }
             }

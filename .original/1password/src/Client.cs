@@ -557,6 +557,9 @@ namespace OnePassword
                 .ToArray();
         }
 
+        // TODO: It's really difficult to write tests for this structure: everything
+        //       is encrypted and it's very annoying to create fixtures. They also look
+        //       completely opaque, no clue what's going on inside. See how this could be fixed.
         internal static Account ParseAccount(JToken json, Keychain keychain)
         {
             var overview = Decrypt(json.At("encOverview"), keychain);
@@ -568,7 +571,9 @@ namespace OnePassword
                                FindAccountField(fields, "username"),
                                FindAccountField(fields, "password"),
                                overview.StringAt("url", ""),
-                               details.StringAt("notesPlain", ""));
+                               details.StringAt("notesPlain", ""),
+                               ExtractUrls(overview),
+                               ExtractFields(details));
         }
 
         internal static string FindAccountField(JToken json, string name)
@@ -578,6 +583,29 @@ namespace OnePassword
                     return i.StringAt("value", "");
 
             return "";
+        }
+
+        internal static Account.Url[] ExtractUrls(JToken overview)
+        {
+            return overview.At("URLs", new JArray())
+                .Select(url => new Account.Url(name: url.StringAt("l", ""), value: url.StringAt("u", "")))
+                .ToArray();
+        }
+
+        internal static Account.Field[] ExtractFields(JToken details)
+        {
+            return details.At("sections", new JArray())
+                .SelectMany(ExtractSectionFields)
+                .ToArray();
+        }
+
+        internal static IEnumerable<Account.Field> ExtractSectionFields(JToken section)
+        {
+            var name = section.StringAt("title", "");
+            return section.At("fields", new JArray())
+                .Select(f => new Account.Field(name: f.StringAt("t", ""),
+                                               value: f.StringAt("v", ""),
+                                               section: name));
         }
 
         internal static void SignOut(JsonHttpClient jsonHttp)
