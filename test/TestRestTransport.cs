@@ -57,11 +57,18 @@ namespace PasswordManagerAccess.Test
             return this;
         }
 
+        public TestRestTransport ExpectContent(Action<string> verify)
+        {
+            var e = GetLastExpected();
+            e.ContentVerifiers.Add(verify);
+            return this;
+        }
+
         //
         // Private
         //
 
-        private class Request
+        private class Expected
         {
             public HttpMethod Method;
             public string[] UrlFragments = NoFragments;
@@ -69,7 +76,9 @@ namespace PasswordManagerAccess.Test
             public Dictionary<string, string> PartialHeaders = NoHeaders;
             public Dictionary<string, string> PartialCookies = NoCookies;
 
-            public Request(HttpMethod method)
+            public List<Action<string>> ContentVerifiers = new List<Action<string>>();
+
+            public Expected(HttpMethod method)
             {
                 Method = method;
             }
@@ -82,13 +91,13 @@ namespace PasswordManagerAccess.Test
             public readonly HttpStatusCode Status;
 
             // Expected to be received from the caller
-            public Request Expected;
+            public Expected Expected;
 
             public Response(HttpMethod method, string content, HttpStatusCode status)
             {
                 Content = content;
                 Status = status;
-                Expected = new Request(method);
+                Expected = new Expected(method);
             }
         }
 
@@ -106,7 +115,7 @@ namespace PasswordManagerAccess.Test
             return _responses.Last();
         }
 
-        private Request GetLastExpected()
+        private Expected GetLastExpected()
         {
             return GetLastResponse().Expected;
         }
@@ -130,6 +139,9 @@ namespace PasswordManagerAccess.Test
             var contentStr = content.ReadAsStringAsync().Result;
             foreach (var c in e.ContentFragments)
                 Assert.Contains(c, contentStr);
+
+            foreach (var v in e.ContentVerifiers)
+                v(contentStr);
 
             // TODO: Better messages
             foreach (var header in e.PartialHeaders)

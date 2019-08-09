@@ -64,19 +64,19 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(RememberMeToken), rest);
         }
 
-#if TESTS_ARE_FIXED
         [Fact]
         public void Login_does_not_send_remember_me_token_when_not_available()
         {
-            var jsonHttp = SetupAuthTokenRequest();
-            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), jsonHttp);
+            var rest = new TestRestTransport()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectContent(c => Assert.DoesNotContain("twoFactorToken", c))
+                    .ExpectContent(c => Assert.DoesNotContain("twoFactorProvider", c))
+                .ToRestClient();
 
-            Mock.Get(jsonHttp.Http).Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<string>(s => !s.Contains("twoFactorToken") && !s.Contains("twoFactorProvider")),
-                It.IsAny<Dictionary<string, string>>()));
+            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest);
         }
 
+#if TESTS_ARE_FIXED
         [Fact]
         public void RequestAuthToken_returns_auth_token_response()
         {
