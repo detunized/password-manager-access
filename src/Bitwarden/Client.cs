@@ -386,7 +386,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (privateKey == null || profile.Organizations == null)
                 return new Dictionary<string, byte[]>();
 
-            return profile.Organizations.ToDictionary(x => x.Id, x => DecryptToBytes(x.Key, privateKey));
+            return profile.Organizations.ToDictionary(x => x.Id, x => DecryptRsaToBytes(x.Key, privateKey));
         }
 
         internal static Dictionary<string, string> ParseFolders(Response.Folder[] folders, byte[] key)
@@ -419,6 +419,14 @@ namespace PasswordManagerAccess.Bitwarden
         internal static byte[] DecryptToBytes(string s, byte[] key)
         {
             return CipherString.Parse(s).Decrypt(key);
+        }
+
+        // Looks like the original implementation treats RSA strings differently in some contexts.
+        // It seems they ignore some data when it's known to be RSA. Using CipherString.Parse
+        // wouldn't work here.
+        internal static byte[] DecryptRsaToBytes(string s, byte[] privateKey)
+        {
+            return CipherString.ParseRsa(s).Decrypt(privateKey);
         }
 
         internal static string DecryptToString(string s, byte[] key)

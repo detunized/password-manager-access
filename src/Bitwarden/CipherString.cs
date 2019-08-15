@@ -77,6 +77,8 @@ namespace PasswordManagerAccess.Bitwarden
             return new CipherString(mode, iv.Decode64(), ciphertext.Decode64(), mac.Decode64());
         }
 
+        // Special forced RSA parsing mode. The original implementation treats RSA strings
+        // differently in some contexts and ignores some data.
         public static CipherString ParseRsa(string encoded)
         {
             CipherMode mode;
