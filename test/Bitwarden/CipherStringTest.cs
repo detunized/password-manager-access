@@ -9,6 +9,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class CipherStringTest
     {
+        //
+        // Parse
+        //
+
         [Fact]
         public void Parse_handles_default_two_piece_cipher_mode()
         {
@@ -65,11 +69,11 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void Parse_handles_cipher_mode_4()
         {
-            var cs = CipherString.Parse("4.dcGElncBCW/5N+J9gcO0StC+TvUbRgAaV6PrWked/ejcmjqZxZTlFJ/K7mt1lcyEOz4aq/+2wrveHois5hvDv2Ft0M+MMk6iLiSc+TwHFjxX1jINVymRQMQwEsLF6HA2sTPyhi+HhebWXI0c+jBOW2m17DItEipUXODeCjGa6skWPb+U3+eFV0Un+GObaYP6/BmJw2jVePzudgwJ6b0ai1OtQMvIVlTaE/p3lJiEMhCPw5LGcLxe2Kmjer2Z1jABr+zmowveSnZ35sJcvpUHQLPi4j5Sj66PEPv6I0A+h7f0Jlm1S/MB+ViZN5k2KGNGIGfisGvCIl0GU+rmg8wFnw==");
+            var cs = CipherString.Parse($"4.{RsaCiphertextBase64}");
 
             Assert.Equal(CipherMode.Rsa2048OaepSha1, cs.Mode);
             Assert.Empty(cs.Iv);
-            Assert.Equal(256, cs.Ciphertext.Length);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
             Assert.Empty(cs.Mac);
         }
 
@@ -87,6 +91,102 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var invalid = new[] {"7.", "A."};
             foreach (var i in invalid)
                 VerifyThrowsInvalidFormat(i, "Invalid/unsupported cipher mode");
+        }
+
+        //
+        // ParseRsa
+        //
+
+        [Fact]
+        public void ParseRsa_handles_default_mode()
+        {
+            var cs = CipherString.ParseRsa(RsaCiphertextBase64);
+
+            Assert.Equal(CipherMode.Rsa2048OaepSha256, cs.Mode);
+            Assert.Empty(cs.Iv);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
+            Assert.Empty(cs.Mac);
+        }
+
+        [Fact]
+        public void ParseRsa_handles_modes_3()
+        {
+            var cs = CipherString.ParseRsa($"3.{RsaCiphertextBase64}");
+
+            Assert.Equal(CipherMode.Rsa2048OaepSha256, cs.Mode);
+            Assert.Empty(cs.Iv);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
+            Assert.Empty(cs.Mac);
+        }
+
+        [Fact]
+        public void ParseRsa_handles_modes_4()
+        {
+            var cs = CipherString.ParseRsa($"4.{RsaCiphertextBase64}");
+
+            Assert.Equal(CipherMode.Rsa2048OaepSha1, cs.Mode);
+            Assert.Empty(cs.Iv);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
+            Assert.Empty(cs.Mac);
+        }
+
+        [Fact]
+        public void ParseRsa_handles_modes_5_and_ignores_mac()
+        {
+            var cs = CipherString.ParseRsa($"5.{RsaCiphertextBase64}|{MacBase64}");
+
+            Assert.Equal(CipherMode.Rsa2048OaepSha256HmacSha256, cs.Mode);
+            Assert.Empty(cs.Iv);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
+            Assert.All(cs.Mac, x => Assert.Equal(0, x));
+        }
+
+        [Fact]
+        public void ParseRsa_handles_modes_5_without_mac()
+        {
+            var cs = CipherString.ParseRsa($"5.{RsaCiphertextBase64}");
+
+            Assert.Equal(CipherMode.Rsa2048OaepSha256HmacSha256, cs.Mode);
+            Assert.Empty(cs.Iv);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
+            Assert.All(cs.Mac, x => Assert.Equal(0, x));
+        }
+
+        [Fact]
+        public void ParseRsa_handles_modes_6_and_ignores_mac()
+        {
+            var cs = CipherString.ParseRsa($"6.{RsaCiphertextBase64}|{MacBase64}");
+
+            Assert.Equal(CipherMode.Rsa2048OaepSha1HmacSha256, cs.Mode);
+            Assert.Empty(cs.Iv);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
+            Assert.All(cs.Mac, x => Assert.Equal(0, x));
+        }
+
+        [Fact]
+        public void ParseRsa_handles_modes_6_without_mac()
+        {
+            var cs = CipherString.ParseRsa($"6.{RsaCiphertextBase64}");
+
+            Assert.Equal(CipherMode.Rsa2048OaepSha1HmacSha256, cs.Mode);
+            Assert.Empty(cs.Iv);
+            Assert.Equal(RsaCiphertext, cs.Ciphertext);
+            Assert.All(cs.Mac, x => Assert.Equal(0, x));
+        }
+
+        [Fact]
+        public void ParseRsa_throws_on_malformed_input()
+        {
+            Exceptions.AssertThrowsInternalError(() => CipherString.ParseRsa(".."),
+                                                 "Invalid/unsupported cipher string format");
+        }
+
+        [Fact]
+        public void ParseRsa_throws_on_valid_non_rsa_input()
+        {
+            Exceptions.AssertThrowsInternalError(
+                () => CipherString.ParseRsa("0.aXZpdml2aXZpdml2aXZpdg==|Y2lwaGVydGV4dA=="),
+                "Invalid RSA cipher string format");
         }
 
         [Fact]
@@ -257,8 +357,11 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
         private static readonly byte[] Iv = "iviviviviviviviv".ToBytes();
         private static readonly byte[] Ciphertext = "ciphertext".ToBytes();
+
         private static readonly byte[] Mac = "mac mac mac mac mac mac mac mac ".ToBytes();
+        private static readonly string MacBase64 = Mac.ToBase64();
 
         private static readonly byte[] RsaCiphertext = new string('!', 256).ToBytes();
+        private static readonly string RsaCiphertextBase64 = RsaCiphertext.ToBase64();
     }
 }

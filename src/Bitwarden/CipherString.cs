@@ -77,6 +77,45 @@ namespace PasswordManagerAccess.Bitwarden
             return new CipherString(mode, iv.Decode64(), ciphertext.Decode64(), mac.Decode64());
         }
 
+        public static CipherString ParseRsa(string encoded)
+        {
+            CipherMode mode;
+            string ciphertext;
+            byte[] mac;
+
+            var onDot = encoded.Split('.');
+            switch (onDot.Length)
+            {
+            case 1:
+                mode = CipherMode.Rsa2048OaepSha256;
+                ciphertext = onDot[0];
+                break;
+            case 2:
+                mode = ParseCipherMode(onDot[0]);
+                ciphertext = onDot[1].Split('|')[0];
+                break;
+            default:
+                throw MakeError("Invalid/unsupported cipher string format");
+            }
+
+            // The mac is ignored in the original implementation and we only keep it to pass the validation.
+            switch (mode)
+            {
+            case CipherMode.Rsa2048OaepSha256:
+            case CipherMode.Rsa2048OaepSha1:
+                mac = new byte[0];
+                break;
+            case CipherMode.Rsa2048OaepSha256HmacSha256:
+            case CipherMode.Rsa2048OaepSha1HmacSha256:
+                mac = new byte[32];
+                break;
+            default:
+                throw MakeError("Invalid RSA cipher string format");
+            }
+
+            return new CipherString(mode, new byte[0], ciphertext.Decode64(), mac);
+        }
+
         public CipherString(CipherMode mode, byte[] iv, byte[] ciphertext, byte[] mac)
         {
             Validate(mode, iv, ciphertext, mac);
