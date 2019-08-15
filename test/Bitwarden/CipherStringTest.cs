@@ -10,13 +10,24 @@ namespace PasswordManagerAccess.Test.Bitwarden
     public class CipherStringTest
     {
         [Fact]
-        public void Parse_handles_default_cipher_mode()
+        public void Parse_handles_default_two_piece_cipher_mode()
         {
             var cs = CipherString.Parse("aXZpdml2aXZpdml2aXZpdg==|Y2lwaGVydGV4dA==");
 
             Assert.Equal(CipherMode.Aes256Cbc, cs.Mode);
             Assert.Equal(Iv, cs.Iv);
             Assert.Equal(Ciphertext, cs.Ciphertext);
+        }
+
+        [Fact]
+        public void Parse_handles_default_three_piece_cipher_mode()
+        {
+            var cs = CipherString.Parse("aXZpdml2aXZpdml2aXZpdg==|Y2lwaGVydGV4dA==|bWFjIG1hYyBtYWMgbWFjIG1hYyBtYWMgbWFjIG1hYyA=");
+
+            Assert.Equal(CipherMode.Aes128CbcHmacSha256, cs.Mode);
+            Assert.Equal(Iv, cs.Iv);
+            Assert.Equal(Ciphertext, cs.Ciphertext);
+            Assert.Equal(Mac, cs.Mac);
         }
 
         [Fact]

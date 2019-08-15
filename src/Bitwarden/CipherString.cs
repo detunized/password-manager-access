@@ -35,18 +35,18 @@ namespace PasswordManagerAccess.Bitwarden
         public static CipherString Parse(string encoded)
         {
             CipherMode mode;
-            string encrypted;
+            string[] onPipe;
 
             var onDot = encoded.Split('.');
             switch (onDot.Length)
             {
             case 1:
-                mode = CipherMode.Aes256Cbc;
-                encrypted = onDot[0];
+                onPipe = onDot[0].Split('|');
+                mode = onPipe.Length == 3 ? CipherMode.Aes128CbcHmacSha256 : CipherMode.Aes256Cbc;
                 break;
             case 2:
+                onPipe = onDot[1].Split('|');
                 mode = ParseCipherMode(onDot[0]);
-                encrypted = onDot[1];
                 break;
             default:
                 throw MakeError("Invalid/unsupported cipher string format");
@@ -56,7 +56,6 @@ namespace PasswordManagerAccess.Bitwarden
             string ciphertext;
             string mac = "";
 
-            var onPipe = encrypted.Split('|');
             switch (onPipe.Length)
             {
             case 1:
