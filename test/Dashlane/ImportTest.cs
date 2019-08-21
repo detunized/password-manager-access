@@ -1,14 +1,14 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Xml;
 using System.Xml.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.Dashlane;
+using Xunit;
 
-namespace Dashlane.Test
+namespace PasswordManagerAccess.Test.Dashlane
 {
-    [TestFixture]
-    class ImportTest
+    public class ImportTest
     {
         public const string Passowrd = "password";
         public const string Uki = "local-uki";
@@ -20,71 +20,60 @@ namespace Dashlane.Test
                 "</KWLocalSettingsManager>" +
             "</root>";
 
-        [Test]
+        [Fact]
         public void ImportUkiFromSettingsFile_returns_uki()
         {
-            Assert.That(
-                Import.ImportUkiFromSettingsFile(Filename, Passowrd),
-                Is.EqualTo(Uki));
+            Assert.Equal(Uki, Import.ImportUkiFromSettingsFile(Filename, Passowrd));
         }
 
-        [Test]
+        [Fact]
         public void ImportUkiFromSettings_as_xml_string_returns_uki()
         {
-            Assert.That(
-                Import.ImportUkiFromSettings(Xml),
-                Is.EqualTo(Uki));
+            Assert.Equal(Uki, Import.ImportUkiFromSettings(Xml));
         }
 
-        [Test]
+        [Fact]
         public void ImportUkiFromSettings_as_xml_string_throws_on_invalid_xml()
         {
-            Assert.That(
-                () => Import.ImportUkiFromSettings("> not really xml <"),
-                Throws
-                    .TypeOf<ImportException>()
-                    .And.Property("Reason").EqualTo(ImportException.FailureReason.InvalidFormat)
-                    .And.Message.EqualTo("Failed to parse XML settings file")
-                    .And.InnerException.InstanceOf<XmlException>());
+            var e = Assert.Throws<ImportException>(() => Import.ImportUkiFromSettings("> not really xml <"));
+
+            Assert.Equal(ImportException.FailureReason.InvalidFormat, e.Reason);
+            Assert.Equal("Failed to parse XML settings file", e.Message);
+            Assert.IsType<XmlException>(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void ImportUkiFromSettings_as_xdocument_returns_uki()
         {
-            Assert.That(
-                Import.ImportUkiFromSettings(XDocument.Parse(Xml)),
-                Is.EqualTo(Uki));
+            Assert.Equal(Uki, Import.ImportUkiFromSettings(XDocument.Parse(Xml)));
         }
 
-        [Test]
+        [Fact]
         public void ImportUkiFromSettings_as_xdocument_throws_on_wrong_xml()
         {
-            Assert.That(
-                () => Import.ImportUkiFromSettings(XDocument.Parse("<root />")),
-                Throws
-                    .TypeOf<ImportException>()
-                    .And.Property("Reason").EqualTo(ImportException.FailureReason.InvalidFormat)
-                    .And.Message.EqualTo("The settings file doesn't contain an UKI"));
+            var e = Assert.Throws<ImportException>(() => Import.ImportUkiFromSettings(XDocument.Parse("<root />")));
+
+            Assert.Equal(ImportException.FailureReason.InvalidFormat, e.Reason);
+            Assert.Equal("The settings file doesn't contain an UKI", e.Message);
+            Assert.Null(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void LoadSettingsFile_reads_and_decrypts_settings_xml()
         {
-            Assert.That(
-                Import.LoadSettingsFile(Filename, Passowrd),
-                Is.StringStarting("<?xml").And.StringEnding("</root>\n"));
+            var s = Import.LoadSettingsFile(Filename, Passowrd);
+            Assert.StartsWith("<?xml", s);
+            Assert.EndsWith("</root>\n", s);
         }
 
-        [Test]
+        [Fact]
         public void LoadSettingsFile_throws_on_incorrect_password()
         {
-            Assert.That(
-                () => Import.LoadSettingsFile(Filename, "Incorrect password"),
-                Throws
-                    .TypeOf<ImportException>()
-                    .And.Property("Reason").EqualTo(ImportException.FailureReason.IncorrectPassword)
-                    .And.Message.EqualTo("The settings file is corrupted or the password is incorrect")
-                    .And.InnerException.InstanceOf<ParseException>());
+            var e = Assert.Throws<ImportException>(() => Import.LoadSettingsFile(Filename, "Incorrect password"));
+
+            Assert.Equal(ImportException.FailureReason.IncorrectPassword, e.Reason);
+            Assert.Equal("The settings file is corrupted or the password is incorrect", e.Message);
+            Assert.IsType<ParseException>(e.InnerException);
         }
     }
 }

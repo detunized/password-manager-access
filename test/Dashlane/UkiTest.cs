@@ -1,17 +1,17 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.Dashlane;
+using Xunit;
 
-namespace Dashlane.Test
+namespace PasswordManagerAccess.Test.Dashlane
 {
-    [TestFixture]
-    class UkiTest
+    public class UkiTest
     {
-        [Test]
+        [Fact]
         public void Generate_returns_uki()
         {
-            Assert.That(Uki.Generate(), Is.StringMatching(@"[0-9a-f]+-webaccess-[0-9]+"));
+            Assert.Matches(@"[0-9a-f]+-webaccess-[0-9]+", Uki.Generate());
         }
     }
 }

@@ -1,14 +1,14 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using Xunit;
+using PasswordManagerAccess.Dashlane;
 
-namespace Dashlane.Test
+namespace PasswordManagerAccess.Test.Dashlane
 {
-    [TestFixture]
-    class ExtensionsTest
+    public class ExtensionsTest
     {
         public const string TestString = "All your base are belong to us";
         public const string TestHex = "416c6c20796f75722062617365206172652062656c6f6e6720746f207573";
@@ -17,43 +17,43 @@ namespace Dashlane.Test
             114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
         };
 
-        [Test]
+        [Fact]
         public void String_ToBytes_converts_string_to_utf8_bytes()
         {
-            Assert.That("".ToBytes(), Is.EqualTo(new byte[] {}));
-            Assert.That(TestString.ToBytes(), Is.EqualTo(TestBytes));
+            Assert.Equal(new byte[]{}, "".ToBytes());
+            Assert.Equal(TestBytes, TestString.ToBytes());
         }
 
-        [Test]
+        [Fact]
         public void String_Decode64_decodes_base64()
         {
-            Assert.That("".Decode64(), Is.EqualTo(new byte[] {}));
-            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
-            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
-            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
-            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+            Assert.Equal(new byte[]{}, "".Decode64());
+            Assert.Equal(new byte[]{0x61}, "YQ==".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62}, "YWI=".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63}, "YWJj".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_ToUtf8_returns_string()
         {
-            Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+            Assert.Equal("", new byte[]{}.ToUtf8());
+            Assert.Equal(TestString, TestBytes.ToUtf8());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_ToHex_returns_hex_string()
         {
-            Assert.That(new byte[] { }.ToHex(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
+            Assert.Equal("", new byte[]{}.ToHex());
+            Assert.Equal(TestHex, TestBytes.ToHex());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_Sub_returns_subarray()
         {
             var array = "0123456789abcdef".ToBytes();
             var check = new Action<int, int, string>((start, length, expected) =>
-                Assert.That(array.Sub(start, length), Is.EqualTo(expected.ToBytes())));
+                Assert.Equal(expected.ToBytes(), array.Sub(start, length)));
 
             // Subarrays at 0, no overflow
             check(0, 1, "0");
@@ -102,28 +102,27 @@ namespace Dashlane.Test
             check(int.MaxValue, int.MaxValue, "");
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Length should be nonnegative\r\nParameter name: length")]
+        [Fact]
         public void ByteArray_Sub_throws_on_negative_length()
         {
-            new byte[] {}.Sub(0, -1337);
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => new byte[] {}.Sub(0, -1337));
+            Assert.Equal("Length should be nonnegative\r\nParameter name: length", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void JToken_GetString_returns_string()
         {
-            Action<string, string> check = (json, key) =>
-                Assert.That(JToken.Parse(json).GetString(key), Is.EqualTo("value"));
+            Action<string, string> check = (json, key) => 
+                Assert.Equal("value", JToken.Parse(json).GetString(key));
 
             check("{'key': 'value'}", "key");
             check("{'key': {'kee': 'value'}}", "key.kee");
         }
 
-        [Test]
+        [Fact]
         public void JToken_GetString_returns_null()
         {
-            Action<string, string> check = (json, key) =>
-                Assert.That(JToken.Parse(json).GetString(key), Is.Null);
+            Action<string, string> check = (json, key) => Assert.Null(JToken.Parse(json).GetString(key));
 
             check("0", "key");
             check("''", "key");

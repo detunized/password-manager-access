@@ -1,4 +1,4 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -7,12 +7,12 @@ using System.Net;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.Dashlane;
+using Xunit;
 
-namespace Dashlane.Test
+namespace PasswordManagerAccess.Test.Dashlane
 {
-    [TestFixture]
-    class RemoteTest
+    public class RemoteTest
     {
         public const string Username = "username";
         public const string Uki = "uki";
@@ -22,18 +22,16 @@ namespace Dashlane.Test
         public const string RegisterStep1Url = "https://ws1.dashlane.com/6/authentication/sendtoken";
         public const string RegisterStep2Url = "https://ws1.dashlane.com/6/authentication/registeruki";
 
-        [Test]
+        [Fact]
         public void Fetch_returns_received_json()
         {
             var response = new JObject();
             response["what"] = "ever";
 
-            Assert.That(
-                Remote.Fetch(Username, Uki, SetupWebClient("{'what': 'ever'}").Object),
-                Is.EqualTo(response));
+            Assert.Equal(response, Remote.Fetch(Username, Uki, SetupWebClient("{'what': 'ever'}").Object));
         }
 
-        [Test]
+        [Fact]
         public void Fetch_makes_post_request_to_specific_url()
         {
             var webClient = SetupWebClient();
@@ -45,7 +43,7 @@ namespace Dashlane.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_makes_post_request_with_correct_username_and_uki()
         {
             var webClient = SetupWebClient();
@@ -59,19 +57,18 @@ namespace Dashlane.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_network_error()
         {
-            Assert.That(
-                () => Remote.Fetch(Username, Uki, SetupWebClient(new WebException()).Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.NetworkError)
-                    .And.Message.EqualTo("Network error occurred")
-                    .And.InnerException.InstanceOf<WebException>());
+            var e = Assert.Throws<FetchException>(
+                () => Remote.Fetch(Username, Uki, SetupWebClient(new WebException()).Object));
+
+            Assert.Equal(FetchException.FailureReason.NetworkError, e.Reason);
+            Assert.Equal("Network error occurred", e.Message);
+            Assert.IsType<WebException>(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_invalid_json_in_response()
         {
             string[] responses =
@@ -85,29 +82,26 @@ namespace Dashlane.Test
 
             foreach (var i in responses)
             {
-                Assert.That(
-                    () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
-                    Throws
-                        .TypeOf<FetchException>()
-                        .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidResponse)
-                        .And.Message.EqualTo("Invalid JSON in response")
-                        .And.InnerException.InstanceOf<JsonException>());
+                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(i).Object));
+
+                Assert.Equal(FetchException.FailureReason.InvalidResponse, e.Reason);
+                Assert.Equal("Invalid JSON in response", e.Message);
+                Assert.IsType<JsonException>(e.InnerException);
             }
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_error_with_message()
         {
             var response = "{'error': {'message': 'Oops!'}}";
-            Assert.That(
-                () => Remote.Fetch(Username, Uki, SetupWebClient(response).Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
-                    .And.Message.EqualTo("Oops!"));
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(response).Object));
+
+            Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
+            Assert.Equal("Oops!", e.Message);
+            Assert.Null(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_error_with_malformed_response()
         {
             string[] responses =
@@ -126,40 +120,37 @@ namespace Dashlane.Test
 
             foreach (var i in responses)
             {
-                Assert.That(
-                    () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
-                    Throws
-                        .TypeOf<FetchException>()
-                        .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
-                        .And.Message.EqualTo("Unknown error"));
+                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(i).Object));
+
+                Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
+                Assert.Equal("Unknown error", e.Message);
+                Assert.Null(e.InnerException);
             }
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_invalid_username_or_password()
         {
             var response = "{'objectType': 'message', 'content': 'Incorrect authentification'}";
-            Assert.That(
-                () => Remote.Fetch(Username, Uki, SetupWebClient(response).Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.InvalidCredentials)
-                    .And.Message.EqualTo("Invalid username or password"));
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(response).Object));
+
+            Assert.Equal(FetchException.FailureReason.InvalidCredentials, e.Reason);
+            Assert.Equal("Invalid username or password", e.Message);
+            Assert.Null(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_other_message()
         {
             var response = "{'objectType': 'message', 'content': 'Oops!'}";
-            Assert.That(
-                () => Remote.Fetch(Username, Uki, SetupWebClient(response).Object),
-                Throws
-                    .TypeOf<FetchException>()
-                    .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
-                    .And.Message.EqualTo("Oops!"));
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(response).Object));
+
+            Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
+            Assert.Equal("Oops!", e.Message);
+            Assert.Null(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_message_with_malformed_response()
         {
             string[] responses =
@@ -174,16 +165,15 @@ namespace Dashlane.Test
 
             foreach (var i in responses)
             {
-                Assert.That(
-                    () => Remote.Fetch(Username, Uki, SetupWebClient(i).Object),
-                    Throws
-                        .TypeOf<FetchException>()
-                        .And.Property("Reason").EqualTo(FetchException.FailureReason.UnknownError)
-                        .And.Message.EqualTo("Unknown error"));
+                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(i).Object));
+
+                Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
+                Assert.Equal("Unknown error", e.Message);
+                Assert.Null(e.InnerException);
             }
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep1_makes_post_request_to_specific_url()
         {
             var webClient = SetupWebClient("SUCCESS");
@@ -195,7 +185,7 @@ namespace Dashlane.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep1_makes_post_request_with_correct_username()
         {
             var webClient = SetupWebClient("SUCCESS");
@@ -209,30 +199,29 @@ namespace Dashlane.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep1_throws_on_network_error()
         {
-            Assert.That(
-                () => Remote.RegisterUkiStep1(Username, SetupWebClient(new WebException()).Object),
-                Throws
-                    .TypeOf<RegisterException>()
-                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.NetworkError)
-                    .And.Message.EqualTo("Network error occurred")
-                    .And.InnerException.InstanceOf<WebException>());
+            var e = Assert.Throws<RegisterException>(
+                () => Remote.RegisterUkiStep1(Username, SetupWebClient(new WebException()).Object));
+
+            Assert.Equal(RegisterException.FailureReason.NetworkError, e.Reason);
+            Assert.Equal("Network error occurred", e.Message);
+            Assert.IsType<WebException>(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep1_throws_on_invalid_response()
         {
-            Assert.That(
-                () => Remote.RegisterUkiStep1(Username, SetupWebClient("NOT A GREAT SUCCESS").Object),
-                Throws
-                    .TypeOf<RegisterException>()
-                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.InvalidResponse)
-                    .And.Message.EqualTo("Register UKI failed"));
+            var e = Assert.Throws<RegisterException>(
+                () => Remote.RegisterUkiStep1(Username, SetupWebClient("NOT A GREAT SUCCESS").Object));
+
+            Assert.Equal(RegisterException.FailureReason.InvalidResponse, e.Reason);
+            Assert.Equal("Register UKI failed", e.Message);
+            Assert.Null(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep2_makes_post_request_to_specific_url()
         {
             var webClient = SetupWebClient("SUCCESS");
@@ -244,7 +233,7 @@ namespace Dashlane.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep2_makes_post_request_with_correct_username_and_other_parameters()
         {
             var webClient = SetupWebClient("SUCCESS");
@@ -262,37 +251,36 @@ namespace Dashlane.Test
                 Times.Once);
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep2_throws_on_network_error()
         {
-            Assert.That(
+            var e = Assert.Throws<RegisterException>(
                 () => Remote.RegisterUkiStep2(
                     Username,
                     DeviceName,
                     Uki,
                     Token,
-                    SetupWebClient(new WebException()).Object),
-                Throws
-                    .TypeOf<RegisterException>()
-                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.NetworkError)
-                    .And.Message.EqualTo("Network error occurred")
-                    .And.InnerException.InstanceOf<WebException>());
+                    SetupWebClient(new WebException()).Object));
+
+            Assert.Equal(RegisterException.FailureReason.NetworkError, e.Reason);
+            Assert.Equal("Network error occurred", e.Message);
+            Assert.IsType<WebException>(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void RegisterUkiStep2_throws_on_invalid_response()
         {
-            Assert.That(
+            var e = Assert.Throws<RegisterException>(
                 () => Remote.RegisterUkiStep2(
                     Username,
                     DeviceName,
                     Uki,
                     Token,
-                    SetupWebClient("NOT A GREAT SUCCESS").Object),
-                Throws
-                    .TypeOf<RegisterException>()
-                    .And.Property("Reason").EqualTo(RegisterException.FailureReason.InvalidResponse)
-                    .And.Message.EqualTo("Register UKI failed"));
+                    SetupWebClient("NOT A GREAT SUCCESS").Object));
+
+            Assert.Equal(RegisterException.FailureReason.InvalidResponse, e.Reason);
+            Assert.Equal("Register UKI failed", e.Message);
+            Assert.Null(e.InnerException);
         }
 
         //
