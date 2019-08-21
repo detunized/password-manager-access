@@ -128,11 +128,101 @@ namespace PasswordManagerAccess.Dashlane
             if (version.SequenceEqual(Kwc3))
                 return new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, true, false, 1);
 
+            // TODO: This is not correct. There's IV, not salt. I wish we could find an example of this in the wild.
             if (version.SequenceEqual(Kwc5))
-                return new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, false, true, 5);
+                return new Blob(blob.Sub(68, int.MaxValue), blob.Sub(0, 16), false, true, 5);
+
+            // New flexible format
+            if (blob[0] == '$')
+                return ParseFlexibleBlob(blob);
 
             // TODO: Replace with a ClientException
             throw new NotImplementedException("Unsupported encryption mode");
+        }
+
+        public static Blob ParseFlexibleBlob(byte[] blob)
+        {
+            // Pieces of the string joined with $ ($1$argon2d$16$3$32768$2$aes256$cbchmac$16$...)
+
+            // This part is the key derivation configuration:
+            //   - $1       - version, must be 1
+            //   - $argon2d - method, must be "argon2d" or "pbkdf2"
+            //
+            // For argon2d:
+            //   - $16     - salt length
+            //   - $3      - time cost
+            //   - $32768  - memory cost
+            //   - $2      - parallelism
+            //
+            // For pbkdf2:
+            //   - $16     - salt length
+            //   - $10000  - number of iterations
+            //   - $sha256 - hash method
+            //
+            // The next part is the cipher/encryption configuration:
+            //   - $aes256  - cipher, must be aes256
+            //   - $cbchmac - AES mode, must be cbchmac, cbc or gcm
+            //   - $16      - IV length
+            //
+            // Signature is always "hmac"
+            // IV derivation could be either "data" or "evpByteToKey"
+            //
+            // After the crypto configuration:
+            //   - salt       - "salt length" bytes
+            //   - IV         - "IV length" bytes
+            //   - MAC        - 32 bytes
+            //   - ciphertext - the rest
+
+            var offset = 0;
+
+            var version = GetNextComponent(blob, ref offset);
+            if (version != "1")
+                throw new InvalidOperationException();
+
+            var method = GetNextComponent(blob, ref offset);
+            switch (method)
+            {
+            case "argon2d":
+                var argonSaltLength = int.Parse(GetNextComponent(blob, ref offset));
+                var timeCost = int.Parse(GetNextComponent(blob, ref offset));
+                var memoryCost = int.Parse(GetNextComponent(blob, ref offset));
+                var parallelism = int.Parse(GetNextComponent(blob, ref offset));
+                break;
+            case "pbkdf2":
+                var pbkdfSaltLength = int.Parse(GetNextComponent(blob, ref offset));
+                var iterations = int.Parse(GetNextComponent(blob, ref offset));
+                var hash = GetNextComponent(blob, ref offset);
+                break;
+            default:
+                throw new InvalidOperationException();
+            }
+
+            var cipher = GetNextComponent(blob, ref offset);
+            if (cipher != "aes256")
+                throw new InvalidOperationException();
+
+            var aesMode = GetNextComponent(blob, ref offset);
+            if (!new[] {"cbc", "cbchmac", "gcm"}.Contains(aesMode))
+                throw new InvalidOperationException();
+
+            return new Blob();
+        }
+
+        public static string GetNextComponent(byte[] blob, ref int offset)
+        {
+            var end = GetNextDollar(blob, offset);
+            var sub = blob.Sub(offset, end - offset);
+            offset = end;
+            return sub.ToUtf8();
+        }
+
+        public static int GetNextDollar(byte[] blob, int start)
+        {
+            for (var i = start; i < blob.Length; i++)
+                if (blob[i] == '$')
+                    return i;
+
+            throw new InvalidOperationException();
         }
 
         public static byte[] DecryptBlob(byte[] blob, string password)
