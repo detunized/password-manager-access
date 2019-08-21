@@ -1,10 +1,10 @@
-// Copyright (C) 2016 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.Security.Cryptography;
 
-namespace Dashlane
+namespace PasswordManagerAccess.Dashlane
 {
     public static class Uki
     {
