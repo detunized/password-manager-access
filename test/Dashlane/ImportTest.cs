@@ -12,7 +12,7 @@ namespace PasswordManagerAccess.Test.Dashlane
     {
         public const string Passowrd = "password";
         public const string Uki = "local-uki";
-        public const string Filename = "Fixtures/localSettings.aes";
+        public const string Filename = "Dashlane/Fixtures/localSettings.aes";
         public const string Xml =
             "<root>" +
                 "<KWLocalSettingsManager>" +

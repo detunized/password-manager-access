@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using Moq;
 using PasswordManagerAccess.Dashlane;
@@ -10,7 +9,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.Dashlane
 {
-    public class VaultTest
+    public class VaultTest: TestBase
     {
         public const string Username = "username";
         public const string Password = "password";
@@ -71,7 +70,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         // Helpers
         //
 
-        private static string[] Accounts(string filename)
+        private string[] Accounts(string filename)
         {
             return Vault.Open(Username, Password, Uki, SetupWebClient(filename))
                 .Accounts
@@ -79,12 +78,12 @@ namespace PasswordManagerAccess.Test.Dashlane
                 .ToArray();
         }
 
-        private static IWebClient SetupWebClient(string filename)
+        private IWebClient SetupWebClient(string filename)
         {
             var webClient = new Mock<IWebClient>();
             webClient
                 .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(File.ReadAllBytes(string.Format("Fixtures/{0}.json", filename)));
+                .Returns(GetFixture(filename).ToBytes());
 
             return webClient.Object;
         }

@@ -93,7 +93,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void ParseEncryptedBlob_parses_legacy_blob()
         {
-            var blob = Salt.Concat(Content).ToArray();
+            var blob = Salt.Concat("KWC5".ToBytes()).Concat(Content).ToArray();
             var parsed = Parse.ParseEncryptedBlob(blob);
 
             Assert.Equal(Content, parsed.Ciphertext);
@@ -104,17 +104,10 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void ParseEncryptedBlob_parses_short_blob_as_legacy()
+        public void ParseEncryptedBlob_throws_on_unknown_encryption_type()
         {
-            var ciphertext = new byte[] {13, 37};
-            var blob = Salt.Concat(ciphertext).ToArray();
-            var parsed = Parse.ParseEncryptedBlob(blob);
-
-            Assert.Equal(ciphertext, parsed.Ciphertext);
-            Assert.Equal(Salt, parsed.Salt);
-            Assert.False(parsed.Compressed);
-            Assert.True(parsed.UseDerivedKey);
-            Assert.Equal(5, parsed.Iterations);
+            var blob = Salt.Concat("blah".ToBytes()).Concat(Content).ToArray();
+            Assert.Throws<NotImplementedException>(() => Parse.ParseEncryptedBlob(blob));
         }
 
         [Fact]

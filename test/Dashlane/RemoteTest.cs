@@ -86,7 +86,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
                 Assert.Equal(FetchException.FailureReason.InvalidResponse, e.Reason);
                 Assert.Equal("Invalid JSON in response", e.Message);
-                Assert.IsType<JsonException>(e.InnerException);
+                Assert.IsAssignableFrom<JsonException>(e.InnerException);
             }
         }
 

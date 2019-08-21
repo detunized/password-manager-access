@@ -129,7 +129,7 @@ namespace PasswordManagerAccess.Dashlane
                 return new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, true, false, 1);
 
             if (version.SequenceEqual(Kwc5))
-                new Blob(blob.Sub(saltLength, int.MaxValue), salt, false, true, 5);
+                return new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, false, true, 5);
 
             // TODO: Replace with a ClientException
             throw new NotImplementedException("Unsupported encryption mode");
