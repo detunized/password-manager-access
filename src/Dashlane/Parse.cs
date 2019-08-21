@@ -15,6 +15,7 @@ namespace PasswordManagerAccess.Dashlane
     public static class Parse
     {
         private static readonly byte[] Kwc3 = "KWC3".ToBytes();
+        private static readonly byte[] Kwc5 = "KWC5".ToBytes();
 
         public static byte[] ComputeEncryptionKey(string password, byte[] salt)
         {
@@ -123,9 +124,15 @@ namespace PasswordManagerAccess.Dashlane
                 throw new ArgumentException("Blob is too short", "blob");
 
             var version = blob.Sub(saltLength, versionLength);
-            return version.SequenceEqual(Kwc3)
-                ? new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, true, false, 1)
-                : new Blob(blob.Sub(saltLength, int.MaxValue), salt, false, true, 5);
+
+            if (version.SequenceEqual(Kwc3))
+                return new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, true, false, 1);
+
+            if (version.SequenceEqual(Kwc5))
+                new Blob(blob.Sub(saltLength, int.MaxValue), salt, false, true, 5);
+
+            // TODO: Replace with a ClientException
+            throw new NotImplementedException("Unsupported encryption mode");
         }
 
         public static byte[] DecryptBlob(byte[] blob, string password)
