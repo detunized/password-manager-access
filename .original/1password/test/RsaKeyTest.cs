@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -14,6 +15,83 @@ namespace OnePassword.Test
         {
             var key = RsaKey.Parse(RsaParameters);
             Assert.That(key.Id, Is.EqualTo("szerdhg2ww2ahjo4ilz57x7cce"));
+        }
+
+        [Test]
+        public void RestoreLeadingZeros_pads_to_correct_length()
+        {
+            var rsa = new RSAParameters
+            {
+                Exponent = new byte[3],
+                Modulus = new byte[2048 / 8 - 1],
+                P = new byte[13],
+                Q = new byte[17],
+                DP = new byte[23],
+                DQ = new byte[37],
+                InverseQ = new byte[53],
+                D = new byte[133],
+            };
+
+            var padded = RsaKey.RestoreLeadingZeros(rsa);
+
+            Assert.That(padded.Exponent.Length, Is.EqualTo(3));
+            Assert.That(padded.Modulus.Length, Is.EqualTo(2048 / 8));
+            Assert.That(padded.P.Length, Is.EqualTo(1024 / 8));
+            Assert.That(padded.Q.Length, Is.EqualTo(1024 / 8));
+            Assert.That(padded.DP.Length, Is.EqualTo(1024 / 8));
+            Assert.That(padded.DQ.Length, Is.EqualTo(1024 / 8));
+            Assert.That(padded.InverseQ.Length, Is.EqualTo(1024 / 8));
+            Assert.That(padded.D.Length, Is.EqualTo(2048 / 8));
+        }
+
+        [Test]
+        public void RestoreLeadingZeros_doesnt_change_valid_parameters()
+        {
+            var rsa = new RSAParameters
+            {
+                Exponent = RsaParameters.StringAt("e").Decode64(),
+                Modulus = RsaParameters.StringAt("n").Decode64(),
+                P = RsaParameters.StringAt("p").Decode64(),
+                Q = RsaParameters.StringAt("q").Decode64(),
+                DP = RsaParameters.StringAt("dp").Decode64(),
+                DQ = RsaParameters.StringAt("dq").Decode64(),
+                InverseQ = RsaParameters.StringAt("qi").Decode64(),
+                D = RsaParameters.StringAt("d").Decode64(),
+            };
+
+            var padded = RsaKey.RestoreLeadingZeros(rsa);
+
+            Assert.That(padded.Exponent, Is.EqualTo(rsa.Exponent));
+            Assert.That(padded.Modulus, Is.EqualTo(rsa.Modulus));
+            Assert.That(padded.P, Is.EqualTo(rsa.P));
+            Assert.That(padded.Q, Is.EqualTo(rsa.Q));
+            Assert.That(padded.DP, Is.EqualTo(rsa.DP));
+            Assert.That(padded.DQ, Is.EqualTo(rsa.DQ));
+            Assert.That(padded.InverseQ, Is.EqualTo(rsa.InverseQ));
+            Assert.That(padded.D, Is.EqualTo(rsa.D));
+        }
+
+        [Test]
+        public void GuessKeyBitLength_guesses_correctly()
+        {
+            foreach (var bits in new[] { 1024, 2048, 4096 })
+            {
+                foreach (var i in new[] { bits * 3 / 4 + 8, bits - 16, bits - 8, bits })
+                {
+                    var guessed = RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[i / 8] });
+                    Assert.That(guessed, Is.EqualTo(bits));
+                }
+            }
+        }
+
+        [Test]
+        public void GuessKeyBitLength_throws_on_invalid_values()
+        {
+            foreach (var bits in new[] { 768, 4096 + 8 })
+            {
+                Assert.That(() => RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[bits / 8] }),
+                            Throws.InstanceOf<ClientException>().And.Message.Contains("not supported"));
+            }
         }
 
         //
