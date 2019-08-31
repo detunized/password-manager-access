@@ -117,8 +117,9 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(5, parsed.Iterations);
         }
 
+        // TODO: Test PBKDF2 as well
         [Fact]
-        public void ParseEncryptedBlob_parses_flexible_blob()
+        public void ParseEncryptedBlob_parses_flexible_blob_with_argon2d()
         {
             var blob = "$1$argon2d$16$3$32768$2$aes256$cbchmac$16$".ToBytes()
                 .Concat(Salt16)
@@ -135,6 +136,19 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.False(parsed.Compressed);
             Assert.False(parsed.UseDerivedKey);
             Assert.Equal(0, parsed.Iterations);
+
+            var config = parsed.CryptoConfig;
+            Assert.IsType<Parse.Argon2dConfig>(config.KdfConfig);
+            Assert.Equal(Parse.CryptoConfig.CipherModeType.CbcHmac, config.CipherMode);
+            Assert.Equal(Parse.CryptoConfig.IvGenerationModeType.Data, config.IvGenerationMode);
+            Assert.Equal(Parse.CryptoConfig.SignatureModeType.HmacSha256, config.SignatureMode);
+
+            var argon2d = (Parse.Argon2dConfig)config.KdfConfig;
+            Assert.Equal(32768, argon2d.MemoryCost);
+            Assert.Equal(3, argon2d.TimeCost);
+            Assert.Equal(2, argon2d.Parallelism);
+            Assert.Equal(16, argon2d.SaltLength);
+            Assert.Equal("argon2d", argon2d.Name);
         }
 
         [Fact]

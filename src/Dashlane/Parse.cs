@@ -18,6 +18,18 @@ namespace PasswordManagerAccess.Dashlane
         private static readonly byte[] Kwc5 = "KWC5".ToBytes();
         private static readonly byte[] NoBytes = new byte[0];
 
+        private static readonly CryptoConfig Kwc3Config = new CryptoConfig(
+            new Pbkdf2Config(Pbkdf2Config.HashMethodType.Sha1, 10204, 32),
+            CryptoConfig.CipherModeType.Cbc,
+            CryptoConfig.IvGenerationModeType.EvpByteToKey,
+            CryptoConfig.SignatureModeType.None);
+
+        private static readonly CryptoConfig Kwc5Config = new CryptoConfig(
+            new NoKdfConfig(),
+            CryptoConfig.CipherModeType.CbcHmac,
+            CryptoConfig.IvGenerationModeType.Data,
+            CryptoConfig.SignatureModeType.HmacSha256);
+
         public static byte[] ComputeEncryptionKey(string password, byte[] salt)
         {
             return new Rfc2898DeriveBytes(password, salt, 10204).GetBytes(32);
@@ -142,6 +154,12 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
+        public class NoKdfConfig: IKdfConfig
+        {
+            public string Name => "none";
+            public int SaltLength => 0;
+        }
+
         public class CryptoConfig
         {
             public enum CipherModeType
@@ -157,14 +175,25 @@ namespace PasswordManagerAccess.Dashlane
                 HmacSha256,
             }
 
+            public enum IvGenerationModeType
+            {
+                Data,
+                EvpByteToKey,
+            }
+
             public readonly IKdfConfig KdfConfig;
             public readonly CipherModeType CipherMode;
+            public readonly IvGenerationModeType IvGenerationMode;
             public readonly SignatureModeType SignatureMode;
 
-            public CryptoConfig(IKdfConfig kdfConfig, CipherModeType cipherMode, SignatureModeType signatureMode)
+            public CryptoConfig(IKdfConfig kdfConfig,
+                                CipherModeType cipherMode,
+                                IvGenerationModeType ivGenerationMode,
+                                SignatureModeType signatureMode)
             {
                 KdfConfig = kdfConfig;
                 CipherMode = cipherMode;
+                IvGenerationMode = ivGenerationMode;
                 SignatureMode = signatureMode;
             }
         }
@@ -185,7 +214,9 @@ namespace PasswordManagerAccess.Dashlane
                 Iv = iv;
                 Hash = hash;
                 Compressed = compressed;
+                // TODO: Should be replaced with CryptoConfig
                 UseDerivedKey = useDerivedKey;
+                // TODO: Should be replaced with CryptoConfig
                 Iterations = iterations;
                 CryptoConfig = cryptoConfig;
             }
@@ -343,6 +374,7 @@ namespace PasswordManagerAccess.Dashlane
 
             var cryptoConfig = new CryptoConfig(kdfConfig,
                                                 cipherMode,
+                                                CryptoConfig.IvGenerationModeType.Data,
                                                 CryptoConfig.SignatureModeType.HmacSha256);
 
             var ivLength = int.Parse(GetNextComponent(blob, ref offset));
