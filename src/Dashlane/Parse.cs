@@ -12,10 +12,11 @@ using System.Xml.XPath;
 
 namespace PasswordManagerAccess.Dashlane
 {
-    public static class Parse
+    internal static class Parse
     {
         private static readonly byte[] Kwc3 = "KWC3".ToBytes();
         private static readonly byte[] Kwc5 = "KWC5".ToBytes();
+        private static readonly byte[] NoBytes = new byte[0];
 
         public static byte[] ComputeEncryptionKey(string password, byte[] salt)
         {
@@ -95,20 +96,106 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        public struct Blob
+        public interface IKdfConfig
         {
-            public Blob(byte[] ciphertext, byte[] salt, bool compressed, bool useDerivedKey, int iterations)
-                : this()
+            string Name { get; }
+            int SaltLength { get; }
+        }
+
+        public class Argon2dConfig: IKdfConfig
+        {
+            public readonly int MemoryCost;
+            public readonly int TimeCost;
+            public readonly int Parallelism;
+
+            public string Name => "argon2d";
+            public int SaltLength { get; }
+
+            public Argon2dConfig(int memoryCost, int timeCost, int parallelism, int saltLength)
+            {
+                MemoryCost = memoryCost;
+                TimeCost = timeCost;
+                Parallelism = parallelism;
+                SaltLength = saltLength;
+            }
+        }
+
+        public class Pbkdf2Config: IKdfConfig
+        {
+            public enum HashMethodType
+            {
+                Sha1,
+                Sha256,
+            }
+
+            public readonly HashMethodType HashMethod;
+            public readonly int Iterations;
+
+            public string Name => "pbkdf2";
+            public int SaltLength { get; }
+
+            public Pbkdf2Config(HashMethodType hashMethod, int iterations, int saltLength)
+            {
+                HashMethod = hashMethod;
+                Iterations = iterations;
+                SaltLength = saltLength;
+            }
+        }
+
+        public class CryptoConfig
+        {
+            public enum CipherModeType
+            {
+                Cbc,
+                CbcHmac,
+                Gcm,
+            }
+
+            public enum SignatureModeType
+            {
+                None,
+                HmacSha256,
+            }
+
+            public readonly IKdfConfig KdfConfig;
+            public readonly CipherModeType CipherMode;
+            public readonly SignatureModeType SignatureMode;
+
+            public CryptoConfig(IKdfConfig kdfConfig, CipherModeType cipherMode, SignatureModeType signatureMode)
+            {
+                KdfConfig = kdfConfig;
+                CipherMode = cipherMode;
+                SignatureMode = signatureMode;
+            }
+        }
+
+        public class Blob
+        {
+            public Blob(byte[] ciphertext,
+                        byte[] salt,
+                        byte[] iv,
+                        byte[] hash,
+                        bool compressed,
+                        bool useDerivedKey,
+                        int iterations,
+                        CryptoConfig cryptoConfig = null)
             {
                 Ciphertext = ciphertext;
                 Salt = salt;
+                Iv = iv;
+                Hash = hash;
                 Compressed = compressed;
                 UseDerivedKey = useDerivedKey;
                 Iterations = iterations;
+                CryptoConfig = cryptoConfig;
             }
 
             public readonly byte[] Ciphertext;
             public readonly byte[] Salt;
+            public readonly byte[] Iv;
+            public readonly byte[] Hash;
+            public readonly CryptoConfig CryptoConfig;
+
             public readonly bool Compressed;
             public readonly bool UseDerivedKey;
             public readonly int Iterations;
@@ -126,11 +213,22 @@ namespace PasswordManagerAccess.Dashlane
             var version = blob.Sub(saltLength, versionLength);
 
             if (version.SequenceEqual(Kwc3))
-                return new Blob(blob.Sub(saltLength + versionLength, int.MaxValue), salt, true, false, 1);
+                return new Blob(ciphertext: blob.Sub(saltLength + versionLength, int.MaxValue),
+                                salt: salt,
+                                iv: NoBytes,
+                                hash: NoBytes,
+                                compressed: true,
+                                useDerivedKey: false,
+                                iterations: 1);
 
-            // TODO: This is not correct. There's IV, not salt. I wish we could find an example of this in the wild.
             if (version.SequenceEqual(Kwc5))
-                return new Blob(blob.Sub(68, int.MaxValue), blob.Sub(0, 16), false, true, 5);
+                return new Blob(ciphertext: blob.Sub(68, int.MaxValue),
+                                salt: NoBytes,
+                                iv: blob.Sub(0, 16),
+                                hash: blob.Sub(36, 32),
+                                compressed: false,
+                                useDerivedKey: true,
+                                iterations: 5);
 
             // New flexible format
             if (blob[0] == '$')
@@ -173,25 +271,50 @@ namespace PasswordManagerAccess.Dashlane
             //   - MAC        - 32 bytes
             //   - ciphertext - the rest
 
-            var offset = 0;
+            var offset = 1;
 
             var version = GetNextComponent(blob, ref offset);
             if (version != "1")
                 throw new InvalidOperationException();
 
-            var method = GetNextComponent(blob, ref offset);
-            switch (method)
+            IKdfConfig kdfConfig = null;
+            switch (GetNextComponent(blob, ref offset))
             {
             case "argon2d":
-                var argonSaltLength = int.Parse(GetNextComponent(blob, ref offset));
-                var timeCost = int.Parse(GetNextComponent(blob, ref offset));
-                var memoryCost = int.Parse(GetNextComponent(blob, ref offset));
-                var parallelism = int.Parse(GetNextComponent(blob, ref offset));
+                {
+                    var saltLength = int.Parse(GetNextComponent(blob, ref offset));
+                    var timeCost = int.Parse(GetNextComponent(blob, ref offset));
+                    var memoryCost = int.Parse(GetNextComponent(blob, ref offset));
+                    var parallelism = int.Parse(GetNextComponent(blob, ref offset));
+                    kdfConfig = new Argon2dConfig(memoryCost: memoryCost,
+                                                  timeCost: timeCost,
+                                                  parallelism: parallelism,
+                                                  saltLength: saltLength);
+                }
                 break;
             case "pbkdf2":
-                var pbkdfSaltLength = int.Parse(GetNextComponent(blob, ref offset));
-                var iterations = int.Parse(GetNextComponent(blob, ref offset));
-                var hash = GetNextComponent(blob, ref offset);
+                {
+                    var saltLength = int.Parse(GetNextComponent(blob, ref offset));
+                    var iterations = int.Parse(GetNextComponent(blob, ref offset));
+
+                    Pbkdf2Config.HashMethodType hashMethod;
+                    string hashMethodStr = GetNextComponent(blob, ref offset);
+                    switch (hashMethodStr)
+                    {
+                    case "sha1":
+                        hashMethod = Pbkdf2Config.HashMethodType.Sha1;
+                        break;
+                    case "sha256":
+                        hashMethod = Pbkdf2Config.HashMethodType.Sha256;
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unknown PBKDF2 hashing method: {hashMethodStr}");
+                    }
+
+                    kdfConfig = new Pbkdf2Config(hashMethod: hashMethod,
+                                                 iterations: iterations,
+                                                 saltLength: saltLength);
+                }
                 break;
             default:
                 throw new InvalidOperationException();
@@ -201,18 +324,55 @@ namespace PasswordManagerAccess.Dashlane
             if (cipher != "aes256")
                 throw new InvalidOperationException();
 
-            var aesMode = GetNextComponent(blob, ref offset);
-            if (!new[] {"cbc", "cbchmac", "gcm"}.Contains(aesMode))
-                throw new InvalidOperationException();
+            CryptoConfig.CipherModeType cipherMode;
+            var cipherModeStr = GetNextComponent(blob, ref offset);
+            switch (cipherModeStr)
+            {
+            case "cbc":
+                cipherMode = CryptoConfig.CipherModeType.Cbc;
+                break;
+            case "cbchmac":
+                cipherMode = CryptoConfig.CipherModeType.CbcHmac;
+                break;
+            case "gcm":
+                cipherMode = CryptoConfig.CipherModeType.Gcm;
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown cipher mode: {cipherModeStr}");
+            }
 
-            return new Blob();
+            var cryptoConfig = new CryptoConfig(kdfConfig,
+                                                cipherMode,
+                                                CryptoConfig.SignatureModeType.HmacSha256);
+
+            var ivLength = int.Parse(GetNextComponent(blob, ref offset));
+
+            var salt = blob.Sub(offset, kdfConfig.SaltLength);
+            offset += kdfConfig.SaltLength;
+
+            var iv = blob.Sub(offset, ivLength);
+            offset += ivLength;
+
+            var hash = blob.Sub(offset, 32);
+            offset += 32;
+
+            var ciphertext = blob.Sub(offset, int.MaxValue);
+
+            return new Blob(ciphertext: ciphertext,
+                            salt: salt,
+                            iv: iv,
+                            hash: hash,
+                            compressed: false,
+                            useDerivedKey: false,
+                            iterations: 0,
+                            cryptoConfig: cryptoConfig);
         }
 
         public static string GetNextComponent(byte[] blob, ref int offset)
         {
             var end = GetNextDollar(blob, offset);
             var sub = blob.Sub(offset, end - offset);
-            offset = end;
+            offset = end + 1;
             return sub.ToUtf8();
         }
 

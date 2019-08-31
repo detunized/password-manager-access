@@ -5,15 +5,18 @@ using System;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Xml.Linq;
-using Xunit;
 using PasswordManagerAccess.Dashlane;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.Dashlane
 {
     public class ParseTest
     {
         public const string Password = "password";
-        public static readonly byte[] Salt = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
+        public static readonly byte[] Salt16 = "saltsaltsaltsalt".ToBytes();
+        public static readonly byte[] Salt32 = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
+        public static readonly byte[] Iv16 = "iviviviviviviviv".ToBytes();
+        public static readonly byte[] Hash32 = "hashhashhashhashhashhashhashhash".ToBytes();
         public static readonly byte[] Content = "All your base are belong to us".ToBytes();
         public static readonly byte[] Blob =
             ("c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzxDNg8kGh5" +
@@ -22,7 +25,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void ComputeEncryptionKey_returns_correct_result()
         {
-            var key = Parse.ComputeEncryptionKey(Password, Salt);
+            var key = Parse.ComputeEncryptionKey(Password, Salt32);
             Assert.Equal("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(), key);
         }
 
@@ -43,7 +46,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var key = "OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64();
             var check = new Action<int, string, string>((iterations, expectedKey, expectedIv) =>
             {
-                var keyIv = Parse.DeriveEncryptionKeyAndIv(key, Salt, iterations);
+                var keyIv = Parse.DeriveEncryptionKeyAndIv(key, Salt32, iterations);
                 Assert.Equal(expectedKey.Decode64(), keyIv.Key);
                 Assert.Equal(expectedIv.Decode64(), keyIv.Iv);
             });
@@ -55,7 +58,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void DecryptAes256_decrypts_ciphertext()
         {
-            Assert.Equal(Content, Parse.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(), "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(), "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
+            Assert.Equal(Content, Parse.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                                      "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                                      "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
         }
 
         [Fact]
@@ -80,33 +85,62 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void ParseEncryptedBlob_parses_kwc3_blob()
         {
-            var blob = Salt.Concat("KWC3".ToBytes()).Concat(Content).ToArray();
+            var blob = Salt32.Concat("KWC3".ToBytes()).Concat(Content).ToArray();
             var parsed = Parse.ParseEncryptedBlob(blob);
 
             Assert.Equal(Content, parsed.Ciphertext);
-            Assert.Equal(Salt, parsed.Salt);
+            Assert.Equal(Salt32, parsed.Salt);
+            Assert.Empty(parsed.Iv);
+            Assert.Empty(parsed.Hash);
             Assert.True(parsed.Compressed);
             Assert.False(parsed.UseDerivedKey);
             Assert.Equal(1, parsed.Iterations);
         }
 
         [Fact]
-        public void ParseEncryptedBlob_parses_legacy_blob()
+        public void ParseEncryptedBlob_parses_kwc5_blob()
         {
-            var blob = Salt.Concat("KWC5".ToBytes()).Concat(Content).ToArray();
+            var blob = Iv16
+                .Concat("16 bytes padding".ToBytes())
+                .Concat("KWC5".ToBytes())
+                .Concat(Hash32)
+                .Concat(Content)
+                .ToArray();
             var parsed = Parse.ParseEncryptedBlob(blob);
 
             Assert.Equal(Content, parsed.Ciphertext);
-            Assert.Equal(Salt, parsed.Salt);
+            Assert.Empty(parsed.Salt);
+            Assert.Equal(Iv16, parsed.Iv);
+            Assert.Equal(Hash32, parsed.Hash);
             Assert.False(parsed.Compressed);
             Assert.True(parsed.UseDerivedKey);
             Assert.Equal(5, parsed.Iterations);
         }
 
         [Fact]
+        public void ParseEncryptedBlob_parses_flexible_blob()
+        {
+            var blob = "$1$argon2d$16$3$32768$2$aes256$cbchmac$16$".ToBytes()
+                .Concat(Salt16)
+                .Concat(Iv16)
+                .Concat(Hash32)
+                .Concat(Content)
+                .ToArray();
+            var parsed = Parse.ParseEncryptedBlob(blob);
+
+            Assert.Equal(Content, parsed.Ciphertext);
+            Assert.Equal(Salt16, parsed.Salt);
+            Assert.Equal(Iv16, parsed.Iv);
+            Assert.Equal(Hash32, parsed.Hash);
+            Assert.False(parsed.Compressed);
+            Assert.False(parsed.UseDerivedKey);
+            Assert.Equal(0, parsed.Iterations);
+        }
+
+        [Fact]
         public void ParseEncryptedBlob_throws_on_unknown_encryption_type()
         {
-            var blob = Salt.Concat("blah".ToBytes()).Concat(Content).ToArray();
+            var blob = Salt32.Concat("blah".ToBytes()).Concat(Content).ToArray();
             Assert.Throws<NotImplementedException>(() => Parse.ParseEncryptedBlob(blob));
         }
 
@@ -224,5 +258,19 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             Assert.Equal(2, Parse.ExtractEncryptedAccounts(blob.Decode64(), Password).Length);
         }
+
+        //
+        // Data
+        //
+
+        // TODO: Use this!
+        private const string FlexibleBlobArgon2 = "JDEkYXJnb24yZCQxNiQzJDMyNzY4JDIkYWVzMjU2J" +
+            "GNiY2htYWMkMTYk8Ik8hP3t6nuDctDDdgSfor7v7ZK13ba1dofrlEojOg0a8GKMz8dn6GHsViM7t3qv" +
+            "2BzAnAehDZmzJp27mOiDAyQVBDoGmoNMd53EoMUZ+0aSCTY1gYQdCPvEC/7HGqjbj4gSf/ONuf2OSg5" +
+            "TwcQ1twbq2tlGyohUuj3qZ5s+eC9HJCpWHAzhFqODnqQBBM3zdkkFOxWXx8P6oGP5G4fOFgzvaGrlAD" +
+            "jh+bEd/wwAIZIz2IZ6QpYBU7I+dRJh2C2/3Bx/ZY6qqjoehtFu1k0St4gKMGS42X8gnLbquSRmMRIzC" +
+            "bx035b05Z4lglfA9SJUrQBZTVzo+doct3zpud8mZa4bwTNIj0aji+d5BEtDPma862LTglDL5FjJ83Uo" +
+            "vR0M6M8WO8qRW2bJHa063Q7zA6VrZKqptK2yZeez6DGyo7uIDvv9HKDNIYcH71aZH5MPFth6tPc7NiX" +
+            "lVy0VBkE55kA+RCHWZ1PTZwTQQWtCQPlNONq6m+YQSCq3tXr6TkZ4zGYneRejyuiBI3NFNhQEdw==";
     }
 }

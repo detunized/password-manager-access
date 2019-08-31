@@ -2,14 +2,12 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.IO;
-using System.Linq;
 using PasswordManagerAccess.Dashlane;
 using PasswordManagerAccess.Example.Common;
 
 namespace Example
 {
-    class Program
+    static class Program
     {
         static void Main(string[] args)
         {
