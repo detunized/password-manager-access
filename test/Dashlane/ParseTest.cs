@@ -95,6 +95,18 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.True(parsed.Compressed);
             Assert.False(parsed.UseDerivedKey);
             Assert.Equal(1, parsed.Iterations);
+
+            var config = parsed.CryptoConfig;
+            Assert.IsType<Parse.Pbkdf2Config>(config.KdfConfig);
+            Assert.Equal(Parse.CryptoConfig.CipherModeType.Cbc, config.CipherMode);
+            Assert.Equal(Parse.CryptoConfig.IvGenerationModeType.EvpByteToKey, config.IvGenerationMode);
+            Assert.Equal(Parse.CryptoConfig.SignatureModeType.None, config.SignatureMode);
+
+            var pbkdf2 = (Parse.Pbkdf2Config)config.KdfConfig;
+            Assert.Equal(Parse.Pbkdf2Config.HashMethodType.Sha1, pbkdf2.HashMethod);
+            Assert.Equal(10204, pbkdf2.Iterations);
+            Assert.Equal(32, pbkdf2.SaltLength);
+            Assert.Equal("pbkdf2", pbkdf2.Name);
         }
 
         [Fact(Skip = "KWC5 is not supported at the moment")]
@@ -115,6 +127,15 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.False(parsed.Compressed);
             Assert.True(parsed.UseDerivedKey);
             Assert.Equal(5, parsed.Iterations);
+
+            var config = parsed.CryptoConfig;
+            Assert.IsType<Parse.NoKdfConfig>(config.KdfConfig);
+            Assert.Equal(Parse.CryptoConfig.CipherModeType.CbcHmac, config.CipherMode);
+            Assert.Equal(Parse.CryptoConfig.IvGenerationModeType.Data, config.IvGenerationMode);
+            Assert.Equal(Parse.CryptoConfig.SignatureModeType.HmacSha256, config.SignatureMode);
+
+            var noKdf = (Parse.NoKdfConfig)config.KdfConfig;
+            Assert.Equal("none", noKdf.Name);
         }
 
         // TODO: Test PBKDF2 as well

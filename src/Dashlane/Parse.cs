@@ -208,7 +208,7 @@ namespace PasswordManagerAccess.Dashlane
                         bool compressed,
                         bool useDerivedKey,
                         int iterations,
-                        CryptoConfig cryptoConfig = null)
+                        CryptoConfig cryptoConfig)
             {
                 Ciphertext = ciphertext;
                 Salt = salt;
@@ -251,7 +251,8 @@ namespace PasswordManagerAccess.Dashlane
                                 hash: NoBytes,
                                 compressed: true,
                                 useDerivedKey: false,
-                                iterations: 1);
+                                iterations: 1,
+                                cryptoConfig: Kwc3Config);
 
             if (version.SequenceEqual(Kwc5))
                 throw new UnsupportedFeatureException("KWC5 encryption scheme is not supported");
@@ -264,7 +265,8 @@ namespace PasswordManagerAccess.Dashlane
             //                 hash: blob.Sub(36, 32),
             //                 compressed: false,
             //                 useDerivedKey: true,
-            //                 iterations: 5);
+            //                 iterations: 5,
+            //                 cryptoConfig: Kwc5Config);
 
             // New flexible format
             if (blob[0] == '$')
