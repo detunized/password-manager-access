@@ -3,10 +3,40 @@
 
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
+
+// TODO: Add this!!!
+// This actually works, it's how to import the new settings!
+//
+// var localKeyFilename = @"C:\Users\${username}\AppData\Roaming\Dashlane\profiles\lastpass.ruby+01-september-2019@gmail.com\Keys\localKey.aes";
+// var localKeyBlob = File.ReadAllText(localKeyFilename).Decode64();
+//
+// var localSettingsFilename = @"C:\Users\${username}\AppData\Roaming\Dashlane\profiles\lastpass.ruby+01-september-2019@gmail.com\Settings\localSettings.aes";
+// var localSettingsBlob = File.ReadAllBytes(localSettingsFilename);
+//
+// try
+// {
+//     var localKey = Parse.DecryptBlob(localKeyBlob, password);
+//
+//     var parsedSettingsBlob = Parse.ParseEncryptedBlob(localSettingsBlob);
+//     var settingsKey = new Rfc2898DeriveBytes(localKey, parsedSettingsBlob.Salt, 10204).GetBytes(32);
+//     var derivedSettingsKeyIv = Parse.DeriveEncryptionKeyAndIv(localKey, parsedSettingsBlob.Salt, parsedSettingsBlob.Iterations);
+//     var compressedPlaintextSettings = Parse.DecryptAes256(parsedSettingsBlob.Ciphertext,
+//                                                             derivedSettingsKeyIv.Iv,
+//                                                             parsedSettingsBlob.UseDerivedKey ? derivedSettingsKeyIv.Key : localKey);
+//     var plaintextSettings = parsedSettingsBlob.Compressed
+//         ? Parse.Inflate(compressedPlaintextSettings.Sub(6, int.MaxValue))
+//         : compressedPlaintextSettings;
+// }
+// catch (ParseException e)
+// {
+//     throw new ImportException(
+//         ImportException.FailureReason.IncorrectPassword,
+//         "The settings file is corrupted or the password is incorrect",
+//         e);
+// }
 
 namespace PasswordManagerAccess.Dashlane
 {
