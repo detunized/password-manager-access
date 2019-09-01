@@ -97,7 +97,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(1, parsed.Iterations);
         }
 
-        [Fact]
+        [Fact(Skip = "KWC5 is not supported at the moment")]
         public void ParseEncryptedBlob_parses_kwc5_blob()
         {
             var blob = Iv16

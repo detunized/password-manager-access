@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using System.Xml.XPath;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Dashlane
 {
@@ -253,13 +254,17 @@ namespace PasswordManagerAccess.Dashlane
                                 iterations: 1);
 
             if (version.SequenceEqual(Kwc5))
-                return new Blob(ciphertext: blob.Sub(68, int.MaxValue),
-                                salt: NoBytes,
-                                iv: blob.Sub(0, 16),
-                                hash: blob.Sub(36, 32),
-                                compressed: false,
-                                useDerivedKey: true,
-                                iterations: 5);
+                throw new UnsupportedFeatureException("KWC5 encryption scheme is not supported");
+
+            // TODO: Add KWC5 support. It's impossible to test, since there are no real examples of this in the wild
+            // This is how to parse it:
+            // return new Blob(ciphertext: blob.Sub(68, int.MaxValue),
+            //                 salt: NoBytes,
+            //                 iv: blob.Sub(0, 16),
+            //                 hash: blob.Sub(36, 32),
+            //                 compressed: false,
+            //                 useDerivedKey: true,
+            //                 iterations: 5);
 
             // New flexible format
             if (blob[0] == '$')
