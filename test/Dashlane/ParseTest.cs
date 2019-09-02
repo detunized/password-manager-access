@@ -36,8 +36,8 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal("pbkdf2", pbkdf2.Name);
         }
 
-        [Fact(Skip = "KWC5 is not supported at the moment")]
-        public void ParseEncryptedBlob_parses_kwc5_blob()
+        [Fact]
+        public void ParseEncryptedBlob_throws_on_kwc5_blob()
         {
             var blob = Iv16
                 .Concat("16 bytes padding".ToBytes())
@@ -45,21 +45,8 @@ namespace PasswordManagerAccess.Test.Dashlane
                 .Concat(Hash32)
                 .Concat(Content)
                 .ToArray();
-            var parsed = Parse.ParseEncryptedBlob(blob);
 
-            Assert.Equal(Content, parsed.Ciphertext);
-            Assert.Empty(parsed.Salt);
-            Assert.Equal(Iv16, parsed.Iv);
-            Assert.Equal(Hash32, parsed.Hash);
-
-            var config = parsed.CryptoConfig;
-            Assert.IsType<Parse.NoKdfConfig>(config.KdfConfig);
-            Assert.Equal(Parse.CryptoConfig.CipherModeType.CbcHmac, config.CipherMode);
-            Assert.Equal(Parse.CryptoConfig.IvGenerationModeType.Data, config.IvGenerationMode);
-            Assert.Equal(Parse.CryptoConfig.SignatureModeType.HmacSha256, config.SignatureMode);
-
-            var noKdf = (Parse.NoKdfConfig)config.KdfConfig;
-            Assert.Equal("none", noKdf.Name);
+            Exceptions.AssertThrowsUnsupportedFeature(() => Parse.ParseEncryptedBlob(blob), "KWC5");
         }
 
         [Fact]
