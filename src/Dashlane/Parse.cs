@@ -235,7 +235,6 @@ namespace PasswordManagerAccess.Dashlane
                         byte[] iv,
                         byte[] hash,
                         bool compressed,
-                        bool useDerivedKey,
                         int iterations,
                         CryptoConfig cryptoConfig)
             {
@@ -244,8 +243,6 @@ namespace PasswordManagerAccess.Dashlane
                 Iv = iv;
                 Hash = hash;
                 Compressed = compressed;
-                // TODO: Should be replaced with CryptoConfig
-                UseDerivedKey = useDerivedKey;
                 // TODO: Should be replaced with CryptoConfig
                 Iterations = iterations;
                 CryptoConfig = cryptoConfig;
@@ -258,7 +255,6 @@ namespace PasswordManagerAccess.Dashlane
             public readonly CryptoConfig CryptoConfig;
 
             public readonly bool Compressed;
-            public readonly bool UseDerivedKey;
             public readonly int Iterations;
         }
 
@@ -279,7 +275,6 @@ namespace PasswordManagerAccess.Dashlane
                                 iv: NoBytes,
                                 hash: NoBytes,
                                 compressed: true,
-                                useDerivedKey: false,
                                 iterations: 1,
                                 cryptoConfig: Kwc3Config);
 
@@ -293,7 +288,6 @@ namespace PasswordManagerAccess.Dashlane
             //                 iv: blob.Sub(0, 16),
             //                 hash: blob.Sub(36, 32),
             //                 compressed: false,
-            //                 useDerivedKey: true,
             //                 iterations: 5,
             //                 cryptoConfig: Kwc5Config);
 
@@ -431,7 +425,6 @@ namespace PasswordManagerAccess.Dashlane
                             iv: iv,
                             hash: hash,
                             compressed: true,
-                            useDerivedKey: false,
                             iterations: 0,
                             cryptoConfig: cryptoConfig);
         }

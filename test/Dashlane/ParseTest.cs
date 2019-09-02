@@ -100,7 +100,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Empty(parsed.Iv);
             Assert.Empty(parsed.Hash);
             Assert.True(parsed.Compressed);
-            Assert.False(parsed.UseDerivedKey);
             Assert.Equal(1, parsed.Iterations);
 
             var config = parsed.CryptoConfig;
@@ -132,7 +131,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(Iv16, parsed.Iv);
             Assert.Equal(Hash32, parsed.Hash);
             Assert.False(parsed.Compressed);
-            Assert.True(parsed.UseDerivedKey);
             Assert.Equal(5, parsed.Iterations);
 
             var config = parsed.CryptoConfig;
@@ -161,7 +159,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(Iv16, parsed.Iv);
             Assert.Equal(Hash32, parsed.Hash);
             Assert.True(parsed.Compressed);
-            Assert.False(parsed.UseDerivedKey);
             Assert.Equal(0, parsed.Iterations);
 
             var config = parsed.CryptoConfig;
@@ -194,7 +191,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(Iv16, parsed.Iv);
             Assert.Equal(Hash32, parsed.Hash);
             Assert.True(parsed.Compressed);
-            Assert.False(parsed.UseDerivedKey);
             Assert.Equal(0, parsed.Iterations);
 
             var config = parsed.CryptoConfig;
