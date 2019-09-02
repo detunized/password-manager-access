@@ -1,8 +1,8 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Xunit;
 using PasswordManagerAccess.Common;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
 {
@@ -24,6 +24,39 @@ namespace PasswordManagerAccess.Test.Common
         {
             var sha = Crypto.Sha256("message".ToBytes());
             Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), sha);
+        }
+
+        //
+        // SHA-512
+        //
+
+        [Fact]
+        public void Sha512_string_returns_hashed_message()
+        {
+            var sha = Crypto.Sha512("message");
+            Assert.Equal(
+                "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==".Decode64(),
+                sha);
+        }
+
+        [Fact]
+        public void Sha512_bytes_returns_hashed_message()
+        {
+            var sha = Crypto.Sha512("message".ToBytes());
+            Assert.Equal(
+                "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==".Decode64(),
+                sha);
+        }
+
+        //
+        // HMAC-SHA-256
+        //
+
+        [Fact]
+        public void HmacSha256_string_returns_mac()
+        {
+            var mac = Crypto.HmacSha256("message".ToBytes(), "key".ToBytes());
+            Assert.Equal("6e9ef29b75fffc5b7abae527d58fdadb2fe42e7219011976917343065f58ed4a".DecodeHex(), mac);
         }
 
         //

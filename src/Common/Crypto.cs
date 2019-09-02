@@ -23,6 +23,27 @@ namespace PasswordManagerAccess.Common
                 return sha.ComputeHash(message);
         }
 
+        public static byte[] Sha512(string message)
+        {
+            return Sha512(message.ToBytes());
+        }
+
+        public static byte[] Sha512(byte[] message)
+        {
+            using (var sha = SHA512.Create())
+                return sha.ComputeHash(message);
+        }
+
+        //
+        // HMAC
+        //
+
+        public static byte[] HmacSha256(byte[] message, byte[] key)
+        {
+            using (var hmac = new HMACSHA256() { Key = key })
+                return hmac.ComputeHash(message);
+        }
+
         //
         // PBKDF2
         //
