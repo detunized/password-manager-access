@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using System.Xml.XPath;
+using Konscious.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Dashlane
@@ -58,7 +59,16 @@ namespace PasswordManagerAccess.Dashlane
 
             public byte[] Derive(byte[] password, byte[] salt)
             {
-                throw new NotImplementedException("Argon2d is not supported yet");
+                // TODO: Move this to Crypto?
+                var argon2d = new Argon2d(password)
+                {
+                    Salt = salt,
+                    MemorySize = MemoryCost,
+                    Iterations = TimeCost,
+                    DegreeOfParallelism = Parallelism,
+                };
+
+                return argon2d.GetBytes(32);
             }
         }
 
