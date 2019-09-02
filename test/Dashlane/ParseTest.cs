@@ -12,67 +12,6 @@ namespace PasswordManagerAccess.Test.Dashlane
 {
     public class ParseTest
     {
-        public const string Password = "password";
-        public static readonly byte[] Salt16 = "saltsaltsaltsalt".ToBytes();
-        public static readonly byte[] Salt32 = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
-        public static readonly byte[] Iv16 = "iviviviviviviviv".ToBytes();
-        public static readonly byte[] Hash32 = "hashhashhashhashhashhashhashhash".ToBytes();
-        public static readonly byte[] Content = "All your base are belong to us".ToBytes();
-        public static readonly byte[] Blob =
-            ("c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzxDNg8kGh5" +
-            "rSYkNvXzzn+3xsCKXSKgGhb2pGnbuqQo32blVfJpurp7jj8oSnzxa66").Decode64();
-
-        [Fact]
-        public void ComputeEncryptionKey_returns_correct_result()
-        {
-            var key = Parse.ComputeEncryptionKey(
-                Password,
-                Salt32,
-                new Parse.CryptoConfig(
-                    new Parse.Pbkdf2Config(Parse.Pbkdf2Config.HashMethodType.Sha1, 10204, 32),
-                    Parse.CryptoConfig.CipherModeType.Cbc,
-                    Parse.CryptoConfig.IvGenerationModeType.EvpByteToKey,
-                    Parse.CryptoConfig.SignatureModeType.None));
-            Assert.Equal("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(), key);
-        }
-
-        [Fact]
-        public void DeriveEncryptionKeyAndIv_computes_key_and_iv()
-        {
-            var keyIv = Parse.DeriveEncryptionKeyAndIv("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(),
-                                                       Salt32);
-
-            Assert.Equal("6HA2Rq9GTeKzAc1imNjvyaXBGW4zRA5wIr60Vbx/o8w=".Decode64(), keyIv.Key);
-            Assert.Equal("fCk2EkpIYGn05JHcVfR8eQ==".Decode64(), keyIv.Iv);
-        }
-
-        [Fact]
-        public void DecryptAes256_decrypts_ciphertext()
-        {
-            Assert.Equal(Content, Parse.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                                      "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                                      "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
-        }
-
-        [Fact]
-        public void DecryptAes256_throws_on_incorrect_encryption_key()
-        {
-            var e = Assert.Throws<ParseException>(() => Parse.DecryptAes256(
-                "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                "Incorrect key must be 32 bytes!!".ToBytes()));
-
-            Assert.Equal(ParseException.FailureReason.IncorrectPassword, e.Reason);
-            Assert.Equal("Decryption failed due to incorrect password or data corruption", e.Message);
-            Assert.IsType<CryptographicException>(e.InnerException);
-        }
-
-        [Fact]
-        public void Inflate_decompresses_data()
-        {
-            Assert.Equal(Content, Parse.Inflate("c8zJUajMLy1SSEosTlVILEpVSErNyc9LVyjJVygtBgA=".Decode64()));
-        }
-
         [Fact]
         public void ParseEncryptedBlob_parses_kwc3_blob()
         {
@@ -217,6 +156,57 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
+        public void ComputeEncryptionKey_returns_correct_result()
+        {
+            var key = Parse.ComputeEncryptionKey(
+                Password,
+                Salt32,
+                new Parse.CryptoConfig(
+                    new Parse.Pbkdf2Config(Parse.Pbkdf2Config.HashMethodType.Sha1, 10204, 32),
+                    Parse.CryptoConfig.CipherModeType.Cbc,
+                    Parse.CryptoConfig.IvGenerationModeType.EvpByteToKey,
+                    Parse.CryptoConfig.SignatureModeType.None));
+            Assert.Equal("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(), key);
+        }
+
+        [Fact]
+        public void DeriveEncryptionKeyAndIv_computes_key_and_iv()
+        {
+            var keyIv = Parse.DeriveEncryptionKeyAndIv("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(),
+                                                       Salt32);
+
+            Assert.Equal("6HA2Rq9GTeKzAc1imNjvyaXBGW4zRA5wIr60Vbx/o8w=".Decode64(), keyIv.Key);
+            Assert.Equal("fCk2EkpIYGn05JHcVfR8eQ==".Decode64(), keyIv.Iv);
+        }
+
+        [Fact]
+        public void DecryptAes256_decrypts_ciphertext()
+        {
+            Assert.Equal(Content, Parse.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                                      "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                                      "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
+        }
+
+        [Fact]
+        public void DecryptAes256_throws_on_incorrect_encryption_key()
+        {
+            var e = Assert.Throws<ParseException>(() => Parse.DecryptAes256(
+                "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                "Incorrect key must be 32 bytes!!".ToBytes()));
+
+            Assert.Equal(ParseException.FailureReason.IncorrectPassword, e.Reason);
+            Assert.Equal("Decryption failed due to incorrect password or data corruption", e.Message);
+            Assert.IsType<CryptographicException>(e.InnerException);
+        }
+
+        [Fact]
+        public void Inflate_decompresses_data()
+        {
+            Assert.Equal(Content, Parse.Inflate("c8zJUajMLy1SSEosTlVILEpVSErNyc9LVyjJVygtBgA=".Decode64()));
+        }
+
+        [Fact]
         public void ExtractAccountsFromXml_extracts_accounts_at_different_levels()
         {
             var xml = @"
@@ -311,6 +301,16 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
         // Data
         //
+
+        private const string Password = "password";
+        private static readonly byte[] Salt16 = "saltsaltsaltsalt".ToBytes();
+        private static readonly byte[] Salt32 = "saltsaltsaltsaltsaltsaltsaltsalt".ToBytes();
+        private static readonly byte[] Iv16 = "iviviviviviviviv".ToBytes();
+        private static readonly byte[] Hash32 = "hashhashhashhashhashhashhashhash".ToBytes();
+        private static readonly byte[] Content = "All your base are belong to us".ToBytes();
+        private static readonly byte[] Blob =
+            ("c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzxDNg8kGh5" +
+            "rSYkNvXzzn+3xsCKXSKgGhb2pGnbuqQo32blVfJpurp7jj8oSnzxa66").Decode64();
 
         // TODO: Use this!
         private const string FlexibleBlobArgon2 = "JDEkYXJnb24yZCQxNiQzJDMyNzY4JDIkYWVzMjU2J" +

@@ -31,77 +31,6 @@ namespace PasswordManagerAccess.Dashlane
             CryptoConfig.IvGenerationModeType.Data,
             CryptoConfig.SignatureModeType.HmacSha256);
 
-        // TODO: Remove this?
-        public static byte[] ComputeEncryptionKey(string password, byte[] salt, CryptoConfig config)
-        {
-            // TODO: This is slow for some of the algorithms, this needs to be cached or large
-            // vaults would take forever to open.
-            return config.KdfConfig.Derive(password.ToBytes(), salt);
-        }
-
-        public struct KeyIvPair
-        {
-            public KeyIvPair(byte[] key, byte[] iv)
-            {
-                Key = key;
-                Iv = iv;
-            }
-
-            public readonly byte[] Key;
-            public readonly byte[] Iv;
-        }
-
-        public static KeyIvPair DeriveEncryptionKeyAndIv(byte[] key, byte[] salt)
-        {
-            var saltyKey = key.Concat(salt.Take(8)).ToArray();
-            var last = new byte[] {};
-            IEnumerable<byte> joined = new byte[] {};
-
-            for (var i = 0; i < 3; ++i)
-            {
-                last = Crypto.Sha1(last.Concat(saltyKey).ToArray());
-                joined = joined.Concat(last);
-            }
-
-            return new KeyIvPair(
-                key: joined.Take(32).ToArray(),
-                iv: joined.Skip(32).Take(16).ToArray());
-        }
-
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
-        {
-            try
-            {
-                using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.CBC, IV = iv })
-                using (var decryptor = aes.CreateDecryptor())
-                using (var inputStream = new MemoryStream(ciphertext, false))
-                using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
-                using (var outputStream = new MemoryStream())
-                {
-                    cryptoStream.CopyTo(outputStream);
-                    return outputStream.ToArray();
-                }
-            }
-            catch (CryptographicException e)
-            {
-                throw new ParseException(
-                    ParseException.FailureReason.IncorrectPassword,
-                    "Decryption failed due to incorrect password or data corruption",
-                    e);
-            }
-        }
-
-        public static byte[] Inflate(byte[] compressed)
-        {
-            using (var inputStream = new MemoryStream(compressed, false))
-            using (var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress))
-            using (var outputStream = new MemoryStream())
-            {
-                deflateStream.CopyTo(outputStream);
-                return outputStream.ToArray();
-            }
-        }
-
         public interface IKdfConfig
         {
             string Name { get; }
@@ -219,6 +148,15 @@ namespace PasswordManagerAccess.Dashlane
 
         public class Blob
         {
+            public readonly byte[] Ciphertext;
+            public readonly byte[] Salt;
+            public readonly byte[] Iv;
+            public readonly byte[] Hash;
+            public readonly CryptoConfig CryptoConfig;
+
+            // TODO: Remove?
+            public readonly bool Compressed;
+
             public Blob(byte[] ciphertext,
                         byte[] salt,
                         byte[] iv,
@@ -233,14 +171,6 @@ namespace PasswordManagerAccess.Dashlane
                 Compressed = compressed;
                 CryptoConfig = cryptoConfig;
             }
-
-            public readonly byte[] Ciphertext;
-            public readonly byte[] Salt;
-            public readonly byte[] Iv;
-            public readonly byte[] Hash;
-            public readonly CryptoConfig CryptoConfig;
-
-            public readonly bool Compressed;
         }
 
         public static Blob ParseEncryptedBlob(byte[] blob)
@@ -456,6 +386,14 @@ namespace PasswordManagerAccess.Dashlane
             return parsed.Compressed ? Inflate(plaintext.Sub(6, int.MaxValue)) : plaintext;
         }
 
+        // TODO: Remove this?
+        public static byte[] ComputeEncryptionKey(string password, byte[] salt, CryptoConfig config)
+        {
+            // TODO: This is slow for some of the algorithms, this needs to be cached or large
+            // vaults would take forever to open.
+            return config.KdfConfig.Derive(password.ToBytes(), salt);
+        }
+
         public static byte[] DeriveIv(byte[] key, Blob blob)
         {
             switch (blob.CryptoConfig.IvGenerationMode)
@@ -468,6 +406,35 @@ namespace PasswordManagerAccess.Dashlane
             }
 
             throw new InternalErrorException($"Unexpected IV generation mode {blob.CryptoConfig.IvGenerationMode}");
+        }
+
+        public struct KeyIvPair
+        {
+            public KeyIvPair(byte[] key, byte[] iv)
+            {
+                Key = key;
+                Iv = iv;
+            }
+
+            public readonly byte[] Key;
+            public readonly byte[] Iv;
+        }
+
+        public static KeyIvPair DeriveEncryptionKeyAndIv(byte[] key, byte[] salt)
+        {
+            var saltyKey = key.Concat(salt.Take(8)).ToArray();
+            var last = new byte[] { };
+            IEnumerable<byte> joined = new byte[] { };
+
+            for (var i = 0; i < 3; ++i)
+            {
+                last = Crypto.Sha1(last.Concat(saltyKey).ToArray());
+                joined = joined.Concat(last);
+            }
+
+            return new KeyIvPair(
+                key: joined.Take(32).ToArray(),
+                iv: joined.Skip(32).Take(16).ToArray());
         }
 
         public static Tuple<byte[], byte[]> DeriveKeyAndHmacKey(byte[] key, CryptoConfig config)
@@ -496,6 +463,40 @@ namespace PasswordManagerAccess.Dashlane
             }
 
             throw new InternalErrorException($"Unexpected signature mode {blob.CryptoConfig.SignatureMode}");
+        }
+
+        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
+        {
+            try
+            {
+                using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.CBC, IV = iv })
+                using (var decryptor = aes.CreateDecryptor())
+                using (var inputStream = new MemoryStream(ciphertext, false))
+                using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
+                using (var outputStream = new MemoryStream())
+                {
+                    cryptoStream.CopyTo(outputStream);
+                    return outputStream.ToArray();
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new ParseException(
+                    ParseException.FailureReason.IncorrectPassword,
+                    "Decryption failed due to incorrect password or data corruption",
+                    e);
+            }
+        }
+
+        public static byte[] Inflate(byte[] compressed)
+        {
+            using (var inputStream = new MemoryStream(compressed, false))
+            using (var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress))
+            using (var outputStream = new MemoryStream())
+            {
+                deflateStream.CopyTo(outputStream);
+                return outputStream.ToArray();
+            }
         }
 
         public static Account[] ExtractAccountsFromXml(string xml)
