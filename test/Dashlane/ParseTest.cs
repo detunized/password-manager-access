@@ -37,29 +37,13 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void Sha1_computes_sha1_given_times()
+        public void DeriveEncryptionKeyAndIv_computes_key_and_iv()
         {
-            var check = new Action<int, string>((iterations, expected) =>
-                Assert.Equal(expected.Decode64(), Parse.Sha1(Content, iterations)));
+            var keyIv = Parse.DeriveEncryptionKeyAndIv("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(),
+                                                       Salt32);
 
-            check(0, Convert.ToBase64String(Content));
-            check(1, "xgmXgTCENlJpbnSLucn3NwPXkIk=");
-            check(5, "RqcjtwJ5KY1MON7n3WwvqGhrrpg=");
-        }
-
-        [Fact]
-        public void DeriveEncryptionKeyAndIv_computes_key_and_iv_for_given_number_of_iterations()
-        {
-            var key = "OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64();
-            var check = new Action<int, string, string>((iterations, expectedKey, expectedIv) =>
-            {
-                var keyIv = Parse.DeriveEncryptionKeyAndIv(key, Salt32, iterations);
-                Assert.Equal(expectedKey.Decode64(), keyIv.Key);
-                Assert.Equal(expectedIv.Decode64(), keyIv.Iv);
-            });
-
-            check(1, "6HA2Rq9GTeKzAc1imNjvyaXBGW4zRA5wIr60Vbx/o8w=", "fCk2EkpIYGn05JHcVfR8eQ==");
-            check(5, "fsuGfEOoYL4uOmp24ZuAExIuVePh6YIu7t0rfCDogpM=", "/vsHfrsRzyGCQOBP4UEQuw==");
+            Assert.Equal("6HA2Rq9GTeKzAc1imNjvyaXBGW4zRA5wIr60Vbx/o8w=".Decode64(), keyIv.Key);
+            Assert.Equal("fCk2EkpIYGn05JHcVfR8eQ==".Decode64(), keyIv.Iv);
         }
 
         [Fact]

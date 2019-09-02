@@ -39,17 +39,6 @@ namespace PasswordManagerAccess.Dashlane
             return config.KdfConfig.Derive(password.ToBytes(), salt);
         }
 
-        // TODO: Remove this?
-        public static byte[] Sha1(byte[] bytes, int times)
-        {
-            var result = bytes;
-            using (var sha = new SHA1Managed())
-                for (var i = 0; i < times; ++i)
-                    result = sha.ComputeHash(result);
-
-            return result;
-        }
-
         public struct KeyIvPair
         {
             public KeyIvPair(byte[] key, byte[] iv)
@@ -62,7 +51,7 @@ namespace PasswordManagerAccess.Dashlane
             public readonly byte[] Iv;
         }
 
-        public static KeyIvPair DeriveEncryptionKeyAndIv(byte[] key, byte[] salt, int iterations = 1)
+        public static KeyIvPair DeriveEncryptionKeyAndIv(byte[] key, byte[] salt)
         {
             var saltyKey = key.Concat(salt.Take(8)).ToArray();
             var last = new byte[] {};
@@ -70,7 +59,7 @@ namespace PasswordManagerAccess.Dashlane
 
             for (var i = 0; i < 3; ++i)
             {
-                last = Sha1(last.Concat(saltyKey).ToArray(), iterations);
+                last = Crypto.Sha1(last.Concat(saltyKey).ToArray());
                 joined = joined.Concat(last);
             }
 
