@@ -62,7 +62,7 @@ namespace PasswordManagerAccess.Dashlane
             public readonly byte[] Iv;
         }
 
-        public static KeyIvPair DeriveEncryptionKeyAndIv(byte[] key, byte[] salt, int iterations)
+        public static KeyIvPair DeriveEncryptionKeyAndIv(byte[] key, byte[] salt, int iterations = 1)
         {
             var saltyKey = key.Concat(salt.Take(8)).ToArray();
             var last = new byte[] {};
@@ -235,7 +235,6 @@ namespace PasswordManagerAccess.Dashlane
                         byte[] iv,
                         byte[] hash,
                         bool compressed,
-                        int iterations,
                         CryptoConfig cryptoConfig)
             {
                 Ciphertext = ciphertext;
@@ -243,8 +242,6 @@ namespace PasswordManagerAccess.Dashlane
                 Iv = iv;
                 Hash = hash;
                 Compressed = compressed;
-                // TODO: Should be replaced with CryptoConfig
-                Iterations = iterations;
                 CryptoConfig = cryptoConfig;
             }
 
@@ -255,7 +252,6 @@ namespace PasswordManagerAccess.Dashlane
             public readonly CryptoConfig CryptoConfig;
 
             public readonly bool Compressed;
-            public readonly int Iterations;
         }
 
         public static Blob ParseEncryptedBlob(byte[] blob)
@@ -275,7 +271,6 @@ namespace PasswordManagerAccess.Dashlane
                                 iv: NoBytes,
                                 hash: NoBytes,
                                 compressed: true,
-                                iterations: 1,
                                 cryptoConfig: Kwc3Config);
 
             if (version.SequenceEqual(Kwc5))
@@ -288,7 +283,6 @@ namespace PasswordManagerAccess.Dashlane
             //                 iv: blob.Sub(0, 16),
             //                 hash: blob.Sub(36, 32),
             //                 compressed: false,
-            //                 iterations: 5,
             //                 cryptoConfig: Kwc5Config);
 
             // New flexible format
@@ -425,7 +419,6 @@ namespace PasswordManagerAccess.Dashlane
                             iv: iv,
                             hash: hash,
                             compressed: true,
-                            iterations: 0,
                             cryptoConfig: cryptoConfig);
         }
 
@@ -482,7 +475,7 @@ namespace PasswordManagerAccess.Dashlane
                 return blob.Iv;
             case CryptoConfig.IvGenerationModeType.EvpByteToKey:
                 // The key part of this is only used in KWC5 which is not support ATM
-                return DeriveEncryptionKeyAndIv(key, blob.Salt, blob.Iterations).Iv;
+                return DeriveEncryptionKeyAndIv(key, blob.Salt).Iv;
             }
 
             throw new InternalErrorException($"Unexpected IV generation mode {blob.CryptoConfig.IvGenerationMode}");
