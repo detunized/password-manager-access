@@ -9,6 +9,24 @@ namespace PasswordManagerAccess.Test.Common
     public class CryptoTest
     {
         //
+        // SHA-1
+        //
+
+        [Fact]
+        public void Sha1_string_returns_hashed_message()
+        {
+            var sha = Crypto.Sha1("message");
+            Assert.Equal("b5ua881ui4pzws3O03/p9ZIm4n0=".Decode64(), sha);
+        }
+
+        [Fact]
+        public void Sha1_bytes_returns_hashed_message()
+        {
+            var sha = Crypto.Sha1("message".ToBytes());
+            Assert.Equal("b5ua881ui4pzws3O03/p9ZIm4n0=".Decode64(), sha);
+        }
+
+        //
         // SHA-256
         //
 

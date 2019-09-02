@@ -12,6 +12,17 @@ namespace PasswordManagerAccess.Common
         // SHA
         //
 
+        public static byte[] Sha1(string message)
+        {
+            return Sha1(message.ToBytes());
+        }
+
+        public static byte[] Sha1(byte[] message)
+        {
+            using (var sha = SHA1.Create())
+                return sha.ComputeHash(message);
+        }
+
         public static byte[] Sha256(string message)
         {
             return Sha256(message.ToBytes());
