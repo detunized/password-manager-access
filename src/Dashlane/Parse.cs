@@ -154,21 +154,12 @@ namespace PasswordManagerAccess.Dashlane
             public readonly byte[] Hash;
             public readonly CryptoConfig CryptoConfig;
 
-            // TODO: Remove?
-            public readonly bool Compressed;
-
-            public Blob(byte[] ciphertext,
-                        byte[] salt,
-                        byte[] iv,
-                        byte[] hash,
-                        bool compressed,
-                        CryptoConfig cryptoConfig)
+            public Blob(byte[] ciphertext, byte[] salt, byte[] iv, byte[] hash, CryptoConfig cryptoConfig)
             {
                 Ciphertext = ciphertext;
                 Salt = salt;
                 Iv = iv;
                 Hash = hash;
-                Compressed = compressed;
                 CryptoConfig = cryptoConfig;
             }
         }
@@ -189,7 +180,6 @@ namespace PasswordManagerAccess.Dashlane
                                 salt: salt,
                                 iv: NoBytes,
                                 hash: NoBytes,
-                                compressed: true,
                                 cryptoConfig: Kwc3Config);
 
             if (version.SequenceEqual(Kwc5))
@@ -201,7 +191,6 @@ namespace PasswordManagerAccess.Dashlane
             //                 salt: NoBytes,
             //                 iv: blob.Sub(0, 16),
             //                 hash: blob.Sub(36, 32),
-            //                 compressed: false,
             //                 cryptoConfig: Kwc5Config);
 
             // New flexible format
@@ -333,12 +322,7 @@ namespace PasswordManagerAccess.Dashlane
 
             var ciphertext = blob.Sub(offset, int.MaxValue);
 
-            return new Blob(ciphertext: ciphertext,
-                            salt: salt,
-                            iv: iv,
-                            hash: hash,
-                            compressed: true,
-                            cryptoConfig: cryptoConfig);
+            return new Blob(ciphertext: ciphertext, salt: salt, iv: iv, hash: hash, cryptoConfig: cryptoConfig);
         }
 
         public static string GetNextComponent(byte[] blob, ref int offset)
@@ -383,7 +367,7 @@ namespace PasswordManagerAccess.Dashlane
             var plaintext = DecryptAes256(parsed.Ciphertext, iv, encryptionKey);
 
             // 6. Inflate
-            return parsed.Compressed ? Inflate(plaintext.Sub(6, int.MaxValue)) : plaintext;
+            return Inflate(plaintext.Sub(6, int.MaxValue));
         }
 
         // TODO: Remove this?

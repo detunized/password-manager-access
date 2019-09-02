@@ -22,7 +22,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(Salt32, parsed.Salt);
             Assert.Empty(parsed.Iv);
             Assert.Empty(parsed.Hash);
-            Assert.True(parsed.Compressed);
 
             var config = parsed.CryptoConfig;
             Assert.IsType<Parse.Pbkdf2Config>(config.KdfConfig);
@@ -52,7 +51,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Empty(parsed.Salt);
             Assert.Equal(Iv16, parsed.Iv);
             Assert.Equal(Hash32, parsed.Hash);
-            Assert.False(parsed.Compressed);
 
             var config = parsed.CryptoConfig;
             Assert.IsType<Parse.NoKdfConfig>(config.KdfConfig);
@@ -79,7 +77,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(Salt16, parsed.Salt);
             Assert.Equal(Iv16, parsed.Iv);
             Assert.Equal(Hash32, parsed.Hash);
-            Assert.True(parsed.Compressed);
 
             var config = parsed.CryptoConfig;
             Assert.IsType<Parse.Argon2dConfig>(config.KdfConfig);
@@ -110,7 +107,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(Salt16, parsed.Salt);
             Assert.Equal(Iv16, parsed.Iv);
             Assert.Equal(Hash32, parsed.Hash);
-            Assert.True(parsed.Compressed);
 
             var config = parsed.CryptoConfig;
             Assert.IsType<Parse.Pbkdf2Config>(config.KdfConfig);
