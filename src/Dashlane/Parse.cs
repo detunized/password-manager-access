@@ -31,11 +31,15 @@ namespace PasswordManagerAccess.Dashlane
             CryptoConfig.IvGenerationModeType.Data,
             CryptoConfig.SignatureModeType.HmacSha256);
 
-        public static byte[] ComputeEncryptionKey(string password, byte[] salt)
+        // TODO: Remove this?
+        public static byte[] ComputeEncryptionKey(string password, byte[] salt, CryptoConfig config)
         {
-            return new Rfc2898DeriveBytes(password, salt, 10204).GetBytes(32);
+            // TODO: This is slow for some of the algorithms, this needs to be cached or large
+            // vaults would take forever to open.
+            return config.KdfConfig.Derive(password.ToBytes(), salt);
         }
 
+        // TODO: Remove this?
         public static byte[] Sha1(byte[] bytes, int times)
         {
             var result = bytes;
@@ -113,6 +117,8 @@ namespace PasswordManagerAccess.Dashlane
         {
             string Name { get; }
             int SaltLength { get; }
+
+            byte[] Derive(byte[] password, byte[] salt);
         }
 
         public class Argon2dConfig: IKdfConfig
@@ -130,6 +136,11 @@ namespace PasswordManagerAccess.Dashlane
                 TimeCost = timeCost;
                 Parallelism = parallelism;
                 SaltLength = saltLength;
+            }
+
+            public byte[] Derive(byte[] password, byte[] salt)
+            {
+                throw new NotImplementedException("Argon2d is not supported yet");
             }
         }
 
@@ -153,12 +164,30 @@ namespace PasswordManagerAccess.Dashlane
                 Iterations = iterations;
                 SaltLength = saltLength;
             }
+
+            public byte[] Derive(byte[] password, byte[] salt)
+            {
+                switch (HashMethod)
+                {
+                case HashMethodType.Sha1:
+                    return Pbkdf2.GenerateSha1(password, salt, Iterations, 32);
+                case HashMethodType.Sha256:
+                    return Pbkdf2.GenerateSha256(password, salt, Iterations, 32);
+                }
+
+                throw new InternalErrorException($"Unknown hash method {HashMethod}");
+            }
         }
 
         public class NoKdfConfig: IKdfConfig
         {
             public string Name => "none";
             public int SaltLength => 0;
+
+            public byte[] Derive(byte[] password, byte[] salt)
+            {
+                return NoBytes;
+            }
         }
 
         public class CryptoConfig
@@ -401,7 +430,7 @@ namespace PasswordManagerAccess.Dashlane
                             salt: salt,
                             iv: iv,
                             hash: hash,
-                            compressed: false,
+                            compressed: true,
                             useDerivedKey: false,
                             iterations: 0,
                             cryptoConfig: cryptoConfig);
@@ -426,15 +455,72 @@ namespace PasswordManagerAccess.Dashlane
 
         public static byte[] DecryptBlob(byte[] blob, string password)
         {
+            // 1. Parse
             var parsed = ParseEncryptedBlob(blob);
-            var key = ComputeEncryptionKey(password, parsed.Salt);
-            var derivedKeyIv = DeriveEncryptionKeyAndIv(key, parsed.Salt, parsed.Iterations);
-            var plaintext = DecryptAes256(
-                parsed.Ciphertext,
-                derivedKeyIv.Iv,
-                parsed.UseDerivedKey ? derivedKeyIv.Key : key);
 
+            // 2. Derive the key and IV
+            //
+            // Depending on the mode, the key is either the actual encryption key or an interim key
+            // that is used to derive the iv, HMAC and the encryption keys.
+            var key = ComputeEncryptionKey(password, parsed.Salt, parsed.CryptoConfig);
+            var iv = DeriveIv(key, parsed);
+
+            // 3. Derive the encryption key and the HMAC key
+            var keyHmacKey = DeriveKeyAndHmacKey(key, parsed.CryptoConfig);
+            var encryptionKey = keyHmacKey.Item1;
+            var hmacKey = keyHmacKey.Item2;
+
+            // 4. Check the MAC
+            if (!DoesHashMatch(parsed, iv, hmacKey))
+                throw new CryptoException("The data in the vault is corrupted (MAC doesn't match)");
+
+            // 5. Decrypt
+            var plaintext = DecryptAes256(parsed.Ciphertext, iv, encryptionKey);
+
+            // 6. Inflate
             return parsed.Compressed ? Inflate(plaintext.Sub(6, int.MaxValue)) : plaintext;
+        }
+
+        public static byte[] DeriveIv(byte[] key, Blob blob)
+        {
+            switch (blob.CryptoConfig.IvGenerationMode)
+            {
+            case CryptoConfig.IvGenerationModeType.Data:
+                return blob.Iv;
+            case CryptoConfig.IvGenerationModeType.EvpByteToKey:
+                // The key part of this is only used in KWC5 which is not support ATM
+                return DeriveEncryptionKeyAndIv(key, blob.Salt, blob.Iterations).Iv;
+            }
+
+            throw new InternalErrorException($"Unexpected IV generation mode {blob.CryptoConfig.IvGenerationMode}");
+        }
+
+        public static Tuple<byte[], byte[]> DeriveKeyAndHmacKey(byte[] key, CryptoConfig config)
+        {
+            switch (config.SignatureMode)
+            {
+            case CryptoConfig.SignatureModeType.None:
+                return new Tuple<byte[], byte[]>(key, NoBytes);
+            case CryptoConfig.SignatureModeType.HmacSha256:
+                var keys = Crypto.Sha512(key);
+                return new Tuple<byte[], byte[]>(keys.Sub(0, 32), keys.Sub(32, 32));
+            }
+
+            throw new InternalErrorException($"Unexpected signature mode {config.SignatureMode}");
+        }
+
+        public static bool DoesHashMatch(Blob blob, byte[] iv, byte[] hmacKey)
+        {
+            switch (blob.CryptoConfig.SignatureMode)
+            {
+            case CryptoConfig.SignatureModeType.None:
+                return true;
+            case CryptoConfig.SignatureModeType.HmacSha256:
+                var hash = Crypto.HmacSha256(iv.Concat(blob.Ciphertext).ToArray(), hmacKey);
+                return hash.SequenceEqual(blob.Hash);
+            }
+
+            throw new InternalErrorException($"Unexpected signature mode {blob.CryptoConfig.SignatureMode}");
         }
 
         public static Account[] ExtractAccountsFromXml(string xml)

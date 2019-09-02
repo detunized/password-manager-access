@@ -25,7 +25,14 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void ComputeEncryptionKey_returns_correct_result()
         {
-            var key = Parse.ComputeEncryptionKey(Password, Salt32);
+            var key = Parse.ComputeEncryptionKey(
+                Password,
+                Salt32,
+                new Parse.CryptoConfig(
+                    new Parse.Pbkdf2Config(Parse.Pbkdf2Config.HashMethodType.Sha1, 10204, 32),
+                    Parse.CryptoConfig.CipherModeType.Cbc,
+                    Parse.CryptoConfig.IvGenerationModeType.EvpByteToKey,
+                    Parse.CryptoConfig.SignatureModeType.None));
             Assert.Equal("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(), key);
         }
 
@@ -138,7 +145,6 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal("none", noKdf.Name);
         }
 
-        // TODO: Test PBKDF2 as well
         [Fact]
         public void ParseEncryptedBlob_parses_flexible_blob_with_argon2d()
         {
@@ -154,7 +160,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(Salt16, parsed.Salt);
             Assert.Equal(Iv16, parsed.Iv);
             Assert.Equal(Hash32, parsed.Hash);
-            Assert.False(parsed.Compressed);
+            Assert.True(parsed.Compressed);
             Assert.False(parsed.UseDerivedKey);
             Assert.Equal(0, parsed.Iterations);
 
@@ -170,6 +176,38 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(2, argon2d.Parallelism);
             Assert.Equal(16, argon2d.SaltLength);
             Assert.Equal("argon2d", argon2d.Name);
+        }
+
+        [Fact]
+        public void ParseEncryptedBlob_parses_flexible_blob_with_pbkdf2()
+        {
+            var blob = "$1$pbkdf2$16$200000$sha256$aes256$cbchmac$16$".ToBytes()
+                .Concat(Salt16)
+                .Concat(Iv16)
+                .Concat(Hash32)
+                .Concat(Content)
+                .ToArray();
+            var parsed = Parse.ParseEncryptedBlob(blob);
+
+            Assert.Equal(Content, parsed.Ciphertext);
+            Assert.Equal(Salt16, parsed.Salt);
+            Assert.Equal(Iv16, parsed.Iv);
+            Assert.Equal(Hash32, parsed.Hash);
+            Assert.True(parsed.Compressed);
+            Assert.False(parsed.UseDerivedKey);
+            Assert.Equal(0, parsed.Iterations);
+
+            var config = parsed.CryptoConfig;
+            Assert.IsType<Parse.Pbkdf2Config>(config.KdfConfig);
+            Assert.Equal(Parse.CryptoConfig.CipherModeType.CbcHmac, config.CipherMode);
+            Assert.Equal(Parse.CryptoConfig.IvGenerationModeType.Data, config.IvGenerationMode);
+            Assert.Equal(Parse.CryptoConfig.SignatureModeType.HmacSha256, config.SignatureMode);
+
+            var pbkdf2 = (Parse.Pbkdf2Config)config.KdfConfig;
+            Assert.Equal(Parse.Pbkdf2Config.HashMethodType.Sha256, pbkdf2.HashMethod);
+            Assert.Equal(200000, pbkdf2.Iterations);
+            Assert.Equal(16, pbkdf2.SaltLength);
+            Assert.Equal("pbkdf2", pbkdf2.Name);
         }
 
         [Fact]
