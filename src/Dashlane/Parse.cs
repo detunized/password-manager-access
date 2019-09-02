@@ -373,6 +373,11 @@ namespace PasswordManagerAccess.Dashlane
         // TODO: Remove this?
         public static byte[] ComputeEncryptionKey(string password, byte[] salt, CryptoConfig config)
         {
+            // TODO: Dashlane does some sort of tricky conversion of non ASCII passwords. Figure this out!
+            //       For now we just throw as non supported.
+            if (password.Any(x => x > 127))
+                throw new UnsupportedFeatureException("Non ASCII passwords are not supported");
+
             // TODO: This is slow for some of the algorithms, this needs to be cached or large
             // vaults would take forever to open.
             return config.KdfConfig.Derive(password.ToBytes(), salt);

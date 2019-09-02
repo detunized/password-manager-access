@@ -153,6 +153,13 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
+        public void ComputeEncryptionKey_throws_on_non_ascii_password()
+        {
+            Exceptions.AssertThrowsUnsupportedFeature(() => Parse.ComputeEncryptionKey("\x80\x90\xA0", Salt32, null),
+                                                      "Non ASCII passwords");
+        }
+
+        [Fact]
         public void DeriveEncryptionKeyAndIv_computes_key_and_iv()
         {
             var keyIv = Parse.DeriveEncryptionKeyAndIv("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(),
