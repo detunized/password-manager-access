@@ -4,6 +4,7 @@
 using System.Collections.Specialized;
 using System.Linq;
 using Moq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using Xunit;
 

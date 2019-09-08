@@ -3,6 +3,7 @@
 
 using System.Xml;
 using System.Xml.Linq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using Xunit;
 

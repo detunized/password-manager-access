@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Dashlane
 {

@@ -7,6 +7,7 @@ using System.Net;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using Xunit;
 

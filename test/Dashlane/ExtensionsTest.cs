@@ -5,6 +5,7 @@ using System;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using PasswordManagerAccess.Dashlane;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Test.Dashlane
 {
