@@ -354,6 +354,11 @@ namespace PasswordManagerAccess.Dashlane
 
         public static byte[] DecryptBlob(byte[] blob, string password)
         {
+            return DecryptBlob(blob, PasswordToBytes(password));
+        }
+
+        public static byte[] DecryptBlob(byte[] blob, byte[] password)
+        {
             // 1. Parse
             var parsed = ParseEncryptedBlob(blob);
 
@@ -381,7 +386,14 @@ namespace PasswordManagerAccess.Dashlane
         }
 
         // TODO: Remove this?
-        public static byte[] ComputeEncryptionKey(string password, byte[] salt, CryptoConfig config)
+        public static byte[] ComputeEncryptionKey(byte[] password, byte[] salt, CryptoConfig config)
+        {
+            // TODO: This is slow for some of the algorithms, this needs to be cached or large
+            // vaults would take forever to open.
+            return config.KdfConfig.Derive(password, salt);
+        }
+
+        public static byte[] PasswordToBytes(string password)
         {
             // TODO: Dashlane does some sort of tricky conversion of non ASCII passwords. Figure this out!
             //       For now we just throw as non supported.
@@ -390,7 +402,7 @@ namespace PasswordManagerAccess.Dashlane
 
             // TODO: This is slow for some of the algorithms, this needs to be cached or large
             // vaults would take forever to open.
-            return config.KdfConfig.Derive(password.ToBytes(), salt);
+            return password.ToBytes();
         }
 
         public static byte[] DeriveIv(byte[] key, Blob blob)

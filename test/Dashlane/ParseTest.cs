@@ -139,10 +139,17 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
+        public void DecryptBlob_throws_on_non_ascii_password()
+        {
+            Exceptions.AssertThrowsUnsupportedFeature(() => Parse.DecryptBlob(Blob, "\x80\x90\xA0"),
+                                                      "Non ASCII passwords");
+        }
+
+        [Fact]
         public void ComputeEncryptionKey_returns_correct_result()
         {
             var key = Parse.ComputeEncryptionKey(
-                Password,
+                Password.ToBytes(),
                 Salt32,
                 new Parse.CryptoConfig(
                     new Parse.Pbkdf2Config(Parse.Pbkdf2Config.HashMethodType.Sha1, 10204, 32),
@@ -153,9 +160,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void ComputeEncryptionKey_throws_on_non_ascii_password()
+        public void PasswordToBytes_throws_on_non_ascii_password()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(() => Parse.ComputeEncryptionKey("\x80\x90\xA0", Salt32, null),
+            Exceptions.AssertThrowsUnsupportedFeature(() => Parse.PasswordToBytes("\x80\x90\xA0"),
                                                       "Non ASCII passwords");
         }
 
