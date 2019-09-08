@@ -48,12 +48,12 @@ namespace PasswordManagerAccess.Dashlane
             return ImportUkiFromSettingsFile(FindSettingsFile(username), password);
         }
 
-        public static string ImportUkiFromSettingsFile(string filename, string password)
+        internal static string ImportUkiFromSettingsFile(string filename, string password)
         {
             return ImportUkiFromSettings(LoadSettingsFile(filename, password));
         }
 
-        public static string ImportUkiFromSettings(string settingsXml)
+        internal static string ImportUkiFromSettings(string settingsXml)
         {
             try
             {
@@ -68,7 +68,7 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        public static string ImportUkiFromSettings(XDocument settings)
+        internal static string ImportUkiFromSettings(XDocument settings)
         {
             var uki = settings.XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']");
             if (uki == null)
@@ -79,7 +79,7 @@ namespace PasswordManagerAccess.Dashlane
             return uki.Value;
         }
 
-        public static string LoadSettingsFile(string filename, string password)
+        internal static string LoadSettingsFile(string filename, string password)
         {
             var blob = File.ReadAllBytes(filename);
             try
@@ -96,7 +96,7 @@ namespace PasswordManagerAccess.Dashlane
         }
 
         // TODO: Not sure how to test this!
-        public static string FindSettingsFile(string username)
+        internal static string FindSettingsFile(string username)
         {
             // TODO: Are there other platforms besides Windows desktop we need to check on?
 
