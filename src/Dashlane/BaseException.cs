@@ -5,6 +5,7 @@ using System;
 
 namespace PasswordManagerAccess.Dashlane
 {
+    // TODO: Remove this and all subclasses
     public class BaseException: Exception
     {
         public BaseException(string message): base(message)
