@@ -6,37 +6,7 @@ using System.IO;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
-
-// TODO: Add this!!!
-// This actually works, it's how to import the new settings!
-//
-// var localKeyFilename = @"C:\Users\${username}\AppData\Roaming\Dashlane\profiles\lastpass.ruby+01-september-2019@gmail.com\Keys\localKey.aes";
-// var localKeyBlob = File.ReadAllText(localKeyFilename).Decode64();
-//
-// var localSettingsFilename = @"C:\Users\${username}\AppData\Roaming\Dashlane\profiles\lastpass.ruby+01-september-2019@gmail.com\Settings\localSettings.aes";
-// var localSettingsBlob = File.ReadAllBytes(localSettingsFilename);
-//
-// try
-// {
-//     var localKey = Parse.DecryptBlob(localKeyBlob, password);
-//
-//     var parsedSettingsBlob = Parse.ParseEncryptedBlob(localSettingsBlob);
-//     var settingsKey = new Rfc2898DeriveBytes(localKey, parsedSettingsBlob.Salt, 10204).GetBytes(32);
-//     var derivedSettingsKeyIv = Parse.DeriveEncryptionKeyAndIv(localKey, parsedSettingsBlob.Salt, parsedSettingsBlob.Iterations);
-//     var compressedPlaintextSettings = Parse.DecryptAes256(parsedSettingsBlob.Ciphertext,
-//                                                             derivedSettingsKeyIv.Iv,
-//                                                             parsedSettingsBlob.UseDerivedKey ? derivedSettingsKeyIv.Key : localKey);
-//     var plaintextSettings = parsedSettingsBlob.Compressed
-//         ? Parse.Inflate(compressedPlaintextSettings.Sub(6, int.MaxValue))
-//         : compressedPlaintextSettings;
-// }
-// catch (ParseException e)
-// {
-//     throw new ImportException(
-//         ImportException.FailureReason.IncorrectPassword,
-//         "The settings file is corrupted or the password is incorrect",
-//         e);
-// }
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Dashlane
 {
@@ -45,12 +15,23 @@ namespace PasswordManagerAccess.Dashlane
         // TODO: Not sure how to test this!
         public static string ImportUki(string username, string password)
         {
-            return ImportUkiFromSettingsFile(FindSettingsFile(username), password);
+            return ImportUkiFromSettingsFile(FindSettingsFile(username),
+                                             GetSettingsKey(username, password));
         }
 
-        internal static string ImportUkiFromSettingsFile(string filename, string password)
+        // Returns either the master password or the local key
+        internal static byte[] GetSettingsKey(string username, string password)
         {
-            return ImportUkiFromSettings(LoadSettingsFile(filename, password));
+            var localKeyFilename = FindLocalKeyFile(username);
+            if (localKeyFilename == null)
+                return Parse.PasswordToBytes(password);
+
+            return ImportLocalKey(localKeyFilename, password);
+        }
+
+        internal static string ImportUkiFromSettingsFile(string filename, byte[] key)
+        {
+            return ImportUkiFromSettings(LoadSettingsFile(filename, key));
         }
 
         internal static string ImportUkiFromSettings(string settingsXml)
@@ -79,12 +60,28 @@ namespace PasswordManagerAccess.Dashlane
             return uki.Value;
         }
 
-        internal static string LoadSettingsFile(string filename, string password)
+        public static byte[] ImportLocalKey(string filename, string password)
+        {
+            var blob = File.ReadAllText(filename).Decode64();
+            try
+            {
+                return Parse.DecryptBlob(blob, password);
+            }
+            catch (CryptoException e)
+            {
+                throw new ImportException(
+                    ImportException.FailureReason.IncorrectPassword,
+                    "The encryption key file is corrupted or the password is incorrect",
+                    e);
+            }
+        }
+
+        internal static string LoadSettingsFile(string filename, byte[] key)
         {
             var blob = File.ReadAllBytes(filename);
             try
             {
-                return Parse.DecryptBlob(blob, password).ToUtf8();
+                return Parse.DecryptBlob(blob, key).ToUtf8();
             }
             catch (ParseException e)
             {
@@ -95,25 +92,35 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
+        // The local key is optional. It doesn't exist in the older versions. This function returns
+        // null when the local key is not found.
+        internal static string FindLocalKeyFile(string username)
+        {
+            // TODO: Are there other platforms besides Windows desktop we need to check on?
+            var filename = Path.Combine(GetProfilePath(username), "Keys", "localKey.aes");
+            return File.Exists(filename) ? filename : null;
+        }
+
         // TODO: Not sure how to test this!
         internal static string FindSettingsFile(string username)
         {
             // TODO: Are there other platforms besides Windows desktop we need to check on?
-
-            var filename = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Dashlane",
-                "profiles",
-                username,
-                "Settings",
-                "localSettings.aes");
-
+            var filename = Path.Combine(GetProfilePath(username), "Settings", "localSettings.aes");
             if (!File.Exists(filename))
                 throw new ImportException(
                     ImportException.FailureReason.ProfileNotFound,
                     string.Format("Profile '{0}' doesn't exist", username));
 
             return filename;
+        }
+
+        internal static string GetProfilePath(string username)
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Dashlane",
+                "profiles",
+                username);
         }
     }
 }

@@ -10,9 +10,10 @@ namespace PasswordManagerAccess.Test.Dashlane
 {
     public class ImportTest
     {
-        public const string Passowrd = "password";
+        public const string Password = "password";
         public const string Uki = "local-uki";
-        public const string Filename = "Dashlane/Fixtures/localSettings.aes";
+        public const string LocalKeyFilename = "Dashlane/Fixtures/localKey.aes";
+        public const string SettingsFilename = "Dashlane/Fixtures/localSettings.aes";
         public const string Xml =
             "<root>" +
                 "<KWLocalSettingsManager>" +
@@ -23,7 +24,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void ImportUkiFromSettingsFile_returns_uki()
         {
-            Assert.Equal(Uki, Import.ImportUkiFromSettingsFile(Filename, Passowrd));
+            Assert.Equal(Uki, Import.ImportUkiFromSettingsFile(SettingsFilename, Password.ToBytes()));
         }
 
         [Fact]
@@ -59,9 +60,26 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
+        public void ImportLocalKey_loads_and_decrypts_key()
+        {
+            var key = Import.ImportLocalKey(LocalKeyFilename, "Password13");
+            Assert.Equal(32, key.Length);
+        }
+
+        [Fact]
+        public void ImportLocalKey_throws_on_incorrect_password()
+        {
+            var e = Assert.Throws<ImportException>(() => Import.ImportLocalKey(LocalKeyFilename, "Incorrect password"));
+
+            Assert.Equal(ImportException.FailureReason.IncorrectPassword, e.Reason);
+            Assert.Equal("The encryption key file is corrupted or the password is incorrect", e.Message);
+            Assert.IsType<PasswordManagerAccess.Common.CryptoException>(e.InnerException); // TODO: Import PasswordManagerAccess.Common
+        }
+
+        [Fact]
         public void LoadSettingsFile_reads_and_decrypts_settings_xml()
         {
-            var s = Import.LoadSettingsFile(Filename, Passowrd);
+            var s = Import.LoadSettingsFile(SettingsFilename, Password.ToBytes());
             Assert.StartsWith("<?xml", s);
             Assert.EndsWith("</root>\n", s);
         }
@@ -69,7 +87,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void LoadSettingsFile_throws_on_incorrect_password()
         {
-            var e = Assert.Throws<ImportException>(() => Import.LoadSettingsFile(Filename, "Incorrect password"));
+            var e = Assert.Throws<ImportException>(() => Import.LoadSettingsFile(SettingsFilename,
+                                                                                 "Incorrect password".ToBytes()));
 
             Assert.Equal(ImportException.FailureReason.IncorrectPassword, e.Reason);
             Assert.Equal("The settings file is corrupted or the password is incorrect", e.Message);
