@@ -73,7 +73,8 @@ namespace PasswordManagerAccess.Test.Dashlane
 
         private string[] Accounts(string filename)
         {
-            return Vault.Open(Username, Password, Uki, SetupWebClient(filename))
+            var flow = new RestFlow().Post(GetFixture(filename));
+            return Vault.Open(Username, Password, Uki, flow)
                 .Accounts
                 .Select(i => i.Name)
                 .ToArray();

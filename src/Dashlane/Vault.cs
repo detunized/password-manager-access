@@ -12,16 +12,35 @@ namespace PasswordManagerAccess.Dashlane
     {
         public static Vault Open(string username, string password, string uki)
         {
-            using (var webClient = new WebClient())
-                return Open(username, password, uki, webClient);
+            using (var transport = new RestTransport())
+                return Open(username, password, uki, transport);
         }
 
-        public static Vault Open(string username, string password, string uki, IWebClient webClient)
+        // TODO: Change this to the UI pattern
+        public static void RegisterUkiStep1(string username)
         {
-            return new Vault(Remote.Fetch(username, uki, webClient), password);
+            using (var webClient = new WebClient())
+                Remote.RegisterUkiStep1(username, webClient);
         }
 
-        public Vault(JObject blob, string password)
+        // TODO: Change this to the UI pattern
+        public static void RegisterUkiStep2(string username, string deviceName, string uki, string token)
+        {
+            using (var webClient = new WebClient())
+                Remote.RegisterUkiStep2(username, deviceName, uki, token, webClient);
+        }
+
+
+        //
+        // Internal
+        //
+
+        internal static Vault Open(string username, string password, string uki, IRestTransport transport)
+        {
+            return new Vault(Remote.Fetch(username, uki, transport), password);
+        }
+
+        internal Vault(JObject blob, string password)
         {
             var accounts = new Dictionary<string, Account>();
 

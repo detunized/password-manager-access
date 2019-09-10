@@ -57,7 +57,7 @@ namespace Example
                 {
                     // Request a security token to be sent to the user's email address.
                     Console.WriteLine("Initiating a new UKI registration. Requesting a security token.");
-                    Remote.RegisterUkiStep1(username);
+                    Vault.RegisterUkiStep1(username);
 
                     // Ask the user to enter the token.
                     Console.Write("Enter the token sent by email: ");
@@ -70,7 +70,7 @@ namespace Example
 
                     // Register all that with the server.
                     Console.WriteLine("Registering the new UKI under the name of 'dashlane-sharp'");
-                    Remote.RegisterUkiStep2(username, "dashlane-sharp", newUki, token);
+                    Vault.RegisterUkiStep2(username, "dashlane-sharp", newUki, token);
 
                     // Great success!
                     uki = newUki;

@@ -1,7 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json;
@@ -10,49 +10,34 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Dashlane
 {
-    public static class Remote
+    internal static class Remote
     {
         private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
         private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
         private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";
 
-        public static JObject Fetch(string username, string uki)
+        public static JObject Fetch(string username, string uki, IRestTransport transport)
         {
-            using (var webClient = new WebClient())
-                return Fetch(username, uki, webClient);
-        }
+            var rest = new RestClient(transport);
 
-        public static JObject Fetch(string username, string uki, IWebClient webClient)
-        {
-            byte[] response;
-            try
+            var response = rest.PostForm(LatestUrl, new Dictionary<string, object>
             {
-                response = webClient.UploadValues(LatestUrl, new NameValueCollection {
-                    {"login", username},
-                    {"lock", "nolock"},
-                    {"timestamp", "1"},
-                    {"sharingTimestamp", "0"},
-                    {"uki", uki},
-                });
-            }
-            catch (WebException e)
+                {"login", username},
+                {"lock", "nolock"},
+                {"timestamp", "1"},
+                {"sharingTimestamp", "0"},
+                {"uki", uki},
+            });
+
+            if (response.IsSuccessful)
             {
-                throw new FetchException(
-                    FetchException.FailureReason.NetworkError,
-                    "Network error occurred",
-                    e);
+                var parsed = ParseResponse(response.Content);
+                CheckForErrors(parsed);
+
+                return parsed;
             }
 
-            var parsed = ParseResponse(response);
-            CheckForErrors(parsed);
-
-            return parsed;
-        }
-
-        public static void RegisterUkiStep1(string username)
-        {
-            using (var webClient = new WebClient())
-                RegisterUkiStep1(username, webClient);
+            throw new NetworkErrorException("Network error occurred", response.Error);
         }
 
         public static void RegisterUkiStep1(string username, IWebClient webClient)
@@ -77,12 +62,6 @@ namespace PasswordManagerAccess.Dashlane
                 throw new RegisterException(
                     RegisterException.FailureReason.InvalidResponse,
                     "Register UKI failed");
-        }
-
-        public static void RegisterUkiStep2(string username, string deviceName, string uki, string token)
-        {
-            using (var webClient = new WebClient())
-                RegisterUkiStep2(username, deviceName, uki, token, webClient);
         }
 
         public static void RegisterUkiStep2(
@@ -118,18 +97,15 @@ namespace PasswordManagerAccess.Dashlane
                     "Register UKI failed");
         }
 
-        private static JObject ParseResponse(byte[] response)
+        private static JObject ParseResponse(string response)
         {
             try
             {
-                return JObject.Parse(response.ToUtf8());
+                return JObject.Parse(response);
             }
             catch (JsonException e)
             {
-                throw new FetchException(
-                    FetchException.FailureReason.InvalidResponse,
-                    "Invalid JSON in response",
-                    e);
+                throw new InternalErrorException("Invalid JSON in response", e);
             }
         }
 

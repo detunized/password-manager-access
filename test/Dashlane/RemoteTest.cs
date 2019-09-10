@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Net;
+using System.Net.Http;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -26,47 +27,36 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void Fetch_returns_received_json()
         {
+            var rest = new RestFlow().Post("{'what': 'ever'}");
             var response = new JObject();
             response["what"] = "ever";
 
-            Assert.Equal(response, Remote.Fetch(Username, Uki, SetupWebClient("{'what': 'ever'}").Object));
+            Assert.Equal(response, Remote.Fetch(Username, Uki, rest));
         }
 
         [Fact]
         public void Fetch_makes_post_request_to_specific_url()
         {
-            var webClient = SetupWebClient();
-
-            Remote.Fetch(Username, Uki, webClient.Object);
-
-            webClient.Verify(
-                x => x.UploadValues(It.Is<string>(s => s == FetchUrl), It.IsAny<NameValueCollection>()),
-                Times.Once);
+            var rest = new RestFlow().Post("{}").ExpectUrl(FetchUrl);
+            Remote.Fetch(Username, Uki, rest);
         }
 
         [Fact]
         public void Fetch_makes_post_request_with_correct_username_and_uki()
         {
-            var webClient = SetupWebClient();
-
-            Remote.Fetch(Username, Uki, webClient.Object);
-
-            webClient.Verify(
-                x => x.UploadValues(
-                    It.IsAny<string>(),
-                    It.Is<NameValueCollection>(p => p["login"] == Username && p["uki"] == Uki)),
-                Times.Once);
+            var rest = new RestFlow().Post("{}").ExpectContent($"login={Username}", $"uki={Uki}");
+            Remote.Fetch(Username, Uki, rest);
         }
 
         [Fact]
         public void Fetch_throws_on_network_error()
         {
-            var e = Assert.Throws<FetchException>(
-                () => Remote.Fetch(Username, Uki, SetupWebClient(new WebException()).Object));
+            var error = new HttpRequestException("Network error");
+            var rest = new RestFlow().Post("{}", error);
 
-            Assert.Equal(FetchException.FailureReason.NetworkError, e.Reason);
-            Assert.Equal("Network error occurred", e.Message);
-            Assert.IsType<WebException>(e.InnerException);
+            var e = Exceptions.AssertThrowsNetworkError(() => Remote.Fetch(Username, Uki, rest),
+                                                        "Network error occurred");
+            Assert.Equal(error, e.InnerException);
         }
 
         [Fact]
@@ -83,9 +73,9 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             foreach (var i in responses)
             {
-                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(i).Object));
+                var rest = new RestFlow().Post(i);
+                var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest));
 
-                Assert.Equal(FetchException.FailureReason.InvalidResponse, e.Reason);
                 Assert.Equal("Invalid JSON in response", e.Message);
                 Assert.IsAssignableFrom<JsonException>(e.InnerException);
             }
@@ -94,8 +84,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void Fetch_throws_on_error_with_message()
         {
-            var response = "{'error': {'message': 'Oops!'}}";
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(response).Object));
+            var rest = new RestFlow().Post("{'error': {'message': 'Oops!'}}");
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
 
             Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
             Assert.Equal("Oops!", e.Message);
@@ -121,7 +111,8 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             foreach (var i in responses)
             {
-                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(i).Object));
+                var rest = new RestFlow().Post(i);
+                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
 
                 Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
                 Assert.Equal("Unknown error", e.Message);
@@ -132,8 +123,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void Fetch_throws_on_invalid_username_or_password()
         {
-            var response = "{'objectType': 'message', 'content': 'Incorrect authentification'}";
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(response).Object));
+            var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Incorrect authentification'}");
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
 
             Assert.Equal(FetchException.FailureReason.InvalidCredentials, e.Reason);
             Assert.Equal("Invalid username or password", e.Message);
@@ -143,8 +134,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void Fetch_throws_on_other_message()
         {
-            var response = "{'objectType': 'message', 'content': 'Oops!'}";
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(response).Object));
+            var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Oops!'}");
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
 
             Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
             Assert.Equal("Oops!", e.Message);
@@ -166,7 +157,8 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             foreach (var i in responses)
             {
-                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, SetupWebClient(i).Object));
+                var rest = new RestFlow().Post(i);
+                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
 
                 Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
                 Assert.Equal("Unknown error", e.Message);
