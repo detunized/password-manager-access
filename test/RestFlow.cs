@@ -1,13 +1,13 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Collections.Generic;
-using Xunit;
-using PasswordManagerAccess.Common;
 using System;
-using System.Net.Http;
-using System.Net;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using PasswordManagerAccess.Common;
+using Xunit;
 
 namespace PasswordManagerAccess.Test
 {
@@ -17,20 +17,30 @@ namespace PasswordManagerAccess.Test
         // GET
         //
 
-        public RestFlow Get(string response, HttpStatusCode status = HttpStatusCode.OK)
+        public RestFlow Get(string response, HttpStatusCode status = HttpStatusCode.OK, Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Get, response, status));
+            _responses.Add(new Response(HttpMethod.Get, response, status, error));
             return this;
+        }
+
+        public RestFlow Get(string response, Exception error)
+        {
+            return Get(response, HttpStatusCode.OK, error);
         }
 
         //
         // POST
         //
 
-        public RestFlow Post(string response, HttpStatusCode status = HttpStatusCode.OK)
+        public RestFlow Post(string response, HttpStatusCode status = HttpStatusCode.OK, Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Post, response, status));
+            _responses.Add(new Response(HttpMethod.Post, response, status, error));
             return this;
+        }
+
+        public RestFlow Post(string response, Exception error)
+        {
+            return Post(response, HttpStatusCode.OK, error);
         }
 
         public RestClient ToRestClient(string baseUrl = "https://does.not.matter")
@@ -112,14 +122,16 @@ namespace PasswordManagerAccess.Test
             // Returned to the caller
             public readonly string Content;
             public readonly HttpStatusCode Status;
+            public readonly Exception Error;
 
             // Expected to be received from the caller
             public Expected Expected;
 
-            public Response(HttpMethod method, string content, HttpStatusCode status)
+            public Response(HttpMethod method, string content, HttpStatusCode status, Exception error)
             {
                 Content = content;
                 Status = status;
+                Error = error;
                 Expected = new Expected(method);
             }
         }
@@ -187,6 +199,7 @@ namespace PasswordManagerAccess.Test
             // Response
             allocatedResult.StatusCode = r.Status;
             allocatedResult.Content = r.Content;
+            allocatedResult.Error = r.Error;
             allocatedResult.Cookies = new Dictionary<string, string>();
             allocatedResult.RequestUri = uri;
         }
