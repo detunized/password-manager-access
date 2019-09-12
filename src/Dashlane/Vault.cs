@@ -19,15 +19,15 @@ namespace PasswordManagerAccess.Dashlane
         // TODO: Change this to the UI pattern
         public static void RegisterUkiStep1(string username)
         {
-            using (var webClient = new WebClient())
-                Remote.RegisterUkiStep1(username, webClient);
+            using (var transport = new RestTransport())
+                Remote.RegisterUkiStep1(username, transport);
         }
 
         // TODO: Change this to the UI pattern
         public static void RegisterUkiStep2(string username, string deviceName, string uki, string token)
         {
-            using (var webClient = new WebClient())
-                Remote.RegisterUkiStep2(username, deviceName, uki, token, webClient);
+            using (var transport = new RestTransport())
+                Remote.RegisterUkiStep2(username, deviceName, uki, token, transport);
         }
 
 

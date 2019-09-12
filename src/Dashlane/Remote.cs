@@ -1,9 +1,8 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
@@ -40,61 +39,43 @@ namespace PasswordManagerAccess.Dashlane
             throw new NetworkErrorException("Network error occurred", response.Error);
         }
 
-        public static void RegisterUkiStep1(string username, IWebClient webClient)
+        public static void RegisterUkiStep1(string username, IRestTransport transport)
         {
-            byte[] response;
-            try
+            PerformRegisterUkiStep(transport, rest => rest.PostForm(TokenUrl, new Dictionary<string, object>
             {
-                response = webClient.UploadValues(TokenUrl, new NameValueCollection {
-                    {"login", username},
-                    {"isOTPAware", "true"},
-                });
-            }
-            catch (WebException e)
-            {
-                throw new RegisterException(
-                    RegisterException.FailureReason.NetworkError,
-                    "Network error occurred",
-                    e);
-            }
-
-            if (response.ToUtf8() != "SUCCESS")
-                throw new RegisterException(
-                    RegisterException.FailureReason.InvalidResponse,
-                    "Register UKI failed");
+                {"login", username},
+                {"isOTPAware", "true"},
+            }));
         }
 
-        public static void RegisterUkiStep2(
-            string username,
-            string deviceName,
-            string uki,
-            string token,
-            IWebClient webClient)
+        public static void RegisterUkiStep2(string username,
+                                            string deviceName,
+                                            string uki,
+                                            string token,
+                                            IRestTransport transport)
         {
-            byte[] response;
-            try
+            PerformRegisterUkiStep(transport, rest => rest.PostForm(RegisterUrl, new Dictionary<string, object>
             {
-                response = webClient.UploadValues(RegisterUrl, new NameValueCollection {
-                    {"devicename", deviceName},
-                    {"login", username},
-                    {"platform", "webaccess"},
-                    {"temporary", "0"},
-                    {"token", token},
-                    {"uki", uki},
-                });
-            }
-            catch (WebException e)
-            {
-                throw new RegisterException(
-                    RegisterException.FailureReason.NetworkError,
-                    "Network error occurred",
-                    e);
-            }
+                {"devicename", deviceName},
+                {"login", username},
+                {"platform", "webaccess"},
+                {"temporary", "0"},
+                {"token", token},
+                {"uki", uki},
+            }));
+        }
 
-            if (response.ToUtf8() != "SUCCESS")
-                throw new RegisterException(
-                    RegisterException.FailureReason.InvalidResponse,
-                    "Register UKI failed");
+        private static void PerformRegisterUkiStep(IRestTransport transport, Func<RestClient, RestResponse> makeRequest)
+        {
+            var response = makeRequest((RestClient)new RestClient((IRestTransport)transport));
+
+            if (response.IsSuccessful && response.Content == "SUCCESS")
+                return;
+
+            if (response.HasError)
+                throw new NetworkErrorException("Network error occurred", response.Error);
+
+            throw new InternalErrorException("Register UKI failed", response.Error);
         }
 
         private static JObject ParseResponse(string response)

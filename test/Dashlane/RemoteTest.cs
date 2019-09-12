@@ -1,14 +1,9 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
-using System.Collections.Specialized;
-using System.Net;
 using System.Net.Http;
-using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using Xunit;
 
@@ -169,135 +164,69 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void RegisterUkiStep1_makes_post_request_to_specific_url()
         {
-            var webClient = SetupWebClient("SUCCESS");
-
-            Remote.RegisterUkiStep1(Username, webClient.Object);
-
-            webClient.Verify(
-                x => x.UploadValues(It.Is<string>(s => s == RegisterStep1Url), It.IsAny<NameValueCollection>()),
-                Times.Once);
+            var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterStep1Url);
+            Remote.RegisterUkiStep1(Username, rest);
         }
 
         [Fact]
         public void RegisterUkiStep1_makes_post_request_with_correct_username()
         {
-            var webClient = SetupWebClient("SUCCESS");
-
-            Remote.RegisterUkiStep1(Username, webClient.Object);
-
-            webClient.Verify(
-                x => x.UploadValues(
-                    It.IsAny<string>(),
-                    It.Is<NameValueCollection>(p => p["login"] == Username)),
-                Times.Once);
+            var rest = new RestFlow().Post("SUCCESS").ExpectContent($"login={Username}");
+            Remote.RegisterUkiStep1(Username, rest);
         }
 
         [Fact]
         public void RegisterUkiStep1_throws_on_network_error()
         {
-            var e = Assert.Throws<RegisterException>(
-                () => Remote.RegisterUkiStep1(Username, SetupWebClient(new WebException()).Object));
+            var error = new HttpRequestException("Network error");
+            var rest = new RestFlow().Post("", error);
 
-            Assert.Equal(RegisterException.FailureReason.NetworkError, e.Reason);
-            Assert.Equal("Network error occurred", e.Message);
-            Assert.IsType<WebException>(e.InnerException);
+            var e = Exceptions.AssertThrowsNetworkError(() => Remote.RegisterUkiStep1(Username, rest),
+                                                        "Network error occurred");
+            Assert.Same(error, e.InnerException);
         }
 
         [Fact]
         public void RegisterUkiStep1_throws_on_invalid_response()
         {
-            var e = Assert.Throws<RegisterException>(
-                () => Remote.RegisterUkiStep1(Username, SetupWebClient("NOT A GREAT SUCCESS").Object));
-
-            Assert.Equal(RegisterException.FailureReason.InvalidResponse, e.Reason);
-            Assert.Equal("Register UKI failed", e.Message);
-            Assert.Null(e.InnerException);
+            var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
+            Exceptions.AssertThrowsInternalError(() => Remote.RegisterUkiStep1(Username, rest), "Register UKI failed");
         }
 
         [Fact]
         public void RegisterUkiStep2_makes_post_request_to_specific_url()
         {
-            var webClient = SetupWebClient("SUCCESS");
-
-            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, webClient.Object);
-
-            webClient.Verify(
-                x => x.UploadValues(It.Is<string>(s => s == RegisterStep2Url), It.IsAny<NameValueCollection>()),
-                Times.Once);
+            var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterStep2Url);
+            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest);
         }
 
         [Fact]
         public void RegisterUkiStep2_makes_post_request_with_correct_username_and_other_parameters()
         {
-            var webClient = SetupWebClient("SUCCESS");
-
-            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, webClient.Object);
-
-            webClient.Verify(
-                x => x.UploadValues(
-                    It.IsAny<string>(),
-                    It.Is<NameValueCollection>(p =>
-                        p["login"] == Username &&
-                        p["devicename"] == DeviceName &&
-                        p["uki"] == Uki &&
-                        p["token"] == Token)),
-                Times.Once);
+            var rest = new RestFlow()
+                .Post("SUCCESS")
+                .ExpectContent($"login={Username}", $"devicename={DeviceName}", $"uki={Uki}", $"token={Token}");
+            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest);
         }
 
         [Fact]
         public void RegisterUkiStep2_throws_on_network_error()
         {
-            var e = Assert.Throws<RegisterException>(
-                () => Remote.RegisterUkiStep2(
-                    Username,
-                    DeviceName,
-                    Uki,
-                    Token,
-                    SetupWebClient(new WebException()).Object));
+            var error = new HttpRequestException("Network error");
+            var rest = new RestFlow().Post("", error);
 
-            Assert.Equal(RegisterException.FailureReason.NetworkError, e.Reason);
-            Assert.Equal("Network error occurred", e.Message);
-            Assert.IsType<WebException>(e.InnerException);
+            var e = Exceptions.AssertThrowsNetworkError(
+                () => Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest),
+                "Network error occurred");
+            Assert.Same(error, e.InnerException);
         }
 
         [Fact]
         public void RegisterUkiStep2_throws_on_invalid_response()
         {
-            var e = Assert.Throws<RegisterException>(
-                () => Remote.RegisterUkiStep2(
-                    Username,
-                    DeviceName,
-                    Uki,
-                    Token,
-                    SetupWebClient("NOT A GREAT SUCCESS").Object));
-
-            Assert.Equal(RegisterException.FailureReason.InvalidResponse, e.Reason);
-            Assert.Equal("Register UKI failed", e.Message);
-            Assert.Null(e.InnerException);
-        }
-
-        //
-        // Helpers
-        //
-
-        private static Mock<IWebClient> SetupWebClient(string response = "{}")
-        {
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(response.ToBytes());
-
-            return webClient;
-        }
-
-        private static Mock<IWebClient> SetupWebClient(Exception e)
-        {
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Throws(e);
-
-            return webClient;
+            var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
+            Exceptions.AssertThrowsInternalError(() => Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest),
+                                                 "Register UKI failed");
         }
     }
 }
