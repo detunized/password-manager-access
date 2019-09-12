@@ -79,15 +79,5 @@ namespace PasswordManagerAccess.Test.Dashlane
                 .Select(i => i.Name)
                 .ToArray();
         }
-
-        private IWebClient SetupWebClient(string filename)
-        {
-            var webClient = new Mock<IWebClient>();
-            webClient
-                .Setup(x => x.UploadValues(It.IsAny<string>(), It.IsAny<NameValueCollection>()))
-                .Returns(GetFixture(filename).ToBytes());
-
-            return webClient.Object;
-        }
     }
 }
