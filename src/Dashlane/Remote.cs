@@ -43,6 +43,7 @@ namespace PasswordManagerAccess.Dashlane
                 case "YES":
                     return LoginType.Regular;
                 case "YES_OTP_LOGIN":
+                case "YES_OTP_NEWDEVICE":
                     return LoginType.GoogleAuth;
                 }
 
