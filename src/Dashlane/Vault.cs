@@ -37,6 +37,18 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static Vault Open(string username, string password, string uki, IRestTransport transport)
         {
+            switch (Remote.RequestLoginType(username, transport))
+            {
+            case Remote.LoginType.DoesntExist:
+                throw new BadCredentialsException("Invalid username");
+            case Remote.LoginType.Regular:
+                break;
+            case Remote.LoginType.GoogleAuth:
+                throw new UnsupportedFeatureException("MFA is not supported yet");
+            default:
+                throw new InternalErrorException("Unknown login type");
+            }
+
             return new Vault(Remote.Fetch(username, uki, transport), password);
         }
 

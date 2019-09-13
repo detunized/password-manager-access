@@ -1,10 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Collections.Specialized;
 using System.Linq;
-using Moq;
-using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using Xunit;
 
@@ -73,7 +70,9 @@ namespace PasswordManagerAccess.Test.Dashlane
 
         private string[] Accounts(string filename)
         {
-            var flow = new RestFlow().Post(GetFixture(filename));
+            var flow = new RestFlow()
+                .Post(GetFixture("exists-yes"))
+                .Post(GetFixture(filename));
             return Vault.Open(Username, Password, Uki, flow)
                 .Accounts
                 .Select(i => i.Name)
