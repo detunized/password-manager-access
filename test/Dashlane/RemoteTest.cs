@@ -12,6 +12,8 @@ namespace PasswordManagerAccess.Test.Dashlane
     public class RemoteTest
     {
         public const string Username = "username";
+        public const string Otp = "123456";
+        public const string NoOtp = "";
         public const string Uki = "uki";
         public const string DeviceName = "device";
         public const string Token = "token";
@@ -67,21 +69,34 @@ namespace PasswordManagerAccess.Test.Dashlane
             var response = new JObject();
             response["what"] = "ever";
 
-            Assert.Equal(response, Remote.Fetch(Username, Uki, rest));
+            Assert.Equal(response, Remote.Fetch(Username, Uki, NoOtp, rest));
         }
 
         [Fact]
         public void Fetch_makes_post_request_to_specific_url()
         {
             var rest = new RestFlow().Post("{}").ExpectUrl(FetchUrl);
-            Remote.Fetch(Username, Uki, rest);
+            Remote.Fetch(Username, Uki, NoOtp, rest);
         }
 
         [Fact]
-        public void Fetch_makes_post_request_with_correct_username_and_uki()
+        public void Fetch_makes_post_request_with_correct_username_uki_and_no_otp()
         {
-            var rest = new RestFlow().Post("{}").ExpectContent($"login={Username}", $"uki={Uki}");
-            Remote.Fetch(Username, Uki, rest);
+            var rest = new RestFlow()
+                .Post("{}")
+                    .ExpectContent($"login={Username}", $"uki={Uki}")
+                    .ExpectContent(s => Assert.DoesNotContain("otp=", s));
+            Remote.Fetch(Username, Uki, NoOtp, rest);
+        }
+
+        [Fact]
+        public void Fetch_makes_post_request_with_correct_username_otp_and_no_uki()
+        {
+            var rest = new RestFlow()
+                .Post("{}")
+                    .ExpectContent($"login={Username}", $"otp={Otp}")
+                    .ExpectContent(s => Assert.DoesNotContain("uki=", s));
+            Remote.Fetch(Username, Uki, Otp, rest);
         }
 
         [Fact]
@@ -90,7 +105,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("{}", error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Remote.Fetch(Username, Uki, rest),
+            var e = Exceptions.AssertThrowsNetworkError(() => Remote.Fetch(Username, Uki, NoOtp, rest),
                                                         "Network error occurred");
             Assert.Equal(error, e.InnerException);
         }
@@ -110,7 +125,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             foreach (var i in responses)
             {
                 var rest = new RestFlow().Post(i);
-                var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest));
+                var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest));
 
                 Assert.Equal("Invalid JSON in response", e.Message);
                 Assert.IsAssignableFrom<JsonException>(e.InnerException);
@@ -121,7 +136,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void Fetch_throws_on_error_with_message()
         {
             var rest = new RestFlow().Post("{'error': {'message': 'Oops!'}}");
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
 
             Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
             Assert.Equal("Oops!", e.Message);
@@ -148,7 +163,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             foreach (var i in responses)
             {
                 var rest = new RestFlow().Post(i);
-                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
+                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
 
                 Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
                 Assert.Equal("Unknown error", e.Message);
@@ -160,7 +175,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void Fetch_throws_on_invalid_username_or_password()
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Incorrect authentification'}");
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
 
             Assert.Equal(FetchException.FailureReason.InvalidCredentials, e.Reason);
             Assert.Equal("Invalid username or password", e.Message);
@@ -171,7 +186,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void Fetch_throws_on_other_message()
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Oops!'}");
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
+            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
 
             Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
             Assert.Equal("Oops!", e.Message);
@@ -194,7 +209,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             foreach (var i in responses)
             {
                 var rest = new RestFlow().Post(i);
-                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, rest));
+                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
 
                 Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
                 Assert.Equal("Unknown error", e.Message);

@@ -49,7 +49,7 @@ namespace PasswordManagerAccess.Dashlane
                 throw new InternalErrorException("Unknown login type");
             }
 
-            return new Vault(Remote.Fetch(username, uki, transport), password);
+            return new Vault(Remote.Fetch(username, uki, "", transport), password);
         }
 
         internal Vault(JObject blob, string password)

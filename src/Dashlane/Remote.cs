@@ -52,19 +52,25 @@ namespace PasswordManagerAccess.Dashlane
             throw MakeSpecializedError(response);
         }
 
-        public static JObject Fetch(string username, string uki, IRestTransport transport)
+        public static JObject Fetch(string username, string uki, string otp, IRestTransport transport)
         {
             var rest = new RestClient(transport);
 
-            var response = rest.PostForm(LatestUrl, new Dictionary<string, object>
+            var parameters = new Dictionary<string, object>
             {
                 {"login", username},
                 {"lock", "nolock"},
-                {"timestamp", "1"},
+                {"timestamp", "0"},
                 {"sharingTimestamp", "0"},
-                {"uki", uki},
-            });
+            };
 
+            // The UKI should only be sent when no OTP is used. It fails otherwise!
+            if (otp.IsNullOrEmpty())
+                parameters["uki"] = uki;
+            else
+                parameters["otp"] = otp;
+
+            var response = rest.PostForm(LatestUrl, parameters);
             if (response.IsSuccessful)
             {
                 var parsed = ParseResponse(response.Content);
