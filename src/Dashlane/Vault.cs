@@ -62,9 +62,13 @@ namespace PasswordManagerAccess.Dashlane
         {
             var accounts = new Dictionary<string, Account>();
 
+            // This is used with the MFA. The server supplies the password prefix that is used in encryption.
+            var serverKey = blob.GetString("serverKey") ?? "";
+            var fullPassword = serverKey + password;
+
             var fullFile = blob.GetString("fullBackupFile");
             if (!string.IsNullOrWhiteSpace(fullFile))
-                foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), password))
+                foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), fullPassword))
                     accounts.Add(i.Id, i);
 
             foreach (var transaction in blob.SelectToken("transactionList"))
@@ -77,7 +81,7 @@ namespace PasswordManagerAccess.Dashlane
                 case "BACKUP_EDIT":
                     var content = transaction.GetString("content");
                     if (!string.IsNullOrWhiteSpace(content))
-                        foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), password))
+                        foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword))
                             accounts.Add(i.Id, i);
 
                     break;
