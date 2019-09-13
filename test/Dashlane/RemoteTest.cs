@@ -15,9 +15,50 @@ namespace PasswordManagerAccess.Test.Dashlane
         public const string Uki = "uki";
         public const string DeviceName = "device";
         public const string Token = "token";
+        public const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
         public const string FetchUrl = "https://ws1.dashlane.com/12/backup/latest";
         public const string RegisterStep1Url = "https://ws1.dashlane.com/6/authentication/sendtoken";
         public const string RegisterStep2Url = "https://ws1.dashlane.com/6/authentication/registeruki";
+
+        //
+        // RequestLoginType
+        //
+
+        [Fact]
+        public void RequestLoginType_makes_post_request_to_specific_url()
+        {
+            var rest = new RestFlow().Post("{'exists': 'YES'}").ExpectUrl(LoginTypeUrl);
+            Remote.RequestLoginType(Username, rest);
+        }
+
+        [Fact]
+        public void RequestLoginType_requests_with_correct_username()
+        {
+            var rest = new RestFlow().Post("{'exists': 'YES'}").ExpectContent($"login={Username}");
+            Remote.RequestLoginType(Username, rest);
+        }
+
+        [Theory]
+        [InlineData("NO", Remote.LoginType.DoesntExist)]
+        [InlineData("YES", Remote.LoginType.Regular)]
+        [InlineData("YES_OTP_LOGIN", Remote.LoginType.GoogleAuth)]
+        internal void RequestLoginType_returns_correct_login_type(string input, Remote.LoginType expected)
+        {
+            var rest = new RestFlow().Post($"{{'exists': '{input}'}}");
+            Assert.Equal(expected, Remote.RequestLoginType(Username, rest));
+        }
+
+        [Fact]
+        internal void RequestLoginType_throws_on_unknown_login_type()
+        {
+            var rest = new RestFlow().Post("{'exists': 'blah'}");
+            Exceptions.AssertThrowsUnsupportedFeature(() => Remote.RequestLoginType(Username, rest),
+                                                      "'blah' is not supported");
+        }
+
+        //
+        // Fetch
+        //
 
         [Fact]
         public void Fetch_returns_received_json()
@@ -161,6 +202,10 @@ namespace PasswordManagerAccess.Test.Dashlane
             }
         }
 
+        //
+        // RegisterUkiStep1
+        //
+
         [Fact]
         public void RegisterUkiStep1_makes_post_request_to_specific_url()
         {
@@ -192,6 +237,10 @@ namespace PasswordManagerAccess.Test.Dashlane
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
             Exceptions.AssertThrowsInternalError(() => Remote.RegisterUkiStep1(Username, rest), "Register UKI failed");
         }
+
+        //
+        // RegisterUkiStep2
+        //
 
         [Fact]
         public void RegisterUkiStep2_makes_post_request_to_specific_url()

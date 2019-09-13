@@ -9,11 +9,48 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Dashlane
 {
+    using R = Response;
+
     internal static class Remote
     {
+        private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
         private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
         private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
         private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";
+
+        public enum LoginType
+        {
+            DoesntExist,
+            Regular,
+            GoogleAuth,
+        }
+
+        public static LoginType RequestLoginType(string username, IRestTransport transport)
+        {
+            return RequestLoginType(username, new RestClient(transport));
+        }
+
+        public static LoginType RequestLoginType(string username, RestClient rest)
+        {
+            var response = rest.PostForm<R.LoginType>(LoginTypeUrl, new Dictionary<string, object> {{"login", username}});
+            if (response.IsSuccessful)
+            {
+                string type = response.Data.Exists;
+                switch (type)
+                {
+                case "NO":
+                    return LoginType.DoesntExist;
+                case "YES":
+                    return LoginType.Regular;
+                case "YES_OTP_LOGIN":
+                    return LoginType.GoogleAuth;
+                }
+
+                throw new UnsupportedFeatureException($"Login type '{type}' is not supported");
+            }
+
+            throw MakeSpecializedError(response);
+        }
 
         public static JObject Fetch(string username, string uki, IRestTransport transport)
         {
@@ -121,6 +158,25 @@ namespace PasswordManagerAccess.Dashlane
                         message);
                 }
             }
+        }
+
+        private static Common.BaseException MakeSpecializedError(RestResponse response)
+        {
+            Uri uri = response.RequestUri;
+
+            if (response.IsHttpError)
+                return new InternalErrorException(
+                    $"HTTP request to {uri} failed with status {response.StatusCode}");
+
+            if (response.IsNetworkError)
+                return new NetworkErrorException(
+                    $"A network error occurred during a request to {uri}", response.Error);
+
+            if (response.Error is JsonException)
+                return new InternalErrorException(
+                    $"Failed to parse JSON response from {uri}", response.Error);
+
+            return new InternalErrorException($"Unexpected response from {uri}", response.Error);
         }
     }
 }
