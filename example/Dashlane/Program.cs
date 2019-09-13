@@ -7,6 +7,56 @@ using PasswordManagerAccess.Example.Common;
 
 namespace Example
 {
+    class TextUi: Ui
+    {
+        public override Passcode ProvideGoogleAuthPasscode(int attempt)
+        {
+            if (attempt > 0)
+                Bad("Google Authenticator code is invalid, try again");
+
+            return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
+        }
+
+        //
+        // Private
+        //
+
+        private static Passcode GetPasscode(string prompt)
+        {
+            var passcode = GetAnswer(prompt);
+            return passcode == "" ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+        }
+
+        private static string GetAnswer(string prompt)
+        {
+            Console.WriteLine(prompt);
+            Console.Write("> ");
+            var input = Console.ReadLine();
+
+            return input == null ? "" : input.Trim();
+        }
+
+        private static bool GetRememberMe()
+        {
+            var remember = GetAnswer("Remember this device?").ToLower();
+            return remember == "y" || remember == "yes";
+        }
+
+        private static void Bad(string text)
+        {
+            WriteLine(ConsoleColor.Red, text);
+        }
+
+        private static void WriteLine(ConsoleColor color, string text)
+        {
+            Console.ForegroundColor = color;
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+
+        private const string ToCancel = "or just press ENTER to cancel";
+    }
+
     static class Program
     {
         static void Main(string[] args)
@@ -96,7 +146,7 @@ namespace Example
             {
                 // Fetch and parse first.
                 Console.WriteLine("Fetching and parsing the remote vault");
-                var vault = Vault.Open(username, password, uki);
+                var vault = Vault.Open(username, password, uki, new TextUi());
 
                 // And then dump the accounts.
                 Console.WriteLine("The vault has {0} account(s) in it:", vault.Accounts.Length);

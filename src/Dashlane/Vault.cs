@@ -10,10 +10,10 @@ namespace PasswordManagerAccess.Dashlane
 {
     public class Vault
     {
-        public static Vault Open(string username, string password, string uki)
+        public static Vault Open(string username, string password, string uki, Ui ui)
         {
             using (var transport = new RestTransport())
-                return Open(username, password, uki, transport);
+                return Open(username, password, uki, ui, transport);
         }
 
         // TODO: Change this to the UI pattern
@@ -35,8 +35,10 @@ namespace PasswordManagerAccess.Dashlane
         // Internal
         //
 
-        internal static Vault Open(string username, string password, string uki, IRestTransport transport)
+        internal static Vault Open(string username, string password, string uki, Ui ui, IRestTransport transport)
         {
+            Ui.Passcode passcode = new Ui.Passcode("", false);
+
             switch (Remote.RequestLoginType(username, transport))
             {
             case Remote.LoginType.DoesntExist:
@@ -44,12 +46,16 @@ namespace PasswordManagerAccess.Dashlane
             case Remote.LoginType.Regular:
                 break;
             case Remote.LoginType.GoogleAuth:
-                throw new UnsupportedFeatureException("MFA is not supported yet");
+                passcode = ui.ProvideGoogleAuthPasscode(0);
+                break;
             default:
                 throw new InternalErrorException("Unknown login type");
             }
 
-            return new Vault(Remote.Fetch(username, uki, "", transport), password);
+            if (passcode == Ui.Passcode.Cancel)
+                throw new CanceledMultiFactorException("MFA canceled by the user");
+
+            return new Vault(Remote.Fetch(username, uki, passcode.Code ?? "", transport), password);
         }
 
         internal Vault(JObject blob, string password)

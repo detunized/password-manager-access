@@ -2,8 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using Xunit;
 using PasswordManagerAccess.Common;
+using Xunit;
 
 namespace PasswordManagerAccess.Test
 {
@@ -12,6 +12,16 @@ namespace PasswordManagerAccess.Test
         public static BadCredentialsException AssertThrowsBadCredentials(Action action, string message = "")
         {
             return AssertThrows<BadCredentialsException>(action, message);
+        }
+
+        public static BadMultiFactorException AssertThrowsBadMultiFactor(Action action, string message = "")
+        {
+            return AssertThrows<BadMultiFactorException>(action, message);
+        }
+
+        public static CanceledMultiFactorException AssertThrowsCanceledMultiFactor(Action action, string message = "")
+        {
+            return AssertThrows<CanceledMultiFactorException>(action, message);
         }
 
         public static NetworkErrorException AssertThrowsNetworkError(Action action, string message = "")
