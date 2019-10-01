@@ -163,10 +163,9 @@ namespace Example
                         account.Note);
                 }
             }
-            catch (FetchException e)
+            catch (PasswordManagerAccess.Common.BaseException e)
             {
-                Console.WriteLine("Could not download the vault");
-                Console.WriteLine("Error: {0} ({1})", e.Message, e.Reason);
+                Util.PrintException(e);
             }
             catch (ParseException e)
             {

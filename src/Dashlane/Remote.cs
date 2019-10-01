@@ -140,29 +140,18 @@ namespace PasswordManagerAccess.Dashlane
             if (error != null)
             {
                 var message = error.GetString("message") ?? "Unknown error";
-                throw new FetchException(
-                    FetchException.FailureReason.UnknownError,
-                    message);
+                throw new InternalErrorException($"Request failed with error: '{message}'");
             }
 
             if (response.GetString("objectType") == "message")
             {
-                var message = response.GetString("content");
-                if (message == null)
-                    throw new FetchException(
-                        FetchException.FailureReason.UnknownError,
-                        "Unknown error");
-
+                var message = response.GetString("content") ?? "Unknown error";
                 switch (message)
                 {
-                case "Incorrect authentification":
-                    throw new FetchException(
-                        FetchException.FailureReason.InvalidCredentials,
-                        "Invalid username or password");
+                case "Incorrect authentification": // Important: it's misspelled in the original code
+                    throw new BadCredentialsException("Invalid username or password");
                 default:
-                    throw new FetchException(
-                        FetchException.FailureReason.UnknownError,
-                        message);
+                    throw new InternalErrorException($"Request failed with error: '{message}'");
                 }
             }
         }

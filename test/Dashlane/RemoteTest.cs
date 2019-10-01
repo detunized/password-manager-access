@@ -136,11 +136,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void Fetch_throws_on_error_with_message()
         {
             var rest = new RestFlow().Post("{'error': {'message': 'Oops!'}}");
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
-
-            Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
-            Assert.Equal("Oops!", e.Message);
-            Assert.Null(e.InnerException);
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Oops!");
         }
 
         [Fact]
@@ -163,11 +159,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             foreach (var i in responses)
             {
                 var rest = new RestFlow().Post(i);
-                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
-
-                Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
-                Assert.Equal("Unknown error", e.Message);
-                Assert.Null(e.InnerException);
+                Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
             }
         }
 
@@ -175,22 +167,15 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void Fetch_throws_on_invalid_username_or_password()
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Incorrect authentification'}");
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
-
-            Assert.Equal(FetchException.FailureReason.InvalidCredentials, e.Reason);
-            Assert.Equal("Invalid username or password", e.Message);
-            Assert.Null(e.InnerException);
+            Exceptions.AssertThrowsBadCredentials(() => Remote.Fetch(Username, Uki, NoOtp, rest),
+                                                  "Invalid username or password");
         }
 
         [Fact]
         public void Fetch_throws_on_other_message()
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Oops!'}");
-            var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
-
-            Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
-            Assert.Equal("Oops!", e.Message);
-            Assert.Null(e.InnerException);
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Oops!");
         }
 
         [Fact]
@@ -209,11 +194,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             foreach (var i in responses)
             {
                 var rest = new RestFlow().Post(i);
-                var e = Assert.Throws<FetchException>(() => Remote.Fetch(Username, Uki, NoOtp, rest));
-
-                Assert.Equal(FetchException.FailureReason.UnknownError, e.Reason);
-                Assert.Equal("Unknown error", e.Message);
-                Assert.Null(e.InnerException);
+                Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
             }
         }
 
