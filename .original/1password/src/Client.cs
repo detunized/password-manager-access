@@ -581,9 +581,23 @@ namespace OnePassword
             }
 
             return items
-                .Where(i => i.StringAt("templateUuid", "") == AccountTemplateId) // Keep only accounts/logins
+                .Where(ShouldKeepAccount)
                 .Select(i => ParseAccount(i, keychain))
                 .ToArray();
+        }
+
+        // TODO: Add a test to verify the deleted accounts are ignored
+        internal static bool ShouldKeepAccount(JToken account)
+        {
+            // Reject everything but accounts/logins
+            if (account.StringAt("templateUuid", "") != AccountTemplateId)
+                return false;
+
+            // Reject deleted accounts (be conservative, throw only explicitly marked as "Y")
+            if (account.StringAt("trashed", "") == "Y")
+                return false;
+
+            return true;
         }
 
         // TODO: It's really difficult to write tests for this structure: everything
