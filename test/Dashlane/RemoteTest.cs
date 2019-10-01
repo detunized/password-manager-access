@@ -11,17 +11,6 @@ namespace PasswordManagerAccess.Test.Dashlane
 {
     public class RemoteTest
     {
-        public const string Username = "username";
-        public const string Otp = "123456";
-        public const string NoOtp = "";
-        public const string Uki = "uki";
-        public const string DeviceName = "device";
-        public const string Token = "token";
-        public const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
-        public const string FetchUrl = "https://ws1.dashlane.com/12/backup/latest";
-        public const string RegisterStep1Url = "https://ws1.dashlane.com/6/authentication/sendtoken";
-        public const string RegisterStep2Url = "https://ws1.dashlane.com/6/authentication/registeruki";
-
         //
         // RequestLoginType
         //
@@ -110,26 +99,19 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.Equal(error, e.InnerException);
         }
 
-        [Fact]
-        public void Fetch_throws_on_invalid_json_in_response()
+        [Theory]
+        [InlineData("")]
+        [InlineData("0")]
+        [InlineData("''")]
+        [InlineData("[]")]
+        [InlineData("} invalid {")]
+        public void Fetch_throws_on_invalid_json_in_response(string response)
         {
-            string[] responses =
-            {
-                "",
-                "0",
-                "''",
-                "[]",
-                "} invalid {",
-            };
+            var rest = new RestFlow().Post(response);
+            var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest));
 
-            foreach (var i in responses)
-            {
-                var rest = new RestFlow().Post(i);
-                var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest));
-
-                Assert.Equal("Invalid JSON in response", e.Message);
-                Assert.IsAssignableFrom<JsonException>(e.InnerException);
-            }
+            Assert.Equal("Invalid JSON in response", e.Message);
+            Assert.IsAssignableFrom<JsonException>(e.InnerException);
         }
 
         [Fact]
@@ -139,28 +121,20 @@ namespace PasswordManagerAccess.Test.Dashlane
             Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Oops!");
         }
 
-        [Fact]
-        public void Fetch_throws_on_error_with_malformed_response()
+        [Theory]
+        [InlineData("{'error': null}")]
+        [InlineData("{'error': {}}")]
+        [InlineData("{'error': []}")]
+        [InlineData("{'error': 0}")]
+        [InlineData("{'error': ''}")]
+        [InlineData("{'error': {'message': null}}")]
+        [InlineData("{'error': {'message': {}}}")]
+        [InlineData("{'error': {'message': []}}")]
+        [InlineData("{'error': {'message': 0}}")]
+        public void Fetch_throws_on_error_with_malformed_response(string response)
         {
-            string[] responses =
-            {
-                "{'error': null}",
-                "{'error': {}}",
-                "{'error': []}",
-                "{'error': 0}",
-                "{'error': ''}",
-
-                "{'error': {'message': null}}",
-                "{'error': {'message': {}}}",
-                "{'error': {'message': []}}",
-                "{'error': {'message': 0}}",
-            };
-
-            foreach (var i in responses)
-            {
-                var rest = new RestFlow().Post(i);
-                Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
-            }
+            var rest = new RestFlow().Post(response);
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
         }
 
         [Fact]
@@ -178,24 +152,17 @@ namespace PasswordManagerAccess.Test.Dashlane
             Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Oops!");
         }
 
-        [Fact]
-        public void Fetch_throws_on_message_with_malformed_response()
+        [Theory]
+        [InlineData("{'objectType': 'message'}")]
+        [InlineData("{'objectType': 'message', 'what': 'ever'}")]
+        [InlineData("{'objectType': 'message', 'content': null}")]
+        [InlineData("{'objectType': 'message', 'content': 0}")]
+        [InlineData("{'objectType': 'message', 'content': []}")]
+        [InlineData("{'objectType': 'message', 'content': {}}")]
+        public void Fetch_throws_on_message_with_malformed_response(string response)
         {
-            string[] responses =
-            {
-                "{'objectType': 'message'}",
-                "{'objectType': 'message', 'what': 'ever'}",
-                "{'objectType': 'message', 'content': null}",
-                "{'objectType': 'message', 'content': 0}",
-                "{'objectType': 'message', 'content': []}",
-                "{'objectType': 'message', 'content': {}}",
-            };
-
-            foreach (var i in responses)
-            {
-                var rest = new RestFlow().Post(i);
-                Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
-            }
+            var rest = new RestFlow().Post(response);
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
         }
 
         //
@@ -273,5 +240,20 @@ namespace PasswordManagerAccess.Test.Dashlane
             Exceptions.AssertThrowsInternalError(() => Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest),
                                                  "Register UKI failed");
         }
+
+        //
+        // Data
+        //
+
+        private const string Username = "username";
+        private const string Otp = "123456";
+        private const string NoOtp = "";
+        private const string Uki = "uki";
+        private const string DeviceName = "device";
+        private const string Token = "token";
+        private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
+        private const string FetchUrl = "https://ws1.dashlane.com/12/backup/latest";
+        private const string RegisterStep1Url = "https://ws1.dashlane.com/6/authentication/sendtoken";
+        private const string RegisterStep2Url = "https://ws1.dashlane.com/6/authentication/registeruki";
     }
 }
