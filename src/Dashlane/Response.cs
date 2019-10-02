@@ -10,4 +10,13 @@ namespace PasswordManagerAccess.Dashlane.Response
         [JsonProperty(PropertyName = "exists", Required = Required.Always)]
         public readonly string Exists;
     }
+
+    internal class Status
+    {
+        [JsonProperty(PropertyName = "code", Required = Required.Always)]
+        public readonly int Code;
+
+        [JsonProperty(PropertyName = "message", Required = Required.Always)]
+        public readonly string Message;
+    }
 }

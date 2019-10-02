@@ -14,6 +14,7 @@ namespace PasswordManagerAccess.Dashlane
     internal static class Remote
     {
         private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
+        private const string VerifyUkiUrl = "https://ws1.dashlane.com/1/features/getForUser";
         private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
         private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
         private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";
@@ -56,6 +57,10 @@ namespace PasswordManagerAccess.Dashlane
         public static JObject Fetch(string username, string uki, string otp, IRestTransport transport)
         {
             var rest = new RestClient(transport);
+
+            // TODO: Handle this here (WIP)
+            if (!IsUkiValid(username, uki, rest))
+                throw new BadCredentialsException("The UKI is invalid");
 
             var parameters = new Dictionary<string, object>
             {
@@ -107,6 +112,21 @@ namespace PasswordManagerAccess.Dashlane
                 {"token", token},
                 {"uki", uki},
             }));
+        }
+
+        private static bool IsUkiValid(string username, string uki, RestClient rest)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                {"login", username},
+                {"uki", uki},
+            };
+
+            var response = rest.PostForm<R.Status>(VerifyUkiUrl, parameters);
+            if (response.IsSuccessful)
+                return response.Data.Code == 200 && response.Data.Message == "OK";
+
+            throw MakeSpecializedError(response);
         }
 
         private static void PerformRegisterUkiStep(IRestTransport transport, Func<RestClient, RestResponse> makeRequest)
