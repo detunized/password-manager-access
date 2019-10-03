@@ -11,27 +11,112 @@ namespace PasswordManagerAccess.Dashlane
 {
     using R = Response;
 
+    // TODO: Replace UKI with DeviceId. The term UKI is obscure and has no meaning!
+
     internal static class Remote
     {
-        private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
-        private const string VerifyUkiUrl = "https://ws1.dashlane.com/1/features/getForUser";
-        private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
-        private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
-        private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";
+        // TODO: Don't return JObject
+        public static JObject OpenVault(string username, string deviceId, Ui ui, IRestTransport transport)
+        {
+            // TODO: Use base url
+            var rest = new RestClient(transport);
 
-        public enum LoginType
+            var loginType = RequestLoginType(username, rest);
+            if (loginType == LoginType.DoesntExist)
+                throw new BadCredentialsException("Invalid username");
+
+            if (!IsDeviceRegistered(username, deviceId, rest))
+                RegisterNewDevice(username, deviceId, ui, rest);
+
+            Ui.Passcode passcode = loginType == LoginType.GoogleAuth
+                ? ui.ProvideGoogleAuthPasscode(0)
+                : new Ui.Passcode("", false);
+
+            if (passcode == Ui.Passcode.Cancel)
+                throw new CanceledMultiFactorException("MFA canceled by the user");
+
+            return Fetch(username, deviceId, passcode.Code ?? "", rest);
+        }
+
+        //
+        // Internal
+        //
+
+        internal static bool IsDeviceRegistered(string username, string deviceId, RestClient rest)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                {"login", username},
+                {"uki", deviceId},
+            };
+
+            var response = rest.PostForm<R.Status>(VerifyUkiUrl, parameters);
+            if (response.IsSuccessful)
+                return response.Data.Code == 200 && response.Data.Message == "OK";
+
+            throw MakeSpecializedError(response);
+        }
+
+        internal static void RegisterNewDevice(string username, string deviceId, Ui ui, RestClient rest)
+        {
+            var token = RequestToken(username, ui, rest);
+            RegisterDeviceWithToken(username, "TODO: device name", deviceId, token, rest);
+        }
+
+        internal static string RequestToken(string username, Ui ui, RestClient rest)
+        {
+            while (true)
+            {
+                TriggerEmailWithToken(username, rest);
+
+                var token = ui.ProvideEmailToken();
+                if (token == Ui.EmailToken.Cancel)
+                    throw new InternalErrorException("Canceled by user"); // TODO: Add new exception type
+                else if (token == Ui.EmailToken.Resend)
+                    continue;
+
+                return token.Token;
+            }
+        }
+
+        internal static void TriggerEmailWithToken(string username, RestClient rest)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                {"login", username},
+                {"isOTPAware", "true"},
+            };
+
+            PerformRegisterUkiStep(TokenUrl, parameters, rest);
+        }
+
+        internal static void RegisterDeviceWithToken(string username,
+                                              string deviceName,
+                                              string uki,
+                                              string token,
+                                              RestClient rest)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                {"devicename", deviceName},
+                {"login", username},
+                {"platform", "webaccess"},
+                {"temporary", "0"},
+                {"token", token},
+                {"uki", uki},
+            };
+
+            PerformRegisterUkiStep(RegisterUrl, parameters, rest);
+        }
+
+        internal enum LoginType
         {
             DoesntExist,
             Regular,
             GoogleAuth,
         }
 
-        public static LoginType RequestLoginType(string username, IRestTransport transport)
-        {
-            return RequestLoginType(username, new RestClient(transport));
-        }
-
-        public static LoginType RequestLoginType(string username, RestClient rest)
+        internal static LoginType RequestLoginType(string username, RestClient rest)
         {
             var response = rest.PostForm<R.LoginType>(LoginTypeUrl, new Dictionary<string, object> {{"login", username}});
             if (response.IsSuccessful)
@@ -54,14 +139,8 @@ namespace PasswordManagerAccess.Dashlane
             throw MakeSpecializedError(response);
         }
 
-        public static JObject Fetch(string username, string uki, string otp, IRestTransport transport)
+        internal static JObject Fetch(string username, string uki, string otp, RestClient rest)
         {
-            var rest = new RestClient(transport);
-
-            // TODO: Handle this here (WIP)
-            if (!IsUkiValid(username, uki, rest))
-                throw new BadCredentialsException("The UKI is invalid");
-
             var parameters = new Dictionary<string, object>
             {
                 {"login", username},
@@ -88,58 +167,17 @@ namespace PasswordManagerAccess.Dashlane
             throw new NetworkErrorException("Network error occurred", response.Error);
         }
 
-        public static void RegisterUkiStep1(string username, IRestTransport transport)
+        //
+        // Private
+        //
+
+        private static void PerformRegisterUkiStep(string url, Dictionary<string, object> parameters, RestClient rest)
         {
-            PerformRegisterUkiStep(transport, rest => rest.PostForm(TokenUrl, new Dictionary<string, object>
-            {
-                {"login", username},
-                {"isOTPAware", "true"},
-            }));
-        }
-
-        public static void RegisterUkiStep2(string username,
-                                            string deviceName,
-                                            string uki,
-                                            string token,
-                                            IRestTransport transport)
-        {
-            PerformRegisterUkiStep(transport, rest => rest.PostForm(RegisterUrl, new Dictionary<string, object>
-            {
-                {"devicename", deviceName},
-                {"login", username},
-                {"platform", "webaccess"},
-                {"temporary", "0"},
-                {"token", token},
-                {"uki", uki},
-            }));
-        }
-
-        private static bool IsUkiValid(string username, string uki, RestClient rest)
-        {
-            var parameters = new Dictionary<string, object>
-            {
-                {"login", username},
-                {"uki", uki},
-            };
-
-            var response = rest.PostForm<R.Status>(VerifyUkiUrl, parameters);
-            if (response.IsSuccessful)
-                return response.Data.Code == 200 && response.Data.Message == "OK";
-
-            throw MakeSpecializedError(response);
-        }
-
-        private static void PerformRegisterUkiStep(IRestTransport transport, Func<RestClient, RestResponse> makeRequest)
-        {
-            var response = makeRequest((RestClient)new RestClient((IRestTransport)transport));
-
+            var response = rest.PostForm(url, parameters);
             if (response.IsSuccessful && response.Content == "SUCCESS")
                 return;
 
-            if (response.HasError)
-                throw new NetworkErrorException("Network error occurred", response.Error);
-
-            throw new InternalErrorException("Register UKI failed", response.Error);
+            throw MakeSpecializedError(response);
         }
 
         private static JObject ParseResponse(string response)
@@ -194,5 +232,15 @@ namespace PasswordManagerAccess.Dashlane
 
             return new InternalErrorException($"Unexpected response from {uri}", response.Error);
         }
+
+        //
+        // Data
+        //
+
+        private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
+        private const string VerifyUkiUrl = "https://ws1.dashlane.com/1/features/getForUser";
+        private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
+        private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
+        private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";
     }
 }

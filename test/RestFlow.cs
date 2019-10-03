@@ -48,6 +48,11 @@ namespace PasswordManagerAccess.Test
             return new RestClient(this, baseUrl);
         }
 
+        public static implicit operator RestClient(RestFlow flow)
+        {
+            return flow.ToRestClient();
+        }
+
         //
         // Expect
         //

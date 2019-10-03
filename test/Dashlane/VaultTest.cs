@@ -1,6 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Linq;
 using Moq;
 using PasswordManagerAccess.Dashlane;
@@ -67,6 +68,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var flow = new RestFlow()
                 .Post(GetFixture("exists-otp"))
+                .Post(GetFixture("device-registered"))
                 .Post(GetFixture("empty-vault"))
                     .ExpectContent($"otp={Otp}");
 
@@ -81,6 +83,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var flow = new RestFlow()
                 .Post(GetFixture("exists-otp"))
+                .Post(GetFixture("device-registered"))
                 .Post(GetFixture("empty-vault"));
 
             var ui = new Mock<Ui>();
@@ -100,12 +103,18 @@ namespace PasswordManagerAccess.Test.Dashlane
             {
                 return new Passcode(Otp, false);
             }
+
+            public override EmailToken ProvideEmailToken()
+            {
+                throw new NotImplementedException();
+            }
         }
 
         private string[] Accounts(string filename)
         {
             var flow = new RestFlow()
                 .Post(GetFixture("exists-yes"))
+                .Post(GetFixture("device-registered"))
                 .Post(GetFixture(filename));
             return Vault.Open(Username, Password, Uki, null, flow)
                 .Accounts

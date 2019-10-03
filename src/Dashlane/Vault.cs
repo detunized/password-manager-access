@@ -10,52 +10,19 @@ namespace PasswordManagerAccess.Dashlane
 {
     public class Vault
     {
-        public static Vault Open(string username, string password, string uki, Ui ui)
+        public static Vault Open(string username, string password, string deviceId, Ui ui)
         {
             using (var transport = new RestTransport())
-                return Open(username, password, uki, ui, transport);
+                return Open(username, password, deviceId, ui, transport);
         }
-
-        // TODO: Change this to the UI pattern
-        public static void RegisterUkiStep1(string username)
-        {
-            using (var transport = new RestTransport())
-                Remote.RegisterUkiStep1(username, transport);
-        }
-
-        // TODO: Change this to the UI pattern
-        public static void RegisterUkiStep2(string username, string deviceName, string uki, string token)
-        {
-            using (var transport = new RestTransport())
-                Remote.RegisterUkiStep2(username, deviceName, uki, token, transport);
-        }
-
 
         //
         // Internal
         //
 
-        internal static Vault Open(string username, string password, string uki, Ui ui, IRestTransport transport)
+        internal static Vault Open(string username, string password, string deviceId, Ui ui, IRestTransport transport)
         {
-            Ui.Passcode passcode = new Ui.Passcode("", false);
-
-            switch (Remote.RequestLoginType(username, transport))
-            {
-            case Remote.LoginType.DoesntExist:
-                throw new BadCredentialsException("Invalid username");
-            case Remote.LoginType.Regular:
-                break;
-            case Remote.LoginType.GoogleAuth:
-                passcode = ui.ProvideGoogleAuthPasscode(0);
-                break;
-            default:
-                throw new InternalErrorException("Unknown login type");
-            }
-
-            if (passcode == Ui.Passcode.Cancel)
-                throw new CanceledMultiFactorException("MFA canceled by the user");
-
-            return new Vault(Remote.Fetch(username, uki, passcode.Code ?? "", transport), password);
+            return new Vault(Remote.OpenVault(username, deviceId, ui, transport), password);
         }
 
         internal Vault(JObject blob, string password)

@@ -173,14 +173,14 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void RegisterUkiStep1_makes_post_request_to_specific_url()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterStep1Url);
-            Remote.RegisterUkiStep1(Username, rest);
+            Remote.TriggerEmailWithToken(Username, rest);
         }
 
         [Fact]
         public void RegisterUkiStep1_makes_post_request_with_correct_username()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectContent($"login={Username}");
-            Remote.RegisterUkiStep1(Username, rest);
+            Remote.TriggerEmailWithToken(Username, rest);
         }
 
         [Fact]
@@ -189,8 +189,8 @@ namespace PasswordManagerAccess.Test.Dashlane
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("", error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Remote.RegisterUkiStep1(Username, rest),
-                                                        "Network error occurred");
+            var e = Exceptions.AssertThrowsNetworkError(() => Remote.TriggerEmailWithToken(Username, rest),
+                                                        "network error occurred");
             Assert.Same(error, e.InnerException);
         }
 
@@ -198,7 +198,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void RegisterUkiStep1_throws_on_invalid_response()
         {
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
-            Exceptions.AssertThrowsInternalError(() => Remote.RegisterUkiStep1(Username, rest), "Register UKI failed");
+            Exceptions.AssertThrowsInternalError(() => Remote.TriggerEmailWithToken(Username, rest));
         }
 
         //
@@ -209,7 +209,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void RegisterUkiStep2_makes_post_request_to_specific_url()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterStep2Url);
-            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest);
+            Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest);
         }
 
         [Fact]
@@ -218,7 +218,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var rest = new RestFlow()
                 .Post("SUCCESS")
                 .ExpectContent($"login={Username}", $"devicename={DeviceName}", $"uki={Uki}", $"token={Token}");
-            Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest);
+            Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest);
         }
 
         [Fact]
@@ -228,8 +228,8 @@ namespace PasswordManagerAccess.Test.Dashlane
             var rest = new RestFlow().Post("", error);
 
             var e = Exceptions.AssertThrowsNetworkError(
-                () => Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest),
-                "Network error occurred");
+                () => Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest),
+                "network error occurred");
             Assert.Same(error, e.InnerException);
         }
 
@@ -237,8 +237,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void RegisterUkiStep2_throws_on_invalid_response()
         {
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
-            Exceptions.AssertThrowsInternalError(() => Remote.RegisterUkiStep2(Username, DeviceName, Uki, Token, rest),
-                                                 "Register UKI failed");
+            Exceptions.AssertThrowsInternalError(
+                () => Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest));
         }
 
         //

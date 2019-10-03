@@ -17,6 +17,22 @@ namespace Example
             return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
         }
 
+        public override EmailToken ProvideEmailToken()
+        {
+            var answer = GetAnswer($"Please check your email and enter the security token {ToCancel} " +
+                                   "or 'r' to resend the token");
+            switch (answer)
+            {
+            case "":
+                return EmailToken.Cancel;
+            case "r":
+            case "R":
+                return EmailToken.Resend;
+            default:
+                return new EmailToken(answer);
+            }
+        }
+
         //
         // Private
         //
@@ -69,79 +85,40 @@ namespace Example
             // The UKI is optional.
             var uki = config.ContainsKey("uki") ? config["uki"] : "";
 
-            // It seems we don't have an UKI. We need one to authenticate with the server.
-            // An UKI is a device id that is registered with the Dashlane server. There are
-            // two ways to obtain one.
+            // It seems we don't have an UKI. We need one to authenticate with the server. An UKI is
+            // a device id that is registered with the Dashlane server. There are two ways to obtain
+            // one.
 
-            // 1. On a machine that has a Dashlane client installed we could rummage through
-            // the settings database and find the UKI that is used by the client. This way
-            // we can pretend to be that client and silently authenticate with the server.
+            // On a machine that has a Dashlane client installed we could rummage through the
+            // settings database and find the UKI that is used by the client. This way we can
+            // pretend to be that client and silently authenticate with the server.
             if (uki == "")
             {
                 try
                 {
                     Console.WriteLine("No UKI is specified. Looking for the local Dashlane");
-                    Console.WriteLine("settings database (profile name: {0})", username);
+                    Console.WriteLine($"settings database (profile name: {username})");
 
                     uki = Import.ImportUki(username, password);
 
-                    Console.WriteLine("Found an UKI in the local database: {0}", uki);
+                    Console.WriteLine($"Found an UKI in the local database: {uki}");
                 }
                 catch (ImportException e)
                 {
                     Console.WriteLine("Could not import the UKI from the local Dashlane setting)");
-                    Console.WriteLine("Error: {0} ({1})", e.Message, e.Reason);
+                    Console.WriteLine($"Error: {e.Message} ({e.Reason})");
                 }
             }
 
-            // 2. Alternatively we could try to generate a new UKI and register it with the
-            // server. The process is interactive and is made up of two steps. Step one
-            // initiates the process and triggers an email to be sent to the user and the
-            // registered email address with a security token.
-            // In step 2 the token along with the machine name and the new UKI is registered
-            // with the server. After these two steps the new UKI could be used to authenticate
-            // with the Dashlane server and fetch the vault.
+            // Alternatively we could try to generate a new UKI and register it with the server. The
+            // process is interactive. The server will send an email with a security token that the
+            // user must provide via the Ui interface. This UKI should be used on subsequent runs.
             if (uki == "")
             {
-                try
-                {
-                    // Request a security token to be sent to the user's email address.
-                    Console.WriteLine("Initiating a new UKI registration. Requesting a security token.");
-                    Vault.RegisterUkiStep1(username);
-
-                    // Ask the user to enter the token.
-                    Console.Write("Enter the token sent by email: ");
-                    Console.Out.Flush();
-                    var token = Console.ReadLine().Trim();
-
-                    // Generate a new UKI.
-                    var newUki = Uki.Generate();
-                    Console.WriteLine("Generated a new UKI: {0}", newUki);
-
-                    // Register all that with the server.
-                    Console.WriteLine("Registering the new UKI under the name of 'dashlane-sharp'");
-                    Vault.RegisterUkiStep2(username, "dashlane-sharp", newUki, token);
-
-                    // Great success!
-                    uki = newUki;
-                    Console.WriteLine("Registration successful");
-                    Console.WriteLine("Save this UKI for later access: {0}", uki);
-                }
-                catch (RegisterException e)
-                {
-                    Console.WriteLine("Could not register the new UKI with the server.");
-                    Console.WriteLine("Error: {0} ({1})", e.Message, e.Reason);
-                }
+                uki = Uki.Generate();
+                Console.WriteLine($"Generated a new UKI: {uki}");
             }
 
-            // We still don't have a valid UKI. Cannot proceed any further.
-            if (uki == "")
-            {
-                Console.WriteLine("It's impossible to continue with out a valid UKI. Exiting.");
-                return;
-            }
-
-            // Now, when we have a registered UKI we can try to open the vault.
             try
             {
                 // Fetch and parse first.
