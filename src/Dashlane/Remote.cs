@@ -11,8 +11,6 @@ namespace PasswordManagerAccess.Dashlane
 {
     using R = Response;
 
-    // TODO: Replace UKI with DeviceId. The term UKI is obscure and has no meaning!
-
     internal static class Remote
     {
         // TODO: Don't return JObject
@@ -42,6 +40,36 @@ namespace PasswordManagerAccess.Dashlane
         // Internal
         //
 
+        internal enum LoginType
+        {
+            DoesntExist,
+            Regular,
+            GoogleAuth,
+        }
+
+        internal static LoginType RequestLoginType(string username, RestClient rest)
+        {
+            var response = rest.PostForm<R.LoginType>(LoginTypeUrl, new Dictionary<string, object> { { "login", username } });
+            if (response.IsSuccessful)
+            {
+                string type = response.Data.Exists;
+                switch (type)
+                {
+                case "NO":
+                    return LoginType.DoesntExist;
+                case "YES":
+                    return LoginType.Regular;
+                case "YES_OTP_LOGIN":
+                case "YES_OTP_NEWDEVICE":
+                    return LoginType.GoogleAuth;
+                }
+
+                throw new UnsupportedFeatureException($"Login type '{type}' is not supported");
+            }
+
+            throw MakeSpecializedError(response);
+        }
+
         internal static bool IsDeviceRegistered(string username, string deviceId, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
@@ -50,7 +78,7 @@ namespace PasswordManagerAccess.Dashlane
                 {"uki", deviceId},
             };
 
-            var response = rest.PostForm<R.Status>(VerifyUkiUrl, parameters);
+            var response = rest.PostForm<R.Status>(VerifyDeviceIdUrl, parameters);
             if (response.IsSuccessful)
                 return response.Data.Code == 200 && response.Data.Message == "OK";
 
@@ -87,14 +115,14 @@ namespace PasswordManagerAccess.Dashlane
                 {"isOTPAware", "true"},
             };
 
-            PerformRegisterUkiStep(TokenUrl, parameters, rest);
+            PerformRegisterDeviceStep(TokenUrl, parameters, rest);
         }
 
         internal static void RegisterDeviceWithToken(string username,
-                                              string deviceName,
-                                              string uki,
-                                              string token,
-                                              RestClient rest)
+                                                     string deviceName,
+                                                     string deviceId,
+                                                     string token,
+                                                     RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -103,43 +131,13 @@ namespace PasswordManagerAccess.Dashlane
                 {"platform", "webaccess"},
                 {"temporary", "0"},
                 {"token", token},
-                {"uki", uki},
+                {"uki", deviceId},
             };
 
-            PerformRegisterUkiStep(RegisterUrl, parameters, rest);
+            PerformRegisterDeviceStep(RegisterUrl, parameters, rest);
         }
 
-        internal enum LoginType
-        {
-            DoesntExist,
-            Regular,
-            GoogleAuth,
-        }
-
-        internal static LoginType RequestLoginType(string username, RestClient rest)
-        {
-            var response = rest.PostForm<R.LoginType>(LoginTypeUrl, new Dictionary<string, object> {{"login", username}});
-            if (response.IsSuccessful)
-            {
-                string type = response.Data.Exists;
-                switch (type)
-                {
-                case "NO":
-                    return LoginType.DoesntExist;
-                case "YES":
-                    return LoginType.Regular;
-                case "YES_OTP_LOGIN":
-                case "YES_OTP_NEWDEVICE":
-                    return LoginType.GoogleAuth;
-                }
-
-                throw new UnsupportedFeatureException($"Login type '{type}' is not supported");
-            }
-
-            throw MakeSpecializedError(response);
-        }
-
-        internal static JObject Fetch(string username, string uki, string otp, RestClient rest)
+        internal static JObject Fetch(string username, string deviceId, string otp, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -149,9 +147,9 @@ namespace PasswordManagerAccess.Dashlane
                 {"sharingTimestamp", "0"},
             };
 
-            // The UKI should only be sent when no OTP is used. It fails otherwise!
+            // The device ID should only be sent when no OTP is used. It fails otherwise!
             if (otp.IsNullOrEmpty())
-                parameters["uki"] = uki;
+                parameters["uki"] = deviceId;
             else
                 parameters["otp"] = otp;
 
@@ -171,7 +169,7 @@ namespace PasswordManagerAccess.Dashlane
         // Private
         //
 
-        private static void PerformRegisterUkiStep(string url, Dictionary<string, object> parameters, RestClient rest)
+        private static void PerformRegisterDeviceStep(string url, Dictionary<string, object> parameters, RestClient rest)
         {
             var response = rest.PostForm(url, parameters);
             if (response.IsSuccessful && response.Content == "SUCCESS")
@@ -238,7 +236,7 @@ namespace PasswordManagerAccess.Dashlane
         //
 
         private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
-        private const string VerifyUkiUrl = "https://ws1.dashlane.com/1/features/getForUser";
+        private const string VerifyDeviceIdUrl = "https://ws1.dashlane.com/1/features/getForUser";
         private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
         private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
         private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";

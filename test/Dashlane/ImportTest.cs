@@ -12,7 +12,7 @@ namespace PasswordManagerAccess.Test.Dashlane
     public class ImportTest
     {
         public const string Password = "password";
-        public const string Uki = "local-uki";
+        public const string DeviceId = "local-uki";
         public const string LocalKeyFilename = "Dashlane/Fixtures/localKey.aes";
         public const string SettingsFilename = "Dashlane/Fixtures/localSettings.aes";
         public const string Xml =
@@ -23,21 +23,21 @@ namespace PasswordManagerAccess.Test.Dashlane
             "</root>";
 
         [Fact]
-        public void ImportUkiFromSettingsFile_returns_uki()
+        public void ImportDeviceIdFromSettingsFile_returns_device_id()
         {
-            Assert.Equal(Uki, Import.ImportUkiFromSettingsFile(SettingsFilename, Password.ToBytes()));
+            Assert.Equal(DeviceId, Import.ImportDeviceIdFromSettingsFile(SettingsFilename, Password.ToBytes()));
         }
 
         [Fact]
-        public void ImportUkiFromSettings_as_xml_string_returns_uki()
+        public void ImportDeviceIdFromSettings_as_xml_string_returns_device_id()
         {
-            Assert.Equal(Uki, Import.ImportUkiFromSettings(Xml));
+            Assert.Equal(DeviceId, Import.ImportDeviceIdFromSettings(Xml));
         }
 
         [Fact]
-        public void ImportUkiFromSettings_as_xml_string_throws_on_invalid_xml()
+        public void ImportDeviceIdFromSettings_as_xml_string_throws_on_invalid_xml()
         {
-            var e = Assert.Throws<ImportException>(() => Import.ImportUkiFromSettings("> not really xml <"));
+            var e = Assert.Throws<ImportException>(() => Import.ImportDeviceIdFromSettings("> not really xml <"));
 
             Assert.Equal(ImportException.FailureReason.InvalidFormat, e.Reason);
             Assert.Equal("Failed to parse XML settings file", e.Message);
@@ -45,18 +45,18 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void ImportUkiFromSettings_as_xdocument_returns_uki()
+        public void ImportDeviceIdFromSettings_as_xdocument_returns_device_id()
         {
-            Assert.Equal(Uki, Import.ImportUkiFromSettings(XDocument.Parse(Xml)));
+            Assert.Equal(DeviceId, Import.ImportDeviceIdFromSettings(XDocument.Parse(Xml)));
         }
 
         [Fact]
-        public void ImportUkiFromSettings_as_xdocument_throws_on_wrong_xml()
+        public void ImportDeviceIdFromSettings_as_xdocument_throws_on_wrong_xml()
         {
-            var e = Assert.Throws<ImportException>(() => Import.ImportUkiFromSettings(XDocument.Parse("<root />")));
+            var e = Assert.Throws<ImportException>(() => Import.ImportDeviceIdFromSettings(XDocument.Parse("<root />")));
 
             Assert.Equal(ImportException.FailureReason.InvalidFormat, e.Reason);
-            Assert.Equal("The settings file doesn't contain an UKI", e.Message);
+            Assert.Equal("The settings file doesn't contain a device ID", e.Message);
             Assert.Null(e.InnerException);
         }
 
@@ -74,7 +74,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             Assert.Equal(ImportException.FailureReason.IncorrectPassword, e.Reason);
             Assert.Equal("The encryption key file is corrupted or the password is incorrect", e.Message);
-            Assert.IsType<PasswordManagerAccess.Common.CryptoException>(e.InnerException); // TODO: Import PasswordManagerAccess.Common
+            Assert.IsType<CryptoException>(e.InnerException);
         }
 
         [Fact]

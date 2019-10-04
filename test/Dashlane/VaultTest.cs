@@ -93,6 +93,12 @@ namespace PasswordManagerAccess.Test.Dashlane
                                                        "MFA canceled by the user");
         }
 
+        [Fact]
+        public void GenerateRandomDeviceId_returns_device_id()
+        {
+            Assert.Matches(@"[0-9a-f]+-webaccess-[0-9]+", Vault.GenerateRandomDeviceId());
+        }
+
         //
         // Helpers
         //

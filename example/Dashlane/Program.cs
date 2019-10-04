@@ -82,48 +82,50 @@ namespace Example
             var username = config["username"];
             var password = config["password"];
 
-            // The UKI is optional.
-            var uki = config.ContainsKey("uki") ? config["uki"] : "";
+            // The device ID is optional.
+            var deviceId = config.ContainsKey("device-id") ? config["device-id"] : "";
 
-            // It seems we don't have an UKI. We need one to authenticate with the server. An UKI is
-            // a device id that is registered with the Dashlane server. There are two ways to obtain
+            // It seems we don't have a device ID. We need one to authenticate with the server. A
+            // device ID must be registered with the Dashlane server. There are two ways to obtain
             // one.
 
             // On a machine that has a Dashlane client installed we could rummage through the
-            // settings database and find the UKI that is used by the client. This way we can
+            // settings database and find the device ID that is used by the client. This way we can
             // pretend to be that client and silently authenticate with the server.
-            if (uki == "")
+            if (deviceId == "")
             {
                 try
                 {
-                    Console.WriteLine("No UKI is specified. Looking for the local Dashlane");
+                    Console.WriteLine("No device ID is specified. Looking for the local Dashlane");
                     Console.WriteLine($"settings database (profile name: {username})");
 
-                    uki = Import.ImportUki(username, password);
+                    deviceId = Import.ImportLocalDeviceId(username, password);
 
-                    Console.WriteLine($"Found an UKI in the local database: {uki}");
+                    Console.WriteLine($"The device ID is found in the local database: {deviceId}");
                 }
                 catch (ImportException e)
                 {
-                    Console.WriteLine("Could not import the UKI from the local Dashlane setting)");
+                    Console.WriteLine("Could not import the device ID from the local Dashlane setting)");
                     Console.WriteLine($"Error: {e.Message} ({e.Reason})");
                 }
             }
 
-            // Alternatively we could try to generate a new UKI and register it with the server. The
-            // process is interactive. The server will send an email with a security token that the
-            // user must provide via the Ui interface. This UKI should be used on subsequent runs.
-            if (uki == "")
+            // Alternatively, we could try to generate a new device ID and register it with the
+            // server. The process is interactive. The server will send an email with a security
+            // token that the user must provide via the Ui interface. This device ID should be used
+            // on the subsequent runs.
+            if (deviceId == "")
             {
-                uki = Uki.Generate();
-                Console.WriteLine($"Generated a new UKI: {uki}");
+                deviceId = Vault.GenerateRandomDeviceId();
+                Console.WriteLine($"Generated a new device ID: {deviceId}");
+                Console.WriteLine("Please store it and use it on the subsequent runs");
             }
 
             try
             {
                 // Fetch and parse first.
                 Console.WriteLine("Fetching and parsing the remote vault");
-                var vault = Vault.Open(username, password, uki, new TextUi());
+                var vault = Vault.Open(username, password, deviceId, new TextUi());
 
                 // And then dump the accounts.
                 Console.WriteLine("The vault has {0} account(s) in it:", vault.Accounts.Length);

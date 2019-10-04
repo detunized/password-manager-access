@@ -13,11 +13,15 @@ namespace PasswordManagerAccess.Dashlane
     public static class Import
     {
         // TODO: Not sure how to test this!
-        public static string ImportUki(string username, string password)
+        public static string ImportLocalDeviceId(string username, string password)
         {
-            return ImportUkiFromSettingsFile(FindSettingsFile(username),
-                                             GetSettingsKey(username, password));
+            return ImportDeviceIdFromSettingsFile(FindSettingsFile(username),
+                                                  GetSettingsKey(username, password));
         }
+
+        //
+        // Internal
+        //
 
         // Returns either the master password or the local key
         internal static byte[] GetSettingsKey(string username, string password)
@@ -29,16 +33,16 @@ namespace PasswordManagerAccess.Dashlane
             return ImportLocalKey(localKeyFilename, password);
         }
 
-        internal static string ImportUkiFromSettingsFile(string filename, byte[] key)
+        internal static string ImportDeviceIdFromSettingsFile(string filename, byte[] key)
         {
-            return ImportUkiFromSettings(LoadSettingsFile(filename, key));
+            return ImportDeviceIdFromSettings(LoadSettingsFile(filename, key));
         }
 
-        internal static string ImportUkiFromSettings(string settingsXml)
+        internal static string ImportDeviceIdFromSettings(string settingsXml)
         {
             try
             {
-                return ImportUkiFromSettings(XDocument.Parse(settingsXml));
+                return ImportDeviceIdFromSettings(XDocument.Parse(settingsXml));
             }
             catch (XmlException e)
             {
@@ -49,15 +53,15 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        internal static string ImportUkiFromSettings(XDocument settings)
+        internal static string ImportDeviceIdFromSettings(XDocument settings)
         {
-            var uki = settings.XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']");
-            if (uki == null)
+            var id = settings.XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']");
+            if (id == null)
                 throw new ImportException(
                     ImportException.FailureReason.InvalidFormat,
-                    "The settings file doesn't contain an UKI");
+                    "The settings file doesn't contain a device ID");
 
-            return uki.Value;
+            return id.Value;
         }
 
         public static byte[] ImportLocalKey(string filename, string password)
