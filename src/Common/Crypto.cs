@@ -9,6 +9,28 @@ namespace PasswordManagerAccess.Common
     internal static class Crypto
     {
         //
+        // Random
+        //
+
+        public static byte[] RandomBytes(int size)
+        {
+            using (var random = new RNGCryptoServiceProvider())
+            {
+                var bytes = new byte[size];
+                random.GetBytes(bytes);
+                return bytes;
+            }
+        }
+
+        public static string RandomHex(int length)
+        {
+            if (length % 2 != 0)
+                throw new InternalErrorException("length must be multiple of 2");
+
+            return RandomBytes(length / 2).ToHex();
+        }
+
+        //
         // SHA
         //
 

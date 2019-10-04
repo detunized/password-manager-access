@@ -1,10 +1,8 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
@@ -18,21 +16,13 @@ namespace PasswordManagerAccess.Dashlane
                 return Open(username, password, deviceId, ui, transport);
         }
 
-        // TODO: Simplify this!
         public static string GenerateRandomDeviceId()
         {
-            // This loosely mirrors the web uki generation process. Not clear if it's needed. Looks
-            // like a simple random string does the job. Anyways...
-
-            var time = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-            var text = string.Format(
-                "{0}{1}{2:x8}",
-                Environment.OSVersion.VersionString,
-                time,
-                (uint)((1 + new Random().NextDouble()) * 268435456));
-            var hash = MD5.Create().ComputeHash(text.ToBytes()).ToHex();
-
-            return string.Format("{0}-webaccess-{1}", hash, time);
+            // Generates something like this:
+            // 852dc12ff32a4fc0905e3ff0076868bf-92d3115e-9dae-4c70-a139-5b0063da4ed6
+            return new[] {32, 8, 4, 4, 4, 12}
+                .Select(Crypto.RandomHex)
+                .JoinToString("-");
         }
 
         //

@@ -240,6 +240,15 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // IEnumerable
+        //
+
+        public static string JoinToString<T>(this IEnumerable<T> e, string separator)
+        {
+            return string.Join(separator, e);
+        }
+
+        //
         // BigInteger
         //
 
