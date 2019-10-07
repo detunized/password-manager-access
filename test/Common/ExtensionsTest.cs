@@ -391,6 +391,25 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
+        // IEnumerable
+        //
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("a", "", "a")]
+        [InlineData("ab", "", "a", "b")]
+        [InlineData("", "-")]
+        [InlineData("a", "-", "a")]
+        [InlineData("a-b", "-", "a", "b")]
+        [InlineData("1-2", "-", 1, 2)]
+        public void IEnumerable_JoinToString_returns_joined_string(string expected,
+                                                                   string separator,
+                                                                   params object[] objects)
+        {
+            Assert.Equal(expected, objects.JoinToString(separator));
+        }
+
+        //
         // BigInteger
         //
 
