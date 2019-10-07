@@ -64,6 +64,10 @@ namespace PasswordManagerAccess.Dashlane
             return id.Value;
         }
 
+        // TODO: When the 2FA is set to "Each time I log in to Dashlane" this won't work. To make it
+        // work we need to use the OPT to ask the server for the server key. That key is prepended
+        // to the password and only then it's possible to decrypt the local settings file. The
+        // Windows client actually warns about that when the option is turned on. Look into this.
         public static byte[] ImportLocalKey(string filename, string password)
         {
             var blob = File.ReadAllText(filename).Decode64();
