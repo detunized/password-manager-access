@@ -16,9 +16,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
 
         [Fact]
-        public void RequestLoginType_makes_post_request_to_specific_url()
+        public void RequestLoginType_makes_post_request_to_specific_endpoint()
         {
-            var rest = new RestFlow().Post("{'exists': 'YES'}").ExpectUrl(LoginTypeUrl);
+            var rest = new RestFlow().Post("{'exists': 'YES'}").ExpectUrl(LoginTypeEndpoint);
             Remote.RequestLoginType(Username, rest);
         }
 
@@ -62,9 +62,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void Fetch_makes_post_request_to_specific_url()
+        public void Fetch_makes_post_request_to_specific_endpoint()
         {
-            var rest = new RestFlow().Post("{}").ExpectUrl(FetchUrl);
+            var rest = new RestFlow().Post("{}").ExpectUrl(FetchEndpoint);
             Remote.Fetch(Username, Uki, NoOtp, rest);
         }
 
@@ -166,25 +166,25 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         //
-        // RegisterUkiStep1
+        // TriggerEmailWithToken
         //
 
         [Fact]
-        public void RegisterUkiStep1_makes_post_request_to_specific_url()
+        public void TriggerEmailWithToken_makes_post_request_to_specific_endpoint()
         {
-            var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterStep1Url);
+            var rest = new RestFlow().Post("SUCCESS").ExpectUrl(SendEmailEndpoint);
             Remote.TriggerEmailWithToken(Username, rest);
         }
 
         [Fact]
-        public void RegisterUkiStep1_makes_post_request_with_correct_username()
+        public void TriggerEmailWithToken_makes_post_request_with_correct_username()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectContent($"login={Username}");
             Remote.TriggerEmailWithToken(Username, rest);
         }
 
         [Fact]
-        public void RegisterUkiStep1_throws_on_network_error()
+        public void TriggerEmailWithToken_throws_on_network_error()
         {
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("", error);
@@ -195,25 +195,25 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void RegisterUkiStep1_throws_on_invalid_response()
+        public void TriggerEmailWithToken_throws_on_invalid_response()
         {
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
             Exceptions.AssertThrowsInternalError(() => Remote.TriggerEmailWithToken(Username, rest));
         }
 
         //
-        // RegisterUkiStep2
+        // RegisterDeviceWithToken
         //
 
         [Fact]
-        public void RegisterUkiStep2_makes_post_request_to_specific_url()
+        public void RegisterDeviceWithToken_makes_post_request_to_specific_endpoint()
         {
-            var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterStep2Url);
+            var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterEndpoint);
             Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest);
         }
 
         [Fact]
-        public void RegisterUkiStep2_makes_post_request_with_correct_username_and_other_parameters()
+        public void RegisterDeviceWithToken_makes_post_request_with_correct_username_and_other_parameters()
         {
             var rest = new RestFlow()
                 .Post("SUCCESS")
@@ -222,7 +222,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void RegisterUkiStep2_throws_on_network_error()
+        public void RegisterDeviceWithToken_throws_on_network_error()
         {
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("", error);
@@ -234,7 +234,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void RegisterUkiStep2_throws_on_invalid_response()
+        public void RegisterDeviceWithToken_throws_on_invalid_response()
         {
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
             Exceptions.AssertThrowsInternalError(
@@ -251,9 +251,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         private const string Uki = "uki";
         private const string DeviceName = "device";
         private const string Token = "token";
-        private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
-        private const string FetchUrl = "https://ws1.dashlane.com/12/backup/latest";
-        private const string RegisterStep1Url = "https://ws1.dashlane.com/6/authentication/sendtoken";
-        private const string RegisterStep2Url = "https://ws1.dashlane.com/6/authentication/registeruki";
+        private const string LoginTypeEndpoint = "/7/authentication/exists";
+        private const string FetchEndpoint = "/12/backup/latest";
+        private const string SendEmailEndpoint = "/6/authentication/sendtoken";
+        private const string RegisterEndpoint = "/6/authentication/registeruki";
     }
 }

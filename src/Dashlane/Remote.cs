@@ -16,8 +16,7 @@ namespace PasswordManagerAccess.Dashlane
         // TODO: Don't return JObject
         public static JObject OpenVault(string username, string deviceId, Ui ui, IRestTransport transport)
         {
-            // TODO: Use base url
-            var rest = new RestClient(transport);
+            var rest = new RestClient(transport, BaseApiUrl);
 
             var loginType = RequestLoginType(username, rest);
             if (loginType == LoginType.DoesntExist)
@@ -49,7 +48,8 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static LoginType RequestLoginType(string username, RestClient rest)
         {
-            var response = rest.PostForm<R.LoginType>(LoginTypeUrl, new Dictionary<string, object> { { "login", username } });
+            var parameters = new Dictionary<string, object> {{"login", username}};
+            var response = rest.PostForm<R.LoginType>(LoginTypeEndpoint, parameters);
             if (response.IsSuccessful)
             {
                 string type = response.Data.Exists;
@@ -78,7 +78,7 @@ namespace PasswordManagerAccess.Dashlane
                 {"uki", deviceId},
             };
 
-            var response = rest.PostForm<R.Status>(VerifyDeviceIdUrl, parameters);
+            var response = rest.PostForm<R.Status>(VerifyDeviceIdEndpoint, parameters);
             if (response.IsSuccessful)
                 return response.Data.Code == 200 && response.Data.Message == "OK";
 
@@ -115,7 +115,7 @@ namespace PasswordManagerAccess.Dashlane
                 {"isOTPAware", "true"},
             };
 
-            PerformRegisterDeviceStep(TokenUrl, parameters, rest);
+            PerformRegisterDeviceStep(SendTokenEndpoint, parameters, rest);
         }
 
         internal static void RegisterDeviceWithToken(string username,
@@ -134,7 +134,7 @@ namespace PasswordManagerAccess.Dashlane
                 {"uki", deviceId},
             };
 
-            PerformRegisterDeviceStep(RegisterUrl, parameters, rest);
+            PerformRegisterDeviceStep(RegisterEndpoint, parameters, rest);
         }
 
         internal static JObject Fetch(string username, string deviceId, string otp, RestClient rest)
@@ -153,7 +153,7 @@ namespace PasswordManagerAccess.Dashlane
             else
                 parameters["otp"] = otp;
 
-            var response = rest.PostForm(LatestUrl, parameters);
+            var response = rest.PostForm(LatestEndpoint, parameters);
             if (response.IsSuccessful)
             {
                 var parsed = ParseResponse(response.Content);
@@ -235,10 +235,11 @@ namespace PasswordManagerAccess.Dashlane
         // Data
         //
 
-        private const string LoginTypeUrl = "https://ws1.dashlane.com/7/authentication/exists";
-        private const string VerifyDeviceIdUrl = "https://ws1.dashlane.com/1/features/getForUser";
-        private const string LatestUrl = "https://ws1.dashlane.com/12/backup/latest";
-        private const string TokenUrl = "https://ws1.dashlane.com/6/authentication/sendtoken";
-        private const string RegisterUrl = "https://ws1.dashlane.com/6/authentication/registeruki";
+        private const string BaseApiUrl = "https://ws1.dashlane.com/";
+        private const string LoginTypeEndpoint = "7/authentication/exists";
+        private const string VerifyDeviceIdEndpoint = "1/features/getForUser";
+        private const string LatestEndpoint = "12/backup/latest";
+        private const string SendTokenEndpoint = "6/authentication/sendtoken";
+        private const string RegisterEndpoint = "6/authentication/registeruki";
     }
 }
