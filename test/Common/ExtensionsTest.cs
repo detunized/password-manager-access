@@ -105,25 +105,20 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(new byte[] { 0x66 }, "MY=========".Decode32());
         }
 
-        [Fact]
-        public void String_Decode32_throws_on_invalid_base32()
+        [Theory]
+        [InlineData("0")]
+        [InlineData("1")]
+        [InlineData("8")]
+        [InlineData("9")]
+        [InlineData("!")]
+        [InlineData("MZXQ!")]
+        [InlineData("!@#$%^&*()")]
+        [InlineData("MY======MY")]
+        [InlineData("MY======MY======")]
+        [InlineData("=MY======")]
+        public void String_Decode32_throws_on_invalid_base32(string invalidBase32)
         {
-            var invalidBase32 = new[]
-            {
-                "0",
-                "1",
-                "8",
-                "9",
-                "!",
-                "MZXQ!",
-                "!@#$%^&*()",
-                "MY======MY",
-                "MY======MY======",
-                "=MY======",
-            };
-
-            foreach (var i in invalidBase32)
-                Exceptions.AssertThrowsInternalError(() => i.Decode32(), "invalid characters in base32");
+            Exceptions.AssertThrowsInternalError(() => invalidBase32.Decode32(), "invalid characters in base32");
         }
 
         [Fact]
@@ -413,48 +408,36 @@ namespace PasswordManagerAccess.Test.Common
         // BigInteger
         //
 
-        [Fact]
-        public void BigInteger_ToHex_returns_hex_string()
+        [Theory]
+        [InlineData("0", 0)]
+        [InlineData("1", 1)]
+        [InlineData("d", 0xD)]
+        [InlineData("de", 0xDE)]
+        [InlineData("dea", 0xDEA)]
+        [InlineData("dead", 0xDEAD)]
+        [InlineData("80", 0x80)]
+        [InlineData("ff", 0xFF)]
+        [InlineData("-1", -1)]
+        [InlineData("-d", -0xD)]
+        [InlineData("-de", -0xDE)]
+        [InlineData("-dea", -0xDEA)]
+        [InlineData("-dead", -0xDEAD)]
+        [InlineData("-80", -0x80)]
+        [InlineData("-ff", -0xFF)]
+        public void BigInteger_ToHex_returns_hex_string(string hex, int number)
         {
-            var testCases = new Dictionary<int, string>
-            {
-                {0, "0"},
-                {1, "1"},
-                {0xD, "d"},
-                {0xDE, "de"},
-                {0xDEA, "dea"},
-                {0xDEAD, "dead"},
-                {0x80, "80"},
-                {0xFF, "ff"},
-                {-1, "-1"},
-                {-0xD, "-d"},
-                {-0xDE, "-de"},
-                {-0xDEA, "-dea"},
-                {-0xDEAD, "-dead"},
-                {-0x80, "-80"},
-                {-0xFF, "-ff"},
-            };
-
-            foreach (var i in testCases)
-                Assert.Equal(i.Value, new BigInteger(i.Key).ToHex());
+            Assert.Equal(hex, new BigInteger(number).ToHex());
         }
 
-        [Fact]
-        public void BigInteger_ModExp_returns_positive_result()
+        [Theory]
+        [InlineData(3, -3, 3, 10)]
+        [InlineData(36, -4, 3, 100)]
+        [InlineData(936, -4, 3, 1000)]
+        [InlineData(594327, -1337, 19, 1000000)]
+        public void BigInteger_ModExp_returns_positive_result(int result, int b, int e, int m)
         {
-            var testCases = new[]
-            {
-                new []{-3, 3, 10, 3},
-                new []{-4, 3, 100, 36},
-                new []{-4, 3, 1000, 936},
-                new []{-1337, 19, 1000000, 594327},
-            };
-
-            foreach (var i in testCases)
-            {
-                var r = new BigInteger(i[0]).ModExp(new BigInteger(i[1]), new BigInteger(i[2]));
-                Assert.Equal(new BigInteger(i[3]), r);
-            }
+            Assert.Equal(new BigInteger(result),
+                         new BigInteger(b).ModExp(new BigInteger(e), new BigInteger(m)));
         }
 
         //
