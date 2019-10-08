@@ -112,7 +112,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void ParseEncryptedBlob_throws_on_unknown_encryption_type()
         {
             var blob = Salt32.Concat("blah".ToBytes()).Concat(Content).ToArray();
-            Assert.Throws<NotImplementedException>(() => Parse.ParseEncryptedBlob(blob));
+            Exceptions.AssertThrowsInternalError(() => Parse.ParseEncryptedBlob(blob), "Invalid blob format");
         }
 
         [Fact]

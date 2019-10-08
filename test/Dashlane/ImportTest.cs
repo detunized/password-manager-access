@@ -53,10 +53,13 @@ namespace PasswordManagerAccess.Test.Dashlane
                                                  "The settings file doesn't contain a device ID");
         }
 
-        [Fact]
-        public void ImportLocalKey_loads_and_decrypts_key()
+        [Theory]
+        [InlineData("localKey-kwc3.aes")]
+        [InlineData("localKey-pbkdf2.aes")]
+        [InlineData("localKey-argon2d.aes")]
+        public void ImportLocalKey_loads_and_decrypts_key(string filename)
         {
-            var key = Import.ImportLocalKey(LocalKeyFilename, "Password13");
+            var key = Import.ImportLocalKey($"Dashlane/Fixtures/{filename}", "Password13");
             Assert.Equal(32, key.Length);
         }
 
