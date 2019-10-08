@@ -46,22 +46,17 @@ namespace PasswordManagerAccess.Dashlane
             }
             catch (XmlException e)
             {
-                throw new ImportException(
-                    ImportException.FailureReason.InvalidFormat,
-                    "Failed to parse XML settings file",
-                    e);
+                throw new InternalErrorException("Failed to parse XML settings file", e);
             }
         }
 
         internal static string ImportDeviceIdFromSettings(XDocument settings)
         {
             var id = settings.XPathSelectElement("/root/KWLocalSettingsManager/KWDataItem[@key='uki']");
-            if (id == null)
-                throw new ImportException(
-                    ImportException.FailureReason.InvalidFormat,
-                    "The settings file doesn't contain a device ID");
+            if (id != null)
+                return id.Value;
 
-            return id.Value;
+            throw new InternalErrorException("The settings file doesn't contain a device ID");
         }
 
         // TODO: When the 2FA is set to "Each time I log in to Dashlane" this won't work. To make it
@@ -71,33 +66,13 @@ namespace PasswordManagerAccess.Dashlane
         public static byte[] ImportLocalKey(string filename, string password)
         {
             var blob = File.ReadAllText(filename).Decode64();
-            try
-            {
-                return Parse.DecryptBlob(blob, password);
-            }
-            catch (CryptoException e)
-            {
-                throw new ImportException(
-                    ImportException.FailureReason.IncorrectPassword,
-                    "The encryption key file is corrupted or the password is incorrect",
-                    e);
-            }
+            return Parse.DecryptBlob(blob, password);
         }
 
         internal static string LoadSettingsFile(string filename, byte[] key)
         {
             var blob = File.ReadAllBytes(filename);
-            try
-            {
-                return Parse.DecryptBlob(blob, key).ToUtf8();
-            }
-            catch (ParseException e)
-            {
-                throw new ImportException(
-                    ImportException.FailureReason.IncorrectPassword,
-                    "The settings file is corrupted or the password is incorrect",
-                    e);
-            }
+            return Parse.DecryptBlob(blob, key).ToUtf8();
         }
 
         // The local key is optional. It doesn't exist in the older versions. This function returns
@@ -114,21 +89,16 @@ namespace PasswordManagerAccess.Dashlane
         {
             // TODO: Are there other platforms besides Windows desktop we need to check on?
             var filename = Path.Combine(GetProfilePath(username), "Settings", "localSettings.aes");
-            if (!File.Exists(filename))
-                throw new ImportException(
-                    ImportException.FailureReason.ProfileNotFound,
-                    string.Format("Profile '{0}' doesn't exist", username));
+            if (File.Exists(filename))
+                return filename;
 
-            return filename;
+            throw new InternalErrorException(string.Format("Profile '{0}' doesn't exist", username));
         }
 
         internal static string GetProfilePath(string username)
         {
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Dashlane",
-                "profiles",
-                username);
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(appData, "Dashlane", "profiles", username);
         }
     }
 }

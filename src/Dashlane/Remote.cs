@@ -205,6 +205,8 @@ namespace PasswordManagerAccess.Dashlane
                 switch (message)
                 {
                 case "Incorrect authentification": // Important: it's misspelled in the original code
+                    // TODO: This is unlikely, since the username has been verified at this point
+                    // and password is not used here. Check when this could fail.
                     throw new BadCredentialsException("Invalid username or password");
                 default:
                     throw new InternalErrorException($"Request failed with error: '{message}'");
@@ -212,7 +214,7 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        private static Common.BaseException MakeSpecializedError(RestResponse response)
+        private static BaseException MakeSpecializedError(RestResponse response)
         {
             Uri uri = response.RequestUri;
 

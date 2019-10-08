@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using PasswordManagerAccess.Example.Common;
 
@@ -103,10 +104,10 @@ namespace Example
 
                     Console.WriteLine($"The device ID is found in the local database: {deviceId}");
                 }
-                catch (ImportException e)
+                catch (BaseException e)
                 {
                     Console.WriteLine("Could not import the device ID from the local Dashlane setting)");
-                    Console.WriteLine($"Error: {e.Message} ({e.Reason})");
+                    Util.PrintException(e);
                 }
             }
 
@@ -142,14 +143,10 @@ namespace Example
                         account.Note);
                 }
             }
-            catch (PasswordManagerAccess.Common.BaseException e)
+            catch (BaseException e)
             {
+                Console.WriteLine("Could not open the remote vault");
                 Util.PrintException(e);
-            }
-            catch (ParseException e)
-            {
-                Console.WriteLine("Could not parse the vault");
-                Console.WriteLine("Error: {0} ({1})", e.Message, e.Reason);
             }
         }
     }

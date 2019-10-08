@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using Konscious.Security.Cryptography;
@@ -207,8 +206,7 @@ namespace PasswordManagerAccess.Dashlane
             if (blob[0] == '$')
                 return ParseFlexibleBlob(blob);
 
-            // TODO: Replace with a ClientException
-            throw new NotImplementedException("Unsupported encryption mode");
+            throw new InternalErrorException("Invalid blob format");
         }
 
         public static Blob ParseFlexibleBlob(byte[] blob)
@@ -376,16 +374,17 @@ namespace PasswordManagerAccess.Dashlane
 
             // 4. Check the MAC
             if (!DoesHashMatch(parsed, iv, hmacKey))
-                throw new CryptoException("The data in the vault is corrupted (MAC doesn't match)");
+                throw new BadCredentialsException(
+                    "The password is incorrect or the data in the vault is corrupted (MAC doesn't match)");
 
             // 5. Decrypt
-            var plaintext = DecryptAes256(parsed.Ciphertext, iv, encryptionKey);
+            var plaintext = Decrypt(parsed.Ciphertext, iv, encryptionKey);
 
             // 6. Inflate
             return Inflate(plaintext.Sub(6, int.MaxValue));
         }
 
-        // TODO: Remove this?
+        // TODO: This function does nothing special. Inline this?
         public static byte[] ComputeEncryptionKey(byte[] password, byte[] salt, CryptoConfig config)
         {
             // TODO: This is slow for some of the algorithms, this needs to be cached or large
@@ -400,8 +399,6 @@ namespace PasswordManagerAccess.Dashlane
             if (password.Any(x => x > 127))
                 throw new UnsupportedFeatureException("Non ASCII passwords are not supported");
 
-            // TODO: This is slow for some of the algorithms, this needs to be cached or large
-            // vaults would take forever to open.
             return password.ToBytes();
         }
 
@@ -476,26 +473,15 @@ namespace PasswordManagerAccess.Dashlane
             throw new InternalErrorException($"Unexpected signature mode {blob.CryptoConfig.SignatureMode}");
         }
 
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
+        public static byte[] Decrypt(byte[] ciphertext, byte[] iv, byte[] encryptionKey)
         {
             try
             {
-                using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.CBC, IV = iv })
-                using (var decryptor = aes.CreateDecryptor())
-                using (var inputStream = new MemoryStream(ciphertext, false))
-                using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
-                using (var outputStream = new MemoryStream())
-                {
-                    cryptoStream.CopyTo(outputStream);
-                    return outputStream.ToArray();
-                }
+                return Crypto.DecryptAes256Cbc(ciphertext, iv, encryptionKey);
             }
-            catch (CryptographicException e)
+            catch (CryptoException e)
             {
-                throw new ParseException(
-                    ParseException.FailureReason.IncorrectPassword,
-                    "Decryption failed due to incorrect password or data corruption",
-                    e);
+                throw new BadCredentialsException("The password is incorrect", e);
             }
         }
 

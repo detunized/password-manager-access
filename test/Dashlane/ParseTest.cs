@@ -3,7 +3,6 @@
 
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Xml.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
@@ -132,11 +131,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void DecryptBlob_throws_on_incorrect_password()
         {
-            var e = Assert.Throws<ParseException>(() => Parse.DecryptBlob(Blob, "Incorrect password"));
-
-            Assert.Equal(ParseException.FailureReason.IncorrectPassword, e.Reason);
-            Assert.Equal("Decryption failed due to incorrect password or data corruption", e.Message);
-            Assert.IsType<CryptographicException>(e.InnerException);
+            Exceptions.AssertThrowsBadCredentials(() => Parse.DecryptBlob(Blob, "Incorrect password"),
+                                                  "The password is incorrect");
         }
 
         [Fact]
@@ -178,24 +174,22 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void DecryptAes256_decrypts_ciphertext()
+        public void Decrypt_decrypts_ciphertext()
         {
-            Assert.Equal(Content, Parse.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                                      "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                                      "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
+            var plaintext = Parse.Decrypt("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                          "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                          "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
+            Assert.Equal(Content, plaintext);
         }
 
         [Fact]
-        public void DecryptAes256_throws_on_incorrect_encryption_key()
+        public void Decrypt_throws_on_incorrect_encryption_key()
         {
-            var e = Assert.Throws<ParseException>(() => Parse.DecryptAes256(
+            Exceptions.AssertThrowsBadCredentials(() => Parse.Decrypt(
                 "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
                 "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                "Incorrect key must be 32 bytes!!".ToBytes()));
-
-            Assert.Equal(ParseException.FailureReason.IncorrectPassword, e.Reason);
-            Assert.Equal("Decryption failed due to incorrect password or data corruption", e.Message);
-            Assert.IsType<CryptographicException>(e.InnerException);
+                "Incorrect key must be 32 bytes!!".ToBytes()),
+                "The password is incorrect");
         }
 
         [Fact]
