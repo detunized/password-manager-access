@@ -10,21 +10,14 @@ namespace PasswordManagerAccess.Test.Dashlane
 {
     public class ImportTest
     {
-        public const string Password = "password";
-        public const string DeviceId = "local-uki";
-        public const string LocalKeyFilename = "Dashlane/Fixtures/localKey.aes";
-        public const string SettingsFilename = "Dashlane/Fixtures/localSettings.aes";
-        public const string Xml =
-            "<root>" +
-                "<KWLocalSettingsManager>" +
-                    "<KWDataItem key='uki'>local-uki</KWDataItem>" +
-                "</KWLocalSettingsManager>" +
-            "</root>";
-
-        [Fact]
-        public void ImportDeviceIdFromSettingsFile_returns_device_id()
+        [Theory]
+        [InlineData("localSettings-kwc3.aes")]
+        [InlineData("localSettings-pbkdf2.aes")]
+        [InlineData("localSettings-argon2d.aes")]
+        public void ImportDeviceIdFromSettingsFile_returns_device_id(string filename)
         {
-            Assert.Equal(DeviceId, Import.ImportDeviceIdFromSettingsFile(SettingsFilename, Password.ToBytes()));
+            var id = Import.ImportDeviceIdFromSettingsFile($"{FixtureDir}/{filename}", LocalKey);
+            Assert.Equal(DeviceId, id);
         }
 
         [Fact]
@@ -59,21 +52,22 @@ namespace PasswordManagerAccess.Test.Dashlane
         [InlineData("localKey-argon2d.aes")]
         public void ImportLocalKey_loads_and_decrypts_key(string filename)
         {
-            var key = Import.ImportLocalKey($"Dashlane/Fixtures/{filename}", "Password13");
-            Assert.Equal(32, key.Length);
+            var key = Import.ImportLocalKey($"{FixtureDir}/{filename}", Password);
+            Assert.Equal(LocalKey, key);
         }
 
         [Fact]
         public void ImportLocalKey_throws_on_incorrect_password()
         {
-            Exceptions.AssertThrowsBadCredentials(() => Import.ImportLocalKey(LocalKeyFilename, "Incorrect password"),
-                                                  "The password is incorrect");
+            Exceptions.AssertThrowsBadCredentials(
+                () => Import.ImportLocalKey($"{FixtureDir}/localKey-kwc3.aes", "Incorrect password"),
+                "The password is incorrect");
         }
 
         [Fact]
         public void LoadSettingsFile_reads_and_decrypts_settings_xml()
         {
-            var s = Import.LoadSettingsFile(SettingsFilename, Password.ToBytes());
+            var s = Import.LoadSettingsFile(SettingsFilename, LocalKey);
             Assert.StartsWith("<?xml", s);
             Assert.EndsWith("</root>\n", s);
         }
@@ -85,5 +79,23 @@ namespace PasswordManagerAccess.Test.Dashlane
                 () => Import.LoadSettingsFile(SettingsFilename, "Incorrect key".ToBytes()),
                 "The password is incorrect");
         }
+
+        //
+        // Data
+        //
+
+        private const string Password = "Password13";
+        private const string DeviceId = "4242424242421997669740r1570532486-2BKZLme8-Euno-7XFl-F09n-JaIvRMHi6h24";
+        private const string FixtureDir = "Dashlane/Fixtures";
+        private const string SettingsFilename = FixtureDir + "/localSettings-kwc3.aes";
+
+        private readonly byte[] LocalKey = "n+YYHZEKgxghoy3vlJ+EfWyCZ2CTn6Ik3jpGTjhbsbQ=".Decode64();
+
+        private readonly string Xml =
+            "<root>" +
+                "<KWLocalSettingsManager>" +
+                    $"<KWDataItem key='uki'>{DeviceId}</KWDataItem>" +
+                "</KWLocalSettingsManager>" +
+            "</root>";
     }
 }
