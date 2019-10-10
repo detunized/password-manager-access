@@ -31,18 +31,28 @@ namespace PasswordManagerAccess.Dashlane
             if (registered && loginType != LoginType.GoogleAuth_Always)
                 return Fetch(username, deviceId, rest);
 
-            var passcode = GetPasscodeFromUser(username, loginType, ui, rest);
-
-            // TODO: Verify what happens when OTP is not correct!
-            var blob = Fetch(username, loginType, passcode.Code, rest);
-
-            if (passcode.RememberMe && !registered)
+            // Try to fetch a few times and then register the device
+            var attempt = 0;
+            while (true)
             {
-                var token = blob.GetString("token") ?? passcode.Code;
-                RegisterDeviceWithPasscode(username, deviceId, DeviceName, token, rest);
-            }
+                try
+                {
+                    var passcode = GetPasscodeFromUser(username, loginType, attempt++, ui, rest);
+                    var blob = Fetch(username, loginType, passcode.Code, rest);
 
-            return blob;
+                    if (passcode.RememberMe && !registered)
+                    {
+                        var token = blob.GetString("token") ?? passcode.Code;
+                        RegisterDeviceWithToken(username, deviceId, DeviceName, token, rest);
+                    }
+
+                    return blob;
+                }
+                catch (BadMultiFactorException) when (attempt < 3)
+                {
+                    // Ignore
+                }
+            }
         }
 
         //
@@ -100,22 +110,32 @@ namespace PasswordManagerAccess.Dashlane
         }
 
         // Always returns a valid passcode. Throws on errors.
-        internal static Ui.Passcode GetPasscodeFromUser(string username, LoginType loginType, Ui ui, RestClient rest)
+        internal static Ui.Passcode GetPasscodeFromUser(string username,
+                                                        LoginType loginType,
+                                                        int attempt,
+                                                        Ui ui,
+                                                        RestClient rest)
         {
             // To login we need the MFA passcode. In case no MFA is set up, the code sent via email.
             Ui.Passcode passcode = Ui.Passcode.Cancel;
             switch (loginType)
             {
             case LoginType.Regular:
+                // Only trigger the first email right away. On the following attempts wait for the
+                // user to trigger the resend explicitly.
+                var triggerEmail = attempt == 0;
                 do
                 {
-                    TriggerEmailWithPasscode(username, rest);
-                    passcode = ui.ProvideEmailPasscode(0);
+                    if (triggerEmail)
+                        TriggerEmailWithPasscode(username, rest);
+
+                    passcode = ui.ProvideEmailPasscode(attempt);
+                    triggerEmail = true;
                 } while (passcode == Ui.Passcode.Resend);
                 break;
             case LoginType.GoogleAuth_Once:
             case LoginType.GoogleAuth_Always:
-                passcode = ui.ProvideGoogleAuthPasscode(0);
+                passcode = ui.ProvideGoogleAuthPasscode(attempt);
                 break;
             default:
                 throw new InternalErrorException("Unknown login type");
@@ -141,7 +161,7 @@ namespace PasswordManagerAccess.Dashlane
             PerformRegisterDeviceStep(SendTokenEndpoint, parameters, rest);
         }
 
-        internal static void RegisterDeviceWithPasscode(string username,
+        internal static void RegisterDeviceWithToken(string username,
                                                         string deviceId,
                                                         string deviceName,
                                                         string token,
@@ -252,9 +272,9 @@ namespace PasswordManagerAccess.Dashlane
                 switch (message)
                 {
                 case "Incorrect authentification": // Important: it's misspelled in the original code
-                    // TODO: This is unlikely, since the username has been verified at this point
-                    // and password is not used here. Check when this could fail.
-                    throw new BadCredentialsException("Invalid username or password");
+                    throw new BadMultiFactorException("Invalid email token");
+                case "Bad OTP":
+                    throw new BadMultiFactorException("Invalid second factor code");
                 default:
                     throw new InternalErrorException($"Request failed with error: '{message}'");
                 }

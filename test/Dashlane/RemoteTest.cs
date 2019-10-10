@@ -222,7 +222,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         private void RegisterDeviceWithToken_makes_post_request_to_specific_endpoint()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterEndpoint);
-            Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest);
+            Remote.RegisterDeviceWithToken(Username, Uki, DeviceName, Token, rest);
         }
 
         [Fact]
@@ -231,7 +231,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var rest = new RestFlow()
                 .Post("SUCCESS")
                 .ExpectContent($"login={Username}", $"devicename={DeviceName}", $"uki={Uki}", $"token={Token}");
-            Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest);
+            Remote.RegisterDeviceWithToken(Username, Uki, DeviceName, Token, rest);
         }
 
         [Fact]
@@ -241,7 +241,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var rest = new RestFlow().Post("", error);
 
             var e = Exceptions.AssertThrowsNetworkError(
-                () => Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest),
+                () => Remote.RegisterDeviceWithToken(Username, Uki, DeviceName, Token, rest),
                 "network error occurred");
             Assert.Same(error, e.InnerException);
         }
@@ -251,7 +251,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
             Exceptions.AssertThrowsInternalError(
-                () => Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest));
+                () => Remote.RegisterDeviceWithToken(Username, Uki, DeviceName, Token, rest));
         }
 
         //

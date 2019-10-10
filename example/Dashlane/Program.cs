@@ -20,6 +20,9 @@ namespace Example
 
         public override Passcode ProvideEmailPasscode(int attempt)
         {
+            if (attempt > 0)
+                Bad("Email security token is invalid, try again");
+
             var passcode = GetPasscode($"Please check your email and enter the security token {ToCancel} " +
                                        "or 'r' to resend the token");
 
