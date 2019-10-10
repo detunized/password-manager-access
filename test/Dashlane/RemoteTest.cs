@@ -16,14 +16,14 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
 
         [Fact]
-        public void RequestLoginType_makes_post_request_to_specific_endpoint()
+        private void RequestLoginType_makes_post_request_to_specific_endpoint()
         {
             var rest = new RestFlow().Post("{'exists': 'YES'}").ExpectUrl(LoginTypeEndpoint);
             Remote.RequestLoginType(Username, rest);
         }
 
         [Fact]
-        public void RequestLoginType_requests_with_correct_username()
+        private void RequestLoginType_requests_with_correct_username()
         {
             var rest = new RestFlow().Post("{'exists': 'YES'}").ExpectContent($"login={Username}");
             Remote.RequestLoginType(Username, rest);
@@ -32,7 +32,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Theory]
         [InlineData("NO", Remote.LoginType.DoesntExist)]
         [InlineData("YES", Remote.LoginType.Regular)]
-        [InlineData("YES_OTP_LOGIN", Remote.LoginType.GoogleAuth)]
+        [InlineData("YES_OTP_NEWDEVICE", Remote.LoginType.GoogleAuth_Once)]
+        [InlineData("YES_OTP_LOGIN", Remote.LoginType.GoogleAuth_Always)]
         internal void RequestLoginType_returns_correct_login_type(string input, Remote.LoginType expected)
         {
             var rest = new RestFlow().Post($"{{'exists': '{input}'}}");
@@ -52,49 +53,61 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
 
         [Fact]
-        public void Fetch_returns_received_json()
+        private void Fetch_returns_received_json()
         {
             var rest = new RestFlow().Post("{'what': 'ever'}");
             var response = new JObject();
             response["what"] = "ever";
 
-            Assert.Equal(response, Remote.Fetch(Username, Uki, NoOtp, rest));
+            Assert.Equal(response, Remote.Fetch(Username, Uki, rest));
         }
 
         [Fact]
-        public void Fetch_makes_post_request_to_specific_endpoint()
+        private void Fetch_makes_post_request_to_specific_endpoint()
         {
             var rest = new RestFlow().Post("{}").ExpectUrl(FetchEndpoint);
-            Remote.Fetch(Username, Uki, NoOtp, rest);
+            Remote.Fetch(Username, Uki, rest);
         }
 
         [Fact]
-        public void Fetch_makes_post_request_with_correct_username_uki_and_no_otp()
+        private void Fetch_makes_post_request_with_correct_username_uki_and_no_otp()
         {
             var rest = new RestFlow()
                 .Post("{}")
                     .ExpectContent($"login={Username}", $"uki={Uki}")
                     .ExpectContent(s => Assert.DoesNotContain("otp=", s));
-            Remote.Fetch(Username, Uki, NoOtp, rest);
+            Remote.Fetch(Username, Uki, rest);
         }
 
         [Fact]
-        public void Fetch_makes_post_request_with_correct_username_otp_and_no_uki()
+        private void Fetch_makes_post_request_with_correct_username_email_token_and_no_uki()
+        {
+            var rest = new RestFlow()
+                .Post("{}")
+                    .ExpectContent($"login={Username}", $"token={Otp}")
+                    .ExpectContent(s => Assert.DoesNotContain("uki=", s));
+            Remote.Fetch(Username, Remote.LoginType.Regular, Otp, rest);
+        }
+
+        [Theory]
+        [InlineData(Remote.LoginType.GoogleAuth_Once)]
+        [InlineData(Remote.LoginType.GoogleAuth_Always)]
+        private void Fetch_makes_post_request_with_correct_username_otp_and_no_uki(Remote.LoginType loginType)
         {
             var rest = new RestFlow()
                 .Post("{}")
                     .ExpectContent($"login={Username}", $"otp={Otp}")
                     .ExpectContent(s => Assert.DoesNotContain("uki=", s));
-            Remote.Fetch(Username, Uki, Otp, rest);
+            Remote.Fetch(Username, loginType, Otp, rest);
         }
 
         [Fact]
-        public void Fetch_throws_on_network_error()
+        private void Fetch_throws_on_network_error()
         {
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("{}", error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Remote.Fetch(Username, Uki, NoOtp, rest),
+            var e = Exceptions.AssertThrowsNetworkError(() => Remote.Fetch(Username, Uki, rest),
                                                         "Network error occurred");
             Assert.Equal(error, e.InnerException);
         }
@@ -105,20 +118,20 @@ namespace PasswordManagerAccess.Test.Dashlane
         [InlineData("''")]
         [InlineData("[]")]
         [InlineData("} invalid {")]
-        public void Fetch_throws_on_invalid_json_in_response(string response)
+        private void Fetch_throws_on_invalid_json_in_response(string response)
         {
             var rest = new RestFlow().Post(response);
-            var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest));
+            var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest));
 
             Assert.Equal("Invalid JSON in response", e.Message);
             Assert.IsAssignableFrom<JsonException>(e.InnerException);
         }
 
         [Fact]
-        public void Fetch_throws_on_error_with_message()
+        private void Fetch_throws_on_error_with_message()
         {
             var rest = new RestFlow().Post("{'error': {'message': 'Oops!'}}");
-            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Oops!");
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest), "Oops!");
         }
 
         [Theory]
@@ -131,25 +144,25 @@ namespace PasswordManagerAccess.Test.Dashlane
         [InlineData("{'error': {'message': {}}}")]
         [InlineData("{'error': {'message': []}}")]
         [InlineData("{'error': {'message': 0}}")]
-        public void Fetch_throws_on_error_with_malformed_response(string response)
+        private void Fetch_throws_on_error_with_malformed_response(string response)
         {
             var rest = new RestFlow().Post(response);
-            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest), "Unknown error");
         }
 
         [Fact]
-        public void Fetch_throws_on_invalid_username_or_password()
+        private void Fetch_throws_on_invalid_username_or_password()
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Incorrect authentification'}");
-            Exceptions.AssertThrowsBadCredentials(() => Remote.Fetch(Username, Uki, NoOtp, rest),
+            Exceptions.AssertThrowsBadCredentials(() => Remote.Fetch(Username, Uki, rest),
                                                   "Invalid username or password");
         }
 
         [Fact]
-        public void Fetch_throws_on_other_message()
+        private void Fetch_throws_on_other_message()
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Oops!'}");
-            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Oops!");
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest), "Oops!");
         }
 
         [Theory]
@@ -159,10 +172,10 @@ namespace PasswordManagerAccess.Test.Dashlane
         [InlineData("{'objectType': 'message', 'content': 0}")]
         [InlineData("{'objectType': 'message', 'content': []}")]
         [InlineData("{'objectType': 'message', 'content': {}}")]
-        public void Fetch_throws_on_message_with_malformed_response(string response)
+        private void Fetch_throws_on_message_with_malformed_response(string response)
         {
             var rest = new RestFlow().Post(response);
-            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, NoOtp, rest), "Unknown error");
+            Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest), "Unknown error");
         }
 
         //
@@ -170,35 +183,35 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
 
         [Fact]
-        public void TriggerEmailWithToken_makes_post_request_to_specific_endpoint()
+        private void TriggerEmailWithToken_makes_post_request_to_specific_endpoint()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectUrl(SendEmailEndpoint);
-            Remote.TriggerEmailWithToken(Username, rest);
+            Remote.TriggerEmailWithPasscode(Username, rest);
         }
 
         [Fact]
-        public void TriggerEmailWithToken_makes_post_request_with_correct_username()
+        private void TriggerEmailWithToken_makes_post_request_with_correct_username()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectContent($"login={Username}");
-            Remote.TriggerEmailWithToken(Username, rest);
+            Remote.TriggerEmailWithPasscode(Username, rest);
         }
 
         [Fact]
-        public void TriggerEmailWithToken_throws_on_network_error()
+        private void TriggerEmailWithToken_throws_on_network_error()
         {
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("", error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Remote.TriggerEmailWithToken(Username, rest),
+            var e = Exceptions.AssertThrowsNetworkError(() => Remote.TriggerEmailWithPasscode(Username, rest),
                                                         "network error occurred");
             Assert.Same(error, e.InnerException);
         }
 
         [Fact]
-        public void TriggerEmailWithToken_throws_on_invalid_response()
+        private void TriggerEmailWithToken_throws_on_invalid_response()
         {
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
-            Exceptions.AssertThrowsInternalError(() => Remote.TriggerEmailWithToken(Username, rest));
+            Exceptions.AssertThrowsInternalError(() => Remote.TriggerEmailWithPasscode(Username, rest));
         }
 
         //
@@ -206,39 +219,39 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
 
         [Fact]
-        public void RegisterDeviceWithToken_makes_post_request_to_specific_endpoint()
+        private void RegisterDeviceWithToken_makes_post_request_to_specific_endpoint()
         {
             var rest = new RestFlow().Post("SUCCESS").ExpectUrl(RegisterEndpoint);
-            Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest);
+            Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest);
         }
 
         [Fact]
-        public void RegisterDeviceWithToken_makes_post_request_with_correct_username_and_other_parameters()
+        private void RegisterDeviceWithToken_makes_post_request_with_correct_username_and_other_parameters()
         {
             var rest = new RestFlow()
                 .Post("SUCCESS")
                 .ExpectContent($"login={Username}", $"devicename={DeviceName}", $"uki={Uki}", $"token={Token}");
-            Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest);
+            Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest);
         }
 
         [Fact]
-        public void RegisterDeviceWithToken_throws_on_network_error()
+        private void RegisterDeviceWithToken_throws_on_network_error()
         {
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("", error);
 
             var e = Exceptions.AssertThrowsNetworkError(
-                () => Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest),
+                () => Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest),
                 "network error occurred");
             Assert.Same(error, e.InnerException);
         }
 
         [Fact]
-        public void RegisterDeviceWithToken_throws_on_invalid_response()
+        private void RegisterDeviceWithToken_throws_on_invalid_response()
         {
             var rest = new RestFlow().Post("NOT A GREAT SUCCESS");
             Exceptions.AssertThrowsInternalError(
-                () => Remote.RegisterDeviceWithToken(Username, DeviceName, Uki, Token, rest));
+                () => Remote.RegisterDeviceWithPasscode(Username, Uki, DeviceName, Token, rest));
         }
 
         //

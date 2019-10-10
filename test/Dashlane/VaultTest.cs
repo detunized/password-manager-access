@@ -116,7 +116,7 @@ namespace PasswordManagerAccess.Test.Dashlane
                 return new Passcode(Otp, false);
             }
 
-            public override EmailToken ProvideEmailToken()
+            public override Passcode ProvideEmailPasscode(int attempt)
             {
                 throw new NotImplementedException();
             }

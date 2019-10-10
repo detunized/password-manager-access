@@ -18,19 +18,18 @@ namespace Example
             return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
         }
 
-        public override EmailToken ProvideEmailToken()
+        public override Passcode ProvideEmailPasscode(int attempt)
         {
-            var answer = GetAnswer($"Please check your email and enter the security token {ToCancel} " +
-                                   "or 'r' to resend the token");
-            switch (answer)
+            var passcode = GetPasscode($"Please check your email and enter the security token {ToCancel} " +
+                                       "or 'r' to resend the token");
+
+            switch (passcode.Code)
             {
-            case "":
-                return EmailToken.Cancel;
             case "r":
             case "R":
-                return EmailToken.Resend;
+                return Passcode.Resend;
             default:
-                return new EmailToken(answer);
+                return passcode;
             }
         }
 

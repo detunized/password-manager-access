@@ -22,17 +22,25 @@ namespace PasswordManagerAccess.Dashlane
             if (loginType == LoginType.DoesntExist)
                 throw new BadCredentialsException("Invalid username");
 
-            if (!IsDeviceRegistered(username, deviceId, rest))
-                RegisterNewDevice(username, deviceId, ui, rest);
+            var registered = IsDeviceRegistered(username, deviceId, rest);
 
-            Ui.Passcode passcode = loginType == LoginType.GoogleAuth
-                ? ui.ProvideGoogleAuthPasscode(0)
-                : new Ui.Passcode("", false);
+            // We have a registered device, no 2FA code is needed
+            // TODO: Verify always-on OTP!
+            if (registered && loginType != LoginType.GoogleAuth_Always)
+                return Fetch(username, deviceId, rest);
 
-            if (passcode == Ui.Passcode.Cancel)
-                throw new CanceledMultiFactorException("MFA canceled by the user");
+            var passcode = GetPasscodeFromUser(username, loginType, ui, rest);
 
-            return Fetch(username, deviceId, passcode.Code ?? "", rest);
+            // TODO: Verify what happens when OTP is not correct!
+            var blob = Fetch(username, loginType, passcode.Code, rest);
+
+            if (passcode.RememberMe)
+            {
+                var token = blob.GetString("token") ?? passcode.Code;
+                RegisterDeviceWithPasscode(username, deviceId, DeviceName, token, rest);
+            }
+
+            return blob;
         }
 
         //
@@ -43,7 +51,8 @@ namespace PasswordManagerAccess.Dashlane
         {
             DoesntExist,
             Regular,
-            GoogleAuth,
+            GoogleAuth_Once,
+            GoogleAuth_Always,
         }
 
         internal static LoginType RequestLoginType(string username, RestClient rest)
@@ -56,12 +65,15 @@ namespace PasswordManagerAccess.Dashlane
                 switch (type)
                 {
                 case "NO":
+                case "NO_UNLIKELY":
+                case "NO_INVALID":
                     return LoginType.DoesntExist;
                 case "YES":
                     return LoginType.Regular;
-                case "YES_OTP_LOGIN":
                 case "YES_OTP_NEWDEVICE":
-                    return LoginType.GoogleAuth;
+                    return LoginType.GoogleAuth_Once;
+                case "YES_OTP_LOGIN":
+                    return LoginType.GoogleAuth_Always;
                 }
 
                 throw new UnsupportedFeatureException($"Login type '{type}' is not supported");
@@ -85,29 +97,38 @@ namespace PasswordManagerAccess.Dashlane
             throw MakeSpecializedError(response);
         }
 
-        internal static void RegisterNewDevice(string username, string deviceId, Ui ui, RestClient rest)
+        // Always returns a valid passcode. Throws on errors.
+        internal static Ui.Passcode GetPasscodeFromUser(string username, LoginType loginType, Ui ui, RestClient rest)
         {
-            var token = RequestToken(username, ui, rest);
-            RegisterDeviceWithToken(username, "TODO: device name", deviceId, token, rest);
-        }
-
-        internal static string RequestToken(string username, Ui ui, RestClient rest)
-        {
-            while (true)
+            // To login we need the MFA passcode. In case no MFA is set up, the code sent via email.
+            Ui.Passcode passcode = Ui.Passcode.Cancel;
+            switch (loginType)
             {
-                TriggerEmailWithToken(username, rest);
-
-                var token = ui.ProvideEmailToken();
-                if (token == Ui.EmailToken.Cancel)
-                    throw new InternalErrorException("Canceled by user"); // TODO: Add new exception type
-                else if (token == Ui.EmailToken.Resend)
-                    continue;
-
-                return token.Token;
+            case LoginType.Regular:
+                do
+                {
+                    TriggerEmailWithPasscode(username, rest);
+                    passcode = ui.ProvideEmailPasscode(0);
+                } while (passcode == Ui.Passcode.Resend);
+                break;
+            case LoginType.GoogleAuth_Once:
+            case LoginType.GoogleAuth_Always:
+                passcode = ui.ProvideGoogleAuthPasscode(0);
+                break;
+            default:
+                throw new InternalErrorException("Unknown login type");
             }
+
+            if (passcode == Ui.Passcode.Cancel)
+                throw new CanceledMultiFactorException("MFA canceled by the user");
+
+            if (passcode.Code.IsNullOrEmpty())
+                throw new InternalErrorException("MFA passcode cannot be null or blank");
+
+            return passcode;
         }
 
-        internal static void TriggerEmailWithToken(string username, RestClient rest)
+        internal static void TriggerEmailWithPasscode(string username, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -118,17 +139,17 @@ namespace PasswordManagerAccess.Dashlane
             PerformRegisterDeviceStep(SendTokenEndpoint, parameters, rest);
         }
 
-        internal static void RegisterDeviceWithToken(string username,
-                                                     string deviceName,
-                                                     string deviceId,
-                                                     string token,
-                                                     RestClient rest)
+        internal static void RegisterDeviceWithPasscode(string username,
+                                                        string deviceId,
+                                                        string deviceName,
+                                                        string token,
+                                                        RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
                 {"devicename", deviceName},
                 {"login", username},
-                {"platform", "webaccess"},
+                {"platform", "server_leeloo"},
                 {"temporary", "0"},
                 {"token", token},
                 {"uki", deviceId},
@@ -137,22 +158,46 @@ namespace PasswordManagerAccess.Dashlane
             PerformRegisterDeviceStep(RegisterEndpoint, parameters, rest);
         }
 
-        internal static JObject Fetch(string username, string deviceId, string otp, RestClient rest)
+        internal static JObject Fetch(string username, string deviceId, RestClient rest)
         {
-            var parameters = new Dictionary<string, object>
+            var parameters = CommonFetchParameters(username);
+            parameters["uki"] = deviceId;
+
+            return Fetch(parameters, rest);
+        }
+
+        internal static JObject Fetch(string username, LoginType loginType, string passcode, RestClient rest)
+        {
+            var parameters = CommonFetchParameters(username);
+            switch (loginType)
+            {
+            case LoginType.Regular:
+                parameters["token"] = passcode;
+                break;
+            case LoginType.GoogleAuth_Once:
+            case LoginType.GoogleAuth_Always:
+                parameters["otp"] = passcode;
+                break;
+            default:
+                throw new InternalErrorException($"Unknown login type: {loginType}");
+            }
+
+            return Fetch(parameters, rest);
+        }
+
+        internal static Dictionary<string, object> CommonFetchParameters(string username)
+        {
+            return new Dictionary<string, object>
             {
                 {"login", username},
                 {"lock", "nolock"},
                 {"timestamp", "0"},
                 {"sharingTimestamp", "0"},
             };
+        }
 
-            // The device ID should only be sent when no OTP is used. It fails otherwise!
-            if (otp.IsNullOrEmpty())
-                parameters["uki"] = deviceId;
-            else
-                parameters["otp"] = otp;
-
+        internal static JObject Fetch(Dictionary<string, object> parameters, RestClient rest)
+        {
             var response = rest.PostForm(LatestEndpoint, parameters);
             if (response.IsSuccessful)
             {
@@ -236,6 +281,9 @@ namespace PasswordManagerAccess.Dashlane
         //
         // Data
         //
+
+        // TODO: Make this configurable
+        private const string DeviceName = "password-manager-access-client";
 
         private const string BaseApiUrl = "https://ws1.dashlane.com/";
         private const string LoginTypeEndpoint = "7/authentication/exists";
