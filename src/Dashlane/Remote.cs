@@ -24,8 +24,10 @@ namespace PasswordManagerAccess.Dashlane
 
             var registered = IsDeviceRegistered(username, deviceId, rest);
 
-            // We have a registered device, no 2FA code is needed
-            // TODO: Verify always-on OTP!
+            // We have a registered device, no 2FA code is needed unless always-OTP mode is on. In
+            // always-OTP mode registering a device doesn't stop the server from asking OTP the next
+            // time around. So remember-me function is this mode is more or less useless. The
+            // registered device shows up in the admin area though.
             if (registered && loginType != LoginType.GoogleAuth_Always)
                 return Fetch(username, deviceId, rest);
 
@@ -34,7 +36,7 @@ namespace PasswordManagerAccess.Dashlane
             // TODO: Verify what happens when OTP is not correct!
             var blob = Fetch(username, loginType, passcode.Code, rest);
 
-            if (passcode.RememberMe)
+            if (passcode.RememberMe && !registered)
             {
                 var token = blob.GetString("token") ?? passcode.Code;
                 RegisterDeviceWithPasscode(username, deviceId, DeviceName, token, rest);
