@@ -119,7 +119,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void ParseEncryptedBlob_throws_on_too_short_blob()
         {
             var e = Assert.Throws<ArgumentException>(() => Parse.ParseEncryptedBlob(new byte[] {13, 37}));
-            Assert.Equal("Blob is too short\r\nParameter name: blob", e.Message);
+            Assert.Contains("Blob is too short", e.Message);
         }
 
         [Fact]

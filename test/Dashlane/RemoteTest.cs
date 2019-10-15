@@ -154,8 +154,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         private void Fetch_throws_on_invalid_username_or_password()
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Incorrect authentification'}");
-            Exceptions.AssertThrowsBadCredentials(() => Remote.Fetch(Username, Uki, rest),
-                                                  "Invalid username or password");
+            Exceptions.AssertThrowsBadMultiFactor(() => Remote.Fetch(Username, Uki, rest),
+                                                  "Invalid email token");
         }
 
         [Fact]
