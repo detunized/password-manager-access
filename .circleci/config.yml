@@ -9,3 +9,4 @@ jobs:
     steps:
       - checkout
       - run: dotnet build
+      - run: dotnet test
