@@ -1,5 +1,7 @@
 # Password Manager Access for .NET in C#
 
+[![Build status](https://ci.appveyor.com/api/projects/status/83qpps4fqdv0vn60?svg=true)](https://ci.appveyor.com/project/detunized/password-manager-access)
+
 Provides access API to various online password managers. This repo is an
 attempt to join and unify all the libraries I've written in the past (see
 detunized/lastpass-sharp, detunized/1password-sharp and many more).

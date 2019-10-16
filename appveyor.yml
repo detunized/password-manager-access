@@ -1,0 +1,9 @@
+﻿version: 1.0.{build}
+image: Ubuntu1804
+
+build:
+  project: password-manager-access.sln
+  verbosity: minimal
+
+test_script:
+  - sh: dotnet test -f netcoreapp3.0
