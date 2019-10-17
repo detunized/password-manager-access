@@ -10,6 +10,7 @@
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net472;netcoreapp3.0</TargetFrameworks>
     <LangVersion>6</LangVersion>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
 </Project>
