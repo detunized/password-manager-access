@@ -34,9 +34,7 @@ jobs:
     vmImage: 'ubuntu-latest'
 
   variables:
-    solution: 'password-manager-access.sln'
-    buildPlatform: 'Any CPU'
-    buildConfiguration: 'Release'
+    framework: 'netcoreapp3.0'
 
   steps:
   - task: DotNetCoreCLI@2
@@ -50,3 +48,4 @@ jobs:
   - task: DotNetCoreCLI@2
     inputs:
       command: test
+      arguments: '--framework $(framework)'
