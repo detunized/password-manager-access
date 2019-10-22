@@ -29,6 +29,18 @@ jobs:
       platform: '$(buildPlatform)'
       configuration: '$(buildConfiguration)'
 
+  - task: NuGetCommand@2
+    inputs:
+      command: pack
+      packagesToPack: 'src/*.csproj'
+
+  # - task: GithubRelease@0
+  #   displayName: 'Create GitHub Release'
+  #   condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/v')
+  #   inputs:
+  #     gitHubConnection: detunized
+  #     assets: $(Build.ArtifactStagingDirectory)/*.nupkg
+
 - job: Linux
   pool:
     vmImage: 'ubuntu-latest'
