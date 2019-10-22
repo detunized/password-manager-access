@@ -29,10 +29,16 @@ jobs:
       platform: '$(buildPlatform)'
       configuration: '$(buildConfiguration)'
 
-  - task: NuGetCommand@2
+  - task: DotNetCoreCLI@2
+    displayName: Build NuGet package
     inputs:
       command: pack
-      packagesToPack: 'src/*.csproj'
+      arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget'
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      path: '$(Build.ArtifactStagingDirectory)/nuget'
+      artifact: nuget-package
 
   # - task: GithubRelease@0
   #   displayName: 'Create GitHub Release'
@@ -47,6 +53,9 @@ jobs:
 
   variables:
     framework: 'netcoreapp3.0'
+    solution: 'password-manager-access.sln'
+    buildPlatform: 'Any CPU'
+    buildConfiguration: 'Release'
 
   steps:
   - task: DotNetCoreCLI@2
@@ -64,3 +73,19 @@ jobs:
     inputs:
       command: test
       arguments: '--framework $(framework)'
+
+  # - task: DotNetCoreCLI@2
+  #   displayName: Build NuGet package
+  #   inputs:
+  #     command: pack
+  #     projects: src/PasswordManagerAccess.csproj
+  #     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget-linux --no-build --verbosity normal'
+  #     verbosityRestore: normal
+  #     verbosityPack: normal
+
+  - bash: 'dotnet pack --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget-linux --no-build --verbosity normal'
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      path: '$(Build.ArtifactStagingDirectory)/nuget-linux'
+      artifact: nuget-package-linux
