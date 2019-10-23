@@ -118,4 +118,4 @@ jobs:
   - download: current
     artifact: nuget
 
-  - bash: 'ls -lR'
+  - bash: 'ls -lR $(Pipeline.Workspace)/nuget'
