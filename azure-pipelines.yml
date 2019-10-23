@@ -118,4 +118,7 @@ jobs:
   - download: current
     artifact: nuget
 
-  - bash: 'ls -lR $(Pipeline.Workspace)/nuget'
+  - task: GitHubRelease@0
+    inputs:
+      gitHubConnection: github-release
+      assets: '$(Pipeline.Workspace)/nuget/*.nupkg'
