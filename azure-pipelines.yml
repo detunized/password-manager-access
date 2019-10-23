@@ -2,50 +2,50 @@ trigger:
 - master
 
 jobs:
-# - job: Windows
-#   pool:
-#     vmImage: 'windows-latest'
 
-#   variables:
-#     solution: 'password-manager-access.sln'
-#     buildPlatform: 'Any CPU'
-#     buildConfiguration: 'Release'
+#
+# Windows
+#
 
-#   steps:
-#   - task: NuGetToolInstaller@1
+- job: Windows
+  pool:
+    vmImage: 'windows-latest'
 
-#   - task: NuGetCommand@2
-#     inputs:
-#       restoreSolution: '$(solution)'
+  variables:
+    solution: 'password-manager-access.sln'
+    buildPlatform: 'Any CPU'
+    buildConfiguration: 'Release'
 
-#   - task: VSBuild@1
-#     inputs:
-#       solution: '$(solution)'
-#       platform: '$(buildPlatform)'
-#       configuration: '$(buildConfiguration)'
+  steps:
+  - task: NuGetToolInstaller@1
 
-#   - task: VSTest@2
-#     inputs:
-#       platform: '$(buildPlatform)'
-#       configuration: '$(buildConfiguration)'
+  - task: NuGetCommand@2
+    inputs:
+      restoreSolution: '$(solution)'
 
-#   - task: DotNetCoreCLI@2
-#     displayName: Build NuGet package
-#     inputs:
-#       command: pack
-#       arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget'
+  - task: VSBuild@1
+    inputs:
+      solution: '$(solution)'
+      platform: '$(buildPlatform)'
+      configuration: '$(buildConfiguration)'
 
-#   - task: PublishPipelineArtifact@1
-#     inputs:
-#       path: '$(Build.ArtifactStagingDirectory)/nuget'
-#       artifact: nuget-package
+  - task: VSTest@2
+    inputs:
+      platform: '$(buildPlatform)'
+      configuration: '$(buildConfiguration)'
 
-  # - task: GithubRelease@0
-  #   displayName: 'Create GitHub Release'
-  #   condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/v')
-  #   inputs:
-  #     gitHubConnection: detunized
-  #     assets: $(Build.ArtifactStagingDirectory)/*.nupkg
+  - task: DotNetCoreCLI@2
+    displayName: Build NuGet package
+    inputs:
+      command: pack
+      arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget'
+
+  - publish: src/bin/$(buildConfiguration)
+    artifact: nuget-win
+
+#
+# Linux
+#
 
 - job: Linux
   pool:
@@ -75,10 +75,8 @@ jobs:
   - bash: 'dotnet pack -c $(buildConfiguration) --no-build $(solution)'
     displayName: Pack
 
-  - publish: src/bin/Release
+  - publish: src/bin/$(buildConfiguration)
     artifact: nuget
-
-  - bash: 'ls -lR src/bin/Release'
 
   # - task: DotNetCoreCLI@2
   #   displayName: Build
@@ -108,8 +106,14 @@ jobs:
   #     path: '$(Build.ArtifactStagingDirectory)/nuget-linux'
   #     artifact: nuget-package-linux
 
+#
+# Release to GitHub
+#
+
 - job: Release
-  dependsOn: Linux
+  dependsOn:
+  - Windows
+  - Linux
 
   pool:
     vmImage: 'ubuntu-latest'
@@ -118,9 +122,12 @@ jobs:
   - download: current
     artifact: nuget
 
+  - download: current
+    artifact: nuget-win
+
   - task: GitHubRelease@0
     inputs:
       gitHubConnection: github-release
-      assets: '$(Pipeline.Workspace)/nuget/*.nupkg'
+      assets: $(Pipeline.Workspace)/**/*.nupkg
       tagSource: manual
       tag: $(Build.BuildNumber)
