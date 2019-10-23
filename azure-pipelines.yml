@@ -59,8 +59,13 @@ jobs:
 
   steps:
   - bash: 'dotnet restore $(solution)'
+    displayName: Restore
+
   - bash: 'dotnet build -c $(buildConfiguration) --no-restore $(solution)'
+    displayName: Build
+
   - bash: 'dotnet test -c $(buildConfiguration) --framework $(framework) --logger trx --no-build $(solution)'
+    displayName: Test
 
   - task: PublishTestResults@2
     inputs:
@@ -68,6 +73,7 @@ jobs:
       testResultsFiles: test/TestResults/*.trx
 
   - bash: 'dotnet pack -c $(buildConfiguration) --no-build $(solution)'
+    displayName: Pack
 
   - publish: src/bin/Release
     artifact: nuget
@@ -111,6 +117,5 @@ jobs:
   steps:
   - download: current
     artifact: nuget
-    patterns: '*.nupkg'
 
   - bash: 'ls -lR'
