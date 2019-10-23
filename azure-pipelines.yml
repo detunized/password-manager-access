@@ -71,6 +71,9 @@ jobs:
 
   - bash: 'dotnet pack -c $(buildConfiguration) --no-build $(solution)'
 
+  - publish: src/bin/Release
+    artifact: nuget
+
   # - task: DotNetCoreCLI@2
   #   displayName: Build
   #   inputs:
