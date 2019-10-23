@@ -122,3 +122,5 @@ jobs:
     inputs:
       gitHubConnection: github-release
       assets: '$(Pipeline.Workspace)/nuget/*.nupkg'
+      tagSource: manual
+      tag: $(Build.BuildNumber)
