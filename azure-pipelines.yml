@@ -62,8 +62,6 @@ jobs:
   - bash: 'dotnet build -c $(buildConfiguration) --no-restore $(solution)'
   - bash: 'dotnet test -c $(buildConfiguration) --framework $(framework) --logger trx --no-build $(solution)'
 
-  - bash: 'ls -lR'
-
   - task: PublishTestResults@2
     inputs:
       testResultsFormat: VSTest
@@ -73,6 +71,8 @@ jobs:
 
   - publish: src/bin/Release
     artifact: nuget
+
+  - bash: 'ls -lR src/bin/Release'
 
   # - task: DotNetCoreCLI@2
   #   displayName: Build
@@ -101,3 +101,16 @@ jobs:
   #   inputs:
   #     path: '$(Build.ArtifactStagingDirectory)/nuget-linux'
   #     artifact: nuget-package-linux
+
+- job: Release
+  dependsOn: Linux
+
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  steps:
+  - download: current
+    artifact: nuget
+    patterns: '*.nupkg'
+
+  - bash: 'ls -lR'
