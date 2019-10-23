@@ -62,6 +62,8 @@ jobs:
   - bash: 'dotnet build -c $(buildConfiguration) --no-restore $(solution)'
   - bash: 'dotnet test -c $(buildConfiguration) --framework $(framework) --logger trx --no-build $(solution)'
 
+  - bash: 'ls -lR'
+
   - task: PublishTestResults@2
     inputs:
       testResultsFormat: VSTest
