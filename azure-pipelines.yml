@@ -2,43 +2,43 @@ trigger:
 - master
 
 jobs:
-- job: Windows
-  pool:
-    vmImage: 'windows-latest'
+# - job: Windows
+#   pool:
+#     vmImage: 'windows-latest'
 
-  variables:
-    solution: 'password-manager-access.sln'
-    buildPlatform: 'Any CPU'
-    buildConfiguration: 'Release'
+#   variables:
+#     solution: 'password-manager-access.sln'
+#     buildPlatform: 'Any CPU'
+#     buildConfiguration: 'Release'
 
-  steps:
-  - task: NuGetToolInstaller@1
+#   steps:
+#   - task: NuGetToolInstaller@1
 
-  - task: NuGetCommand@2
-    inputs:
-      restoreSolution: '$(solution)'
+#   - task: NuGetCommand@2
+#     inputs:
+#       restoreSolution: '$(solution)'
 
-  - task: VSBuild@1
-    inputs:
-      solution: '$(solution)'
-      platform: '$(buildPlatform)'
-      configuration: '$(buildConfiguration)'
+#   - task: VSBuild@1
+#     inputs:
+#       solution: '$(solution)'
+#       platform: '$(buildPlatform)'
+#       configuration: '$(buildConfiguration)'
 
-  - task: VSTest@2
-    inputs:
-      platform: '$(buildPlatform)'
-      configuration: '$(buildConfiguration)'
+#   - task: VSTest@2
+#     inputs:
+#       platform: '$(buildPlatform)'
+#       configuration: '$(buildConfiguration)'
 
-  - task: DotNetCoreCLI@2
-    displayName: Build NuGet package
-    inputs:
-      command: pack
-      arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget'
+#   - task: DotNetCoreCLI@2
+#     displayName: Build NuGet package
+#     inputs:
+#       command: pack
+#       arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget'
 
-  - task: PublishPipelineArtifact@1
-    inputs:
-      path: '$(Build.ArtifactStagingDirectory)/nuget'
-      artifact: nuget-package
+#   - task: PublishPipelineArtifact@1
+#     inputs:
+#       path: '$(Build.ArtifactStagingDirectory)/nuget'
+#       artifact: nuget-package
 
   # - task: GithubRelease@0
   #   displayName: 'Create GitHub Release'
@@ -58,21 +58,22 @@ jobs:
     buildConfiguration: 'Release'
 
   steps:
-  - task: DotNetCoreCLI@2
-    displayName: Restore
-    inputs:
-      command: restore
+  - bash: 'dotnet restore $(solution)'
+  - bash: 'dotnet build -c $(buildConfiguration) --no-restore $(solution)'
+  - bash: 'dotnet test -c $(buildConfiguration) --framework $(framework) --no-build $(solution)'
+  - bash: 'dotnet pack -c $(buildConfiguration) --no-build $(solution)'
 
-  - task: DotNetCoreCLI@2
-    displayName: Build
-    inputs:
-      command: build
+  # - task: DotNetCoreCLI@2
+  #   displayName: Build
+  #   inputs:
+  #     command: build
+  #     configuration: '$(buildConfiguration)'
 
-  - task: DotNetCoreCLI@2
-    displayName: Test
-    inputs:
-      command: test
-      arguments: '--framework $(framework)'
+  # - task: DotNetCoreCLI@2
+  #   displayName: Test
+  #   inputs:
+  #     command: test
+  #     arguments: '--framework $(framework)'
 
   # - task: DotNetCoreCLI@2
   #   displayName: Build NuGet package
@@ -83,9 +84,9 @@ jobs:
   #     verbosityRestore: normal
   #     verbosityPack: normal
 
-  - bash: 'dotnet pack --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget-linux --no-build --verbosity normal'
+  # - bash: 'dotnet pack --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget-linux --no-build --verbosity normal'
 
-  - task: PublishPipelineArtifact@1
-    inputs:
-      path: '$(Build.ArtifactStagingDirectory)/nuget-linux'
-      artifact: nuget-package-linux
+  # - task: PublishPipelineArtifact@1
+  #   inputs:
+  #     path: '$(Build.ArtifactStagingDirectory)/nuget-linux'
+  #     artifact: nuget-package-linux
