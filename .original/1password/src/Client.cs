@@ -1,14 +1,14 @@
 // Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace OnePassword
 {
@@ -557,11 +557,11 @@ namespace OnePassword
                                                    JsonHttpClient jsonHttp,
                                                    ILogger logger)
         {
-            var response = GetEncryptedJson(string.Format("v1/vault/{0}/0/items", id),
-                                            sessionKey,
-                                            jsonHttp);
-            var items = response.At("items", new JArray());
+            // Convert to array right away not iterate over the same expensive enumerator again.
+            var items = EnumerateAccountsItemsInVault(id, sessionKey, jsonHttp).ToArray();
 
+            // TODO: Do we still need this? The code could be simplified when this is no longer
+            // needed.
             if (logger != null)
             {
                 var stats = new Dictionary<string, int>();
@@ -584,6 +584,27 @@ namespace OnePassword
                 .Where(ShouldKeepAccount)
                 .Select(i => ParseAccount(i, keychain))
                 .ToArray();
+        }
+
+        // Don't enumerate more than once. It's very slow since it makes network requests.
+        // TODO: Add a test for the multi-batch scenario.
+        internal static IEnumerable<JToken> EnumerateAccountsItemsInVault(string id,
+                                                                          AesKey sessionKey,
+                                                                          JsonHttpClient jsonHttp)
+        {
+            var batchId = 0;
+            while (true)
+            {
+                var response = GetEncryptedJson($"v1/vault/{id}/{batchId}/items", sessionKey, jsonHttp);
+                foreach (var i in response.At("items", new JArray()))
+                    yield return i;
+
+                // The last batch is marked with {batchComplete: true}
+                if (response.BoolAt("batchComplete", true))
+                    yield break;
+
+                batchId = response.IntAt("contentVersion");
+            }
         }
 
         // TODO: Add a test to verify the deleted accounts are ignored
