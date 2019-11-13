@@ -1,5 +1,6 @@
 trigger:
 - master
+- refs/tags/v*
 
 jobs:
 
@@ -111,9 +112,12 @@ jobs:
 #
 
 - job: Release
+
   dependsOn:
   - Windows
   - Linux
+
+  condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v')
 
   pool:
     vmImage: 'ubuntu-latest'
