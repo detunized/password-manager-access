@@ -410,6 +410,7 @@ namespace LastPass
             new Dictionary<string, Ui.SecondFactorMethod>
             {
                 {"googleauthrequired", Ui.SecondFactorMethod.GoogleAuth},
+                {"microsoftauthrequired", Ui.SecondFactorMethod.MicrosoftAuth},
                 {"otprequired", Ui.SecondFactorMethod.Yubikey},
             };
 

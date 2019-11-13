@@ -9,6 +9,7 @@ namespace LastPass
         public enum SecondFactorMethod
         {
             GoogleAuth,
+            MicrosoftAuth,
             Yubikey,
             // TODO: See which other methods should be supported.
         }
