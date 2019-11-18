@@ -1,0 +1,27 @@
+﻿{
+    "error": "invalid_grant",
+    "error_description": "Two factor required.",
+    "TwoFactorProviders": [0, 1, 2, 3, 4],
+    "TwoFactorProviders2":
+    {
+        "0": null,
+        "1":
+        {
+            "Email": "la***********@gmail.com"
+        },
+        "2":
+        {
+            "Host": "api-005dde75.duosecurity.com",
+            "Signature": "TX|bGFzdHBhc3MucnVieUBnbWFpbC5jb218RElLU0FYUEtZWDJST1lXSUdJRFp8MTU3NDA4MDgyNA==|45db357b849438b4978733ea10691d5e03db31bb:APP|bGFzdHBhc3MucnVieUBnbWFpbC5jb218RElLU0FYUEtZWDJST1lXSUdJRFp8MTU3NDA4NDEyNA==|697b856757cde45b3d9031332c167fbfe341652b"
+        },
+        "3":
+        {
+            "Nfc": false
+        },
+        "4":
+        {
+            "Challenge": "{\"appId\":\"https://vault.bitwarden.com/app-id.json\",\"challenge\":\"L-vPG2bu7wj4iwWWmYo7R6PwP7TEezOkGeSPj0sjqLg\",\"keys\":[{\"keyHandle\":\"PSQxqnD3Mf0A3DIzyQsMrbSSI4dc36HLoFXOj5vAJObKmRGXiYutnqCpBOEWYYuaCX0JI3QTKhI1VEDehpMStQ\",\"version\":\"U2F_V2\"}]}",
+            "Challenges": "[{\"appId\":\"https://vault.bitwarden.com/app-id.json\",\"challenge\":\"L-vPG2bu7wj4iwWWmYo7R6PwP7TEezOkGeSPj0sjqLg\",\"keyHandle\":\"PSQxqnD3Mf0A3DIzyQsMrbSSI4dc36HLoFXOj5vAJObKmRGXiYutnqCpBOEWYYuaCX0JI3QTKhI1VEDehpMStQ\",\"version\":\"U2F_V2\"}]"
+        }
+    }
+}

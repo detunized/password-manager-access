@@ -175,12 +175,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (methods == null || methods.Count == 0)
                 throw new InternalErrorException("Logical error: should be called with non empty list of methods");
 
-            if (methods.Count == 1)
-                return methods.ElementAt(0).Key;
-
             var availableMethods = new List<Ui.MfaMethod>();
-            availableMethods.Add(Ui.MfaMethod.Cancel);
-
             foreach (var m in methods.Keys)
             {
                 switch (m)
@@ -199,15 +194,23 @@ namespace PasswordManagerAccess.Bitwarden
                     break;
                 case Response.SecondFactorMethod.RememberMe:
                     break;
-                default:
-                    throw new UnsupportedFeatureException("TODO");
                 }
             }
+
+            // Only unsupported methods were found
+            if (availableMethods.Count == 0)
+            {
+                var unsupported = string.Join(", ", methods.Keys);
+                throw new UnsupportedFeatureException($"Seconds factor methods [{unsupported}] are not supported");
+            }
+
+            // Cancel is always available
+            availableMethods.Add(Ui.MfaMethod.Cancel);
 
             switch (ui.ChooseMfaMethod(availableMethods.ToArray()))
             {
             case Ui.MfaMethod.Cancel:
-                throw new CanceledMultiFactorException("TODO");
+                throw new CanceledMultiFactorException("Second factor step is cancelled by the user");
             case Ui.MfaMethod.GoogleAuth:
                 return Response.SecondFactorMethod.GoogleAuth;
             case Ui.MfaMethod.Email:
@@ -217,7 +220,7 @@ namespace PasswordManagerAccess.Bitwarden
             case Ui.MfaMethod.YubiKey:
                 return Response.SecondFactorMethod.YubiKey;
             default:
-                throw new InternalErrorException("TODO");
+                throw new InternalErrorException("The user responded with invalid input");
             }
         }
 

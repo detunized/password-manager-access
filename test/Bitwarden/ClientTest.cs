@@ -87,6 +87,35 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void Login_asks_ui_to_choose_second_factor_method()
+        {
+            var rest = new RestFlow()
+                .Post(GetFixture("login-mfa"), System.Net.HttpStatusCode.BadRequest)
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                .ToRestClient();
+
+            var ui = new Mock<Ui>();
+            ui.Setup(x => x.ChooseMfaMethod(It.IsAny<Ui.MfaMethod[]>())).Returns(Ui.MfaMethod.GoogleAuth);
+            ui.Setup(x => x.ProvideGoogleAuthPasscode()).Returns(new Ui.Passcode("123456", false));
+
+            Client.Login(Username, PasswordHash, DeviceId, ui.Object, SetupSecureStorage(null), rest);
+
+            ui.Verify(x => x.ChooseMfaMethod(It.IsAny<Ui.MfaMethod[]>()), Times.Once);
+        }
+
+        [Fact]
+        public void Login_throws_when_no_supported_second_factor_methods_are_available()
+        {
+            var rest = new RestFlow()
+                .Post(GetFixture("login-mfa-unsupported-only"), System.Net.HttpStatusCode.BadRequest)
+                .ToRestClient();
+
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest),
+                "not supported");
+        }
+
+        [Fact]
         public void RequestAuthToken_returns_auth_token_response()
         {
             var rest = new RestFlow()
@@ -98,6 +127,26 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
             Assert.Null(response.RememberMeToken);
             Assert.Null(response.SecondFactor.Methods);
+        }
+
+        [Fact]
+        public void RequestAuthToken_returns_second_factor_response()
+        {
+            var rest = new RestFlow()
+                .Post(GetFixture("login-mfa"), System.Net.HttpStatusCode.BadRequest)
+                .ToRestClient();
+
+            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
+
+            Assert.Null(response.AuthToken);
+            Assert.Null(response.RememberMeToken);
+
+            var methods = response.SecondFactor.Methods.Keys;
+            Assert.Equal(5, methods.Count);
+            Assert.Contains(Response.SecondFactorMethod.GoogleAuth, methods);
+            Assert.Contains(Response.SecondFactorMethod.Email, methods);
+            Assert.Contains(Response.SecondFactorMethod.Duo, methods);
+            Assert.Contains(Response.SecondFactorMethod.YubiKey, methods);
         }
 
         [Fact]

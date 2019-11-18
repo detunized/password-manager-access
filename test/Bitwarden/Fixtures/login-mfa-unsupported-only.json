@@ -1,0 +1,13 @@
+﻿{
+    "error": "invalid_grant",
+    "error_description": "Two factor required.",
+    "TwoFactorProviders": [4],
+    "TwoFactorProviders2":
+    {
+        "4":
+        {
+            "Challenge": "{\"appId\":\"https://vault.bitwarden.com/app-id.json\",\"challenge\":\"L-vPG2bu7wj4iwWWmYo7R6PwP7TEezOkGeSPj0sjqLg\",\"keys\":[{\"keyHandle\":\"PSQxqnD3Mf0A3DIzyQsMrbSSI4dc36HLoFXOj5vAJObKmRGXiYutnqCpBOEWYYuaCX0JI3QTKhI1VEDehpMStQ\",\"version\":\"U2F_V2\"}]}",
+            "Challenges": "[{\"appId\":\"https://vault.bitwarden.com/app-id.json\",\"challenge\":\"L-vPG2bu7wj4iwWWmYo7R6PwP7TEezOkGeSPj0sjqLg\",\"keyHandle\":\"PSQxqnD3Mf0A3DIzyQsMrbSSI4dc36HLoFXOj5vAJObKmRGXiYutnqCpBOEWYYuaCX0JI3QTKhI1VEDehpMStQ\",\"version\":\"U2F_V2\"}]"
+        }
+    }
+}
