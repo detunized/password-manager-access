@@ -17,6 +17,7 @@ namespace PasswordManagerAccess.Bitwarden
             Email,
             Duo,
             YubiKey,
+            U2f,
         }
 
         // To cancel return Method.Cancel (always available)
@@ -38,6 +39,7 @@ namespace PasswordManagerAccess.Bitwarden
         public abstract Passcode ProvideGoogleAuthPasscode();
         public abstract Passcode ProvideEmailPasscode(string emailHint);
         public abstract Passcode ProvideYubiKeyPasscode();
+        public abstract Passcode ProvideU2fPasscode(string appId, byte[] challenge, byte[] keyHandle);
 
         //
         // Duo

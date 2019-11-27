@@ -120,6 +120,9 @@ namespace PasswordManagerAccess.Bitwarden
             case Response.SecondFactorMethod.YubiKey:
                 passcode = ui.ProvideYubiKeyPasscode();
                 break;
+            case Response.SecondFactorMethod.U2f:
+                passcode = AskU2fPasscode(JObject.Parse((string)extra["Challenge"]), ui);
+                break;
             default:
                 throw new UnsupportedFeatureException($"2FA method {method} is not supported");
             }
@@ -169,6 +172,21 @@ namespace PasswordManagerAccess.Bitwarden
             storage.StoreString(RememberMeTokenKey, "");
         }
 
+        internal static Ui.Passcode AskU2fPasscode(JObject u2fParams, Ui ui)
+        {
+            var appId = (string)u2fParams["appId"];
+            var challenge = (string)u2fParams["challenge"];
+            var keyHandle = ((string)u2fParams["keys"][0]["keyHandle"]).Decode64Loose(); // TODO: Support multiple keys
+
+            // The challenge that is received from the server is not the actual U2F challenge, it's
+            // just a part of it. The actual challenge is a SHA-256 hash of the "client data" that
+            // is formed from various bits of information. The client data is sent back to the
+            // server in a follow up request.
+            var clientData = $"{{\"challenge\":\"{challenge}\",\"origin\":\"{appId}\",\"typ\":\"navigator.id.getAssertion\"}}";
+
+            return ui.ProvideU2fPasscode(appId, Common.Crypto.Sha256(clientData), keyHandle);
+        }
+
         internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor, Ui ui)
         {
             var methods = secondFactor.Methods;
@@ -191,6 +209,9 @@ namespace PasswordManagerAccess.Bitwarden
                     break;
                 case Response.SecondFactorMethod.YubiKey:
                     availableMethods.Add(Ui.MfaMethod.YubiKey);
+                    break;
+                case Response.SecondFactorMethod.U2f:
+                    availableMethods.Add(Ui.MfaMethod.U2f);
                     break;
                 case Response.SecondFactorMethod.RememberMe:
                     break;
@@ -219,6 +240,8 @@ namespace PasswordManagerAccess.Bitwarden
                 return Response.SecondFactorMethod.Duo;
             case Ui.MfaMethod.YubiKey:
                 return Response.SecondFactorMethod.YubiKey;
+            case Ui.MfaMethod.U2f:
+                return Response.SecondFactorMethod.U2f;
             default:
                 throw new InternalErrorException("The user responded with invalid input");
             }
