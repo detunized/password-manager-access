@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void JToken_GetString_returns_string()
         {
-            Action<string, string> check = (json, key) => 
+            Action<string, string> check = (json, key) =>
                 Assert.Equal("value", JToken.Parse(json).GetString(key));
 
             check("{'key': 'value'}", "key");

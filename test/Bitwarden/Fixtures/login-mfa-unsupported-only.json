@@ -1,4 +1,4 @@
-﻿{
+{
     "error": "invalid_grant",
     "error_description": "Two factor required.",
     "TwoFactorProviders": [4],
