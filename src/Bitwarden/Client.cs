@@ -176,15 +176,28 @@ namespace PasswordManagerAccess.Bitwarden
         {
             var appId = (string)u2fParams["appId"];
             var challenge = (string)u2fParams["challenge"];
-            var keyHandle = ((string)u2fParams["keys"][0]["keyHandle"]).Decode64Loose(); // TODO: Support multiple keys
+            var keyHandle = (string)u2fParams["keys"][0]["keyHandle"]; // TODO: Support multiple keys
 
             // The challenge that is received from the server is not the actual U2F challenge, it's
             // just a part of it. The actual challenge is a SHA-256 hash of the "client data" that
             // is formed from various bits of information. The client data is sent back to the
-            // server in a follow up request.
+            // server in a follow up request. The U2f library calculates the SHA-256 for us, so no
+            // need to hash it here.
             var clientData = $"{{\"challenge\":\"{challenge}\",\"origin\":\"{appId}\",\"typ\":\"navigator.id.getAssertion\"}}";
 
-            return ui.ProvideU2fPasscode(appId, Common.Crypto.Sha256(clientData), keyHandle);
+            // TODO: Decide what to do on other platforms
+            var signature = U2fWin10.U2f.Sign(appId, clientData.ToBytes(), keyHandle.Decode64Loose());
+
+            // This is the 2FA token that is expected by the BW server
+            var token = JsonConvert.SerializeObject(new
+            {
+                keyHandle = keyHandle,
+                clientData = clientData.ToBytes().ToUrlSafeBase64NoPadding(),
+                signatureData = signature.ToUrlSafeBase64NoPadding(),
+            });
+
+            // TODO: Add support for remember-me.
+            return new Ui.Passcode(token, false);
         }
 
         internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor, Ui ui)
