@@ -189,6 +189,8 @@ namespace PasswordManagerAccess.Bitwarden
             var clientData = $"{{\"challenge\":\"{challenge}\",\"origin\":\"{appId}\",\"typ\":\"navigator.id.getAssertion\"}}";
 
             var signature = U2fWin10.U2f.Sign(appId, clientData.ToBytes(), keyHandle.Decode64Loose());
+            if (signature == null || signature.Length == 0)
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             // This is the 2FA token that is expected by the BW server
             var token = JsonConvert.SerializeObject(new
@@ -251,7 +253,7 @@ namespace PasswordManagerAccess.Bitwarden
             switch (ui.ChooseMfaMethod(availableMethods.ToArray()))
             {
             case Ui.MfaMethod.Cancel:
-                throw new CanceledMultiFactorException("Second factor step is cancelled by the user");
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
             case Ui.MfaMethod.GoogleAuth:
                 return Response.SecondFactorMethod.GoogleAuth;
             case Ui.MfaMethod.Email:
