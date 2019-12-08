@@ -500,17 +500,25 @@ namespace PasswordManagerAccess.Bitwarden
         internal static BaseException MakeSpecializedError(RestResponse response)
         {
             if (response.IsNetworkError)
-                return new NetworkErrorException("Network error has occured", response.Error);
-
-            if (response.HasError)
-                return new InternalErrorException("Network request or response parsing failed", response.Error);
+                return new NetworkErrorException("Network error has occurred", response.Error);
 
             if (!IsHttp4XX(response))
-                return new InternalErrorException($"Unexpected response from the server ({response.StatusCode})");
+                return new InternalErrorException($"Unexpected response from the server with status code {response.StatusCode}");
 
-            var message = GetServerErrorMessage(response);
-            if (message.IsNullOrEmpty())
+            // It's possible that the original request failed because of the JSON parsing, but we
+            // ignore it deliberately to first check for returned errors.
+            var error = GetServerError(response);
+            if (!error.HasValue)
+            {
+                // Only when the error parsing failed we return the original error.
+                if (response.HasError)
+                    return new InternalErrorException("Network request or response parsing failed", response.Error);
+
+                // We expect some error to be returned by the server.
                 return new InternalErrorException("Unexpected response from the server");
+            }
+
+            var message = error.Value.Info.Message ?? error.Value.Description ?? error.Value.Id ?? "unknown error";
 
             if (message.Contains("Username or password is incorrect"))
                 return new BadCredentialsException(message);
@@ -521,12 +529,11 @@ namespace PasswordManagerAccess.Bitwarden
             return new InternalErrorException($"Server responded with an error: '{message}'");
         }
 
-        internal static string GetServerErrorMessage(RestResponse response)
+        internal static Response.Error? GetServerError(RestResponse response)
         {
             try
             {
-                var parsed = JObject.Parse(response.Content ?? "{}");
-                return (string)(parsed["ErrorModel"] ?? parsed)["Message"];
+                return JsonConvert.DeserializeObject<Response.Error>(response.Content ?? "{}");
             }
             catch (JsonException)
             {

@@ -10,6 +10,23 @@ using Newtonsoft.Json.Linq;
 // any names here get changed.
 namespace PasswordManagerAccess.Bitwarden.Response
 {
+    public struct Error
+    {
+        [JsonProperty(PropertyName = "error")]
+        public string Id;
+
+        [JsonProperty(PropertyName = "error_description")]
+        public string Description;
+
+        [JsonProperty(PropertyName = "ErrorModel")]
+        public ErrorModel Info;
+    }
+
+    public struct ErrorModel
+    {
+        public string Message;
+    }
+
     public enum KdfMethod
     {
         Pbkdf2Sha256 = 0,
