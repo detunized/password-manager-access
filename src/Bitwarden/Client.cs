@@ -174,6 +174,9 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static Ui.Passcode AskU2fPasscode(JObject u2fParams, Ui ui)
         {
+            // TODO: Decide what to do on other platforms
+            // TODO: See how to get rid of the #if in favor of some cleaner way (partial classes?)
+#if NETFRAMEWORK
             var appId = (string)u2fParams["appId"];
             var challenge = (string)u2fParams["challenge"];
             var keyHandle = (string)u2fParams["keys"][0]["keyHandle"]; // TODO: Support multiple keys
@@ -185,7 +188,6 @@ namespace PasswordManagerAccess.Bitwarden
             // need to hash it here.
             var clientData = $"{{\"challenge\":\"{challenge}\",\"origin\":\"{appId}\",\"typ\":\"navigator.id.getAssertion\"}}";
 
-            // TODO: Decide what to do on other platforms
             var signature = U2fWin10.U2f.Sign(appId, clientData.ToBytes(), keyHandle.Decode64Loose());
 
             // This is the 2FA token that is expected by the BW server
@@ -198,6 +200,9 @@ namespace PasswordManagerAccess.Bitwarden
 
             // TODO: Add support for remember-me.
             return new Ui.Passcode(token, false);
+#else
+            throw new UnsupportedFeatureException("U2f is not supported on this platform");
+#endif
         }
 
         internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor, Ui ui)
@@ -224,7 +229,9 @@ namespace PasswordManagerAccess.Bitwarden
                     availableMethods.Add(Ui.MfaMethod.YubiKey);
                     break;
                 case Response.SecondFactorMethod.U2f:
+#if NETFRAMEWORK
                     availableMethods.Add(Ui.MfaMethod.U2f);
+#endif
                     break;
                 case Response.SecondFactorMethod.RememberMe:
                     break;
