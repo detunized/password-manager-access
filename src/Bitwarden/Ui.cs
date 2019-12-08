@@ -39,7 +39,6 @@ namespace PasswordManagerAccess.Bitwarden
         public abstract Passcode ProvideGoogleAuthPasscode();
         public abstract Passcode ProvideEmailPasscode(string emailHint);
         public abstract Passcode ProvideYubiKeyPasscode();
-        public abstract Passcode ProvideU2fPasscode(string appId, byte[] challenge, byte[] keyHandle);
 
         //
         // Duo

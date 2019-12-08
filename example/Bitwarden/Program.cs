@@ -61,11 +61,6 @@ namespace PasswordManagerAccess.Example.Keeper
                 return GetPasscode($"Please enter the YubiKey code {ToCancel}");
             }
 
-            public override Passcode ProvideU2fPasscode(string appId, byte[] challenge, byte[] keyHandle)
-            {
-                return new Passcode("TODO", false);
-            }
-
             public override DuoChoice ChooseDuoFactor(DuoDevice[] devices)
             {
                 var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
