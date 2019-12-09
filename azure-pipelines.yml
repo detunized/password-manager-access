@@ -123,6 +123,8 @@ jobs:
     vmImage: 'ubuntu-latest'
 
   steps:
+  - checkout: none
+
   - download: current
     artifact: nuget
 
@@ -134,4 +136,4 @@ jobs:
       gitHubConnection: github-release
       assets: $(Pipeline.Workspace)/**/*.nupkg
       tagSource: manual
-      tag: $(Build.BuildNumber)
+      tag: $(Build.SourceBranchName)
