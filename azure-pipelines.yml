@@ -39,7 +39,7 @@ jobs:
     displayName: Build NuGet package
     inputs:
       command: pack
-      arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget'
+      arguments: '--configuration $(buildConfiguration) --no-build --include-symbols --include-source --output $(Build.ArtifactStagingDirectory)/nuget'
 
   - publish: src/bin/$(buildConfiguration)
     artifact: nuget-win
@@ -73,7 +73,7 @@ jobs:
       testResultsFormat: VSTest
       testResultsFiles: test/TestResults/*.trx
 
-  - bash: 'dotnet pack -c $(buildConfiguration) --no-build $(solution)'
+  - bash: 'dotnet pack -c $(buildConfiguration) --no-build --include-symbols --include-source $(solution)'
     displayName: Pack
 
   - publish: src/bin/$(buildConfiguration)
