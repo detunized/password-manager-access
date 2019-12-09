@@ -7,7 +7,7 @@ using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 
-namespace PasswordManagerAccess.Example.Keeper
+namespace PasswordManagerAccess.Example.Bitwarden
 {
     public static class Program
     {

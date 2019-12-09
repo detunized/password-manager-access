@@ -6,7 +6,7 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using PasswordManagerAccess.Example.Common;
 
-namespace Example
+namespace PasswordManagerAccess.Example.Dashlane
 {
     class TextUi: Ui
     {
