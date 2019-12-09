@@ -1,8 +1,0 @@
-{
-    "result": "fail",
-    "salt": "hRqgbcKS-l_mCmdOp5xhUQ",
-    "result_code": "auth_failed",
-    "message": "",
-    "iterations": 100000,
-    "command": "login"
-}
