@@ -2,13 +2,9 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Globalization;
-using System.Linq;
-using System.Numerics;
-using System.Text;
 using Newtonsoft.Json.Linq;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal static class Extensions
     {
@@ -16,77 +12,9 @@ namespace OnePassword
         // string
         //
 
-        public static byte[] ToBytes(this string s)
-        {
-            return Encoding.UTF8.GetBytes(s);
-        }
-
-        public static byte[] DecodeHex(this string s)
-        {
-            if (s.Length % 2 != 0)
-                throw ExceptionFactory.MakeInvalidOperation(
-                    "DecodeHex: input length must be multiple of 2");
-
-            var bytes = new byte[s.Length / 2];
-            for (var i = 0; i < s.Length / 2; ++i)
-            {
-                var b = 0;
-                for (var j = 0; j < 2; ++j)
-                {
-                    b <<= 4;
-                    var c = char.ToLower(s[i * 2 + j]);
-                    if (c >= '0' && c <= '9')
-                        b |= c - '0';
-                    else if (c >= 'a' && c <= 'f')
-                        b |= c - 'a' + 10;
-                    else
-                        throw ExceptionFactory.MakeInvalidOperation(
-                            "DecodeHex: input contains invalid characters");
-                }
-
-                bytes[i] = (byte)b;
-            }
-
-            return bytes;
-        }
-
-        public static byte[] Decode32(this string s)
-        {
-            // Remove padding
-            var length = s.Length;
-            while (length > 0 && s[length - 1] == '=')
-                length -= 1;
-
-            var result = new byte[length * 5 / 8];
-            int currentByte = 0;
-            int bitsReady = 0;
-            int outputIndex = 0;
-
-            for (var i  = 0; i < length; i += 1)
-            {
-                int c = char.ToLower(s[i]);
-                if (c >= 'a' && c <= 'z')
-                    c -= 'a';
-                else if (c >= '2' && c <= '7')
-                    c += 26 - '2';
-                else
-                    throw ExceptionFactory.MakeInvalidOperation("Decode32: invalid characters in base32");
-
-                currentByte <<= 5;
-                currentByte |= c & 31;
-                bitsReady += 5;
-
-                if (bitsReady >= 8)
-                {
-                    bitsReady -= 8;
-                    result[outputIndex] = (byte)(currentByte >> bitsReady);
-                    outputIndex += 1;
-                }
-            }
-
-            return result;
-        }
-
+        // TODO: This is a tricky one. 1Password uses Decode64 in place of Decode64Loose.
+        // Investigate and make sure the tests and the example work before removing it.
+        //
         // Handles URL-safe, regular and mixed Base64 with or without padding.
         public static byte[] Decode64(this string s)
         {
@@ -112,80 +40,21 @@ namespace OnePassword
             return Convert.FromBase64String(regularBase64);
         }
 
-        public static BigInteger ToBigInt(this string s)
-        {
-            // Adding a leading '0' is important to trick .NET into treating any number
-            // as positive, like OpenSSL does. Otherwise if the number starts with a
-            // byte greater or equal to 0x80 it will be negative.
-            return BigInteger.Parse('0' + s, NumberStyles.HexNumber);
-        }
-
         //
         // byte[]
         //
 
-        public static string ToUtf8(this byte[] x)
-        {
-            return Encoding.UTF8.GetString(x);
-        }
-
-        public static string ToHex(this byte[] x)
-        {
-            var hex = new char[x.Length * 2];
-            for (int i = 0, c = 0; i < x.Length; i += 1)
-            {
-                int hi = x[i] >> 4;
-                hex[c] = (char)(hi < 10 ? '0' + hi : 'a' + hi - 10);
-                c += 1;
-
-                int lo = x[i] & 15;
-                hex[c] = (char)(lo < 10 ? '0' + lo : 'a' + lo - 10);
-                c += 1;
-            }
-
-            return new string(hex);
-        }
-
+        // TODO: This is a tricky one. 1Password uses Decode64 in place of Decode64Loose.
+        // Investigate and make sure the tests and the example work before removing it.
+        //
         // URL-safe Base64
         public static string ToBase64(this byte[] x)
         {
             return Convert.ToBase64String(x).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         }
 
-        public static BigInteger ToBigInt(this byte[] x)
-        {
-            // Need to reverse, since we're trying to match OpenSSL conventions.
-            // Adding a trailing 0 is important to trick .NET into treating any number
-            // as positive, like OpenSSL does. Otherwise if the last byte is greater or
-            // equal to 0x80 it will be negative.
-            return new BigInteger(x.Reverse().Concat(new byte[] { 0 }).ToArray());
-        }
-
         //
-        // BigInteger
-        //
-
-        public static string ToHex(this BigInteger i)
-        {
-            // Strip out leading zeros to mimic 1Password behavior.
-            if (i > 0)
-                return i.ToString("x").TrimStart('0');
-
-            if (i < 0)
-                return "-" + (-i).ToHex();
-
-            return "0";
-        }
-
-        // Calculates (b ^ e) % m in a way that is compatible with 1Password.
-        // Specifically the result is never negative. .NET BigInteger.ModPow returns
-        // negative mod when b is negative.
-        public static BigInteger ModExp(this BigInteger b, BigInteger e, BigInteger m)
-        {
-            var r = BigInteger.ModPow(b, e, m);
-            return r >= 0 ? r : r + m;
-        }
-
+        // TODO: Switch to deserialization and remove this!
         //
         // Nested JToken access by path with and without exceptions
         //

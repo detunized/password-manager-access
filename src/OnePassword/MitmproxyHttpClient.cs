@@ -4,7 +4,7 @@
 using System;
 using System.Net;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal class MitmproxyHttpClient: HttpClient
     {

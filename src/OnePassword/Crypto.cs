@@ -4,8 +4,9 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal static class Crypto
     {

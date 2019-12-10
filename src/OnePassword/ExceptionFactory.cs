@@ -3,7 +3,7 @@
 
 using System;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     // This class is here to untie various subsystems from explicitly throwing ClientException.
     // We want to throw ClientException for everything to make the user's life easier but it's

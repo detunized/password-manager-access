@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     public interface IHttpClient
     {

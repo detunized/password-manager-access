@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Net;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     public class HttpClient: IHttpClient
     {

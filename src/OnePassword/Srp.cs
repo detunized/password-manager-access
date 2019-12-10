@@ -3,8 +3,9 @@
 
 using System.Collections.Generic;
 using System.Numerics;
+using PasswordManagerAccess.Common;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     // Performs a secure password exchange and generates a secret symmetric
     // session encryption key that couldn't be seen by a man in the middle.

@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     // TODO: Write some comments here. Nothing is obvious in this file.
     class AesGcm

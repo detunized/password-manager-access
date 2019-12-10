@@ -4,7 +4,7 @@
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     // This is a clean reimplementation of https://tools.ietf.org/html/rfc5869
     // No strangely licensed code has been used here even as a reference.

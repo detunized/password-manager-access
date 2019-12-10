@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json.Linq;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal class Session
     {

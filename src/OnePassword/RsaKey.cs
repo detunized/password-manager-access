@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal class RsaKey
     {

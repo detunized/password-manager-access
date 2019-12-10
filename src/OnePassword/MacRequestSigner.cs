@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal class MacRequestSigner: IRequestSigner
     {

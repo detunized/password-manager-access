@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal interface IRequestSigner
     {

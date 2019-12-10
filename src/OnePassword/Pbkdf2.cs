@@ -4,7 +4,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     internal static class Pbkdf2
     {

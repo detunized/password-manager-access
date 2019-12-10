@@ -3,7 +3,7 @@
 
 using System;
 
-namespace OnePassword
+namespace PasswordManagerAccess.OnePassword
 {
     public class ClientException: BaseException
     {
