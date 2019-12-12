@@ -90,3 +90,9 @@ jobs:
       assets: $(Pipeline.Workspace)/**/*.nupkg
       tagSource: manual
       tag: $(Build.SourceBranchName)
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: push
+      nugetFeedType: external
+      externalEndPoint: nuget-push
