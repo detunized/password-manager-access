@@ -35,15 +35,6 @@ jobs:
       platform: '$(buildPlatform)'
       configuration: '$(buildConfiguration)'
 
-  - task: DotNetCoreCLI@2
-    displayName: Build NuGet package
-    inputs:
-      command: pack
-      arguments: '--configuration $(buildConfiguration) --no-build --include-symbols --include-source --output $(Build.ArtifactStagingDirectory)/nuget'
-
-  - publish: src/bin/$(buildConfiguration)
-    artifact: nuget-win
-
 #
 # Linux
 #
@@ -69,43 +60,10 @@ jobs:
     displayName: Test
 
   - task: PublishTestResults@2
+    condition: always()
     inputs:
       testResultsFormat: VSTest
       testResultsFiles: test/TestResults/*.trx
-
-  - bash: 'dotnet pack -c $(buildConfiguration) --no-build --include-symbols --include-source $(solution)'
-    displayName: Pack
-
-  - publish: src/bin/$(buildConfiguration)
-    artifact: nuget
-
-  # - task: DotNetCoreCLI@2
-  #   displayName: Build
-  #   inputs:
-  #     command: build
-  #     configuration: '$(buildConfiguration)'
-
-  # - task: DotNetCoreCLI@2
-  #   displayName: Test
-  #   inputs:
-  #     command: test
-  #     arguments: '--framework $(framework)'
-
-  # - task: DotNetCoreCLI@2
-  #   displayName: Build NuGet package
-  #   inputs:
-  #     command: pack
-  #     projects: src/PasswordManagerAccess.csproj
-  #     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget-linux --no-build --verbosity normal'
-  #     verbosityRestore: normal
-  #     verbosityPack: normal
-
-  # - bash: 'dotnet pack --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/nuget-linux --no-build --verbosity normal'
-
-  # - task: PublishPipelineArtifact@1
-  #   inputs:
-  #     path: '$(Build.ArtifactStagingDirectory)/nuget-linux'
-  #     artifact: nuget-package-linux
 
 #
 # Release to GitHub
@@ -123,13 +81,8 @@ jobs:
     vmImage: 'ubuntu-latest'
 
   steps:
-  - checkout: none
-
-  - download: current
-    artifact: nuget
-
-  - download: current
-    artifact: nuget-win
+  - bash: 'ci/make-nuget-package.sh $(Build.SourceBranchName)'
+    displayName: Build package
 
   - task: GitHubRelease@0
     inputs:
