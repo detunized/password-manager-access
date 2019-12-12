@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
 
 namespace Example
@@ -100,23 +101,18 @@ namespace Example
         public static void Main()
         {
             // Read 1Password credentials from a file
-            // The file should contain 5 lines:
+            // The file should contain 5 values:
             //   - username
             //   - password
             //   - account key
-            //   - client UUID
+            //   - client UUID or device ID
             //   - API domain (my.1password.com, my.1password.eu or my.1password.ca)
-            // See credentials.txt.example for an example.
-            var credentials = File.ReadAllLines("../../credentials.txt");
-            var username = credentials[0];
-            var password = credentials[1];
-            var accountKey = credentials[2];
-            var uuid = credentials[3];
-            var domain = credentials[4];
+            // See config.yaml.example for an example.
+            var config = Util.ReadConfig();
 
             try
             {
-                DumpAllVaults(username, password, accountKey, uuid, domain);
+                DumpAllVaults(config["username"], config["password"], config["account-key"], config["device-id"], config["domain"]);
             }
             catch (ClientException e)
             {
