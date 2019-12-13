@@ -84,8 +84,10 @@ jobs:
   - bash: 'ci/make-nuget-package.sh $(Build.SourceBranchName)'
     displayName: Build package
 
-  - bash: 'ci/push-package-to-nuget.sh api-key-would-be-here'
+  - bash: ci/push-package-to-nuget.sh
     displayName: Push package
+    env:
+      NUGET_API_KEY: $(nuget_api_key)
 
   - task: GitHubRelease@0
     inputs:
