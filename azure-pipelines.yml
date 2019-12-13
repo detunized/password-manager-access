@@ -94,5 +94,6 @@ jobs:
   - task: DotNetCoreCLI@2
     inputs:
       command: push
+      searchPatternPush: $(Pipeline.Workspace)/**/*.nupkg
       nugetFeedType: external
       externalEndPoint: nuget-push
