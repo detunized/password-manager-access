@@ -1,4 +1,5 @@
 /.vs/
+/.vscode/
 /example/*/bin/
 /example/*/obj/
 /example/*/config.yaml
