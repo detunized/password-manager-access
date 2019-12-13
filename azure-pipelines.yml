@@ -87,7 +87,7 @@ jobs:
   - bash: ci/push-package-to-nuget.sh
     displayName: Push package
     env:
-      NUGET_API_KEY: $(nuget_api_key)
+      NUGET_API_KEY: $(nuget-api-key)
 
   - task: GitHubRelease@0
     inputs:
