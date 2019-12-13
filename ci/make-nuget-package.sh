@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script is needed to strip out the leading `v` from the git tag. Otherwise it just calls
 # `dotnet pack`.

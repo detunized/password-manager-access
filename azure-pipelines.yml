@@ -84,6 +84,9 @@ jobs:
   - bash: 'ci/make-nuget-package.sh $(Build.SourceBranchName)'
     displayName: Build package
 
+  - bash: 'ci/push-package-to-nuget.sh api-key-would-be-here'
+    displayName: Push package
+
   - task: GitHubRelease@0
     inputs:
       gitHubConnection: github-release
@@ -92,6 +95,7 @@ jobs:
       tag: $(Build.SourceBranchName)
 
   - task: DotNetCoreCLI@2
+    condition: false
     inputs:
       command: push
       searchPatternPush: $(Pipeline.Workspace)/**/*.nupkg
