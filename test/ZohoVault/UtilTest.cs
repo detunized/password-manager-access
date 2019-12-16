@@ -5,11 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using PasswordManagerAccess.Common;
 using Xunit;
-using Crypto = PasswordManagerAccess.ZohoVault.Crypto;
+using Util = PasswordManagerAccess.ZohoVault.Util;
 
 namespace PasswordManagerAccess.Test.ZohoVault
 {
-    public class CryptoTest
+    public class UtilTest
     {
         // From http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
         public readonly byte[] NistKey = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4".DecodeHex();
@@ -26,7 +26,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [Fact]
         public void ComputeKey_returns_key()
         {
-            var key = Crypto.ComputeKey(
+            var key = Util.ComputeKey(
                 TestData.Passphrase,
                 "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
                 1000);
@@ -37,7 +37,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public void Decrypt_returns_plaintext()
         {
             // Calculated with the original Js code
-            var plaintext = Crypto.Decrypt(
+            var plaintext = Util.Decrypt(
                 "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(),
                 TestData.Key).ToUtf8();
             Assert.Equal("{\"date\":\"2016-08-30T15:05:42.874Z\"}", plaintext);
@@ -49,7 +49,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             // Calculated with the original Js code
             var ctrKey = "1fad494b86d62e89f945e8cfb9925e341fad494b86d62e89f945e8cfb9925e34".DecodeHex();
-            Assert.Equal(ctrKey, Crypto.ComputeAesCtrKey(TestData.Key));
+            Assert.Equal(ctrKey, Util.ComputeAesCtrKey(TestData.Key));
         }
 
         //
@@ -62,19 +62,19 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var ciphertext = NistCiphertext.Take(16).ToArray();
             var plaintext = NistPlaintext.Take(16).ToArray();
 
-            Assert.Equal(plaintext, Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr));
+            Assert.Equal(plaintext, Util.DecryptAes256Ctr(ciphertext, NistKey, NistCtr));
         }
 
         [Fact]
         public void DecryptAes256Ctr_decrypts_multiple_blocks()
         {
-            Assert.Equal(NistPlaintext, Crypto.DecryptAes256Ctr(NistCiphertext, NistKey, NistCtr));
+            Assert.Equal(NistPlaintext, Util.DecryptAes256Ctr(NistCiphertext, NistKey, NistCtr));
         }
 
         [Fact]
         public void DecryptAes256Ctr_decrypts_empty_input()
         {
-            Assert.Equal(new byte[0], Crypto.DecryptAes256Ctr(new byte[0], NistKey, NistCtr));
+            Assert.Equal(new byte[0], Util.DecryptAes256Ctr(new byte[0], NistKey, NistCtr));
         }
 
         [Fact]
@@ -85,7 +85,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 var ciphertext = NistCiphertext.Take(i).ToArray();
                 var plaintext = NistPlaintext.Take(i).ToArray();
 
-                Assert.Equal(plaintext, Crypto.DecryptAes256Ctr(ciphertext, NistKey, NistCtr));
+                Assert.Equal(plaintext, Util.DecryptAes256Ctr(ciphertext, NistKey, NistCtr));
             }
         }
 
@@ -110,7 +110,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
             foreach (var i in testCases)
             {
                 var counter = i.Key.DecodeHex();
-                Crypto.IncrementCounter(counter);
+                Util.IncrementCounter(counter);
                 Assert.Equal(i.Value.DecodeHex(), counter);
             }
         }

@@ -5,11 +5,10 @@ using System;
 using System.Linq;
 using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
-using C = PasswordManagerAccess.Common.Crypto; // TODO: Why not C = Common.Crypto as in Keeper?
 
 namespace PasswordManagerAccess.ZohoVault
 {
-    internal static class Crypto
+    internal static class Util
     {
         // For AES block size is always 16 bytes
         public const int BlockSize = 16;
@@ -17,7 +16,7 @@ namespace PasswordManagerAccess.ZohoVault
         public static byte[] ComputeKey(string passphrase, byte[] salt, int iterationCount)
         {
             // Regular PBKDF2 with HMAC-SHA256
-            var key = C.Pbkdf2Sha256(passphrase, salt, iterationCount, 32);
+            var key = Crypto.Pbkdf2Sha256(passphrase, salt, iterationCount, 32);
 
             // They actual key is the hex bytes, not the key itself
             return key.ToHex().Substring(0, 32).ToBytes();

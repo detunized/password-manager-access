@@ -131,14 +131,14 @@ namespace PasswordManagerAccess.ZohoVault
             var info = GetAuthInfo(cookies, rest);
 
             // Decryption key
-            var key = Crypto.ComputeKey(passphrase, info.Salt, info.IterationCount);
+            var key = Util.ComputeKey(passphrase, info.Salt, info.IterationCount);
 
             // Verify that the key is correct
             // AuthInfo.EncryptionCheck contains some encrypted JSON that could be
             // decrypted and parsed to check if the passphrase is correct. We have
             // to rely here on the encrypted JSON simply not parsing correctly and
             // producing some sort of error.
-            var decrypted = Crypto.Decrypt(info.EncryptionCheck, key).ToUtf8();
+            var decrypted = Util.Decrypt(info.EncryptionCheck, key).ToUtf8();
 
             // TODO: See if ToUtf8 could throw something
 
@@ -181,10 +181,10 @@ namespace PasswordManagerAccess.ZohoVault
                 var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data);
                 return new Account(secret.Id,
                                    secret.Name,
-                                   Crypto.DecryptString(data.Username, key),
-                                   Crypto.DecryptString(data.Password, key),
+                                   Util.DecryptString(data.Username, key),
+                                   Util.DecryptString(data.Password, key),
                                    secret.Url,
-                                   Crypto.DecryptString(secret.Note, key));
+                                   Util.DecryptString(secret.Note, key));
             }
             catch (JsonException)
             {
