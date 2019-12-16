@@ -4,11 +4,11 @@
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace PasswordManagerAccess.OnePassword
+namespace PasswordManagerAccess.Common
 {
     // This is a clean reimplementation of https://tools.ietf.org/html/rfc5869
     // No strangely licensed code has been used here even as a reference.
-    static internal class Hkdf
+    internal static class Hkdf
     {
         // TODO: See if we need to parametrize on HMAC, currently it's SHA-256 only
         public static byte[] Generate(byte[] ikm, byte[] salt, byte[] info, int byteCount)

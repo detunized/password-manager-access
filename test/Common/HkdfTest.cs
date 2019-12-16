@@ -5,7 +5,7 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
 
-namespace PasswordManagerAccess.Test.OnePassword
+namespace PasswordManagerAccess.Test.Common
 {
     public class HkdfTest
     {

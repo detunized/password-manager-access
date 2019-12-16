@@ -8,6 +8,7 @@ using C = PasswordManagerAccess.Common.Crypto;
 
 namespace PasswordManagerAccess.OnePassword
 {
+    // Crypto stuff that is specific to 1Password
     internal static class Crypto
     {
         public static uint RandonUInt32()
@@ -29,10 +30,10 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] Hkdf(string method, byte[] ikm, byte[] salt)
         {
-            return OnePassword.Hkdf.Generate(ikm: ikm,
-                                             salt: salt,
-                                             info: method.ToBytes(),
-                                             byteCount: 32);
+            return Common.Hkdf.Generate(ikm: ikm,
+                                        salt: salt,
+                                        info: method.ToBytes(),
+                                        byteCount: 32);
         }
 
         public static byte[] Pbes2(string method, string password, byte[] salt, int iterations)
@@ -41,10 +42,16 @@ namespace PasswordManagerAccess.OnePassword
             {
             case "PBES2-HS256":
             case "PBES2g-HS256":
-                return Pbkdf2.GenerateSha256(password.ToBytes(), salt, iterations, 32);
+                return C.Pbkdf2Sha256(password: password,
+                                      salt: salt,
+                                      iterations: iterations,
+                                      byteCount: 32);
             case "PBES2-HS512":
             case "PBES2g-HS512":
-                return Pbkdf2.GenerateSha512(password.ToBytes(), salt, iterations, 32);
+                return C.Pbkdf2Sha512(password: password,
+                                      salt: salt,
+                                      iterations: iterations,
+                                      byteCount: 32);
             }
 
             throw ExceptionFactory.MakeUnsupported(
