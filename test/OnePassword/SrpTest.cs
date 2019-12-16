@@ -1,22 +1,25 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Numerics;
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword;
+using Xunit;
+using JsonHttpClient = PasswordManagerAccess.OnePassword.JsonHttpClient;
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Test.OnePassword
 {
-    [TestFixture]
     public class SrpTest
     {
-        [Test]
+        [Fact]
         public void GenerateSecretA_returns_a_large_number()
         {
             var a = Srp.GenerateSecretA();
-            Assert.That(a.ToByteArray().Length, Is.AtLeast(20));
+            Assert.True(a.ToByteArray().Length >= 20);
         }
 
-        [Test]
+        [Fact]
         public void ComputeSharedA_returns_shared_A()
         {
             const string expected = "333346421466140763410769085841921229531670575226192261465" +
@@ -37,19 +40,19 @@ namespace OnePassword.Test
                                     "918881443743873444606149630727602090800656964297843387612" +
                                     "37449944019317626953125";
             var a = Srp.ComputeSharedA(1337);
-            Assert.That(a.ToString(), Is.EqualTo(expected));
+            Assert.Equal(expected, a.ToString());
         }
 
-        [Test]
+        [Fact]
         public void ExchangeAForB_returns_B()
         {
             var b = PerformExchange("exchange-a-for-b-response");
 
-            Assert.That(b, Is.GreaterThan(BigInteger.Zero));
-            Assert.That(b.ToByteArray().Length, Is.AtLeast(20));
+            Assert.True(b > BigInteger.Zero);
+            Assert.True(b.ToByteArray().Length >= 20);
         }
 
-        [Test]
+        [Fact]
         public void ExchangeAForB_makes_POST_request_to_specific_url()
         {
             var http = SetupJsonHttp("exchange-a-for-b-response");
@@ -58,14 +61,15 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyPostUrl(http, "1password.com/api/v1/auth");
         }
 
-        [Test]
+        [Fact]
         public void ExchangeAForB_throws_on_mismatching_session_id()
         {
-            Assert.That(() => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"),
-                        ExceptionsTest.ThrowsInvalidOpeationWithMessage("ID doesn't match"));
+            var e = Assert.Throws<InvalidOperationException>(
+                () => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"));
+            Assert.Contains("ID doesn't match", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void ValidateB_throws_on_failed_validation()
         {
             var b = ("0FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA" +
@@ -84,11 +88,11 @@ namespace OnePassword.Test
                      "62170481CD0069127D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C93406319" +
                      "9FFFFFFFFFFFFFFFF").ToBigInt();
 
-            Assert.That(() => Srp.ValidateB(b),
-                        ExceptionsTest.ThrowsInvalidOpeationWithMessage("validation failed"));
+            var e = Assert.Throws<InvalidOperationException>(() => Srp.ValidateB(b));
+            Assert.Contains("validation failed", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void ComputeKey_returns_key()
         {
             var secretA = new BigInteger(1337);
@@ -128,17 +132,17 @@ namespace OnePassword.Test
                                      TestData.ClientInfo,
                                      TestData.Session);
 
-            Assert.That(key, Is.EqualTo("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64()));
+            Assert.Equal("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64Loose(), key);
         }
 
-        [Test]
+        [Fact]
         public void ComputeX_returns_X()
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
             var x = Srp.ComputeX(TestData.ClientInfo, TestData.Session);
 
-            Assert.That(x.ToString(), Is.EqualTo(expected));
+            Assert.Equal(expected, x.ToString());
         }
 
         //

@@ -8,14 +8,14 @@ using System.Linq;
 using System.Net;
 using Moq;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.OnePassword;
+using Xunit;
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Test.OnePassword
 {
-    [TestFixture]
     public class JsonHttpClientTest
     {
-        [Test]
+        [Fact]
         public void Get_makes_GET_request_with_headers()
         {
             var http = SetupGet();
@@ -25,10 +25,10 @@ namespace OnePassword.Test
             http.Verify(x => x.Get(It.Is<string>(s => s == Url),
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
 
-            Assert.That(JToken.DeepEquals(response, ResponseJson));
+            Assert.True(JToken.DeepEquals(response, ResponseJson));
         }
 
-        [Test]
+        [Fact]
         public void Get_sets_headers_with_signature()
         {
             var http = SetupGet();
@@ -39,7 +39,7 @@ namespace OnePassword.Test
                                    It.Is<Dictionary<string, string>>(d => d.ContainsKey("X-AgileBits-MAC"))));
         }
 
-        [Test]
+        [Fact]
         public void Post_makes_POST_request_with_data_and_headers()
         {
             var http = SetupPost();
@@ -60,10 +60,10 @@ namespace OnePassword.Test
                                     It.Is<string>(s => s == encodedData),
                                     It.Is<Dictionary<string, string>>(d => AreEqual(d, JsonHeaders))));
 
-            Assert.That(JToken.DeepEquals(response, ResponseJson));
+            Assert.True(JToken.DeepEquals(response, ResponseJson));
         }
 
-        [Test]
+        [Fact]
         public void Post_sets_headers_with_signature()
         {
             var http = SetupPost();
@@ -75,7 +75,7 @@ namespace OnePassword.Test
                                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("X-AgileBits-MAC"))));
         }
 
-        [Test]
+        [Fact]
         public void Put_makes_PUT_request_with_headers()
         {
             var http = SetupPut();
@@ -85,10 +85,10 @@ namespace OnePassword.Test
             http.Verify(x => x.Put(It.Is<string>(s => s == Url),
                                    It.Is<Dictionary<string, string>>(d => AreEqual(d, Headers))));
 
-            Assert.That(JToken.DeepEquals(response, ResponseJson));
+            Assert.True(JToken.DeepEquals(response, ResponseJson));
         }
 
-        [Test]
+        [Fact]
         public void Put_sets_headers_with_signature()
         {
             var http = SetupPut();
@@ -99,7 +99,7 @@ namespace OnePassword.Test
                                    It.Is<Dictionary<string, string>>(d => d.ContainsKey("X-AgileBits-MAC"))));
         }
 
-        [Test]
+        [Fact]
         public void MakeUrl_joins_url_with_slashes()
         {
             string[] bases = {"http://all.your.base", "http://all.your.base/"};
@@ -107,8 +107,7 @@ namespace OnePassword.Test
 
             foreach (var b in bases)
                 foreach (var e in endpoints)
-                    Assert.That(new JsonHttpClient(null, b).MakeUrl(e),
-                                Is.EqualTo("http://all.your.base/are/belong/to/us"));
+                    Assert.Equal("http://all.your.base/are/belong/to/us", new JsonHttpClient(null, b).MakeUrl(e));
         }
 
         //
@@ -179,7 +178,7 @@ namespace OnePassword.Test
             VerifyGetUrl(http.Http, url);
         }
 
-        public static void VerifyGetUrl(IHttpClient http, string url)
+        internal static void VerifyGetUrl(IHttpClient http, string url)
         {
             Mock.Get(http).Verify(x => x.Get(It.Is<string>(s => s.Contains(url)),
                                              It.IsAny<Dictionary<string, string>>()));
@@ -220,7 +219,7 @@ namespace OnePassword.Test
             VerifyPostUrl(http.Http, url);
         }
 
-        public static void VerifyPostUrl(IHttpClient http, string url)
+        internal static void VerifyPostUrl(IHttpClient http, string url)
         {
             Mock.Get(http).Verify(x => x.Post(It.Is<string>(s => s.Contains(url)),
                                               It.IsAny<string>(),
@@ -246,7 +245,7 @@ namespace OnePassword.Test
             VerifyPutUrl(http.Http, url);
         }
 
-        public static void VerifyPutUrl(IHttpClient http, string url)
+        internal static void VerifyPutUrl(IHttpClient http, string url)
         {
             Mock.Get(http).Verify(x => x.Put(It.Is<string>(s => s.Contains(url)),
                                              It.IsAny<Dictionary<string, string>>()));

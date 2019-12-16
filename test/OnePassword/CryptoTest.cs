@@ -1,113 +1,112 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword;
+using Xunit;
+using Crypto = PasswordManagerAccess.OnePassword.Crypto;
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Test.OnePassword
 {
-    [TestFixture]
     public class CryptoTest
     {
-        [Test]
+        [Fact]
         public void RandomBytes_returns_array_of_requested_size()
         {
             foreach (var size in new[] {0, 1, 2, 3, 4, 15, 255, 1024, 1337})
-                Assert.That(Crypto.RandomBytes(size).Length, Is.EqualTo(size));
+                Assert.Equal(size, Crypto.RandomBytes(size).Length);
         }
 
-        [Test]
+        [Fact]
         public void RandomUuid_returns_string_of_26_characters()
         {
-            Assert.That(Crypto.RandomUuid().Length, Is.EqualTo(26));
+            Assert.Equal(26, Crypto.RandomUuid().Length);
         }
 
-        [Test]
+        [Fact]
         public void Sha256_string_returns_hashed_message()
         {
-            Assert.That(Crypto.Sha256("message"),
-                        Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
+            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64Loose(),
+                         Crypto.Sha256("message"));
         }
 
-        [Test]
+        [Fact]
         public void Sha256_bytes_returns_hashed_message()
         {
-            Assert.That(Crypto.Sha256("message".ToBytes()),
-                        Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
+            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64Loose(),
+                         Crypto.Sha256("message".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void Hamc256_string_returns_hashed_message()
         {
-            Assert.That(Crypto.Hmac256("salt".ToBytes(), "message"),
-                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64Loose(),
+                         Crypto.Hmac256("salt".ToBytes(), "message"));
         }
 
-        [Test]
+        [Fact]
         public void Hmac256_bytes_returns_hashed_message()
         {
-            Assert.That(Crypto.Hmac256("salt".ToBytes(), "message".ToBytes()),
-                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
+            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64Loose(),
+                         Crypto.Hmac256("salt".ToBytes(), "message".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void Hkdf_returns_derived_key()
         {
-            Assert.That(Crypto.Hkdf("PBES2g-HS256", "ikm".ToBytes(), "salt".ToBytes()),
-                        Is.EqualTo("UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64()));
+            Assert.Equal("UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64Loose(),
+                         Crypto.Hkdf("PBES2g-HS256", "ikm".ToBytes(), "salt".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void Pbes2_returns_derived_key()
         {
-            Assert.That(Crypto.Pbes2("PBES2g-HS256", "password", "salt".ToBytes(), 100),
-                        Is.EqualTo("B-aZcYDPfxKQTwQQDUBdNIiP32KvbVBqDswjsZb-mdg".Decode64()));
-            Assert.That(Crypto.Pbes2("PBES2g-HS512", "password", "salt".ToBytes(), 100),
-                        Is.EqualTo("_vcnaxBwQKCnE7y-yf0-GRzGFTJJ4kWj4aIgh9vmFgY".Decode64()));
+            Assert.Equal("B-aZcYDPfxKQTwQQDUBdNIiP32KvbVBqDswjsZb-mdg".Decode64Loose(),
+                         Crypto.Pbes2("PBES2g-HS256", "password", "salt".ToBytes(), 100));
+            Assert.Equal("_vcnaxBwQKCnE7y-yf0-GRzGFTJJ4kWj4aIgh9vmFgY".
+                         Decode64Loose(), Crypto.Pbes2("PBES2g-HS512", "password", "salt".ToBytes(), 100));
         }
 
-        [Test]
+        [Fact]
         public void Pbes2_throws_on_unsupported_method()
         {
-            Assert.That(() => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
-                        ExceptionsTest.ThrowsUnsupportedFeatureWithMessage("method"));
+            var e = Assert.Throws<UnsupportedFeatureException>(
+                () => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100));
+            Assert.Contains("method", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void CalculateSessionHmacSalt_returns_salt()
         {
-            var key = new AesKey("", "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64());
+            var key = new AesKey("", "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
             var expected =
                 "cce080cc9b3eaeaa9b6e621e1b4c4d2048babe16e40b0576fc2520c26473b9ac".DecodeHex();
 
-            Assert.That(Crypto.CalculateSessionHmacSalt(key), Is.EqualTo(expected));
+            Assert.Equal(expected, Crypto.CalculateSessionHmacSalt(key));
         }
 
-        [Test]
+        [Fact]
         public void CalculateClientHash_convenience_returns_hash()
         {
-            Assert.That(Crypto.CalculateClientHash(TestData.Session),
-                        Is.EqualTo("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA"));
+            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Crypto.CalculateClientHash(TestData.Session));
         }
 
-        [Test]
+        [Fact]
         public void CalculateClientHash_returns_hash()
         {
-            Assert.That(Crypto.CalculateClientHash("RTN9SA", "TOZVTFIFBZGFDFNE5KSZFY7EZY"),
-                        Is.EqualTo("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA"));
+            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Crypto.CalculateClientHash("RTN9SA", "TOZVTFIFBZGFDFNE5KSZFY7EZY"));
         }
 
-        [Test]
+        [Fact]
         public void HashRememberMeToken_convenience_returns_hash()
         {
-            Assert.That(Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", TestData.Session),
-                        Is.EqualTo("XPvm9ASr"));
+            Assert.Equal("XPvm9ASr", Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", TestData.Session));
         }
 
-        [Test]
+        [Fact]
         public void HashRememberMeToken_returns_hash()
         {
-            Assert.That(Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"),
-                        Is.EqualTo("oNk_XW_e"));
+            Assert.Equal("oNk_XW_e", Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"));
         }
     }
 }

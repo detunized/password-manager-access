@@ -1,118 +1,122 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword;
+using Xunit;
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Test.OnePassword
 {
-    [TestFixture]
     public class AesGcmTest
     {
         //
         // Encrypt
         //
 
-        [Test]
+        [Fact]
         public void Encrypt_returns_ciphertext()
         {
             foreach (var i in TestCases)
             {
                 var ecnrypted = AesGcm.Encrypt(i.Key, i.Plaintext, i.Iv, i.AuthData);
-                Assert.That(ecnrypted, Is.EqualTo(i.CiphertextWithTag));
+                Assert.Equal(i.CiphertextWithTag, ecnrypted);
             }
         }
 
-        [Test]
+        [Fact]
         public void Encrypt_throws_on_invalid_key_length()
         {
-            Assert.That(
+            var e = Assert.Throws<InvalidOperationException>(
                 () => AesGcm.Encrypt(key: new byte[13],
                                      plaintext: new byte[16],
                                      iv: new byte[12],
-                                     authData: new byte[0]),
-                ExceptionsTest.ThrowsInvalidOpeationWithMessage("key must"));
+                                     authData: new byte[0]));
+            Assert.Contains("key must", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Encrypt_throws_on_invalid_iv_length()
         {
-            Assert.That(
+            var e = Assert.Throws<InvalidOperationException>(
                 () => AesGcm.Encrypt(key: new byte[32],
                                      plaintext: new byte[16],
                                      iv: new byte[13],
-                                     authData: new byte[0]),
-                ExceptionsTest.ThrowsInvalidOpeationWithMessage("iv must"));
+                                     authData: new byte[0]));
+            Assert.Contains("iv must", e.Message);
         }
 
         //
         // Decrypt
         //
 
-        [Test]
+        [Fact]
         public void Decrypt_returns_plaintext()
         {
             foreach (var i in TestCases)
             {
                 var decrypted = AesGcm.Decrypt(i.Key, i.CiphertextWithTag, i.Iv, i.AuthData);
-                Assert.That(decrypted, Is.EqualTo(i.Plaintext));
+                Assert.Equal(i.Plaintext, decrypted);
             }
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_invalid_key_length()
         {
-            Assert.That(
+            var e = Assert.Throws<InvalidOperationException>(
                 () => AesGcm.Decrypt(key: new byte[13],
                                      ciphertext: new byte[16],
                                      iv: new byte[12],
-                                     authData: new byte[0]),
-                ExceptionsTest.ThrowsInvalidOpeationWithMessage("key must"));
+                                     authData: new byte[0]));
+            Assert.Contains("key must", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_invalid_ciphertext_length()
         {
-            Assert.That(
+            var e = Assert.Throws<InvalidOperationException>(
                 () => AesGcm.Decrypt(key: new byte[32],
                                      ciphertext: new byte[13],
                                      iv: new byte[12],
-                                     authData: new byte[0]),
-                ExceptionsTest.ThrowsInvalidOpeationWithMessage("ciphertext must"));
+                                     authData: new byte[0]));
+            Assert.Contains("ciphertext must", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_invalid_iv_length()
         {
-            Assert.That(
+            var e = Assert.Throws<InvalidOperationException>(
                 () => AesGcm.Decrypt(key: new byte[32],
                                      ciphertext: new byte[16],
                                      iv: new byte[13],
-                                     authData: new byte[0]),
-                ExceptionsTest.ThrowsInvalidOpeationWithMessage("iv must"));
+                                     authData: new byte[0]));
+            Assert.Contains("iv must", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_modified_ciphertext()
         {
             foreach (var i in TestCases)
             {
                 // Change the first byte of the ciphertext
                 var modified = Modified(i.CiphertextWithTag, 0);
-                Assert.That(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData),
-                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("auth tag"));
+                var e = Assert.Throws<InvalidOperationException>(
+                    () => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
+                Assert.Contains("auth tag", e.Message);
             }
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_modified_tag()
         {
             foreach (var i in TestCases)
             {
                 // Change the last byte in the tag
                 var modified = Modified(i.CiphertextWithTag, -1);
-                Assert.That(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData),
-                            ExceptionsTest.ThrowsInvalidOpeationWithMessage("auth tag"));
+                var e = Assert.Throws<InvalidOperationException>(
+                    () => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
+                Assert.Contains("auth tag", e.Message);
             }
         }
 
@@ -120,7 +124,7 @@ namespace OnePassword.Test
         // GHash
         //
 
-        [Test]
+        [Fact]
         public void GHash_returns_hash()
         {
             foreach (var i in TestCases)
@@ -130,11 +134,11 @@ namespace OnePassword.Test
                                         i.AuthData.Length,
                                         i.Ciphertext,
                                         i.Ciphertext.Length);
-                Assert.That(hash, Is.EqualTo(i.GHash));
+                Assert.Equal(i.GHash, hash);
             }
         }
 
-        [Test]
+        [Fact]
         public void IncrementCounter_overflows_into_next_byte()
         {
             var testCases = new Dictionary<string, string>
@@ -150,7 +154,7 @@ namespace OnePassword.Test
                 var counter = i.Key.DecodeHex();
                 AesGcm.IncrementCounter(counter);
 
-                Assert.That(counter, Is.EqualTo(i.Value.DecodeHex()));
+                Assert.Equal(i.Value.DecodeHex(), counter);
             }
         }
 

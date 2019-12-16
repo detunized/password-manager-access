@@ -1,14 +1,15 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword;
+using Xunit;
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Test.OnePassword
 {
-    [TestFixture]
     public class HkdfTest
     {
-        [Test]
+        [Fact]
         public void Generate_returns_expected_values()
         {
             foreach (var i in HkdfTestCases)
@@ -17,7 +18,7 @@ namespace OnePassword.Test
                                            i.Salt.DecodeHex(),
                                            i.Info.DecodeHex(),
                                            i.ByteCount);
-                Assert.That(result, Is.EqualTo(i.Expected.DecodeHex()));
+                Assert.Equal(i.Expected.DecodeHex(), result);
             }
         }
 

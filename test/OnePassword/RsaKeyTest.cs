@@ -3,21 +3,21 @@
 
 using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.OnePassword;
+using Xunit;
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Test.OnePassword
 {
-    [TestFixture]
     public class RsaKeyTest
     {
-        [Test]
+        [Fact]
         public void Parse_returns_key()
         {
             var key = RsaKey.Parse(RsaParameters);
-            Assert.That(key.Id, Is.EqualTo("szerdhg2ww2ahjo4ilz57x7cce"));
+            Assert.Equal("szerdhg2ww2ahjo4ilz57x7cce", key.Id);
         }
 
-        [Test]
+        [Fact]
         public void RestoreLeadingZeros_pads_to_correct_length()
         {
             var rsa = new RSAParameters
@@ -34,17 +34,17 @@ namespace OnePassword.Test
 
             var padded = RsaKey.RestoreLeadingZeros(rsa);
 
-            Assert.That(padded.Exponent.Length, Is.EqualTo(3));
-            Assert.That(padded.Modulus.Length, Is.EqualTo(2048 / 8));
-            Assert.That(padded.P.Length, Is.EqualTo(1024 / 8));
-            Assert.That(padded.Q.Length, Is.EqualTo(1024 / 8));
-            Assert.That(padded.DP.Length, Is.EqualTo(1024 / 8));
-            Assert.That(padded.DQ.Length, Is.EqualTo(1024 / 8));
-            Assert.That(padded.InverseQ.Length, Is.EqualTo(1024 / 8));
-            Assert.That(padded.D.Length, Is.EqualTo(2048 / 8));
+            Assert.Equal(3, padded.Exponent.Length);
+            Assert.Equal(2048 / 8, padded.Modulus.Length);
+            Assert.Equal(1024 / 8, padded.P.Length);
+            Assert.Equal(1024 / 8, padded.Q.Length);
+            Assert.Equal(1024 / 8, padded.DP.Length);
+            Assert.Equal(1024 / 8, padded.DQ.Length);
+            Assert.Equal(1024 / 8, padded.InverseQ.Length);
+            Assert.Equal(2048 / 8, padded.D.Length);
         }
 
-        [Test]
+        [Fact]
         public void RestoreLeadingZeros_doesnt_change_valid_parameters()
         {
             var rsa = new RSAParameters
@@ -61,17 +61,17 @@ namespace OnePassword.Test
 
             var padded = RsaKey.RestoreLeadingZeros(rsa);
 
-            Assert.That(padded.Exponent, Is.EqualTo(rsa.Exponent));
-            Assert.That(padded.Modulus, Is.EqualTo(rsa.Modulus));
-            Assert.That(padded.P, Is.EqualTo(rsa.P));
-            Assert.That(padded.Q, Is.EqualTo(rsa.Q));
-            Assert.That(padded.DP, Is.EqualTo(rsa.DP));
-            Assert.That(padded.DQ, Is.EqualTo(rsa.DQ));
-            Assert.That(padded.InverseQ, Is.EqualTo(rsa.InverseQ));
-            Assert.That(padded.D, Is.EqualTo(rsa.D));
+            Assert.Equal(rsa.Exponent, padded.Exponent);
+            Assert.Equal(rsa.Modulus, padded.Modulus);
+            Assert.Equal(rsa.P, padded.P);
+            Assert.Equal(rsa.Q, padded.Q);
+            Assert.Equal(rsa.DP, padded.DP);
+            Assert.Equal(rsa.DQ, padded.DQ);
+            Assert.Equal(rsa.InverseQ, padded.InverseQ);
+            Assert.Equal(rsa.D, padded.D);
         }
 
-        [Test]
+        [Fact]
         public void GuessKeyBitLength_guesses_correctly()
         {
             foreach (var bits in new[] { 1024, 2048, 4096 })
@@ -79,18 +79,19 @@ namespace OnePassword.Test
                 foreach (var i in new[] { bits * 3 / 4 + 8, bits - 16, bits - 8, bits })
                 {
                     var guessed = RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[i / 8] });
-                    Assert.That(guessed, Is.EqualTo(bits));
+                    Assert.Equal(bits, guessed);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void GuessKeyBitLength_throws_on_invalid_values()
         {
             foreach (var bits in new[] { 768, 4096 + 8 })
             {
-                Assert.That(() => RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[bits / 8] }),
-                            Throws.InstanceOf<ClientException>().And.Message.Contains("not supported"));
+                var e = Assert.Throws<ClientException>(
+                    () => RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[bits / 8] }));
+                Assert.Contains("not supported", e.Message);
             }
         }
 

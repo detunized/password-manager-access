@@ -1,7 +1,10 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-namespace OnePassword.Test
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword;
+
+namespace PasswordManagerAccess.Test.OnePassword
 {
     internal class TestData
     {
@@ -33,7 +36,7 @@ namespace OnePassword.Test
                                srpMethod: "SRPg-4096",
                                keyMethod: "PBES2g-HS256",
                                iterations: 100000,
-                               salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64());
+                               salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64Loose());
         }
     }
 }

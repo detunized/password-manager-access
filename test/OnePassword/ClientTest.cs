@@ -3,33 +3,37 @@
 
 using Moq;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword;
+using Xunit;
+using HttpClient = PasswordManagerAccess.OnePassword.HttpClient;
+using IHttpClient = PasswordManagerAccess.OnePassword.IHttpClient;
+using JsonHttpClient = PasswordManagerAccess.OnePassword.JsonHttpClient;
 
 // TODO: DRY up tests. There's quite a bit of copy-paste here.
 // TODO: Creating encrypted test fixtures is a giant PITA and not very obvious what's going on.
 //       Look into this. Maybe encrypt on the fly and store plain JSON response in the fixture.
 
-namespace OnePassword.Test
+namespace PasswordManagerAccess.Test.OnePassword
 {
-    [TestFixture]
     public class ClientTest
     {
-        [Test]
+        [Fact]
         public void StartNewSession_returns_session_on_ok()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("start-new-session-response"));
             var session = Client.StartNewSession(TestData.ClientInfo, http);
 
-            Assert.That(session.Id, Is.EqualTo(TestData.Session.Id));
-            Assert.That(session.KeyFormat, Is.EqualTo(TestData.Session.KeyFormat));
-            Assert.That(session.KeyUuid, Is.EqualTo(TestData.Session.KeyUuid));
-            Assert.That(session.SrpMethod, Is.EqualTo(TestData.Session.SrpMethod));
-            Assert.That(session.KeyMethod, Is.EqualTo(TestData.Session.KeyMethod));
-            Assert.That(session.Iterations, Is.EqualTo(TestData.Session.Iterations));
-            Assert.That(session.Salt, Is.EqualTo(TestData.Session.Salt));
+            Assert.Equal(TestData.Session.Id, session.Id);
+            Assert.Equal(TestData.Session.KeyFormat, session.KeyFormat);
+            Assert.Equal(TestData.Session.KeyUuid, session.KeyUuid);
+            Assert.Equal(TestData.Session.SrpMethod, session.SrpMethod);
+            Assert.Equal(TestData.Session.KeyMethod, session.KeyMethod);
+            Assert.Equal(TestData.Session.Iterations, session.Iterations);
+            Assert.Equal(TestData.Session.Salt, session.Salt);
         }
 
-        [Test]
+        [Fact]
         public void StartNewSession_makes_GET_request_to_specific_url()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("start-new-session-response"));
@@ -38,45 +42,43 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v2/auth");
         }
 
-        [Test]
+        [Fact]
         public void StartNewSession_throws_on_unknown_status()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGet("{'status': 'unknown'}"));
-            Assert.That(() => Client.StartNewSession(TestData.ClientInfo, http),
-                        ExceptionsTest.ThrowsInvalidResponseWithMessage("'unknown'")
-                            .And.Message.StartsWith("Failed to start a new session"));
+
+            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, http));
+            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
+            Assert.Contains("Failed to start a new session", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void StartNewSession_throws_on_network_error()
         {
             var jsonHttp = new JsonHttpClient(JsonHttpClientTest.SetupGetWithFailure().Object, "");
 
-            Assert.That(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp),
-                        ExceptionsTest.ThrowsReasonWithMessage(
-                            ClientException.FailureReason.NetworkError,
-                            "request"));
+            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp));
+            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
         }
 
-        [Test]
+        [Fact]
         public void StartNewSession_throws_on_invalid_json()
         {
-            var jsonHttp = new JsonHttpClient(
-                JsonHttpClientTest.SetupGet("} invalid json {").Object,
-                "");
+            var jsonHttp = new JsonHttpClient(JsonHttpClientTest.SetupGet("} invalid json {").Object, "");
 
-            Assert.That(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp),
-                        ExceptionsTest.ThrowsInvalidResponseWithMessage("Invalid JSON"));
+            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp));
+            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
+            Assert.Contains("Invalid JSON", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void RegisterDevice_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 1}"));
             Client.RegisterDevice(TestData.ClientInfo, http);
         }
 
-        [Test]
+        [Fact]
         public void RegisterDevice_makes_POST_request_to_specific_url()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 1}"));
@@ -85,23 +87,24 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v1/device");
         }
 
-        [Test]
+        [Fact]
         public void RegisterDevice_throws_on_error()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 0}"));
-            Assert.That(() => Client.RegisterDevice(TestData.ClientInfo, http),
-                        ExceptionsTest.ThrowsRespondedWithErrorWithMessage(TestData.Uuid)
-                            .And.Message.StartsWith("Failed to register"));
+
+            var e = Assert.Throws<ClientException>(() => Client.RegisterDevice(TestData.ClientInfo, http));
+            Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
+            Assert.Contains("Failed to register", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void ReauthorizeDevice_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
             Client.ReauthorizeDevice(TestData.ClientInfo, http);
         }
 
-        [Test]
+        [Fact]
         public void ReauthorizeDevice_makes_PUT_request_to_specific_url()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
@@ -110,25 +113,26 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyPutUrl(http.Http, "1password.com/api/v1/device");
         }
 
-        [Test]
+        [Fact]
         public void ReauthorizeDevice_throws_on_error()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
-            Assert.That(() => Client.ReauthorizeDevice(TestData.ClientInfo, http),
-                        ExceptionsTest.ThrowsRespondedWithErrorWithMessage(TestData.Uuid)
-                            .And.Message.StartsWith("Failed to reauthorize"));
+
+            var e = Assert.Throws<ClientException>(() => Client.ReauthorizeDevice(TestData.ClientInfo, http));
+            Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
+            Assert.Contains("Failed to reauthorize", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void VerifySessionKey_returns_success()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
             var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
 
-            Assert.That(result.Status, Is.EqualTo(Client.VerifyStatus.Success));
+            Assert.Equal(Client.VerifyStatus.Success, result.Status);
         }
 
-        [Test]
+        [Fact]
         public void VerifySessionKey_makes_POST_request_to_specific_url()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
@@ -137,42 +141,42 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v2/auth/verify");
         }
 
-        [Test]
+        [Fact]
         public void ParseSecondFactors_returns_factors()
         {
             var json = JToken.Parse("{'totp': {'enabled': true}, 'dsecret': {'enabled': true}}");
             var factors = Client.ParseSecondFactors(json);
 
-            Assert.That(factors, Is.EquivalentTo(new[] { Client.SecondFactor.GoogleAuthenticator,
-                                                         Client.SecondFactor.RememberMeToken }));
+            Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator, Client.SecondFactor.RememberMeToken },
+                         factors);
         }
 
-        [Test]
+        [Fact]
         public void ParseSecondFactor_ignores_missing_factors()
         {
             var json = JToken.Parse("{'totp': {'enabled': true}}");
             var factors = Client.ParseSecondFactors(json);
 
-            Assert.That(factors, Is.EquivalentTo(new[] { Client.SecondFactor.GoogleAuthenticator }));
+            Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator }, factors);
         }
 
-        [Test]
+        [Fact]
         public void ParseSecondFactor_ignores_disabled_factors()
         {
             var json = JToken.Parse("{'totp': {'enabled': true}, 'dsecret': {'enabled': false}}");
             var factors = Client.ParseSecondFactors(json);
 
-            Assert.That(factors, Is.EquivalentTo(new[] { Client.SecondFactor.GoogleAuthenticator }));
+            Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator }, factors);
         }
 
-        [Test]
+        [Fact]
         public void GetAccountInfo_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
             Client.GetAccountInfo(TestData.SesionKey, http);
         }
 
-        [Test]
+        [Fact]
         public void GetAccountInfo_makes_GET_request_to_specific_url()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
@@ -181,14 +185,14 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account");
         }
 
-        [Test]
+        [Fact]
         public void GetKeysets_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("empty-object-response"));
             Client.GetKeysets(TestData.SesionKey, http);
         }
 
-        [Test]
+        [Fact]
         public void GetKeysets_makes_GET_request_to_specific_url()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("empty-object-response"));
@@ -197,16 +201,16 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account/keysets");
         }
 
-        [Test]
+        [Fact]
         public void BuildListOfAccessibleVaults_returns_vaults()
         {
             var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
             var vaults = Client.BuildListOfAccessibleVaults(accountInfo);
 
-            Assert.That(vaults, Is.EquivalentTo(new[] {"ru74fjxlkipzzctorwj4icrj2a", "4tz67op2kfiapodi5ygprtwn64"}));
+            Assert.Equal(new[] {"ru74fjxlkipzzctorwj4icrj2a", "4tz67op2kfiapodi5ygprtwn64"}, vaults);
         }
 
-        [Test]
+        [Fact]
         public void GetVaultAccounts_work()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
@@ -217,7 +221,7 @@ namespace OnePassword.Test
             Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http, null);
         }
 
-        [Test]
+        [Fact]
         public void GetVaultAccounts_with_no_items_work()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-with-no-items-response"));
@@ -228,7 +232,7 @@ namespace OnePassword.Test
             Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http, null);
         }
 
-        [Test]
+        [Fact]
         public void GetVaultAccounts_makes_GET_request_to_specific_url()
         {
             var http =
@@ -243,14 +247,14 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/vault");
         }
 
-        [Test]
+        [Fact]
         public void SignOut_works()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
             Client.SignOut(http);
         }
 
-        [Test]
+        [Fact]
         public void SignOut_makes_PUT_request_to_specific_url()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
@@ -259,15 +263,17 @@ namespace OnePassword.Test
             JsonHttpClientTest.VerifyPutUrl(http.Http, "1password.com/api/v1/session/signout");
         }
 
-        [Test]
+        [Fact]
         public void SignOut_throws_on_bad_response()
         {
             var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
-            Assert.That(() => Client.SignOut(http),
-                        ExceptionsTest.ThrowsRespondedWithErrorWithMessage("Failed to sign out"));
+
+            var e = Assert.Throws<ClientException>(() => Client.SignOut(http));
+            Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
+            Assert.Contains("Failed to sign out", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void DecryptKeys_returns_all_keys_in_keychain()
         {
             var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
@@ -282,7 +288,7 @@ namespace OnePassword.Test
             };
 
             foreach (var i in aesKeys)
-                Assert.That(keychain.GetAes(i), Is.Not.Null);
+                Assert.NotNull(keychain.GetAes(i));
 
             var keysetIds = new[]
             {
@@ -294,46 +300,43 @@ namespace OnePassword.Test
 
             foreach (var i in keysetIds)
             {
-                Assert.That(keychain.GetAes(i), Is.Not.Null);
-                Assert.That(keychain.GetRsa(i), Is.Not.Null);
+                Assert.NotNull(keychain.GetAes(i));
+                Assert.NotNull(keychain.GetRsa(i));
             }
         }
 
-        [Test]
+        [Fact]
         public void DeriveMasterKey_returns_master_key()
         {
-            var expected =
-                "09f6cf6acc4f64f2ac6af5d912427253c4dd5e1a48dfc6bfea21df8f6d3a701e".DecodeHex();
+            var expected = "09f6cf6acc4f64f2ac6af5d912427253c4dd5e1a48dfc6bfea21df8f6d3a701e".DecodeHex();
             var key = Client.DeriveMasterKey("PBES2g-HS256",
                                              100000,
-                                             "i2enf0xq-XPKCFFf5UZqNQ".Decode64(),
+                                             "i2enf0xq-XPKCFFf5UZqNQ".Decode64Loose(),
                                              TestData.ClientInfo);
 
-            Assert.That(key.Id, Is.EqualTo("mp"));
-            Assert.That(key.Key, Is.EqualTo(expected));
+            Assert.Equal("mp", key.Id);
+            Assert.Equal(expected, key.Key);
         }
 
-        [Test]
+        [Fact]
         public void GetApiUrl_returns_correct_url()
         {
-            Assert.That(Client.GetApiUrl("my.1password.com"),
-                        Is.EqualTo("https://my.1password.com/api"));
-            Assert.That(Client.GetApiUrl("my.1password.eu"),
-                        Is.EqualTo("https://my.1password.eu/api"));
+            Assert.Equal("https://my.1password.com/api", Client.GetApiUrl("my.1password.com"));
+            Assert.Equal("https://my.1password.eu/api", Client.GetApiUrl("my.1password.eu"));
         }
 
-        [Test]
+        [Fact]
         public void MakeJsonClient_sets_base_url()
         {
             var http = Client.MakeJsonClient(new HttpClient(), "https://base.url");
-            Assert.That(http.BaseUrl, Is.EqualTo("https://base.url"));
+            Assert.Equal("https://base.url", http.BaseUrl);
         }
 
-        [Test]
+        [Fact]
         public void MakeJsonClient_copies_base_url()
         {
             var http = Client.MakeJsonClient(new JsonHttpClient(new HttpClient(), "https://base.url"));
-            Assert.That(http.BaseUrl, Is.EqualTo("https://base.url"));
+            Assert.Equal("https://base.url", http.BaseUrl);
         }
 
         //
