@@ -27,16 +27,6 @@ namespace PasswordManagerAccess.OnePassword
             return new string(uuid);
         }
 
-        public static byte[] Hmac256(byte[] salt, string message)
-        {
-            return Hmac256(salt, message.ToBytes());
-        }
-
-        public static byte[] Hmac256(byte[] salt, byte[] message)
-        {
-            return C.HmacSha256(message, salt);
-        }
-
         public static byte[] Hkdf(string method, byte[] ikm, byte[] salt)
         {
             return OnePassword.Hkdf.Generate(ikm: ikm,
@@ -63,7 +53,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] CalculateSessionHmacSalt(AesKey sessionKey)
         {
-            return Hmac256(sessionKey.Key, SessionHmacSecret);
+            return C.HmacSha256(SessionHmacSecret, sessionKey.Key);
         }
 
         public static string CalculateClientHash(Session session)
@@ -85,7 +75,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static string HashRememberMeToken(string token, string sessionId)
         {
-            return Hmac256(token.Decode64(), sessionId.Decode32()).ToBase64().Substring(0, 8);
+            return C.HmacSha256(sessionId.Decode32(), token.Decode64()).ToBase64().Substring(0, 8);
         }
 
         private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();

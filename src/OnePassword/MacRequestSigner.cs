@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using C = PasswordManagerAccess.Common.Crypto;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -52,7 +53,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal string CalculateAuthSignature(string authMessage, uint requestId)
         {
-            var hash = Crypto.Hmac256(_salt, authMessage);
+            var hash = C.HmacSha256(authMessage, _salt);
             var hash12 = hash.Take(12).ToArray().ToBase64();
             return string.Format("v1|{0}|{1}", requestId, hash12);
         }

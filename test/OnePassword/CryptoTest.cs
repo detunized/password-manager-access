@@ -17,20 +17,6 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void Hamc256_string_returns_hashed_message()
-        {
-            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64Loose(),
-                         Crypto.Hmac256("salt".ToBytes(), "message"));
-        }
-
-        [Fact]
-        public void Hmac256_bytes_returns_hashed_message()
-        {
-            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64Loose(),
-                         Crypto.Hmac256("salt".ToBytes(), "message".ToBytes()));
-        }
-
-        [Fact]
         public void Hkdf_returns_derived_key()
         {
             Assert.Equal("UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64Loose(),

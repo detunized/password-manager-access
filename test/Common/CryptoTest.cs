@@ -73,6 +73,13 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void HmacSha256_string_returns_mac()
         {
+            var mac = Crypto.HmacSha256("message", "key".ToBytes());
+            Assert.Equal("6e9ef29b75fffc5b7abae527d58fdadb2fe42e7219011976917343065f58ed4a".DecodeHex(), mac);
+        }
+
+        [Fact]
+        public void HmacSha256_bytes_returns_mac()
+        {
             var mac = Crypto.HmacSha256("message".ToBytes(), "key".ToBytes());
             Assert.Equal("6e9ef29b75fffc5b7abae527d58fdadb2fe42e7219011976917343065f58ed4a".DecodeHex(), mac);
         }
