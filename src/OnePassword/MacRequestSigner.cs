@@ -4,21 +4,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using C = PasswordManagerAccess.Common.Crypto;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
     internal class MacRequestSigner: IRequestSigner
     {
         public MacRequestSigner(Session session, AesKey sessionKey)
-            : this(session, sessionKey, C.RandonUInt32())
+            : this(session, sessionKey, Crypto.RandonUInt32())
         {
         }
 
         public MacRequestSigner(Session session, AesKey sessionKey, uint seed)
         {
             _sessionId = session.Id;
-            _salt = Crypto.CalculateSessionHmacSalt(sessionKey);
+            _salt = Util.CalculateSessionHmacSalt(sessionKey);
             _requestId = seed;
         }
 
@@ -53,7 +53,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal string CalculateAuthSignature(string authMessage, uint requestId)
         {
-            var hash = C.HmacSha256(authMessage, _salt);
+            var hash = Crypto.HmacSha256(authMessage, _salt);
             var hash12 = hash.Take(12).ToArray().ToBase64();
             return string.Format("v1|{0}|{1}", requestId, hash12);
         }

@@ -4,12 +4,10 @@
 using System;
 using System.Linq;
 using PasswordManagerAccess.Common;
-using C = PasswordManagerAccess.Common.Crypto;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    // Crypto stuff that is specific to 1Password
-    internal static class Crypto
+    internal static class Util
     {
         public static string RandomUuid()
         {
@@ -37,16 +35,16 @@ namespace PasswordManagerAccess.OnePassword
             {
             case "PBES2-HS256":
             case "PBES2g-HS256":
-                return C.Pbkdf2Sha256(password: password,
-                                      salt: salt,
-                                      iterations: iterations,
-                                      byteCount: 32);
+                return Crypto.Pbkdf2Sha256(password: password,
+                                           salt: salt,
+                                           iterations: iterations,
+                                           byteCount: 32);
             case "PBES2-HS512":
             case "PBES2g-HS512":
-                return C.Pbkdf2Sha512(password: password,
-                                      salt: salt,
-                                      iterations: iterations,
-                                      byteCount: 32);
+                return Crypto.Pbkdf2Sha512(password: password,
+                                           salt: salt,
+                                           iterations: iterations,
+                                           byteCount: 32);
             }
 
             throw ExceptionFactory.MakeUnsupported(
@@ -55,7 +53,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] CalculateSessionHmacSalt(AesKey sessionKey)
         {
-            return C.HmacSha256(SessionHmacSecret, sessionKey.Key);
+            return Crypto.HmacSha256(SessionHmacSecret, sessionKey.Key);
         }
 
         public static string CalculateClientHash(Session session)
@@ -65,9 +63,9 @@ namespace PasswordManagerAccess.OnePassword
 
         public static string CalculateClientHash(string accountKeyUuid, string sessionId)
         {
-            var a = C.Sha256(accountKeyUuid);
-            var b = C.Sha256(sessionId);
-            return C.Sha256(a.Concat(b).ToArray()).ToBase64();
+            var a = Crypto.Sha256(accountKeyUuid);
+            var b = Crypto.Sha256(sessionId);
+            return Crypto.Sha256(a.Concat(b).ToArray()).ToBase64();
         }
 
         public static string HashRememberMeToken(string token, Session session)
@@ -77,7 +75,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static string HashRememberMeToken(string token, string sessionId)
         {
-            return C.HmacSha256(sessionId.Decode32(), token.Decode64()).ToBase64().Substring(0, 8);
+            return Crypto.HmacSha256(sessionId.Decode32(), token.Decode64()).ToBase64().Substring(0, 8);
         }
 
         private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();

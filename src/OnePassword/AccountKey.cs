@@ -49,9 +49,9 @@ namespace PasswordManagerAccess.OnePassword
 
         public byte[] Hash()
         {
-            return Crypto.Hkdf(method: Format,
-                               ikm: Key.ToBytes(),
-                               salt: Uuid.ToBytes());
+            return Util.Hkdf(method: Format,
+                             ikm: Key.ToBytes(),
+                             salt: Uuid.ToBytes());
         }
 
         public byte[] CombineWith(byte[] bytes)

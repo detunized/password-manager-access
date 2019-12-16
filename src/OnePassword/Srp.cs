@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.Numerics;
 using PasswordManagerAccess.Common;
-using C = PasswordManagerAccess.Common.Crypto;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -38,7 +37,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static BigInteger GenerateSecretA()
         {
-            return C.RandomBytes(32).ToBigInt();
+            return Crypto.RandomBytes(32).ToBigInt();
         }
 
         internal static BigInteger ComputeSharedA(BigInteger secretA)
@@ -77,13 +76,13 @@ namespace PasswordManagerAccess.OnePassword
         {
             // Some arbitrary crypto computation, variable names don't have much meaning
             var ab = sharedA.ToHex() + sharedB.ToHex();
-            var hashAb = C.Sha256(ab).ToBigInt();
+            var hashAb = Crypto.Sha256(ab).ToBigInt();
             var s = session.Id.ToBytes().ToBigInt();
             var x = ComputeX(clientInfo, session);
             var y = sharedB - SirpG.ModExp(x, SirpN) * s;
             var z = y.ModExp(secretA + hashAb * x, SirpN);
 
-            return C.Sha256(z.ToHex());
+            return Crypto.Sha256(z.ToHex());
         }
 
         internal static BigInteger ComputeX(ClientInfo clientInfo, Session session)
@@ -96,16 +95,15 @@ namespace PasswordManagerAccess.OnePassword
 
             // TODO: Add constants for 1024, 6144 and 8192
             if (method != "SRPg-4096")
-                throw ExceptionFactory.MakeUnsupported(
-                    string.Format("SRP: method '{0}' is not supported", method));
+                throw ExceptionFactory.MakeUnsupported(string.Format("SRP: method '{0}' is not supported", method));
 
-            var k1 = Crypto.Hkdf(method: method,
-                                 ikm: session.Salt,
-                                 salt: clientInfo.Username.ToBytes());
-            var k2 = Crypto.Pbes2(method: session.KeyMethod,
-                                  password: clientInfo.Password,
-                                  salt: k1,
-                                  iterations: iterations);
+            var k1 = Util.Hkdf(method: method,
+                               ikm: session.Salt,
+                               salt: clientInfo.Username.ToBytes());
+            var k2 = Util.Pbes2(method: session.KeyMethod,
+                                password: clientInfo.Password,
+                                salt: k1,
+                                iterations: iterations);
             var x = clientInfo.AccountKey.CombineWith(k2);
 
             return x.ToBigInt();

@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.OnePassword
         // Use this function to generate a unique random identifier for each new client.
         public static string GenerateRandomUuid()
         {
-            return Crypto.RandomUuid();
+            return Util.RandomUuid();
         }
 
         public static string GetDomain(Region region)
@@ -316,7 +316,7 @@ namespace PasswordManagerAccess.OnePassword
                     new Dictionary<string, object>
                     {
                         {"sessionID", session.Id},
-                        {"clientVerifyHash", Crypto.CalculateClientHash(session)},
+                        {"clientVerifyHash", Util.CalculateClientHash(session)},
                         {"client", ClientId},
                     },
                     sessionKey,
@@ -459,7 +459,7 @@ namespace PasswordManagerAccess.OnePassword
                 break;
             case SecondFactor.RememberMeToken:
                 key = "dsecret";
-                data = new Dictionary<string, string> {{"dshmac", Crypto.HashRememberMeToken(code, session)}};
+                data = new Dictionary<string, string> {{"dshmac", Util.HashRememberMeToken(code, session)}};
                 break;
             default:
                 throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
@@ -743,8 +743,8 @@ namespace PasswordManagerAccess.OnePassword
             //       by either trying to call the original JS functions in the browser console
             //       or by changing to some really weird password and trying to log in.
 
-            var k1 = Crypto.Hkdf(algorithm, salt, clientInfo.Username.ToLower().ToBytes());
-            var k2 = Crypto.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
+            var k1 = Util.Hkdf(algorithm, salt, clientInfo.Username.ToLower().ToBytes());
+            var k2 = Util.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
             var key = clientInfo.AccountKey.CombineWith(k2);
 
             return new AesKey(MasterKeyId, key);
