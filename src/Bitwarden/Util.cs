@@ -21,18 +21,12 @@ namespace PasswordManagerAccess.Bitwarden
             return Pbkdf2.GenerateSha256(key, password.ToBytes(), 1, 32);
         }
 
-        public static byte[] Hmac(byte[] key, byte[] message)
-        {
-            using (var hmac = new HMACSHA256 {Key = key})
-                return hmac.ComputeHash(message);
-        }
-
         // This is the "expand" half of the "extract-expand" HKDF algorithm.
         // The length is fixed to 32 not to complicate things.
         // See https://tools.ietf.org/html/rfc5869
         public static byte[] HkdfExpand(byte[] prk, byte[] info)
         {
-            return Hmac(prk, info.Concat(new byte[] {1}).ToArray());
+            return Crypto.HmacSha256(info.Concat(new byte[] { 1 }).ToArray(), prk);
         }
 
         public static byte[] ExpandKey(byte[] key)

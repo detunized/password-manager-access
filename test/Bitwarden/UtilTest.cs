@@ -31,13 +31,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void Hmac256_bytes_returns_hashed_message()
-        {
-            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64(),
-                         Util.Hmac("salt".ToBytes(), "message".ToBytes()));
-        }
-
-        [Fact]
         public void HkdfExpand_returns_expected_result()
         {
             Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(),

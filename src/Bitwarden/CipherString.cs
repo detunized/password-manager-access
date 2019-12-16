@@ -256,7 +256,7 @@ namespace PasswordManagerAccess.Bitwarden
             var macKey = key.Skip(32).Take(32).ToArray();
 
             // Encrypt-then-MAC scheme
-            var mac = Util.Hmac(macKey, Iv.Concat(Ciphertext).ToArray());
+            var mac = Crypto.HmacSha256(Iv.Concat(Ciphertext).ToArray(), macKey);
             if (!mac.SequenceEqual(Mac))
                 throw new CryptoException("MAC doesn't match. The vault is most likely corrupted.");
 
