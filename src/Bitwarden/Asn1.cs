@@ -1,7 +1,6 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using PasswordManagerAccess.Common;
@@ -47,7 +46,7 @@ namespace PasswordManagerAccess.Bitwarden
                 kind = Kind.Sequence;
                 break;
             default:
-                throw new ArgumentException($"Unknown ASN.1 tag {tag}");
+                throw new InternalErrorException($"Unknown ASN.1 tag {tag}");
             }
 
             int size = reader.ReadByte();

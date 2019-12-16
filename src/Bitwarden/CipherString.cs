@@ -1,11 +1,8 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Linq;
 using PasswordManagerAccess.Common;
-
-// TODO: Here and everywhere else in Bitwarden: remove System.Exceptions
 
 namespace PasswordManagerAccess.Bitwarden
 {
@@ -147,7 +144,7 @@ namespace PasswordManagerAccess.Bitwarden
             case CipherMode.Rsa2048OaepSha1HmacSha256:
                 return DecryptRsa2048OaepSha1HmacSha256(key);
             default:
-                throw new InvalidOperationException($"Invalid cipher mode: {Mode}");
+                throw MakeError($"Invalid cipher mode: {Mode}");
             }
         }
 
@@ -233,7 +230,7 @@ namespace PasswordManagerAccess.Bitwarden
         private byte[] DecryptAes256Cbc(byte[] key)
         {
             if (key.Length != 32)
-                throw new InvalidOperationException($"Key must be 32 bytes long, got {key.Length}");
+                throw MakeError($"Key must be 32 bytes long, got {key.Length}");
 
             return Crypto.DecryptAes256Cbc(Ciphertext, Iv, key);
         }
@@ -249,7 +246,7 @@ namespace PasswordManagerAccess.Bitwarden
                 key = Util.ExpandKey(key);
 
             if (key.Length != 64)
-                throw new InvalidOperationException($"Key must be 64 bytes long, got {key.Length}");
+                throw MakeError($"Key must be 64 bytes long, got {key.Length}");
 
             // First 32 bytes is the encryption key and the next 32 bytes is the MAC key
             var encKey = key.Take(32).ToArray();
@@ -266,7 +263,7 @@ namespace PasswordManagerAccess.Bitwarden
         private byte[] DecryptRsa2048OaepSha256(byte[] key)
         {
             if (Ciphertext.Length != 256)
-                throw new InvalidOperationException($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
+                throw MakeError($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
 
             return Util.DecryptRsaSha256(Ciphertext, key);
         }
@@ -274,7 +271,7 @@ namespace PasswordManagerAccess.Bitwarden
         private byte[] DecryptRsa2048OaepSha1(byte[] key)
         {
             if (Ciphertext.Length != 256)
-                throw new InvalidOperationException($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
+                throw MakeError($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
 
             return Util.DecryptRsaSha1(Ciphertext, key);
         }

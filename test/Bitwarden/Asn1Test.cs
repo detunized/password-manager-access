@@ -36,8 +36,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void Asn1_ExtractItem_throws_on_invalid_tag()
         {
-            var e = Assert.Throws<ArgumentException>(() => Asn1.ExtractItem("0D04DEADBEEF".DecodeHex()));
-            Assert.Equal("Unknown ASN.1 tag 13", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Asn1.ExtractItem("0D04DEADBEEF".DecodeHex()),
+                                                 "Unknown ASN.1 tag 13");
         }
 
         [Fact]
