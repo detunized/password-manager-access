@@ -10,7 +10,7 @@ using JsonHttpClient = PasswordManagerAccess.OnePassword.JsonHttpClient;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class SrpTest
+    public class SrpTest: TestBase
     {
         [Fact]
         public void GenerateSecretA_returns_a_large_number()
@@ -64,8 +64,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void ExchangeAForB_throws_on_mismatching_session_id()
         {
-            var e = Assert.Throws<InvalidOperationException>(
+            var e = Assert.Throws<ClientException>(
                 () => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"));
+            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("ID doesn't match", e.Message);
         }
 
@@ -88,7 +89,8 @@ namespace PasswordManagerAccess.Test.OnePassword
                      "62170481CD0069127D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C93406319" +
                      "9FFFFFFFFFFFFFFFF").ToBigInt();
 
-            var e = Assert.Throws<InvalidOperationException>(() => Srp.ValidateB(b));
+            var e = Assert.Throws<ClientException>(() => Srp.ValidateB(b));
+            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("validation failed", e.Message);
         }
 
@@ -149,15 +151,15 @@ namespace PasswordManagerAccess.Test.OnePassword
         // Helpers
         //
 
-        private static BigInteger PerformExchange(string fixture,
-                                                  string sessionId = TestData.SessionId)
+        private BigInteger PerformExchange(string fixtureName,
+                                           string sessionId = TestData.SessionId)
         {
-            return Srp.ExchangeAForB(0, TestData.MakeSession(sessionId), SetupJsonHttp(fixture));
+            return Srp.ExchangeAForB(0, TestData.MakeSession(sessionId), SetupJsonHttp(fixtureName));
         }
 
-        private static JsonHttpClient SetupJsonHttp(string fixture)
+        private JsonHttpClient SetupJsonHttp(string fixtureName)
         {
-            return new JsonHttpClient(JsonHttpClientTest.SetupPostWithFixture(fixture).Object,
+            return new JsonHttpClient(JsonHttpClientTest.SetupPost(GetFixture(fixtureName)).Object,
                                       Client.GetApiUrl(Client.DefaultDomain));
         }
     }

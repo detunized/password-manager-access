@@ -49,7 +49,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             foreach (var key in keys)
             {
-                var e = Assert.Throws<InvalidOperationException>(() => AccountKey.Parse(key));
+                var e = Assert.Throws<ClientException>(() => AccountKey.Parse(key));
+                Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
                 Assert.Contains("Invalid account key", e.Message);
             }
         }
@@ -81,7 +82,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             foreach (var b in bytes)
             {
-                var e = Assert.Throws<InvalidOperationException>(() => Key.CombineWith(b.ToBytes()));
+                var e = Assert.Throws<ClientException>(() => Key.CombineWith(b.ToBytes()));
+                Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
                 Assert.Contains("hash function", e.Message);
             }
         }

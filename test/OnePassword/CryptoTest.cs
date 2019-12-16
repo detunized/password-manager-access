@@ -70,8 +70,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void Pbes2_throws_on_unsupported_method()
         {
-            var e = Assert.Throws<UnsupportedFeatureException>(
+            var e = Assert.Throws<ClientException>(
                 () => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100));
+            Assert.Equal(ClientException.FailureReason.UnsupportedFeature, e.Reason);
             Assert.Contains("method", e.Message);
         }
 

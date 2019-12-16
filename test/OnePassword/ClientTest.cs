@@ -16,12 +16,12 @@ using JsonHttpClient = PasswordManagerAccess.OnePassword.JsonHttpClient;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class ClientTest
+    public class ClientTest: TestBase
     {
         [Fact]
         public void StartNewSession_returns_session_on_ok()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("start-new-session-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("start-new-session-response")));
             var session = Client.StartNewSession(TestData.ClientInfo, http);
 
             Assert.Equal(TestData.Session.Id, session.Id);
@@ -36,7 +36,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_makes_GET_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("start-new-session-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("start-new-session-response")));
             Client.StartNewSession(TestData.ClientInfo, http);
 
             JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v2/auth");
@@ -67,7 +67,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var jsonHttp = new JsonHttpClient(JsonHttpClientTest.SetupGet("} invalid json {").Object, "");
 
             var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp));
-            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
+            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
             Assert.Contains("Invalid JSON", e.Message);
         }
 
@@ -126,7 +126,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void VerifySessionKey_returns_success()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost(GetFixture("verify-key-response")));
             var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
 
             Assert.Equal(Client.VerifyStatus.Success, result.Status);
@@ -135,7 +135,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void VerifySessionKey_makes_POST_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPostWithFixture("verify-key-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost(GetFixture("verify-key-response")));
             Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
 
             JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v2/auth/verify");
@@ -172,14 +172,14 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetAccountInfo_works()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-account-info-response")));
             Client.GetAccountInfo(TestData.SesionKey, http);
         }
 
         [Fact]
         public void GetAccountInfo_makes_GET_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-account-info-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-account-info-response")));
             Client.GetAccountInfo(TestData.SesionKey, http);
 
             JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account");
@@ -188,14 +188,14 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetKeysets_works()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("empty-object-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("empty-object-response")));
             Client.GetKeysets(TestData.SesionKey, http);
         }
 
         [Fact]
         public void GetKeysets_makes_GET_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("empty-object-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("empty-object-response")));
             Client.GetKeysets(TestData.SesionKey, http);
 
             JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account/keysets");
@@ -204,7 +204,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void BuildListOfAccessibleVaults_returns_vaults()
         {
-            var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
+            var accountInfo = JObject.Parse(GetFixture("account-info"));
             var vaults = Client.BuildListOfAccessibleVaults(accountInfo);
 
             Assert.Equal(new[] {"ru74fjxlkipzzctorwj4icrj2a", "4tz67op2kfiapodi5ygprtwn64"}, vaults);
@@ -213,7 +213,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetVaultAccounts_work()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-vault-accounts-ru74-response")));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
@@ -224,7 +224,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetVaultAccounts_with_no_items_work()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGetWithFixture("get-vault-with-no-items-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-vault-with-no-items-response")));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
@@ -235,9 +235,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetVaultAccounts_makes_GET_request_to_specific_url()
         {
-            var http =
-                MakeJsonHttp(
-                    JsonHttpClientTest.SetupGetWithFixture("get-vault-accounts-ru74-response"));
+            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-vault-accounts-ru74-response")));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
@@ -276,8 +274,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void DecryptKeys_returns_all_keys_in_keychain()
         {
-            var accountInfo = JObject.Parse(JsonHttpClientTest.ReadFixture("account-info"));
-            var keysets = JObject.Parse(JsonHttpClientTest.ReadFixture("keysets"));
+            var accountInfo = JObject.Parse(GetFixture("account-info"));
+            var keysets = JObject.Parse(GetFixture("keysets"));
             var keychain = Client.DecryptAllKeys(accountInfo, keysets, ClientInfo);
 
             var aesKeys = new[]

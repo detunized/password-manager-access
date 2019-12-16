@@ -28,22 +28,24 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void Encrypt_throws_on_invalid_key_length()
         {
-            var e = Assert.Throws<InvalidOperationException>(
+            var e = Assert.Throws<ClientException>(
                 () => AesGcm.Encrypt(key: new byte[13],
                                      plaintext: new byte[16],
                                      iv: new byte[12],
                                      authData: new byte[0]));
+            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("key must", e.Message);
         }
 
         [Fact]
         public void Encrypt_throws_on_invalid_iv_length()
         {
-            var e = Assert.Throws<InvalidOperationException>(
+            var e = Assert.Throws<ClientException>(
                 () => AesGcm.Encrypt(key: new byte[32],
                                      plaintext: new byte[16],
                                      iv: new byte[13],
                                      authData: new byte[0]));
+            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("iv must", e.Message);
         }
 
@@ -64,33 +66,36 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void Decrypt_throws_on_invalid_key_length()
         {
-            var e = Assert.Throws<InvalidOperationException>(
+            var e = Assert.Throws<ClientException>(
                 () => AesGcm.Decrypt(key: new byte[13],
                                      ciphertext: new byte[16],
                                      iv: new byte[12],
                                      authData: new byte[0]));
+            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("key must", e.Message);
         }
 
         [Fact]
         public void Decrypt_throws_on_invalid_ciphertext_length()
         {
-            var e = Assert.Throws<InvalidOperationException>(
+            var e = Assert.Throws<ClientException>(
                 () => AesGcm.Decrypt(key: new byte[32],
                                      ciphertext: new byte[13],
                                      iv: new byte[12],
                                      authData: new byte[0]));
+            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("ciphertext must", e.Message);
         }
 
         [Fact]
         public void Decrypt_throws_on_invalid_iv_length()
         {
-            var e = Assert.Throws<InvalidOperationException>(
+            var e = Assert.Throws<ClientException>(
                 () => AesGcm.Decrypt(key: new byte[32],
                                      ciphertext: new byte[16],
                                      iv: new byte[13],
                                      authData: new byte[0]));
+            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("iv must", e.Message);
         }
 
@@ -101,8 +106,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             {
                 // Change the first byte of the ciphertext
                 var modified = Modified(i.CiphertextWithTag, 0);
-                var e = Assert.Throws<InvalidOperationException>(
-                    () => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
+                var e = Assert.Throws<ClientException>(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
+                Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
                 Assert.Contains("auth tag", e.Message);
             }
         }
@@ -114,8 +119,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             {
                 // Change the last byte in the tag
                 var modified = Modified(i.CiphertextWithTag, -1);
-                var e = Assert.Throws<InvalidOperationException>(
-                    () => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
+                var e = Assert.Throws<ClientException>(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
+                Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
                 Assert.Contains("auth tag", e.Message);
             }
         }
