@@ -27,16 +27,6 @@ namespace PasswordManagerAccess.OnePassword
             return new string(uuid);
         }
 
-        public static byte[] Sha256(string message)
-        {
-            return Sha256(message.ToBytes());
-        }
-
-        public static byte[] Sha256(byte[] message)
-        {
-            return C.Sha256(message);
-        }
-
         public static byte[] Hmac256(byte[] salt, string message)
         {
             return Hmac256(salt, message.ToBytes());
@@ -83,9 +73,9 @@ namespace PasswordManagerAccess.OnePassword
 
         public static string CalculateClientHash(string accountKeyUuid, string sessionId)
         {
-            var a = Sha256(accountKeyUuid);
-            var b = Sha256(sessionId);
-            return Sha256(a.Concat(b).ToArray()).ToBase64();
+            var a = C.Sha256(accountKeyUuid);
+            var b = C.Sha256(sessionId);
+            return C.Sha256(a.Concat(b).ToArray()).ToBase64();
         }
 
         public static string HashRememberMeToken(string token, Session session)

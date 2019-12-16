@@ -77,13 +77,13 @@ namespace PasswordManagerAccess.OnePassword
         {
             // Some arbitrary crypto computation, variable names don't have much meaning
             var ab = sharedA.ToHex() + sharedB.ToHex();
-            var hashAb = Crypto.Sha256(ab).ToBigInt();
+            var hashAb = C.Sha256(ab).ToBigInt();
             var s = session.Id.ToBytes().ToBigInt();
             var x = ComputeX(clientInfo, session);
             var y = sharedB - SirpG.ModExp(x, SirpN) * s;
             var z = y.ModExp(secretA + hashAb * x, SirpN);
 
-            return Crypto.Sha256(z.ToHex());
+            return C.Sha256(z.ToHex());
         }
 
         internal static BigInteger ComputeX(ClientInfo clientInfo, Session session)
