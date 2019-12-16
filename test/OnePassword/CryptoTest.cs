@@ -11,13 +11,6 @@ namespace PasswordManagerAccess.Test.OnePassword
     public class CryptoTest
     {
         [Fact]
-        public void RandomBytes_returns_array_of_requested_size()
-        {
-            foreach (var size in new[] {0, 1, 2, 3, 4, 15, 255, 1024, 1337})
-                Assert.Equal(size, Crypto.RandomBytes(size).Length);
-        }
-
-        [Fact]
         public void RandomUuid_returns_string_of_26_characters()
         {
             Assert.Equal(26, Crypto.RandomUuid().Length);
@@ -70,8 +63,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void Pbes2_throws_on_unsupported_method()
         {
-            var e = Assert.Throws<ClientException>(
-                () => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100));
+            var e = Assert.Throws<ClientException>(() => Crypto.Pbes2("Unknown", "password", "salt".ToBytes(), 100));
             Assert.Equal(ClientException.FailureReason.UnsupportedFeature, e.Reason);
             Assert.Contains("method", e.Message);
         }
@@ -80,8 +72,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void CalculateSessionHmacSalt_returns_salt()
         {
             var key = new AesKey("", "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
-            var expected =
-                "cce080cc9b3eaeaa9b6e621e1b4c4d2048babe16e40b0576fc2520c26473b9ac".DecodeHex();
+            var expected = "cce080cc9b3eaeaa9b6e621e1b4c4d2048babe16e40b0576fc2520c26473b9ac".DecodeHex();
 
             Assert.Equal(expected, Crypto.CalculateSessionHmacSalt(key));
         }
@@ -95,7 +86,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void CalculateClientHash_returns_hash()
         {
-            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Crypto.CalculateClientHash("RTN9SA", "TOZVTFIFBZGFDFNE5KSZFY7EZY"));
+            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA",
+                         Crypto.CalculateClientHash("RTN9SA", "TOZVTFIFBZGFDFNE5KSZFY7EZY"));
         }
 
         [Fact]
@@ -107,7 +99,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void HashRememberMeToken_returns_hash()
         {
-            Assert.Equal("oNk_XW_e", Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"));
+            Assert.Equal("oNk_XW_e",
+                         Crypto.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"));
         }
     }
 }

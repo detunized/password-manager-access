@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using PasswordManagerAccess.Common;
+using C = PasswordManagerAccess.Common.Crypto;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -37,7 +38,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static BigInteger GenerateSecretA()
         {
-            return Crypto.RandomBytes(32).ToBigInt();
+            return C.RandomBytes(32).ToBigInt();
         }
 
         internal static BigInteger ComputeSharedA(BigInteger secretA)

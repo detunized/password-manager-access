@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Newtonsoft.Json.Linq;
+using C = PasswordManagerAccess.Common.Crypto;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -27,7 +28,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public Encrypted Encrypt(byte[] plaintext)
         {
-            return Encrypt(plaintext, Crypto.RandomBytes(12));
+            return Encrypt(plaintext, C.RandomBytes(12));
         }
 
         public Encrypted Encrypt(byte[] plaintext, byte[] iv)

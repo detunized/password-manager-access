@@ -3,30 +3,21 @@
 
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
+using C = PasswordManagerAccess.Common.Crypto;
 
 namespace PasswordManagerAccess.OnePassword
 {
     internal static class Crypto
     {
-        public static byte[] RandomBytes(int size)
-        {
-            using (var random = new RNGCryptoServiceProvider())
-            {
-                var bytes = new byte[size];
-                random.GetBytes(bytes);
-                return bytes;
-            }
-        }
-
         public static uint RandonUInt32()
         {
-            return BitConverter.ToUInt32(RandomBytes(sizeof (uint)), 0);
+            return BitConverter.ToUInt32(C.RandomBytes(sizeof (uint)), 0);
         }
 
         public static string RandomUuid()
         {
+            // TODO: Shouldn't this be using Crypto.RandomBytes?
             var random = new Random();
             var uuid = new char[26];
 
@@ -43,8 +34,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] Sha256(byte[] message)
         {
-            using (var sha = new SHA256Managed())
-                return sha.ComputeHash(message);
+            return C.Sha256(message);
         }
 
         public static byte[] Hmac256(byte[] salt, string message)
@@ -54,8 +44,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] Hmac256(byte[] salt, byte[] message)
         {
-            using (var hmac = new HMACSHA256 { Key = salt })
-                return hmac.ComputeHash(message);
+            return C.HmacSha256(message, salt);
         }
 
         public static byte[] Hkdf(string method, byte[] ikm, byte[] salt)
