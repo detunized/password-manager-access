@@ -235,7 +235,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (key.Length != 32)
                 throw new InvalidOperationException($"Key must be 32 bytes long, got {key.Length}");
 
-            return Util.DecryptAes256(Ciphertext, Iv, key);
+            return Crypto.DecryptAes256Cbc(Ciphertext, Iv, key);
         }
 
         private byte[] DecryptAes128CbcHmacSha256(byte[] key)
@@ -260,7 +260,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (!mac.SequenceEqual(Mac))
                 throw new CryptoException("MAC doesn't match. The vault is most likely corrupted.");
 
-            return Util.DecryptAes256(Ciphertext, Iv, encKey);
+            return Crypto.DecryptAes256Cbc(Ciphertext, Iv, encKey);
         }
 
         private byte[] DecryptRsa2048OaepSha256(byte[] key)

@@ -37,29 +37,6 @@ namespace PasswordManagerAccess.Bitwarden
             return enc.Concat(mac).ToArray();
         }
 
-        // TODO: Use Common.Crypto
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] key)
-        {
-            var mode = System.Security.Cryptography.CipherMode.CBC;
-            try
-            {
-                using (var aes = new AesManaged {KeySize = 256, Key = key, Mode = mode, IV = iv})
-                using (var decryptor = aes.CreateDecryptor())
-                using (var inputStream = new MemoryStream(ciphertext, false))
-                using (var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read))
-                using (var outputStream = new MemoryStream())
-                {
-                    cryptoStream.CopyTo(outputStream);
-
-                    return outputStream.ToArray();
-                }
-            }
-            catch (CryptographicException e)
-            {
-                throw new CryptoException("AES decryption failed", e);
-            }
-        }
-
         public static byte[] DecryptRsaSha1(byte[] ciphertext, byte[] privateKey)
         {
             return DecryptRsa(ciphertext, ParsePrivateKeyPkcs8(privateKey), RSAEncryptionPadding.OaepSHA1);

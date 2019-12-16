@@ -45,25 +45,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void DecryptAes256_decrypts_ciphertext()
-        {
-            Assert.Equal("All your base are belong to us".ToBytes(),
-                         Util.DecryptAes256(ciphertext: "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                            iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                            key: "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
-        }
-
-        [Fact]
-        public void DecryptAes256_throws_on_incorrect_encryption_key()
-        {
-            Exceptions.AssertThrowsCrypto(
-                () => Util.DecryptAes256(ciphertext: "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                         iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                         key: "Incorrect key must be 32 bytes!!".ToBytes()),
-                "AES decryption failed");
-        }
-
-        [Fact]
         public void ParsePrivateKeyPkcs8_parses_openssl_generated_key()
         {
             // Generate with
