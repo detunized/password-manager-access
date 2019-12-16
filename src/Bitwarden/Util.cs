@@ -9,7 +9,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Bitwarden
 {
-    internal static class Crypto
+    internal static class Util
     {
         public static byte[] DeriveKey(string username, string password, int iterations)
         {
@@ -43,6 +43,7 @@ namespace PasswordManagerAccess.Bitwarden
             return enc.Concat(mac).ToArray();
         }
 
+        // TODO: Use Common.Crypto
         public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] key)
         {
             var mode = System.Security.Cryptography.CipherMode.CBC;

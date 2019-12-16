@@ -1,67 +1,73 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
 using Xunit;
-using Crypto = PasswordManagerAccess.Bitwarden.Crypto;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
-    public class CryptoTest
+    public class UtilTest
     {
         [Fact]
         public void DeriveKey_returns_derived_key()
         {
-            var key = Crypto.DeriveKey(Username, Password, 100);
+            var key = Util.DeriveKey(Username, Password, 100);
             Assert.Equal(DerivedKey.Decode64(), key);
         }
 
         [Fact]
         public void DeriveKey_trims_whitespace_and_lowercases_username()
         {
-            var key = Crypto.DeriveKey(" UsErNaMe ", Password, 100);
+            var key = Util.DeriveKey(" UsErNaMe ", Password, 100);
             Assert.Equal(DerivedKey.Decode64(), key);
         }
 
         [Fact]
         public void HashPassword_returns_hashed_password()
         {
-            var hash = Crypto.HashPassword(Password, DerivedKey.Decode64());
+            var hash = Util.HashPassword(Password, DerivedKey.Decode64());
             Assert.Equal(PasswordHash.Decode64(), hash);
         }
 
         [Fact]
         public void Hmac256_bytes_returns_hashed_message()
         {
-            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64(), Crypto.Hmac("salt".ToBytes(), "message".ToBytes()));
+            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64(),
+                         Util.Hmac("salt".ToBytes(), "message".ToBytes()));
         }
 
         [Fact]
         public void HkdfExpand_returns_expected_result()
         {
-            Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(), Crypto.HkdfExpand("prk".ToBytes(), "info".ToBytes()));
+            Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(),
+                         Util.HkdfExpand("prk".ToBytes(), "info".ToBytes()));
         }
 
         [Fact]
         public void ExpandKey_expands_key_to_64_bytes()
         {
             var expected = "GKPlyJlfe4rO+RNeBj6P4Jm1Ds4QFB23rN2WvwVcb5Iw0U+9uVf7jwQ04Yq75uCrOSsL7HonzBzNdYi1hO/mlQ==";
-            Assert.Equal(expected.Decode64(), Crypto.ExpandKey("key".ToBytes()));
+            Assert.Equal(expected.Decode64(), Util.ExpandKey("key".ToBytes()));
         }
 
         [Fact]
         public void DecryptAes256_decrypts_ciphertext()
         {
-            Assert.Equal("All your base are belong to us".ToBytes(), Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(), "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(), "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
+            Assert.Equal("All your base are belong to us".ToBytes(),
+                         Util.DecryptAes256(ciphertext: "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                            iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                            key: "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64()));
         }
 
         [Fact]
         public void DecryptAes256_throws_on_incorrect_encryption_key()
         {
-            Exceptions.AssertThrowsCrypto(() => Crypto.DecryptAes256("TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                                                                     "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                                                                     "Incorrect key must be 32 bytes!!".ToBytes()),
-                                          "AES decryption failed");
+            Exceptions.AssertThrowsCrypto(
+                () => Util.DecryptAes256(ciphertext: "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
+                                         iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
+                                         key: "Incorrect key must be 32 bytes!!".ToBytes()),
+                "AES decryption failed");
         }
 
         [Fact]
@@ -97,7 +103,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                       "Nmo9sez/pKeLnCqra8Ew29paWg==";
 
             // Check nothing here. Not throwing anything is good enough.
-            Crypto.ParsePrivateKeyPkcs8(key.Decode64());
+            Util.ParsePrivateKeyPkcs8(key.Decode64());
         }
 
         //

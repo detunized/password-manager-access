@@ -235,7 +235,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (key.Length != 32)
                 throw new InvalidOperationException($"Key must be 32 bytes long, got {key.Length}");
 
-            return Crypto.DecryptAes256(Ciphertext, Iv, key);
+            return Util.DecryptAes256(Ciphertext, Iv, key);
         }
 
         private byte[] DecryptAes128CbcHmacSha256(byte[] key)
@@ -246,7 +246,7 @@ namespace PasswordManagerAccess.Bitwarden
         private byte[] DecryptAes256CbcHmacSha256(byte[] key)
         {
             if (key.Length == 32)
-                key = Crypto.ExpandKey(key);
+                key = Util.ExpandKey(key);
 
             if (key.Length != 64)
                 throw new InvalidOperationException($"Key must be 64 bytes long, got {key.Length}");
@@ -256,11 +256,11 @@ namespace PasswordManagerAccess.Bitwarden
             var macKey = key.Skip(32).Take(32).ToArray();
 
             // Encrypt-then-MAC scheme
-            var mac = Crypto.Hmac(macKey, Iv.Concat(Ciphertext).ToArray());
+            var mac = Util.Hmac(macKey, Iv.Concat(Ciphertext).ToArray());
             if (!mac.SequenceEqual(Mac))
                 throw new CryptoException("MAC doesn't match. The vault is most likely corrupted.");
 
-            return Crypto.DecryptAes256(Ciphertext, Iv, encKey);
+            return Util.DecryptAes256(Ciphertext, Iv, encKey);
         }
 
         private byte[] DecryptRsa2048OaepSha256(byte[] key)
@@ -268,7 +268,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (Ciphertext.Length != 256)
                 throw new InvalidOperationException($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
 
-            return Crypto.DecryptRsaSha256(Ciphertext, key);
+            return Util.DecryptRsaSha256(Ciphertext, key);
         }
 
         private byte[] DecryptRsa2048OaepSha1(byte[] key)
@@ -276,7 +276,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (Ciphertext.Length != 256)
                 throw new InvalidOperationException($"Ciphertext must be 256 bytes long, got {Ciphertext.Length}");
 
-            return Crypto.DecryptRsaSha1(Ciphertext, key);
+            return Util.DecryptRsaSha1(Ciphertext, key);
         }
 
         private byte[] DecryptRsa2048OaepSha256HmacSha256(byte[] key)

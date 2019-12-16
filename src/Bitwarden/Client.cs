@@ -29,10 +29,10 @@ namespace PasswordManagerAccess.Bitwarden
             var iterations = RequestKdfIterationCount(username, rest);
 
             // 2. Derive the master encryption key or KEK (key encryption key)
-            var key = Crypto.DeriveKey(username, password, iterations);
+            var key = Util.DeriveKey(username, password, iterations);
 
             // 3. Hash the password that is going to be sent to the server
-            var hash = Crypto.HashPassword(password, key);
+            var hash = Util.HashPassword(password, key);
 
             // 4. Authenticate with the server and get the token
             var token = Login(username, hash, deviceId, ui, storage, rest);
