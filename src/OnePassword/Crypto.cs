@@ -11,11 +11,6 @@ namespace PasswordManagerAccess.OnePassword
     // Crypto stuff that is specific to 1Password
     internal static class Crypto
     {
-        public static uint RandonUInt32()
-        {
-            return BitConverter.ToUInt32(C.RandomBytes(sizeof (uint)), 0);
-        }
-
         public static string RandomUuid()
         {
             // TODO: Shouldn't this be using Crypto.RandomBytes?

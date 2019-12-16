@@ -11,7 +11,7 @@ namespace PasswordManagerAccess.OnePassword
     internal class MacRequestSigner: IRequestSigner
     {
         public MacRequestSigner(Session session, AesKey sessionKey)
-            : this(session, sessionKey, Crypto.RandonUInt32())
+            : this(session, sessionKey, C.RandonUInt32())
         {
         }
 

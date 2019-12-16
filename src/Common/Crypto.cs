@@ -1,6 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.IO;
 using System.Security.Cryptography;
 
@@ -28,6 +29,11 @@ namespace PasswordManagerAccess.Common
                 throw new InternalErrorException("length must be multiple of 2");
 
             return RandomBytes(length / 2).ToHex();
+        }
+
+        public static uint RandonUInt32()
+        {
+            return BitConverter.ToUInt32(RandomBytes(sizeof(uint)), 0);
         }
 
         //
