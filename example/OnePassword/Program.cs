@@ -119,6 +119,10 @@ namespace Example
             {
                 Console.WriteLine("Error: {0} (Reason: {1})", e.Message, e.Reason);
             }
+            catch (PasswordManagerAccess.Common.BaseException e)
+            {
+                Util.PrintException(e);
+            }
         }
 
         private static void DumpAllVaults(string username,
