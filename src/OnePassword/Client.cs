@@ -848,6 +848,30 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         //
+        // Migration helpers
+        //
+
+        internal static JObject Get(string endpoint, RestClient rest)
+        {
+            var response = rest.Get(endpoint);
+            if (!response.IsSuccessful)
+                throw new ClientException(ClientException.FailureReason.NetworkError,
+                                          $"GET request to '{endpoint}' failed",
+                                          response.Error);
+
+            try
+            {
+                return JObject.Parse(response.Content);
+            }
+            catch (JsonException e)
+            {
+                throw new ClientException(ClientException.FailureReason.InvalidResponse,
+                                          $"Invalid JSON in response from '{endpoint}'",
+                                          e);
+            }
+        }
+
+        //
         // Private
         //
 

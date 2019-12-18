@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -146,9 +147,85 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Throws<UriFormatException>(() => rest.MakeAbsoluteUri("not an endpoint"));
         }
 
+        [Fact]
+        public void Get_request_is_signed_with_extra_headers()
+        {
+            InRequest(
+                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                new AppendSigner(),
+                request => {
+                    Assert.Equal(new[] { "value" }, request.Headers.GetValues("header"));
+                    Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
+                    Assert.Equal(new[] { "GET" }, request.Headers.GetValues("TestSigner-method"));
+                    Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
+                });
+        }
+
+        [Fact]
+        public void PostJson_request_is_signed_with_extra_headers()
+        {
+            InRequest(
+                rest => rest.PostJson(Url,
+                                      new Dictionary<string, object>(),
+                                      new Dictionary<string, string> { { "header", "value" } }),
+                new AppendSigner(),
+                request => {
+                    Assert.Equal(new[] { "value" }, request.Headers.GetValues("header"));
+                    Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
+                    Assert.Equal(new[] { "POST" }, request.Headers.GetValues("TestSigner-method"));
+                    Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
+                });
+        }
+
+        [Fact]
+        public void Signer_can_remove_headers()
+        {
+            InRequest(
+                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                new RemoveSigner(),
+                request => Assert.False(request.Headers.Contains("header")));
+        }
+
+        [Fact]
+        public void Signer_can_modify_headers()
+        {
+            InRequest(
+                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                new ModifySigner(),
+                request => Assert.Equal(new[] { "value-modified" }, request.Headers.GetValues("header")));
+        }
+
         //
         // Helpers
         //
+
+        class AppendSigner : IRequestSigner
+        {
+            public Dictionary<string, string> Sign(Uri uri, HttpMethod method, Dictionary<string, string> headers)
+            {
+                return new Dictionary<string, string>(headers) {
+                    ["TestSigner-uri"] = uri.ToString(),
+                    ["TestSigner-method"] = method.ToString(),
+                    ["TestSigner-extra"] = "extra",
+                };
+            }
+        }
+
+        class RemoveSigner : IRequestSigner
+        {
+            public Dictionary<string, string> Sign(Uri uri, HttpMethod method, Dictionary<string, string> headers)
+            {
+                return new Dictionary<string, string>();
+            }
+        }
+
+        class ModifySigner : IRequestSigner
+        {
+            public Dictionary<string, string> Sign(Uri uri, HttpMethod method, Dictionary<string, string> headers)
+            {
+                return headers.ToDictionary(x => x.Key, x => x.Value + "-modified");
+            }
+        }
 
         // This is for asserting inside a request like this:
         // InRequest(
@@ -158,6 +235,7 @@ namespace PasswordManagerAccess.Test.Common
         // );
         internal static void InRequest(Action<RestClient> restCall,
                                        string responseContent,
+                                       IRequestSigner signer,
                                        Action<HttpRequestMessage> assertRequest)
         {
             using (var transport = new RestTransport(request => {
@@ -165,13 +243,20 @@ namespace PasswordManagerAccess.Test.Common
                 return RespondWith(responseContent)(request);
             }))
             {
-                restCall(new RestClient(transport));
+                restCall(new RestClient(transport, "", signer));
             }
+        }
+
+        internal static void InRequest(Action<RestClient> restCall,
+                                       IRequestSigner signer,
+                                       Action<HttpRequestMessage> assertRequest)
+        {
+            InRequest(restCall, "", signer, assertRequest);
         }
 
         internal static void InRequest(Action<RestClient> restCall, Action<HttpRequestMessage> assertRequest)
         {
-            InRequest(restCall, "", assertRequest);
+            InRequest(restCall, null, assertRequest);
         }
 
         internal static RestClient Serve(string response, string baseUrl = "")

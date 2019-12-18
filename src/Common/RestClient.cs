@@ -14,9 +14,9 @@ using H = System.Net.Http;
 
 namespace PasswordManagerAccess.Common
 {
-    using PostParameters = Dictionary<string, object>;
-    using HttpHeaders = Dictionary<string, string>;
     using HttpCookies = Dictionary<string, string>;
+    using HttpHeaders = Dictionary<string, string>;
+    using PostParameters = Dictionary<string, object>;
     using SendAsyncType = Func<HttpRequestMessage, Task<HttpResponseMessage>>;
 
     internal class RestResponse
@@ -243,6 +243,25 @@ namespace PasswordManagerAccess.Common
     }
 
     //
+    // IRequestSigner
+    //
+
+    // Signs the request by returning a new set of headers
+    internal interface IRequestSigner
+    {
+        HttpHeaders Sign(Uri uri, HttpMethod method, HttpHeaders headers);
+    }
+
+    // Unit request signer that does nothing
+    internal class UnitRequestSigner: IRequestSigner
+    {
+        public HttpHeaders Sign(Uri uri, HttpMethod method, HttpHeaders headers)
+        {
+            return headers;
+        }
+    }
+
+    //
     // RestClient
     //
 
@@ -250,11 +269,13 @@ namespace PasswordManagerAccess.Common
     {
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
+        public readonly IRequestSigner Signer;
 
-        public RestClient(IRestTransport transport, string baseUrl = "")
+        public RestClient(IRestTransport transport, string baseUrl = "", IRequestSigner signer = null)
         {
             Transport = transport;
             BaseUrl = baseUrl.TrimEnd('/');
+            Signer = signer ?? new UnitRequestSigner();
         }
 
         //
@@ -436,7 +457,13 @@ namespace PasswordManagerAccess.Common
                                                  Func<TResponse> responseFactory) where TResponse: RestResponse
         {
             var response = responseFactory();
-            Transport.MakeRequest(uri, method, content, headers, cookies, maxRedirectCount, response);
+            Transport.MakeRequest(uri,
+                                  method,
+                                  content,
+                                  Signer.Sign(uri, method, headers),
+                                  cookies,
+                                  maxRedirectCount,
+                                  response);
 
             return response;
         }
