@@ -195,25 +195,114 @@ namespace PasswordManagerAccess.Test.Common
                 request => Assert.Equal(new[] { "value-modified" }, request.Headers.GetValues("header")));
         }
 
+        [Fact]
+        public void Get_sends_default_headers()
+        {
+            InRequest(
+                rest => rest.Get(Url),
+                "",
+                NoSigner,
+                new Dictionary<string, string> { { "header", "value" } },
+                NoCookies,
+                request => Assert.Equal(new[] { "value" }, request.Headers.GetValues("header")));
+        }
+
+        [Fact]
+        public void Get_sends_default_cookies()
+        {
+            InRequest(
+                rest => rest.PostJson(Url, new Dictionary<string, object>()),
+                "",
+                NoSigner,
+                NoHeaders,
+                new Dictionary<string, string> { { "cookie", "value" } },
+                request => Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie")));
+        }
+
+        [Fact]
+        public void PostJson_sends_default_headers()
+        {
+            InRequest(
+                rest => rest.PostJson(Url, new Dictionary<string, object>()),
+                "",
+                NoSigner,
+                new Dictionary<string, string> { { "header", "value" } },
+                NoCookies,
+                request => Assert.Equal(new[] { "value" }, request.Headers.GetValues("header")));
+        }
+
+        [Fact]
+        public void PostJson_sends_default_cookies()
+        {
+            InRequest(
+                rest => rest.Get(Url),
+                "",
+                NoSigner,
+                NoHeaders,
+                new Dictionary<string, string> { { "cookie", "value" } },
+                request => Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie")));
+        }
+
+        [Fact]
+        public void Get_request_headers_override_default_headers()
+        {
+            InRequest(
+                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                "",
+                NoSigner,
+                new Dictionary<string, string> { { "header", "default-value" } },
+                NoCookies,
+                request => Assert.Equal(new[] { "value" }, request.Headers.GetValues("header")));
+        }
+
+        [Fact]
+        public void Get_request_cookies_override_default_cookies()
+        {
+            InRequest(
+                rest => rest.PostJson(Url,
+                                      NoParameters,
+                                      cookies: new Dictionary<string, string> { { "cookie", "value" } }),
+                "",
+                NoSigner,
+                NoHeaders,
+                new Dictionary<string, string> { { "cookie", "default-value" } },
+                request => Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie")));
+        }
+
+        [Fact]
+        public void Signer_modifies_default_headers()
+        {
+            InRequest(
+                rest => rest.Get(Url),
+                "",
+                new ModifySigner(),
+                new Dictionary<string, string> { { "header", "value" } },
+                NoCookies,
+                request => Assert.Equal(new[] { "value-modified" }, request.Headers.GetValues("header")));
+        }
+
         //
         // Helpers
         //
 
         class AppendSigner : IRequestSigner
         {
-            public Dictionary<string, string> Sign(Uri uri, HttpMethod method, Dictionary<string, string> headers)
+            public IReadOnlyDictionary<string, string> Sign(Uri uri, HttpMethod method,
+                                                            IReadOnlyDictionary<string, string> headers)
             {
-                return new Dictionary<string, string>(headers) {
-                    ["TestSigner-uri"] = uri.ToString(),
-                    ["TestSigner-method"] = method.ToString(),
-                    ["TestSigner-extra"] = "extra",
-                };
+                return headers.Merge(new Dictionary<string, string>
+                {
+                    { "TestSigner-uri", uri.ToString() },
+                    { "TestSigner-method", method.ToString() },
+                    { "TestSigner-extra", "extra" },
+                });
             }
         }
 
         class RemoveSigner : IRequestSigner
         {
-            public Dictionary<string, string> Sign(Uri uri, HttpMethod method, Dictionary<string, string> headers)
+            public IReadOnlyDictionary<string, string> Sign(Uri uri, HttpMethod method,
+                                                            IReadOnlyDictionary<string, string> headers)
             {
                 return new Dictionary<string, string>();
             }
@@ -221,7 +310,8 @@ namespace PasswordManagerAccess.Test.Common
 
         class ModifySigner : IRequestSigner
         {
-            public Dictionary<string, string> Sign(Uri uri, HttpMethod method, Dictionary<string, string> headers)
+            public IReadOnlyDictionary<string, string> Sign(Uri uri, HttpMethod method,
+                                                            IReadOnlyDictionary<string, string> headers)
             {
                 return headers.ToDictionary(x => x.Key, x => x.Value + "-modified");
             }
@@ -236,6 +326,8 @@ namespace PasswordManagerAccess.Test.Common
         internal static void InRequest(Action<RestClient> restCall,
                                        string responseContent,
                                        IRequestSigner signer,
+                                       IReadOnlyDictionary<string, string> defaultHeaders,
+                                       IReadOnlyDictionary<string, string> defaultCookies,
                                        Action<HttpRequestMessage> assertRequest)
         {
             using (var transport = new RestTransport(request => {
@@ -243,7 +335,7 @@ namespace PasswordManagerAccess.Test.Common
                 return RespondWith(responseContent)(request);
             }))
             {
-                restCall(new RestClient(transport, "", signer));
+                restCall(new RestClient(transport, "", signer, defaultHeaders, defaultCookies));
             }
         }
 
@@ -251,12 +343,12 @@ namespace PasswordManagerAccess.Test.Common
                                        IRequestSigner signer,
                                        Action<HttpRequestMessage> assertRequest)
         {
-            InRequest(restCall, "", signer, assertRequest);
+            InRequest(restCall, "", signer, NoHeaders, NoCookies, assertRequest);
         }
 
         internal static void InRequest(Action<RestClient> restCall, Action<HttpRequestMessage> assertRequest)
         {
-            InRequest(restCall, null, assertRequest);
+            InRequest(restCall, NoSigner, assertRequest);
         }
 
         internal static RestClient Serve(string response, string baseUrl = "")
@@ -283,5 +375,9 @@ namespace PasswordManagerAccess.Test.Common
         //
 
         private const string Url = "https://example.com/";
+        private static readonly Dictionary<string, object> NoParameters = new Dictionary<string, object>();
+        private static readonly IRequestSigner NoSigner = null;
+        private static readonly IReadOnlyDictionary<string, string> NoHeaders = new Dictionary<string, string>();
+        private static readonly IReadOnlyDictionary<string, string> NoCookies = new Dictionary<string, string>();
     }
 }

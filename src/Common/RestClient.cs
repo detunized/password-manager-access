@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -17,6 +18,8 @@ namespace PasswordManagerAccess.Common
     using HttpCookies = Dictionary<string, string>;
     using HttpHeaders = Dictionary<string, string>;
     using PostParameters = Dictionary<string, object>;
+    using ReadOnlyHttpCookies = IReadOnlyDictionary<string, string>;
+    using ReadOnlyHttpHeaders = IReadOnlyDictionary<string, string>;
     using SendAsyncType = Func<HttpRequestMessage, Task<HttpResponseMessage>>;
 
     internal class RestResponse
@@ -77,8 +80,8 @@ namespace PasswordManagerAccess.Common
         void MakeRequest(Uri uri,
                          HttpMethod method,
                          HttpContent content,
-                         HttpHeaders headers,
-                         HttpCookies cookies,
+                         ReadOnlyHttpHeaders headers,
+                         ReadOnlyHttpCookies cookies,
                          int maxRedirectCount,
                          RestResponse allocatedResult);
     }
@@ -100,8 +103,8 @@ namespace PasswordManagerAccess.Common
         public void MakeRequest(Uri uri,
                                 HttpMethod method,
                                 HttpContent content,
-                                HttpHeaders headers,
-                                HttpCookies cookies,
+                                ReadOnlyHttpHeaders headers,
+                                ReadOnlyHttpCookies cookies,
                                 int maxRedirectCount,
                                 RestResponse allocatedResult)
         {
@@ -249,13 +252,13 @@ namespace PasswordManagerAccess.Common
     // Signs the request by returning a new set of headers
     internal interface IRequestSigner
     {
-        HttpHeaders Sign(Uri uri, HttpMethod method, HttpHeaders headers);
+        ReadOnlyHttpHeaders Sign(Uri uri, HttpMethod method, ReadOnlyHttpHeaders headers);
     }
 
     // Unit request signer that does nothing
     internal class UnitRequestSigner: IRequestSigner
     {
-        public HttpHeaders Sign(Uri uri, HttpMethod method, HttpHeaders headers)
+        public ReadOnlyHttpHeaders Sign(Uri uri, HttpMethod method, ReadOnlyHttpHeaders headers)
         {
             return headers;
         }
@@ -265,17 +268,27 @@ namespace PasswordManagerAccess.Common
     // RestClient
     //
 
+    // This class tries to be immutable, it's easier to keep track of state and test that way. When
+    // the settings have to be changed, the new instance should be created.
     internal class RestClient
     {
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
         public readonly IRequestSigner Signer;
+        public readonly ReadOnlyHttpCookies DefaultHeaders;
+        public readonly ReadOnlyHttpCookies DefaultCookies;
 
-        public RestClient(IRestTransport transport, string baseUrl = "", IRequestSigner signer = null)
+        public RestClient(IRestTransport transport,
+                          string baseUrl = "",
+                          IRequestSigner signer = null,
+                          ReadOnlyHttpHeaders defaultHeaders = null,
+                          ReadOnlyHttpCookies defaultCookies = null)
         {
             Transport = transport;
             BaseUrl = baseUrl.TrimEnd('/');
             Signer = signer ?? new UnitRequestSigner();
+            DefaultHeaders = defaultHeaders ?? new ReadOnlyDictionary<string, string>(NoHeaders);
+            DefaultCookies = defaultCookies ?? new ReadOnlyDictionary<string, string>(NoCookies);
         }
 
         //
@@ -460,8 +473,8 @@ namespace PasswordManagerAccess.Common
             Transport.MakeRequest(uri,
                                   method,
                                   content,
-                                  Signer.Sign(uri, method, headers),
-                                  cookies,
+                                  Signer.Sign(uri, method, DefaultHeaders.Merge(headers)),
+                                  DefaultCookies.Merge(cookies),
                                   maxRedirectCount,
                                   response);
 

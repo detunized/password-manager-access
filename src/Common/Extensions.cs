@@ -217,17 +217,16 @@ namespace PasswordManagerAccess.Common
         // Dictionary
         //
 
-        public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dictionary,
+        public static TValue GetOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary,
                                                         TKey key,
                                                         TValue defaultValue)
         {
-            TValue v;
-            return dictionary.TryGetValue(key, out v) ? v : defaultValue;
+            return dictionary.TryGetValue(key, out var v) ? v : defaultValue;
         }
 
         // Always returns a copy
-        public static Dictionary<TKey, TValue> MergeCopy<TKey, TValue>(this Dictionary<TKey, TValue> self,
-                                                                       Dictionary<TKey, TValue> other)
+        public static Dictionary<TKey, TValue> MergeCopy<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> self,
+                                                                       IReadOnlyDictionary<TKey, TValue> other)
         {
             var merged = new Dictionary<TKey, TValue>(self.Count + other.Count);
 
@@ -241,8 +240,9 @@ namespace PasswordManagerAccess.Common
         }
 
         // Only returns a copy when the merge is not trivial, otherwise returns either argument.
-        public static Dictionary<TKey, TValue> Merge<TKey, TValue>(this Dictionary<TKey, TValue> self,
-                                                                   Dictionary<TKey, TValue> other)
+        public static IReadOnlyDictionary<TKey, TValue> Merge<TKey, TValue>(
+            this IReadOnlyDictionary<TKey, TValue> self,
+            IReadOnlyDictionary<TKey, TValue> other)
         {
             if (other.Count == 0)
                 return self;

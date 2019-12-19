@@ -163,8 +163,8 @@ namespace PasswordManagerAccess.Test
         void IRestTransport.MakeRequest(Uri uri,
                                         HttpMethod method,
                                         HttpContent content,
-                                        Dictionary<string, string> headers,
-                                        Dictionary<string, string> cookies,
+                                        IReadOnlyDictionary<string, string> headers,
+                                        IReadOnlyDictionary<string, string> cookies,
                                         int maxRedirectCount,
                                         RestResponse allocatedResult)
         {
