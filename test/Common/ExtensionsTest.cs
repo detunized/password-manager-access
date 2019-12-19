@@ -334,43 +334,50 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void Dictionary_Merge_merges_empty_dictionaries()
+        public void Dictionary_MergeCopy_merges_empty_dictionaries_to_new_dictionary()
         {
             var e1 = new Dictionary<string, string>();
             var e2 = new Dictionary<string, string>();
+            var m = e1.MergeCopy(e2);
 
-            Assert.Empty(e1.Merge(e2));
+            Assert.Empty(m);
+            Assert.NotSame(e1, m);
+            Assert.NotSame(e2, m);
         }
 
         [Fact]
-        public void Dictionary_Merge_merges_empty_and_non_empty_dictionary()
+        public void Dictionary_MergeCopy_merges_empty_and_non_empty_dictionary_to_new_dictionary()
         {
             var e = new Dictionary<string, string>();
             var d = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
+            var ed = e.MergeCopy(d);
+            var de = d.MergeCopy(e);
 
-            Assert.Equal(d, e.Merge(d));
-            Assert.Equal(d, d.Merge(e));
+            Assert.Equal(d, ed);
+            Assert.Equal(d, de);
+            Assert.NotSame(d, ed);
+            Assert.NotSame(d, de);
         }
 
         [Fact]
-        public void Dictionary_Merge_merges_non_overlapping_dictionaries()
+        public void Dictionary_MergeCopy_merges_non_overlapping_dictionaries()
         {
             var d1 = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
             var d2 = new Dictionary<string, string>() { { "three", "3" }, { "four", "4" } };
             var r = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" }, { "three", "3" }, { "four", "4" } };
 
-            Assert.Equal(r, d1.Merge(d2));
-            Assert.Equal(r, d2.Merge(d1));
+            Assert.Equal(r, d1.MergeCopy(d2));
+            Assert.Equal(r, d2.MergeCopy(d1));
         }
 
         [Fact]
-        public void Dictionary_Merge_merges_overlapping_dictionaries()
+        public void Dictionary_MergeCopy_merges_overlapping_dictionaries()
         {
             var d1 = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
             var d2 = new Dictionary<string, string>() { { "three", "3" }, { "two", "2!" } };
 
-            var r12 = d1.Merge(d2);
-            var r21 = d2.Merge(d1);
+            var r12 = d1.MergeCopy(d2);
+            var r21 = d2.MergeCopy(d1);
 
             Assert.Equal(3, r12.Count);
             Assert.Equal(3, r21.Count);
@@ -383,6 +390,33 @@ namespace PasswordManagerAccess.Test.Common
 
             Assert.Equal("3", r12["three"]);
             Assert.Equal("3", r21["three"]);
+        }
+
+        [Fact]
+        public void Dictionary_Merge_returns_left_when_right_is_empty()
+        {
+            var left = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
+            var right = new Dictionary<string, string>();
+
+            Assert.Same(left, left.Merge(right));
+        }
+
+        [Fact]
+        public void Dictionary_Merge_returns_right_when_left_is_empty()
+        {
+            var left = new Dictionary<string, string>();
+            var right = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
+
+            Assert.Same(right, left.Merge(right));
+        }
+
+        [Fact]
+        public void Dictionary_Merge_returns_left_when_both_are_empty()
+        {
+            var left = new Dictionary<string, string>();
+            var right = new Dictionary<string, string>();
+
+            Assert.Same(left, left.Merge(right));
         }
 
         //

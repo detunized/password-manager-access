@@ -86,7 +86,7 @@ namespace PasswordManagerAccess.Test
         public RestFlow ExpectHeaders(Dictionary<string, string> partialHeaders)
         {
             var e = GetLastExpected();
-            e.PartialHeaders = e.PartialHeaders.Merge(partialHeaders);
+            e.PartialHeaders = e.PartialHeaders.MergeCopy(partialHeaders);
             return this;
         }
 
@@ -98,7 +98,7 @@ namespace PasswordManagerAccess.Test
         public RestFlow ExpectCookies(Dictionary<string, string> partialCookies)
         {
             var e = GetLastExpected();
-            e.PartialCookies = e.PartialCookies.Merge(partialCookies);
+            e.PartialCookies = e.PartialCookies.MergeCopy(partialCookies);
             return this;
         }
 

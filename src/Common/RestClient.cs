@@ -127,7 +127,7 @@ namespace PasswordManagerAccess.Common
                 var response = _http.SendAsync(request).GetAwaiter().GetResult();
 
                 var responseCookies = ParseResponseCookies(response, uri);
-                var allCookies = cookies.Merge(responseCookies);
+                var allCookies = cookies.MergeCopy(responseCookies);
 
                 // Redirect if still possible (HTTP Status 3XX)
                 if ((int)response.StatusCode / 100 == 3 && maxRedirectCount > 0)

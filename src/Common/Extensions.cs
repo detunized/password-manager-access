@@ -225,8 +225,9 @@ namespace PasswordManagerAccess.Common
             return dictionary.TryGetValue(key, out v) ? v : defaultValue;
         }
 
-        public static Dictionary<TKey, TValue> Merge<TKey, TValue>(this Dictionary<TKey, TValue> self,
-                                                                   Dictionary<TKey, TValue> other)
+        // Always returns a copy
+        public static Dictionary<TKey, TValue> MergeCopy<TKey, TValue>(this Dictionary<TKey, TValue> self,
+                                                                       Dictionary<TKey, TValue> other)
         {
             var merged = new Dictionary<TKey, TValue>(self.Count + other.Count);
 
@@ -237,6 +238,19 @@ namespace PasswordManagerAccess.Common
                 merged[i.Key] = i.Value;
 
             return merged;
+        }
+
+        // Only returns a copy when the merge is not trivial, otherwise returns either argument.
+        public static Dictionary<TKey, TValue> Merge<TKey, TValue>(this Dictionary<TKey, TValue> self,
+                                                                   Dictionary<TKey, TValue> other)
+        {
+            if (other.Count == 0)
+                return self;
+
+            if (self.Count == 0)
+                return other;
+
+            return self.MergeCopy(other);
         }
 
         //
