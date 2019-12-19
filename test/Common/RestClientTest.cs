@@ -40,7 +40,7 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_sends_headers()
         {
             InRequest(
-                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
                 request =>
                 {
                     Assert.Equal(new[] { "value" }, request.Headers.GetValues("header"));
@@ -51,7 +51,7 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_sends_cookies()
         {
             InRequest(
-                rest => rest.Get(Url, null, new Dictionary<string, string> { { "cookie", "value" } }),
+                rest => rest.Get(Url, cookies: new Dictionary<string, string> { { "cookie", "value" } }),
                 request =>
                 {
                     Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie"));
@@ -151,7 +151,7 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_request_is_signed_with_extra_headers()
         {
             InRequest(
-                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
                 new AppendSigner(),
                 request => {
                     Assert.Equal(new[] { "value" }, request.Headers.GetValues("header"));
@@ -181,7 +181,7 @@ namespace PasswordManagerAccess.Test.Common
         public void Signer_can_remove_headers()
         {
             InRequest(
-                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
                 new RemoveSigner(),
                 request => Assert.False(request.Headers.Contains("header")));
         }
@@ -190,7 +190,7 @@ namespace PasswordManagerAccess.Test.Common
         public void Signer_can_modify_headers()
         {
             InRequest(
-                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
                 new ModifySigner(),
                 request => Assert.Equal(new[] { "value-modified" }, request.Headers.GetValues("header")));
         }
@@ -247,7 +247,7 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_request_headers_override_default_headers()
         {
             InRequest(
-                rest => rest.Get(Url, new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
                 "",
                 NoSigner,
                 new Dictionary<string, string> { { "header", "default-value" } },
