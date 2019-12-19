@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.Test.Common
         public void PostJson_sends_json_headers()
         {
             InRequest(
-                rest => rest.PostJson(Url, new Dictionary<string, object>()),
+                rest => rest.PostJson(Url, NoParameters),
                 request => {
                     Assert.Equal(new[] { "application/json; charset=utf-8" },
                                  request.Content.Headers.GetValues("Content-type"));
@@ -93,7 +93,7 @@ namespace PasswordManagerAccess.Test.Common
         public void PostForm_sends_form_headers()
         {
             InRequest(
-                rest => rest.PostForm(Url, new Dictionary<string, object>()),
+                rest => rest.PostForm(Url, NoParameters),
                 request => {
                     Assert.Equal(new[] { "application/x-www-form-urlencoded" },
                                  request.Content.Headers.GetValues("Content-type"));
@@ -166,7 +166,7 @@ namespace PasswordManagerAccess.Test.Common
         {
             InRequest(
                 rest => rest.PostJson(Url,
-                                      new Dictionary<string, object>(),
+                                      NoParameters,
                                       new Dictionary<string, string> { { "header", "value" } }),
                 new AppendSigner(),
                 request => {
@@ -211,7 +211,7 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_sends_default_cookies()
         {
             InRequest(
-                rest => rest.PostJson(Url, new Dictionary<string, object>()),
+                rest => rest.Get(Url),
                 "",
                 NoSigner,
                 NoHeaders,
@@ -223,7 +223,7 @@ namespace PasswordManagerAccess.Test.Common
         public void PostJson_sends_default_headers()
         {
             InRequest(
-                rest => rest.PostJson(Url, new Dictionary<string, object>()),
+                rest => rest.PostJson(Url, NoParameters),
                 "",
                 NoSigner,
                 new Dictionary<string, string> { { "header", "value" } },
@@ -235,7 +235,7 @@ namespace PasswordManagerAccess.Test.Common
         public void PostJson_sends_default_cookies()
         {
             InRequest(
-                rest => rest.Get(Url),
+                rest => rest.PostJson(Url, NoParameters),
                 "",
                 NoSigner,
                 NoHeaders,
