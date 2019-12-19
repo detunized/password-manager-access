@@ -40,10 +40,10 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_sends_headers()
         {
             InRequest(
-                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: TestHeaders),
                 request =>
                 {
-                    Assert.Equal(new[] { "value" }, request.Headers.GetValues("header"));
+                    Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
                 });
         }
 
@@ -51,10 +51,10 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_sends_cookies()
         {
             InRequest(
-                rest => rest.Get(Url, cookies: new Dictionary<string, string> { { "cookie", "value" } }),
+                rest => rest.Get(Url, cookies: TestCookies),
                 request =>
                 {
-                    Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie"));
+                    Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie"));
                 });
         }
 
@@ -151,10 +151,10 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_request_is_signed_with_extra_headers()
         {
             InRequest(
-                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: TestHeaders),
                 new AppendSigner(),
                 request => {
-                    Assert.Equal(new[] { "value" }, request.Headers.GetValues("header"));
+                    Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
                     Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
                     Assert.Equal(new[] { "GET" }, request.Headers.GetValues("TestSigner-method"));
                     Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
@@ -165,12 +165,10 @@ namespace PasswordManagerAccess.Test.Common
         public void PostJson_request_is_signed_with_extra_headers()
         {
             InRequest(
-                rest => rest.PostJson(Url,
-                                      NoParameters,
-                                      new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.PostJson(Url, NoParameters, TestHeaders),
                 new AppendSigner(),
                 request => {
-                    Assert.Equal(new[] { "value" }, request.Headers.GetValues("header"));
+                    Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
                     Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
                     Assert.Equal(new[] { "POST" }, request.Headers.GetValues("TestSigner-method"));
                     Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
@@ -181,18 +179,19 @@ namespace PasswordManagerAccess.Test.Common
         public void Signer_can_remove_headers()
         {
             InRequest(
-                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: TestHeaders),
                 new RemoveSigner(),
-                request => Assert.False(request.Headers.Contains("header")));
+                request => Assert.False(request.Headers.Contains(TestHeaderName)));
         }
 
         [Fact]
         public void Signer_can_modify_headers()
         {
             InRequest(
-                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: TestHeaders),
                 new ModifySigner(),
-                request => Assert.Equal(new[] { "value-modified" }, request.Headers.GetValues("header")));
+                request => Assert.Equal(new[] { TestHeaderValue + "-modified" },
+                                        request.Headers.GetValues(TestHeaderName)));
         }
 
         [Fact]
@@ -202,9 +201,9 @@ namespace PasswordManagerAccess.Test.Common
                 rest => rest.Get(Url),
                 "",
                 NoSigner,
-                new Dictionary<string, string> { { "header", "value" } },
+                TestHeaders,
                 NoCookies,
-                request => Assert.Equal(new[] { "value" }, request.Headers.GetValues("header")));
+                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName)));
         }
 
         [Fact]
@@ -215,8 +214,8 @@ namespace PasswordManagerAccess.Test.Common
                 "",
                 NoSigner,
                 NoHeaders,
-                new Dictionary<string, string> { { "cookie", "value" } },
-                request => Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie")));
+                TestCookies,
+                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie")));
         }
 
         [Fact]
@@ -226,9 +225,9 @@ namespace PasswordManagerAccess.Test.Common
                 rest => rest.PostJson(Url, NoParameters),
                 "",
                 NoSigner,
-                new Dictionary<string, string> { { "header", "value" } },
+                TestHeaders,
                 NoCookies,
-                request => Assert.Equal(new[] { "value" }, request.Headers.GetValues("header")));
+                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName)));
         }
 
         [Fact]
@@ -239,34 +238,32 @@ namespace PasswordManagerAccess.Test.Common
                 "",
                 NoSigner,
                 NoHeaders,
-                new Dictionary<string, string> { { "cookie", "value" } },
-                request => Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie")));
+                TestCookies,
+                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie")));
         }
 
         [Fact]
         public void Get_request_headers_override_default_headers()
         {
             InRequest(
-                rest => rest.Get(Url, headers: new Dictionary<string, string> { { "header", "value" } }),
+                rest => rest.Get(Url, headers: TestHeaders),
                 "",
                 NoSigner,
-                new Dictionary<string, string> { { "header", "default-value" } },
+                new Dictionary<string, string> { { TestHeaderName, "default-value" } },
                 NoCookies,
-                request => Assert.Equal(new[] { "value" }, request.Headers.GetValues("header")));
+                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName)));
         }
 
         [Fact]
         public void Get_request_cookies_override_default_cookies()
         {
             InRequest(
-                rest => rest.PostJson(Url,
-                                      NoParameters,
-                                      cookies: new Dictionary<string, string> { { "cookie", "value" } }),
+                rest => rest.PostJson(Url, NoParameters, cookies: TestCookies),
                 "",
                 NoSigner,
                 NoHeaders,
-                new Dictionary<string, string> { { "cookie", "default-value" } },
-                request => Assert.Equal(new[] { "cookie=value" }, request.Headers.GetValues("Cookie")));
+                new Dictionary<string, string> { { TestCookieName, "default-value" } },
+                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie")));
         }
 
         [Fact]
@@ -276,9 +273,10 @@ namespace PasswordManagerAccess.Test.Common
                 rest => rest.Get(Url),
                 "",
                 new ModifySigner(),
-                new Dictionary<string, string> { { "header", "value" } },
+                TestHeaders,
                 NoCookies,
-                request => Assert.Equal(new[] { "value-modified" }, request.Headers.GetValues("header")));
+                request => Assert.Equal(new[] { TestHeaderValue + "-modified" },
+                                        request.Headers.GetValues(TestHeaderName)));
         }
 
         //
@@ -379,5 +377,20 @@ namespace PasswordManagerAccess.Test.Common
         private static readonly IRequestSigner NoSigner = null;
         private static readonly IReadOnlyDictionary<string, string> NoHeaders = new Dictionary<string, string>();
         private static readonly IReadOnlyDictionary<string, string> NoCookies = new Dictionary<string, string>();
+
+        private const string TestHeaderName = "header-name";
+        private const string TestHeaderValue = "header-value";
+        private static readonly Dictionary<string, string> TestHeaders = new Dictionary<string, string>
+        {
+            { TestHeaderName, TestHeaderValue }
+        };
+
+        private const string TestCookieName = "cookie-name";
+        private const string TestCookieValue = "cookie-value";
+        private static readonly string TestCookieHeader = $"{TestCookieName}={TestCookieValue}";
+        private static readonly Dictionary<string, string> TestCookies = new Dictionary<string, string>
+        {
+            { TestCookieName, TestCookieValue }
+        };
     }
 }
