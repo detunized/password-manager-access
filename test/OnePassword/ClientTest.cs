@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Net.Http;
+using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
 
@@ -99,11 +100,10 @@ namespace PasswordManagerAccess.Test.OnePassword
             Assert.Contains("Failed to register", e.Message);
         }
 
-#if FALSE
         [Fact]
         public void ReauthorizeDevice_works()
         {
-            var rest = new RestFlow().Post("{'success': 1}");
+            var rest = new RestFlow().Put("{'success': 1}");
 
             Client.ReauthorizeDevice(TestData.ClientInfo, rest);
         }
@@ -112,7 +112,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void ReauthorizeDevice_makes_PUT_request_to_specific_url()
         {
             var rest = new RestFlow()
-                .Post("{'success': 1}")
+                .Put("{'success': 1}")
                 .ExpectUrl("1password.com/api/v1/device")
                 .ToRestClient(ApiUrl);
 
@@ -122,9 +122,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void ReauthorizeDevice_throws_on_error()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
+            var rest = new RestFlow().Put("{'success': 0}");
 
-            var e = Assert.Throws<ClientException>(() => Client.ReauthorizeDevice(TestData.ClientInfo, http));
+            var e = Assert.Throws<ClientException>(() => Client.ReauthorizeDevice(TestData.ClientInfo, rest));
             Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
             Assert.Contains("Failed to reauthorize", e.Message);
         }
@@ -132,8 +132,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void VerifySessionKey_returns_success()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost(GetFixture("verify-key-response")));
-            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
+            var rest = new RestFlow().Post(GetFixture("verify-key-response"));
+            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, rest);
 
             Assert.Equal(Client.VerifyStatus.Success, result.Status);
         }
@@ -141,10 +141,12 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void VerifySessionKey_makes_POST_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost(GetFixture("verify-key-response")));
-            Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, http);
+            var rest = new RestFlow()
+                .Post(GetFixture("verify-key-response"))
+                .ExpectUrl("1password.com/api/v2/auth/verify")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v2/auth/verify");
+            Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, rest);
         }
 
         [Fact]
@@ -178,26 +180,31 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetAccountInfo_works()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-account-info-response")));
-            Client.GetAccountInfo(TestData.SesionKey, http);
+            var rest = new RestFlow().Get(GetFixture("get-account-info-response"));
+
+            Client.GetAccountInfo(TestData.SesionKey, rest);
         }
 
         [Fact]
         public void GetAccountInfo_makes_GET_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-account-info-response")));
-            Client.GetAccountInfo(TestData.SesionKey, http);
+            var rest = new RestFlow()
+                .Get(GetFixture("get-account-info-response"))
+                .ExpectUrl("1password.com/api/v1/account")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account");
+            Client.GetAccountInfo(TestData.SesionKey, rest);
         }
 
         [Fact]
         public void GetKeysets_works()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("empty-object-response")));
-            Client.GetKeysets(TestData.SesionKey, http);
+            var rest = new RestFlow().Get(GetFixture("empty-object-response"));
+
+            Client.GetKeysets(TestData.SesionKey, rest);
         }
 
+#if FALSE
         [Fact]
         public void GetKeysets_makes_GET_request_to_specific_url()
         {
