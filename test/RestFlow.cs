@@ -28,6 +28,11 @@ namespace PasswordManagerAccess.Test
             return Get(response, HttpStatusCode.OK, error);
         }
 
+        public RestFlow Get(Exception error)
+        {
+            return Get("", error);
+        }
+
         //
         // POST
         //

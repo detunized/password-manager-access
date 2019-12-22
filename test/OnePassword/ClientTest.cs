@@ -1,6 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Net.Http;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
 
@@ -15,10 +16,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_returns_session_on_ok()
         {
-            var rest = new RestFlow()
-                .Get(GetFixture("start-new-session-response"))
-                .ToRestClient();
-
+            var rest = new RestFlow().Get(GetFixture("start-new-session-response"));
             var session = Client.StartNewSession(TestData.ClientInfo, rest);
 
             Assert.Equal(TestData.Session.Id, session.Id);
@@ -41,13 +39,12 @@ namespace PasswordManagerAccess.Test.OnePassword
             Client.StartNewSession(TestData.ClientInfo, rest);
         }
 
-#if FALSE
         [Fact]
         public void StartNewSession_throws_on_unknown_status()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet("{'status': 'unknown'}"));
+            var rest = new RestFlow().Get("{'status': 'unknown'}");
 
-            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, http));
+            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, rest));
             Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
             Assert.Contains("Failed to start a new session", e.Message);
         }
@@ -55,18 +52,20 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_throws_on_network_error()
         {
-            var jsonHttp = new JsonHttpClient(JsonHttpClientTest.SetupGetWithFailure().Object, "");
+            var error = new HttpRequestException("Network error");
+            var rest = new RestFlow().Get(error);
 
-            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp));
+            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, rest));
             Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
+            Assert.Same(error, e.InnerException);
         }
 
         [Fact]
         public void StartNewSession_throws_on_invalid_json()
         {
-            var jsonHttp = new JsonHttpClient(JsonHttpClientTest.SetupGet("} invalid json {").Object, "");
+            var rest = new RestFlow().Get("} invalid json {");
 
-            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, jsonHttp));
+            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, rest));
             Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
             Assert.Contains("Invalid JSON", e.Message);
         }
@@ -74,43 +73,50 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void RegisterDevice_works()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 1}"));
-            Client.RegisterDevice(TestData.ClientInfo, http);
+            var rest = new RestFlow().Post("{'success': 1}");
+
+            Client.RegisterDevice(TestData.ClientInfo, rest);
         }
 
         [Fact]
         public void RegisterDevice_makes_POST_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 1}"));
-            Client.RegisterDevice(TestData.ClientInfo, http);
+            var rest = new RestFlow()
+                .Post("{'success': 1}")
+                .ExpectUrl("1password.com/api/v1/device")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyPostUrl(http.Http, "1password.com/api/v1/device");
+            Client.RegisterDevice(TestData.ClientInfo, rest);
         }
 
         [Fact]
         public void RegisterDevice_throws_on_error()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPost("{'success': 0}"));
+            var rest = new RestFlow().Post("{'success': 0}");
 
-            var e = Assert.Throws<ClientException>(() => Client.RegisterDevice(TestData.ClientInfo, http));
+            var e = Assert.Throws<ClientException>(() => Client.RegisterDevice(TestData.ClientInfo, rest));
             Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
             Assert.Contains("Failed to register", e.Message);
         }
 
+#if FALSE
         [Fact]
         public void ReauthorizeDevice_works()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
-            Client.ReauthorizeDevice(TestData.ClientInfo, http);
+            var rest = new RestFlow().Post("{'success': 1}");
+
+            Client.ReauthorizeDevice(TestData.ClientInfo, rest);
         }
 
         [Fact]
         public void ReauthorizeDevice_makes_PUT_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
-            Client.ReauthorizeDevice(TestData.ClientInfo, http);
+            var rest = new RestFlow()
+                .Post("{'success': 1}")
+                .ExpectUrl("1password.com/api/v1/device")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyPutUrl(http.Http, "1password.com/api/v1/device");
+            Client.ReauthorizeDevice(TestData.ClientInfo, rest);
         }
 
         [Fact]
