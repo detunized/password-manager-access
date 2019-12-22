@@ -14,8 +14,13 @@ namespace PasswordManagerAccess.Test.Common
 {
     using SendAsyncType = Func<HttpRequestMessage, Task<HttpResponseMessage>>;
 
+    // TODO: Test redirects
     public class RestClientTest
     {
+        //
+        // GET
+        //
+
         [Fact]
         public void Get_works()
         {
@@ -67,6 +72,10 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
         }
 
+        //
+        // POST JSON/form
+        //
+
         [Fact]
         public void PostJson_sends_json_headers()
         {
@@ -110,6 +119,56 @@ namespace PasswordManagerAccess.Test.Common
                                  request.Content.ReadAsStringAsync().Result);
                 });
         }
+
+        //
+        // PUT
+        //
+
+        [Fact]
+        public void Put_works()
+        {
+            var response = Serve("yo").Put(Url);
+
+            Assert.True(response.IsSuccessful);
+            Assert.Equal("yo", response.Content);
+        }
+
+        [Fact]
+        public void Put_sets_url()
+        {
+            InRequest(
+                rest => rest.Put(Url),
+                request => Assert.Equal(Url, request.RequestUri.AbsoluteUri));
+        }
+
+        [Fact]
+        public void Put_sends_headers()
+        {
+            InRequest(
+                rest => rest.Put(Url, headers: TestHeaders),
+                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName)));
+        }
+
+        [Fact]
+        public void Put_sends_cookies()
+        {
+            InRequest(
+                rest => rest.Put(Url, cookies: TestCookies),
+                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie")));
+        }
+
+        [Fact]
+        public void Put_decodes_json()
+        {
+            var response = Serve("{'Key': 'k', 'Value': 'v'}").Put<KeyValuePair<string, string>>(Url);
+
+            Assert.True(response.IsSuccessful);
+            Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
+        }
+
+        //
+        // URI
+        //
 
         [Fact]
         public void MakeAbsoluteUri_joins_url_with_slashes()
@@ -161,6 +220,13 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Throws<UriFormatException>(() => rest.MakeAbsoluteUri("not an endpoint"));
         }
 
+        //
+        // Request signer
+        //
+
+        // Here we test every request type (GET, POST, PUT) only once to make sure all requests are
+        // going through a signer. Other signer features we test only on GET to make things brief.
+
         [Fact]
         public void Get_request_is_signed_with_extra_headers()
         {
@@ -176,7 +242,7 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void PostJson_request_is_signed_with_extra_headers()
+        public void Post_request_is_signed_with_extra_headers()
         {
             InRequest(
                 rest => rest.PostJson(Url, NoParameters, TestHeaders),
@@ -185,6 +251,20 @@ namespace PasswordManagerAccess.Test.Common
                     Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
                     Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
                     Assert.Equal(new[] { "POST" }, request.Headers.GetValues("TestSigner-method"));
+                    Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
+                });
+        }
+
+        [Fact]
+        public void Put_request_is_signed_with_extra_headers()
+        {
+            InRequest(
+                rest => rest.Put(Url, headers: TestHeaders),
+                new AppendSigner(),
+                request => {
+                    Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
+                    Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
+                    Assert.Equal(new[] { "PUT" }, request.Headers.GetValues("TestSigner-method"));
                     Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
                 });
         }
@@ -233,7 +313,7 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void PostJson_sends_default_headers()
+        public void Post_sends_default_headers()
         {
             InRequest(
                 rest => rest.PostJson(Url, NoParameters),
@@ -245,7 +325,7 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void PostJson_sends_default_cookies()
+        public void Post_sends_default_cookies()
         {
             InRequest(
                 rest => rest.PostJson(Url, NoParameters),
@@ -257,7 +337,31 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void Get_request_headers_override_default_headers()
+        public void Put_sends_default_headers()
+        {
+            InRequest(
+                rest => rest.Put(Url),
+                "",
+                NoSigner,
+                TestHeaders,
+                NoCookies,
+                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName)));
+        }
+
+        [Fact]
+        public void Put_sends_default_cookies()
+        {
+            InRequest(
+                rest => rest.Put(Url),
+                "",
+                NoSigner,
+                NoHeaders,
+                TestCookies,
+                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie")));
+        }
+
+        [Fact]
+        public void Request_headers_override_default_headers()
         {
             InRequest(
                 rest => rest.Get(Url, headers: TestHeaders),
@@ -269,10 +373,10 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void Get_request_cookies_override_default_cookies()
+        public void Request_cookies_override_default_cookies()
         {
             InRequest(
-                rest => rest.PostJson(Url, NoParameters, cookies: TestCookies),
+                rest => rest.Get(Url, cookies: TestCookies),
                 "",
                 NoSigner,
                 NoHeaders,

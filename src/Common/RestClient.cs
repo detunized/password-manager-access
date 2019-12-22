@@ -384,12 +384,23 @@ namespace PasswordManagerAccess.Common
 
         public RestResponse Put(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            throw new NotImplementedException();
+            return MakeRequest(endpoint,
+                               HttpMethod.Put,
+                               null,
+                               headers ?? NoHeaders,
+                               cookies ?? NoCookies,
+                               MaxRedirects);
         }
 
         public RestResponse<T> Put<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            throw new NotImplementedException();
+            return MakeRequest<T>(endpoint,
+                                  HttpMethod.Get,
+                                  null,
+                                  headers ?? NoHeaders,
+                                  cookies ?? NoCookies,
+                                  MaxRedirects,
+                                  JsonConvert.DeserializeObject<T>);
         }
 
         //
