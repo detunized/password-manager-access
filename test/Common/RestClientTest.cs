@@ -126,6 +126,20 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
+        public void MakeAbsoluteUri_joins_base_url_with_path()
+        {
+            string[] bases = { "http://all.your.base/are", "http://all.your.base/are/" };
+            string[] endpoints = { "belong/to/us", "/belong/to/us" };
+
+            foreach (var b in bases)
+            {
+                RestClient rest = new RestClient(null, b);
+                foreach (var e in endpoints)
+                    Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(e).AbsoluteUri);
+            }
+        }
+
+        [Fact]
         public void MakeAbsoluteUri_allows_empty_base()
         {
             RestClient rest = new RestClient(null, "");

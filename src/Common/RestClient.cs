@@ -387,10 +387,14 @@ namespace PasswordManagerAccess.Common
         {
             // It's allowed to have no base URL and then the endpoint is an absolute URL
             // The Uri constructor should take care of broken URL formats and throw.
+            // TODO: Should we throw our own exceptions instead?
             if (BaseUrl.IsNullOrEmpty())
                 return new Uri(endpoint);
 
-            return new Uri(new Uri(BaseUrl), endpoint);
+            if (endpoint.IsNullOrEmpty())
+                return new Uri(BaseUrl);
+
+            return new Uri(string.Format("{0}{1}{2}", BaseUrl, endpoint.StartsWith("/") ? "" : "/", endpoint));
         }
 
         //
