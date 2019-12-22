@@ -48,6 +48,35 @@ namespace PasswordManagerAccess.Test
             return Post(response, HttpStatusCode.OK, error);
         }
 
+        public RestFlow Post(Exception error)
+        {
+            return Post("", error);
+        }
+
+        //
+        // PUT
+        //
+
+        public RestFlow Put(string response, HttpStatusCode status = HttpStatusCode.OK, Exception error = null)
+        {
+            _responses.Add(new Response(HttpMethod.Put, response, status, error));
+            return this;
+        }
+
+        public RestFlow Put(string response, Exception error)
+        {
+            return Put(response, HttpStatusCode.OK, error);
+        }
+
+        public RestFlow Put(Exception error)
+        {
+            return Put("", error);
+        }
+
+        //
+        // RestClient
+        //
+
         public RestClient ToRestClient(string baseUrl = "https://does.not.matter")
         {
             return new RestClient(this, baseUrl);
