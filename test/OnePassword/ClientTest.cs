@@ -3,6 +3,7 @@
 
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
 
@@ -204,14 +205,15 @@ namespace PasswordManagerAccess.Test.OnePassword
             Client.GetKeysets(TestData.SesionKey, rest);
         }
 
-#if FALSE
         [Fact]
         public void GetKeysets_makes_GET_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("empty-object-response")));
-            Client.GetKeysets(TestData.SesionKey, http);
+            var rest = new RestFlow()
+                .Get(GetFixture("empty-object-response"))
+                .ExpectUrl("1password.com/api/v1/account/keysets")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/account/keysets");
+            Client.GetKeysets(TestData.SesionKey, rest);
         }
 
         [Fact]
@@ -226,60 +228,64 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetVaultAccounts_work()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-vault-accounts-ru74-response")));
+            var rest = new RestFlow().Get(GetFixture("get-vault-accounts-ru74-response"));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http, null);
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, rest, null);
         }
 
         [Fact]
         public void GetVaultAccounts_with_no_items_work()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-vault-with-no-items-response")));
+            var rest = new RestFlow().Get(GetFixture("get-vault-with-no-items-response"));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http, null);
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, rest, null);
         }
 
         [Fact]
         public void GetVaultAccounts_makes_GET_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("get-vault-accounts-ru74-response")));
+            var rest = new RestFlow()
+                .Get(GetFixture("get-vault-accounts-ru74-response"))
+                .ExpectUrl("1password.com/api/v1/vault")
+                .ToRestClient(ApiUrl);
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, http, null);
-
-            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v1/vault");
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, rest, null);
         }
 
         [Fact]
         public void SignOut_works()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
-            Client.SignOut(http);
+            var rest = new RestFlow().Put("{'success': 1}");
+
+            Client.SignOut(rest);
         }
 
         [Fact]
         public void SignOut_makes_PUT_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 1}"));
-            Client.SignOut(http);
+            var rest = new RestFlow()
+                .Put("{'success': 1}")
+                .ExpectUrl("1password.com/api/v1/session/signout")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyPutUrl(http.Http, "1password.com/api/v1/session/signout");
+            Client.SignOut(rest);
         }
 
         [Fact]
         public void SignOut_throws_on_bad_response()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupPut("{'success': 0}"));
+            var rest = new RestFlow().Put("{'success': 0}");
 
-            var e = Assert.Throws<ClientException>(() => Client.SignOut(http));
+            var e = Assert.Throws<ClientException>(() => Client.SignOut(rest));
             Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
             Assert.Contains("Failed to sign out", e.Message);
         }
@@ -337,22 +343,24 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void MakeJsonClient_sets_base_url()
+        public void MakeRestClient_sets_base_url()
         {
-            var http = Client.MakeJsonClient(new HttpClient(), "https://base.url");
-            Assert.Equal("https://base.url", http.BaseUrl);
+            var rest = Client.MakeRestClient(null, "https://base.url");
+            Assert.Equal("https://base.url", rest.BaseUrl);
         }
 
         [Fact]
-        public void MakeJsonClient_copies_base_url()
+        public void MakeRestClient_copies_base_url()
         {
-            var http = Client.MakeJsonClient(new JsonHttpClient(new HttpClient(), "https://base.url"));
+            var http = Client.MakeRestClient(new RestClient(null, "https://base.url"));
             Assert.Equal("https://base.url", http.BaseUrl);
         }
 
         //
         // Data
         //
+
+        private const string ApiUrl = "https://my.1password.com/api";
 
         // TODO: All the tests here use the data from this account. I don't care about the account
         //       or exposing its credentials, but I don't want to have inconsistent test data.
@@ -364,21 +372,5 @@ namespace PasswordManagerAccess.Test.OnePassword
             accountKey: "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
             uuid: "rz64r4uhyvgew672nm4ncaqonq",
             domain: "my.1password.com");
-
-        //
-        // Helpers
-        //
-
-        private static JsonHttpClient MakeJsonHttp(Mock<IHttpClient> http)
-        {
-            return new JsonHttpClient(http.Object, Client.GetApiUrl(Client.DefaultDomain));
-        }
-#endif
-
-        //
-        // Data
-        //
-
-        private const string ApiUrl = "https://my.1password.com/api";
     }
 }
