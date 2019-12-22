@@ -11,7 +11,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using H = System.Net.Http;
 
 namespace PasswordManagerAccess.Common
 {
@@ -196,20 +195,20 @@ namespace PasswordManagerAccess.Common
         // Private
         //
 
-        private RestTransport(H.HttpClient http)
+        private RestTransport(HttpClient http)
         {
             _http = http;
         }
 
-        private static H.HttpClient MakeDefaultHttpClient()
+        private static HttpClient MakeDefaultHttpClient()
         {
             var handler = new HttpClientHandler() { UseCookies = false, AllowAutoRedirect = false };
-            return new H.HttpClient(handler, true);
+            return new HttpClient(handler, true);
         }
 
-        private static H.HttpClient MakeHttpClient(SendAsyncType sendAsync)
+        private static HttpClient MakeHttpClient(SendAsyncType sendAsync)
         {
-            return new H.HttpClient(new RestMessageHandler(sendAsync), true);
+            return new HttpClient(new RestMessageHandler(sendAsync), true);
         }
 
         //
@@ -218,7 +217,7 @@ namespace PasswordManagerAccess.Common
 
         private const string SetCookieHeader = "Set-Cookie";
 
-        private readonly H.HttpClient _http;
+        private readonly HttpClient _http;
 
         //
         // IDisposable
