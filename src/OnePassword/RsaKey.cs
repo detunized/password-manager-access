@@ -4,6 +4,7 @@
 using System.Linq;
 using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -19,14 +20,14 @@ namespace PasswordManagerAccess.OnePassword
         {
             RSAParameters parameters = new RSAParameters
             {
-                Exponent = json.StringAt("e").Decode64(),
-                Modulus = json.StringAt("n").Decode64(),
-                P = json.StringAt("p").Decode64(),
-                Q = json.StringAt("q").Decode64(),
-                DP = json.StringAt("dp").Decode64(),
-                DQ = json.StringAt("dq").Decode64(),
-                InverseQ = json.StringAt("qi").Decode64(),
-                D = json.StringAt("d").Decode64(),
+                Exponent = json.StringAt("e").Decode64Loose(),
+                Modulus = json.StringAt("n").Decode64Loose(),
+                P = json.StringAt("p").Decode64Loose(),
+                Q = json.StringAt("q").Decode64Loose(),
+                DP = json.StringAt("dp").Decode64Loose(),
+                DQ = json.StringAt("dq").Decode64Loose(),
+                InverseQ = json.StringAt("qi").Decode64Loose(),
+                D = json.StringAt("d").Decode64Loose(),
             };
 
             return new RsaKey(id: json.StringAt("kid"), parameters: RestoreLeadingZeros(parameters));

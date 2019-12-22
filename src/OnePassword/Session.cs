@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -23,7 +24,7 @@ namespace PasswordManagerAccess.OnePassword
                                srpMethod: json.StringAt("userAuth/method"),
                                keyMethod: json.StringAt("userAuth/alg"),
                                iterations: json.IntAt("userAuth/iterations"),
-                               salt: json.StringAt("userAuth/salt").Decode64());
+                               salt: json.StringAt("userAuth/salt").Decode64Loose());
         }
 
         public Session(string id,

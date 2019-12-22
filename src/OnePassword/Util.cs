@@ -65,7 +65,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             var a = Crypto.Sha256(accountKeyUuid);
             var b = Crypto.Sha256(sessionId);
-            return Crypto.Sha256(a.Concat(b).ToArray()).ToBase64();
+            return Crypto.Sha256(a.Concat(b).ToArray()).ToUrlSafeBase64NoPadding();
         }
 
         public static string HashRememberMeToken(string token, Session session)
@@ -75,11 +75,12 @@ namespace PasswordManagerAccess.OnePassword
 
         public static string HashRememberMeToken(string token, string sessionId)
         {
-            return Crypto.HmacSha256(sessionId.Decode32(), token.Decode64()).ToBase64().Substring(0, 8);
+            return Crypto.HmacSha256(sessionId.Decode32(), token.Decode64Loose())
+                .ToUrlSafeBase64NoPadding()
+                .Substring(0, 8);
         }
 
         private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();
-        private const string SessionHmacSecret =
-            "He never wears a Mac, in the pouring rain. Very strange.";
+        private const string SessionHmacSecret = "He never wears a Mac, in the pouring rain. Very strange.";
     }
 }

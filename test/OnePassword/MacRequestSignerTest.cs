@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
 
@@ -60,7 +61,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // The test data is generated with the actual web page JS.
             var session = TestData.MakeSession("PBXONDZUWVCJFAV25C7XR7IYDQ");
-            var key = new AesKey(session.Id, "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64());
+            var key = new AesKey(session.Id, "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
             var seed = 842346063u;
 
             return new MacRequestSigner(session, key, seed);

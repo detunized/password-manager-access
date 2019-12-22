@@ -709,7 +709,7 @@ namespace PasswordManagerAccess.OnePassword
             var keyInfo = sorted[0].At("encSymKey");
             var masterKey = DeriveMasterKey(algorithm: keyInfo.StringAt("alg"),
                                             iterations: keyInfo.IntAt("p2c"),
-                                            salt: keyInfo.StringAt("p2s").Decode64(),
+                                            salt: keyInfo.StringAt("p2s").Decode64Loose(),
                                             clientInfo: clientInfo);
             keychain.Add(masterKey);
 

@@ -3,6 +3,7 @@
 
 using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
 
@@ -49,14 +50,14 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var rsa = new RSAParameters
             {
-                Exponent = RsaParameters.StringAt("e").Decode64(),
-                Modulus = RsaParameters.StringAt("n").Decode64(),
-                P = RsaParameters.StringAt("p").Decode64(),
-                Q = RsaParameters.StringAt("q").Decode64(),
-                DP = RsaParameters.StringAt("dp").Decode64(),
-                DQ = RsaParameters.StringAt("dq").Decode64(),
-                InverseQ = RsaParameters.StringAt("qi").Decode64(),
-                D = RsaParameters.StringAt("d").Decode64(),
+                Exponent = RsaParameters.StringAt("e").Decode64Loose(),
+                Modulus = RsaParameters.StringAt("n").Decode64Loose(),
+                P = RsaParameters.StringAt("p").Decode64Loose(),
+                Q = RsaParameters.StringAt("q").Decode64Loose(),
+                DP = RsaParameters.StringAt("dp").Decode64Loose(),
+                DQ = RsaParameters.StringAt("dq").Decode64Loose(),
+                InverseQ = RsaParameters.StringAt("qi").Decode64Loose(),
+                D = RsaParameters.StringAt("d").Decode64Loose(),
             };
 
             var padded = RsaKey.RestoreLeadingZeros(rsa);

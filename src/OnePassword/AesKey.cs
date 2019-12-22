@@ -17,7 +17,7 @@ namespace PasswordManagerAccess.OnePassword
         public static AesKey Parse(JToken json)
         {
             return new AesKey(id: json.StringAt("kid"),
-                              key: json.StringAt("k").Decode64());
+                              key: json.StringAt("k").Decode64Loose());
         }
 
         public AesKey(string id, byte[] key)

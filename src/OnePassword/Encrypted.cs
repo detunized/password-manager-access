@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -19,8 +20,8 @@ namespace PasswordManagerAccess.OnePassword
             return new Encrypted(keyId: json.StringAt("kid"),
                                  scheme: json.StringAt("enc"),
                                  container: json.StringAt("cty"),
-                                 iv: json.StringAt("iv", "").Decode64(),
-                                 ciphertext: json.StringAt("data").Decode64());
+                                 iv: json.StringAt("iv", "").Decode64Loose(),
+                                 ciphertext: json.StringAt("data").Decode64Loose());
         }
 
         public Encrypted(string keyId, string scheme, string container, byte[] iv, byte[] ciphertext)
@@ -39,8 +40,8 @@ namespace PasswordManagerAccess.OnePassword
                 {"kid", KeyId},
                 {"enc", Scheme},
                 {"cty", Container},
-                {"iv", Iv.ToBase64()},
-                {"data", Ciphertext.ToBase64()},
+                {"iv", Iv.ToUrlSafeBase64NoPadding()},
+                {"data", Ciphertext.ToUrlSafeBase64NoPadding()},
             };
         }
     }

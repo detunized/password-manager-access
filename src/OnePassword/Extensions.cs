@@ -1,58 +1,12 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using Newtonsoft.Json.Linq;
 
 namespace PasswordManagerAccess.OnePassword
 {
     internal static class Extensions
     {
-        //
-        // string
-        //
-
-        // TODO: This is a tricky one. 1Password uses Decode64 in place of Decode64Loose.
-        // Investigate and make sure the tests and the example work before removing it.
-        //
-        // Handles URL-safe, regular and mixed Base64 with or without padding.
-        public static byte[] Decode64(this string s)
-        {
-            // Remove any padding.
-            var withoutPadding = s.TrimEnd('=');
-
-            // Re-pad correctly
-            var withPadding = withoutPadding;
-            switch (withoutPadding.Length % 4)
-            {
-            case 2:
-                withPadding += "==";
-                break;
-            case 3:
-                withPadding += "=";
-                break;
-            }
-
-            // Convert to regular Base64
-            var regularBase64 = withPadding.Replace('-', '+').Replace('_', '/');
-
-            // Shouldn't fail anymore base of the padding or URL-safe.
-            return Convert.FromBase64String(regularBase64);
-        }
-
-        //
-        // byte[]
-        //
-
-        // TODO: This is a tricky one. 1Password uses Decode64 in place of Decode64Loose.
-        // Investigate and make sure the tests and the example work before removing it.
-        //
-        // URL-safe Base64
-        public static string ToBase64(this byte[] x)
-        {
-            return Convert.ToBase64String(x).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        }
-
         //
         // TODO: Switch to deserialization and remove this!
         //
