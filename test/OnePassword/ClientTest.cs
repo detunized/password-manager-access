@@ -1,14 +1,8 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Moq;
-using Newtonsoft.Json.Linq;
-using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
-using HttpClient = PasswordManagerAccess.OnePassword.HttpClient;
-using IHttpClient = PasswordManagerAccess.OnePassword.IHttpClient;
-using JsonHttpClient = PasswordManagerAccess.OnePassword.JsonHttpClient;
 
 // TODO: DRY up tests. There's quite a bit of copy-paste here.
 // TODO: Creating encrypted test fixtures is a giant PITA and not very obvious what's going on.
@@ -21,8 +15,11 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_returns_session_on_ok()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("start-new-session-response")));
-            var session = Client.StartNewSession(TestData.ClientInfo, http);
+            var rest = new RestFlow()
+                .Get(GetFixture("start-new-session-response"))
+                .ToRestClient();
+
+            var session = Client.StartNewSession(TestData.ClientInfo, rest);
 
             Assert.Equal(TestData.Session.Id, session.Id);
             Assert.Equal(TestData.Session.KeyFormat, session.KeyFormat);
@@ -36,12 +33,15 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_makes_GET_request_to_specific_url()
         {
-            var http = MakeJsonHttp(JsonHttpClientTest.SetupGet(GetFixture("start-new-session-response")));
-            Client.StartNewSession(TestData.ClientInfo, http);
+            var rest = new RestFlow()
+                .Get(GetFixture("start-new-session-response"))
+                .ExpectUrl("1password.com/api/v2/auth")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyGetUrl(http.Http, "1password.com/api/v2/auth");
+            Client.StartNewSession(TestData.ClientInfo, rest);
         }
 
+#if FALSE
         [Fact]
         public void StartNewSession_throws_on_unknown_status()
         {
@@ -360,5 +360,12 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             return new JsonHttpClient(http.Object, Client.GetApiUrl(Client.DefaultDomain));
         }
+#endif
+
+        //
+        // Data
+        //
+
+        private const string ApiUrl = "https://my.1password.com/api";
     }
 }

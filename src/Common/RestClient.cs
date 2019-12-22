@@ -380,6 +380,20 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // PUT
+        //
+
+        public RestResponse Put(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public RestResponse<T> Put<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        //
         // Internal
         //
 

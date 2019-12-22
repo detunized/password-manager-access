@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Numerics;
+using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
@@ -14,9 +15,9 @@ namespace PasswordManagerAccess.OnePassword
     internal static class Srp
     {
         // Returns the session encryption key
-        public static AesKey Perform(ClientInfo clientInfo, Session session, JsonHttpClient http)
+        public static AesKey Perform(ClientInfo clientInfo, Session session, RestClient rest)
         {
-            var key = Perform(GenerateSecretA(), clientInfo, session, http);
+            var key = Perform(GenerateSecretA(), clientInfo, session, rest);
             return new AesKey(session.Id, key);
         }
 
@@ -27,10 +28,10 @@ namespace PasswordManagerAccess.OnePassword
         internal static byte[] Perform(BigInteger secretA,
                                        ClientInfo clientInfo,
                                        Session session,
-                                       JsonHttpClient http)
+                                       RestClient rest)
         {
             var sharedA = ComputeSharedA(secretA);
-            var sharedB = ExchangeAForB(sharedA, session, http);
+            var sharedB = ExchangeAForB(sharedA, session, rest);
             ValidateB(sharedB);
             return ComputeKey(secretA, sharedA, sharedB, clientInfo, session);
         }
@@ -45,21 +46,31 @@ namespace PasswordManagerAccess.OnePassword
             return SirpG.ModExp(secretA, SirpN);
         }
 
-        internal static BigInteger ExchangeAForB(BigInteger sharedA,
-                                                 Session session,
-                                                 JsonHttpClient http)
+        // TODO: Move to Response namespace
+        internal class AForB
         {
-            var response = http.Post("v1/auth",
-                                     new Dictionary<string, object>
-                                     {
-                                         {"sessionID", session.Id},
-                                         {"userA", sharedA.ToHex()}
-                                     });
+            [JsonProperty(PropertyName = "sessionID")]
+            public string SessionId;
 
-            if (response.StringAt("sessionID") != session.Id)
+            [JsonProperty(PropertyName = "userB")]
+            public string B;
+        }
+
+        internal static BigInteger ExchangeAForB(BigInteger sharedA, Session session, RestClient rest)
+        {
+            var response = rest.PostJson<AForB>("v1/auth", new Dictionary<string, object>
+            {
+                {"sessionID", session.Id},
+                {"userA", sharedA.ToHex()}
+            });
+
+            if (!response.IsSuccessful)
+                throw new NetworkErrorException("TODO: Ooops!"); // TODO: Add proper error handling!
+
+            if (response.Data.SessionId != session.Id)
                 throw ExceptionFactory.MakeInvalidOperation("SRP: session ID doesn't match");
 
-            return response.StringAt("userB").ToBigInt();
+            return response.Data.B.ToBigInt();
         }
 
         internal static void ValidateB(BigInteger sharedB)

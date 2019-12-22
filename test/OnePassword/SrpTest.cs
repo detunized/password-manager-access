@@ -1,12 +1,10 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Numerics;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
-using JsonHttpClient = PasswordManagerAccess.OnePassword.JsonHttpClient;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
@@ -55,17 +53,19 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void ExchangeAForB_makes_POST_request_to_specific_url()
         {
-            var http = SetupJsonHttp("exchange-a-for-b-response");
-            Srp.ExchangeAForB(0, TestData.MakeSession(), http);
+            var rest = new RestFlow()
+                .Post(GetFixture("exchange-a-for-b-response"))
+                .ExpectUrl("1password.com/api/v1/auth")
+                .ToRestClient(ApiUrl);
 
-            JsonHttpClientTest.VerifyPostUrl(http, "1password.com/api/v1/auth");
+            Srp.ExchangeAForB(0, TestData.MakeSession(), rest);
         }
 
         [Fact]
         public void ExchangeAForB_throws_on_mismatching_session_id()
         {
-            var e = Assert.Throws<ClientException>(
-                () => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"));
+            var e = Assert.Throws<ClientException>(() => PerformExchange("exchange-a-for-b-response",
+                                                                         "incorrect-session-id"));
             Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
             Assert.Contains("ID doesn't match", e.Message);
         }
@@ -154,13 +154,17 @@ namespace PasswordManagerAccess.Test.OnePassword
         private BigInteger PerformExchange(string fixtureName,
                                            string sessionId = TestData.SessionId)
         {
-            return Srp.ExchangeAForB(0, TestData.MakeSession(sessionId), SetupJsonHttp(fixtureName));
+            var rest = new RestFlow()
+                .Post(GetFixture(fixtureName))
+                .ToRestClient(ApiUrl);
+
+            return Srp.ExchangeAForB(0, TestData.MakeSession(sessionId), rest);
         }
 
-        private JsonHttpClient SetupJsonHttp(string fixtureName)
-        {
-            return new JsonHttpClient(JsonHttpClientTest.SetupPost(GetFixture(fixtureName)).Object,
-                                      Client.GetApiUrl(Client.DefaultDomain));
-        }
+        //
+        // Data
+        //
+
+        private const string ApiUrl = "https://my.1password.com/api";
     }
 }

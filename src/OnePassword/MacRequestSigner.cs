@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
@@ -26,13 +27,15 @@ namespace PasswordManagerAccess.OnePassword
         // RequestId is bumped every time the message is signed. Thus
         // calling this function again on the same request would yield
         // a different result.
-        public KeyValuePair<string, string> Sign(string url, string method)
+        public IReadOnlyDictionary<string, string> Sign(Uri uri,
+                                                        HttpMethod method,
+                                                        IReadOnlyDictionary<string, string> headers)
         {
             var id = _requestId;
             _requestId += 1;
 
-            var signature = CalculateAuthSignature(CalculateAuthMessage(url, method, id), id);
-            return new KeyValuePair<string, string>("X-AgileBits-MAC", signature);
+            var signature = CalculateAuthSignature(CalculateAuthMessage(uri.ToString(), method.ToString(), id), id);
+            return headers.Merge(new Dictionary<string, string> { { "X-AgileBits-MAC", signature } });
         }
 
         //

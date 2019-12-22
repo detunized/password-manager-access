@@ -41,11 +41,14 @@ namespace PasswordManagerAccess.OnePassword
                                             ISecureStorage storage,
                                             ILogger logger = null)
         {
-            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain),
-                                 ui,
-                                 storage,
-                                 logger,
-                                 new HttpClient());
+            using (var transport = new RestTransport())
+            {
+                return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain),
+                                     ui,
+                                     storage,
+                                     logger,
+                                     transport);
+            }
         }
 
         // Alternative entry point with a predefined region
@@ -99,28 +102,30 @@ namespace PasswordManagerAccess.OnePassword
                                               Ui ui,
                                               ISecureStorage storage,
                                               ILogger logger,
-                                              IHttpClient http)
+                                              IRestTransport transport)
         {
+            var rest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
+
             // Step 1: Login is multi-step process in itself, which might iterate for a few times internally.
-            var login = Login(clientInfo, ui, storage, http);
+            var login = Login(clientInfo, ui, storage, rest);
 
             try
             {
                 // Step 2: Get account info. It contains users, keys, groups, vault info and other stuff.
                 //         Not the actual vault data though. That is requested separately.
-                var accountInfo = GetAccountInfo(login.SessionKey, login.JsonHttp);
+                var accountInfo = GetAccountInfo(login.SessionKey, login.Rest);
 
                 // Step 6: Get all the keysets in one place. The original code is quite hairy around this
                 //         topic, so it's not very clear if these keysets should be merged with anything else
                 //         or it's enough to just use these keys. For now we gonna ignore other keys and
                 //         see if it's enough.
-                var keysets = GetKeysets(login.SessionKey, login.JsonHttp);
+                var keysets = GetKeysets(login.SessionKey, login.Rest);
 
                 // Step 3: Derive and decrypt keys
                 var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
 
                 // Step 4: Get and decrypt vaults
-                var vaults = GetVaults(accountInfo, login.SessionKey, keychain, login.JsonHttp, logger);
+                var vaults = GetVaults(accountInfo, login.SessionKey, keychain, login.Rest, logger);
 
                 // Done
                 return vaults;
@@ -133,31 +138,29 @@ namespace PasswordManagerAccess.OnePassword
                 //       the issue.
 
                 // Last step: Make sure to sign out in any case
-                SignOut(login.JsonHttp);
+                SignOut(login.Rest);
             }
         }
 
         internal struct LoginResult
         {
             public readonly AesKey SessionKey;
-            public readonly JsonHttpClient JsonHttp;
+            public readonly RestClient Rest;
 
-            public LoginResult(AesKey sessionKey, JsonHttpClient jsonHttp)
+            public LoginResult(AesKey sessionKey, RestClient rest)
             {
                 SessionKey = sessionKey;
-                JsonHttp = jsonHttp;
+                Rest = rest;
             }
         }
 
-        internal static LoginResult Login(ClientInfo clientInfo, Ui ui, ISecureStorage storage, IHttpClient http)
+        internal static LoginResult Login(ClientInfo clientInfo, Ui ui, ISecureStorage storage, RestClient rest)
         {
-            var jsonHttp = MakeJsonClient(http, GetApiUrl(clientInfo.Domain));
-
             while (true)
             {
                 try
                 {
-                    return LoginAttempt(clientInfo, ui, storage, jsonHttp);
+                    return LoginAttempt(clientInfo, ui, storage, rest);
                 }
                 catch (ClientException e) when (e.Reason == ClientException.FailureReason.OutdatedRememberMeToken)
                 {
@@ -167,30 +170,30 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        private static LoginResult LoginAttempt(ClientInfo clientInfo, Ui ui, ISecureStorage storage, JsonHttpClient jsonHttp)
+        private static LoginResult LoginAttempt(ClientInfo clientInfo, Ui ui, ISecureStorage storage, RestClient rest)
         {
             // Step 1: Request to initiate a new session
-            var session = StartNewSession(clientInfo, jsonHttp);
+            var session = StartNewSession(clientInfo, rest);
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
-            jsonHttp = MakeJsonClient(jsonHttp, session.Id);
+            rest = MakeRestClient(rest, sessionId: session.Id);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(clientInfo, session, jsonHttp);
+            var sessionKey = Srp.Perform(clientInfo, session, rest);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
-            jsonHttp.Signer = new MacRequestSigner(session, sessionKey);
+            rest = MakeRestClient(rest, new MacRequestSigner(session, sessionKey), session.Id);
 
             // Step 3: Verify the key with the server
-            var verifiedOrMfa = VerifySessionKey(clientInfo, session, sessionKey, jsonHttp);
+            var verifiedOrMfa = VerifySessionKey(clientInfo, session, sessionKey, rest);
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, jsonHttp);
+                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, rest);
 
-            return new LoginResult(sessionKey, jsonHttp);
+            return new LoginResult(sessionKey, rest);
         }
 
         internal static string GetApiUrl(string domain)
@@ -198,32 +201,32 @@ namespace PasswordManagerAccess.OnePassword
             return string.Format("https://{0}/api", domain);
         }
 
-        internal static JsonHttpClient MakeJsonClient(IHttpClient http,
-                                                      string baseUrl,
-                                                      string sessionId = null)
+        internal static RestClient MakeRestClient(IRestTransport transport,
+                                                  string baseUrl,
+                                                  IRequestSigner signer = null,
+                                                  string sessionId = null)
         {
-            var jsonHttp = new JsonHttpClient(http, baseUrl);
-            jsonHttp.Headers["X-AgileBits-Client"] = ClientId;
+            var headers = new Dictionary<string, string>(2) { { "X-AgileBits-Client", ClientId } };
+            if (!sessionId.IsNullOrEmpty())
+                headers["X-AgileBits-Session-ID"] = sessionId;
 
-            if (sessionId != null)
-                jsonHttp.Headers["X-AgileBits-Session-ID"] = sessionId;
-
-            return jsonHttp;
+            return new RestClient(transport, baseUrl, signer, headers);
         }
 
-        internal static JsonHttpClient MakeJsonClient(JsonHttpClient jsonHttp,
-                                                      string sessionId = null)
+        internal static RestClient MakeRestClient(RestClient rest,
+                                                  IRequestSigner signer = null,
+                                                  string sessionId = null)
         {
-            return MakeJsonClient(jsonHttp.Http, jsonHttp.BaseUrl, sessionId);
+            return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
         }
 
-        internal static Session StartNewSession(ClientInfo clientInfo, JsonHttpClient jsonHttp)
+        internal static Session StartNewSession(ClientInfo clientInfo, RestClient rest)
         {
-            var response = jsonHttp.Get(string.Format("v2/auth/{0}/{1}/{2}/{3}",
-                                                      clientInfo.Username,
-                                                      clientInfo.AccountKey.Format,
-                                                      clientInfo.AccountKey.Uuid,
-                                                      clientInfo.Uuid));
+            var response = Get(rest, string.Format("v2/auth/{0}/{1}/{2}/{3}",
+                                                   clientInfo.Username,
+                                                   clientInfo.AccountKey.Format,
+                                                   clientInfo.AccountKey.Uuid,
+                                                   clientInfo.Uuid));
             var status = response.StringAt("status");
             switch (status)
             {
@@ -234,10 +237,10 @@ namespace PasswordManagerAccess.OnePassword
                                               "The account key is incorrect");
                 return session;
             case "device-not-registered":
-                RegisterDevice(clientInfo, MakeJsonClient(jsonHttp, response.StringAt("sessionID")));
+                RegisterDevice(clientInfo, MakeRestClient(rest, sessionId: response.StringAt("sessionID")));
                 break;
             case "device-deleted":
-                ReauthorizeDevice(clientInfo, MakeJsonClient(jsonHttp, response.StringAt("sessionID")));
+                ReauthorizeDevice(clientInfo, MakeRestClient(rest, sessionId: response.StringAt("sessionID")));
                 break;
             default:
                 throw new ClientException(
@@ -247,18 +250,17 @@ namespace PasswordManagerAccess.OnePassword
                         status));
             }
 
-            return StartNewSession(clientInfo, jsonHttp);
+            return StartNewSession(clientInfo, rest);
         }
 
-        internal static void RegisterDevice(ClientInfo clientInfo, JsonHttpClient jsonHttp)
+        internal static void RegisterDevice(ClientInfo clientInfo, RestClient rest)
         {
-            var response = jsonHttp.Post("v1/device",
-                                         new Dictionary<string, object>
-                                         {
-                                             {"uuid", clientInfo.Uuid},
-                                             {"clientName", ClientName},
-                                             {"clientVersion", ClientVersion},
-                                         });
+            var response = Post(rest, "v1/device", new Dictionary<string, object>
+            {
+                {"uuid", clientInfo.Uuid},
+                {"clientName", ClientName},
+                {"clientVersion", ClientVersion},
+            });
 
             if (response.IntAt("success") != 1)
                 throw new ClientException(ClientException.FailureReason.RespondedWithError,
@@ -266,9 +268,9 @@ namespace PasswordManagerAccess.OnePassword
                                                         clientInfo.Uuid));
         }
 
-        internal static void ReauthorizeDevice(ClientInfo clientInfo, JsonHttpClient jsonHttp)
+        internal static void ReauthorizeDevice(ClientInfo clientInfo, RestClient rest)
         {
-            var response = jsonHttp.Put(string.Format("v1/device/{0}/reauthorize", clientInfo.Uuid));
+            var response = Put(rest, string.Format("v1/device/{0}/reauthorize", clientInfo.Uuid));
 
             if (response.IntAt("success") != 1)
                 throw new ClientException(ClientException.FailureReason.RespondedWithError,
@@ -307,7 +309,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static VerifyResult VerifySessionKey(ClientInfo clientInfo,
                                                       Session session,
                                                       AesKey sessionKey,
-                                                      JsonHttpClient jsonHttp)
+                                                      RestClient rest)
         {
             try
             {
@@ -320,7 +322,7 @@ namespace PasswordManagerAccess.OnePassword
                         {"client", ClientId},
                     },
                     sessionKey,
-                    jsonHttp);
+                    rest);
 
                 // TODO: 1P verifies if "serverVerifyHash" is valid. Do that.
                 // We assume it's all good if we got HTTP 200.
@@ -363,11 +365,11 @@ namespace PasswordManagerAccess.OnePassword
                                                                AesKey sessionKey,
                                                                Ui ui,
                                                                ISecureStorage storage,
-                                                               JsonHttpClient jsonHttp)
+                                                               RestClient rest)
         {
             // Try "remember me" first. It's possible the server didn't allow it or
             // we don't have a valid token stored from one of the previous sessions.
-            if (TrySubmitRememberMeToken(factors, session, sessionKey, storage, jsonHttp))
+            if (TrySubmitRememberMeToken(factors, session, sessionKey, storage, rest))
                 return;
 
             var factor = ChooseInteractiveSecondFactor(factors);
@@ -378,7 +380,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
                                           "Second factor step is canceled by the user");
 
-            var token = SubmitSecondFactorCode(factor, passcode.Code, session, sessionKey, jsonHttp);
+            var token = SubmitSecondFactorCode(factor, passcode.Code, session, sessionKey, rest);
 
             // Store the token with the application. Next time we're not gonna need to enter any passcodes.
             if (passcode.RememberMe)
@@ -389,7 +391,7 @@ namespace PasswordManagerAccess.OnePassword
                                                       Session session,
                                                       AesKey sessionKey,
                                                       ISecureStorage storage,
-                                                      JsonHttpClient jsonHttp)
+                                                      RestClient rest)
         {
             if (!factors.Contains(SecondFactor.RememberMeToken))
                 return false;
@@ -400,7 +402,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                SubmitSecondFactorCode(SecondFactor.RememberMeToken, token, session, sessionKey, jsonHttp);
+                SubmitSecondFactorCode(SecondFactor.RememberMeToken, token, session, sessionKey, rest);
             }
             catch (ClientException e) when (e.Reason == ClientException.FailureReason.IncorrectSecondFactorCode)
             {
@@ -446,7 +448,7 @@ namespace PasswordManagerAccess.OnePassword
                                                       string code,
                                                       Session session,
                                                       AesKey sessionKey,
-                                                      JsonHttpClient jsonHttp)
+                                                      RestClient rest)
         {
             var key = "";
             object data = null;
@@ -475,7 +477,7 @@ namespace PasswordManagerAccess.OnePassword
                                                      {key, data},
                                                  },
                                                  sessionKey,
-                                                 jsonHttp);
+                                                 rest);
 
                 return response.StringAt("dsecret", "");
             }
@@ -490,20 +492,23 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static JObject GetAccountInfo(AesKey sessionKey, JsonHttpClient jsonHttp)
+        internal static JObject GetAccountInfo(AesKey sessionKey, RestClient rest)
         {
-            return GetEncryptedJson("v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults", sessionKey, jsonHttp);
+            return GetEncryptedJson(
+                "v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
+                sessionKey,
+                rest);
         }
 
-        internal static JObject GetKeysets(AesKey sessionKey, JsonHttpClient jsonHttp)
+        internal static JObject GetKeysets(AesKey sessionKey, RestClient rest)
         {
-            return GetEncryptedJson("v1/account/keysets", sessionKey, jsonHttp);
+            return GetEncryptedJson("v1/account/keysets", sessionKey, rest);
         }
 
         internal static Vault[] GetVaults(JToken accountInfo,
                                           AesKey sessionKey,
                                           Keychain keychain,
-                                          JsonHttpClient jsonHttp,
+                                          RestClient rest,
                                           ILogger logger)
         {
             var accessibleVaults = new HashSet<string>(BuildListOfAccessibleVaults(accountInfo));
@@ -522,7 +527,7 @@ namespace PasswordManagerAccess.OnePassword
 
             return allVaults
                 .Where(i => accessibleVaults.Contains(i.StringAt("uuid", "")))
-                .Select(i => GetVault(i, sessionKey, keychain, jsonHttp, logger))
+                .Select(i => GetVault(i, sessionKey, keychain, rest, logger))
                 .ToArray();
         }
 
@@ -540,7 +545,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static Vault GetVault(JToken json,
                                        AesKey sessionKey,
                                        Keychain keychain,
-                                       JsonHttpClient jsonHttp,
+                                       RestClient rest,
                                        ILogger logger)
         {
             var id = json.StringAt("uuid");
@@ -549,17 +554,17 @@ namespace PasswordManagerAccess.OnePassword
             return new Vault(id: id,
                              name: attributes.StringAt("name", ""),
                              description: attributes.StringAt("desc", ""),
-                             accounts: GetVaultAccounts(id, sessionKey, keychain, jsonHttp, logger));
+                             accounts: GetVaultAccounts(id, sessionKey, keychain, rest, logger));
         }
 
         internal static Account[] GetVaultAccounts(string id,
                                                    AesKey sessionKey,
                                                    Keychain keychain,
-                                                   JsonHttpClient jsonHttp,
+                                                   RestClient rest,
                                                    ILogger logger)
         {
             // Convert to array right away not iterate over the same expensive enumerator again.
-            var items = EnumerateAccountsItemsInVault(id, sessionKey, jsonHttp).ToArray();
+            var items = EnumerateAccountsItemsInVault(id, sessionKey, rest).ToArray();
 
             // TODO: Do we still need this? The code could be simplified when this is no longer
             // needed.
@@ -591,12 +596,12 @@ namespace PasswordManagerAccess.OnePassword
         // TODO: Add a test for the multi-batch scenario.
         internal static IEnumerable<JToken> EnumerateAccountsItemsInVault(string id,
                                                                           AesKey sessionKey,
-                                                                          JsonHttpClient jsonHttp)
+                                                                          RestClient rest)
         {
             var batchId = 0;
             while (true)
             {
-                var response = GetEncryptedJson($"v1/vault/{id}/{batchId}/items", sessionKey, jsonHttp);
+                var response = GetEncryptedJson($"v1/vault/{id}/{batchId}/items", sessionKey, rest);
                 foreach (var i in response.At("items", new JArray()))
                     yield return i;
 
@@ -673,9 +678,9 @@ namespace PasswordManagerAccess.OnePassword
                                                section: name));
         }
 
-        internal static void SignOut(JsonHttpClient jsonHttp)
+        internal static void SignOut(RestClient rest)
         {
-            var response = jsonHttp.Put("v1/session/signout");
+            var response = Put(rest, "v1/session/signout");
             if (response.IntAt("success") != 1)
                 throw new ClientException(ClientException.FailureReason.RespondedWithError,
                                           "Failed to sign out");
@@ -756,19 +761,19 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static JObject GetEncryptedJson(string endpoint,
                                                  AesKey sessionKey,
-                                                 JsonHttpClient jsonHttp)
+                                                 RestClient rest)
         {
-            return Decrypt(jsonHttp.Get(endpoint), sessionKey);
+            return Decrypt(Get(rest, endpoint), sessionKey);
         }
 
         internal static JObject PostEncryptedJson(string endpoint,
                                                   Dictionary<string, object> parameters,
                                                   AesKey sessionKey,
-                                                  JsonHttpClient jsonHttp)
+                                                  RestClient rest)
         {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
-            var response = jsonHttp.Post(endpoint, encryptedPayload.ToDictionary());
+            var response = Post(rest, endpoint, encryptedPayload.ToDictionary());
 
             return Decrypt(response, sessionKey);
         }
@@ -851,12 +856,52 @@ namespace PasswordManagerAccess.OnePassword
         // Migration helpers
         //
 
-        internal static JObject Get(string endpoint, RestClient rest)
+        internal static JObject Get(RestClient rest, string endpoint)
         {
             var response = rest.Get(endpoint);
             if (!response.IsSuccessful)
                 throw new ClientException(ClientException.FailureReason.NetworkError,
                                           $"GET request to '{endpoint}' failed",
+                                          response.Error);
+
+            try
+            {
+                return JObject.Parse(response.Content);
+            }
+            catch (JsonException e)
+            {
+                throw new ClientException(ClientException.FailureReason.InvalidResponse,
+                                          $"Invalid JSON in response from '{endpoint}'",
+                                          e);
+            }
+        }
+
+        internal static JObject Post(RestClient rest, string endpoint, Dictionary<string, object> parameters)
+        {
+            var response = rest.PostJson(endpoint, parameters);
+            if (!response.IsSuccessful)
+                throw new ClientException(ClientException.FailureReason.NetworkError,
+                                          $"POST request to '{endpoint}' failed",
+                                          response.Error);
+
+            try
+            {
+                return JObject.Parse(response.Content);
+            }
+            catch (JsonException e)
+            {
+                throw new ClientException(ClientException.FailureReason.InvalidResponse,
+                                          $"Invalid JSON in response from '{endpoint}'",
+                                          e);
+            }
+        }
+
+        internal static JObject Put(RestClient rest, string endpoint)
+        {
+            var response = rest.Put(endpoint);
+            if (!response.IsSuccessful)
+                throw new ClientException(ClientException.FailureReason.NetworkError,
+                                          $"PUT request to '{endpoint}' failed",
                                           response.Error);
 
             try
