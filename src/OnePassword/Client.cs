@@ -823,48 +823,22 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         // TODO: Remove
-        internal static JObject Decrypt(JToken json, AesKey sessionKey)
+        internal static JObject Decrypt(JToken json, IDecryptor decryptor)
         {
-            return JObject.Parse(sessionKey.Decrypt(Encrypted.Parse(json)).ToUtf8());
+            return JObject.Parse(decryptor.Decrypt(Encrypted.Parse(json)).ToUtf8());
         }
 
         // TODO: Remove
-        internal static JObject Decrypt(JToken json, Keychain keychain)
+        internal static JObject Decrypt(R.Encrypted encrypted, IDecryptor decryptor)
         {
-            return JObject.Parse(keychain.Decrypt(Encrypted.Parse(json)).ToUtf8());
+            return JObject.Parse(decryptor.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
         }
 
-        // TODO: Remove
-        internal static JObject Decrypt(R.Encrypted encrypted, AesKey sessionKey)
-        {
-            return JObject.Parse(sessionKey.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
-        }
-
-        // TODO: Unite AesKey and Keychain via IDecryptor
-        internal static T Decrypt<T>(R.Encrypted encrypted, AesKey sessionKey)
+        internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
         {
             try
             {
-                return JsonConvert.DeserializeObject<T>(sessionKey.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
-            }
-            catch (JsonException e)
-            {
-                throw new InternalErrorException("Failed to parse JSON in response from the server", e);
-            }
-        }
-
-        // TODO: Remove
-        internal static JObject Decrypt(R.Encrypted encrypted, Keychain keychain)
-        {
-            return JObject.Parse(keychain.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
-        }
-
-        // TODO: Unite AesKey and Keychain via IDecryptor
-        internal static T Decrypt<T>(R.Encrypted encrypted, Keychain keychain)
-        {
-            try
-            {
-                return JsonConvert.DeserializeObject<T>(keychain.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
+                return JsonConvert.DeserializeObject<T>(decryptor.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
             }
             catch (JsonException e)
             {

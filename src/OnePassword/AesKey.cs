@@ -6,7 +6,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class AesKey
+    internal class AesKey: IDecryptor
     {
         public const string ContainerType = "b5+jwk+json";
         public const string EncryptionScheme = "A256GCM";

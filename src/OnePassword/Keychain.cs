@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class Keychain
+    internal class Keychain: IDecryptor
     {
         public void Add(AesKey key)
         {

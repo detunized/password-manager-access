@@ -8,7 +8,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class RsaKey
+    internal class RsaKey: IDecryptor
     {
         public const string ContainerType = "b5+jwk+json";
         public const string EncryptionScheme = "RSA-OAEP";
