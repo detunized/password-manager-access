@@ -10,6 +10,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -222,32 +223,39 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static Session StartNewSession(ClientInfo clientInfo, RestClient rest)
         {
-            var response = Get(rest, string.Format("v2/auth/{0}/{1}/{2}/{3}",
-                                                   clientInfo.Username,
-                                                   clientInfo.AccountKey.Format,
-                                                   clientInfo.AccountKey.Uuid,
-                                                   clientInfo.Uuid));
-            var status = response.StringAt("status");
+            var response = rest.Get<R.NewSession>(string.Format("v2/auth/{0}/{1}/{2}/{3}",
+                                                                clientInfo.Username,
+                                                                clientInfo.AccountKey.Format,
+                                                                clientInfo.AccountKey.Uuid,
+                                                                clientInfo.Uuid));
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var info = response.Data;
+            var status = info.Status;
             switch (status)
             {
             case "ok":
-                var session = Session.Parse(response);
+                var session = new Session(id: info.SessionId,
+                                          keyFormat: info.KeyFormat,
+                                          keyUuid: info.KeyUuid,
+                                          srpMethod: info.Auth.Method,
+                                          keyMethod: info.Auth.Algorithm,
+                                          iterations: info.Auth.Iterations,
+                                          salt: info.Auth.Salt.Decode64Loose());
+
                 if (session.KeyUuid != clientInfo.AccountKey.Uuid)
-                    throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                              "The account key is incorrect");
+                    throw new BadCredentialsException("The account key is incorrect");
                 return session;
             case "device-not-registered":
-                RegisterDevice(clientInfo, MakeRestClient(rest, sessionId: response.StringAt("sessionID")));
+                RegisterDevice(clientInfo, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             case "device-deleted":
-                ReauthorizeDevice(clientInfo, MakeRestClient(rest, sessionId: response.StringAt("sessionID")));
+                ReauthorizeDevice(clientInfo, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             default:
-                throw new ClientException(
-                    ClientException.FailureReason.InvalidResponse,
-                    string.Format(
-                        "Failed to start a new session, unsupported response status '{0}'",
-                        status));
+                throw new InternalErrorException(
+                    $"Failed to start a new session, unsupported response status '{status}'");
             }
 
             return StartNewSession(clientInfo, rest);
@@ -255,27 +263,29 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static void RegisterDevice(ClientInfo clientInfo, RestClient rest)
         {
-            var response = Post(rest, "v1/device", new Dictionary<string, object>
+            var response = rest.PostJson<R.SuccessStatus>("v1/device", new Dictionary<string, object>
             {
                 {"uuid", clientInfo.Uuid},
                 {"clientName", ClientName},
                 {"clientVersion", ClientVersion},
             });
 
-            if (response.IntAt("success") != 1)
-                throw new ClientException(ClientException.FailureReason.RespondedWithError,
-                                          string.Format("Failed to register the device '{0}'",
-                                                        clientInfo.Uuid));
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            if (response.Data.Success != 1)
+                throw new InternalErrorException($"Failed to register the device '{clientInfo.Uuid}'");
         }
 
         internal static void ReauthorizeDevice(ClientInfo clientInfo, RestClient rest)
         {
-            var response = Put(rest, string.Format("v1/device/{0}/reauthorize", clientInfo.Uuid));
+            var response = rest.Put<R.SuccessStatus>($"v1/device/{clientInfo.Uuid}/reauthorize");
 
-            if (response.IntAt("success") != 1)
-                throw new ClientException(ClientException.FailureReason.RespondedWithError,
-                                          string.Format("Failed to reauthorize the device '{0}'",
-                                                        clientInfo.Uuid));
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            if (response.Data.Success != 1)
+                throw new InternalErrorException($"Failed to reauthorize the device '{clientInfo.Uuid}'");
         }
 
         internal enum VerifyStatus
@@ -758,6 +768,16 @@ namespace PasswordManagerAccess.OnePassword
         //
         // HTTP
         //
+
+        internal static Common.BaseException MakeError(RestResponse response)
+        {
+            if (response.IsNetworkError)
+                return new NetworkErrorException("Network error has occurred", response.Error);
+
+            return new InternalErrorException(
+                $"Invalid or unexpected response from the server (HTTP status: {response.StatusCode})",
+                response.Error);
+        }
 
         internal static JObject GetEncryptedJson(string endpoint,
                                                  AesKey sessionKey,

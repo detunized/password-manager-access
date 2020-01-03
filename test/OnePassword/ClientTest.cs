@@ -44,11 +44,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_throws_on_unknown_status()
         {
-            var rest = new RestFlow().Get("{'status': 'unknown'}");
+            var rest = new RestFlow().Get("{'status': 'unknown', 'sessionID': 'blah'}");
 
-            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, rest));
-            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
-            Assert.Contains("Failed to start a new session", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, rest),
+                                                 "Failed to start a new session, unsupported response status");
         }
 
         [Fact]
@@ -57,8 +56,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Get(error);
 
-            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, rest));
-            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
+            var e = Exceptions.AssertThrowsNetworkError(() => Client.StartNewSession(TestData.ClientInfo, rest),
+                                                        "Network error");
             Assert.Same(error, e.InnerException);
         }
 
@@ -67,9 +66,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var rest = new RestFlow().Get("} invalid json {");
 
-            var e = Assert.Throws<ClientException>(() => Client.StartNewSession(TestData.ClientInfo, rest));
-            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
-            Assert.Contains("Invalid JSON", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, rest),
+                                                 "Invalid or unexpected response");
         }
 
         [Fact]
@@ -96,9 +94,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var rest = new RestFlow().Post("{'success': 0}");
 
-            var e = Assert.Throws<ClientException>(() => Client.RegisterDevice(TestData.ClientInfo, rest));
-            Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
-            Assert.Contains("Failed to register", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Client.RegisterDevice(TestData.ClientInfo, rest),
+                                                 "Failed to register the device");
         }
 
         [Fact]
@@ -125,9 +122,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var rest = new RestFlow().Put("{'success': 0}");
 
-            var e = Assert.Throws<ClientException>(() => Client.ReauthorizeDevice(TestData.ClientInfo, rest));
-            Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
-            Assert.Contains("Failed to reauthorize", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Client.ReauthorizeDevice(TestData.ClientInfo, rest),
+                                                 "Failed to reauthorize the device");
         }
 
         [Fact]
