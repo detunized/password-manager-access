@@ -43,4 +43,22 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty(PropertyName = "success", Required = Required.Always)]
         public readonly int Success;
     }
+
+    internal struct Encrypted
+    {
+        [JsonProperty(PropertyName = "kid", Required = Required.Always)]
+        public readonly string KeyId;
+
+        [JsonProperty(PropertyName = "enc", Required = Required.Always)]
+        public readonly string Scheme;
+
+        [JsonProperty(PropertyName = "cty", Required = Required.Always)]
+        public readonly string Container;
+
+        [JsonProperty(PropertyName = "iv", Required = Required.Always)]
+        public readonly string Iv;
+
+        [JsonProperty(PropertyName = "data", Required = Required.Always)]
+        public readonly string Ciphertext;
+    }
 }

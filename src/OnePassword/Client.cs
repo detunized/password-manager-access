@@ -305,7 +305,7 @@ namespace PasswordManagerAccess.OnePassword
             public readonly VerifyStatus Status;
             public readonly SecondFactor[] Factors;
 
-            public VerifyResult(VerifyStatus status): this(status, new SecondFactor[0])
+            public VerifyResult(VerifyStatus status) : this(status, new SecondFactor[0])
             {
             }
 
@@ -467,11 +467,11 @@ namespace PasswordManagerAccess.OnePassword
             {
             case SecondFactor.GoogleAuthenticator:
                 key = "totp";
-                data = new Dictionary<string, string> {{"code", code}};
+                data = new Dictionary<string, string> { { "code", code } };
                 break;
             case SecondFactor.RememberMeToken:
                 key = "dsecret";
-                data = new Dictionary<string, string> {{"dshmac", Util.HashRememberMeToken(code, session)}};
+                data = new Dictionary<string, string> { { "dshmac", Util.HashRememberMeToken(code, session) } };
                 break;
             default:
                 throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
@@ -782,13 +782,22 @@ namespace PasswordManagerAccess.OnePassword
                 response.Error);
         }
 
+        // TODO: Remove
         internal static JObject GetEncryptedJson(string endpoint,
                                                  AesKey sessionKey,
                                                  RestClient rest)
         {
-            return Decrypt(Get(rest, endpoint), sessionKey);
+            return Decrypt(Get<R.Encrypted>(rest, endpoint), sessionKey);
         }
 
+        internal static T GetEncryptedJson<T>(string endpoint,
+                                              AesKey sessionKey,
+                                              RestClient rest)
+        {
+            return Decrypt<T>(Get<R.Encrypted>(rest, endpoint), sessionKey);
+        }
+
+        // TODO: Remove
         internal static JObject PostEncryptedJson(string endpoint,
                                                   Dictionary<string, object> parameters,
                                                   AesKey sessionKey,
@@ -796,19 +805,80 @@ namespace PasswordManagerAccess.OnePassword
         {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
-            var response = Post(rest, endpoint, encryptedPayload.ToDictionary());
+            var response = Post<R.Encrypted>(rest, endpoint, encryptedPayload.ToDictionary());
 
             return Decrypt(response, sessionKey);
         }
 
+        internal static T PostEncryptedJson<T>(string endpoint,
+                                               Dictionary<string, object> parameters,
+                                               AesKey sessionKey,
+                                               RestClient rest)
+        {
+            var payload = JsonConvert.SerializeObject(parameters);
+            var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
+            var response = Post<R.Encrypted>(rest, endpoint, encryptedPayload.ToDictionary());
+
+            return Decrypt<T>(response, sessionKey);
+        }
+
+        // TODO: Remove
         internal static JObject Decrypt(JToken json, AesKey sessionKey)
         {
             return JObject.Parse(sessionKey.Decrypt(Encrypted.Parse(json)).ToUtf8());
         }
 
+        // TODO: Remove
         internal static JObject Decrypt(JToken json, Keychain keychain)
         {
             return JObject.Parse(keychain.Decrypt(Encrypted.Parse(json)).ToUtf8());
+        }
+
+        // TODO: Remove
+        internal static JObject Decrypt(R.Encrypted encrypted, AesKey sessionKey)
+        {
+            return JObject.Parse(sessionKey.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
+        }
+
+        // TODO: Unite AesKey and Keychain via IDecryptor
+        internal static T Decrypt<T>(R.Encrypted encrypted, AesKey sessionKey)
+        {
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(sessionKey.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
+            }
+            catch (JsonException e)
+            {
+                throw new InternalErrorException("Failed to parse JSON in response from the server", e);
+            }
+        }
+
+        // TODO: Remove
+        internal static JObject Decrypt(R.Encrypted encrypted, Keychain keychain)
+        {
+            return JObject.Parse(keychain.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
+        }
+
+        // TODO: Unite AesKey and Keychain via IDecryptor
+        internal static T Decrypt<T>(R.Encrypted encrypted, Keychain keychain)
+        {
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(keychain.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
+            }
+            catch (JsonException e)
+            {
+                throw new InternalErrorException("Failed to parse JSON in response from the server", e);
+            }
+        }
+
+        internal static Encrypted ParseEncrypted(R.Encrypted encrypted)
+        {
+            return new Encrypted(keyId: encrypted.KeyId,
+                                 scheme: encrypted.Scheme,
+                                 container: encrypted.Container,
+                                 iv: encrypted.Iv.Decode64Loose(), // TODO: Is this optional?
+                                 ciphertext: encrypted.Ciphertext.Decode64Loose());
         }
 
         internal static string GetHttpResponse(ClientException e)
@@ -899,6 +969,15 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
+        private static T Get<T>(RestClient rest, string endpoint)
+        {
+            var response = rest.Get<T>(endpoint);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data;
+        }
+
         private static JObject Post(RestClient rest, string endpoint, Dictionary<string, object> parameters)
         {
             var response = rest.PostJson(endpoint, parameters);
@@ -917,6 +996,15 @@ namespace PasswordManagerAccess.OnePassword
                                           $"Invalid JSON in response from '{endpoint}'",
                                           e);
             }
+        }
+
+        private static T Post<T>(RestClient rest, string endpoint, Dictionary<string, object> parameters)
+        {
+            var response = rest.PostJson<T>(endpoint, parameters);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data;
         }
 
         //
