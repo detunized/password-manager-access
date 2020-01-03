@@ -395,7 +395,7 @@ namespace PasswordManagerAccess.Common
         public RestResponse<T> Put<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
             return MakeRequest<T>(endpoint,
-                                  HttpMethod.Get,
+                                  HttpMethod.Put,
                                   null,
                                   headers ?? NoHeaders,
                                   cookies ?? NoCookies,
