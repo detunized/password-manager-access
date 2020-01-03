@@ -281,9 +281,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var rest = new RestFlow().Put("{'success': 0}");
 
-            var e = Assert.Throws<ClientException>(() => Client.SignOut(rest));
-            Assert.Equal(ClientException.FailureReason.RespondedWithError, e.Reason);
-            Assert.Contains("Failed to sign out", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Client.SignOut(rest), "Failed to sign out");
         }
 
         [Fact]

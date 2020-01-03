@@ -690,10 +690,13 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static void SignOut(RestClient rest)
         {
-            var response = Put(rest, "v1/session/signout");
-            if (response.IntAt("success") != 1)
-                throw new ClientException(ClientException.FailureReason.RespondedWithError,
-                                          "Failed to sign out");
+            var response = rest.Put<R.SuccessStatus>("v1/session/signout");
+
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            if (response.Data.Success != 1)
+                throw new InternalErrorException("Failed to sign out");
         }
 
         internal static Keychain DecryptAllKeys(JToken accountInfo, JToken keysets, ClientInfo clientInfo)
@@ -876,7 +879,7 @@ namespace PasswordManagerAccess.OnePassword
         // Migration helpers
         //
 
-        internal static JObject Get(RestClient rest, string endpoint)
+        private static JObject Get(RestClient rest, string endpoint)
         {
             var response = rest.Get(endpoint);
             if (!response.IsSuccessful)
@@ -896,32 +899,12 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static JObject Post(RestClient rest, string endpoint, Dictionary<string, object> parameters)
+        private static JObject Post(RestClient rest, string endpoint, Dictionary<string, object> parameters)
         {
             var response = rest.PostJson(endpoint, parameters);
             if (!response.IsSuccessful)
                 throw new ClientException(ClientException.FailureReason.NetworkError,
                                           $"POST request to '{endpoint}' failed",
-                                          response.Error);
-
-            try
-            {
-                return JObject.Parse(response.Content);
-            }
-            catch (JsonException e)
-            {
-                throw new ClientException(ClientException.FailureReason.InvalidResponse,
-                                          $"Invalid JSON in response from '{endpoint}'",
-                                          e);
-            }
-        }
-
-        internal static JObject Put(RestClient rest, string endpoint)
-        {
-            var response = rest.Put(endpoint);
-            if (!response.IsSuccessful)
-                throw new ClientException(ClientException.FailureReason.NetworkError,
-                                          $"PUT request to '{endpoint}' failed",
                                           response.Error);
 
             try
