@@ -580,7 +580,6 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         // Don't enumerate more than once. It's very slow since it makes network requests.
-        // TODO: Add a test for the multi-batch scenario.
         internal static IEnumerable<R.VaultItem> EnumerateAccountsItemsInVault(string id,
                                                                                AesKey sessionKey,
                                                                                RestClient rest)

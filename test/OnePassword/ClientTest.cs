@@ -318,6 +318,26 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
+        public void GetVaultAccounts_with_multiple_batches_returns_all_accounts()
+        {
+            var rest = new RestFlow()
+                .Get(EncryptFixture("get-vault-accounts-ru74-batch-1-response"))
+                .Get(EncryptFixture("get-vault-accounts-ru74-batch-2-response"))
+                .Get(EncryptFixture("get-vault-accounts-ru74-batch-3-response"));
+            var keychain = new Keychain();
+            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
+                                    "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+
+            var accounts = Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a",
+                                                   TestData.SessionKey,
+                                                   keychain,
+                                                   rest,
+                                                   null);
+
+            Assert.Equal(3, accounts.Length);
+        }
+
+        [Fact]
         public void SignOut_works()
         {
             var rest = new RestFlow().Put("{'success': 1}");
