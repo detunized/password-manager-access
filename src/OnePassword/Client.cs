@@ -188,7 +188,7 @@ namespace PasswordManagerAccess.OnePassword
             rest = MakeRestClient(rest, new MacRequestSigner(session, sessionKey), session.Id);
 
             // Step 3: Verify the key with the server
-            var verifiedOrMfa = VerifySessionKey(clientInfo, session, sessionKey, rest);
+            var verifiedOrMfa = VerifySessionKey(session, sessionKey, rest);
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
@@ -316,10 +316,7 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static VerifyResult VerifySessionKey(ClientInfo clientInfo,
-                                                      Session session,
-                                                      AesKey sessionKey,
-                                                      RestClient rest)
+        internal static VerifyResult VerifySessionKey(Session session, AesKey sessionKey, RestClient rest)
         {
             try
             {
@@ -924,26 +921,6 @@ namespace PasswordManagerAccess.OnePassword
         // Migration helpers
         //
 
-        private static JObject Get(RestClient rest, string endpoint)
-        {
-            var response = rest.Get(endpoint);
-            if (!response.IsSuccessful)
-                throw new ClientException(ClientException.FailureReason.NetworkError,
-                                          $"GET request to '{endpoint}' failed",
-                                          response.Error);
-
-            try
-            {
-                return JObject.Parse(response.Content);
-            }
-            catch (JsonException e)
-            {
-                throw new ClientException(ClientException.FailureReason.InvalidResponse,
-                                          $"Invalid JSON in response from '{endpoint}'",
-                                          e);
-            }
-        }
-
         private static T Get<T>(RestClient rest, string endpoint)
         {
             var response = rest.Get<T>(endpoint);
@@ -951,26 +928,6 @@ namespace PasswordManagerAccess.OnePassword
                 throw MakeError(response);
 
             return response.Data;
-        }
-
-        private static JObject Post(RestClient rest, string endpoint, Dictionary<string, object> parameters)
-        {
-            var response = rest.PostJson(endpoint, parameters);
-            if (!response.IsSuccessful)
-                throw new ClientException(ClientException.FailureReason.NetworkError,
-                                          $"POST request to '{endpoint}' failed",
-                                          response.Error);
-
-            try
-            {
-                return JObject.Parse(response.Content);
-            }
-            catch (JsonException e)
-            {
-                throw new ClientException(ClientException.FailureReason.InvalidResponse,
-                                          $"Invalid JSON in response from '{endpoint}'",
-                                          e);
-            }
         }
 
         private static T Post<T>(RestClient rest, string endpoint, Dictionary<string, object> parameters)

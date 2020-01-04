@@ -128,7 +128,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void VerifySessionKey_returns_success()
         {
             var rest = new RestFlow().Post(EncryptFixture("verify-key-response"));
-            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SessionKey, rest);
+            var result = Client.VerifySessionKey(TestData.Session, TestData.SessionKey, rest);
 
             Assert.Equal(Client.VerifyStatus.Success, result.Status);
         }
@@ -141,7 +141,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ExpectUrl("1password.com/api/v2/auth/verify")
                 .ToRestClient(ApiUrl);
 
-            Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SessionKey, rest);
+            Client.VerifySessionKey(TestData.Session, TestData.SessionKey, rest);
         }
 
         [Fact]
