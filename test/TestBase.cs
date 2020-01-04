@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.IO;
+using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.Test
 {
@@ -16,6 +17,11 @@ namespace PasswordManagerAccess.Test
             using (Stream stream = type.Assembly.GetManifestResourceStream(fullName))
             using (StreamReader reader = new StreamReader(stream))
                 return reader.ReadToEnd();
+        }
+
+        public T ParseFixture<T>(string name)
+        {
+            return JsonConvert.DeserializeObject<T>(GetFixture(name, "json"));
         }
     }
 }
