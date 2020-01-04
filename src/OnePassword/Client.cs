@@ -502,27 +502,27 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static JObject GetAccountInfo(AesKey sessionKey, RestClient rest)
+        internal static R.AccountInfo GetAccountInfo(AesKey sessionKey, RestClient rest)
         {
-            return GetEncryptedJson(
+            return GetEncryptedJson<R.AccountInfo>(
                 "v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
                 sessionKey,
                 rest);
         }
 
-        internal static JObject GetKeysets(AesKey sessionKey, RestClient rest)
+        internal static R.KeysetsInfo GetKeysets(AesKey sessionKey, RestClient rest)
         {
-            return GetEncryptedJson("v1/account/keysets", sessionKey, rest);
+            return GetEncryptedJson<R.KeysetsInfo>("v1/account/keysets", sessionKey, rest);
         }
 
-        internal static Vault[] GetVaults(JToken accountInfo,
+        internal static Vault[] GetVaults(R.AccountInfo accountInfo,
                                           AesKey sessionKey,
                                           Keychain keychain,
                                           RestClient rest,
                                           ILogger logger)
         {
             var accessibleVaults = new HashSet<string>(BuildListOfAccessibleVaults(accountInfo));
-            var allVaults = (JArray)accountInfo.At("vaults");
+            var allVaults = accountInfo.Vaults;
 
             if (logger != null)
             {
@@ -530,36 +530,35 @@ namespace PasswordManagerAccess.OnePassword
                 logger.Log(DateTime.Now, $"accessible vaults: {access}");
 
                 var noAccess = AbbreviateIds(allVaults
-                    .Select(x => x.StringAt("uuid", "unknown"))
+                    .Select(x => x.Id)
                     .Except(accessibleVaults));
                 logger.Log(DateTime.Now, $"inaccessible vaults: {noAccess}");
             }
 
             return allVaults
-                .Where(i => accessibleVaults.Contains(i.StringAt("uuid", "")))
-                .Select(i => GetVault(i, sessionKey, keychain, rest, logger))
+                .Where(x => accessibleVaults.Contains(x.Id))
+                .Select(x => GetVault(x, sessionKey, keychain, rest, logger))
                 .ToArray();
         }
 
-        internal static string[] BuildListOfAccessibleVaults(JToken accountInfo)
+        internal static string[] BuildListOfAccessibleVaults(R.AccountInfo accountInfo)
         {
             const int haveReadAccess = 32;
 
-            return accountInfo.At("me/vaultAccess")
-                .Where(i => (i.IntAt("acl", 0) & haveReadAccess) != 0)
-                .Select(i => i.StringAt("vaultUuid", ""))
-                .Where(i => i != "")
+            return accountInfo.Me.VaultAceess
+                .Where(i => (i.Acl & haveReadAccess) != 0)
+                .Select(i => i.Id)
                 .ToArray();
         }
 
-        internal static Vault GetVault(JToken json,
+        internal static Vault GetVault(R.VaultInfo vault,
                                        AesKey sessionKey,
                                        Keychain keychain,
                                        RestClient rest,
                                        ILogger logger)
         {
-            var id = json.StringAt("uuid");
-            var attributes = Decrypt(json.At("encAttrs"), keychain);
+            var id = vault.Id;
+            var attributes = Decrypt(vault.Attributes, keychain);
 
             return new Vault(id: id,
                              name: attributes.StringAt("name", ""),
@@ -699,30 +698,32 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException("Failed to sign out");
         }
 
-        internal static Keychain DecryptAllKeys(JToken accountInfo, JToken keysets, ClientInfo clientInfo)
+        internal static Keychain DecryptAllKeys(R.AccountInfo accountInfo,
+                                                R.KeysetsInfo keysets,
+                                                ClientInfo clientInfo)
         {
             var keychain = new Keychain();
-            DecryptKeysets(keysets.At("keysets"), clientInfo, keychain);
-            DecryptVaultKeys(accountInfo.At("me/vaultAccess"), keychain);
+            DecryptKeysets(keysets.Keysets, clientInfo, keychain);
+            DecryptVaultKeys(accountInfo.Me.VaultAceess, keychain);
 
             return keychain;
         }
 
-        internal static void DecryptKeysets(JToken keysets, ClientInfo clientInfo, Keychain keychain)
+        internal static void DecryptKeysets(R.KeysetInfo[] keysets, ClientInfo clientInfo, Keychain keychain)
         {
             var sorted = keysets
-                .OrderByDescending(i => i.StringAt("encryptedBy") == MasterKeyId) // everything with "mp" goes first
-                .ThenByDescending(i => i.IntAt("sn"))                             // and then is sorted by "sn"
+                .OrderByDescending(x => x.EncryptedBy == MasterKeyId) // everything with "mp" goes first
+                .ThenByDescending(x => x.SerialNumber)                // and then is sorted by "sn"
                 .ToArray();
 
-            if (sorted[0].StringAt("encryptedBy") != MasterKeyId)
+            if (sorted[0].EncryptedBy != MasterKeyId)
                 throw ExceptionFactory.MakeInvalidOperation(
                     string.Format("Invalid keyset (key must be encrypted by '{0}')", MasterKeyId));
 
-            var keyInfo = sorted[0].At("encSymKey");
-            var masterKey = DeriveMasterKey(algorithm: keyInfo.StringAt("alg"),
-                                            iterations: keyInfo.IntAt("p2c"),
-                                            salt: keyInfo.StringAt("p2s").Decode64Loose(),
+            var keyInfo = sorted[0].KeyOrMasterKey;
+            var masterKey = DeriveMasterKey(algorithm: keyInfo.Algorithm,
+                                            iterations: keyInfo.Iterations,
+                                            salt: keyInfo.Salt.Decode64Loose(),
                                             clientInfo: clientInfo);
             keychain.Add(masterKey);
 
@@ -730,26 +731,26 @@ namespace PasswordManagerAccess.OnePassword
                 DecryptKeyset(i, keychain);
         }
 
-        internal static void DecryptVaultKeys(JToken vaults, Keychain keychain)
+        internal static void DecryptVaultKeys(R.VaultAccessInfo[] vaults, Keychain keychain)
         {
             foreach (var i in vaults)
-                DecryptAesKey(i.At("encVaultKey"), keychain);
+                DecryptAesKey(i.EncryptedKey, keychain);
         }
 
-        internal static void DecryptKeyset(JToken keyset, Keychain keychain)
+        internal static void DecryptKeyset(R.KeysetInfo keyset, Keychain keychain)
         {
-            DecryptAesKey(keyset.At("encSymKey"), keychain);
-            DecryptRsaKey(keyset.At("encPriKey"), keychain);
+            DecryptAesKey(keyset.KeyOrMasterKey, keychain);
+            DecryptRsaKey(keyset.PrivateKey, keychain);
         }
 
-        internal static void DecryptAesKey(JToken key, Keychain keychain)
+        internal static void DecryptAesKey(R.Encrypted encrypted, Keychain keychain)
         {
-            keychain.Add(AesKey.Parse(Decrypt(key, keychain)));
+            keychain.Add(AesKey.Parse(Decrypt(encrypted, keychain)));
         }
 
-        internal static void DecryptRsaKey(JToken key, Keychain keychain)
+        internal static void DecryptRsaKey(R.Encrypted encrypted, Keychain keychain)
         {
-            keychain.Add(RsaKey.Parse(Decrypt(key, keychain)));
+            keychain.Add(RsaKey.Parse(Decrypt(encrypted, keychain)));
         }
 
         internal static AesKey DeriveMasterKey(string algorithm,
@@ -851,7 +852,7 @@ namespace PasswordManagerAccess.OnePassword
             return new Encrypted(keyId: encrypted.KeyId,
                                  scheme: encrypted.Scheme,
                                  container: encrypted.Container,
-                                 iv: encrypted.Iv.Decode64Loose(), // TODO: Is this optional?
+                                 iv: encrypted.Iv?.Decode64Loose(), // This is optional
                                  ciphertext: encrypted.Ciphertext.Decode64Loose());
         }
 

@@ -44,7 +44,7 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly int Success;
     }
 
-    internal struct Encrypted
+    internal class Encrypted
     {
         [JsonProperty(PropertyName = "kid", Required = Required.Always)]
         public readonly string KeyId;
@@ -55,10 +55,82 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty(PropertyName = "cty", Required = Required.Always)]
         public readonly string Container;
 
-        [JsonProperty(PropertyName = "iv", Required = Required.Always)]
+        [JsonProperty(PropertyName = "iv")]
         public readonly string Iv;
 
         [JsonProperty(PropertyName = "data", Required = Required.Always)]
         public readonly string Ciphertext;
+    }
+
+    internal class AccountInfo
+    {
+        [JsonProperty(PropertyName = "me", Required = Required.Always)]
+        public readonly MeInfo Me;
+
+        [JsonProperty(PropertyName = "vaults", Required = Required.Always)]
+        public readonly VaultInfo[] Vaults;
+    }
+
+    internal class MeInfo
+    {
+        [JsonProperty(PropertyName = "vaultAccess", Required = Required.Always)]
+        public readonly VaultAccessInfo[] VaultAceess;
+    }
+
+    internal class VaultAccessInfo
+    {
+        [JsonProperty(PropertyName = "vaultUuid", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty(PropertyName = "acl", Required = Required.Always)]
+        public readonly int Acl;
+
+        [JsonProperty(PropertyName = "encVaultKey", Required = Required.Always)]
+        public readonly Encrypted EncryptedKey;
+    }
+
+    internal class VaultInfo
+    {
+        [JsonProperty(PropertyName = "uuid", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty(PropertyName = "encAttrs", Required = Required.Always)]
+        public readonly Encrypted Attributes;
+    }
+
+    internal class KeysetsInfo
+    {
+        [JsonProperty(PropertyName = "keysets", Required = Required.Always)]
+        public readonly KeysetInfo[] Keysets;
+    }
+
+    internal class KeysetInfo
+    {
+        [JsonProperty(PropertyName = "encryptedBy", Required = Required.Always)]
+        public readonly string EncryptedBy;
+
+        [JsonProperty(PropertyName = "sn", Required = Required.Always)]
+        public readonly int SerialNumber;
+
+        [JsonProperty(PropertyName = "encSymKey", Required = Required.Always)]
+        public readonly KeyDerivationInfo KeyOrMasterKey;
+
+        [JsonProperty(PropertyName = "encPriKey", Required = Required.Always)]
+        public readonly Encrypted PrivateKey;
+    }
+
+    // All these fields here are optional because for the master key and the master key only we have
+    // more fields. For the master key these fields are not optional, but there's no way to express
+    // this with attributes.
+    internal class KeyDerivationInfo : Encrypted
+    {
+        [JsonProperty(PropertyName = "alg")]
+        public readonly string Algorithm;
+
+        [JsonProperty(PropertyName = "p2s")]
+        public readonly string Salt;
+
+        [JsonProperty(PropertyName = "p2c")]
+        public readonly int Iterations;
     }
 }
