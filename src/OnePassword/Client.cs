@@ -318,47 +318,35 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static VerifyResult VerifySessionKey(Session session, AesKey sessionKey, RestClient rest)
         {
-            try
-            {
-                var response = PostEncryptedJson(
-                    "v2/auth/verify",
-                    new Dictionary<string, object>
-                    {
-                        {"sessionID", session.Id},
-                        {"clientVerifyHash", Util.CalculateClientHash(session)},
-                        {"client", ClientId},
-                    },
-                    sessionKey,
-                    rest);
+            var response = PostEncryptedJson<R.VerifyKey>(
+                "v2/auth/verify",
+                new Dictionary<string, object>
+                {
+                    {"sessionID", session.Id},
+                    {"clientVerifyHash", Util.CalculateClientHash(session)},
+                    {"client", ClientId},
+                },
+                sessionKey,
+                rest);
 
-                // TODO: 1P verifies if "serverVerifyHash" is valid. Do that.
-                // We assume it's all good if we got HTTP 200.
+            // TODO: 1P verifies if "serverVerifyHash" is valid. Do that.
+            // We assume it's all good if we got HTTP 200.
 
-                var mfa = response.At("mfa", null);
-                if (mfa == null)
-                    return new VerifyResult(VerifyStatus.Success);
+            var mfa = response.Mfa;
+            if (mfa == null)
+                return new VerifyResult(VerifyStatus.Success);
 
-                return new VerifyResult(VerifyStatus.SecondFactorRequired, ParseSecondFactors(mfa));
-            }
-            catch (ClientException e)
-            {
-                if (!IsError102(e))
-                    throw;
-
-                throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                          "Username, password or account key is incorrect",
-                                          e.InnerException);
-            }
+            return new VerifyResult(VerifyStatus.SecondFactorRequired, GetSecondFactors(mfa));
         }
 
-        internal static SecondFactor[] ParseSecondFactors(JToken mfa)
+        internal static SecondFactor[] GetSecondFactors(R.MfaInfo mfa)
         {
             var factors = new List<SecondFactor>(2);
 
-            if (mfa.BoolAt("totp/enabled", false))
+            if (mfa.GoogleAuth?.Enabled == true)
                 factors.Add(SecondFactor.GoogleAuthenticator);
 
-            if (mfa.BoolAt("dsecret/enabled", false))
+            if (mfa.RememberMe?.Enabled == true)
                 factors.Add(SecondFactor.RememberMeToken);
 
             if (factors.Count == 0)
@@ -775,9 +763,36 @@ namespace PasswordManagerAccess.OnePassword
             if (response.IsNetworkError)
                 return new NetworkErrorException("Network error has occurred", response.Error);
 
+            var serverError = ParseServerError(response.Content);
+            if (serverError != null)
+                return serverError;
+
             return new InternalErrorException(
                 $"Invalid or unexpected response from the server (HTTP status: {response.StatusCode})",
                 response.Error);
+        }
+
+        // Returns null when no error is found
+        internal static Common.BaseException ParseServerError(string response)
+        {
+            try
+            {
+                var error = JsonConvert.DeserializeObject<R.Error>(response);
+                switch (error.Code)
+                {
+                case 102:
+                    return new BadCredentialsException("Username, password or account key is incorrect");
+                default:
+                    return new InternalErrorException(
+                        $"The server responded with the error code {error.Code} and the message '{error.Message}'");
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignore, it wasn't a server error
+            }
+
+            return null;
         }
 
         // TODO: Remove
@@ -834,12 +849,19 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
         {
+            string plaintext = decryptor.Decrypt(ParseEncrypted(encrypted)).ToUtf8();
             try
             {
-                return JsonConvert.DeserializeObject<T>(decryptor.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
+                return JsonConvert.DeserializeObject<T>(plaintext);
             }
             catch (JsonException e)
             {
+                // When de-serialization fails it's possible that the server responded with an error
+                // and we should try to parse it first.
+                var serverError = ParseServerError(plaintext);
+                if (serverError != null)
+                    throw serverError;
+
                 throw new InternalErrorException("Failed to parse JSON in response from the server", e);
             }
         }

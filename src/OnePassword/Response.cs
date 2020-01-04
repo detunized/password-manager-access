@@ -23,7 +23,7 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly UserAuth Auth;
     }
 
-    internal struct UserAuth
+    internal class UserAuth
     {
         [JsonProperty(PropertyName = "method")]
         public readonly string Method;
@@ -132,5 +132,44 @@ namespace PasswordManagerAccess.OnePassword.Response
 
         [JsonProperty(PropertyName = "p2c")]
         public readonly int Iterations;
+    }
+
+    internal class VerifyKey
+    {
+        [JsonProperty(PropertyName = "accountUuid", Required = Required.Always)]
+        public readonly string AccountId;
+
+        [JsonProperty(PropertyName = "userUuid", Required = Required.Always)]
+        public readonly string UserId;
+
+        [JsonProperty(PropertyName = "serverVerifyHash", Required = Required.Always)]
+        public readonly string ServerHash;
+
+        [JsonProperty(PropertyName = "mfa")]
+        public readonly MfaInfo Mfa;
+    }
+
+    internal class MfaInfo
+    {
+        [JsonProperty(PropertyName = "dsecret")]
+        public readonly MfaEnabled RememberMe;
+
+        [JsonProperty(PropertyName = "totp")]
+        public readonly MfaEnabled GoogleAuth;
+    }
+
+    internal class MfaEnabled
+    {
+        [JsonProperty(PropertyName = "enabled", Required = Required.Always)]
+        public readonly bool Enabled;
+    }
+
+    internal class Error
+    {
+        [JsonProperty(PropertyName = "errorCode", Required = Required.Always)]
+        public readonly int Code;
+
+        [JsonProperty(PropertyName = "errorMessage")]
+        public readonly string Message;
     }
 }

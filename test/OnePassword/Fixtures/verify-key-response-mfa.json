@@ -2,6 +2,17 @@
     "notifier": "wss://b5n.1password.com/FPF3CVJPDVAT5NVS26SPR4MPAI/DFM4DHQMQ5AS5M6UHSD6PNV774/rz64r4uhyvgew672nm4ncaqonq",
     "accountUuid": "FPF3CVJPDVAT5NVS26SPR4MPAI",
     "userUuid": "DFM4DHQMQ5AS5M6UHSD6PNV774",
-    "mfa": null,
+    "mfa": {
+        "dsecret": {
+            "enabled": true
+        },
+        "dsecretProxy": {
+            "enabled": true
+        },
+        "totp": {
+            "enabled": true,
+            "digits": 6
+        }
+    },
     "serverVerifyHash": "Ke81HUwT13BAW5OrymPX7i7Aii_3cnCKSDJOlt55HMc"
 }

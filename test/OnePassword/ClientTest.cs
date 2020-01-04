@@ -3,7 +3,6 @@
 
 using System.Net.Http;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
@@ -145,29 +144,50 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void ParseSecondFactors_returns_factors()
+        public void VerifySessionKey_returns_factors()
         {
-            var json = JToken.Parse("{'totp': {'enabled': true}, 'dsecret': {'enabled': true}}");
-            var factors = Client.ParseSecondFactors(json);
+            var rest = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
+            var result = Client.VerifySessionKey(TestData.Session, TestData.SessionKey, rest);
+
+            Assert.Equal(2, result.Factors.Length);
+        }
+
+        [Fact]
+        public void VerifySessionKey_throws_BadCredentials_on_auth_error()
+        {
+            var rest = new RestFlow().Post(EncryptFixture("no-auth-response"));
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.VerifySessionKey(TestData.Session, TestData.SessionKey, rest),
+                "Username, password or account key");
+        }
+
+        [Fact]
+        public void GetSecondFactors_returns_factors()
+        {
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+                "{'totp': {'enabled': true}, 'dsecret': {'enabled': true}}");
+            var factors = Client.GetSecondFactors(mfa);
 
             Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator, Client.SecondFactor.RememberMeToken },
                          factors);
         }
 
         [Fact]
-        public void ParseSecondFactor_ignores_missing_factors()
+        public void GetSecondFactors_ignores_missing_factors()
         {
-            var json = JToken.Parse("{'totp': {'enabled': true}}");
-            var factors = Client.ParseSecondFactors(json);
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{'totp': {'enabled': true}}");
+            var factors = Client.GetSecondFactors(mfa);
 
             Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator }, factors);
         }
 
         [Fact]
-        public void ParseSecondFactor_ignores_disabled_factors()
+        public void GetSecondFactors_ignores_disabled_factors()
         {
-            var json = JToken.Parse("{'totp': {'enabled': true}, 'dsecret': {'enabled': false}}");
-            var factors = Client.ParseSecondFactors(json);
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+                "{'totp': {'enabled': true}, 'dsecret': {'enabled': false}}");
+            var factors = Client.GetSecondFactors(mfa);
 
             Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator }, factors);
         }
