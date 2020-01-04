@@ -404,6 +404,7 @@ namespace PasswordManagerAccess.OnePassword
                 // The token got rejected, need to erase it, it's no longer valid.
                 storage.StoreString(RememberMeTokenKey, null);
 
+                // TODO: Don't throw on this. Rather ask the user for the code and sign in as usual.
                 throw new ClientException(ClientException.FailureReason.OutdatedRememberMeToken,
                                           "'Remember me' token got rejected",
                                           e.InnerException);
@@ -464,26 +465,21 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var response = PostEncryptedJson("v1/auth/mfa",
-                                                 new Dictionary<string, object>
-                                                 {
-                                                     {"sessionID", session.Id},
-                                                     {"client", ClientId},
-                                                     {key, data},
-                                                 },
-                                                 sessionKey,
-                                                 rest);
+                var response = PostEncryptedJson<R.Mfa>("v1/auth/mfa",
+                                                        new Dictionary<string, object>
+                                                        {
+                                                            {"sessionID", session.Id},
+                                                            {"client", ClientId},
+                                                            {key, data},
+                                                        },
+                                                        sessionKey,
+                                                        rest);
 
-                return response.StringAt("dsecret", "");
+                return response.RememberMeToken;
             }
-            catch (ClientException e)
+            catch (BadCredentialsException e)
             {
-                if (!IsError102(e))
-                    throw;
-
-                throw new ClientException(ClientException.FailureReason.IncorrectSecondFactorCode,
-                                          "Incorrect second factor code",
-                                          e.InnerException);
+                throw new BadMultiFactorException("Incorrect second factor code", e.InnerException);
             }
         }
 
@@ -808,19 +804,6 @@ namespace PasswordManagerAccess.OnePassword
                                               RestClient rest)
         {
             return Decrypt<T>(Get<R.Encrypted>(rest, endpoint), sessionKey);
-        }
-
-        // TODO: Remove
-        internal static JObject PostEncryptedJson(string endpoint,
-                                                  Dictionary<string, object> parameters,
-                                                  AesKey sessionKey,
-                                                  RestClient rest)
-        {
-            var payload = JsonConvert.SerializeObject(parameters);
-            var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
-            var response = Post<R.Encrypted>(rest, endpoint, encryptedPayload.ToDictionary());
-
-            return Decrypt(response, sessionKey);
         }
 
         internal static T PostEncryptedJson<T>(string endpoint,

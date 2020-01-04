@@ -193,6 +193,48 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
+        public void SubmitSecondFactorCode_returns_remember_me_token()
+        {
+            var rest = new RestFlow().Post(EncryptFixture("mfa-response"));
+            var token = Client.SubmitSecondFactorCode(Client.SecondFactor.GoogleAuthenticator,
+                                                      "123456",
+                                                      TestData.Session,
+                                                      TestData.SessionKey,
+                                                      rest);
+
+            Assert.Equal("gUhBItRHUI7vAc04TJNUkA", token);
+        }
+
+        [Fact]
+        public void SubmitSecondFactorCode_makes_POST_request_to_specific_url()
+        {
+            var rest = new RestFlow()
+                .Post(EncryptFixture("mfa-response"))
+                .ExpectUrl("1password.com/api/v1/auth/mfa")
+                .ToRestClient(ApiUrl);
+
+            Client.SubmitSecondFactorCode(Client.SecondFactor.GoogleAuthenticator,
+                                          "123456",
+                                          TestData.Session,
+                                          TestData.SessionKey,
+                                          rest);
+        }
+
+        [Fact]
+        public void SubmitSecondFactorCode_throws_BadMultiFactor_on_auth_error()
+        {
+            var rest = new RestFlow().Post(EncryptFixture("no-auth-response"));
+
+            Exceptions.AssertThrowsBadMultiFactor(
+                () => Client.SubmitSecondFactorCode(Client.SecondFactor.GoogleAuthenticator,
+                                                    "123456",
+                                                    TestData.Session,
+                                                    TestData.SessionKey,
+                                                    rest),
+                "Incorrect second factor code");
+        }
+
+        [Fact]
         public void GetAccountInfo_works()
         {
             var rest = new RestFlow().Get(EncryptFixture("get-account-info-response"));

@@ -172,4 +172,10 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty(PropertyName = "errorMessage")]
         public readonly string Message;
     }
+
+    internal class Mfa
+    {
+        [JsonProperty(PropertyName = "dsecret", Required = Required.Always)]
+        public readonly string RememberMeToken;
+    }
 }
