@@ -26,7 +26,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public static readonly byte[] SessionKeyBytes =
             "1c45a129b9e96b2f2eae330e8fd3c2dbb9dbe71b696d19823f3fa031b3218aad".DecodeHex();
 
-        public static readonly AesKey SesionKey = new AesKey(SessionId, SessionKeyBytes);
+        public static readonly AesKey SessionKey = new AesKey(SessionId, SessionKeyBytes);
 
         public static Session MakeSession(string id = SessionId)
         {

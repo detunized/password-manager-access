@@ -1,7 +1,4 @@
 {
-  "kid": "TOZVTFIFBZGFDFNE5KSZFY7EZY",
-  "enc": "A256GCM",
-  "cty": "b5+jwk+json",
-  "iv": "hTKHFpseQDCBhJS4",
-  "data": "ZmiveZwhBU-JVLmUmlhXksGQjCQyOgESQ50AhpxrXAKQ0ajRgshKxZsJkgZc3Tx4T11y_xOSNkXw"
+    "contentVersion": 3,
+    "batchComplete": true
 }

@@ -2,15 +2,12 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Net.Http;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
 using R = PasswordManagerAccess.OnePassword.Response;
-
-// TODO: DRY up tests. There's quite a bit of copy-paste here.
-// TODO: Creating encrypted test fixtures is a giant PITA and not very obvious what's going on.
-//       Look into this. Maybe encrypt on the fly and store plain JSON response in the fixture.
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
@@ -130,8 +127,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void VerifySessionKey_returns_success()
         {
-            var rest = new RestFlow().Post(GetFixture("verify-key-response"));
-            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, rest);
+            var rest = new RestFlow().Post(EncryptFixture("verify-key-response"));
+            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SessionKey, rest);
 
             Assert.Equal(Client.VerifyStatus.Success, result.Status);
         }
@@ -140,11 +137,11 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void VerifySessionKey_makes_POST_request_to_specific_url()
         {
             var rest = new RestFlow()
-                .Post(GetFixture("verify-key-response"))
+                .Post(EncryptFixture("verify-key-response"))
                 .ExpectUrl("1password.com/api/v2/auth/verify")
                 .ToRestClient(ApiUrl);
 
-            Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SesionKey, rest);
+            Client.VerifySessionKey(TestData.ClientInfo, TestData.Session, TestData.SessionKey, rest);
         }
 
         [Fact]
@@ -181,7 +178,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var rest = new RestFlow().Get(GetFixture("get-account-info-response"));
 
-            Client.GetAccountInfo(TestData.SesionKey, rest);
+            Client.GetAccountInfo(TestData.SessionKey, rest);
         }
 
         // TODO: Update fixtures
@@ -193,7 +190,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ExpectUrl("1password.com/api/v1/account")
                 .ToRestClient(ApiUrl);
 
-            Client.GetAccountInfo(TestData.SesionKey, rest);
+            Client.GetAccountInfo(TestData.SessionKey, rest);
         }
 
         // TODO: Update fixtures
@@ -202,7 +199,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var rest = new RestFlow().Get(GetFixture("empty-object-response"));
 
-            Client.GetKeysets(TestData.SesionKey, rest);
+            Client.GetKeysets(TestData.SessionKey, rest);
         }
 
         // TODO: Update fixtures
@@ -214,7 +211,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ExpectUrl("1password.com/api/v1/account/keysets")
                 .ToRestClient(ApiUrl);
 
-            Client.GetKeysets(TestData.SesionKey, rest);
+            Client.GetKeysets(TestData.SessionKey, rest);
         }
 
         [Fact]
@@ -229,37 +226,37 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetVaultAccounts_work()
         {
-            var rest = new RestFlow().Get(GetFixture("get-vault-accounts-ru74-response"));
+            var rest = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, rest, null);
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SessionKey, keychain, rest, null);
         }
 
         [Fact]
         public void GetVaultAccounts_with_no_items_work()
         {
-            var rest = new RestFlow().Get(GetFixture("get-vault-with-no-items-response"));
+            var rest = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, rest, null);
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SessionKey, keychain, rest, null);
         }
 
         [Fact]
         public void GetVaultAccounts_makes_GET_request_to_specific_url()
         {
             var rest = new RestFlow()
-                .Get(GetFixture("get-vault-accounts-ru74-response"))
+                .Get(EncryptFixture("get-vault-accounts-ru74-response"))
                 .ExpectUrl("1password.com/api/v1/vault")
                 .ToRestClient(ApiUrl);
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SesionKey, keychain, rest, null);
+            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SessionKey, keychain, rest, null);
         }
 
         [Fact]
@@ -353,6 +350,16 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var http = Client.MakeRestClient(new RestClient(null, "https://base.url"));
             Assert.Equal("https://base.url", http.BaseUrl);
+        }
+
+        //
+        // Helpers
+        //
+
+        private string EncryptFixture(string name)
+        {
+            var encrypted = TestData.SessionKey.Encrypt(GetFixture(name).ToBytes());
+            return JsonConvert.SerializeObject(encrypted.ToDictionary());
         }
 
         //
