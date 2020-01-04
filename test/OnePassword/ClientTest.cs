@@ -172,42 +172,38 @@ namespace PasswordManagerAccess.Test.OnePassword
             Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator }, factors);
         }
 
-        // TODO: Update fixtures
-        [Fact(Skip = "Fixture is invalid")]
+        [Fact]
         public void GetAccountInfo_works()
         {
-            var rest = new RestFlow().Get(GetFixture("get-account-info-response"));
+            var rest = new RestFlow().Get(EncryptFixture("get-account-info-response"));
 
             Client.GetAccountInfo(TestData.SessionKey, rest);
         }
 
-        // TODO: Update fixtures
-        [Fact(Skip = "Fixture is invalid")]
+        [Fact]
         public void GetAccountInfo_makes_GET_request_to_specific_url()
         {
             var rest = new RestFlow()
-                .Get(GetFixture("get-account-info-response"))
+                .Get(EncryptFixture("get-account-info-response"))
                 .ExpectUrl("1password.com/api/v1/account")
                 .ToRestClient(ApiUrl);
 
             Client.GetAccountInfo(TestData.SessionKey, rest);
         }
 
-        // TODO: Update fixtures
-        [Fact(Skip = "Fixture is invalid")]
+        [Fact]
         public void GetKeysets_works()
         {
-            var rest = new RestFlow().Get(GetFixture("empty-object-response"));
+            var rest = new RestFlow().Get(EncryptFixture("get-keysets-response"));
 
             Client.GetKeysets(TestData.SessionKey, rest);
         }
 
-        // TODO: Update fixtures
-        [Fact(Skip = "Fixture is invalid")]
+        [Fact]
         public void GetKeysets_makes_GET_request_to_specific_url()
         {
             var rest = new RestFlow()
-                .Get(GetFixture("empty-object-response"))
+                .Get(EncryptFixture("get-keysets-response"))
                 .ExpectUrl("1password.com/api/v1/account/keysets")
                 .ToRestClient(ApiUrl);
 
@@ -217,7 +213,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void BuildListOfAccessibleVaults_returns_vaults()
         {
-            var accountInfo = ParseFixture<R.AccountInfo>("account-info");
+            var accountInfo = ParseFixture<R.AccountInfo>("get-account-info-response");
             var vaults = Client.BuildListOfAccessibleVaults(accountInfo);
 
             Assert.Equal(new[] {"ru74fjxlkipzzctorwj4icrj2a", "4tz67op2kfiapodi5ygprtwn64"}, vaults);
@@ -289,8 +285,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void DecryptKeys_returns_all_keys_in_keychain()
         {
-            var accountInfo = ParseFixture<R.AccountInfo>("account-info");
-            var keysets = ParseFixture<R.KeysetsInfo>("keysets");
+            var accountInfo = ParseFixture<R.AccountInfo>("get-account-info-response");
+            var keysets = ParseFixture<R.KeysetsInfo>("get-keysets-response");
             var keychain = Client.DecryptAllKeys(accountInfo, keysets, ClientInfo);
 
             var aesKeys = new[]
