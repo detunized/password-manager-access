@@ -3,10 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
@@ -563,7 +560,7 @@ namespace PasswordManagerAccess.OnePassword
                 var stats = new Dictionary<string, int>();
                 foreach (var i in items)
                 {
-                    var key = i.StringAt("templateUuid", "unknown");
+                    var key = i.TemplateId;
                     if (stats.ContainsKey(key))
                         stats[key]++;
                     else
@@ -578,40 +575,41 @@ namespace PasswordManagerAccess.OnePassword
 
             return items
                 .Where(ShouldKeepAccount)
-                .Select(i => ParseAccount(i, keychain))
+                .Select(x => ParseAccount(x, keychain))
                 .ToArray();
         }
 
         // Don't enumerate more than once. It's very slow since it makes network requests.
         // TODO: Add a test for the multi-batch scenario.
-        internal static IEnumerable<JToken> EnumerateAccountsItemsInVault(string id,
-                                                                          AesKey sessionKey,
-                                                                          RestClient rest)
+        internal static IEnumerable<R.VaultItem> EnumerateAccountsItemsInVault(string id,
+                                                                               AesKey sessionKey,
+                                                                               RestClient rest)
         {
             var batchId = 0;
             while (true)
             {
-                var response = GetEncryptedJson($"v1/vault/{id}/{batchId}/items", sessionKey, rest);
-                foreach (var i in response.At("items", new JArray()))
-                    yield return i;
+                var batch = GetEncryptedJson<R.VaultItemsBatch>($"v1/vault/{id}/{batchId}/items", sessionKey, rest);
+                if (batch.Items != null)
+                    foreach (var i in batch.Items)
+                        yield return i;
 
                 // The last batch is marked with {batchComplete: true}
-                if (response.BoolAt("batchComplete", true))
+                if (batch.Complete)
                     yield break;
 
-                batchId = response.IntAt("contentVersion");
+                batchId = batch.Version;
             }
         }
 
         // TODO: Add a test to verify the deleted accounts are ignored
-        internal static bool ShouldKeepAccount(JToken account)
+        internal static bool ShouldKeepAccount(R.VaultItem account)
         {
             // Reject everything but accounts/logins
-            if (account.StringAt("templateUuid", "") != AccountTemplateId)
+            if (account.TemplateId != AccountTemplateId)
                 return false;
 
             // Reject deleted accounts (be conservative, throw only explicitly marked as "Y")
-            if (account.StringAt("trashed", "") == "Y")
+            if (account.Deleted == "Y")
                 return false;
 
             return true;
@@ -620,13 +618,13 @@ namespace PasswordManagerAccess.OnePassword
         // TODO: It's really difficult to write tests for this structure: everything
         //       is encrypted and it's very annoying to create fixtures. They also look
         //       completely opaque, no clue what's going on inside. See how this could be fixed.
-        internal static Account ParseAccount(JToken json, Keychain keychain)
+        internal static Account ParseAccount(R.VaultItem account, Keychain keychain)
         {
-            var overview = Decrypt(json.At("encOverview"), keychain);
-            var details = Decrypt(json.At("encDetails"), keychain);
+            var overview = Decrypt(account.Overview, keychain);
+            var details = Decrypt(account.Details, keychain);
             var fields = details.At("fields", new JArray());
 
-            return new Account(json.StringAt("uuid", ""),
+            return new Account(account.Id,
                                overview.StringAt("title", ""),
                                FindAccountField(fields, "username"),
                                FindAccountField(fields, "password"),
@@ -791,14 +789,6 @@ namespace PasswordManagerAccess.OnePassword
             return null;
         }
 
-        // TODO: Remove
-        private static JObject GetEncryptedJson(string endpoint,
-                                                AesKey sessionKey,
-                                                RestClient rest)
-        {
-            return Decrypt(Get<R.Encrypted>(rest, endpoint), sessionKey);
-        }
-
         internal static T GetEncryptedJson<T>(string endpoint,
                                               AesKey sessionKey,
                                               RestClient rest)
@@ -816,12 +806,6 @@ namespace PasswordManagerAccess.OnePassword
             var response = Post<R.Encrypted>(rest, endpoint, encryptedPayload.ToDictionary());
 
             return Decrypt<T>(response, sessionKey);
-        }
-
-        // TODO: Remove
-        private static JObject Decrypt(JToken json, IDecryptor decryptor)
-        {
-            return JObject.Parse(decryptor.Decrypt(Encrypted.Parse(json)).ToUtf8());
         }
 
         // TODO: Remove

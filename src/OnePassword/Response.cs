@@ -178,4 +178,40 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty(PropertyName = "dsecret", Required = Required.Always)]
         public readonly string RememberMeToken;
     }
+
+    internal class VaultItemsBatch
+    {
+        [JsonProperty(PropertyName = "contentVersion", Required = Required.Always)]
+        public readonly int Version;
+
+        [JsonProperty(PropertyName = "items")]
+        public readonly VaultItem[] Items;
+
+        [JsonProperty(PropertyName = "batchComplete", Required = Required.Always)]
+        public readonly bool Complete;
+    }
+
+    internal class VaultItem
+    {
+        [JsonProperty("uuid", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty("templateUuid", Required = Required.Always)]
+        public readonly string TemplateId;
+
+        [JsonProperty("trashed", Required = Required.Always)]
+        public readonly string Deleted;
+
+        [JsonProperty("itemVersion", Required = Required.Always)]
+        public readonly int Version;
+
+        [JsonProperty("encryptedBy", Required = Required.Always)]
+        public readonly string EncryptedBy;
+
+        [JsonProperty("encOverview", Required = Required.Always)]
+        public readonly Encrypted Overview;
+
+        [JsonProperty("encDetails", Required = Required.Always)]
+        public readonly Encrypted Details;
+    }
 }
