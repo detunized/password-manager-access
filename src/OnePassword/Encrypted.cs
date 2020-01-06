@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
@@ -15,13 +14,13 @@ namespace PasswordManagerAccess.OnePassword
         public readonly byte[] Iv;
         public readonly byte[] Ciphertext;
 
-        public static Encrypted Parse(JToken json)
+        public static Encrypted Parse(Response.Encrypted json)
         {
-            return new Encrypted(keyId: json.StringAt("kid"),
-                                 scheme: json.StringAt("enc"),
-                                 container: json.StringAt("cty"),
-                                 iv: json.StringAt("iv", "").Decode64Loose(),
-                                 ciphertext: json.StringAt("data").Decode64Loose());
+            return new Encrypted(keyId: json.KeyId,
+                                 scheme: json.Scheme,
+                                 container: json.Container,
+                                 iv: json.Iv?.Decode64Loose(), // This is optional
+                                 ciphertext: json.Ciphertext.Decode64Loose());
         }
 
         public Encrypted(string keyId, string scheme, string container, byte[] iv, byte[] ciphertext)

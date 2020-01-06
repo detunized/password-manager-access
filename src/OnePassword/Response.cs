@@ -3,6 +3,7 @@
 
 using Newtonsoft.Json;
 
+// TODO: Rename to Wire or Model since not all this things are responses
 namespace PasswordManagerAccess.OnePassword.Response
 {
     internal class NewSession
@@ -117,6 +118,45 @@ namespace PasswordManagerAccess.OnePassword.Response
 
         [JsonProperty(PropertyName = "encPriKey", Required = Required.Always)]
         public readonly Encrypted PrivateKey;
+    }
+
+    internal class AesKey
+    {
+        [JsonProperty("kid", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty("k", Required = Required.Always)]
+        public readonly string Key;
+    }
+
+    internal class RsaKey
+    {
+        [JsonProperty("kid", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty("e", Required = Required.Always)]
+        public readonly string Exponent;
+
+        [JsonProperty("n", Required = Required.Always)]
+        public readonly string Modulus;
+
+        [JsonProperty("p", Required = Required.Always)]
+        public readonly string P;
+
+        [JsonProperty("q", Required = Required.Always)]
+        public readonly string Q;
+
+        [JsonProperty("dp", Required = Required.Always)]
+        public readonly string DP;
+
+        [JsonProperty("dq", Required = Required.Always)]
+        public readonly string DQ;
+
+        [JsonProperty("qi", Required = Required.Always)]
+        public readonly string InverseQ;
+
+        [JsonProperty("d", Required = Required.Always)]
+        public readonly string D;
     }
 
     // All these fields here are optional because for the master key and the master key only we have

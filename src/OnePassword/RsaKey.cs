@@ -3,7 +3,6 @@
 
 using System.Linq;
 using System.Security.Cryptography;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
@@ -16,21 +15,21 @@ namespace PasswordManagerAccess.OnePassword
         public readonly string Id;
         public readonly RSAParameters Parameters;
 
-        public static RsaKey Parse(JToken json)
+        public static RsaKey Parse(Response.RsaKey json)
         {
             RSAParameters parameters = new RSAParameters
             {
-                Exponent = json.StringAt("e").Decode64Loose(),
-                Modulus = json.StringAt("n").Decode64Loose(),
-                P = json.StringAt("p").Decode64Loose(),
-                Q = json.StringAt("q").Decode64Loose(),
-                DP = json.StringAt("dp").Decode64Loose(),
-                DQ = json.StringAt("dq").Decode64Loose(),
-                InverseQ = json.StringAt("qi").Decode64Loose(),
-                D = json.StringAt("d").Decode64Loose(),
+                Exponent = json.Exponent.Decode64Loose(),
+                Modulus = json.Modulus.Decode64Loose(),
+                P = json.P.Decode64Loose(),
+                Q = json.Q.Decode64Loose(),
+                DP = json.DP.Decode64Loose(),
+                DQ = json.DQ.Decode64Loose(),
+                InverseQ = json.InverseQ.Decode64Loose(),
+                D = json.D.Decode64Loose(),
             };
 
-            return new RsaKey(id: json.StringAt("kid"), parameters: RestoreLeadingZeros(parameters));
+            return new RsaKey(json.Id, RestoreLeadingZeros(parameters));
         }
 
         public RsaKey(string id, RSAParameters parameters)

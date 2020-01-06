@@ -723,12 +723,12 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static void DecryptAesKey(R.Encrypted encrypted, Keychain keychain)
         {
-            keychain.Add(AesKey.Parse(Decrypt(encrypted, keychain)));
+            keychain.Add(AesKey.Parse(Decrypt<R.AesKey>(encrypted, keychain)));
         }
 
         internal static void DecryptRsaKey(R.Encrypted encrypted, Keychain keychain)
         {
-            keychain.Add(RsaKey.Parse(Decrypt(encrypted, keychain)));
+            keychain.Add(RsaKey.Parse(Decrypt<R.RsaKey>(encrypted, keychain)));
         }
 
         internal static AesKey DeriveMasterKey(string algorithm,
@@ -810,12 +810,12 @@ namespace PasswordManagerAccess.OnePassword
         // TODO: Remove
         private static JObject Decrypt(R.Encrypted encrypted, IDecryptor decryptor)
         {
-            return JObject.Parse(decryptor.Decrypt(ParseEncrypted(encrypted)).ToUtf8());
+            return JObject.Parse(decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8());
         }
 
         internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
         {
-            string plaintext = decryptor.Decrypt(ParseEncrypted(encrypted)).ToUtf8();
+            string plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
             try
             {
                 return JsonConvert.DeserializeObject<T>(plaintext);
@@ -830,15 +830,6 @@ namespace PasswordManagerAccess.OnePassword
 
                 throw new InternalErrorException("Failed to parse JSON in response from the server", e);
             }
-        }
-
-        internal static Encrypted ParseEncrypted(R.Encrypted encrypted)
-        {
-            return new Encrypted(keyId: encrypted.KeyId,
-                                 scheme: encrypted.Scheme,
-                                 container: encrypted.Container,
-                                 iv: encrypted.Iv?.Decode64Loose(), // This is optional
-                                 ciphertext: encrypted.Ciphertext.Decode64Loose());
         }
 
         internal static string AbbreviateId(string id)

@@ -1,7 +1,6 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
@@ -14,10 +13,9 @@ namespace PasswordManagerAccess.OnePassword
         public readonly string Id;
         public readonly byte[] Key;
 
-        public static AesKey Parse(JToken json)
+        public static AesKey Parse(Response.AesKey json)
         {
-            return new AesKey(id: json.StringAt("kid"),
-                              key: json.StringAt("k").Decode64Loose());
+            return new AesKey(json.Id, json.Key.Decode64Loose());
         }
 
         public AesKey(string id, byte[] key)
