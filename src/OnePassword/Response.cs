@@ -266,4 +266,82 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty("encDetails", Required = Required.Always)]
         public readonly Encrypted Details;
     }
+
+    internal class VaultItemOverview
+    {
+        [JsonProperty("title", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Title;
+
+        [JsonProperty("url", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Url;
+
+        [JsonProperty("URLs")]
+        public readonly VaultItemUrl[] Urls;
+    }
+
+    internal class VaultItemUrl
+    {
+        [JsonProperty("l", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Name;
+
+        [JsonProperty("u", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Url;
+    }
+
+    internal class VaultItemDetails
+    {
+        [JsonProperty("title", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Name;
+
+        [JsonProperty("url", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Url;
+
+        [JsonProperty("notesPlain", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Note;
+
+        [JsonProperty("fields")]
+        public readonly VaultItemField[] Fields;
+
+        [JsonProperty("sections")]
+        public readonly VaultItemSection[] Sections;
+    }
+
+    internal class VaultItemField
+    {
+        [JsonProperty("designation", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Designation;
+
+        [JsonProperty("value", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Value;
+    }
+
+    internal class VaultItemSection
+    {
+        [JsonProperty("title", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Name;
+
+        [JsonProperty("fields")]
+        public readonly VaultItemSectionField[] Fields;
+    }
+
+    internal class VaultItemSectionField
+    {
+        [JsonProperty("t", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Name;
+
+        [JsonProperty("v", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Value;
+    }
 }

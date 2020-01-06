@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -619,50 +618,44 @@ namespace PasswordManagerAccess.OnePassword
         //       completely opaque, no clue what's going on inside. See how this could be fixed.
         internal static Account ParseAccount(R.VaultItem account, Keychain keychain)
         {
-            var overview = Decrypt(account.Overview, keychain);
-            var details = Decrypt(account.Details, keychain);
-            var fields = details.At("fields", new JArray());
+            var overview = Decrypt<R.VaultItemOverview>(account.Overview, keychain);
+            var details = Decrypt<R.VaultItemDetails>(account.Details, keychain);
+            var fields = details.Fields ?? NoFields;
 
-            return new Account(account.Id,
-                               overview.StringAt("title", ""),
-                               FindAccountField(fields, "username"),
-                               FindAccountField(fields, "password"),
-                               overview.StringAt("url", ""),
-                               details.StringAt("notesPlain", ""),
-                               ExtractUrls(overview),
-                               ExtractFields(details));
+            return new Account(id: account.Id,
+                               name: overview.Title,
+                               username: FindAccountField(fields, "username"),
+                               password: FindAccountField(fields, "password"),
+                               mainUrl: overview.Url,
+                               note: details.Note,
+                               urls: ExtractUrls(overview),
+                               fields: ExtractFields(details));
         }
 
-        internal static string FindAccountField(JToken json, string name)
+        internal static string FindAccountField(R.VaultItemField[] fields, string name)
         {
-            foreach (var i in json)
-                if (i.StringAt("designation", "") == name)
-                    return i.StringAt("value", "");
-
-            return "";
+            return Array.Find(fields, x => x.Designation == name)?.Value ?? "";
         }
 
-        internal static Account.Url[] ExtractUrls(JToken overview)
+        internal static Account.Url[] ExtractUrls(R.VaultItemOverview overview)
         {
-            return overview.At("URLs", new JArray())
-                .Select(url => new Account.Url(name: url.StringAt("l", ""), value: url.StringAt("u", "")))
+            return (overview.Urls ?? NoUrls)
+                .Select(x => new Account.Url(name: x.Name, value: x.Url))
                 .ToArray();
         }
 
-        internal static Account.Field[] ExtractFields(JToken details)
+        internal static Account.Field[] ExtractFields(R.VaultItemDetails details)
         {
-            return details.At("sections", new JArray())
+            return (details.Sections ?? NoSections)
                 .SelectMany(ExtractSectionFields)
                 .ToArray();
         }
 
-        internal static IEnumerable<Account.Field> ExtractSectionFields(JToken section)
+        internal static IEnumerable<Account.Field> ExtractSectionFields(R.VaultItemSection section)
         {
-            var name = section.StringAt("title", "");
-            return section.At("fields", new JArray())
-                .Select(f => new Account.Field(name: f.StringAt("t", ""),
-                                               value: f.StringAt("v", ""),
-                                               section: name));
+            var name = section.Name;
+            return (section.Fields ?? NoSectionFields)
+                .Select(x => new Account.Field(name: x.Name, value: x.Value, section: name));
         }
 
         internal static void SignOut(RestClient rest)
@@ -807,12 +800,6 @@ namespace PasswordManagerAccess.OnePassword
             return Decrypt<T>(response, sessionKey);
         }
 
-        // TODO: Remove
-        private static JObject Decrypt(R.Encrypted encrypted, IDecryptor decryptor)
-        {
-            return JObject.Parse(decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8());
-        }
-
         internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
         {
             string plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
@@ -876,5 +863,10 @@ namespace PasswordManagerAccess.OnePassword
         {
             SecondFactor.GoogleAuthenticator,
         };
+
+        private static readonly R.VaultItemField[] NoFields = new R.VaultItemField[0];
+        private static readonly R.VaultItemUrl[] NoUrls = new R.VaultItemUrl[0];
+        private static readonly R.VaultItemSection[] NoSections = new R.VaultItemSection[0];
+        private static readonly R.VaultItemSectionField[] NoSectionFields = new R.VaultItemSectionField[0];
     }
 }
