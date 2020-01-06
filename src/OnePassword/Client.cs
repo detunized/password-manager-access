@@ -536,11 +536,11 @@ namespace PasswordManagerAccess.OnePassword
                                        ILogger logger)
         {
             var id = vault.Id;
-            var attributes = Decrypt(vault.Attributes, keychain);
+            var attributes = Decrypt<R.VaultAttributes>(vault.Attributes, keychain);
 
             return new Vault(id: id,
-                             name: attributes.StringAt("name", ""),
-                             description: attributes.StringAt("desc", ""),
+                             name: attributes.Name,
+                             description: attributes.Description,
                              accounts: GetVaultAccounts(id, sessionKey, keychain, rest, logger));
         }
 

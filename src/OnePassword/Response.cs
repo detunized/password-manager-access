@@ -1,6 +1,7 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.ComponentModel;
 using Newtonsoft.Json;
 
 // TODO: Rename to Wire or Model since not all this things are responses
@@ -97,6 +98,17 @@ namespace PasswordManagerAccess.OnePassword.Response
 
         [JsonProperty(PropertyName = "encAttrs", Required = Required.Always)]
         public readonly Encrypted Attributes;
+    }
+
+    internal class VaultAttributes
+    {
+        [JsonProperty(PropertyName = "name", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Name;
+
+        [JsonProperty(PropertyName = "desc", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Description;
     }
 
     internal class KeysetsInfo
