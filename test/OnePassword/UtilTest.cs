@@ -34,9 +34,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void Pbes2_throws_on_unsupported_method()
         {
-            var e = Assert.Throws<ClientException>(() => Util.Pbes2("Unknown", "password", "salt".ToBytes(), 100));
-            Assert.Equal(ClientException.FailureReason.UnsupportedFeature, e.Reason);
-            Assert.Contains("method", e.Message);
+            Exceptions.AssertThrowsUnsupportedFeature(() => Util.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
+                                                      "Method 'Unknown' is not supported");
         }
 
         [Fact]

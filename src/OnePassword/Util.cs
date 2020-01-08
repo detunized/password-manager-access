@@ -47,8 +47,7 @@ namespace PasswordManagerAccess.OnePassword
                                            byteCount: 32);
             }
 
-            throw ExceptionFactory.MakeUnsupported(
-                string.Format("PBES2: method '{0}' is not supported", method));
+            throw new UnsupportedFeatureException($"Method '{method}' is not supported");
         }
 
         public static byte[] CalculateSessionHmacSalt(AesKey sessionKey)

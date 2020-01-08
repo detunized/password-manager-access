@@ -3,8 +3,8 @@
 
 using System.Collections.Generic;
 using System.Numerics;
-using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -46,29 +46,20 @@ namespace PasswordManagerAccess.OnePassword
             return SirpG.ModExp(secretA, SirpN);
         }
 
-        // TODO: Move to Response namespace
-        internal class AForB
-        {
-            [JsonProperty(PropertyName = "sessionID")]
-            public string SessionId;
-
-            [JsonProperty(PropertyName = "userB")]
-            public string B;
-        }
-
         internal static BigInteger ExchangeAForB(BigInteger sharedA, Session session, RestClient rest)
         {
-            var response = rest.PostJson<AForB>("v1/auth", new Dictionary<string, object>
+            var response = rest.PostJson<R.AForB>("v1/auth", new Dictionary<string, object>
             {
                 {"sessionID", session.Id},
                 {"userA", sharedA.ToHex()}
             });
 
+            // TODO: Do we need better error handling here?
             if (!response.IsSuccessful)
-                throw new NetworkErrorException("TODO: Ooops!"); // TODO: Add proper error handling!
+                throw new InternalErrorException($"Request to {response.RequestUri} failed");
 
             if (response.Data.SessionId != session.Id)
-                throw ExceptionFactory.MakeInvalidOperation("SRP: session ID doesn't match");
+                throw new InternalErrorException("Session ID doesn't match");
 
             return response.Data.B.ToBigInt();
         }
@@ -76,7 +67,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static void ValidateB(BigInteger sharedB)
         {
             if (sharedB % SirpN == 0)
-                throw ExceptionFactory.MakeInvalidOperation("SRP: B validation failed");
+                throw new InternalErrorException("Shared B validation failed");
         }
 
         internal static byte[] ComputeKey(BigInteger secretA,
@@ -85,7 +76,7 @@ namespace PasswordManagerAccess.OnePassword
                                           ClientInfo clientInfo,
                                           Session session)
         {
-            // Some arbitrary crypto computation, variable names don't have much meaning
+            // Some arbitrary crypto computation, variable names don't have a lot of meaning
             var ab = sharedA.ToHex() + sharedB.ToHex();
             var hashAb = Crypto.Sha256(ab).ToBigInt();
             var s = session.Id.ToBytes().ToBigInt();
@@ -102,11 +93,11 @@ namespace PasswordManagerAccess.OnePassword
             var iterations = session.Iterations;
 
             if (iterations == 0)
-                throw ExceptionFactory.MakeUnsupported("SRP: 0 iterations is not supported");
+                throw new UnsupportedFeatureException("0 iterations is not supported");
 
             // TODO: Add constants for 1024, 6144 and 8192
             if (method != "SRPg-4096")
-                throw ExceptionFactory.MakeUnsupported(string.Format("SRP: method '{0}' is not supported", method));
+                throw new UnsupportedFeatureException($"Method '{method}' is not supported");
 
             var k1 = Util.Hkdf(method: method,
                                ikm: session.Salt,

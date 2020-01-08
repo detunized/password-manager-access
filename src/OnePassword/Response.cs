@@ -344,4 +344,13 @@ namespace PasswordManagerAccess.OnePassword.Response
         [DefaultValue("")]
         public readonly string Value;
     }
+
+    internal class AForB
+    {
+        [JsonProperty(PropertyName = "sessionID", Required = Required.Always)]
+        public readonly string SessionId;
+
+        [JsonProperty(PropertyName = "userB", Required = Required.Always)]
+        public readonly string B;
+    }
 }
