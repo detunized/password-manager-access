@@ -1,7 +1,6 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
@@ -15,159 +14,135 @@ namespace PasswordManagerAccess.Test.OnePassword
         // Encrypt
         //
 
-        [Fact]
-        public void Encrypt_returns_ciphertext()
+        [Theory]
+        [MemberData(nameof(TestCases))]
+        public void Encrypt_returns_ciphertext(TestCase tc)
         {
-            foreach (var i in TestCases)
-            {
-                var ecnrypted = AesGcm.Encrypt(i.Key, i.Plaintext, i.Iv, i.AuthData);
-                Assert.Equal(i.CiphertextWithTag, ecnrypted);
-            }
+            var ecnrypted = AesGcm.Encrypt(tc.Key, tc.Plaintext, tc.Iv, tc.AuthData);
+            Assert.Equal(tc.CiphertextWithTag, ecnrypted);
         }
 
         [Fact]
         public void Encrypt_throws_on_invalid_key_length()
         {
-            var e = Assert.Throws<ClientException>(
+            Exceptions.AssertThrowsInternalError(
                 () => AesGcm.Encrypt(key: new byte[13],
                                      plaintext: new byte[16],
                                      iv: new byte[12],
-                                     authData: new byte[0]));
-            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
-            Assert.Contains("key must", e.Message);
+                                     authData: new byte[0]),
+                "key must");
         }
 
         [Fact]
         public void Encrypt_throws_on_invalid_iv_length()
         {
-            var e = Assert.Throws<ClientException>(
+            Exceptions.AssertThrowsInternalError(
                 () => AesGcm.Encrypt(key: new byte[32],
                                      plaintext: new byte[16],
                                      iv: new byte[13],
-                                     authData: new byte[0]));
-            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
-            Assert.Contains("iv must", e.Message);
+                                     authData: new byte[0]),
+                "iv must");
         }
 
         //
         // Decrypt
         //
 
-        [Fact]
-        public void Decrypt_returns_plaintext()
+        [Theory]
+        [MemberData(nameof(TestCases))]
+        public void Decrypt_returns_plaintext(TestCase tc)
         {
-            foreach (var i in TestCases)
-            {
-                var decrypted = AesGcm.Decrypt(i.Key, i.CiphertextWithTag, i.Iv, i.AuthData);
-                Assert.Equal(i.Plaintext, decrypted);
-            }
+            var decrypted = AesGcm.Decrypt(tc.Key, tc.CiphertextWithTag, tc.Iv, tc.AuthData);
+            Assert.Equal(tc.Plaintext, decrypted);
         }
 
         [Fact]
         public void Decrypt_throws_on_invalid_key_length()
         {
-            var e = Assert.Throws<ClientException>(
+            Exceptions.AssertThrowsInternalError(
                 () => AesGcm.Decrypt(key: new byte[13],
                                      ciphertext: new byte[16],
                                      iv: new byte[12],
-                                     authData: new byte[0]));
-            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
-            Assert.Contains("key must", e.Message);
+                                     authData: new byte[0]),
+                "key must");
         }
 
         [Fact]
         public void Decrypt_throws_on_invalid_ciphertext_length()
         {
-            var e = Assert.Throws<ClientException>(
+            Exceptions.AssertThrowsInternalError(
                 () => AesGcm.Decrypt(key: new byte[32],
                                      ciphertext: new byte[13],
                                      iv: new byte[12],
-                                     authData: new byte[0]));
-            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
-            Assert.Contains("ciphertext must", e.Message);
+                                     authData: new byte[0]),
+                "ciphertext must");
         }
 
         [Fact]
         public void Decrypt_throws_on_invalid_iv_length()
         {
-            var e = Assert.Throws<ClientException>(
+            Exceptions.AssertThrowsInternalError(
                 () => AesGcm.Decrypt(key: new byte[32],
                                      ciphertext: new byte[16],
                                      iv: new byte[13],
-                                     authData: new byte[0]));
-            Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
-            Assert.Contains("iv must", e.Message);
+                                     authData: new byte[0]),
+                "iv must");
         }
 
-        [Fact]
-        public void Decrypt_throws_on_modified_ciphertext()
+        [Theory]
+        [MemberData(nameof(TestCases))]
+        public void Decrypt_throws_on_modified_ciphertext(TestCase tc)
         {
-            foreach (var i in TestCases)
-            {
-                // Change the first byte of the ciphertext
-                var modified = Modified(i.CiphertextWithTag, 0);
-                var e = Assert.Throws<ClientException>(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
-                Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
-                Assert.Contains("auth tag", e.Message);
-            }
+            // Change the first byte of the ciphertext
+            var modified = Modified(tc.CiphertextWithTag, 0);
+            Exceptions.AssertThrowsInternalError(() => AesGcm.Decrypt(tc.Key, modified, tc.Iv, tc.AuthData),
+                                                 "auth tag");
         }
 
-        [Fact]
-        public void Decrypt_throws_on_modified_tag()
+        [Theory]
+        [MemberData(nameof(TestCases))]
+        public void Decrypt_throws_on_modified_tag(TestCase tc)
         {
-            foreach (var i in TestCases)
-            {
-                // Change the last byte in the tag
-                var modified = Modified(i.CiphertextWithTag, -1);
-                var e = Assert.Throws<ClientException>(() => AesGcm.Decrypt(i.Key, modified, i.Iv, i.AuthData));
-                Assert.Equal(ClientException.FailureReason.InvalidOperation, e.Reason);
-                Assert.Contains("auth tag", e.Message);
-            }
+            // Change the last byte in the tag
+            var modified = Modified(tc.CiphertextWithTag, -1);
+            Exceptions.AssertThrowsInternalError(() => AesGcm.Decrypt(tc.Key, modified, tc.Iv, tc.AuthData),
+                                                 "auth tag");
         }
 
         //
         // GHash
         //
 
-        [Fact]
-        public void GHash_returns_hash()
+        [Theory]
+        [MemberData(nameof(TestCases))]
+        public void GHash_returns_hash(TestCase tc)
         {
-            foreach (var i in TestCases)
-            {
-                var hash = AesGcm.GHash(i.HashKey,
-                                        i.AuthData,
-                                        i.AuthData.Length,
-                                        i.Ciphertext,
-                                        i.Ciphertext.Length);
-                Assert.Equal(i.GHash, hash);
-            }
+            var hash = AesGcm.GHash(tc.HashKey,
+                                    tc.AuthData,
+                                    tc.AuthData.Length,
+                                    tc.Ciphertext,
+                                    tc.Ciphertext.Length);
+            Assert.Equal(tc.GHash, hash);
         }
 
-        [Fact]
-        public void IncrementCounter_overflows_into_next_byte()
+        [Theory]
+        [InlineData("000000000000000000000000" + "000000ff", "000000000000000000000000" + "00000100")]
+        [InlineData("000000000000000000000000" + "0000ffff", "000000000000000000000000" + "00010000")]
+        [InlineData("000000000000000000000000" + "00ffffff", "000000000000000000000000" + "01000000")]
+        [InlineData("000000000000000000000000" + "ffffffff", "000000000000000000000000" + "00000000")]
+        public void IncrementCounter_overflows_into_next_byte(string initial, string expected)
         {
-            var testCases = new Dictionary<string, string>
-            {
-                {"000000000000000000000000" + "000000ff", "000000000000000000000000" + "00000100"},
-                {"000000000000000000000000" + "0000ffff", "000000000000000000000000" + "00010000"},
-                {"000000000000000000000000" + "00ffffff", "000000000000000000000000" + "01000000"},
-                {"000000000000000000000000" + "ffffffff", "000000000000000000000000" + "00000000"},
-            };
+            var counter = initial.DecodeHex();
+            AesGcm.IncrementCounter(counter);
 
-            foreach (var i in testCases)
-            {
-                var counter = i.Key.DecodeHex();
-                AesGcm.IncrementCounter(counter);
-
-                Assert.Equal(i.Value.DecodeHex(), counter);
-            }
+            Assert.Equal(expected.DecodeHex(), counter);
         }
 
         //
         // Data
         //
 
-        private struct TestCase
+        public struct TestCase
         {
             public readonly byte[] Key;
             public readonly byte[] Plaintext;
@@ -202,7 +177,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         // Test vectors are from
         // http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf
-        private static readonly TestCase[] TestCases =
+        public static readonly TestCase[] TestCasesData =
         {
             new TestCase(
                 key: "e3c08a8f06c6e3ad95a70557b23f75483ce33021a9c72b7025666204c69c0b72",
@@ -284,6 +259,9 @@ namespace PasswordManagerAccess.Test.OnePassword
                 hashKey: "9a5e559a96459c21e43c0dff0fa426f3",
                 gHash: "177e93a6a2287a8e2d2ec236372101b8"),
         };
+
+        // An adapter for MemberData
+        public static IEnumerable<object[]> TestCases => TestBase.ToMemberData(TestCasesData);
 
         //
         // Helpers
