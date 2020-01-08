@@ -30,7 +30,7 @@ namespace PasswordManagerAccess.OnePassword
         public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] authData)
         {
             if (ciphertext.Length < 16)
-                throw new InternalErrorException("ciphertext must be at least 16 bytes long");
+                throw new InternalErrorException("The ciphertext must be at least 16 bytes long");
 
             var length = ciphertext.Length - 16;
             var plaintext = new byte[length];
@@ -48,7 +48,7 @@ namespace PasswordManagerAccess.OnePassword
                 sum |= tag[i] ^ ciphertext[length + i];
 
             if (sum != 0)
-                throw new InternalErrorException("auth tag doesn't match");
+                throw new InternalErrorException("The auth tag doesn't match");
 
             return plaintext;
         }
@@ -69,10 +69,10 @@ namespace PasswordManagerAccess.OnePassword
                                    byte[] hashSalt)
         {
             if (key.Length != 32)
-                throw new InternalErrorException("key must be 32 bytes long");
+                throw new InternalErrorException("The key must be 32 bytes long");
 
             if (iv.Length != 12)
-                throw new InternalErrorException("iv must be 12 bytes long");
+                throw new InternalErrorException("The iv must be 12 bytes long");
 
             Debug.Assert(input.Length >= length);
             Debug.Assert(output.Length >= length);
@@ -137,7 +137,7 @@ namespace PasswordManagerAccess.OnePassword
                                      int ciphertextLength)
         {
             if (key.Length != 16)
-                throw new InternalErrorException("key must be 16 bytes long");
+                throw new InternalErrorException("The key must be 16 bytes long");
 
             var key128 = new UInt128(key);
             var x = new UInt128();

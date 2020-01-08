@@ -41,13 +41,11 @@ namespace PasswordManagerAccess.OnePassword
         public byte[] Decrypt(Encrypted e)
         {
             if (e.KeyId != Id)
-                throw ExceptionFactory.MakeInvalidOperation("RSA key: mismatching key id");
+                throw new InternalErrorException("Mismatching key id");
 
             if (e.Scheme != EncryptionScheme)
-                throw ExceptionFactory.MakeInvalidOperation(
-                    string.Format("RSA key: invalid encryption scheme '{0}', expected '{1}'",
-                                  e.Scheme,
-                                  EncryptionScheme));
+                throw new InternalErrorException(
+                    $"Invalid encryption scheme '{e.Scheme}', expected '{EncryptionScheme}'");
 
             using (var rsa = new RSACryptoServiceProvider())
             {
@@ -88,7 +86,7 @@ namespace PasswordManagerAccess.OnePassword
                 if (bits <= i && bits > i * 3 / 4)
                     return i;
 
-            throw ExceptionFactory.MakeUnsupported($"{bits}-bit RSA encryption mode is not supported");
+            throw new UnsupportedFeatureException($"{bits}-bit RSA encryption mode is not supported");
         }
 
         internal static byte[] PrepadWithZeros(byte[] bytes, int desiredLength)
@@ -101,7 +99,7 @@ namespace PasswordManagerAccess.OnePassword
             if (length < desiredLength)
                 return new byte[desiredLength - length].Concat(bytes).ToArray();
 
-            throw ExceptionFactory.MakeInvalidOperation("The array is too long to be padded");
+            throw new InternalErrorException("The input array is too long to be padded");
         }
 
         private static readonly int[] SupportedRsaBits = new[] {1024, 2048, 4096};

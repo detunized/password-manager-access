@@ -72,28 +72,27 @@ namespace PasswordManagerAccess.Test.OnePassword
             Assert.Equal(rsa.D, padded.D);
         }
 
-        [Fact]
-        public void GuessKeyBitLength_guesses_correctly()
+        [Theory]
+        [InlineData(1024)]
+        [InlineData(2048)]
+        [InlineData(4096)]
+        public void GuessKeyBitLength_guesses_correctly(int bits)
         {
-            foreach (var bits in new[] { 1024, 2048, 4096 })
+            foreach (var i in new[] { bits * 3 / 4 + 8, bits - 16, bits - 8, bits })
             {
-                foreach (var i in new[] { bits * 3 / 4 + 8, bits - 16, bits - 8, bits })
-                {
-                    var guessed = RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[i / 8] });
-                    Assert.Equal(bits, guessed);
-                }
+                var guessed = RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[i / 8] });
+                Assert.Equal(bits, guessed);
             }
         }
 
-        [Fact]
-        public void GuessKeyBitLength_throws_on_invalid_values()
+        [Theory]
+        [InlineData(768)]
+        [InlineData(4096 + 8)]
+        public void GuessKeyBitLength_throws_on_invalid_values(int bits)
         {
-            foreach (var bits in new[] { 768, 4096 + 8 })
-            {
-                var e = Assert.Throws<ClientException>(
-                    () => RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[bits / 8] }));
-                Assert.Contains("not supported", e.Message);
-            }
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => RsaKey.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[bits / 8] }),
+                "not supported");
         }
 
         //

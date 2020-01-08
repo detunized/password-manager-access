@@ -41,13 +41,11 @@ namespace PasswordManagerAccess.OnePassword
         public byte[] Decrypt(Encrypted e)
         {
             if (e.KeyId != Id)
-                throw ExceptionFactory.MakeInvalidOperation("AES key: mismatching key id");
+                throw new InternalErrorException("Mismatching key id");
 
             if (e.Scheme != EncryptionScheme)
-                throw ExceptionFactory.MakeInvalidOperation(
-                    string.Format("AES key: invalid encryption scheme '{0}', expected '{1}'",
-                                  e.Scheme,
-                                  EncryptionScheme));
+                throw new InternalErrorException(
+                    $"Invalid encryption scheme '{e.Scheme}', expected '{EncryptionScheme}'");
 
             return AesGcm.Decrypt(Key, e.Ciphertext, e.Iv, new byte[0]);
         }
