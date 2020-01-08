@@ -119,7 +119,7 @@ namespace Example
             {
                 Console.WriteLine("Error: {0} (Reason: {1})", e.Message, e.Reason);
             }
-            catch (PasswordManagerAccess.Common.BaseException e)
+            catch (BaseException e)
             {
                 Util.PrintException(e);
             }
