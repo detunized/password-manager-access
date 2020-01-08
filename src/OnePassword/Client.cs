@@ -151,6 +151,12 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
+        // This is exception is used internally to trigger re-login from the depth of the call stack.
+        // Possibly not the best design. TODO: Should this be done differently?
+        internal class RetryLoginException: Exception
+        {
+        }
+
         internal static LoginResult Login(ClientInfo clientInfo, Ui ui, ISecureStorage storage, RestClient rest)
         {
             while (true)
@@ -159,10 +165,8 @@ namespace PasswordManagerAccess.OnePassword
                 {
                     return LoginAttempt(clientInfo, ui, storage, rest);
                 }
-                catch (ClientException e) when (e.Reason == ClientException.FailureReason.OutdatedRememberMeToken)
+                catch (RetryLoginException)
                 {
-                    // When the stored 'remember me' token is rejected by the server, we need to try the whole
-                    // login sequence one more time. Probably the token is expired or it's invalid.
                 }
             }
         }
@@ -368,8 +372,7 @@ namespace PasswordManagerAccess.OnePassword
 
             // Null or blank means the user canceled the 2FA
             if (passcode == null)
-                throw new ClientException(ClientException.FailureReason.UserCanceledSecondFactor,
-                                          "Second factor step is canceled by the user");
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             var token = SubmitSecondFactorCode(factor, passcode.Code, session, sessionKey, rest);
 
@@ -395,15 +398,15 @@ namespace PasswordManagerAccess.OnePassword
             {
                 SubmitSecondFactorCode(SecondFactor.RememberMeToken, token, session, sessionKey, rest);
             }
-            catch (ClientException e) when (e.Reason == ClientException.FailureReason.IncorrectSecondFactorCode)
+            catch (BadMultiFactorException)
             {
                 // The token got rejected, need to erase it, it's no longer valid.
                 storage.StoreString(RememberMeTokenKey, null);
 
-                // TODO: Don't throw on this. Rather ask the user for the code and sign in as usual.
-                throw new ClientException(ClientException.FailureReason.OutdatedRememberMeToken,
-                                          "'Remember me' token got rejected",
-                                          e.InnerException);
+                // When the stored 'remember me' token is rejected by the server, we need to try
+                // the whole login sequence one more time. Probably the token is expired or it's
+                // invalid.
+                throw new RetryLoginException();
             }
 
             return true;
@@ -475,6 +478,7 @@ namespace PasswordManagerAccess.OnePassword
             }
             catch (BadCredentialsException e)
             {
+                // The server report everything as "no auth" error. In this case we know it's related to the MFA.
                 throw new BadMultiFactorException("Incorrect second factor code", e.InnerException);
             }
         }
@@ -802,18 +806,19 @@ namespace PasswordManagerAccess.OnePassword
         internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
         {
             string plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
+
+            // First check for server errors. It's possible to deserialize the returned error object
+            // into one of the target types by mistake when the type has no mandatory fields.
+            // `Response.Mfa` would be one of those.
+            if (ParseServerError(plaintext) is var serverError && serverError != null)
+                throw serverError;
+
             try
             {
                 return JsonConvert.DeserializeObject<T>(plaintext);
             }
             catch (JsonException e)
             {
-                // When de-serialization fails it's possible that the server responded with an error
-                // and we should try to parse it first.
-                var serverError = ParseServerError(plaintext);
-                if (serverError != null)
-                    throw serverError;
-
                 throw new InternalErrorException("Failed to parse JSON in response from the server", e);
             }
         }

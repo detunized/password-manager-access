@@ -221,13 +221,14 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty(PropertyName = "errorCode", Required = Required.Always)]
         public readonly int Code;
 
-        [JsonProperty(PropertyName = "errorMessage")]
+        [JsonProperty(PropertyName = "errorMessage", Required = Required.Always)]
         public readonly string Message;
     }
 
     internal class Mfa
     {
-        [JsonProperty(PropertyName = "dsecret", Required = Required.Always)]
+        [JsonProperty("dsecret", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
         public readonly string RememberMeToken;
     }
 

@@ -115,10 +115,6 @@ namespace Example
             {
                 DumpAllVaults(config["username"], config["password"], config["account-key"], config["device-id"], config["domain"]);
             }
-            catch (ClientException e)
-            {
-                Console.WriteLine("Error: {0} (Reason: {1})", e.Message, e.Reason);
-            }
             catch (BaseException e)
             {
                 Util.PrintException(e);
