@@ -77,20 +77,20 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Empty(cs.Mac);
         }
 
-        [Fact]
-        public void Parse_throws_on_malformed_input()
+        [Theory]
+        [InlineData("0..")]
+        [InlineData("0.|||")]
+        public void Parse_throws_on_malformed_input(string invalid)
         {
-            var invalid = new[] {"0..", "0.|||"};
-            foreach (var i in invalid)
-                VerifyThrowsInvalidFormat(i, "Invalid/unsupported cipher string format");
+            VerifyThrowsInvalidFormat(invalid, "Invalid/unsupported cipher string format");
         }
 
-        [Fact]
-        public void Parse_throws_on_invalid_cipher_mode()
+        [Theory]
+        [InlineData("7.")]
+        [InlineData("A.")]
+        public void Parse_throws_on_invalid_cipher_mode(string invalid)
         {
-            var invalid = new[] {"7.", "A."};
-            foreach (var i in invalid)
-                VerifyThrowsInvalidFormat(i, "Invalid/unsupported cipher mode");
+            VerifyThrowsInvalidFormat(invalid, "Invalid/unsupported cipher mode");
         }
 
         //
@@ -275,22 +275,22 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void Ctor_throws_on_invalid_rsa_2048_oaep_sha_1()
         {
             VerifyThrowsInvalidFormat(mode: CipherMode.Rsa2048OaepSha1,
-                                    iv: "invalid iv".ToBytes(),
-                                    ciphertext: RsaCiphertext,
-                                    mac: "".ToBytes(),
-                                    expectedMessage: "IV is not supported");
+                                      iv: "invalid iv".ToBytes(),
+                                      ciphertext: RsaCiphertext,
+                                      mac: "".ToBytes(),
+                                      expectedMessage: "IV is not supported");
 
             VerifyThrowsInvalidFormat(mode: CipherMode.Rsa2048OaepSha1,
-                                    iv: "".ToBytes(),
-                                    ciphertext: "invalid ciphertext".ToBytes(),
-                                    mac: "".ToBytes(),
-                                    expectedMessage: "Ciphertext must be 256 bytes long");
+                                      iv: "".ToBytes(),
+                                      ciphertext: "invalid ciphertext".ToBytes(),
+                                      mac: "".ToBytes(),
+                                      expectedMessage: "Ciphertext must be 256 bytes long");
 
             VerifyThrowsInvalidFormat(mode: CipherMode.Rsa2048OaepSha1,
-                                    iv: "".ToBytes(),
-                                    ciphertext: RsaCiphertext,
-                                    mac: "invalid mac".ToBytes(),
-                                    expectedMessage: "MAC is not supported");
+                                      iv: "".ToBytes(),
+                                      ciphertext: RsaCiphertext,
+                                      mac: "invalid mac".ToBytes(),
+                                      expectedMessage: "MAC is not supported");
         }
 
         [Fact]

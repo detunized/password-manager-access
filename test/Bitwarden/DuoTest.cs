@@ -1,10 +1,10 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Net;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Test.Common;
 using Xunit;
-using System.Net;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -19,18 +19,13 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal("app", parsed.App);
         }
 
-        [Fact]
-        public void ParseSignature_throws_on_invalid_signature()
+        [Theory]
+        [InlineData("")]
+        [InlineData("tx")]
+        [InlineData("tx:app:other")]
+        public void ParseSignature_throws_on_invalid_signature(string invalid)
         {
-            var cases = new[]
-            {
-                "",
-                "tx",
-                "tx:app:other"
-            };
-
-            foreach (var i in cases)
-                Exceptions.AssertThrowsInternalError(() => Duo.ParseSignature(i), "signature is invalid");
+            Exceptions.AssertThrowsInternalError(() => Duo.ParseSignature(invalid), "signature is invalid");
         }
 
         [Fact]
