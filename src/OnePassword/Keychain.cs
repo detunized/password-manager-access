@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -20,8 +21,7 @@ namespace PasswordManagerAccess.OnePassword
         public AesKey GetAes(string id)
         {
             if (!_aes.ContainsKey(id))
-                throw ExceptionFactory.MakeInvalidOperation(
-                    string.Format("Keychain: AES key '{0}' not found", id));
+                throw new InternalErrorException($"AES key '{id}' not found");
 
             return _aes[id];
         }
@@ -29,8 +29,7 @@ namespace PasswordManagerAccess.OnePassword
         public RsaKey GetRsa(string id)
         {
             if (!_rsa.ContainsKey(id))
-                throw ExceptionFactory.MakeInvalidOperation(
-                    string.Format("Keychain: RSA key '{0}' not found", id));
+                throw new InternalErrorException($"RSA key '{id}' not found");
 
             return _rsa[id];
         }
@@ -45,8 +44,7 @@ namespace PasswordManagerAccess.OnePassword
                 return GetRsa(encrypted.KeyId).Decrypt(encrypted);
             }
 
-            throw ExceptionFactory.MakeInvalidOperation(
-                string.Format("Keychain: Unsupported encryption scheme '{0}'", encrypted.Scheme));
+            throw new UnsupportedFeatureException($"Encryption scheme '{encrypted.Scheme}' is not supported");
         }
 
         private readonly Dictionary<string, AesKey> _aes = new Dictionary<string, AesKey>();

@@ -86,7 +86,7 @@ namespace PasswordManagerAccess.OnePassword
                 return "my.1password.ca";
             }
 
-            throw new ArgumentException("Region values is invalid");
+            throw new InternalErrorException("The region is not valid");
         }
 
         //
@@ -346,7 +346,7 @@ namespace PasswordManagerAccess.OnePassword
                 factors.Add(SecondFactor.RememberMeToken);
 
             if (factors.Count == 0)
-                throw ExceptionFactory.MakeUnsupported("No supported 2FA methods found");
+                throw new InternalErrorException("No supported 2FA methods found");
 
             return factors.ToArray();
         }
@@ -412,7 +412,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static SecondFactor ChooseInteractiveSecondFactor(SecondFactor[] factors)
         {
             if (factors.Length == 0)
-                throw ExceptionFactory.MakeInvalidOperation("The list of 2FA methods could not be empty");
+                throw new InternalErrorException("The list of 2FA methods is empty");
 
             // Contains is O(N) for arrays, so technically we have O(N^2) here.
             // But it's ok, since it's at most just a handful of elements. Converting
@@ -421,7 +421,7 @@ namespace PasswordManagerAccess.OnePassword
                 if (factors.Contains(i))
                     return i;
 
-            throw ExceptionFactory.MakeInvalidOperation("The list of 2FA methods doesn't contain anything we support");
+            throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
         }
 
         internal static Ui.Passcode GetSecondFactorPasscode(SecondFactor factor, Ui ui)
@@ -431,7 +431,7 @@ namespace PasswordManagerAccess.OnePassword
             case SecondFactor.GoogleAuthenticator:
                 return ui.ProvideGoogleAuthPasscode();
             default:
-                throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
+                throw new InternalErrorException($"2FA method {factor} is not valid");
             }
         }
 
@@ -456,7 +456,7 @@ namespace PasswordManagerAccess.OnePassword
                 data = new Dictionary<string, string> { { "dshmac", Util.HashRememberMeToken(code, session) } };
                 break;
             default:
-                throw ExceptionFactory.MakeUnsupported($"2FA method {factor} is not supported");
+                throw new InternalErrorException($"2FA method {factor} is not valid");
             }
 
             try
@@ -688,8 +688,7 @@ namespace PasswordManagerAccess.OnePassword
                 .ToArray();
 
             if (sorted[0].EncryptedBy != MasterKeyId)
-                throw ExceptionFactory.MakeInvalidOperation(
-                    string.Format("Invalid keyset (key must be encrypted by '{0}')", MasterKeyId));
+                throw new InternalErrorException($"Invalid keyset (key must be encrypted by '{MasterKeyId}')");
 
             var keyInfo = sorted[0].KeyOrMasterKey;
             var masterKey = DeriveMasterKey(algorithm: keyInfo.Algorithm,

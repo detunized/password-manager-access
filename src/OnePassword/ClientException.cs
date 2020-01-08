@@ -9,16 +9,11 @@ namespace PasswordManagerAccess.OnePassword
     {
         public enum FailureReason
         {
-            IncorrectCredentials,
             IncorrectSecondFactorCode,
             OutdatedRememberMeToken,
             UserCanceledSecondFactor,
-            NetworkError,
-            InvalidResponse,
-            RespondedWithError,
             UnsupportedFeature,
             InvalidOperation,
-            UnknownError
         }
 
         public ClientException(FailureReason reason, string message):
