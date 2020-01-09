@@ -29,14 +29,20 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(TestBytes, TestString.ToBytes());
         }
 
-        [Fact]
-        public void String_DecodeHex()
+        [Theory]
+        [InlineData("", new byte[] { })]
+        [InlineData("00", new byte[] { 0 })]
+        [InlineData("00ff", new byte[] { 0, 255 })]
+        [InlineData("00010203040506070809", new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 })]
+        [InlineData("000102030405060708090a0b0c0d0e0f",
+                    new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 })]
+        [InlineData("8af633933e96a3c3550c2734bd814195",
+                    new byte[] { 0x8A, 0xF6, 0x33, 0x93, 0x3E, 0x96, 0xA3, 0xC3,
+                                 0x55, 0x0C, 0x27, 0x34, 0xBD, 0x81, 0x41, 0x95 })]
+        public void String_DecodeHex(string hex, byte[] expected)
         {
-            foreach (var i in HexToBytes)
-            {
-                Assert.Equal(i.Value, i.Key.ToLower().DecodeHex());
-                Assert.Equal(i.Value, i.Key.ToUpper().DecodeHex());
-            }
+            Assert.Equal(expected, hex.ToLower().DecodeHex());
+            Assert.Equal(expected, hex.ToUpper().DecodeHex());
         }
 
         [Fact]
@@ -51,58 +57,61 @@ namespace PasswordManagerAccess.Test.Common
             Exceptions.AssertThrowsInternalError(() => "xz".DecodeHex(), "invalid characters in hex");
         }
 
-        [Fact]
-        public void String_Decode32_decodes_base32()
+        // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
+        [Theory]
+        [InlineData(new byte[] { }, "")]
+        [InlineData(new byte[] { 0x66 }, "MY======")]
+        [InlineData(new byte[] { 0x66, 0x6f }, "MZXQ====")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f }, "MZXW6===")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "MZXW6YQ=")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "MZXW6YTB")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "MZXW6YTBOI======")]
+        public void String_Decode32_decodes_base32(byte[] expected, string base32)
         {
-            // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
-            Assert.Equal(new byte[] { }, "".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY======".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY======".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f }, "MZXQ====".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f }, "MZXW6===".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "MZXW6YQ=".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "MZXW6YTB".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "MZXW6YTBOI======".Decode32());
+            Assert.Equal(expected, base32.Decode32());
         }
 
-        [Fact]
-        public void String_Decode32_decodes_base32_without_padding()
+        // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
+        [Theory]
+        [InlineData(new byte[] { 0x66 }, "MY")]
+        [InlineData(new byte[] { 0x66, 0x6f }, "MZXQ")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f }, "MZXW6")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "MZXW6YQ")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "MZXW6YTB")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "MZXW6YTBOI")]
+        public void String_Decode32_decodes_base32_without_padding(byte[] expected, string base32)
         {
-            // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
-            Assert.Equal(new byte[] { 0x66 }, "MY".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f }, "MZXQ".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f }, "MZXW6".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "MZXW6YQ".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "MZXW6YTB".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "MZXW6YTBOI".Decode32());
+            Assert.Equal(expected, base32.Decode32());
         }
 
-        [Fact]
-        public void String_Decode32_decodes_base32_lowercase()
+        // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
+        [Theory]
+        [InlineData(new byte[] { 0x66 }, "my")]
+        [InlineData(new byte[] { 0x66, 0x6f }, "mzxq")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f }, "mzxw6")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "mzxw6yq")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "mzxw6ytb")]
+        [InlineData(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "mzxw6ytboi")]
+        public void String_Decode32_decodes_base32_lowercase(byte[] expected, string base32)
         {
-            // Test vectors from https://tools.ietf.org/html/rfc4648#section-10
-            Assert.Equal(new byte[] { 0x66 }, "my".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f }, "mzxq".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f }, "mzxw6".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62 }, "mzxw6yq".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61 }, "mzxw6ytb".Decode32());
-            Assert.Equal(new byte[] { 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72 }, "mzxw6ytboi".Decode32());
+            Assert.Equal(expected, base32.Decode32());
         }
 
-        [Fact]
-        public void String_Decode32_decodes_incorrectly_padded_base32()
+        [Theory]
+        [InlineData(new byte[] { }, "=")]
+        [InlineData(new byte[] { }, "==")]
+        [InlineData(new byte[] { }, "===")]
+        [InlineData(new byte[] { }, "====")]
+        [InlineData(new byte[] { }, "=====")]
+        [InlineData(new byte[] { 0x66 }, "MY=")]
+        [InlineData(new byte[] { 0x66 }, "MY==")]
+        [InlineData(new byte[] { 0x66 }, "MY===")]
+        [InlineData(new byte[] { 0x66 }, "MY====")]
+        [InlineData(new byte[] { 0x66 }, "MY=====")]
+        [InlineData(new byte[] { 0x66 }, "MY=========")]
+        public void String_Decode32_decodes_incorrectly_padded_base32(byte[] expected, string base32)
         {
-            Assert.Equal(new byte[] { }, "=".Decode32());
-            Assert.Equal(new byte[] { }, "==".Decode32());
-            Assert.Equal(new byte[] { }, "===".Decode32());
-            Assert.Equal(new byte[] { }, "====".Decode32());
-            Assert.Equal(new byte[] { }, "=====".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY=".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY==".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY===".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY====".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY=====".Decode32());
-            Assert.Equal(new byte[] { 0x66 }, "MY=========".Decode32());
+            Assert.Equal(expected, base32.Decode32());
         }
 
         [Theory]
@@ -121,61 +130,67 @@ namespace PasswordManagerAccess.Test.Common
             Exceptions.AssertThrowsInternalError(() => invalidBase32.Decode32(), "invalid characters in base32");
         }
 
-        [Fact]
-        public void String_Decode64_decodes_base64()
+        [Theory]
+        [InlineData(new byte[] { }, "")]
+        [InlineData(new byte[] { 0x61 }, "YQ==")]
+        [InlineData(new byte[] { 0x61, 0x62 }, "YWI=")]
+        [InlineData(new byte[] { 0x61, 0x62, 0x63 }, "YWJj")]
+        [InlineData(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA==")]
+        public void String_Decode64_decodes_base64(byte[] expected, string base64)
         {
-            Assert.Equal(new byte[] { }, "".Decode64());
-            Assert.Equal(new byte[] { 0x61 }, "YQ==".Decode64());
-            Assert.Equal(new byte[] { 0x61, 0x62 }, "YWI=".Decode64());
-            Assert.Equal(new byte[] { 0x61, 0x62, 0x63 }, "YWJj".Decode64());
-            Assert.Equal(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA==".Decode64());
+            Assert.Equal(expected, base64.Decode64());
         }
 
-        [Fact]
-        public void String_Decode64UrlSafe_decodes_url_safe_base64()
+        [Theory]
+        [InlineData(new byte[] { 0xFB, 0xEF, 0xFF }, "++__")]
+        [InlineData(new byte[] { 0xFB, 0xEF, 0xFF }, "+-_/")]
+        [InlineData(new byte[] { 0xFB, 0xEF, 0xBE }, "++--")]
+        [InlineData(new byte[] { 0xF9, 0xAF, 0xDC }, "+a_c")]
+        public void String_Decode64UrlSafe_decodes_url_safe_base64(byte[] expected, string base64)
         {
-            Assert.Equal(new byte[] { 0xFB, 0xEF, 0xFF }, "++__".Decode64UrlSafe());
-            Assert.Equal(new byte[] { 0xFB, 0xEF, 0xFF }, "+-_/".Decode64UrlSafe());
-            Assert.Equal(new byte[] { 0xFB, 0xEF, 0xBE }, "++--".Decode64UrlSafe());
-            Assert.Equal(new byte[] { 0xF9, 0xAF, 0xDC }, "+a_c".Decode64UrlSafe());
+            Assert.Equal(expected, base64.Decode64UrlSafe());
         }
 
-        [Fact]
-        public void String_Decode64Loose_decodes_base64_without_padding()
+        [Theory]
+        [InlineData(new byte[] { }, "")]
+        [InlineData(new byte[] { 0x61 }, "YQ")]
+        [InlineData(new byte[] { 0x61, 0x62 }, "YWI")]
+        [InlineData(new byte[] { 0x61, 0x62, 0x63 }, "YWJj")]
+        [InlineData(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA")]
+        public void String_Decode64Loose_decodes_base64_without_padding(byte[] expected, string base64)
         {
-            Assert.Equal(new byte[] { }, "".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61 }, "YQ".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61, 0x62 }, "YWI".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61, 0x62, 0x63 }, "YWJj".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA".Decode64Loose());
+            Assert.Equal(expected, base64.Decode64Loose());
         }
 
-        [Fact]
-        public void String_Decode64Loose_decodes_incorrectly_padded_base64()
+        [Theory]
+        [InlineData(new byte[] { }, "==")]
+        [InlineData(new byte[] { 0x61 }, "YQ=")]
+        [InlineData(new byte[] { 0x61, 0x62 }, "YWI==")]
+        [InlineData(new byte[] { 0x61, 0x62, 0x63 }, "YWJj=")]
+        [InlineData(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA===")]
+        public void String_Decode64Loose_decodes_incorrectly_padded_base64(byte[] expected, string base64)
         {
-            Assert.Equal(new byte[] { }, "==".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61 }, "YQ=".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61, 0x62 }, "YWI==".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61, 0x62, 0x63 }, "YWJj=".Decode64Loose());
-            Assert.Equal(new byte[] { 0x61, 0x62, 0x63, 0x64 }, "YWJjZA===".Decode64Loose());
+            Assert.Equal(expected, base64.Decode64Loose());
         }
 
-        [Fact]
-        public void String_ToBigInt_returns_BigInteger()
+        [Theory]
+        [InlineData(0, "")]
+        [InlineData(0, "0")]
+        [InlineData(255, "0FF")]
+        [InlineData(0xDEADBEEF, "0DEADBEEF")]
+        public void String_ToBigInt_returns_BigInteger(uint number, string str)
         {
-            Assert.Equal(BigInteger.Zero, "".ToBigInt());
-            Assert.Equal(BigInteger.Zero, "0".ToBigInt());
-            Assert.Equal(new BigInteger(255), "0FF".ToBigInt());
-            Assert.Equal(new BigInteger(0xDEADBEEF), "0DEADBEEF".ToBigInt());
+            Assert.Equal(new BigInteger(number), str.ToBigInt());
         }
 
-        [Fact]
-        public void String_ToBigInt_returns_positive_BigInteger()
+        [Theory]
+        [InlineData(127, "7F")]
+        [InlineData(128, "80")]
+        [InlineData(255, "FF")]
+        [InlineData(0xDEADBEEF, "DEADBEEF")]
+        public void String_ToBigInt_returns_positive_BigInteger(uint number, string str)
         {
-            Assert.Equal(new BigInteger(127), "7F".ToBigInt());
-            Assert.Equal(new BigInteger(128), "80".ToBigInt());
-            Assert.Equal(new BigInteger(255), "FF".ToBigInt());
-            Assert.Equal(new BigInteger(0xDEADBEEF), "DEADBEEF".ToBigInt());
+            Assert.Equal(new BigInteger(number), str.ToBigInt());
         }
 
         //
@@ -196,40 +211,45 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(TestHex, TestBytes.ToHex());
         }
 
-        [Fact]
-        public void ByteArray_ToBase64_returns_regular_base64_with_padding()
+        [Theory]
+        [InlineData("", new byte[] { })]
+        [InlineData("+w==", new byte[] { 0xFB })]
+        [InlineData("++8=", new byte[] { 0xFB, 0xEF })]
+        [InlineData("++//", new byte[] { 0xFB, 0xEF, 0xFF })]
+        public void ByteArray_ToBase64_returns_regular_base64_with_padding(string expected, byte[] bytes)
         {
-            Assert.Equal("", new byte[] { }.ToBase64());
-            Assert.Equal("+w==", new byte[] { 0xFB }.ToBase64());
-            Assert.Equal("++8=", new byte[] { 0xFB, 0xEF }.ToBase64());
-            Assert.Equal("++//", new byte[] { 0xFB, 0xEF, 0xFF }.ToBase64());
+            Assert.Equal(expected, bytes.ToBase64());
         }
 
-        [Fact]
-        public void ByteArray_ToUrlSafeBase64_returns_urlsafe_base64_with_padding()
+        [Theory]
+        [InlineData("", new byte[] { })]
+        [InlineData("-w==", new byte[] { 0xFB })]
+        [InlineData("--8=", new byte[] { 0xFB, 0xEF })]
+        [InlineData("--__", new byte[] { 0xFB, 0xEF, 0xFF })]
+        public void ByteArray_ToUrlSafeBase64_returns_urlsafe_base64_with_padding(string expected, byte[] bytes)
         {
-            Assert.Equal("", new byte[] { }.ToUrlSafeBase64());
-            Assert.Equal("-w==", new byte[] { 0xFB }.ToUrlSafeBase64());
-            Assert.Equal("--8=", new byte[] { 0xFB, 0xEF }.ToUrlSafeBase64());
-            Assert.Equal("--__", new byte[] { 0xFB, 0xEF, 0xFF }.ToUrlSafeBase64());
+            Assert.Equal(expected, bytes.ToUrlSafeBase64());
         }
 
-        [Fact]
-        public void ByteArray_ToUrlSafeBase64NoPadding_returns_urlsafe_base64_without_padding()
+        [Theory]
+        [InlineData("", new byte[] { })]
+        [InlineData("-w", new byte[] { 0xFB })]
+        [InlineData("--8", new byte[] { 0xFB, 0xEF })]
+        [InlineData("--__", new byte[] { 0xFB, 0xEF, 0xFF })]
+        public void ByteArray_ToUrlSafeBase64NoPadding_returns_urlsafe_base64_without_padding(string expected,
+                                                                                              byte[] bytes)
         {
-            Assert.Equal("", new byte[] { }.ToUrlSafeBase64NoPadding());
-            Assert.Equal("-w", new byte[] { 0xFB }.ToUrlSafeBase64NoPadding());
-            Assert.Equal("--8", new byte[] { 0xFB, 0xEF }.ToUrlSafeBase64NoPadding());
-            Assert.Equal("--__", new byte[] { 0xFB, 0xEF, 0xFF }.ToUrlSafeBase64NoPadding());
+            Assert.Equal(expected, bytes.ToUrlSafeBase64NoPadding());
         }
 
-        [Fact]
-        public void ByteArray_ToBigInt_returns_BigInteger()
+        [Theory]
+        [InlineData(0, new byte[] { })]
+        [InlineData(0, new byte[] { 0 })]
+        [InlineData(255, new byte[] { 0xFF })]
+        [InlineData(0xDEADBEEF, new byte[] { 0xDE, 0xAD, 0xBE, 0xEF })]
+        public void ByteArray_ToBigInt_returns_BigInteger(uint number, byte[] bytes)
         {
-            Assert.Equal(BigInteger.Zero, new byte[] { }.ToBigInt());
-            Assert.Equal(BigInteger.Zero, new byte[] { 0 }.ToBigInt());
-            Assert.Equal(new BigInteger(255), new byte[] { 0xFF }.ToBigInt());
-            Assert.Equal(new BigInteger(0xDEADBEEF), new byte[] { 0xDE, 0xAD, 0xBE, 0xEF }.ToBigInt());
+            Assert.Equal(new BigInteger(number), bytes.ToBigInt());
         }
 
         [Fact]
@@ -249,58 +269,51 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(13, result);
         }
 
-        [Fact]
-        public void ByteArray_Sub_returns_subarray()
+        [Theory]
+        // Subarrays at 0, no overflow
+        [InlineData(0, 1, "0")]
+        [InlineData(0, 2, "01")]
+        [InlineData(0, 3, "012")]
+        [InlineData(0, 15, "0123456789abcde")]
+        [InlineData(0, 16, "0123456789abcdef")]
+        // Subarrays in the middle, no overflow
+        [InlineData(1, 1, "1")]
+        [InlineData(3, 2, "34")]
+        [InlineData(8, 3, "89a")]
+        [InlineData(15, 1, "f")]
+        // Subarrays of zero length, no overflow
+        [InlineData(0, 0, "")]
+        [InlineData(1, 0, "")]
+        [InlineData(9, 0, "")]
+        [InlineData(15, 0, "")]
+        // Subarrays at 0 with overflow
+        [InlineData(0, 17, "0123456789abcdef")]
+        [InlineData(0, 12345, "0123456789abcdef")]
+        [InlineData(0, int.MaxValue, "0123456789abcdef")]
+        // Subarrays in the middle with overflow
+        [InlineData(1, 16, "123456789abcdef")]
+        [InlineData(1, 12345, "123456789abcdef")]
+        [InlineData(8, 9, "89abcdef")]
+        [InlineData(8, 67890, "89abcdef")]
+        [InlineData(15, 2, "f")]
+        [InlineData(15, int.MaxValue, "f")]
+        // Subarrays beyond the end
+        [InlineData(16, 0, "")]
+        [InlineData(16, 1, "")]
+        [InlineData(16, 16, "")]
+        [InlineData(16, int.MaxValue, "")]
+        [InlineData(12345, 0, "")]
+        [InlineData(12345, 1, "")]
+        [InlineData(12345, 56789, "")]
+        [InlineData(12345, int.MaxValue, "")]
+        [InlineData(int.MaxValue, 0, "")]
+        [InlineData(int.MaxValue, 1, "")]
+        [InlineData(int.MaxValue, 12345, "")]
+        [InlineData(int.MaxValue, int.MaxValue, "")]
+        public void ByteArray_Sub_returns_subarray(int start, int length, string expected)
         {
             var array = "0123456789abcdef".ToBytes();
-            var check = new Action<int, int, string>(
-                (start, length, expected) => Assert.Equal(expected.ToBytes(), array.Sub(start, length)));
-
-            // Subarrays at 0, no overflow
-            check(0, 1, "0");
-            check(0, 2, "01");
-            check(0, 3, "012");
-            check(0, 15, "0123456789abcde");
-            check(0, 16, "0123456789abcdef");
-
-            // Subarrays in the middle, no overflow
-            check(1, 1, "1");
-            check(3, 2, "34");
-            check(8, 3, "89a");
-            check(15, 1, "f");
-
-            // Subarrays of zero length, no overflow
-            check(0, 0, "");
-            check(1, 0, "");
-            check(9, 0, "");
-            check(15, 0, "");
-
-            // Subarrays at 0 with overflow
-            check(0, 17, "0123456789abcdef");
-            check(0, 12345, "0123456789abcdef");
-            check(0, int.MaxValue, "0123456789abcdef");
-
-            // Subarrays in the middle with overflow
-            check(1, 16, "123456789abcdef");
-            check(1, 12345, "123456789abcdef");
-            check(8, 9, "89abcdef");
-            check(8, 67890, "89abcdef");
-            check(15, 2, "f");
-            check(15, int.MaxValue, "f");
-
-            // Subarrays beyond the end
-            check(16, 0, "");
-            check(16, 1, "");
-            check(16, 16, "");
-            check(16, int.MaxValue, "");
-            check(12345, 0, "");
-            check(12345, 1, "");
-            check(12345, 56789, "");
-            check(12345, int.MaxValue, "");
-            check(int.MaxValue, 0, "");
-            check(int.MaxValue, 1, "");
-            check(int.MaxValue, 12345, "");
-            check(int.MaxValue, int.MaxValue, "");
+            Assert.Equal(expected.ToBytes(), array.Sub(start, length));
         }
 
         [Fact]
