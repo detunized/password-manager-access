@@ -1,32 +1,30 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
 using PasswordManagerAccess.Common;
-using PasswordManagerAccess.OnePassword;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
 {
     public class HkdfTest
     {
-        [Fact]
-        public void Generate_returns_expected_values()
+        [Theory]
+        [MemberData(nameof(TestCases))]
+        public void Generate_returns_expected_values(TestCase tc)
         {
-            foreach (var i in HkdfTestCases)
-            {
-                var result = Hkdf.Generate(i.Ikm.DecodeHex(),
-                                           i.Salt.DecodeHex(),
-                                           i.Info.DecodeHex(),
-                                           i.ByteCount);
-                Assert.Equal(i.Expected.DecodeHex(), result);
-            }
+            var result = Hkdf.Generate(ikm: tc.Ikm.DecodeHex(),
+                                       salt: tc.Salt.DecodeHex(),
+                                       info: tc.Info.DecodeHex(),
+                                       byteCount: tc.ByteCount);
+            Assert.Equal(tc.Expected.DecodeHex(), result);
         }
 
         //
         // Data
         //
 
-        private struct HkdfTestCase
+        public struct TestCase
         {
             public string Ikm;
             public string Salt;
@@ -36,9 +34,9 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         // Test vectors from https://tools.ietf.org/html/rfc5869
-        private static readonly HkdfTestCase[] HkdfTestCases =
+        public static readonly TestCase[] TestCasesData =
         {
-            new HkdfTestCase
+            new TestCase
             {
                 Ikm = "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
                 Salt = "000102030405060708090a0b0c",
@@ -47,7 +45,7 @@ namespace PasswordManagerAccess.Test.Common
                 Expected = "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34" +
                            "007208d5b887185865"
             },
-            new HkdfTestCase
+            new TestCase
             {
                 Ikm = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222" +
                       "32425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40414243444546" +
@@ -64,5 +62,7 @@ namespace PasswordManagerAccess.Test.Common
                            "c58179ec3e87c14c01d5c1f3434f1d87"
             },
         };
+
+        public static readonly IEnumerable<object[]> TestCases = TestBase.ToMemberData(TestCasesData);
     }
 }

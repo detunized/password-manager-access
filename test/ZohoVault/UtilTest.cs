@@ -1,7 +1,6 @@
 // Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Collections.Generic;
 using System.Linq;
 using PasswordManagerAccess.Common;
 using Xunit;
@@ -89,30 +88,23 @@ namespace PasswordManagerAccess.Test.ZohoVault
             }
         }
 
-        [Fact]
-        public void IncrementCounter_adds_one()
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("00", "01")]
+        [InlineData("7f", "80")]
+        [InlineData("fe", "ff")]
+        [InlineData("ff", "00")]
+        [InlineData("000000", "000001")]
+        [InlineData("0000ff", "000100")]
+        [InlineData("00ffff", "010000")]
+        [InlineData("ffffff", "000000")]
+        [InlineData("abcdefffffffffffffffffff", "abcdf0000000000000000000")]
+        [InlineData("ffffffffffffffffffffffff", "000000000000000000000000")]
+        public void IncrementCounter_adds_one(string initial, string expected)
         {
-            var testCases = new Dictionary<string, string>
-            {
-                {"", ""},
-                {"00", "01"},
-                {"7f", "80"},
-                {"fe", "ff"},
-                {"ff", "00"},
-                {"000000", "000001"},
-                {"0000ff", "000100"},
-                {"00ffff", "010000"},
-                {"ffffff", "000000"},
-                {"abcdefffffffffffffffffff", "abcdf0000000000000000000"},
-                {"ffffffffffffffffffffffff", "000000000000000000000000"},
-            };
-
-            foreach (var i in testCases)
-            {
-                var counter = i.Key.DecodeHex();
-                Util.IncrementCounter(counter);
-                Assert.Equal(i.Value.DecodeHex(), counter);
-            }
+            var counter = initial.DecodeHex();
+            Util.IncrementCounter(counter);
+            Assert.Equal(expected.DecodeHex(), counter);
         }
     }
 }

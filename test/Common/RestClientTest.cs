@@ -170,32 +170,21 @@ namespace PasswordManagerAccess.Test.Common
         // URI
         //
 
-        [Fact]
-        public void MakeAbsoluteUri_joins_url_with_slashes()
+        [Theory]
+        // Only domain
+        [InlineData("http://all.your.base", "are/belong/to/us")]
+        [InlineData("http://all.your.base", "/are/belong/to/us")]
+        [InlineData("http://all.your.base/", "are/belong/to/us")]
+        [InlineData("http://all.your.base/", "/are/belong/to/us")]
+        // Domain with path
+        [InlineData("http://all.your.base/are", "belong/to/us")]
+        [InlineData("http://all.your.base/are", "/belong/to/us")]
+        [InlineData("http://all.your.base/are/", "belong/to/us")]
+        [InlineData("http://all.your.base/are/", "/belong/to/us")]
+        public void MakeAbsoluteUri_joins_url_with_slashes(string baseUrl, string endpoint)
         {
-            string[] bases = { "http://all.your.base", "http://all.your.base/" };
-            string[] endpoints = { "are/belong/to/us", "/are/belong/to/us" };
-
-            foreach (var b in bases)
-            {
-                RestClient rest = new RestClient(null, b);
-                foreach (var e in endpoints)
-                    Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(e).AbsoluteUri);
-            }
-        }
-
-        [Fact]
-        public void MakeAbsoluteUri_joins_base_url_with_path()
-        {
-            string[] bases = { "http://all.your.base/are", "http://all.your.base/are/" };
-            string[] endpoints = { "belong/to/us", "/belong/to/us" };
-
-            foreach (var b in bases)
-            {
-                RestClient rest = new RestClient(null, b);
-                foreach (var e in endpoints)
-                    Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(e).AbsoluteUri);
-            }
+            var rest = new RestClient(null, baseUrl);
+            Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(endpoint).AbsoluteUri);
         }
 
         [Fact]
