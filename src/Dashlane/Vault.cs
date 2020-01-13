@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.Dashlane
             var fullFile = blob.GetString("fullBackupFile");
             if (!string.IsNullOrWhiteSpace(fullFile))
                 foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), fullPassword))
-                    accounts.Add(i.Id, i);
+                    accounts[i.Id] = i;
 
             foreach (var transaction in blob.SelectToken("transactionList"))
             {
@@ -58,7 +58,7 @@ namespace PasswordManagerAccess.Dashlane
                     var content = transaction.GetString("content");
                     if (!string.IsNullOrWhiteSpace(content))
                         foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword))
-                            accounts.Add(i.Id, i);
+                            accounts[i.Id] = i;
 
                     break;
                 case "BACKUP_REMOVE":
