@@ -9,126 +9,126 @@ namespace PasswordManagerAccess.OnePassword.Response
 {
     internal class NewSession
     {
-        [JsonProperty(PropertyName = "status", Required = Required.Always)]
+        [JsonProperty("status", Required = Required.Always)]
         public readonly string Status;
 
-        [JsonProperty(PropertyName = "sessionID", Required = Required.Always)]
+        [JsonProperty("sessionID", Required = Required.Always)]
         public readonly string SessionId;
 
-        [JsonProperty(PropertyName = "accountKeyFormat")]
+        [JsonProperty("accountKeyFormat")]
         public readonly string KeyFormat;
 
-        [JsonProperty(PropertyName = "accountKeyUuid")]
+        [JsonProperty("accountKeyUuid")]
         public readonly string KeyUuid;
 
-        [JsonProperty(PropertyName = "userAuth")]
+        [JsonProperty("userAuth")]
         public readonly UserAuth Auth;
     }
 
     internal class UserAuth
     {
-        [JsonProperty(PropertyName = "method")]
+        [JsonProperty("method")]
         public readonly string Method;
 
-        [JsonProperty(PropertyName = "alg")]
+        [JsonProperty("alg")]
         public readonly string Algorithm;
 
-        [JsonProperty(PropertyName = "iterations")]
+        [JsonProperty("iterations")]
         public readonly int Iterations;
 
-        [JsonProperty(PropertyName = "salt")]
+        [JsonProperty("salt")]
         public readonly string Salt;
     }
 
     internal struct SuccessStatus
     {
-        [JsonProperty(PropertyName = "success", Required = Required.Always)]
+        [JsonProperty("success", Required = Required.Always)]
         public readonly int Success;
     }
 
     internal class Encrypted
     {
-        [JsonProperty(PropertyName = "kid", Required = Required.Always)]
+        [JsonProperty("kid", Required = Required.Always)]
         public readonly string KeyId;
 
-        [JsonProperty(PropertyName = "enc", Required = Required.Always)]
+        [JsonProperty("enc", Required = Required.Always)]
         public readonly string Scheme;
 
-        [JsonProperty(PropertyName = "cty", Required = Required.Always)]
+        [JsonProperty("cty", Required = Required.Always)]
         public readonly string Container;
 
-        [JsonProperty(PropertyName = "iv")]
+        [JsonProperty("iv")]
         public readonly string Iv;
 
-        [JsonProperty(PropertyName = "data", Required = Required.Always)]
+        [JsonProperty("data", Required = Required.Always)]
         public readonly string Ciphertext;
     }
 
     internal class AccountInfo
     {
-        [JsonProperty(PropertyName = "me", Required = Required.Always)]
+        [JsonProperty("me", Required = Required.Always)]
         public readonly MeInfo Me;
 
-        [JsonProperty(PropertyName = "vaults", Required = Required.Always)]
+        [JsonProperty("vaults", Required = Required.Always)]
         public readonly VaultInfo[] Vaults;
     }
 
     internal class MeInfo
     {
-        [JsonProperty(PropertyName = "vaultAccess", Required = Required.Always)]
+        [JsonProperty("vaultAccess", Required = Required.Always)]
         public readonly VaultAccessInfo[] VaultAceess;
     }
 
     internal class VaultAccessInfo
     {
-        [JsonProperty(PropertyName = "vaultUuid", Required = Required.Always)]
+        [JsonProperty("vaultUuid", Required = Required.Always)]
         public readonly string Id;
 
-        [JsonProperty(PropertyName = "acl", Required = Required.Always)]
+        [JsonProperty("acl", Required = Required.Always)]
         public readonly int Acl;
 
-        [JsonProperty(PropertyName = "encVaultKey", Required = Required.Always)]
+        [JsonProperty("encVaultKey", Required = Required.Always)]
         public readonly Encrypted EncryptedKey;
     }
 
     internal class VaultInfo
     {
-        [JsonProperty(PropertyName = "uuid", Required = Required.Always)]
+        [JsonProperty("uuid", Required = Required.Always)]
         public readonly string Id;
 
-        [JsonProperty(PropertyName = "encAttrs", Required = Required.Always)]
+        [JsonProperty("encAttrs", Required = Required.Always)]
         public readonly Encrypted Attributes;
     }
 
     internal class VaultAttributes
     {
-        [JsonProperty(PropertyName = "name", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty("name", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue("")]
         public readonly string Name;
 
-        [JsonProperty(PropertyName = "desc", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty("desc", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue("")]
         public readonly string Description;
     }
 
     internal class KeysetsInfo
     {
-        [JsonProperty(PropertyName = "keysets", Required = Required.Always)]
+        [JsonProperty("keysets", Required = Required.Always)]
         public readonly KeysetInfo[] Keysets;
     }
 
     internal class KeysetInfo
     {
-        [JsonProperty(PropertyName = "encryptedBy", Required = Required.Always)]
+        [JsonProperty("encryptedBy", Required = Required.Always)]
         public readonly string EncryptedBy;
 
-        [JsonProperty(PropertyName = "sn", Required = Required.Always)]
+        [JsonProperty("sn", Required = Required.Always)]
         public readonly int SerialNumber;
 
-        [JsonProperty(PropertyName = "encSymKey", Required = Required.Always)]
+        [JsonProperty("encSymKey", Required = Required.Always)]
         public readonly KeyDerivationInfo KeyOrMasterKey;
 
-        [JsonProperty(PropertyName = "encPriKey", Required = Required.Always)]
+        [JsonProperty("encPriKey", Required = Required.Always)]
         public readonly Encrypted PrivateKey;
     }
 
@@ -176,52 +176,52 @@ namespace PasswordManagerAccess.OnePassword.Response
     // this with attributes.
     internal class KeyDerivationInfo : Encrypted
     {
-        [JsonProperty(PropertyName = "alg")]
+        [JsonProperty("alg")]
         public readonly string Algorithm;
 
-        [JsonProperty(PropertyName = "p2s")]
+        [JsonProperty("p2s")]
         public readonly string Salt;
 
-        [JsonProperty(PropertyName = "p2c")]
+        [JsonProperty("p2c")]
         public readonly int Iterations;
     }
 
     internal class VerifyKey
     {
-        [JsonProperty(PropertyName = "accountUuid", Required = Required.Always)]
+        [JsonProperty("accountUuid", Required = Required.Always)]
         public readonly string AccountId;
 
-        [JsonProperty(PropertyName = "userUuid", Required = Required.Always)]
+        [JsonProperty("userUuid", Required = Required.Always)]
         public readonly string UserId;
 
-        [JsonProperty(PropertyName = "serverVerifyHash", Required = Required.Always)]
+        [JsonProperty("serverVerifyHash", Required = Required.Always)]
         public readonly string ServerHash;
 
-        [JsonProperty(PropertyName = "mfa")]
+        [JsonProperty("mfa")]
         public readonly MfaInfo Mfa;
     }
 
     internal class MfaInfo
     {
-        [JsonProperty(PropertyName = "dsecret")]
+        [JsonProperty("dsecret")]
         public readonly MfaEnabled RememberMe;
 
-        [JsonProperty(PropertyName = "totp")]
+        [JsonProperty("totp")]
         public readonly MfaEnabled GoogleAuth;
     }
 
     internal class MfaEnabled
     {
-        [JsonProperty(PropertyName = "enabled", Required = Required.Always)]
+        [JsonProperty("enabled", Required = Required.Always)]
         public readonly bool Enabled;
     }
 
     internal class Error
     {
-        [JsonProperty(PropertyName = "errorCode", Required = Required.Always)]
+        [JsonProperty("errorCode", Required = Required.Always)]
         public readonly int Code;
 
-        [JsonProperty(PropertyName = "errorMessage", Required = Required.Always)]
+        [JsonProperty("errorMessage", Required = Required.Always)]
         public readonly string Message;
     }
 
@@ -234,13 +234,13 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     internal class VaultItemsBatch
     {
-        [JsonProperty(PropertyName = "contentVersion", Required = Required.Always)]
+        [JsonProperty("contentVersion", Required = Required.Always)]
         public readonly int Version;
 
-        [JsonProperty(PropertyName = "items")]
+        [JsonProperty("items")]
         public readonly VaultItem[] Items;
 
-        [JsonProperty(PropertyName = "batchComplete", Required = Required.Always)]
+        [JsonProperty("batchComplete", Required = Required.Always)]
         public readonly bool Complete;
     }
 
@@ -348,10 +348,10 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     internal class AForB
     {
-        [JsonProperty(PropertyName = "sessionID", Required = Required.Always)]
+        [JsonProperty("sessionID", Required = Required.Always)]
         public readonly string SessionId;
 
-        [JsonProperty(PropertyName = "userB", Required = Required.Always)]
+        [JsonProperty("userB", Required = Required.Always)]
         public readonly string B;
     }
 }
