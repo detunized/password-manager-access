@@ -208,7 +208,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // TODO: See which cookies are needed
             var cookies = new Dictionary<string, string>();
-            foreach (var name in "_iamtt dcl_pfx_lcnt iamcsr JSESSIONID stk tfa_ac".Split(' '))
+            foreach (var name in "_iamtt iamcsr JSESSIONID stk tfa_ac".Split(' '))
                 cookies[name] = loginResponse.Cookies[name];
 
             // Now submit the form with the MFA code
