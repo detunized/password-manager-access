@@ -11,8 +11,8 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ZohoVault
 {
-    using R = Response;
     using HttpCookies = Dictionary<string, string>;
+    using R = Response;
 
     internal static class Client
     {
@@ -114,11 +114,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static void Logout(HttpCookies cookies, RestClient rest)
         {
-            var response = rest.Get(
-                LogoutUrl,
-                Headers,
-                cookies);
-
+            var response = rest.Get(LogoutUrl, Headers, cookies);
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
         }

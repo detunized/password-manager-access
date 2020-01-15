@@ -17,15 +17,18 @@ namespace PasswordManagerAccess.Test
         // GET
         //
 
-        public RestFlow Get(string response, HttpStatusCode status = HttpStatusCode.OK, Exception error = null)
+        public RestFlow Get(string response,
+                            HttpStatusCode status = HttpStatusCode.OK,
+                            Dictionary<string, string> cookies = null,
+                            Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Get, response, status, error));
+            _responses.Add(new Response(HttpMethod.Get, response, status, cookies ?? NoCookies, error));
             return this;
         }
 
         public RestFlow Get(string response, Exception error)
         {
-            return Get(response, HttpStatusCode.OK, error);
+            return Get(response, HttpStatusCode.OK, NoCookies, error);
         }
 
         public RestFlow Get(Exception error)
@@ -37,15 +40,18 @@ namespace PasswordManagerAccess.Test
         // POST
         //
 
-        public RestFlow Post(string response, HttpStatusCode status = HttpStatusCode.OK, Exception error = null)
+        public RestFlow Post(string response,
+                             HttpStatusCode status = HttpStatusCode.OK,
+                             Dictionary<string, string> cookies = null,
+                             Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Post, response, status, error));
+            _responses.Add(new Response(HttpMethod.Post, response, status, cookies ?? NoCookies, error));
             return this;
         }
 
         public RestFlow Post(string response, Exception error)
         {
-            return Post(response, HttpStatusCode.OK, error);
+            return Post(response, HttpStatusCode.OK, NoCookies, error);
         }
 
         public RestFlow Post(Exception error)
@@ -57,15 +63,18 @@ namespace PasswordManagerAccess.Test
         // PUT
         //
 
-        public RestFlow Put(string response, HttpStatusCode status = HttpStatusCode.OK, Exception error = null)
+        public RestFlow Put(string response,
+                            HttpStatusCode status = HttpStatusCode.OK,
+                            Dictionary<string, string> cookies = null,
+                            Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Put, response, status, error));
+            _responses.Add(new Response(HttpMethod.Put, response, status, cookies ?? NoCookies, error));
             return this;
         }
 
         public RestFlow Put(string response, Exception error)
         {
-            return Put(response, HttpStatusCode.OK, error);
+            return Put(response, HttpStatusCode.OK, NoCookies, error);
         }
 
         public RestFlow Put(Exception error)
@@ -161,15 +170,21 @@ namespace PasswordManagerAccess.Test
             // Returned to the caller
             public readonly string Content;
             public readonly HttpStatusCode Status;
+            public readonly Dictionary<string, string> Cookies;
             public readonly Exception Error;
 
             // Expected to be received from the caller
             public Expected Expected;
 
-            public Response(HttpMethod method, string content, HttpStatusCode status, Exception error)
+            public Response(HttpMethod method,
+                            string content,
+                            HttpStatusCode status,
+                            Dictionary<string, string> cookies,
+                            Exception error)
             {
                 Content = content;
                 Status = status;
+                Cookies = cookies;
                 Error = error;
                 Expected = new Expected(method);
             }
@@ -239,7 +254,7 @@ namespace PasswordManagerAccess.Test
             allocatedResult.StatusCode = r.Status;
             allocatedResult.Content = r.Content;
             allocatedResult.Error = r.Error;
-            allocatedResult.Cookies = new Dictionary<string, string>();
+            allocatedResult.Cookies = r.Cookies;
             allocatedResult.RequestUri = uri;
         }
 

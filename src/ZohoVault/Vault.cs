@@ -16,15 +16,19 @@ namespace PasswordManagerAccess.ZohoVault
         }
 
         //
-        // Private
+        // Internal
         //
 
-        private static Vault Open(string username, string password, string passphrase, Ui ui, IRestTransport transport)
+        internal static Vault Open(string username,
+                                   string password,
+                                   string passphrase,
+                                   Ui ui,
+                                   IRestTransport transport)
         {
             return new Vault(Client.OpenVault(username, password, passphrase, ui, transport));
         }
 
-        private Vault(Account[] accounts)
+        internal Vault(Account[] accounts)
         {
             Accounts = accounts;
         }
