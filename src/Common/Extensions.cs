@@ -54,6 +54,12 @@ namespace PasswordManagerAccess.Common
             return bytes;
         }
 
+        // This is a forgiving version that pads the input with a '0' when the length is odd
+        public static byte[] DecodeHexLoose(this string s)
+        {
+            return DecodeHex(s.Length % 2 == 0 ? s : s + "0");
+        }
+
         public static byte[] Decode32(this string s)
         {
             // Remove padding
