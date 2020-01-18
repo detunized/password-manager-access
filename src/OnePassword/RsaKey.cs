@@ -47,11 +47,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException(
                     $"Invalid encryption scheme '{e.Scheme}', expected '{EncryptionScheme}'");
 
-            using (var rsa = new RSACryptoServiceProvider())
-            {
-                rsa.ImportParameters(Parameters);
-                return rsa.Decrypt(e.Ciphertext, true);
-            }
+            return Crypto.DecryptRsaSha1(e.Ciphertext, Parameters);
         }
 
         //
