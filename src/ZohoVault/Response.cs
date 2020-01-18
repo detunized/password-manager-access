@@ -81,6 +81,10 @@ namespace PasswordManagerAccess.ZohoVault.Response
 
         [JsonProperty("SECRETDATA", Required = Required.Always)]
         public readonly string Data;
+
+        [JsonProperty("ISSHARED", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string IsShared;
     }
 
     internal struct SecretData

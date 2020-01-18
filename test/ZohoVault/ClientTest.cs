@@ -41,6 +41,29 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("", accounts[1].Note);
         }
 
+        [Fact]
+        public void OpenVault_returns_shared_accounts()
+        {
+            var flow = new RestFlow()
+                .Get("", cookies: OAuthCookies)
+                .Post("showsuccess('blah',)", cookies: LoginCookies)
+                .Get(GetFixture("auth-info-with-shared-items-response"))
+                .Get(GetFixture("vault-with-shared-items-response"))
+                .Get(""); // Logout
+
+            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, flow);
+            var accounts = vault.Accounts;
+
+            Assert.Equal(1, accounts.Length);
+
+            Assert.Equal("113381000000009016", accounts[0].Id);
+            Assert.Equal("Facebook", accounts[0].Name);
+            Assert.Equal("mark", accounts[0].Username);
+            Assert.Equal("zuckerberg", accounts[0].Password);
+            Assert.Equal("https://www.facebook.com", accounts[0].Url);
+            Assert.Equal("Yo, bitches!", accounts[0].Note);
+        }
+
         // There are too many combinations for all the requests and things to verify. So all the
         // tests are rolled into one. This way there's a lot less repetitions, though when this test
         // fails it's harder to figure out why.

@@ -1,0 +1,29 @@
+{
+    "operation":
+    {
+        "name": "GET_LOGIN",
+        "result":
+        {
+            "status": "success",
+            "message": ""
+        },
+        "details":
+        {
+            "LASTMODFIEDTIME": "",
+            "CREATIONTIME": "1560635027050",
+            "LOGIN": "PBKDF2_AES",
+            "USER":
+            {
+                "USERNAME": "LastPass Ruby",
+                "NEW_UI": false,
+                "USERID": "113381000000009004",
+                "EMAIL": "guess@gmail.com",
+                "ZUID": "691361765",
+                "ROLES": "SuperAdmin,Admin,User"
+            },
+            "ITERATION": 1000,
+            "SALT": "d4a220dd898c1be90b9079bc5080250b",
+            "PASSPHRASE": "/QHU4JJmBV2suF3AQxAXWKKE3hbp44y5KF4mInVTjtcXv92zvxrW0wy1lA=="
+        }
+    }
+}

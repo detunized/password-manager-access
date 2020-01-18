@@ -27,11 +27,11 @@ namespace PasswordManagerAccess.ZohoVault
             var cookies = Login(username, password, ui, rest);
             try
             {
-                var key = Authenticate(passphrase, cookies, rest);
+                var vaultKey = Authenticate(passphrase, cookies, rest);
                 var vaultResponse = DownloadVault(cookies, rest);
-                var sharingKey = DecryptSharingKey(vaultResponse, key);
+                var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
 
-                return ParseAccounts(vaultResponse, key);
+                return ParseAccounts(vaultResponse, vaultKey, sharingKey);
             }
             finally
             {
@@ -185,12 +185,12 @@ namespace PasswordManagerAccess.ZohoVault
             return Crypto.DecryptRsa(vaultResponse.SharingKey.DecodeHex(), rsaKey, RSAEncryptionPadding.Pkcs1);
         }
 
-        internal static Account[] ParseAccounts(R.Vault vaultResponse, byte[] key)
+        internal static Account[] ParseAccounts(R.Vault vaultResponse, byte[] vaultKey, byte[] sharingKey)
         {
             // TODO: Test on non account type secrets!
             // TODO: Test on accounts with missing fields!
             return vaultResponse.Secrets
-                .Select(x => ParseAccount(x, key))
+                .Select(x => ParseAccount(x, x.IsShared == "YES" ? sharingKey : vaultKey))
                 .Where(x => x != null)
                 .ToArray();
         }
