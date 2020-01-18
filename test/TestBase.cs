@@ -11,7 +11,7 @@ namespace PasswordManagerAccess.Test
     // Inherit this when fixtures are needed in the test
     public class TestBase
     {
-        public static IEnumerable<object[]> ToMemberData<T>(IEnumerable<T> e)
+        public static IEnumerable<object[]> ToMemberData<T>(params T[] e)
         {
             return e.Select(x => new object[] { x });
         }

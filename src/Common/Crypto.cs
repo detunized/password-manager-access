@@ -122,6 +122,42 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // RSA
+        //
+
+        public static byte[] DecryptRsaPkcs1(byte[] ciphertext, RSAParameters privateKey)
+        {
+            return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.Pkcs1);
+        }
+
+        public static byte[] DecryptRsaSha1(byte[] ciphertext, RSAParameters privateKey)
+        {
+            return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA1);
+        }
+
+        // TODO: Test this function. One .NET 4.7.2 it throws "unsupported" or something like that.
+        public static byte[] DecryptRsaSha256(byte[] ciphertext, RSAParameters privateKey)
+        {
+            return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA256);
+        }
+
+        public static byte[] DecryptRsa(byte[] ciphertext, RSAParameters privateKey, RSAEncryptionPadding padding)
+        {
+            try
+            {
+                using (var rsa = new RSACryptoServiceProvider())
+                {
+                    rsa.ImportParameters(privateKey);
+                    return rsa.Decrypt(ciphertext, padding);
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new CryptoException("RSA decryption failed", e);
+            }
+        }
+
+        //
         // Private
         //
 
