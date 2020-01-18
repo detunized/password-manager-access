@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault;
 using Xunit;
+using R = PasswordManagerAccess.ZohoVault.Response;
 
 namespace PasswordManagerAccess.Test.ZohoVault
 {
@@ -118,6 +119,24 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var vault = Client.DownloadVault(LoginCookies, flow);
 
             Assert.NotEmpty(vault.Secrets);
+        }
+
+        [Fact]
+        public void DecryptSharingKey_returns_null_when_no_key_is_present()
+        {
+            var vault = ParseFixture<R.ResponseEnvelope<R.Vault>>("vault-response").Payload;
+
+            Assert.Null(Client.DecryptSharingKey(vault, TestData.Key));
+        }
+
+        [Fact]
+        public void DecryptSharingKey_returns_key()
+        {
+            var vault = ParseFixture<R.ResponseEnvelope<R.Vault>>("vault-with-shared-items-response").Payload;
+
+            var sharingKey = Client.DecryptSharingKey(vault, TestData.Key2).ToUtf8();
+
+            Assert.Equal("ItaDMKNE|x4gu1gEom9f@'GWsjH!}$OS", sharingKey);
         }
 
         [Fact]

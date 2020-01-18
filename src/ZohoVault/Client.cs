@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -28,6 +29,7 @@ namespace PasswordManagerAccess.ZohoVault
             {
                 var key = Authenticate(passphrase, cookies, rest);
                 var vaultResponse = DownloadVault(cookies, rest);
+                var sharingKey = DecryptSharingKey(vaultResponse, key);
 
                 return ParseAccounts(vaultResponse, key);
             }
@@ -157,6 +159,30 @@ namespace PasswordManagerAccess.ZohoVault
         internal static R.Vault DownloadVault(HttpCookies cookies, RestClient rest)
         {
             return GetWrapped<R.Vault>(VaultUrl, cookies, rest);
+        }
+
+        internal static byte[] DecryptSharingKey(R.Vault vaultResponse, byte[] key)
+        {
+            if (vaultResponse.PrivateKey.IsNullOrEmpty() || vaultResponse.SharingKey.IsNullOrEmpty())
+                return null;
+
+            var privateKeyComponents = Util.Decrypt(vaultResponse.PrivateKey.Decode64(), key).ToUtf8().Split(',');
+            if (privateKeyComponents.Length != 8)
+                throw new InternalErrorException("Invalid RSA key format");
+
+            var rsaKey = new RSAParameters()
+            {
+                Modulus = privateKeyComponents[0].DecodeHexLoose(),
+                Exponent = privateKeyComponents[1].ToBigInt().ToByteArray(),
+                D = privateKeyComponents[2].DecodeHexLoose(),
+                P = privateKeyComponents[3].DecodeHexLoose(),
+                Q = privateKeyComponents[4].DecodeHexLoose(),
+                DP = privateKeyComponents[5].DecodeHexLoose(),
+                DQ = privateKeyComponents[6].DecodeHexLoose(),
+                InverseQ = privateKeyComponents[7].DecodeHexLoose(),
+            };
+
+            return Crypto.DecryptRsa(vaultResponse.SharingKey.DecodeHex(), rsaKey, RSAEncryptionPadding.Pkcs1);
         }
 
         internal static Account[] ParseAccounts(R.Vault vaultResponse, byte[] key)

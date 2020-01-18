@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 
+using System.ComponentModel;
 using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.ZohoVault.Response
@@ -54,6 +55,14 @@ namespace PasswordManagerAccess.ZohoVault.Response
     {
         [JsonProperty("SECRETS", Required = Required.Always)]
         public readonly Secret[] Secrets;
+
+        [JsonProperty("PRIVATEKEY", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string PrivateKey;
+
+        [JsonProperty("SHARINGKEY", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string SharingKey;
     }
 
     internal struct Secret
