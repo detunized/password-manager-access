@@ -58,9 +58,9 @@ namespace PasswordManagerAccess.Test.Common
 
         [Theory]
         [InlineData("0", new byte[] { 0 })]
-        [InlineData("f", new byte[] { 0xF0 })]
-        [InlineData("bad", new byte[] { 0xBA, 0xD0 })]
-        [InlineData("badbeef", new byte[] { 0xBA, 0xDB, 0xEE, 0xF0 })]
+        [InlineData("f", new byte[] { 0x0F })]
+        [InlineData("bad", new byte[] { 0x0B, 0xAD })]
+        [InlineData("badbeef", new byte[] { 0x0B, 0xAD, 0xBE, 0xEF })]
         public void String_DecodeHexLoose_decodes_strings_with_odd_length(string hex, byte[] expected)
         {
             Assert.Equal(expected, hex.DecodeHexLoose());
