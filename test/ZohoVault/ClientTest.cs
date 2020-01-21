@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var vault = Vault.Open(Username, Password, TestData.Passphrase, null, flow);
             var accounts = vault.Accounts;
 
-            Assert.Equal(1, accounts.Length);
+            Assert.Single(accounts);
 
             Assert.Equal("113381000000009016", accounts[0].Id);
             Assert.Equal("Facebook", accounts[0].Name);
