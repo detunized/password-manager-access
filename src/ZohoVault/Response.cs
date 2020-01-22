@@ -95,4 +95,49 @@ namespace PasswordManagerAccess.ZohoVault.Response
         [JsonProperty("password", Required = Required.Always)]
         public readonly string Password;
     }
+
+    internal class Lookup
+    {
+        [JsonProperty("status_code", Required = Required.Always)]
+        public readonly int StatusCode;
+
+        [JsonProperty("message", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string Message;
+
+        [JsonProperty("lookup")]
+        public readonly LookupResult Result;
+
+        [JsonProperty("errors")]
+        public readonly LookupError[] Errors;
+
+        [JsonProperty("data")]
+        public readonly LookupRedirect Redirect;
+    }
+
+    internal class LookupResult
+    {
+        [JsonProperty("loginid", Required = Required.Always)]
+        public readonly string Username;
+
+        [JsonProperty("dc", Required = Required.Always)]
+        public readonly string DataCenter;
+    }
+
+    internal class LookupError
+    {
+        [JsonProperty("code", Required = Required.Always)]
+        public readonly string Code;
+    }
+
+    internal class LookupRedirect
+    {
+        [JsonProperty("redirect_uri", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string RedirectUrl;
+
+        [JsonProperty("dc", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue("")]
+        public readonly string DataCenter;
+    }
 }

@@ -16,6 +16,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow()
                 .Get("", cookies: OAuthCookies)
+                .Post(GetFixture("user-exists-response"))
                 .Post("showsuccess('blah',)", cookies: LoginCookies)
                 .Get(GetFixture("auth-info-response"))
                 .Get(GetFixture("vault-response"))
@@ -46,6 +47,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow()
                 .Get("", cookies: OAuthCookies)
+                .Post(GetFixture("user-exists-response"))
                 .Post("showsuccess('blah',)", cookies: LoginCookies)
                 .Get(GetFixture("auth-info-with-shared-items-response"))
                 .Get(GetFixture("vault-with-shared-items-response"))
@@ -76,12 +78,14 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Get("", cookies: OAuthCookies)
                     .ExpectUrl("https://accounts.zoho.com/oauth/v2/auth?")
+                .Post(GetFixture("user-exists-response"))
+                    .ExpectUrl("signin/v2/lookup")
                 .Post("showsuccess('blah',)", cookies: LoginCookies)
                     .ExpectUrl("https://accounts.zoho.com/signin/auth")
                     .ExpectContent($"LOGIN_ID={Username}", $"PASSWORD={Password}", $"iamcsrcoo={OAuthCookieValue}")
                     .ExpectCookie("iamcsr", OAuthCookieValue);
 
-            var cookies = Client.Login(Username, Password, null, flow);
+            var (cookies, _) = Client.Login(Username, Password, null, flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
@@ -91,6 +95,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow()
                 .Get("", cookies: OAuthCookies)
+                .Post(GetFixture("user-exists-response"))
                 .Post("showerror('It failed')");
 
             Exceptions.AssertThrowsBadCredentials(() => Client.Login(Username, Password, null, flow),

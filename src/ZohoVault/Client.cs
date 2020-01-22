@@ -24,7 +24,7 @@ namespace PasswordManagerAccess.ZohoVault
                                           IRestTransport transport)
         {
             var rest = new RestClient(transport);
-            var cookies = Login(username, password, ui, rest);
+            var (cookies, _) = Login(username, password, ui, rest);
             try
             {
                 var vaultKey = Authenticate(passphrase, cookies, rest);
@@ -43,7 +43,10 @@ namespace PasswordManagerAccess.ZohoVault
         // Internal
         //
 
-        internal static HttpCookies Login(string username, string password, Ui ui, RestClient rest)
+        internal static (HttpCookies cookies, string tld) Login(string username,
+                                                                string password,
+                                                                Ui ui,
+                                                                RestClient rest)
         {
             // OAuth flow:
             //   1. login page (potential captcha)
@@ -60,9 +63,11 @@ namespace PasswordManagerAccess.ZohoVault
             // TODO: Check for errors
             var csrToken = loginPage.Cookies["iamcsr"];
 
+            var tld = GetRegionTld(username, csrToken, rest);
+
             // 1b. Submit the login form
             var response = rest.PostForm(
-                AuthUrl,
+                AuthUrl(tld),
                 parameters: new Dictionary<string, object>
                 {
                     {"LOGIN_ID", username},
@@ -91,7 +96,7 @@ namespace PasswordManagerAccess.ZohoVault
                 // Probably the only way to deal with that is either show the actual browser or tell
                 // the user to login manually and dismiss the message.
                 var url = ExtractSwitchToUrl(response.Content);
-                if (url.StartsWith("https://accounts.zoho.com/tfa/auth"))
+                if (url.StartsWith($"https://accounts.zoho.{tld}/tfa/auth"))
                     response = LoginMfa(response, ui, rest);
                 else
                     throw MakeInvalidResponse($"Unexpected 'switchto' url: '{url}'");
@@ -101,17 +106,77 @@ namespace PasswordManagerAccess.ZohoVault
             if (response.Content.StartsWith("showsuccess("))
             {
                 var url = ExtractShowSuccessUrl(response.Content);
-                if (url.StartsWith("https://accounts.zoho.com/oauth/v2/approve"))
+                if (url.StartsWith($"https://accounts.zoho.{tld}/oauth/v2/approve"))
                 {
                     response = Approve(response, rest);
                     if (!response.Content.StartsWith("showsuccess("))
                         throw MakeInvalidResponse($"Unexpected response: {response.Content}");
                 }
 
-                return response.Cookies;
+                return (response.Cookies, tld);
             }
 
             throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
+        }
+
+        internal static string GetRegionTld(string username, string csrToken, RestClient rest)
+        {
+            var response = rest.PostForm<R.Lookup>(
+                $"{LookupUrl}/{username}",
+                new Dictionary<string, object>
+                {
+                    { "mode", "primary" },
+                    { "cli_time", DateTimeOffset.Now.ToUnixTimeMilliseconds() },
+                    { "servicename", ServiceName },
+                    { "serviceurl", ServiceUrl },
+                },
+                headers: new Dictionary<string, string> { { "X-ZCSRF-TOKEN", $"iamcsrcoo={csrToken}" } },
+                cookies: new Dictionary<string, string> { { "iamcsr", csrToken } });
+
+            if (!response.IsSuccessful)
+                throw MakeErrorOnFailedRequest(response);
+
+            var result = response.Data;
+            string dataCenter;
+
+            if (result.StatusCode / 100 == 2)
+            {
+                dataCenter = result.Result?.DataCenter;
+            }
+            else if (result.Errors?.Length > 0)
+            {
+                switch (result.Errors[0].Code)
+                {
+                case "U400": // User exists in another DC
+                    dataCenter = result.Redirect?.DataCenter;
+                    break;
+                case "U401": // User doesn't exist
+                    throw new BadCredentialsException("The username is invalid");
+                default:
+                    throw new InternalErrorException("Unexpected response");
+                }
+            }
+            else
+            {
+                throw new InternalErrorException("Unexpected response");
+            }
+
+            // From here: https://accounts.zoho.eu/oauth/serverinfo
+            switch (dataCenter)
+            {
+            case "us":
+                return "com";
+            case "eu":
+                return "eu";
+            case "in":
+                return "in";
+            case "au":
+                return "com.au";
+            case null:
+                throw new InternalErrorException("Unexpected response (no data center found)");
+            default:
+                throw new UnsupportedFeatureException($"Unsupported data center '{dataCenter}'");
+            }
         }
 
         internal static void Logout(HttpCookies cookies, RestClient rest)
@@ -409,8 +474,10 @@ namespace PasswordManagerAccess.ZohoVault
         private static readonly string LoginPageUrl =
             $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
 
-        private const string AuthUrl =
-            "https://accounts.zoho.com/signin/auth";
+        private const string LookupUrl =
+            "https://accounts.zoho.com/signin/v2/lookup";
+
+        private static string AuthUrl(string tld) => $"https://accounts.zoho.{tld}/signin/auth";
 
         private const string AuthInfoUrl =
             "https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN";
