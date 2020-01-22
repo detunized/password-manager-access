@@ -110,7 +110,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectUrl("https://accounts.zoho.com/logout?")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            Client.Logout(LoginCookies, flow);
+            Client.Logout(LoginCookies, "com", flow);
         }
 
         [Fact]
@@ -121,7 +121,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            var key = Client.Authenticate(TestData.Passphrase, LoginCookies, flow);
+            var key = Client.Authenticate(TestData.Passphrase, LoginCookies, "com", flow);
 
             Assert.Equal(TestData.Key, key);
         }
@@ -133,7 +133,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("auth-info-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.Authenticate("Not really a passphrase", LoginCookies, flow),
+                () => Client.Authenticate("Not really a passphrase", LoginCookies, "com", flow),
                 "Passphrase is incorrect");
         }
 
@@ -144,7 +144,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-response"))
                 .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT");
 
-            var vault = Client.DownloadVault(LoginCookies, flow);
+            var vault = Client.DownloadVault(LoginCookies, "com", flow);
 
             Assert.NotEmpty(vault.Secrets);
         }
@@ -175,7 +175,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            var info = Client.GetAuthInfo(LoginCookies, flow);
+            var info = Client.GetAuthInfo(LoginCookies, "com", flow);
 
             Assert.Equal(1000, info.IterationCount);
             Assert.Equal("f78e6ffce8e57501a02c9be303db2c68".ToBytes(), info.Salt);
