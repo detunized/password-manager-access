@@ -1,4 +1,9 @@
-﻿# Changelog
+# Changelog
+
+## 0.4.0
+  - ZohoVault: support for regions (#15)
+  - ZohoVault: support for shared items (#19)
+  - ZohoVault: fixed a crash with enabled MFA (#14)
 
 ## 0.3.0
 
