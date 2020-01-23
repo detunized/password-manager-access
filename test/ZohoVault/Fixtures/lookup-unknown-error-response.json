@@ -1,0 +1,11 @@
+{
+    "status_code": 600,
+    "resource_name": "lookup",
+    "message": "Unknown error",
+    "errors": [
+    {
+        "code": "U403",
+        "message": "Unknown error"
+    }],
+    "localized_message": "Unknown error"
+}

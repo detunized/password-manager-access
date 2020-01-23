@@ -24,7 +24,23 @@ namespace PasswordManagerAccess.ZohoVault
                                           IRestTransport transport)
         {
             var rest = new RestClient(transport);
-            var (cookies, tld) = Login(username, password, ui, rest);
+
+            // This token is needed to access other pages of the login flow. It's sent via headers,
+            // cookies and in the request data.
+            var token = RequestToken(rest);
+
+            // TLD is determined by the region/data center. Each user is associated with a specific
+            // region.
+            var tld = GetRegionTld(username, token, rest);
+
+            // Perform the login dance that possibly involves the MFA steps. The cookies are later
+            // used by the subsequent requests.
+            //
+            // TODO: It would be ideal to figure out which cookies are needed for general
+            // cleanliness. It was too many of them and so they are now passed altogether a bundle
+            // between the requests.
+            var cookies = Login(username, password, token, tld, ui, rest);
+
             try
             {
                 var vaultKey = Authenticate(passphrase, cookies, tld, rest);
@@ -43,80 +59,17 @@ namespace PasswordManagerAccess.ZohoVault
         // Internal
         //
 
-        internal static (HttpCookies cookies, string tld) Login(string username,
-                                                                string password,
-                                                                Ui ui,
-                                                                RestClient rest)
+        internal static string RequestToken(RestClient rest)
         {
-            // OAuth flow:
-            //   1. login page (potential captcha)
-            //   2. MFA page (optional, only when MFA is enabled)
-            //   3. Approve page
-            //   4. Redirect URL with OAuth temporary token
-            //   5. Exchange token for permanent token
-
-            // 1a. Fetch the login page for cookies
             var loginPage = rest.Get(LoginPageUrl, Headers);
             if (!loginPage.IsSuccessful)
                 throw MakeErrorOnFailedRequest(loginPage);
 
-            // TODO: Check for errors
-            var csrToken = loginPage.Cookies["iamcsr"];
+            var token = loginPage.Cookies.GetOrDefault("iamcsr", "");
+            if (token.IsNullOrEmpty())
+                throw new InternalErrorException("Unexpected response: 'iamcsr' cookie is not set by the server");
 
-            var tld = GetRegionTld(username, csrToken, rest);
-
-            // 1b. Submit the login form
-            var response = rest.PostForm(
-                AuthUrl(tld),
-                parameters: new Dictionary<string, object>
-                {
-                    {"LOGIN_ID", username},
-                    {"PASSWORD", password},
-                    {"cli_time", DateTimeOffset.Now.ToUnixTimeMilliseconds()},
-                    {"iamcsrcoo", csrToken},
-                    {"servicename", ServiceName},
-                    {"serviceurl", ServiceUrl(tld)},
-                },
-                headers: Headers,
-                cookies: loginPage.Cookies); // TODO: See if we need all the cookies
-
-            // TODO: Handle captcha
-            // Need to show captcha: showhiperror('HIP_REQUIRED')
-            // Captcha is invalid: showhiperror('HIP_INVALID')
-
-            if (!response.IsSuccessful)
-                throw MakeErrorOnFailedRequest(response);
-
-            // The returned text is JavaScript which is supposed to call some functions on the
-            // original page. "showsuccess" is called when everything went well. "switchto" is a
-            // MFA poor man's redirect.
-            if (response.Content.StartsWith("switchto("))
-            {
-                // Sometimes the web login redirects to some kind of message or announcement or whatever.
-                // Probably the only way to deal with that is either show the actual browser or tell
-                // the user to login manually and dismiss the message.
-                var url = ExtractSwitchToUrl(response.Content);
-                if (url.StartsWith($"https://accounts.zoho.{tld}/tfa/auth"))
-                    response = LoginMfa(response, tld, ui, rest);
-                else
-                    throw MakeInvalidResponse($"Unexpected 'switchto' url: '{url}'");
-            }
-
-            // Should be when all is good!
-            if (response.Content.StartsWith("showsuccess("))
-            {
-                var url = ExtractShowSuccessUrl(response.Content);
-                if (url.StartsWith($"https://accounts.zoho.{tld}/oauth/v2/approve"))
-                {
-                    response = Approve(response, tld, rest);
-                    if (!response.Content.StartsWith("showsuccess("))
-                        throw MakeInvalidResponse($"Unexpected response: {response.Content}");
-                }
-
-                return (response.Cookies, tld);
-            }
-
-            throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
+            return token;
         }
 
         internal static string GetRegionTld(string username, string csrToken, RestClient rest)
@@ -161,6 +114,14 @@ namespace PasswordManagerAccess.ZohoVault
                 throw new InternalErrorException("Unexpected response");
             }
 
+            return DataCenterToTld(dataCenter);
+        }
+
+        internal static string DataCenterToTld(string dataCenter)
+        {
+            if (dataCenter.IsNullOrEmpty())
+                throw new InternalErrorException("Unexpected response (no data center found)");
+
             // From here: https://accounts.zoho.eu/oauth/serverinfo
             switch (dataCenter)
             {
@@ -172,11 +133,70 @@ namespace PasswordManagerAccess.ZohoVault
                 return "in";
             case "au":
                 return "com.au";
-            case null:
-                throw new InternalErrorException("Unexpected response (no data center found)");
-            default:
-                throw new UnsupportedFeatureException($"Unsupported data center '{dataCenter}'");
             }
+
+            throw new UnsupportedFeatureException($"Unsupported data center '{dataCenter}'");
+        }
+
+        internal static HttpCookies Login(string username,
+                                          string password,
+                                          string token,
+                                          string tld,
+                                          Ui ui,
+                                          RestClient rest)
+        {
+            // Submit the login form
+            var response = rest.PostForm(
+                AuthUrl(tld),
+                parameters: new Dictionary<string, object>
+                {
+                    {"LOGIN_ID", username},
+                    {"PASSWORD", password},
+                    {"cli_time", DateTimeOffset.Now.ToUnixTimeMilliseconds()},
+                    {"iamcsrcoo", token},
+                    {"servicename", ServiceName},
+                    {"serviceurl", ServiceUrl(tld)},
+                },
+                headers: Headers,
+                cookies: new Dictionary<string, string> { { "iamcsr", token } });
+
+            // TODO: Handle captcha
+            // Need to show captcha: showhiperror('HIP_REQUIRED')
+            // Captcha is invalid: showhiperror('HIP_INVALID')
+
+            if (!response.IsSuccessful)
+                throw MakeErrorOnFailedRequest(response);
+
+            // The returned text is JavaScript which is supposed to call some functions on the
+            // original page. "showsuccess" is called when everything went well. "switchto" is a
+            // MFA poor man's redirect.
+            if (response.Content.StartsWith("switchto("))
+            {
+                // Sometimes the web login redirects to some kind of message or announcement or whatever.
+                // Probably the only way to deal with that is either show the actual browser or tell
+                // the user to login manually and dismiss the message.
+                var url = ExtractSwitchToUrl(response.Content);
+                if (url.StartsWith($"https://accounts.zoho.{tld}/tfa/auth"))
+                    response = LoginMfa(response, tld, ui, rest);
+                else
+                    throw MakeInvalidResponse($"Unexpected 'switchto' url: '{url}'");
+            }
+
+            // Should be when all is good!
+            if (response.Content.StartsWith("showsuccess("))
+            {
+                var url = ExtractShowSuccessUrl(response.Content);
+                if (url.StartsWith($"https://accounts.zoho.{tld}/oauth/v2/approve"))
+                {
+                    response = Approve(response, tld, rest);
+                    if (!response.Content.StartsWith("showsuccess("))
+                        throw MakeInvalidResponse($"Unexpected response: {response.Content}");
+                }
+
+                return response.Cookies;
+            }
+
+            throw new BadCredentialsException("Login failed, most likely the credentials are invalid");
         }
 
         internal static void Logout(HttpCookies cookies, string tld, RestClient rest)

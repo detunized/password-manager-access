@@ -66,40 +66,124 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("Yo, bitches!", accounts[0].Note);
         }
 
-        // There are too many combinations for all the requests and things to verify. So all the
-        // tests are rolled into one. This way there's a lot less repetitions, though when this test
-        // fails it's harder to figure out why.
-        //
-        // TOOD: Either refactor the Login to do less or split up this test to test individual
-        // aspects of behavior like it's done everywhere else.
+        [Fact]
+        public void RequestToken_makes_GET_request_and_returns_token()
+        {
+            var flow = new RestFlow()
+                .Get("", cookies: OAuthCookies)
+                    .ExpectUrl("https://accounts.zoho.com/oauth/v2/auth?");
+
+            var token = Client.RequestToken(flow);
+
+            Assert.Equal(OAuthCookieValue, token);
+        }
+
+        [Fact]
+        public void RequestToken_throws_on_missing_cookie()
+        {
+            var flow = new RestFlow().Get("");
+
+            Exceptions.AssertThrowsInternalError(
+                () => Client.RequestToken(flow),
+                "cookie is not set by the server");
+        }
+
+        [Fact]
+        public void GetRegionTld_makes_POST_request_and_returns_tld()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("user-exists-response"))
+                    .ExpectUrl("signin/v2/lookup");
+
+            var tld = Client.GetRegionTld(Username, OAuthCookieValue, flow);
+
+            Assert.Equal("com", tld);
+        }
+
+        [Fact]
+        public void GetRegionTld_returns_another_tld()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("user-exists-in-another-dc-response"));
+
+            var tld = Client.GetRegionTld(Username, OAuthCookieValue, flow);
+
+            Assert.Equal("eu", tld);
+        }
+
+        [Fact]
+        public void GetRegionTld_throws_on_unknown_user()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("user-does-not-exist-response"));
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.GetRegionTld("unknown", OAuthCookieValue, flow),
+                "The username is invalid");
+        }
+
+        [Fact]
+        public void GetRegionTld_throws_on_unknown_error_code()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("lookup-unknown-error-response"));
+
+            Exceptions.AssertThrowsInternalError(
+                () => Client.GetRegionTld(Username, OAuthCookieValue, flow),
+                "Unexpected response");
+        }
+
+        [Theory]
+        [InlineData("us", "com")]
+        [InlineData("eu", "eu")]
+        [InlineData("in", "in")]
+        [InlineData("au", "com.au")]
+        public void DataCenterToTld_returns_tld(string dc, string tld)
+        {
+            Assert.Equal(tld, Client.DataCenterToTld(dc));
+        }
+
+        [Fact]
+        public void DataCenterToTld_throws_on_unknown_data_center()
+        {
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Client.DataCenterToTld("zx"),
+                "Unsupported data center");
+        }
+
         [Fact]
         public void Login_makes_requests_and_returns_server_cookies()
         {
             var flow = new RestFlow()
-                .Get("", cookies: OAuthCookies)
-                    .ExpectUrl("https://accounts.zoho.com/oauth/v2/auth?")
-                .Post(GetFixture("user-exists-response"))
-                    .ExpectUrl("signin/v2/lookup")
                 .Post("showsuccess('blah',)", cookies: LoginCookies)
                     .ExpectUrl("https://accounts.zoho.com/signin/auth")
                     .ExpectContent($"LOGIN_ID={Username}", $"PASSWORD={Password}", $"iamcsrcoo={OAuthCookieValue}")
                     .ExpectCookie("iamcsr", OAuthCookieValue);
 
-            var (cookies, _) = Client.Login(Username, Password, null, flow);
+            var cookies = Client.Login(Username, Password, OAuthCookieValue, "com", null, flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
+        }
+
+        [Fact]
+        public void Login_makes_requests_to_specified_tld()
+        {
+            var flow = new RestFlow()
+                .Post("showsuccess('blah',)", cookies: LoginCookies)
+                    .ExpectUrl("https://accounts.zoho.eu/signin/auth");
+
+            Client.Login(Username, Password, OAuthCookieValue, "eu", null, flow);
         }
 
         [Fact]
         public void Login_throws_on_response_with_failure()
         {
             var flow = new RestFlow()
-                .Get("", cookies: OAuthCookies)
-                .Post(GetFixture("user-exists-response"))
                 .Post("showerror('It failed')");
 
-            Exceptions.AssertThrowsBadCredentials(() => Client.Login(Username, Password, null, flow),
-                                                  "most likely the credentials are invalid");
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.Login(Username, Password, OAuthCookieValue, "com", null, flow),
+                "most likely the credentials are invalid");
         }
 
         [Fact]
