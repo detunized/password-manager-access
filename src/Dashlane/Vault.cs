@@ -3,11 +3,12 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Dashlane
 {
+    using R = Response;
+
     public class Vault
     {
         public static Vault Open(string username, string password, string deviceId, Ui ui)
@@ -34,35 +35,35 @@ namespace PasswordManagerAccess.Dashlane
             return new Vault(Remote.OpenVault(username, deviceId, ui, transport), password);
         }
 
-        internal Vault(JObject blob, string password)
+        internal Vault(R.Vault blob, string password)
         {
             var accounts = new Dictionary<string, Account>();
 
             // This is used with the MFA. The server supplies the password prefix that is used in encryption.
-            var serverKey = blob.GetString("serverKey") ?? "";
+            var serverKey = blob.ServerKey ?? "";
             var fullPassword = serverKey + password;
 
-            var fullFile = blob.GetString("fullBackupFile");
+            var fullFile = blob.EncryptedAccounts;
             if (!string.IsNullOrWhiteSpace(fullFile))
                 foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), fullPassword))
                     accounts[i.Id] = i;
 
-            foreach (var transaction in blob.SelectToken("transactionList"))
+            foreach (var transaction in blob.Transactions ?? new R.Transaction[0])
             {
-                if (transaction.GetString("type") != "AUTHENTIFIANT")
+                if (transaction.Kind != "AUTHENTIFIANT")
                     continue;
 
-                switch (transaction.GetString("action"))
+                switch (transaction.Action)
                 {
                 case "BACKUP_EDIT":
-                    var content = transaction.GetString("content");
+                    var content = transaction.Content;
                     if (!string.IsNullOrWhiteSpace(content))
                         foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword))
                             accounts[i.Id] = i;
 
                     break;
                 case "BACKUP_REMOVE":
-                    var id = transaction.GetString("identifier");
+                    var id = transaction.Id;
                     if (id != null)
                         accounts.Remove(id);
 

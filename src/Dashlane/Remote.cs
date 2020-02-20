@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.Dashlane
     internal static class Remote
     {
         // TODO: Don't return JObject
-        public static JObject OpenVault(string username, string deviceId, Ui ui, IRestTransport transport)
+        public static R.Vault OpenVault(string username, string deviceId, Ui ui, IRestTransport transport)
         {
             var rest = new RestClient(transport, BaseApiUrl);
 
@@ -42,7 +42,7 @@ namespace PasswordManagerAccess.Dashlane
 
                     if (passcode.RememberMe && !registered)
                     {
-                        var token = blob.GetString("token") ?? passcode.Code;
+                        var token = blob.Token ?? passcode.Code;
                         RegisterDeviceWithToken(username, deviceId, DeviceName, token, rest);
                     }
 
@@ -180,7 +180,7 @@ namespace PasswordManagerAccess.Dashlane
             PerformRegisterDeviceStep(RegisterEndpoint, parameters, rest);
         }
 
-        internal static JObject Fetch(string username, string deviceId, RestClient rest)
+        internal static R.Vault Fetch(string username, string deviceId, RestClient rest)
         {
             var parameters = CommonFetchParameters(username);
             parameters["uki"] = deviceId;
@@ -188,7 +188,7 @@ namespace PasswordManagerAccess.Dashlane
             return Fetch(parameters, rest);
         }
 
-        internal static JObject Fetch(string username, LoginType loginType, string passcode, RestClient rest)
+        internal static R.Vault Fetch(string username, LoginType loginType, string passcode, RestClient rest)
         {
             var parameters = CommonFetchParameters(username);
             switch (loginType)
@@ -218,16 +218,13 @@ namespace PasswordManagerAccess.Dashlane
             };
         }
 
-        internal static JObject Fetch(Dictionary<string, object> parameters, RestClient rest)
+        internal static R.Vault Fetch(Dictionary<string, object> parameters, RestClient rest)
         {
-            var response = rest.PostForm(LatestEndpoint, parameters);
+            var response = rest.PostForm<R.Vault>(LatestEndpoint, parameters);
             if (response.IsSuccessful)
-            {
-                var parsed = ParseResponse(response.Content);
-                CheckForErrors(parsed);
+                return response.Data;
 
-                return parsed;
-            }
+            CheckForErrors(response);
 
             throw new NetworkErrorException("Network error occurred", response.Error);
         }
@@ -245,30 +242,19 @@ namespace PasswordManagerAccess.Dashlane
             throw MakeSpecializedError(response);
         }
 
-        private static JObject ParseResponse(string response)
+        private static void CheckForErrors(RestResponse response)
         {
-            try
-            {
-                return JObject.Parse(response);
-            }
-            catch (JsonException e)
-            {
-                throw new InternalErrorException("Invalid JSON in response", e);
-            }
-        }
-
-        private static void CheckForErrors(JObject response)
-        {
-            var error = response.SelectToken("error");
+            var json = ParseJson(response);
+            var error = json.SelectToken("error");
             if (error != null)
             {
-                var message = error.GetString("message") ?? "Unknown error";
-                throw new InternalErrorException($"Request failed with error: '{message}'");
+                var message = GetStringProperty(error, "message", "Unknown error");
+                throw new InternalErrorException($"Request to '{response.RequestUri}' failed with error: '{message}'");
             }
 
-            if (response.GetString("objectType") == "message")
+            if (GetStringProperty(json, "objectType", "") == "message")
             {
-                var message = response.GetString("content") ?? "Unknown error";
+                var message = GetStringProperty(json, "content", "Unknown error");
                 switch (message)
                 {
                 case "Incorrect authentification": // Important: it's misspelled in the original code
@@ -276,9 +262,28 @@ namespace PasswordManagerAccess.Dashlane
                 case "Bad OTP":
                     throw new BadMultiFactorException("Invalid second factor code");
                 default:
-                    throw new InternalErrorException($"Request failed with error: '{message}'");
+                    throw new InternalErrorException(
+                        $"Request to '{response.RequestUri}' failed with error: '{message}'");
                 }
             }
+        }
+
+        private static JObject ParseJson(RestResponse response)
+        {
+            try
+            {
+                return JObject.Parse(response.Content);
+            }
+            catch (JsonException e)
+            {
+                throw new InternalErrorException($"Invalid JSON in response from '{response.RequestUri}'", e);
+            }
+        }
+
+        private static string GetStringProperty(JToken root, string name, string defaultValue)
+        {
+            var token = root.SelectToken(name);
+            return token == null || token.Type != JTokenType.String ? defaultValue : (string)token;
         }
 
         private static BaseException MakeSpecializedError(RestResponse response)

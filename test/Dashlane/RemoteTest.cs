@@ -2,14 +2,12 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Net.Http;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Dashlane;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Dashlane
 {
-    public class RemoteTest
+    public class RemoteTest: TestBase
     {
         //
         // RequestLoginType
@@ -53,19 +51,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
 
         [Fact]
-        private void Fetch_returns_received_json()
-        {
-            var rest = new RestFlow().Post("{'what': 'ever'}");
-            var response = new JObject();
-            response["what"] = "ever";
-
-            Assert.Equal(response, Remote.Fetch(Username, Uki, rest));
-        }
-
-        [Fact]
         private void Fetch_makes_post_request_to_specific_endpoint()
         {
-            var rest = new RestFlow().Post("{}").ExpectUrl(FetchEndpoint);
+            var rest = new RestFlow().Post(GetFixture("empty-vault")).ExpectUrl(FetchEndpoint);
             Remote.Fetch(Username, Uki, rest);
         }
 
@@ -73,7 +61,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         private void Fetch_makes_post_request_with_correct_username_uki_and_no_otp()
         {
             var rest = new RestFlow()
-                .Post("{}")
+                .Post(GetFixture("empty-vault"))
                     .ExpectContent($"login={Username}", $"uki={Uki}")
                     .ExpectContent(s => Assert.DoesNotContain("otp=", s));
             Remote.Fetch(Username, Uki, rest);
@@ -83,7 +71,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         private void Fetch_makes_post_request_with_correct_username_email_token_and_no_uki()
         {
             var rest = new RestFlow()
-                .Post("{}")
+                .Post(GetFixture("empty-vault"))
                     .ExpectContent($"login={Username}", $"token={Otp}")
                     .ExpectContent(s => Assert.DoesNotContain("uki=", s));
             Remote.Fetch(Username, Remote.LoginType.Regular, Otp, rest);
@@ -95,7 +83,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         private void Fetch_makes_post_request_with_correct_username_otp_and_no_uki(Remote.LoginType loginType)
         {
             var rest = new RestFlow()
-                .Post("{}")
+                .Post(GetFixture("empty-vault"))
                     .ExpectContent($"login={Username}", $"otp={Otp}")
                     .ExpectContent(s => Assert.DoesNotContain("uki=", s));
             Remote.Fetch(Username, loginType, Otp, rest);
@@ -123,8 +111,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var rest = new RestFlow().Post(response);
             var e = Exceptions.AssertThrowsInternalError(() => Remote.Fetch(Username, Uki, rest));
 
-            Assert.Equal("Invalid JSON in response", e.Message);
-            Assert.IsAssignableFrom<JsonException>(e.InnerException);
+            Assert.StartsWith("Invalid JSON in response", e.Message);
         }
 
         [Fact]
