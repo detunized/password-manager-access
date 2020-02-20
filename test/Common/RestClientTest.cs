@@ -17,6 +17,15 @@ namespace PasswordManagerAccess.Test.Common
     // TODO: Test redirects
     public class RestClientTest
     {
+        [Fact]
+        public void IsSuccessful_is_false_on_null_data()
+        {
+            var response = Serve("").Get<object>(Url);
+
+            Assert.Null(response.Data);
+            Assert.False(response.IsSuccessful);
+        }
+
         //
         // GET
         //

@@ -30,7 +30,7 @@ namespace PasswordManagerAccess.Common
         public Uri RequestUri { get; internal set; }
 
         // On HTTP 2xx and no exceptions
-        public bool IsSuccessful => IsHttpOk && !HasError;
+        public virtual bool IsSuccessful => IsHttpOk && !HasError;
 
         // On HTTP 2xx
         public bool IsHttpOk => (int)StatusCode / 100 == 2;
@@ -47,6 +47,9 @@ namespace PasswordManagerAccess.Common
     internal class RestResponse<T>: RestResponse
     {
         public T Data { get; internal set; }
+
+        // Also check if the de-serialization went through
+        public override bool IsSuccessful => base.IsSuccessful && Data != null;
     }
 
     //
