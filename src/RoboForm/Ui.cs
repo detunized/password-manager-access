@@ -5,7 +5,7 @@ namespace PasswordManagerAccess.RoboForm
 {
     public abstract class Ui
     {
-        public struct SecondFactorPassword
+        public class SecondFactorPassword
         {
             public readonly string Password;
             public readonly bool RememberDevice;
@@ -17,6 +17,7 @@ namespace PasswordManagerAccess.RoboForm
             }
         }
 
+        // TODO: Support null to cancel
         public abstract SecondFactorPassword ProvideSecondFactorPassword(string kind);
     }
 }
