@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault;
 using Xunit;
@@ -9,6 +10,7 @@ using R = PasswordManagerAccess.ZohoVault.Response;
 
 namespace PasswordManagerAccess.Test.ZohoVault
 {
+    // TODO: Add MFA tests
     public class ClientTest: TestBase
     {
         [Fact]
@@ -22,7 +24,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-response"))
                 .Get(""); // Logout
 
-            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, flow);
+            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetSecureStorage(), flow);
             var accounts = vault.Accounts;
 
             Assert.Equal(2, accounts.Length);
@@ -53,7 +55,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-with-shared-items-response"))
                 .Get(""); // Logout
 
-            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, flow);
+            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetSecureStorage(), flow);
             var accounts = vault.Accounts;
 
             Assert.Single(accounts);
@@ -160,7 +162,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectContent($"LOGIN_ID={Username}", $"PASSWORD={Password}", $"iamcsrcoo={OAuthCookieValue}")
                     .ExpectCookie("iamcsr", OAuthCookieValue);
 
-            var cookies = Client.Login(Username, Password, OAuthCookieValue, "com", null, flow);
+            var cookies = Client.Login(Username, Password, OAuthCookieValue, "com", null, GetSecureStorage(), flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
@@ -172,7 +174,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post("showsuccess('blah',)", cookies: LoginCookies)
                     .ExpectUrl("https://accounts.zoho.eu/signin/auth");
 
-            Client.Login(Username, Password, OAuthCookieValue, "eu", null, flow);
+            Client.Login(Username, Password, OAuthCookieValue, "eu", null, GetSecureStorage(), flow);
         }
 
         [Fact]
@@ -182,8 +184,27 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post("showerror('It failed')");
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.Login(Username, Password, OAuthCookieValue, "com", null, flow),
+                () => Client.Login(Username, Password, OAuthCookieValue, "com", null, GetSecureStorage(), flow),
                 "most likely the credentials are invalid");
+        }
+
+        [Fact]
+        public void Login_sends_remember_me_token_in_cookies()
+        {
+            var flow = new RestFlow()
+                .Post("showsuccess('blah',)")
+                    .ExpectCookie(RememberMeCookieName, RememberMeCookieValue);
+
+            Client.Login(Username, Password, OAuthCookieValue, "com", null, GetSecureStorage(), flow);
+        }
+
+        [Fact]
+        public void Login_works_when_remember_me_token_is_not_available()
+        {
+            var flow = new RestFlow()
+                .Post("showsuccess('blah',)");
+
+            Client.Login(Username, Password, OAuthCookieValue, "com", null, GetEmptySecureStorage(), flow);
         }
 
         [Fact]
@@ -278,6 +299,36 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("https://accounts.zoho.com/tfa/auth?serviceurl=https%3A%2F%2Fvault.zoho.com", url);
         }
 
+        //
+        // Helpers
+        //
+
+        private static Mock<ISecureStorage> GetSecureStorageMock()
+        {
+            var mock = new Mock<ISecureStorage>();
+            mock.Setup(x => x.LoadString("remember-me-token-key")).Returns(RememberMeCookieName);
+            mock.Setup(x => x.LoadString("remember-me-token-value")).Returns(RememberMeCookieValue);
+
+            return mock;
+        }
+
+        private static ISecureStorage GetSecureStorage()
+        {
+            return GetSecureStorageMock().Object;
+        }
+
+        private static ISecureStorage GetEmptySecureStorage()
+        {
+            var mock = new Mock<ISecureStorage>();
+            mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns((string)null);
+
+            return mock.Object;
+        }
+
+        //
+        // Data
+        //
+
         private const string Username = "lebowski";
         private const string Password = "logjammin";
 
@@ -286,6 +337,9 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
         private const string LoginCookieName = "login-cookie";
         private const string LoginCookieValue = "login-keks";
+
+        private const string RememberMeCookieName = "remember-me-cookie-name";
+        private const string RememberMeCookieValue = "remember-me-cookie-value";
 
         private static readonly Dictionary<string, string> OAuthCookies =
             new Dictionary<string, string> { { OAuthCookieName, OAuthCookieValue } };

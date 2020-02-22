@@ -3,8 +3,8 @@
 
 using System;
 using PasswordManagerAccess.Common;
-using PasswordManagerAccess.ZohoVault;
 using PasswordManagerAccess.Example.Common;
+using PasswordManagerAccess.ZohoVault;
 
 namespace PasswordManagerAccess.Example.ZohoVault
 {
@@ -75,7 +75,11 @@ namespace PasswordManagerAccess.Example.ZohoVault
             try
             {
                 // Open the remote vault
-                var vault = Vault.Open(config["username"], config["password"], config["passphrase"], new TextUi());
+                var vault = Vault.Open(config["username"],
+                                       config["password"],
+                                       config["passphrase"],
+                                       new TextUi(),
+                                       new PlainStorage());
 
                 // Print the decrypted accounts
                 for (int i = 0; i < vault.Accounts.Length; ++i)

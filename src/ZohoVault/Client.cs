@@ -21,6 +21,7 @@ namespace PasswordManagerAccess.ZohoVault
                                           string password,
                                           string passphrase,
                                           Ui ui,
+                                          ISecureStorage storage,
                                           IRestTransport transport)
         {
             var rest = new RestClient(transport);
@@ -39,7 +40,7 @@ namespace PasswordManagerAccess.ZohoVault
             // TODO: It would be ideal to figure out which cookies are needed for general
             // cleanliness. It was too many of them and so they are now passed altogether a bundle
             // between the requests.
-            var cookies = Login(username, password, token, tld, ui, rest);
+            var cookies = Login(username, password, token, tld, ui, storage, rest);
 
             try
             {
@@ -143,8 +144,17 @@ namespace PasswordManagerAccess.ZohoVault
                                           string token,
                                           string tld,
                                           Ui ui,
+                                          ISecureStorage storage,
                                           RestClient rest)
         {
+            var cookies = new Dictionary<string, string> { { "iamcsr", token } };
+
+            // Check if we have a "remember me" token saved from one of the previous sessions
+            var (rememberMeKey, rememberMeValue) = LoadRememberMeToken(storage);
+            bool haveRememberMe = !rememberMeKey.IsNullOrEmpty() && !rememberMeValue.IsNullOrEmpty();
+            if (haveRememberMe)
+                cookies[rememberMeKey] = rememberMeValue;
+
             // Submit the login form
             var response = rest.PostForm(
                 AuthUrl(tld),
@@ -158,7 +168,7 @@ namespace PasswordManagerAccess.ZohoVault
                     {"serviceurl", ServiceUrl(tld)},
                 },
                 headers: Headers,
-                cookies: new Dictionary<string, string> { { "iamcsr", token } });
+                cookies: cookies);
 
             // TODO: Handle captcha
             // Need to show captcha: showhiperror('HIP_REQUIRED')
@@ -172,12 +182,16 @@ namespace PasswordManagerAccess.ZohoVault
             // MFA poor man's redirect.
             if (response.Content.StartsWith("switchto("))
             {
+                // The "remember me" token didn't work, so it must be outdated or corrupted.
+                if (haveRememberMe)
+                    EraseRememberMeToken(storage);
+
                 // Sometimes the web login redirects to some kind of message or announcement or whatever.
                 // Probably the only way to deal with that is either show the actual browser or tell
                 // the user to login manually and dismiss the message.
                 var url = ExtractSwitchToUrl(response.Content);
                 if (url.StartsWith($"https://accounts.zoho.{tld}/tfa/auth"))
-                    response = LoginMfa(response, tld, ui, rest);
+                    response = LoginMfa(response, tld, ui, storage, rest);
                 else
                     throw MakeInvalidResponse($"Unexpected 'switchto' url: '{url}'");
             }
@@ -300,7 +314,11 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        internal static RestResponse LoginMfa(RestResponse loginResponse, string tld, Ui ui, RestClient rest)
+        internal static RestResponse LoginMfa(RestResponse loginResponse,
+                                              string tld,
+                                              Ui ui,
+                                              ISecureStorage storage,
+                                              RestClient rest)
         {
             var url = ExtractSwitchToUrl(loginResponse.Content);
 
@@ -323,7 +341,7 @@ namespace PasswordManagerAccess.ZohoVault
                 endpoint: VerifyUrl(tld),
                 parameters: new Dictionary<string, object>
                 {
-                    { "remembertfa", "false" },
+                    { "remembertfa", code.RememberMe ? "true" : "false" },
                     { "code", code.Code },
                     { "iamcsrcoo", cookies["iamcsr"] },
                     { "servicename", ServiceName },
@@ -342,6 +360,14 @@ namespace PasswordManagerAccess.ZohoVault
 
             if (!verifyResponse.Content.StartsWith("showsuccess("))
                 throw MakeInvalidResponse("Verify MFA failed");
+
+            // Store remember me token for the next sessions
+            if (code.RememberMe)
+            {
+                var key = verifyResponse.Cookies.Keys.Where(x => x.StartsWith("IAMTFATICKET_")).FirstOrDefault();
+                if (!key.IsNullOrEmpty())
+                    SaveRememberMeToken(storage, key, verifyResponse.Cookies[key]);
+            }
 
             return verifyResponse;
         }
@@ -483,6 +509,22 @@ namespace PasswordManagerAccess.ZohoVault
             return new InternalErrorException(message, original);
         }
 
+        private static (string key, string value) LoadRememberMeToken(ISecureStorage storage)
+        {
+            return (storage.LoadString(RememberMeTokenKey), storage.LoadString(RememberMeTokenValue));
+        }
+
+        private static void SaveRememberMeToken(ISecureStorage storage, string key, string value)
+        {
+            storage.StoreString(RememberMeTokenKey, key);
+            storage.StoreString(RememberMeTokenValue, value);
+        }
+
+        private static void EraseRememberMeToken(ISecureStorage storage)
+        {
+            SaveRememberMeToken(storage, null, null);
+        }
+
         //
         // Data
         //
@@ -517,5 +559,8 @@ namespace PasswordManagerAccess.ZohoVault
         // Important! Most of the requests fail without a valid User-Agent header
         private static readonly Dictionary<string, string> Headers =
             new Dictionary<string, string> { { "User-Agent", UserAgent } };
+
+        private const string RememberMeTokenKey = "remember-me-token-key";
+        private const string RememberMeTokenValue = "remember-me-token-value";
     }
 }
