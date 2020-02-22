@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Http;
 using SystemHttp = System.Net.Http.HttpClient;
 
-namespace RoboForm
+namespace PasswordManagerAccess.RoboForm
 {
     // TODO: Reuse HttpClient, it's not supposed to be instantiated for every request.
     // See https://docs.microsoft.com/en-us/dotnet/api/system.net.http.httpclient?view=netframework-4.5

@@ -1,11 +1,11 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
-namespace RoboForm
+namespace PasswordManagerAccess.RoboForm
 {
     internal static class VaultParser
     {

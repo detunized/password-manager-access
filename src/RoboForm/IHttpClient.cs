@@ -1,10 +1,10 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
 using System.Net.Http;
 
-namespace RoboForm
+namespace PasswordManagerAccess.RoboForm
 {
     public interface IHttpClient
     {
