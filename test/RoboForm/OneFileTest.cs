@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.RoboForm;
 using Xunit;
 

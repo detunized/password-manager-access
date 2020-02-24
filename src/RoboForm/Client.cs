@@ -301,7 +301,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static string GenerateNonce()
         {
-            return Crypto.RandomBytes(16).ToUrlSafeBase64();
+            return Crypto.RandomBytes(16).ToUrlSafeBase64NoPadding();
         }
 
         internal static string Step1AuthorizationHeader(Credentials credentials)

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.RoboForm;
 using Xunit;
 
@@ -15,23 +16,6 @@ namespace PasswordManagerAccess.Test.RoboForm
         //
         // string
         //
-
-        [Fact]
-        public void String_ToBytes_converts_string_to_utf8_bytes()
-        {
-            Assert.Equal(new byte[]{}, "".ToBytes());
-            Assert.Equal(TestBytes, TestString.ToBytes());
-        }
-
-        [Fact]
-        public void String_Decode64_decodes_base64()
-        {
-            Assert.Equal(new byte[]{}, "".Decode64());
-            Assert.Equal(new byte[]{0x61}, "YQ==".Decode64());
-            Assert.Equal(new byte[]{0x61, 0x62}, "YWI=".Decode64());
-            Assert.Equal(new byte[]{0x61, 0x62, 0x63}, "YWJj".Decode64());
-            Assert.Equal(new byte[]{0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
-        }
 
         [Fact]
         public void String_ToBase64_returns_base64()
@@ -57,43 +41,6 @@ namespace PasswordManagerAccess.Test.RoboForm
 
             foreach (var i in testCases)
                 Assert.Equal(i.Value, i.Key.EncodeUri());
-        }
-
-        //
-        // byte[]
-        //
-
-        [Fact]
-        public void ByteArray_ToUtf8_returns_string()
-        {
-            Assert.Equal("", new byte[]{}.ToUtf8());
-            Assert.Equal(TestString, TestBytes.ToUtf8());
-        }
-
-        [Fact]
-        public void ByteArray_ToHex_returns_hex_string()
-        {
-            Assert.Equal("", new byte[]{}.ToHex());
-            Assert.Equal(TestHex, TestBytes.ToHex());
-        }
-
-        [Fact]
-        public void ByteArray_ToBase64_returns_base64()
-        {
-            Assert.Equal("", new byte[]{}.ToBase64());
-            Assert.Equal("YQ==", new byte[]{0x61}.ToBase64());
-            Assert.Equal("YWI=", new byte[]{0x61, 0x62}.ToBase64());
-            Assert.Equal("YWJj", new byte[]{0x61, 0x62, 0x63}.ToBase64());
-            Assert.Equal("YWJjZA==", new byte[]{0x61, 0x62, 0x63, 0x64}.ToBase64());
-        }
-
-        [Fact]
-        public void ByteArray_ToUrlSafeBase64_returns_urlsafe_base64_without_padding()
-        {
-            Assert.Equal("", new byte[]{}.ToUrlSafeBase64());
-            Assert.Equal("-w", new byte[]{0xFB}.ToUrlSafeBase64());
-            Assert.Equal("--8", new byte[]{0xFB, 0xEF}.ToUrlSafeBase64());
-            Assert.Equal("--__", new byte[]{0xFB, 0xEF, 0xFF}.ToUrlSafeBase64());
         }
 
         //
@@ -315,20 +262,6 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyBoolAtReturnsDefault(j, "k4");
             VerifyBoolAtReturnsDefault(j, "k5");
         }
-
-        //
-        // Data
-        //
-
-        private const string TestString = "All your base are belong to us";
-        private const string TestHex = "416c6c20796f757220626173652061" +
-                                       "72652062656c6f6e6720746f207573";
-
-        private static readonly byte[] TestBytes =
-        {
-            65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
-            114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
-        };
 
         //
         // Helpers

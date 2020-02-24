@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using Moq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.RoboForm;
 using Xunit;
 

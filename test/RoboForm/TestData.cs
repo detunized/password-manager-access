@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.RoboForm;
 
 namespace PasswordManagerAccess.Test.RoboForm
@@ -24,8 +25,5 @@ namespace PasswordManagerAccess.Test.RoboForm
             salt: "A+Ft8UM674OZOOjUjXCdbw==".Decode64(),
             iterationCount: 4096,
             isMd5: false);
-
-        //public static readonly byte[] Blob = File.ReadAllBytes("Fixtures/blob.bin");
-        //public static readonly string DecryptedBlob = File.ReadAllText("Fixtures/blob.json");
     }
 }

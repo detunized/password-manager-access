@@ -3,8 +3,8 @@
 
 using System;
 using System.IO;
-using System.Text;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
@@ -14,16 +14,6 @@ namespace PasswordManagerAccess.RoboForm
         // string
         //
 
-        public static byte[] ToBytes(this string s)
-        {
-            return Encoding.UTF8.GetBytes(s);
-        }
-
-        public static byte[] Decode64(this string s)
-        {
-            return Convert.FromBase64String(s);
-        }
-
         public static string ToBase64(this string s)
         {
             return s.ToBytes().ToBase64();
@@ -32,42 +22,6 @@ namespace PasswordManagerAccess.RoboForm
         public static string EncodeUri(this string s)
         {
             return Uri.EscapeUriString(s);
-        }
-
-        //
-        // byte[]
-        //
-
-        public static string ToUtf8(this byte[] x)
-        {
-            return Encoding.UTF8.GetString(x);
-        }
-
-        public static string ToHex(this byte[] x)
-        {
-            var hex = new char[x.Length * 2];
-            for (int i = 0, c = 0; i < x.Length; i += 1)
-            {
-                int hi = x[i] >> 4;
-                hex[c] = (char)(hi < 10 ? '0' + hi : 'a' + hi - 10);
-                c += 1;
-
-                int lo = x[i] & 15;
-                hex[c] = (char)(lo < 10 ? '0' + lo : 'a' + lo - 10);
-                c += 1;
-            }
-
-            return new string(hex);
-        }
-
-        public static string ToBase64(this byte[] x)
-        {
-            return Convert.ToBase64String(x);
-        }
-
-        public static string ToUrlSafeBase64(this byte[] x)
-        {
-            return Convert.ToBase64String(x).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         }
 
         //
