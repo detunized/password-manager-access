@@ -1,183 +1,169 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    [TestFixture]
-    class OneFileTest
+    public class OneFileTest: TestBase
     {
-        [Test]
+        [Fact]
         public void Parse_returns_parsed_object()
         {
-            var json = OneFile.Parse(TestData.Blob, TestData.Password);
-            Assert.That(json["i"], Is.Not.Null);
-            Assert.That(json["c"], Is.Not.Null);
+            var json = OneFile.Parse(GetBinaryFixture("blob", "bin"), TestData.Password);
+            Assert.NotNull(json["i"]);
+            Assert.NotNull(json["c"]);
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_no_content()
         {
-            Assert.That(Parse("too short".ToBytes()),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+            VerifyThrowsParseError(() => Parse("too short".ToBytes()), "too short");
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_invalid_signature()
         {
-            Assert.That(ParsePad("invalid!"),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("signature"));
+            VerifyThrowsParseError(() => ParsePad("invalid!"), "signature");
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_unencrypted_content()
         {
-            Assert.That(ParsePad("onefile1"+ "\x05"),
-                        ExceptionsTest.ThrowsUnsupportedFeatureWithMessage("Unencrypted"));
+            VerifyThrowsUnsupportedFeature(() => ParsePad("onefile1"+ "\x05"), "Unencrypted");
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_invalid_checksum_type()
         {
-            Assert.That(ParsePad("onefile1\x07" + "\x13"),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("checksum"));
+            VerifyThrowsParseError(() => ParsePad("onefile1\x07" + "\x13"), "checksum");
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_invalid_content_length()
         {
             var lengths = new[] {new byte[] {0, 0, 0, 0x80}, new byte[] {0xFF, 0xFF, 0xFF, 0xFF}};
             foreach (var i in lengths)
-            {
-                Assert.That(ParsePad("onefile1\x07\x01".ToBytes().Concat(i).ToArray()),
-                            ExceptionsTest.ThrowsParseErrorWithMessage("negative"));
-            }
+                VerifyThrowsParseError(() => ParsePad("onefile1\x07\x01".ToBytes().Concat(i).ToArray()), "negative");
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_invalid_checksum()
         {
-            Assert.That(ParsePad("onefile1\x07\x01\x01\x00\x00\x00" + "invalid checksum" + "!"),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("Checksum"));
+            VerifyThrowsParseError(() => ParsePad("onefile1\x07\x01\x01\x00\x00\x00" + "invalid checksum" + "!"),
+                                   "Checksum");
         }
 
-        [Test]
+        [Fact]
         public void Parse_throws_on_too_short_content()
         {
-            Assert.That(ParsePad("onefile1\x07\x01\x02\x00\x00\x00" + "invalid checksum" + "!"),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+            VerifyThrowsParseError(() => ParsePad("onefile1\x07\x01\x02\x00\x00\x00" + "invalid checksum" + "!"),
+                                   "too short");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_no_content()
         {
-            Assert.That(Decrypt("too short".ToBytes()),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+            VerifyThrowsParseError(() => Decrypt("too short".ToBytes()), "too short");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_invalid_signature()
         {
-            Assert.That(DecryptPad("invalid!"),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("signature"));
+            VerifyThrowsParseError(() => DecryptPad("invalid!"), "signature");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_unsupported_sha1_kdf()
         {
-            Assert.That(DecryptPad("gsencst1\x00" + "\x01"),
-                        ExceptionsTest.ThrowsUnsupportedFeatureWithMessage("SHA-1"));
+            VerifyThrowsUnsupportedFeature(() => DecryptPad("gsencst1\x00" + "\x01"), "SHA-1");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_unsupported_invalid_kdf()
         {
-            Assert.That(DecryptPad("gsencst1\x00" + "\x05"),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("KDF/encryption type"));
+            VerifyThrowsParseError(() => DecryptPad("gsencst1\x00" + "\x05"), "KDF/encryption type");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_invalid_iteration_count()
         {
             var iterations = new[] {new byte[] {0, 0, 0, 0}, new byte[] {0, 0x08, 0, 1}};
             foreach (var i in iterations)
-            {
-                Assert.That(DecryptPad("gsencst1\x00\x02".ToBytes().Concat(i).ToArray()),
-                            ExceptionsTest.ThrowsParseErrorWithMessage("iteration count"));
-            }
+                VerifyThrowsParseError(() => DecryptPad("gsencst1\x00\x02".ToBytes().Concat(i).ToArray()),
+                                       "iteration count");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_too_short_salt()
         {
-            Assert.That(DecryptPad("gsencst1\x00\x02\x00\x10\x00\x00\x10" + "salt..."),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+            VerifyThrowsParseError(() => DecryptPad("gsencst1\x00\x02\x00\x10\x00\x00\x10" + "salt..."), "too short");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_too_short_extra()
         {
-            Assert.That(DecryptPad("gsencst1\x10\x02\x00\x10\x00\x00\x10saltsaltsaltsalt" + "extra..."),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("too short"));
+            VerifyThrowsParseError(
+                () => DecryptPad("gsencst1\x10\x02\x00\x10\x00\x00\x10saltsaltsaltsalt" + "extra..."),
+                "too short");
         }
 
-        [Test]
+        [Fact]
         public void Decompress_returns_decompressed_data()
         {
             // Generated with bash
             // $ echo -n decompressed | gzip -c - | base64
-            Assert.That(
-                OneFile.Decompress("H4sIANRVH1oAA0tJTc7PLShKLS5OTQEACojeBQwAAAA=".Decode64()),
-                Is.EqualTo("decompressed".ToBytes()));
+            Assert.Equal("decompressed".ToBytes(),
+                         OneFile.Decompress("H4sIANRVH1oAA0tJTc7PLShKLS5OTQEACojeBQwAAAA=".Decode64()));
         }
 
-        [Test]
+        [Fact]
         public void ParseJson_returns_parsed_json()
         {
-            Assert.That(OneFile.ParseJson("{}".ToBytes()), Is.Not.Null);
+            Assert.NotNull(OneFile.ParseJson("{}".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void ParseJson_throws_on_invalid_json()
         {
-            Assert.That(() => OneFile.ParseJson("}{".ToBytes()),
-                        ExceptionsTest.ThrowsParseErrorWithMessage("Corrupted"));
+            VerifyThrowsParseError(() => OneFile.ParseJson("}{".ToBytes()), "Corrupted");
         }
 
         //
         // Helpers
         //
 
-        private static TestDelegate ParsePad(string content)
+        private static void ParsePad(string content)
         {
-            return ParsePad(content.ToBytes());
+            ParsePad(content.ToBytes());
         }
 
-        private static TestDelegate ParsePad(byte[] content)
+        private static void ParsePad(byte[] content)
         {
-            return Parse(Pad(content, 30));
+            Parse(Pad(content, 30));
         }
 
-        private static TestDelegate Parse(byte[] content)
+        private static void Parse(byte[] content)
         {
-            return () => OneFile.Parse(content, "password");
+            OneFile.Parse(content, "password");
         }
 
-        private static TestDelegate DecryptPad(string content)
+        private static void DecryptPad(string content)
         {
-            return DecryptPad(content.ToBytes());
+            DecryptPad(content.ToBytes());
         }
 
-        private static TestDelegate DecryptPad(byte[] content)
+        private static void DecryptPad(byte[] content)
         {
-            return Decrypt(Pad(content, 15));
+            Decrypt(Pad(content, 15));
         }
 
-        private static TestDelegate Decrypt(byte[] content)
+        private static void Decrypt(byte[] content)
         {
-            return () => OneFile.Decrypt(content, "password");
+            OneFile.Decrypt(content, "password");
         }
 
         private static byte[] Pad(byte[] content, int minLength)
@@ -186,6 +172,22 @@ namespace PasswordManagerAccess.Test.RoboForm
                 return content;
 
             return content.Concat(new byte[minLength - content.Length]).ToArray();
+        }
+
+        void VerifyThrowsParseError(Action action, string partialMessage)
+        {
+            var e = Assert.Throws<ClientException>(action);
+            Assert.Equal(ClientException.FailureReason.ParseError, e.Reason);
+            Assert.Contains(partialMessage, e.Message);
+
+        }
+
+        void VerifyThrowsUnsupportedFeature(Action action, string partialMessage)
+        {
+            var e = Assert.Throws<ClientException>(action);
+            Assert.Equal(ClientException.FailureReason.UnsupportedFeature, e.Reason);
+            Assert.Contains(partialMessage, e.Message);
+
         }
     }
 }

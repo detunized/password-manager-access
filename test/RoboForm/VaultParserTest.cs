@@ -2,18 +2,18 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    [TestFixture]
-    class VaultParserTest
+    public class VaultParserTest: TestBase
     {
-        [Test]
+        [Fact]
         public void Parse_returns_vault()
         {
-            var vault = VaultParser.Parse(JObject.Parse(TestData.DecryptedBlob));
-            Assert.That(vault.Accounts.Length, Is.GreaterThan(1));
+            var vault = VaultParser.Parse(JObject.Parse(GetFixture("blob")));
+            Assert.True(vault.Accounts.Length > 1);
         }
     }
 }

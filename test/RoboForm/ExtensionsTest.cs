@@ -5,45 +5,45 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    [TestFixture]
     public class ExtensionsTest
     {
         //
         // string
         //
 
-        [Test]
+        [Fact]
         public void String_ToBytes_converts_string_to_utf8_bytes()
         {
-            Assert.That("".ToBytes(), Is.EqualTo(new byte[] { }));
-            Assert.That(TestString.ToBytes(), Is.EqualTo(TestBytes));
+            Assert.Equal(new byte[]{}, "".ToBytes());
+            Assert.Equal(TestBytes, TestString.ToBytes());
         }
 
-        [Test]
+        [Fact]
         public void String_Decode64_decodes_base64()
         {
-            Assert.That("".Decode64(), Is.EqualTo(new byte[] {}));
-            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] {0x61}));
-            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] {0x61, 0x62}));
-            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] {0x61, 0x62, 0x63}));
-            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] {0x61, 0x62, 0x63, 0x64}));
+            Assert.Equal(new byte[]{}, "".Decode64());
+            Assert.Equal(new byte[]{0x61}, "YQ==".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62}, "YWI=".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63}, "YWJj".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
         }
 
-        [Test]
+        [Fact]
         public void String_ToBase64_returns_base64()
         {
-            Assert.That("".ToBase64(), Is.EqualTo(""));
-            Assert.That("a".ToBase64(), Is.EqualTo("YQ=="));
-            Assert.That("ab".ToBase64(), Is.EqualTo("YWI="));
-            Assert.That("abc".ToBase64(), Is.EqualTo("YWJj"));
-            Assert.That("abcd".ToBase64(), Is.EqualTo("YWJjZA=="));
+            Assert.Equal("", "".ToBase64());
+            Assert.Equal("YQ==", "a".ToBase64());
+            Assert.Equal("YWI=", "ab".ToBase64());
+            Assert.Equal("YWJj", "abc".ToBase64());
+            Assert.Equal("YWJjZA==", "abcd".ToBase64());
         }
 
-        [Test]
+        [Fact]
         public void String_EscapeUri_escapes_special_characters()
         {
             var testCases = new Dictionary<string, string>
@@ -56,58 +56,58 @@ namespace PasswordManagerAccess.Test.RoboForm
             };
 
             foreach (var i in testCases)
-                Assert.That(i.Key.EncodeUri(), Is.EqualTo(i.Value));
+                Assert.Equal(i.Value, i.Key.EncodeUri());
         }
 
         //
         // byte[]
         //
 
-        [Test]
+        [Fact]
         public void ByteArray_ToUtf8_returns_string()
         {
-            Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+            Assert.Equal("", new byte[]{}.ToUtf8());
+            Assert.Equal(TestString, TestBytes.ToUtf8());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_ToHex_returns_hex_string()
         {
-            Assert.That(new byte[] {}.ToHex(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToHex(), Is.EqualTo(TestHex));
+            Assert.Equal("", new byte[]{}.ToHex());
+            Assert.Equal(TestHex, TestBytes.ToHex());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_ToBase64_returns_base64()
         {
-            Assert.That(new byte[] {}.ToBase64(), Is.EqualTo(""));
-            Assert.That(new byte[] {0x61}.ToBase64(), Is.EqualTo("YQ=="));
-            Assert.That(new byte[] {0x61, 0x62}.ToBase64(), Is.EqualTo("YWI="));
-            Assert.That(new byte[] {0x61, 0x62, 0x63}.ToBase64(), Is.EqualTo("YWJj"));
-            Assert.That(new byte[] {0x61, 0x62, 0x63, 0x64}.ToBase64(), Is.EqualTo("YWJjZA=="));
+            Assert.Equal("", new byte[]{}.ToBase64());
+            Assert.Equal("YQ==", new byte[]{0x61}.ToBase64());
+            Assert.Equal("YWI=", new byte[]{0x61, 0x62}.ToBase64());
+            Assert.Equal("YWJj", new byte[]{0x61, 0x62, 0x63}.ToBase64());
+            Assert.Equal("YWJjZA==", new byte[]{0x61, 0x62, 0x63, 0x64}.ToBase64());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_ToUrlSafeBase64_returns_urlsafe_base64_without_padding()
         {
-            Assert.That(new byte[] {}.ToUrlSafeBase64(), Is.EqualTo(""));
-            Assert.That(new byte[] {0xFB}.ToUrlSafeBase64(), Is.EqualTo("-w"));
-            Assert.That(new byte[] {0xFB, 0xEF}.ToUrlSafeBase64(), Is.EqualTo("--8"));
-            Assert.That(new byte[] {0xFB, 0xEF, 0xFF}.ToUrlSafeBase64(), Is.EqualTo("--__"));
+            Assert.Equal("", new byte[]{}.ToUrlSafeBase64());
+            Assert.Equal("-w", new byte[]{0xFB}.ToUrlSafeBase64());
+            Assert.Equal("--8", new byte[]{0xFB, 0xEF}.ToUrlSafeBase64());
+            Assert.Equal("--__", new byte[]{0xFB, 0xEF, 0xFF}.ToUrlSafeBase64());
         }
 
         //
         // BinaryReader
         //
 
-        [Test]
+        [Fact]
         public void BinaryReader_ReadUInt32BigEndian_reads_uint()
         {
             var bytes = new byte[] {0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE};
             using (var r = new BinaryReader(new MemoryStream(bytes)))
             {
-                Assert.That(r.ReadUInt32LittleEndian(), Is.EqualTo(0xDEADBEEF));
-                Assert.That(r.ReadUInt32LittleEndian(), Is.EqualTo(0xFEEDF00D));
+                Assert.Equal(0xDEADBEEF, r.ReadUInt32LittleEndian());
+                Assert.Equal(0xFEEDF00D, r.ReadUInt32LittleEndian());
             }
         }
 
@@ -115,7 +115,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         // JToken
         //
 
-        [Test]
+        [Fact]
         public void JToken_chained_At_returns_token()
         {
             var j = JObject.Parse(@"{
@@ -126,15 +126,15 @@ namespace PasswordManagerAccess.Test.RoboForm
             var k2 = j["k1"]["k2"];
             var k3 = j["k1"]["k2"]["k3"];
 
-            Assert.That(j.At("k1"), Is.EqualTo(k1));
-            Assert.That(j.At("k1").At("k2"), Is.EqualTo(k2));
-            Assert.That(j.At("k1").At("k2").At("k3"), Is.EqualTo(k3));
+            Assert.Equal(k1, j.At("k1"));
+            Assert.Equal(k2, j.At("k1").At("k2"));
+            Assert.Equal(k3, j.At("k1").At("k2").At("k3"));
 
-            Assert.That(j.At("k1").At("k2/k3"), Is.EqualTo(k3));
-            Assert.That(j.At("k1/k2").At("k3"), Is.EqualTo(k3));
+            Assert.Equal(k3, j.At("k1").At("k2/k3"));
+            Assert.Equal(k3, j.At("k1/k2").At("k3"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_At_throws_on_invalid_path()
         {
             var j = JObject.Parse(@"{
@@ -152,7 +152,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyAtThrows(j, "k3/k33/k333/i333");
         }
 
-        [Test]
+        [Fact]
         public void JToken_At_throws_on_non_objects()
         {
             var j = JObject.Parse(@"{
@@ -166,7 +166,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyAtThrows(j, "k3/k33/k333");
         }
 
-        [Test]
+        [Fact]
         public void JToken_StringAt_returns_string()
         {
             var j = JObject.Parse(@"{
@@ -175,12 +175,12 @@ namespace PasswordManagerAccess.Test.RoboForm
                 'k3': {'k33': {'k333': 'v333'}}
             }");
 
-            Assert.That(j.StringAt("k1"), Is.EqualTo("v1"));
-            Assert.That(j.StringAt("k2/k22"), Is.EqualTo("v22"));
-            Assert.That(j.StringAt("k3/k33/k333"), Is.EqualTo("v333"));
+            Assert.Equal("v1", j.StringAt("k1"));
+            Assert.Equal("v22", j.StringAt("k2/k22"));
+            Assert.Equal("v333", j.StringAt("k3/k33/k333"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_StringAt_throws_on_non_stings()
         {
             var j = JObject.Parse(@"{
@@ -198,7 +198,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyStringAtThrows(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_StringAt_returns_default_value_on_non_strings()
         {
             var j = JObject.Parse(@"{
@@ -216,7 +216,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyStringAtReturnsDefault(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_IntAt_returns_int()
         {
             var j = JObject.Parse(@"{
@@ -225,12 +225,12 @@ namespace PasswordManagerAccess.Test.RoboForm
                 'k3': {'k33': {'k333': 1337}}
             }");
 
-            Assert.That(j.IntAt("k1"), Is.EqualTo(13));
-            Assert.That(j.IntAt("k2/k22"), Is.EqualTo(42));
-            Assert.That(j.IntAt("k3/k33/k333"), Is.EqualTo(1337));
+            Assert.Equal(13, j.IntAt("k1"));
+            Assert.Equal(42, j.IntAt("k2/k22"));
+            Assert.Equal(1337, j.IntAt("k3/k33/k333"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_IntAt_throws_on_non_ints()
         {
             var j = JObject.Parse(@"{
@@ -248,7 +248,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyIntAtThrows(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_IntAtOrNull_returns_default_value_on_non_ints()
         {
             var j = JObject.Parse(@"{
@@ -266,7 +266,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyIntAtReturnsDefault(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_BoolAt_returns_bools()
         {
             var j = JObject.Parse(@"{
@@ -275,12 +275,12 @@ namespace PasswordManagerAccess.Test.RoboForm
                 'k3': {'k33': {'k333': true}}
             }");
 
-            Assert.That(j.BoolAt("k1"), Is.EqualTo(true));
-            Assert.That(j.BoolAt("k2/k22"), Is.EqualTo(false));
-            Assert.That(j.BoolAt("k3/k33/k333"), Is.EqualTo(true));
+            Assert.True(j.BoolAt("k1"));
+            Assert.False(j.BoolAt("k2/k22"));
+            Assert.True(j.BoolAt("k3/k33/k333"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_BoolAt_throws_on_non_bools()
         {
             var j = JObject.Parse(@"{
@@ -298,7 +298,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             VerifyBoolAtThrows(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_BoolAtOrNull_returns_null_on_non_bools()
         {
             var j = JObject.Parse(@"{
@@ -356,23 +356,23 @@ namespace PasswordManagerAccess.Test.RoboForm
 
         private static void VerifyAccessThrows(JToken token, string path, Action<JToken, string> access)
         {
-            Assert.That(() => access(token, path), Throws.TypeOf<JTokenAccessException>());
+            Assert.Throws<JTokenAccessException>(() => access(token, path));
         }
 
         private static void VerifyStringAtReturnsDefault(JToken token, string path)
         {
-            Assert.That(token.StringAt(path, "default"), Is.EqualTo("default"));
+            Assert.Equal("default", token.StringAt(path, "default"));
         }
 
         private static void VerifyIntAtReturnsDefault(JToken token, string path)
         {
-            Assert.That(token.IntAt(path, 1337), Is.EqualTo(1337));
+            Assert.Equal(1337, token.IntAt(path, 1337));
         }
 
         private static void VerifyBoolAtReturnsDefault(JToken token, string path)
         {
-            Assert.That(token.BoolAt(path, false), Is.EqualTo(false));
-            Assert.That(token.BoolAt(path, true), Is.EqualTo(true));
+            Assert.False(token.BoolAt(path, false));
+            Assert.True(token.BoolAt(path, true));
         }
     }
 }

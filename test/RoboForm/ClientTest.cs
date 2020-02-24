@@ -6,14 +6,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using Moq;
-using NUnit.Framework;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    [TestFixture]
     public class ClientTest
     {
-        [Test]
+        [Fact]
         public void Logout_makes_POST_request_to_specific_url()
         {
             var expected = string.Format("https://online.roboform.com/rf-api/{0}?logout",
@@ -23,32 +23,34 @@ namespace PasswordManagerAccess.Test.RoboForm
                                                          It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void Logout_throws_on_not_HTTP_OK()
         {
-            Assert.That(() => Logout(HttpStatusCode.NotFound),
-                        ExceptionsTest.ThrowsNetworkErrorWithMessage("NotFound (404)"));
+            var e = Assert.Throws<ClientException>(() => Logout(HttpStatusCode.NotFound));
+            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
+            Assert.Contains("NotFound (404)", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void GetBlob_returns_received_bytes()
         {
             var expected = "Blah, blah, blah...".ToBytes();
             var http = SetupGet(HttpStatusCode.OK, expected);
             var response = Client.GetBlob(TestData.Username, Session, http.Object);
 
-            Assert.That(response, Is.EqualTo(expected));
+            Assert.Equal(expected, response);
         }
 
-        [Test]
+        [Fact]
         public void GetBlob_throws_on_not_HTTP_OK()
         {
             var http = SetupGet(HttpStatusCode.NotFound, new byte[0]);
-            Assert.That(() => Client.GetBlob(TestData.Username, Session, http.Object),
-                        ExceptionsTest.ThrowsNetworkErrorWithMessage("NotFound (404)"));
+            var e = Assert.Throws<ClientException>(() => Client.GetBlob(TestData.Username, Session, http.Object));
+            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
+            Assert.Contains("NotFound (404)", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Step1_makes_POST_request_to_specific_server()
         {
             MakeStep1().Verify(x => x.Post(
@@ -56,14 +58,14 @@ namespace PasswordManagerAccess.Test.RoboForm
                 It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void Step1_POST_request_url_contains_username()
         {
             MakeStep1().Verify(x => x.Post(It.Is<string>(s => s.Contains(TestData.Username)),
                                            It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void Step1_makes_POST_request_with_authorization_header_set()
         {
             MakeStep1().Verify(x => x.Post(
@@ -73,42 +75,41 @@ namespace PasswordManagerAccess.Test.RoboForm
                          d["Authorization"].StartsWith("SibAuth realm="))));
         }
 
-        [Test]
+        [Fact]
         public void Step1_returns_WWW_Authenticate_header()
         {
             var http = SetupStep1();
-            Assert.That(
-                Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object),
-                Is.EqualTo(Step1Header));
+            Assert.Equal(Step1Header, Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object));
         }
 
-        [Test]
+        [Fact]
         public void Step1_throws_on_missing_WWW_Authenticate_header()
         {
             var http = SetupStep1(null);
-            Assert.That(
-                () => Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object),
-                ExceptionsTest.ThrowsInvalidResponseWithMessage("WWW-Authenticate header"));
+            var e = Assert.Throws<ClientException>(
+                () => Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object));
+            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
+            Assert.Contains("WWW-Authenticate header", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void GenerateNonce_returns_string_of_correct_length()
         {
             var nonce = Client.GenerateNonce();
-            Assert.That(nonce.Length, Is.EqualTo(22));
+            Assert.Equal(22, nonce.Length);
         }
 
-        [Test]
+        [Fact]
         public void Step1AuthorizationHeader_returns_header()
         {
             var expected = "SibAuth realm=\"RoboForm Online Server\",data=\"biwsbj1sYXN0cGFzcy" +
                            "5ydWJ5QGdtYWlsLmNvbSxyPS1EZUhSclpqQzhEWl8wZThSR3Npc2c=\"";
             var header = Client.Step1AuthorizationHeader(TestData.Credentials);
 
-            Assert.That(header, Is.EqualTo(expected));
+            Assert.Equal(expected, header);
         }
 
-        [Test]
+        [Fact]
         public void Step2_makes_POST_request_to_specific_server()
         {
             MakeStep2().Verify(x => x.Post(
@@ -116,14 +117,14 @@ namespace PasswordManagerAccess.Test.RoboForm
                 It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void Step2_POST_request_url_contains_username()
         {
             MakeStep2().Verify(x => x.Post(It.Is<string>(s => s.Contains(TestData.Username)),
                                            It.IsAny<Dictionary<string, string>>()));
         }
 
-        [Test]
+        [Fact]
         public void Step2_makes_POST_request_with_authorization_header_set()
         {
             MakeStep2().Verify(x => x.Post(
@@ -133,7 +134,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                          d["Authorization"].StartsWith("SibAuth sid="))));
         }
 
-        [Test]
+        [Fact]
         public void Step2_makes_POST_request_with_channel_header_set_to_dash()
         {
             MakeStep2().Verify(x => x.Post(
@@ -142,7 +143,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                                                        d["x-sib-auth-alt-channel"] == "-")));
         }
 
-        [Test]
+        [Fact]
         public void Step2_makes_POST_request_with_x_sib_headers_set()
         {
             MakeStep2("channel", "otp", true).Verify(x => x.Post(
@@ -155,7 +156,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                                                        d["x-sib-auth-alt-memorize"] == "1")));
         }
 
-        [Test]
+        [Fact]
         public void Step2_returns_cookies()
         {
             var http = SetupStep2();
@@ -167,7 +168,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             AssertEqual(result.Session, Session);
         }
 
-        [Test]
+        [Fact]
         public void Step2_ignores_extra_cookies()
         {
             var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
@@ -179,7 +180,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             AssertEqual(result.Session, Session);
         }
 
-        [Test]
+        [Fact]
         public void Step2_throws_on_missing_cookies()
         {
             var testCases = new[]
@@ -194,26 +195,28 @@ namespace PasswordManagerAccess.Test.RoboForm
             foreach (var testCase in testCases)
             {
                 var http = SetupStep2(testCase);
-                Assert.That(() => Client.Step2(TestData.Credentials,
-                                               new Client.OtpOptions(),
-                                               TestData.AuthInfo,
-                                               http.Object),
-                            ExceptionsTest.ThrowsInvalidResponseWithMessage("cookie"));
+                var e = Assert.Throws<ClientException>(() => Client.Step2(TestData.Credentials,
+                                                                          new Client.OtpOptions(),
+                                                                          TestData.AuthInfo,
+                                                                          http.Object));
+                Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
+                Assert.Contains("cookie", e.Message);
             }
         }
 
-        [Test]
+        [Fact]
         public void Step2_throws_http_unauthorized()
         {
             var http = SetupStep2(HttpStatusCode.Unauthorized);
-            Assert.That(() => Client.Step2(TestData.Credentials,
-                                           new Client.OtpOptions(),
-                                           TestData.AuthInfo,
-                                           http.Object),
-                        ExceptionsTest.ThrowsIncorrectCredentialsWithMessage("Username or password"));
+            var e = Assert.Throws<ClientException>(() => Client.Step2(TestData.Credentials,
+                                                   new Client.OtpOptions(),
+                                                   TestData.AuthInfo,
+                                                   http.Object));
+            Assert.Equal(ClientException.FailureReason.IncorrectCredentials, e.Reason);
+            Assert.Contains("Username or password", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Step2AuthorizationHeader_returns_header()
         {
             var expected = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJy" +
@@ -221,7 +224,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                            "FIRi9nSGVSWXEyekhmZ0gxNmdJS05xdGFPak5rUjlrRTRrPQ==\"";
             var header = Client.Step2AuthorizationHeader(TestData.Credentials, TestData.AuthInfo);
 
-            Assert.That(header, Is.EqualTo(expected));
+            Assert.Equal(expected, header);
         }
 
         //
@@ -318,9 +321,9 @@ namespace PasswordManagerAccess.Test.RoboForm
 
         private static void AssertEqual(Session a, Session b)
         {
-            Assert.That(a.Token, Is.EqualTo(b.Token));
-            Assert.That(a.DeviceId, Is.EqualTo(b.DeviceId));
-            Assert.That(a.Header, Is.EqualTo(b.Header));
+            Assert.Equal(b.Token, a.Token);
+            Assert.Equal(b.DeviceId, a.DeviceId);
+            Assert.Equal(b.Header, a.Header);
         }
 
         //

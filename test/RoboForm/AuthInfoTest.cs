@@ -2,27 +2,27 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using NUnit.Framework;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    [TestFixture]
     public class AuthInfoTest
     {
-        [Test]
+        [Fact]
         public void Properties_are_set()
         {
             var info = new AuthInfo("sid", "data", "nonce", "salt".ToBytes(), 1337, true);
 
-            Assert.That(info.Sid, Is.EqualTo("sid"));
-            Assert.That(info.Data, Is.EqualTo("data"));
-            Assert.That(info.Nonce, Is.EqualTo("nonce"));
-            Assert.That(info.Salt, Is.EqualTo("salt".ToBytes()));
-            Assert.That(info.IterationCount, Is.EqualTo(1337));
-            Assert.That(info.IsMd5, Is.EqualTo(true));
+            Assert.Equal("sid", info.Sid);
+            Assert.Equal("data", info.Data);
+            Assert.Equal("nonce", info.Nonce);
+            Assert.Equal("salt".ToBytes(), info.Salt);
+            Assert.Equal(1337, info.IterationCount);
+            Assert.True(info.IsMd5);
         }
 
-        [Test]
+        [Fact]
         public void Parse_returns_AuthInfo()
         {
             var encoded = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"cj0tRGVIUnJaakM4RFpfM" +
@@ -30,45 +30,45 @@ namespace PasswordManagerAccess.Test.RoboForm
                           "WENkYnc9PSxpPTQwOTY=\"";
             var info = AuthInfo.Parse(encoded);
 
-            Assert.That(info.Sid, Is.EqualTo(TestData.AuthInfo.Sid));
-            Assert.That(info.Data, Is.EqualTo(TestData.AuthInfo.Data));
-            Assert.That(info.Nonce, Is.EqualTo(TestData.AuthInfo.Nonce));
-            Assert.That(info.Salt, Is.EqualTo(TestData.AuthInfo.Salt));
-            Assert.That(info.IterationCount, Is.EqualTo(TestData.AuthInfo.IterationCount));
-            Assert.That(info.IsMd5, Is.EqualTo(TestData.AuthInfo.IsMd5));
+            Assert.Equal(TestData.AuthInfo.Sid, info.Sid);
+            Assert.Equal(TestData.AuthInfo.Data, info.Data);
+            Assert.Equal(TestData.AuthInfo.Nonce, info.Nonce);
+            Assert.Equal(TestData.AuthInfo.Salt, info.Salt);
+            Assert.Equal(TestData.AuthInfo.IterationCount, info.IterationCount);
+            Assert.Equal(TestData.AuthInfo.IsMd5, info.IsMd5);
         }
 
-        [Test]
+        [Fact]
         public void ParseAuthInfo_throws_on_missing_parts()
         {
             VerifyThrows(() => AuthInfo.Parse("SibAuth"));
         }
 
-        [Test]
+        [Fact]
         public void ParseAuthInfo_throws_on_invalid_realm()
         {
             VerifyThrows(() => AuthInfo.Parse("Realm sid=\"\",data=\"\""));
         }
 
-        [Test]
+        [Fact]
         public void ParseAuthInfo_throws_on_invalid_parameters_format()
         {
             VerifyThrows(() => AuthInfo.Parse("SibAuth sid=,data="));
         }
 
-        [Test]
+        [Fact]
         public void ParseAuthInfo_throws_on_missing_sid()
         {
             VerifyThrows(() => AuthInfo.Parse("SibAuth data=\"\""));
         }
 
-        [Test]
+        [Fact]
         public void ParseAuthInfo_throws_on_missing_data()
         {
             VerifyThrows(() => AuthInfo.Parse("SibAuth sid=\"\""));
         }
 
-        [Test]
+        [Fact]
         public void ParseAuthInfo_throws_on_invalid_data()
         {
             var testCases = new[]
@@ -85,14 +85,14 @@ namespace PasswordManagerAccess.Test.RoboForm
                                                                 data.ToBase64())));
         }
 
-        [Test]
+        [Fact]
         public void ParseAuthInfo_sets_is_md5_flag()
         {
             var data = "r=nonce,s=c2FsdA==,i=1337,o=pwdMD5";
             var info = AuthInfo.Parse(string.Format("SibAuth sid=\"sid\",data=\"{0}\"",
                                                     data.ToBase64()));
 
-            Assert.That(info.IsMd5, Is.True);
+            Assert.True(info.IsMd5);
         }
 
         //
@@ -100,8 +100,9 @@ namespace PasswordManagerAccess.Test.RoboForm
         //
         private static void VerifyThrows(Action action)
         {
-            Assert.That(new TestDelegate(action),
-                        ExceptionsTest.ThrowsInvalidResponseWithMessage("Invalid auth info"));
+            var e = Assert.Throws<ClientException>(action);
+            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
+            Assert.Contains("Invalid auth info", e.Message);
         }
     }
 }

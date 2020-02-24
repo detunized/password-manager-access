@@ -4,59 +4,32 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
-using NUnit.Framework;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    [TestFixture]
     public class Pbkdf2Test
     {
-        [Test]
+        [Fact]
         public void Generate_sha_1_returns_correct_result()
         {
             VerifyGenerator(Pbkdf2.GenerateSha1, Sha1);
             VerifyGenerator(Pbkdf2.Generate<HMACSHA1>, Sha1);
         }
 
-        [Test]
+        [Fact]
         public void Generate_sha_256_returns_correct_result()
         {
             VerifyGenerator(Pbkdf2.GenerateSha256, Sha256);
             VerifyGenerator(Pbkdf2.Generate<HMACSHA256>, Sha256);
         }
 
-        [Test]
+        [Fact]
         public void Generate_sha_512_returns_correct_result()
         {
             VerifyGenerator(Pbkdf2.GenerateSha512, Sha512);
             VerifyGenerator(Pbkdf2.Generate<HMACSHA512>, Sha512);
-        }
-
-        [Test]
-        public void Generate_throws_on_zero_iterationCount()
-        {
-            foreach (var generate in Generators)
-                Assert.That(() => generate("password".ToBytes(), "salt".ToBytes(), 0, 32),
-                            Throws.InstanceOf<ArgumentOutOfRangeException>()
-                                .And.Message.StartsWith("Iteration count should be positive"));
-        }
-
-        [Test]
-        public void Generate_throws_on_negative_iterationCount()
-        {
-            foreach (var generate in Generators)
-                Assert.That(() => generate("password".ToBytes(), "salt".ToBytes(), -1, 32),
-                            Throws.InstanceOf<ArgumentOutOfRangeException>()
-                                .And.Message.StartsWith("Iteration count should be positive"));
-        }
-
-        [Test]
-        public void Generate_throws_on_negative_byteCount()
-        {
-            foreach (var generate in Generators)
-                Assert.That(() => generate("password".ToBytes(), "salt".ToBytes(), 1, -1),
-                            Throws.InstanceOf<ArgumentOutOfRangeException>()
-                                .And.Message.StartsWith("Byte count should be nonnegative"));
         }
 
         //
@@ -173,17 +146,13 @@ namespace PasswordManagerAccess.Test.RoboForm
         private static void VerifyGenerator(Func<byte[], byte[], int, int, byte[]> generate,
                                             string[] expectedResults)
         {
-            Assert.That(TestCases.Length, Is.EqualTo(expectedResults.Length));
+            Assert.Equal(expectedResults.Length, TestCases.Length);
 
             foreach (var i in TestCases.Zip(expectedResults, (t, e) => new { Test = t, Expected = e }))
             {
                 var expected = i.Expected.Decode64();
 
-                Assert.That(generate(i.Test.Password.ToBytes(),
-                                     i.Test.Salt.ToBytes(),
-                                     i.Test.IterationCount,
-                                     expected.Length),
-                            Is.EqualTo(expected));
+                Assert.Equal(expected, generate(i.Test.Password.ToBytes(), i.Test.Salt.ToBytes(), i.Test.IterationCount, expected.Length));
             }
         }
     }

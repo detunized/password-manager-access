@@ -1,30 +1,29 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    [TestFixture]
-    class SessionTest
+    public class SessionTest
     {
-        [Test]
+        [Fact]
         public void Token_is_set()
         {
-            Assert.That(new Session("token", "").Token, Is.EqualTo("token"));
+            Assert.Equal("token", new Session("token", "").Token);
         }
 
-        [Test]
+        [Fact]
         public void DeviceId_is_set()
         {
-            Assert.That(new Session("", "device-id").DeviceId, Is.EqualTo("device-id"));
+            Assert.Equal("device-id", new Session("", "device-id").DeviceId);
         }
 
-        [Test]
+        [Fact]
         public void Header_is_set()
         {
-            Assert.That(new Session("token", "device-id").Header,
-                        Is.EqualTo("sib-auth=token; sib-deviceid=device-id"));
+            Assert.Equal("sib-auth=token; sib-deviceid=device-id", new Session("token", "device-id").Header);
         }
     }
 }
