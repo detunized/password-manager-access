@@ -1,11 +1,11 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using NUnit.Framework;
 using NUnit.Framework.Constraints;
 
-namespace RoboForm.Test
+namespace PasswordManagerAccess.Test.RoboForm
 {
     [TestFixture]
     public class ExceptionsTest
