@@ -32,14 +32,6 @@ namespace PasswordManagerAccess.Test.RoboForm
         }
 
         [Fact]
-        public void Md5_returns_hashed_message()
-        {
-            // Generated with OpenSSL (just a smoke test, we're not implementing MD5 here)
-            // $ echo -n message | openssl dgst -md5 -binary | openssl base64
-            Assert.Equal("eOcxAn2P1Q7WQjQLfJpjsw==".Decode64(), Util.Md5("message".ToBytes()));
-        }
-
-        [Fact]
         public void DecryptAes256_returns_plaintext_without_padding()
         {
             // Generated with Ruby/openssl

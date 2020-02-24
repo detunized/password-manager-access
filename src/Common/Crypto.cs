@@ -37,6 +37,21 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // MD5
+        //
+
+        public static byte[] Md5(string message)
+        {
+            return Md5(message.ToBytes());
+        }
+
+        public static byte[] Md5(byte[] message)
+        {
+            using (var md5 = MD5.Create())
+                return md5.ComputeHash(message);
+        }
+
+        //
         // SHA
         //
 

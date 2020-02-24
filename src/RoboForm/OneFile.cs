@@ -100,7 +100,7 @@ namespace PasswordManagerAccess.RoboForm
             if (content.Length != length)
                 throw ParseError("Content is too short");
 
-            var actualChecksum = Util.Md5(content);
+            var actualChecksum = Crypto.Md5(content);
             if (!actualChecksum.SequenceEqual(storedChecksum))
                 throw ParseError("Checksum doesn't match");
 

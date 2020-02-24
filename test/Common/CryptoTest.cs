@@ -11,6 +11,30 @@ namespace PasswordManagerAccess.Test.Common
     public class CryptoTest
     {
         //
+        // MD5
+        //
+
+        [Fact]
+        public void Md5_string_returns_hashed_message()
+        {
+            // Generated with OpenSSL (just a smoke test, we're not implementing MD5 here)
+            // $ echo -n message | openssl dgst -md5 -binary | openssl base64
+            byte[] hashed = Crypto.Md5("message");
+
+            Assert.Equal("eOcxAn2P1Q7WQjQLfJpjsw==".Decode64(), hashed);
+        }
+
+        [Fact]
+        public void Md5_bytes_returns_hashed_message()
+        {
+            // Generated with OpenSSL (just a smoke test, we're not implementing MD5 here)
+            // $ echo -n message | openssl dgst -md5 -binary | openssl base64
+            byte[] hashed = Crypto.Md5("message".ToBytes());
+
+            Assert.Equal("eOcxAn2P1Q7WQjQLfJpjsw==".Decode64(), hashed);
+        }
+
+        //
         // SHA-1
         //
 

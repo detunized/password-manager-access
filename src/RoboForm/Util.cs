@@ -21,12 +21,6 @@ namespace PasswordManagerAccess.RoboForm
             return Crypto.HmacSha256("Client Key".ToBytes(), HashPassword(password, authInfo));
         }
 
-        public static byte[] Md5(byte[] data)
-        {
-            using (var md5 = MD5.Create())
-                return md5.ComputeHash(data);
-        }
-
         public static byte[] DecryptAes256(byte[] ciphertext,
                                            byte[] key,
                                            byte[] iv,
@@ -52,7 +46,7 @@ namespace PasswordManagerAccess.RoboForm
         {
             var passwordBytes = password.ToBytes();
             if (authInfo.IsMd5)
-                passwordBytes = Md5(passwordBytes);
+                passwordBytes = Crypto.Md5(passwordBytes);
 
             return Pbkdf2.GenerateSha256(passwordBytes, authInfo.Salt, authInfo.IterationCount, 32);
         }
