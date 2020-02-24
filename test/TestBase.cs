@@ -18,17 +18,35 @@ namespace PasswordManagerAccess.Test
 
         public string GetFixture(string name, string extension = "json")
         {
-            var type = GetType();
-            var names = type.Assembly.GetManifestResourceNames();
-            var fullName = $"{type.Namespace}.Fixtures.{name}.{extension}";
-            using (Stream stream = type.Assembly.GetManifestResourceStream(fullName))
-            using (StreamReader reader = new StreamReader(stream))
+            using (var stream = GetFixtureStream(name, extension))
+            using (var reader = new StreamReader(stream))
                 return reader.ReadToEnd();
+        }
+
+        public byte[] GetBinaryFixture(string name, string extension)
+        {
+            using (var stream = GetFixtureStream(name, extension))
+            using (var memory = new MemoryStream())
+            {
+                stream.CopyTo(memory);
+                return memory.ToArray();
+            }
         }
 
         public T ParseFixture<T>(string name)
         {
             return JsonConvert.DeserializeObject<T>(GetFixture(name, "json"));
+        }
+
+        //
+        // Private
+        //
+
+        private Stream GetFixtureStream(string name, string extension)
+        {
+            var type = GetType();
+            var fullName = $"{type.Namespace}.Fixtures.{name}.{extension}";
+            return type.Assembly.GetManifestResourceStream(fullName);
         }
     }
 }
