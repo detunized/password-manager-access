@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {

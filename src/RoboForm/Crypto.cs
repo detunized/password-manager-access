@@ -3,6 +3,7 @@
 
 using System.IO;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
