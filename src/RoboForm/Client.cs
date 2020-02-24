@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
@@ -300,7 +301,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static string GenerateNonce()
         {
-            return Util.RandomBytes(16).ToUrlSafeBase64();
+            return Crypto.RandomBytes(16).ToUrlSafeBase64();
         }
 
         internal static string Step1AuthorizationHeader(Credentials credentials)
@@ -315,7 +316,7 @@ namespace PasswordManagerAccess.RoboForm
         internal static string Step2AuthorizationHeader(Credentials credentials, AuthInfo authInfo)
         {
             var clientKey = Util.ComputeClientKey(credentials.Password, authInfo);
-            var clientHash = Util.Sha256(clientKey);
+            var clientHash = Crypto.Sha256(clientKey);
 
             var hashingMaterial = string.Format("n={0},r={1},{2},c=biws,r={3}",
                                                 credentials.Username.EncodeUri(),
@@ -323,7 +324,7 @@ namespace PasswordManagerAccess.RoboForm
                                                 authInfo.Data,
                                                 authInfo.Nonce);
 
-            var hashed = Util.Hmac(clientHash, hashingMaterial.ToBytes());
+            var hashed = Crypto.HmacSha256(hashingMaterial.ToBytes(), clientHash);
             var proof = clientKey.Zip(hashed, (a, b) => (byte)(a ^ b)).ToArray();
             var data = string.Format("c=biws,r={0},p={1}", authInfo.Nonce, proof.ToBase64());
 

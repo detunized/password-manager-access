@@ -10,13 +10,6 @@ namespace PasswordManagerAccess.Test.RoboForm
     public class UtilTest
     {
         [Fact]
-        public void RandomBytes_returns_array_of_requested_size()
-        {
-            foreach (var size in new[] { 0, 1, 2, 3, 4, 15, 255, 1024, 1337 })
-                Assert.Equal(size, Util.RandomBytes(size).Length);
-        }
-
-        [Fact]
         public void RandomDeviceId_starts_with_B()
         {
             for (var i = 0; i < 10; ++i)
@@ -36,15 +29,6 @@ namespace PasswordManagerAccess.Test.RoboForm
             // Generated with the original JavaScript code
             Assert.Equal("8sbDhSTLwbl0FhiHAxFxGUQvQwcr4JIbpExO64+Jj8o=".Decode64(),
                          Util.ComputeClientKey(TestData.Password, TestData.AuthInfo));
-        }
-
-        [Fact]
-        public void Hmac_returns_hashed_message()
-        {
-            // Generated with OpenSSL (just a smoke test, we're not implementing HMAC here)
-            // $ echo -n message | openssl dgst -sha256 -binary -hmac "salt" | openssl base64
-            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64(),
-                         Util.Hmac("salt".ToBytes(), "message".ToBytes()));
         }
 
         [Fact]
@@ -85,15 +69,6 @@ namespace PasswordManagerAccess.Test.RoboForm
             // Generated with the original JavaScript code
             Assert.Equal("b+rd7TUt65+hdE7+lHCBPPWHjxbq6qs0y7zufYfqHto=".Decode64(),
                          Util.HashPassword(TestData.Password, TestData.AuthInfo));
-        }
-
-        [Fact]
-        public void Sha256_returns_hashed_message()
-        {
-            // Generated with OpenSSL (just a smoke test, we're not implementing SHA here)
-            // $ echo -n message | openssl dgst -sha256 -binary | openssl base64
-            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(),
-                         Util.Sha256("message".ToBytes()));
         }
     }
 }

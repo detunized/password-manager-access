@@ -9,32 +9,16 @@ namespace PasswordManagerAccess.RoboForm
 {
     internal static class Util
     {
-        public static byte[] RandomBytes(int size)
-        {
-            using (var random = new RNGCryptoServiceProvider())
-            {
-                var bytes = new byte[size];
-                random.GetBytes(bytes);
-                return bytes;
-            }
-        }
-
         public static string RandomDeviceId()
         {
             // All the device ids returned by the server seem to be in this format.
             // Example: B57192ee77db5e5989c5ef7e091b119ea
-            return "B" + RandomBytes(16).ToHex();
+            return "B" + Crypto.RandomBytes(16).ToHex();
         }
 
         public static byte[] ComputeClientKey(string password, AuthInfo authInfo)
         {
-            return Hmac(HashPassword(password, authInfo), "Client Key".ToBytes());
-        }
-
-        public static byte[] Hmac(byte[] salt, byte[] message)
-        {
-            using (var hmac = new HMACSHA256 {Key = salt})
-                return hmac.ComputeHash(message);
+            return Crypto.HmacSha256("Client Key".ToBytes(), HashPassword(password, authInfo));
         }
 
         public static byte[] Md5(byte[] data)
@@ -71,12 +55,6 @@ namespace PasswordManagerAccess.RoboForm
                 passwordBytes = Md5(passwordBytes);
 
             return Pbkdf2.GenerateSha256(passwordBytes, authInfo.Salt, authInfo.IterationCount, 32);
-        }
-
-        internal static byte[] Sha256(byte[] data)
-        {
-            using (var sha = new SHA256Managed())
-                return sha.ComputeHash(data);
         }
 
         internal static AesManaged CreateAes256Cbc(byte[] key, byte[] iv, PaddingMode padding)
