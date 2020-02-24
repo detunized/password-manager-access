@@ -27,7 +27,7 @@ namespace PasswordManagerAccess.RoboForm
         // easily possible as this happens with some other similar services.
         public static string GenerateRandomDeviceId()
         {
-            return Crypto.RandomDeviceId();
+            return Util.RandomDeviceId();
         }
 
         //

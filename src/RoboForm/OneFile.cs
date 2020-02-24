@@ -100,7 +100,7 @@ namespace PasswordManagerAccess.RoboForm
             if (content.Length != length)
                 throw ParseError("Content is too short");
 
-            var actualChecksum = Crypto.Md5(content);
+            var actualChecksum = Util.Md5(content);
             if (!actualChecksum.SequenceEqual(storedChecksum))
                 throw ParseError("Checksum doesn't match");
 
@@ -178,7 +178,7 @@ namespace PasswordManagerAccess.RoboForm
                 // With AES-256-CBC there's no way to know if decrypted correctly.
                 // It will later fail in decompression/JSON parsing.
                 // TODO: Check for CryptographicException
-                var plaintext = Crypto.DecryptAes256(ciphertext, key, iv, padding);
+                var plaintext = Util.DecryptAes256(ciphertext, key, iv, padding);
 
                 // Skip garbage (something strange, but that's what they do)
                 var xor = 0xAA;

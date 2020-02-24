@@ -7,7 +7,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
-    internal static class Crypto
+    internal static class Util
     {
         public static byte[] RandomBytes(int size)
         {
