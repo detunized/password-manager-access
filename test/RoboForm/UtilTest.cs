@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Security.Cryptography;
 using PasswordManagerAccess.RoboForm;
 using Xunit;
 
@@ -29,28 +28,6 @@ namespace PasswordManagerAccess.Test.RoboForm
             // Generated with the original JavaScript code
             Assert.Equal("8sbDhSTLwbl0FhiHAxFxGUQvQwcr4JIbpExO64+Jj8o=".Decode64(),
                          Util.ComputeClientKey(TestData.Password, TestData.AuthInfo));
-        }
-
-        [Fact]
-        public void DecryptAes256_returns_plaintext_without_padding()
-        {
-            // Generated with Ruby/openssl
-            Assert.Equal("decrypted data!!".ToBytes(),
-                         Util.DecryptAes256("XOUQiNfzQHLMHYJzo8jvaw==".Decode64(),
-                                            "this is a very secure password!!".ToBytes(),
-                                            "iviviviviviviviv".ToBytes(),
-                                            PaddingMode.None));
-        }
-
-        [Fact]
-        public void DecryptAes256_returns_ciphertext_with_padding()
-        {
-            // Generated with Ruby/openssl
-            Assert.Equal("decrypted data!".ToBytes(),
-                         Util.DecryptAes256("snfIB8VWKBn7p869FXAfrw==".Decode64(),
-                                            "this is a very secure password!!".ToBytes(),
-                                            "iviviviviviviviv".ToBytes(),
-                                            PaddingMode.PKCS7));
         }
 
         [Fact]

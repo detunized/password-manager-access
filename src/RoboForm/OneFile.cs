@@ -178,7 +178,7 @@ namespace PasswordManagerAccess.RoboForm
                 // With AES-256-CBC there's no way to know if decrypted correctly.
                 // It will later fail in decompression/JSON parsing.
                 // TODO: Check for CryptographicException
-                var plaintext = Util.DecryptAes256(ciphertext, key, iv, padding);
+                var plaintext = Crypto.DecryptAes256Cbc(ciphertext, iv, key, padding);
 
                 // Skip garbage (something strange, but that's what they do)
                 var xor = 0xAA;

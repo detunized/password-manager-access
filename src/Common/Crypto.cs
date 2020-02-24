@@ -136,6 +136,35 @@ namespace PasswordManagerAccess.Common
             return DecryptAes256Cbc(ciphertext, iv, key, PaddingMode.None);
         }
 
+        public static byte[] DecryptAes256Cbc(byte[] ciphertext, byte[] iv, byte[] key, PaddingMode padding)
+        {
+            try
+            {
+                using (var aes = Aes.Create())
+                {
+                    aes.KeySize = 256;
+                    aes.Key = key;
+                    aes.Mode = CipherMode.CBC;
+                    aes.IV = iv;
+                    aes.Padding = padding;
+
+                    using (var decryptor = aes.CreateDecryptor())
+                    using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
+                                                               decryptor,
+                                                               CryptoStreamMode.Read))
+                    using (var outputStream = new MemoryStream())
+                    {
+                        cryptoStream.CopyTo(outputStream);
+                        return outputStream.ToArray();
+                    }
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new CryptoException("AES decryption failed", e);
+            }
+        }
+
         //
         // RSA
         //
@@ -169,39 +198,6 @@ namespace PasswordManagerAccess.Common
             catch (CryptographicException e)
             {
                 throw new CryptoException("RSA decryption failed", e);
-            }
-        }
-
-        //
-        // Private
-        //
-
-        private static byte[] DecryptAes256Cbc(byte[] ciphertext, byte[] iv, byte[] key, PaddingMode padding)
-        {
-            try
-            {
-                using (var aes = Aes.Create())
-                {
-                    aes.KeySize = 256;
-                    aes.Key = key;
-                    aes.Mode = CipherMode.CBC;
-                    aes.IV = iv;
-                    aes.Padding = padding;
-
-                    using (var decryptor = aes.CreateDecryptor())
-                    using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
-                                                               decryptor,
-                                                               CryptoStreamMode.Read))
-                    using (var outputStream = new MemoryStream())
-                    {
-                        cryptoStream.CopyTo(outputStream);
-                        return outputStream.ToArray();
-                    }
-                }
-            }
-            catch (CryptographicException e)
-            {
-                throw new CryptoException("AES decryption failed", e);
             }
         }
     }

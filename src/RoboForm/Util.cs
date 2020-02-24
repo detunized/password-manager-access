@@ -1,8 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.IO;
-using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
@@ -21,23 +19,6 @@ namespace PasswordManagerAccess.RoboForm
             return Crypto.HmacSha256("Client Key".ToBytes(), HashPassword(password, authInfo));
         }
 
-        public static byte[] DecryptAes256(byte[] ciphertext,
-                                           byte[] key,
-                                           byte[] iv,
-                                           PaddingMode padding)
-        {
-            using (var aes = CreateAes256Cbc(key, iv, padding))
-            using (var decryptor = aes.CreateDecryptor())
-            using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
-                                                       decryptor,
-                                                       CryptoStreamMode.Read))
-            using (var plaintextStream = new MemoryStream())
-            {
-                cryptoStream.CopyTo(plaintextStream);
-                return plaintextStream.ToArray();
-            }
-        }
-
         //
         // Internal
         //
@@ -49,19 +30,6 @@ namespace PasswordManagerAccess.RoboForm
                 passwordBytes = Crypto.Md5(passwordBytes);
 
             return Pbkdf2.GenerateSha256(passwordBytes, authInfo.Salt, authInfo.IterationCount, 32);
-        }
-
-        internal static AesManaged CreateAes256Cbc(byte[] key, byte[] iv, PaddingMode padding)
-        {
-            return new AesManaged
-            {
-                BlockSize = 128,
-                KeySize = 256,
-                Key = key,
-                IV = iv,
-                Mode = CipherMode.CBC,
-                Padding = padding
-            };
         }
     }
 }
