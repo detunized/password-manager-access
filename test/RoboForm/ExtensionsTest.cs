@@ -2,10 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Linq;
-using PasswordManagerAccess.Common;
 using PasswordManagerAccess.RoboForm;
 using Xunit;
 
@@ -13,36 +11,6 @@ namespace PasswordManagerAccess.Test.RoboForm
 {
     public class ExtensionsTest
     {
-        //
-        // string
-        //
-
-        [Fact]
-        public void String_ToBase64_returns_base64()
-        {
-            Assert.Equal("", "".ToBase64());
-            Assert.Equal("YQ==", "a".ToBase64());
-            Assert.Equal("YWI=", "ab".ToBase64());
-            Assert.Equal("YWJj", "abc".ToBase64());
-            Assert.Equal("YWJjZA==", "abcd".ToBase64());
-        }
-
-        [Fact]
-        public void String_EscapeUri_escapes_special_characters()
-        {
-            var testCases = new Dictionary<string, string>
-            {
-                // TODO: Add more test cases to make sure it matches JS.
-                {"", ""},
-                {";,/?:@&=+$#", ";,/?:@&=+$#"},
-                {"-_.!~*'()", "-_.!~*'()"},
-                {"ABC abc 123", "ABC%20abc%20123"},
-            };
-
-            foreach (var i in testCases)
-                Assert.Equal(i.Value, i.Key.EncodeUri());
-        }
-
         //
         // BinaryReader
         //

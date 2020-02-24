@@ -29,6 +29,28 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Theory]
+        [InlineData("", "")]
+        [InlineData("YQ==", "a")]
+        [InlineData("YWI=", "ab")]
+        [InlineData("YWJj", "abc")]
+        [InlineData("YWJjZA==", "abcd")]
+        public void String_ToBase64_returns_base64(string base64, string raw)
+        {
+            Assert.Equal(base64, raw.ToBase64());
+        }
+
+        // TODO: Add more test cases to make sure it matches JS.
+        [Theory]
+        [InlineData("", "")]
+        [InlineData(";,/?:@&=+$#", ";,/?:@&=+$#")]
+        [InlineData("-_.!~*'()", "-_.!~*'()")]
+        [InlineData("ABC abc 123", "ABC%20abc%20123")]
+        public void String_EscapeUri_escapes_special_characters(string raw, string uri)
+        {
+            Assert.Equal(uri, raw.EncodeUri());
+        }
+
+        [Theory]
         [InlineData("", new byte[] { })]
         [InlineData("00", new byte[] { 0 })]
         [InlineData("00ff", new byte[] { 0, 255 })]

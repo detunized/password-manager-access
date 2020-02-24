@@ -4,26 +4,11 @@
 using System;
 using System.IO;
 using Newtonsoft.Json.Linq;
-using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
     internal static class Extensions
     {
-        //
-        // string
-        //
-
-        public static string ToBase64(this string s)
-        {
-            return s.ToBytes().ToBase64();
-        }
-
-        public static string EncodeUri(this string s)
-        {
-            return Uri.EscapeUriString(s);
-        }
-
         //
         // BinaryReader
         //
