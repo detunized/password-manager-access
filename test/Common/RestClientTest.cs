@@ -81,6 +81,23 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
         }
 
+        [Fact]
+        public void Get_returns_binary_content()
+        {
+            var content = "binary".ToBytes();
+            var response = Serve(content).Get(Url);
+
+            Assert.Equal(content, response.BinaryContent);
+        }
+
+        [Fact]
+        public void Get_returns_response_headers()
+        {
+            var response = Serve("", ResponseHeaders).Get(Url);
+
+            Assert.Equal(ResponseHeaders, response.Headers);
+        }
+
         //
         // POST JSON/form
         //
@@ -129,6 +146,23 @@ namespace PasswordManagerAccess.Test.Common
                 });
         }
 
+        [Fact]
+        public void PostJson_returns_binary_content()
+        {
+            var content = "binary".ToBytes();
+            var response = Serve(content).PostJson(Url, NoParameters);
+
+            Assert.Equal(content, response.BinaryContent);
+        }
+
+        [Fact]
+        public void PostJson_returns_response_headers()
+        {
+            var response = Serve("", ResponseHeaders).PostJson(Url, NoParameters);
+
+            Assert.Equal(ResponseHeaders, response.Headers);
+        }
+
         //
         // PUT
         //
@@ -173,6 +207,23 @@ namespace PasswordManagerAccess.Test.Common
 
             Assert.True(response.IsSuccessful);
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
+        }
+
+        [Fact]
+        public void Put_returns_binary_content()
+        {
+            var content = "binary".ToBytes();
+            var response = Serve(content).Put(Url);
+
+            Assert.Equal(content, response.BinaryContent);
+        }
+
+        [Fact]
+        public void Put_returns_response_headers()
+        {
+            var response = Serve("", ResponseHeaders).Put(Url);
+
+            Assert.Equal(ResponseHeaders, response.Headers);
         }
 
         //
@@ -446,7 +497,7 @@ namespace PasswordManagerAccess.Test.Common
         {
             using (var transport = new RestTransport(request => {
                 assertRequest(request);
-                return RespondWith(responseContent)(request);
+                return RespondWith(responseContent, NoHeaders)(request);
             }))
             {
                 restCall(new RestClient(transport, "", signer, defaultHeaders, defaultCookies));
@@ -467,21 +518,74 @@ namespace PasswordManagerAccess.Test.Common
 
         internal static RestClient Serve(string response, string baseUrl = "")
         {
-            return new RestClient(new RestTransport(RespondWith(response)), baseUrl);
+            return Serve(response, NoHeaders, baseUrl);
+        }
+
+        internal static RestClient Serve(byte[] response, string baseUrl = "")
+        {
+            return Serve(response, NoHeaders, baseUrl);
+        }
+
+        internal static RestClient Serve(string response,
+                                         IReadOnlyDictionary<string, string> headers,
+                                         string baseUrl = "")
+        {
+            return new RestClient(new RestTransport(RespondWith(response, headers)), baseUrl);
+        }
+
+        internal static RestClient Serve(byte[] response,
+                                         IReadOnlyDictionary<string, string> headers,
+                                         string baseUrl = "")
+        {
+            return new RestClient(new RestTransport(RespondWith(response, headers)), baseUrl);
         }
 
         internal static RestClient Fail(HttpStatusCode status, string baseUrl = "")
         {
-            return new RestClient(new RestTransport(RespondWith("", status)), baseUrl);
+            return Fail(status, NoHeaders, baseUrl);
         }
 
-        private static SendAsyncType RespondWith(string response, HttpStatusCode status = HttpStatusCode.OK)
+        internal static RestClient Fail(HttpStatusCode status,
+                                        IReadOnlyDictionary<string, string> headers,
+                                        string baseUrl = "")
         {
-            return (request) => Task.FromResult(new HttpResponseMessage(status)
+            return new RestClient(new RestTransport(RespondWith("", headers, status)), baseUrl);
+        }
+
+        private static SendAsyncType RespondWith(string response,
+                                                 IReadOnlyDictionary<string, string> headers,
+                                                 HttpStatusCode status = HttpStatusCode.OK)
+        {
+            return RespondWith(new StringContent(response), headers, status);
+        }
+
+        private static SendAsyncType RespondWith(byte[] response,
+                                                 IReadOnlyDictionary<string, string> headers,
+                                                 HttpStatusCode status = HttpStatusCode.OK)
+        {
+            var responseContent = new ByteArrayContent(response);
+            responseContent.Headers.TryAddWithoutValidation("Content-Type", "application/octet-stream");
+
+            return RespondWith(responseContent, headers, status);
+        }
+
+        private static SendAsyncType RespondWith(HttpContent responseContent,
+                                                 IReadOnlyDictionary<string, string> headers,
+                                                 HttpStatusCode status = HttpStatusCode.OK)
+        {
+            return (request) =>
             {
-                Content = new StringContent(response),
-                RequestMessage = request,
-            });
+                var responseMessage = new HttpResponseMessage(status)
+                {
+                    Content = responseContent,
+                    RequestMessage = request,
+                };
+
+                foreach (var header in headers)
+                    responseMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+                return Task.FromResult(responseMessage);
+            };
         }
 
         //
@@ -507,6 +611,13 @@ namespace PasswordManagerAccess.Test.Common
         private static readonly Dictionary<string, string> TestCookies = new Dictionary<string, string>
         {
             { TestCookieName, TestCookieValue }
+        };
+
+        private static readonly Dictionary<string, string> ResponseHeaders = new Dictionary<string, string>
+        {
+            ["ha"] = "ha-ha",
+            ["ho"] = "ho-ho",
+            ["blah"] = "blah-blah",
         };
     }
 }

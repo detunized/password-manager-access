@@ -25,6 +25,8 @@ namespace PasswordManagerAccess.Common
     {
         public HttpStatusCode StatusCode { get; internal set; }
         public string Content { get; internal set; }
+        public byte[] BinaryContent { get; internal set; }
+        public HttpHeaders Headers { get; internal set; }
         public Exception Error { get; internal set; }
         public Dictionary<string, string> Cookies { get; internal set; }
         public Uri RequestUri { get; internal set; }
@@ -155,8 +157,24 @@ namespace PasswordManagerAccess.Common
 
                 // Set up the result
                 allocatedResult.StatusCode = response.StatusCode;
-                allocatedResult.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 allocatedResult.Cookies = allCookies;
+
+                // Special handling for binary content when "Content-Type" is set to "application/octet-stream"
+                if (response.Content.Headers.TryGetValues("Content-Type", out var contentType) &&
+                    contentType.Contains("application/octet-stream"))
+                {
+                    allocatedResult.BinaryContent = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                    allocatedResult.Content = "";
+                }
+                else
+                {
+                    allocatedResult.BinaryContent = new byte[0];
+                    allocatedResult.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                }
+
+                // TODO: Here we're ignoring possible duplicated headers. See if we need to preserve those!
+                allocatedResult.Headers = response.Headers.ToDictionary(x => x.Key,
+                                                                        x => x.Value.FirstOrDefault() ?? "");
             }
             catch (HttpRequestException e)
             {
