@@ -11,12 +11,12 @@ namespace PasswordManagerAccess.RoboForm
         // store it and reuse later on subsequent logins.
         // Calling Vault.Open(username, password, Vault.GenerateRandomDeviceId(), ui) is
         // not a good idea. See bellow.
-        public static Vault Open(string username, string password, string deviceId, Ui ui, Logger logger = null)
+        public static Vault Open(string username, string password, string deviceId, Ui ui)
         {
             var clientInfo = new ClientInfo(username: username,
                                             password: password,
                                             deviceId: deviceId);
-            return Open(clientInfo, ui, logger, new HttpClient());
+            return Open(clientInfo, ui, new HttpClient());
         }
 
         // Generates a random device id that should be used with every new device.
@@ -34,9 +34,9 @@ namespace PasswordManagerAccess.RoboForm
         // Internal
         //
 
-        internal static Vault Open(ClientInfo clientInfo, Ui ui, Logger logger, IHttpClient http)
+        internal static Vault Open(ClientInfo clientInfo, Ui ui, IHttpClient http)
         {
-            return Client.OpenVault(clientInfo, ui, logger, http);
+            return Client.OpenVault(clientInfo, ui, http);
         }
 
         internal Vault(Account[] accounts)

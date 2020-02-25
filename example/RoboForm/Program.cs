@@ -43,26 +43,13 @@ namespace PasswordManagerAccess.Example.RoboForm
             }
         }
 
-        private class ConsoleLogger : Logger
-        {
-            public override void Log(DateTime timestamp, string text)
-            {
-                Console.WriteLine("{0}: {1}", timestamp, text);
-            }
-        }
-
         public static void Main(string[] args)
         {
             var config = Util.ReadConfig();
 
             try
             {
-                var vault = Vault.Open(config["username"],
-                                       config["password"],
-                                       config["device-id"],
-                                       new TextUi(),
-                                       new ConsoleLogger());
-
+                var vault = Vault.Open(config["username"], config["password"], config["device-id"], new TextUi());
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];
