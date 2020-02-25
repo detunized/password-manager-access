@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.IO;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.RoboForm;
 using Xunit;
@@ -11,21 +10,6 @@ namespace PasswordManagerAccess.Test.RoboForm
 {
     public class ExtensionsTest
     {
-        //
-        // BinaryReader
-        //
-
-        [Fact]
-        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
-        {
-            var bytes = new byte[] {0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE};
-            using (var r = new BinaryReader(new MemoryStream(bytes)))
-            {
-                Assert.Equal(0xDEADBEEF, r.ReadUInt32LittleEndian());
-                Assert.Equal(0xFEEDF00D, r.ReadUInt32LittleEndian());
-            }
-        }
-
         //
         // JToken
         //

@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using PasswordManagerAccess.Common;
 using Xunit;
@@ -516,6 +517,21 @@ namespace PasswordManagerAccess.Test.Common
         {
             Assert.Equal(new BigInteger(result),
                          new BigInteger(b).ModExp(new BigInteger(e), new BigInteger(m)));
+        }
+
+        //
+        // BinaryReader
+        //
+
+        [Fact]
+        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
+        {
+            var bytes = new byte[] { 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE };
+            using (var r = new BinaryReader(new MemoryStream(bytes)))
+            {
+                Assert.Equal(0xDEADBEEF, r.ReadUInt32LittleEndian());
+                Assert.Equal(0xFEEDF00D, r.ReadUInt32LittleEndian());
+            }
         }
 
         //
