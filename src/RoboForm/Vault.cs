@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Common;
+
 namespace PasswordManagerAccess.RoboForm
 {
     public class Vault
@@ -16,7 +18,9 @@ namespace PasswordManagerAccess.RoboForm
             var clientInfo = new ClientInfo(username: username,
                                             password: password,
                                             deviceId: deviceId);
-            return Open(clientInfo, ui, new HttpClient());
+
+            using (var transport = new RestTransport())
+                return Open(clientInfo, ui, transport);
         }
 
         // Generates a random device id that should be used with every new device.
@@ -34,9 +38,9 @@ namespace PasswordManagerAccess.RoboForm
         // Internal
         //
 
-        internal static Vault Open(ClientInfo clientInfo, Ui ui, IHttpClient http)
+        internal static Vault Open(ClientInfo clientInfo, Ui ui, IRestTransport transport)
         {
-            return Client.OpenVault(clientInfo, ui, http);
+            return Client.OpenVault(clientInfo, ui, transport);
         }
 
         internal Vault(Account[] accounts)

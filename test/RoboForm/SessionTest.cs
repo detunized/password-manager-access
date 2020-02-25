@@ -21,9 +21,13 @@ namespace PasswordManagerAccess.Test.RoboForm
         }
 
         [Fact]
-        public void Header_is_set()
+        public void Cookies_are_set()
         {
-            Assert.Equal("sib-auth=token; sib-deviceid=device-id", new Session("token", "device-id").Header);
+            var session = new Session("token", "device-id");
+
+            Assert.Equal(2, session.Cookies.Count);
+            Assert.Equal("token", session.Cookies["sib-auth"]);
+            Assert.Equal("device-id", session.Cookies["sib-deviceid"]);
         }
     }
 }
