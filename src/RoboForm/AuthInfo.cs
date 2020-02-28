@@ -39,13 +39,13 @@ namespace PasswordManagerAccess.RoboForm
             {
                 var splitHeader = encoded.Split(' ');
                 if (splitHeader.Length < 2)
-                    throw MakeInvalidResponse("Invalid auth info format");
+                    throw MakeError("Invalid auth info format");
 
                 var realm = splitHeader[0];
                 var parameters = splitHeader[1];
 
                 if (realm != "SibAuth")
-                    throw MakeInvalidResponse(string.Format("Invalid auth info realm '{0}'", realm));
+                    throw MakeError(string.Format("Invalid auth info realm '{0}'", realm));
 
                 var parsedParameters = parameters
                     .Split(',')
@@ -73,7 +73,7 @@ namespace PasswordManagerAccess.RoboForm
             }
             catch (KeyNotFoundException)
             {
-                throw MakeInvalidResponse("Invalid auth info format");
+                throw MakeError("Invalid auth info format");
             }
         }
 
@@ -97,7 +97,7 @@ namespace PasswordManagerAccess.RoboForm
         {
             var m = regex.Match(encoded);
             if (!m.Success || m.Groups.Count < 3)
-                throw MakeInvalidResponse("Invalid auth info parameter format");
+                throw MakeError("Invalid auth info parameter format");
 
             return new KeyValuePair<string, string>(m.Groups[1].Value, m.Groups[2].Value);
         }
@@ -106,9 +106,9 @@ namespace PasswordManagerAccess.RoboForm
         // Private
         //
 
-        private static ClientException MakeInvalidResponse(string message)
+        private static InternalErrorException MakeError(string message)
         {
-            return new ClientException(ClientException.FailureReason.InvalidResponse, message);
+            return new InternalErrorException(message);
         }
 
         private static readonly Regex ParamRegex = new Regex(@"^(\w+)\=(.*?)$");

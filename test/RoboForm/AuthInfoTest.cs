@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.RoboForm;
 using Xunit;
@@ -42,68 +41,58 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void ParseAuthInfo_throws_on_missing_parts()
         {
-            VerifyThrows(() => AuthInfo.Parse("SibAuth"));
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth"),
+                                                 "Invalid auth info format");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_invalid_realm()
         {
-            VerifyThrows(() => AuthInfo.Parse("Realm sid=\"\",data=\"\""));
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("Realm sid=\"\",data=\"\""),
+                                                 "Invalid auth info realm");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_invalid_parameters_format()
         {
-            VerifyThrows(() => AuthInfo.Parse("SibAuth sid=,data="));
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth sid=,data="),
+                                                 "Invalid auth info parameter format");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_missing_sid()
         {
-            VerifyThrows(() => AuthInfo.Parse("SibAuth data=\"\""));
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth data=\"\""),
+                                                 "Invalid auth info");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_missing_data()
         {
-            VerifyThrows(() => AuthInfo.Parse("SibAuth sid=\"\""));
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth sid=\"\""),
+                                                 "Invalid auth info");
         }
 
-        [Fact]
-        public void ParseAuthInfo_throws_on_invalid_data()
+        [Theory]
+        [InlineData("")]
+        [InlineData(",,,")]
+        [InlineData("s=c2FsdA==,i=1337")]
+        [InlineData("r=nonce,i=1337")]
+        [InlineData("r=nonce,s=c2FsdA==")]
+        public void ParseAuthInfo_throws_on_invalid_data(string data)
         {
-            var testCases = new[]
-            {
-                "",
-                ",,,",
-                "s=c2FsdA==,i=1337",
-                "r=nonce,i=1337",
-                "r=nonce,s=c2FsdA==",
-            };
-
-            foreach (var data in testCases)
-                VerifyThrows(() => AuthInfo.Parse(string.Format("SibAuth sid=\"sid\",data=\"{0}\"",
-                                                                data.ToBase64())));
+            Exceptions.AssertThrowsInternalError(
+                () => AuthInfo.Parse($"SibAuth sid=\"sid\",data=\"{data.ToBase64()}\""),
+                "Invalid auth info");
         }
 
         [Fact]
         public void ParseAuthInfo_sets_is_md5_flag()
         {
-            var data = "r=nonce,s=c2FsdA==,i=1337,o=pwdMD5";
-            var info = AuthInfo.Parse(string.Format("SibAuth sid=\"sid\",data=\"{0}\"",
-                                                    data.ToBase64()));
+            var data = "r=nonce,s=c2FsdA==,i=1337,o=pwdMD5".ToBase64();
+            var info = AuthInfo.Parse($"SibAuth sid=\"sid\",data=\"{data}\"");
 
             Assert.True(info.IsMd5);
-        }
-
-        //
-        // Helpers
-        //
-        private static void VerifyThrows(Action action)
-        {
-            var e = Assert.Throws<ClientException>(action);
-            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
-            Assert.Contains("Invalid auth info", e.Message);
         }
     }
 }
