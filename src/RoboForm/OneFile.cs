@@ -25,7 +25,7 @@ namespace PasswordManagerAccess.RoboForm
                 // 00-07 (8): magic ("onefile1")
                 var magic = io.ReadBytes(8);
                 if (!magic.SequenceEqual("onefile1".ToBytes()))
-                    throw ParseError("Invalid signature: [{0}]", PrintBytes(magic));
+                    throw ParseError($"Invalid signature: '{magic.ToHex()}'");
 
                 // 08 (1): flags
                 //     - bit 0: set if the checksum is written into the file
@@ -51,7 +51,7 @@ namespace PasswordManagerAccess.RoboForm
                 //     - 3: SHA-256
                 var checksumType = io.ReadByte();
                 if (checksumType != 1)
-                    throw ParseError("Invalid checksum type: {0}", checksumType);
+                    throw ParseError($"Invalid checksum type: {checksumType}");
 
                 // blob.Length is a few bytes too many, but this avoids reallocations.
                 var content = new List<byte>(blob.Length);
@@ -117,7 +117,7 @@ namespace PasswordManagerAccess.RoboForm
                 // 00-07 (8): magic ("gsencst1")
                 var magic = io.ReadBytes(8);
                 if (!magic.SequenceEqual("gsencst1".ToBytes()))
-                    throw ParseError("Invalid signature: [{0}]", PrintBytes(magic));
+                    throw ParseError($"Invalid signature: '{magic.ToHex()}'");
 
                 // 08 (1): extra header length
                 var extraLength = io.ReadByte();
@@ -144,13 +144,13 @@ namespace PasswordManagerAccess.RoboForm
                     kdf = Pbkdf2.GenerateSha512;
                     break;
                 default:
-                    throw ParseError("KDF/encryption type {0} is invalid", encryptionType);
+                    throw ParseError($"KDF/encryption type {encryptionType} is invalid");
                 }
 
                 // 10-13 (4): KDF iterations
                 var iterations = io.ReadUInt32LittleEndian();
                 if (iterations == 0 || iterations > 512 * 1024)
-                    throw ParseError("KDF iteration count is invalid {0}", iterations);
+                    throw ParseError($"KDF iteration count is invalid {iterations}");
 
                 // 14 (1): salt length
                 var saltLength = io.ReadByte();
@@ -213,7 +213,7 @@ namespace PasswordManagerAccess.RoboForm
             }
             catch (JsonException e)
             {
-                throw ParseError(e, "Corrupted content or decryption failed due to invalid password");
+                throw ParseError("Corrupted content or decryption failed due to invalid password", e);
             }
         }
 
@@ -221,37 +221,14 @@ namespace PasswordManagerAccess.RoboForm
         // Private
         //
 
-        private static string PrintBytes(byte[] bytes)
+        private static InternalErrorException ParseError(string message, Exception inner = null)
         {
-            return string.Join(", ", bytes.Select(i => i.ToString("x2")));
+            return new InternalErrorException(message, inner);
         }
 
-        private static ClientException ParseError(string format, params object[] args)
+        private static UnsupportedFeatureException UnsupportedError(string message)
         {
-            return ParseError(null, format, args);
-        }
-
-        private static ClientException ParseError(Exception inner,
-                                                  string format,
-                                                  params object[] args)
-        {
-            return CreateException(inner, ClientException.FailureReason.ParseError, format, args);
-        }
-
-        private static ClientException UnsupportedError(string format, params object[] args)
-        {
-            return CreateException(null,
-                                   ClientException.FailureReason.UnsupportedFeature,
-                                   format,
-                                   args);
-        }
-
-        private static ClientException CreateException(Exception inner,
-                                                       ClientException.FailureReason reason,
-                                                       string format,
-                                                       params object[] args)
-        {
-            return new ClientException(reason, string.Format("Onefile: " + format, args), inner);
+            return new UnsupportedFeatureException(message);
         }
     }
 }
