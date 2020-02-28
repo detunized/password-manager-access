@@ -253,6 +253,8 @@ namespace PasswordManagerAccess.Test
             // Response
             allocatedResult.StatusCode = r.Status;
             allocatedResult.Content = r.Content;
+            allocatedResult.BinaryContent = new byte[0]; // TODO: Add support for binary responses
+            allocatedResult.Headers = new Dictionary<string, string>(); // TODO: Add support for response headers
             allocatedResult.Error = r.Error;
             allocatedResult.Cookies = r.Cookies;
             allocatedResult.RequestUri = uri;

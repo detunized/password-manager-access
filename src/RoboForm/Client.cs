@@ -12,6 +12,7 @@ namespace PasswordManagerAccess.RoboForm
     {
         public static Vault OpenVault(ClientInfo clientInfo, Ui ui, IRestTransport transport)
         {
+            // TODO: Use base URL
             var rest = new RestClient(transport);
             var session = Login(clientInfo, ui, rest);
             try
@@ -118,8 +119,7 @@ namespace PasswordManagerAccess.RoboForm
             if (shouldBeSession.Session != null)
                 return shouldBeSession.Session;
 
-            throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                      "Incorrect one time password");
+            throw new BadMultiFactorException("Invalid second factor code");
         }
 
         internal class ScramResult
@@ -158,7 +158,7 @@ namespace PasswordManagerAccess.RoboForm
             //       to log out as the server usually keeps track of open sessions and
             //       might start blocking new sessions at some point.
             if (!response.IsSuccessful)
-                throw MakeNetworkError(response.StatusCode);
+                throw MakeError(response);
         }
 
         internal static byte[] GetBlob(string username, Session session, RestClient rest)
@@ -168,7 +168,7 @@ namespace PasswordManagerAccess.RoboForm
 
             var response = rest.Get(url, cookies: session.Cookies);
             if (!response.IsSuccessful)
-                throw MakeNetworkError(response.StatusCode);
+                throw MakeError(response);
 
             return response.BinaryContent;
         }
@@ -204,27 +204,17 @@ namespace PasswordManagerAccess.RoboForm
 
             // First check for any errors that might have happened during the request
             if (response.HasError)
-                throw MakeNetworkError(HttpStatusCode.OK); // TODO: It's not OK really
-
-            // Handle this separately not to have a confusing error message on "success".
-            // This should never happen as it's not clear what to do after this fake "success".
-            // We need both step1 and step2 to complete to get a valid session.
-            if (response.IsHttpOk)
-            {
-                var message = string.Format("Unauthorized (401) is expected in the response, got {0} ({1}) instead",
-                                            response.StatusCode,
-                                            (int)response.StatusCode);
-                throw MakeInvalidResponse(message);
-            }
+                throw MakeError(response);
 
             // 401 is expected as the only valid response at this point
             if (response.StatusCode != HttpStatusCode.Unauthorized)
-                throw MakeNetworkError(response.StatusCode);
+                throw new InternalErrorException(
+                    $"Unauthorized (401) is expected in the response, got {(int)response.StatusCode} instead");
 
             // WWW-Authenticate has the result of this step.
             var header = response.Headers.GetOrDefault("WWW-Authenticate", "");
             if (header.IsNullOrEmpty())
-                throw MakeInvalidResponse("WWW-Authenticate header wasn't found in the response");
+                throw new InternalErrorException("WWW-Authenticate header wasn't found in the response");
 
             return header;
         }
@@ -238,7 +228,7 @@ namespace PasswordManagerAccess.RoboForm
 
             // First check for any errors that might have happened during the request
             if (response.HasError)
-                throw MakeNetworkError(HttpStatusCode.OK); // TODO: It's not OK really
+                throw MakeError(response);
 
             // Step2 fails with 401 on incorrect username, password or OTP
             if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -249,24 +239,22 @@ namespace PasswordManagerAccess.RoboForm
 
                 // If OTP is set then it's the OTP that is wrong
                 if (otp.Password != null)
-                    throw new ClientException(ClientException.FailureReason.IncorrectOneTimePassword, 
-                                              "One time password is incorrect");
+                    throw new BadMultiFactorException("Invalid second factor code");
 
-                throw new ClientException(ClientException.FailureReason.IncorrectCredentials,
-                                          "Username or password is incorrect");
+                throw new BadCredentialsException("Invalid username or password");
             }
 
             // Otherwise step2 is supposed to succeed
-            if (!response.IsHttpOk)
-                throw MakeNetworkError(response.StatusCode);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
 
             var auth = response.Cookies.GetOrDefault("sib-auth", "");
             if (auth.IsNullOrEmpty())
-                throw MakeInvalidResponse("'sib-auth' cookie wasn't found in the response");
+                throw new InternalErrorException("'sib-auth' cookie wasn't found in the response");
 
             var device = response.Cookies.GetOrDefault("sib-deviceid", "");
             if (device.IsNullOrEmpty())
-                throw MakeInvalidResponse("'sib-deviceid' cookie wasn't found in the response");
+                throw new InternalErrorException("'sib-deviceid' cookie wasn't found in the response");
 
             return new ScramResult(new Session(auth, device));
         }
@@ -322,16 +310,15 @@ namespace PasswordManagerAccess.RoboForm
         // Private
         //
 
-        private static ClientException MakeNetworkError(HttpStatusCode code)
+        private static Common.BaseException MakeError(RestResponse response)
         {
-            return new ClientException(
-                ClientException.FailureReason.NetworkError,
-                string.Format("Network request failed with HTTP code {0} ({1})", code, (int)code));
-        }
+            var failedWith = $"Request to {response.RequestUri} failed with";
 
-        private static ClientException MakeInvalidResponse(string message)
-        {
-            return new ClientException(ClientException.FailureReason.InvalidResponse, message);
+            if (response.IsHttpError)
+                return new InternalErrorException($"{failedWith} HTTP status {(int)response.StatusCode}");
+
+            var errorType = response.IsNetworkError ? "a network" : "an unknown";
+            return new NetworkErrorException($"{failedWith} {errorType} error", response.Error);
         }
     }
 }

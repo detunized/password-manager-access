@@ -1,88 +1,168 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
+using System.Net;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.RoboForm;
+using Xunit;
+
 namespace PasswordManagerAccess.Test.RoboForm
 {
     public class ClientTest
     {
-#if FIX_TESTS
         [Fact]
         public void Logout_makes_POST_request_to_specific_url()
         {
-            var expected = string.Format("https://online.roboform.com/rf-api/{0}?logout",
-                                         TestData.Username);
+            var rest = new RestFlow()
+                .Post("")
+                    .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?logout");
 
-            Logout(HttpStatusCode.OK).Verify(x => x.Post(It.Is<string>(s => s == expected),
-                                                         It.IsAny<Dictionary<string, string>>()));
+            Client.Logout(TestData.Username, Session, rest.ToRestClient(""));
         }
 
         [Fact]
         public void Logout_throws_on_not_HTTP_OK()
         {
-            var e = Assert.Throws<ClientException>(() => Logout(HttpStatusCode.NotFound));
-            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
-            Assert.Contains("NotFound (404)", e.Message);
+            var rest = new RestFlow()
+                .Post("", HttpStatusCode.NotFound);
+
+            Exceptions.AssertThrowsInternalError(() => Client.Logout(TestData.Username, Session, rest), "404");
+        }
+
+        [Fact(Skip = "RestFlow doesn't support binary responses yet")]
+        public void GetBlob_returns_received_bytes()
+        {
+            var expected = "Blah, blah, blah...";
+            var rest = new RestFlow()
+                .Get(expected);
+
+            var blob = Client.GetBlob(TestData.Username, Session, rest);
+
+            Assert.Equal(expected.ToBytes(), blob);
         }
 
         [Fact]
-        public void GetBlob_returns_received_bytes()
+        public void GetBlob_makes_GET_request_to_specific_url()
         {
-            var expected = "Blah, blah, blah...".ToBytes();
-            var http = SetupGet(HttpStatusCode.OK, expected);
-            var response = Client.GetBlob(TestData.Username, Session, http.Object);
+            var rest = new RestFlow()
+                .Get("")
+                    .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}/user-data.rfo");
 
-            Assert.Equal(expected, response);
+            Client.GetBlob(TestData.Username, Session, rest.ToRestClient(""));
         }
 
         [Fact]
         public void GetBlob_throws_on_not_HTTP_OK()
         {
-            var http = SetupGet(HttpStatusCode.NotFound, new byte[0]);
-            var e = Assert.Throws<ClientException>(() => Client.GetBlob(TestData.Username, Session, http.Object));
-            Assert.Equal(ClientException.FailureReason.NetworkError, e.Reason);
-            Assert.Contains("NotFound (404)", e.Message);
+            var rest = new RestFlow()
+                            .Get("", HttpStatusCode.NotFound);
+
+            Exceptions.AssertThrowsInternalError(() => Client.GetBlob(TestData.Username, Session, rest), "404");
         }
 
-        [Fact]
-        public void Step1_makes_POST_request_to_specific_server()
+        [Fact(Skip = "RestFlow doesn't support response headers")]
+        public void Step1_makes_POST_request_to_specific_url_with_headers()
         {
-            MakeStep1().Verify(x => x.Post(
-                It.Is<string>(s => s.StartsWith("https://online.roboform.com/")),
-                It.IsAny<Dictionary<string, string>>()));
+            var rest = new RestFlow()
+                .Post("", HttpStatusCode.Unauthorized)
+                    .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?login")
+                    .ExpectHeader("Authorization", "SibAuth realm=");
+
+            Client.Step1(TestData.Credentials, new Client.OtpOptions(), rest.ToRestClient(""));
         }
 
-        [Fact]
-        public void Step1_POST_request_url_contains_username()
-        {
-            MakeStep1().Verify(x => x.Post(It.Is<string>(s => s.Contains(TestData.Username)),
-                                           It.IsAny<Dictionary<string, string>>()));
-        }
-
-        [Fact]
-        public void Step1_makes_POST_request_with_authorization_header_set()
-        {
-            MakeStep1().Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(
-                    d => d.ContainsKey("Authorization") &&
-                         d["Authorization"].StartsWith("SibAuth realm="))));
-        }
-
-        [Fact]
+        [Fact(Skip = "RestFlow doesn't support response headers")]
         public void Step1_returns_WWW_Authenticate_header()
         {
-            var http = SetupStep1();
-            Assert.Equal(Step1Header, Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object));
+            // TODO: Implement
+        }
+
+        [Fact(Skip = "RestFlow doesn't support response headers")]
+        public void Step1_throws_on_missing_WWW_Authenticate_header()
+        {
+            // TODO: Implement
         }
 
         [Fact]
-        public void Step1_throws_on_missing_WWW_Authenticate_header()
+        public void Step2_makes_POST_request_to_specific_url_and_headers_set()
         {
-            var http = SetupStep1(null);
-            var e = Assert.Throws<ClientException>(
-                () => Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object));
-            Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
-            Assert.Contains("WWW-Authenticate header", e.Message);
+            var rest = new RestFlow()
+                .Post("", cookies: Step2Cookies)
+                    .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?login")
+                    /*.ExpectHeader("Authorization", "SibAuth sid=")*/;  // TODO: Add support for partial header match
+
+            Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest.ToRestClient(""));
+        }
+
+        [Fact]
+        public void Step2_makes_POST_request_with_channel_set_to_dash_when_no_MFA_present()
+        {
+            var rest = new RestFlow()
+                .Post("", cookies: Step2Cookies)
+                    .ExpectHeader("x-sib-auth-alt-channel", "-");
+
+            Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest);
+        }
+
+        [Fact]
+        public void Step2_makes_POST_request_with_x_sib_headers_set_when_MFA_is_present()
+        {
+            var rest = new RestFlow()
+                .Post("", cookies: Step2Cookies)
+                    .ExpectHeader("x-sib-auth-alt-channel", "channel")
+                    .ExpectHeader("x-sib-auth-alt-otp", "otp")
+                    .ExpectHeader("x-sib-auth-alt-memorize", "1");
+
+            Client.Step2(TestData.Credentials,
+                         new Client.OtpOptions("channel", "otp", true),
+                         TestData.AuthInfo,
+                         rest);
+        }
+
+        [Fact]
+        public void Step2_returns_cookies()
+        {
+            var rest = new RestFlow()
+                .Post("", cookies: Step2Cookies);
+
+            var result = Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest);
+
+            AsserSessionsAretEqual(result.Session, Session);
+        }
+
+        [Fact]
+        public void Step2_ignores_extra_cookies()
+        {
+            var extraCookies = new Dictionary<string, string> { ["blah"] = "blah-blah" };
+            var rest = new RestFlow()
+                .Post("", cookies: Step2Cookies.MergeCopy(extraCookies));
+
+            var result = Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest);
+
+            AsserSessionsAretEqual(result.Session, Session);
+        }
+
+        [Fact]
+        public void Step2_throws_on_missing_cookies()
+        {
+            var rest = new RestFlow()
+                .Post("", cookies: new Dictionary<string, string>());
+
+            Exceptions.AssertThrowsInternalError(
+                () => Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest),
+                "cookie wasn't found in the response");
+        }
+
+        [Fact]
+        public void Step2_throws_on_HTTP_unuthorized()
+        {
+            var rest = new RestFlow()
+                .Post("", HttpStatusCode.Unauthorized);
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest),
+                "Invalid username or password");
         }
 
         [Fact]
@@ -103,113 +183,6 @@ namespace PasswordManagerAccess.Test.RoboForm
         }
 
         [Fact]
-        public void Step2_makes_POST_request_to_specific_server()
-        {
-            MakeStep2().Verify(x => x.Post(
-                It.Is<string>(s => s.StartsWith("https://online.roboform.com/")),
-                It.IsAny<Dictionary<string, string>>()));
-        }
-
-        [Fact]
-        public void Step2_POST_request_url_contains_username()
-        {
-            MakeStep2().Verify(x => x.Post(It.Is<string>(s => s.Contains(TestData.Username)),
-                                           It.IsAny<Dictionary<string, string>>()));
-        }
-
-        [Fact]
-        public void Step2_makes_POST_request_with_authorization_header_set()
-        {
-            MakeStep2().Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(
-                    d => d.ContainsKey("Authorization") &&
-                         d["Authorization"].StartsWith("SibAuth sid="))));
-        }
-
-        [Fact]
-        public void Step2_makes_POST_request_with_channel_header_set_to_dash()
-        {
-            MakeStep2().Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(d => d.ContainsKey("x-sib-auth-alt-channel") &&
-                                                       d["x-sib-auth-alt-channel"] == "-")));
-        }
-
-        [Fact]
-        public void Step2_makes_POST_request_with_x_sib_headers_set()
-        {
-            MakeStep2("channel", "otp", true).Verify(x => x.Post(
-                It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(d => d.ContainsKey("x-sib-auth-alt-channel") &&
-                                                       d["x-sib-auth-alt-channel"] == "channel" &&
-                                                       d.ContainsKey("x-sib-auth-alt-otp") &&
-                                                       d["x-sib-auth-alt-otp"] == "otp" &&
-                                                       d.ContainsKey("x-sib-auth-alt-memorize") &&
-                                                       d["x-sib-auth-alt-memorize"] == "1")));
-        }
-
-        [Fact]
-        public void Step2_returns_cookies()
-        {
-            var http = SetupStep2();
-            var result = Client.Step2(TestData.Credentials,
-                                      new Client.OtpOptions(),
-                                      TestData.AuthInfo,
-                                      http.Object);
-
-            AssertEqual(result.Session, Session);
-        }
-
-        [Fact]
-        public void Step2_ignores_extra_cookies()
-        {
-            var http = SetupStep2(Step2Cookies.Concat(new[] {"blah=blah-blah"}).ToArray());
-            var result = Client.Step2(TestData.Credentials,
-                                      new Client.OtpOptions(),
-                                      TestData.AuthInfo,
-                                      http.Object);
-
-            AssertEqual(result.Session, Session);
-        }
-
-        [Fact]
-        public void Step2_throws_on_missing_cookies()
-        {
-            var testCases = new[]
-            {
-                new string[] {},
-                new[] {"sib-auth=auth"},
-                new[] {"sib-deviceid=deviceid"},
-                new[] {"blah=blah-blah"},
-                new[] {"sib-auth=auth", "blah=blah-blah"},
-            };
-
-            foreach (var testCase in testCases)
-            {
-                var http = SetupStep2(testCase);
-                var e = Assert.Throws<ClientException>(() => Client.Step2(TestData.Credentials,
-                                                                          new Client.OtpOptions(),
-                                                                          TestData.AuthInfo,
-                                                                          http.Object));
-                Assert.Equal(ClientException.FailureReason.InvalidResponse, e.Reason);
-                Assert.Contains("cookie", e.Message);
-            }
-        }
-
-        [Fact]
-        public void Step2_throws_http_unauthorized()
-        {
-            var http = SetupStep2(HttpStatusCode.Unauthorized);
-            var e = Assert.Throws<ClientException>(() => Client.Step2(TestData.Credentials,
-                                                   new Client.OtpOptions(),
-                                                   TestData.AuthInfo,
-                                                   http.Object));
-            Assert.Equal(ClientException.FailureReason.IncorrectCredentials, e.Reason);
-            Assert.Contains("Username or password", e.Message);
-        }
-
-        [Fact]
         public void Step2AuthorizationHeader_returns_header()
         {
             var expected = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJy" +
@@ -224,95 +197,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         // Helpers
         //
 
-        public static Mock<IHttpClient> Logout(HttpStatusCode status)
-        {
-            var http = SetupPost(status);
-            Client.Logout(TestData.Username, Session, http.Object);
-            return http;
-        }
-
-        public static Mock<IHttpClient> MakeStep1()
-        {
-            var http = SetupStep1();
-            Client.Step1(TestData.Credentials, new Client.OtpOptions(), http.Object);
-            return http;
-        }
-
-        public static Mock<IHttpClient> SetupStep1(string header = Step1Header)
-        {
-            var http = SetupPost(HttpStatusCode.Unauthorized,
-                                 new KeyValuePair<string, string>("WWW-Authenticate", header));
-            return http;
-        }
-
-        public static Mock<IHttpClient> MakeStep2(string otpChannel = null,
-                                                  string otp = null,
-                                                  bool rememberDevice = false)
-        {
-            var http = SetupStep2();
-            Client.Step2(TestData.Credentials,
-                         new Client.OtpOptions(otpChannel, otp, rememberDevice),
-                         TestData.AuthInfo,
-                         http.Object);
-            return http;
-        }
-
-        public static Mock<IHttpClient> SetupStep2()
-        {
-            return SetupStep2(Step2Cookies);
-        }
-
-        public static Mock<IHttpClient> SetupStep2(string[] cookies)
-        {
-            var http = SetupPost(HttpStatusCode.OK,
-                                 cookies
-                                     .Select(i => new KeyValuePair<string, string>("Set-Cookie", i))
-                                     .ToArray());
-            return http;
-        }
-
-        public static Mock<IHttpClient> SetupStep2(HttpStatusCode status)
-        {
-            var http = SetupPost(status);
-            return http;
-        }
-
-        private static Mock<IHttpClient> SetupGet(HttpStatusCode status, byte[] responseContent)
-        {
-            var response = new HttpResponseMessage(status)
-            {
-                Content = new ByteArrayContent(responseContent)
-            };
-
-            var http = new Mock<IHttpClient>();
-            http
-                .Setup(x => x.Get(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
-                .Returns(response);
-
-            return http;
-        }
-
-        private static Mock<IHttpClient> SetupPost(HttpStatusCode status)
-        {
-            return SetupPost(status, new KeyValuePair<string, string>[] {});
-        }
-
-        private static Mock<IHttpClient> SetupPost(HttpStatusCode status,
-                                                   params KeyValuePair<string, string>[] headers)
-        {
-            var response = new HttpResponseMessage(status);
-            foreach (var i in headers)
-                response.Headers.Add(i.Key, i.Value);
-
-            var http = new Mock<IHttpClient>();
-            http
-                .Setup(x => x.Post(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
-                .Returns(response);
-
-            return http;
-        }
-
-        private static void AssertEqual(Session a, Session b)
+        private static void AsserSessionsAretEqual(Session a, Session b)
         {
             Assert.Equal(b.Token, a.Token);
             Assert.Equal(b.DeviceId, a.DeviceId);
@@ -324,14 +209,12 @@ namespace PasswordManagerAccess.Test.RoboForm
         //
 
         private const string Step1Header = "WWW-Authenticate-step1";
-        private static readonly string[] Step2Cookies =
+        private static readonly Dictionary<string, string> Step2Cookies = new Dictionary<string, string>
         {
-            // The cookies must be in the distant future, otherwise the tests stop working,
-            // because the System.Net.CookieContainer ignores expired cookies.
-            "sib-auth=AQAUABAAdN_MjkCW; path=/; expires=Wed, 07 Nov 2179 23:27:20 GMT; HttpOnly; Secure",
-            "sib-deviceid=B972fc9818e7; path=/; expires=Wed, 07 Nov 2179 23:27:20 GMT; HttpOnly; Secure"
+            ["sib-auth"] = "AQAUABAAdN_MjkCW",
+            ["sib-deviceid"] = "B972fc9818e7",
         };
+
         private static readonly Session Session = new Session("AQAUABAAdN_MjkCW", "B972fc9818e7");
-#endif
     }
 }
