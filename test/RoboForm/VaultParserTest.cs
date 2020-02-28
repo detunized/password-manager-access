@@ -15,5 +15,15 @@ namespace PasswordManagerAccess.Test.RoboForm
             var vault = VaultParser.Parse(JObject.Parse(GetFixture("blob")));
             Assert.True(vault.Accounts.Length > 1);
         }
+
+        [Theory]
+        [InlineData("{}", "Invalid format")]
+        [InlineData("{'c': []}", "Invalid format")]
+        [InlineData("{'c': [{}]}", "Invalid format")]
+        [InlineData("{'c': [{}, {}]}", "Invalid root node format")]
+        public void Parse_throws_on_invalid_format(string json, string message)
+        {
+            Exceptions.AssertThrowsInternalError(() => VaultParser.Parse(JObject.Parse(json)), message);
+        }
     }
 }

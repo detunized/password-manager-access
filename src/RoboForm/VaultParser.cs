@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
@@ -13,14 +14,11 @@ namespace PasswordManagerAccess.RoboForm
         {
             var c = json["c"] as JArray;
             if (c == null || c.Count < 2)
-                throw ParseError("Invalid format");
+                throw new InternalErrorException("Invalid format");
 
             var root = c[1];
-            if (root == null)
-                throw ParseError("Root node not found");
-
-            if (!root.BoolAt("i/F", false) || root.StringAt("i/n", "") != "root")
-                throw ParseError("Invalid root node format");
+            if (root == null || !root.BoolAt("i/F", false) || root.StringAt("i/n", "") != "root")
+                throw new InternalErrorException("Invalid root node format");
 
             var accounts = new List<Account>();
             TraverseParse(root["c"], "", accounts);
@@ -125,12 +123,6 @@ namespace PasswordManagerAccess.RoboForm
                 return password[0].Value;
 
             return null;
-        }
-
-        private static ClientException ParseError(string format, params object[] args)
-        {
-            return new ClientException(ClientException.FailureReason.ParseError,
-                                       string.Format("Vault " + format, args));
         }
 
         private static readonly HashSet<string> UsernameFields = new HashSet<string>
