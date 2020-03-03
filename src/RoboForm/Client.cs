@@ -310,7 +310,7 @@ namespace PasswordManagerAccess.RoboForm
         // Private
         //
 
-        private static Common.BaseException MakeError(RestResponse response)
+        private static BaseException MakeError(RestResponse response)
         {
             var failedWith = $"Request to {response.RequestUri} failed with";
 

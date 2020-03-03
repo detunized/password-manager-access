@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.RoboForm;
 
@@ -68,7 +69,7 @@ namespace PasswordManagerAccess.Example.RoboForm
             }
             catch (BaseException e)
             {
-                Console.WriteLine("Error: {0}", e);
+                Util.PrintException(e);
             }
         }
     }
