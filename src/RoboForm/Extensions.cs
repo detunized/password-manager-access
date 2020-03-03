@@ -7,88 +7,28 @@ namespace PasswordManagerAccess.RoboForm
 {
     internal static class Extensions
     {
-        //
-        // Nested JToken access by path with and without exceptions
-        //
-
-        public static JToken At(this JToken j, string path)
+        public static string StringAt(this JToken j, string name, string defaultValue)
         {
-            var c = j;
-            foreach (var i in path.Split('/'))
-            {
-                if (c.Type != JTokenType.Object)
-                    throw new JTokenAccessException(
-                        string.Format("Expected nested objects at '{0}'", path));
-
-                c = c[i];
-                if (c == null)
-                    throw new JTokenAccessException(string.Format("Path '{0}' doesn't exist", path));
-            }
-
-            return c;
+            return At(j, name, JTokenType.String, defaultValue);
         }
 
-        public static string StringAt(this JToken j, string path)
+        public static int IntAt(this JToken j, string name, int defaultValue)
         {
-            var s = j.At(path);
-            if (s.Type != JTokenType.String)
-                throw new JTokenAccessException(string.Format("Expected a string at '{0}'", path));
-
-            return (string)s;
+            return At(j, name, JTokenType.Integer, defaultValue);
         }
 
-        public static string StringAt(this JToken j, string path, string defaultValue)
+        public static bool BoolAt(this JToken j, string name, bool defaultValue)
         {
-            try
-            {
-                return j.StringAt(path);
-            }
-            catch (JTokenAccessException)
-            {
-                return defaultValue;
-            }
+            return At(j, name, JTokenType.Boolean, defaultValue);
         }
 
-        public static int IntAt(this JToken j, string path)
+        private static T At<T>(JToken j, string name, JTokenType type, T defaultValue)
         {
-            var i = j.At(path);
-            if (i.Type != JTokenType.Integer)
-                throw new JTokenAccessException(string.Format("Expected an integer at '{0}'", path));
+            if (j?.Type == JTokenType.Object)
+                if (j[name] is var field && field?.Type == type)
+                    return field.ToObject<T>();
 
-            return (int)i;
-        }
-
-        public static int IntAt(this JToken j, string path, int defaultValue)
-        {
-            try
-            {
-                return j.IntAt(path);
-            }
-            catch (JTokenAccessException)
-            {
-                return defaultValue;
-            }
-        }
-
-        public static bool BoolAt(this JToken j, string path)
-        {
-            var b = j.At(path);
-            if (b.Type != JTokenType.Boolean)
-                throw new JTokenAccessException(string.Format("Expected a boolean at '{0}'", path));
-
-            return (bool)b;
-        }
-
-        public static bool BoolAt(this JToken j, string path, bool defaultValue)
-        {
-            try
-            {
-                return j.BoolAt(path);
-            }
-            catch (JTokenAccessException)
-            {
-                return defaultValue;
-            }
+            return defaultValue;
         }
     }
 }

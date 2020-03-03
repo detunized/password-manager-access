@@ -17,7 +17,11 @@ namespace PasswordManagerAccess.RoboForm
                 throw new InternalErrorException("Invalid format");
 
             var root = c[1];
-            if (root == null || !root.BoolAt("i/F", false) || root.StringAt("i/n", "") != "root")
+            if (root == null)
+                throw new InternalErrorException("Invalid root node format");
+
+            var info = root["i"];
+            if (!info.BoolAt("F", false) || info.StringAt("n", "") != "root")
                 throw new InternalErrorException("Invalid root node format");
 
             var accounts = new List<Account>();
@@ -26,15 +30,16 @@ namespace PasswordManagerAccess.RoboForm
             return new Vault(accounts.ToArray());
         }
 
-        private static void TraverseParse(JToken node, string path, List<Account> accounts)
+        private static void TraverseParse(JToken nodes, string path, List<Account> accounts)
         {
-            foreach (var i in node)
+            foreach (var node in nodes)
             {
-                var name = i.StringAt("i/n", "");
-                if (i.BoolAt("i/F", false))
-                    TraverseParse(i["c"], path.Length == 0 ? name : path + "/" + name, accounts);
+                var info = node["i"];
+                var name = info.StringAt("n", "");
+                if (info.BoolAt("F", false))
+                    TraverseParse(node["c"], path.Length == 0 ? name : path + "/" + name, accounts);
                 else
-                    accounts.Add(ParseAccount(i.StringAt("b", "{}"), name, path));
+                    accounts.Add(ParseAccount(node.StringAt("b", "{}"), name, path));
             }
         }
 
