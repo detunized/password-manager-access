@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.RoboForm
                 var parameters = splitHeader[1];
 
                 if (realm != "SibAuth")
-                    throw MakeError(string.Format("Invalid auth info realm '{0}'", realm));
+                    throw MakeError($"Invalid auth info realm '{realm}'");
 
                 var parsedParameters = parameters
                     .Split(',')

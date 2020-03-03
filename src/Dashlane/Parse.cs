@@ -517,7 +517,7 @@ namespace PasswordManagerAccess.Dashlane
 
         public static string GetValueForKeyOrDefault(XElement e, string key, string defaultValue = "")
         {
-            var item = e.XPathSelectElement(string.Format("KWDataItem[@key='{0}']", key));
+            var item = e.XPathSelectElement($"KWDataItem[@key='{key}']");
             return item != null ? item.Value : defaultValue;
         }
 

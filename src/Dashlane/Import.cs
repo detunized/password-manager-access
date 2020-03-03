@@ -92,7 +92,7 @@ namespace PasswordManagerAccess.Dashlane
             if (File.Exists(filename))
                 return filename;
 
-            throw new InternalErrorException(string.Format("Profile '{0}' doesn't exist", username));
+            throw new InternalErrorException($"Profile '{username}' doesn't exist");
         }
 
         internal static string GetProfilePath(string username)

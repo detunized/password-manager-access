@@ -8,6 +8,8 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
+    // TODO: Could be beneficial to convert at least some of the JToken.*At access to
+    // de-serialization. The input json is recursive with somewhat dynamic structure.
     internal static class VaultParser
     {
         public static Vault Parse(JObject json)

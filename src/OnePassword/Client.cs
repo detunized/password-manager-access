@@ -199,7 +199,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static string GetApiUrl(string domain)
         {
-            return string.Format("https://{0}/api", domain);
+            return $"https://{domain}/api";
         }
 
         internal static RestClient MakeRestClient(IRestTransport transport,

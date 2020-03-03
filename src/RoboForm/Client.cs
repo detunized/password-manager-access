@@ -163,8 +163,9 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static byte[] GetBlob(string username, Session session, RestClient rest)
         {
-            // TODO: Make this random? TBH not sure what it's for.
-            var url = string.Format("{0}/user-data.rfo?_{1}", ApiBaseUrl(username), 1337);
+            // TODO: Make 1337 random? TBH not sure what it's for.
+            var baseUrl = ApiBaseUrl(username);
+            var url = $"{baseUrl}/user-data.rfo?_1337";
 
             var response = rest.Get(url, cookies: session.Cookies);
             if (!response.IsSuccessful)
@@ -268,9 +269,8 @@ namespace PasswordManagerAccess.RoboForm
         {
             var data = string.Format("n,,n={0},r={1}",
                                      credentials.Username.EncodeUri(),
-                                     credentials.Nonce);
-            return string.Format("SibAuth realm=\"RoboForm Online Server\",data=\"{0}\"",
-                                 data.ToBase64());
+                                     credentials.Nonce).ToBase64();
+            return $"SibAuth realm=\"RoboForm Online Server\",data=\"{data}\"";
         }
 
         internal static string Step2AuthorizationHeader(Credentials credentials, AuthInfo authInfo)
@@ -285,10 +285,10 @@ namespace PasswordManagerAccess.RoboForm
                                                 authInfo.Nonce);
 
             var hashed = Crypto.HmacSha256(hashingMaterial.ToBytes(), clientHash);
-            var proof = clientKey.Zip(hashed, (a, b) => (byte)(a ^ b)).ToArray();
-            var data = string.Format("c=biws,r={0},p={1}", authInfo.Nonce, proof.ToBase64());
+            var proof = clientKey.Zip(hashed, (a, b) => (byte)(a ^ b)).ToArray().ToBase64();
+            var data = $"c=biws,r={authInfo.Nonce},p={proof}".ToBase64();
 
-            return string.Format("SibAuth sid=\"{0}\",data=\"{1}\"", authInfo.Sid, data.ToBase64());
+            return $"SibAuth sid=\"{authInfo.Sid}\",data=\"{data}\"";
         }
 
         internal static string LoginUrl(string username)
@@ -298,12 +298,14 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static string ApiUrl(string username, string endpoint)
         {
-            return string.Format("{0}?{1}", ApiBaseUrl(username), endpoint);
+            var baseUrl = ApiBaseUrl(username);
+            return $"{baseUrl}?{endpoint}";
         }
 
         internal static string ApiBaseUrl(string username)
         {
-            return string.Format("https://online.roboform.com/rf-api/{0}", username.EncodeUri());
+            var uriEncodedUsername = username.EncodeUri();
+            return $"https://online.roboform.com/rf-api/{uriEncodedUsername}";
         }
 
         //
