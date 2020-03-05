@@ -1,14 +1,14 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.StickyPassword;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
-    [TestFixture]
-    class AccountTest
+    public class AccountTest
     {
-        [Test]
+        [Fact]
         public void Account_properties_are_set()
         {
             var id = 0xdeadbeef;
@@ -24,14 +24,14 @@ namespace PasswordManagerAccess.Test.StickyPassword
 
             var account = new Account(id, name, url, notes, credentials);
 
-            Assert.That(account.Id, Is.EqualTo(id));
-            Assert.That(account.Name, Is.EqualTo(name));
-            Assert.That(account.Url, Is.EqualTo(url));
-            Assert.That(account.Notes, Is.EqualTo(notes));
-            Assert.That(account.Credentials, Is.EqualTo(credentials));
+            Assert.Equal(id, account.Id);
+            Assert.Equal(name, account.Name);
+            Assert.Equal(url, account.Url);
+            Assert.Equal(notes, account.Notes);
+            Assert.Equal(credentials, account.Credentials);
         }
 
-        [Test]
+        [Fact]
         public void Credentials_properties_are_set()
         {
             var username = "username";
@@ -40,9 +40,9 @@ namespace PasswordManagerAccess.Test.StickyPassword
 
             var credentials = new Credentials(username, password, description);
 
-            Assert.That(credentials.Username, Is.EqualTo(username));
-            Assert.That(credentials.Password, Is.EqualTo(password));
-            Assert.That(credentials.Description, Is.EqualTo(description));
+            Assert.Equal(username, credentials.Username);
+            Assert.Equal(password, credentials.Password);
+            Assert.Equal(description, credentials.Description);
         }
     }
 }

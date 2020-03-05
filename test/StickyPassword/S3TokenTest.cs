@@ -1,14 +1,14 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.StickyPassword;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
-    [TestFixture]
-    class S3TokenTest
+    public class S3TokenTest
     {
-        [Test]
+        [Fact]
         public void S3Token_properties_are_set()
         {
             var accessKeyId = "accessKeyId";
@@ -25,12 +25,12 @@ namespace PasswordManagerAccess.Test.StickyPassword
                                     bucketName,
                                     objectPrefix);
 
-            Assert.That(token.AccessKeyId, Is.EqualTo(accessKeyId));
-            Assert.That(token.SecretAccessKey, Is.EqualTo(secretAccessKey));
-            Assert.That(token.SessionToken, Is.EqualTo(sessionToken));
-            Assert.That(token.ExpirationDate, Is.EqualTo(expirationDate));
-            Assert.That(token.BucketName, Is.EqualTo(bucketName));
-            Assert.That(token.ObjectPrefix, Is.EqualTo(objectPrefix));
+            Assert.Equal(accessKeyId, token.AccessKeyId);
+            Assert.Equal(secretAccessKey, token.SecretAccessKey);
+            Assert.Equal(sessionToken, token.SessionToken);
+            Assert.Equal(expirationDate, token.ExpirationDate);
+            Assert.Equal(bucketName, token.BucketName);
+            Assert.Equal(objectPrefix, token.ObjectPrefix);
         }
     }
 }

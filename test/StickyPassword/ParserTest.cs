@@ -1,31 +1,27 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.StickyPassword;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
-    [TestFixture]
-    class ParserTest
+    public class ParserTest
     {
-        [Test]
+        [Fact]
         public void IsKeyCorrect_returns_true()
         {
             var key = Crypto.DeriveDbKey(Password, KeySalt);
 
-            Assert.That(
-                Parser.IsKeyCorrect(key, KeyVerification),
-                Is.True);
+            Assert.True(Parser.IsKeyCorrect(key, KeyVerification));
         }
 
-        [Test]
+        [Fact]
         public void IsKeyCorrect_return_false()
         {
             var key = Crypto.DeriveDbKey("Incorrect password", KeySalt);
 
-            Assert.That(
-                Parser.IsKeyCorrect(key, KeyVerification),
-                Is.False);
+            Assert.False(Parser.IsKeyCorrect(key, KeyVerification));
         }
 
         //

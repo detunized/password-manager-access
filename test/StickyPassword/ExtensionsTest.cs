@@ -3,12 +3,12 @@
 
 using System;
 using System.IO;
-using NUnit.Framework;
+using PasswordManagerAccess.StickyPassword;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
-    [TestFixture]
-    class ExtensionsTest
+    public class ExtensionsTest
     {
         public const string TestString = "All your base are belong to us";
         public static readonly byte[] TestBytes = {
@@ -20,49 +20,49 @@ namespace PasswordManagerAccess.Test.StickyPassword
         // string
         //
 
-        [Test]
+        [Fact]
         public void String_ToBytes_converts_string_to_utf8_bytes()
         {
-            Assert.That("".ToBytes(), Is.EqualTo(new byte[] {}));
-            Assert.That(TestString.ToBytes(), Is.EqualTo(TestBytes));
+            Assert.Equal(new byte[]{}, "".ToBytes());
+            Assert.Equal(TestBytes, TestString.ToBytes());
         }
 
-        [Test]
+        [Fact]
         public void String_Decode64_decodes_base64()
         {
-            Assert.That("".Decode64(), Is.EqualTo(new byte[] {}));
-            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
-            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
-            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
-            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+            Assert.Equal(new byte[]{}, "".Decode64());
+            Assert.Equal(new byte[]{0x61}, "YQ==".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62}, "YWI=".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63}, "YWJj".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
         }
 
         //
         // byte[]
         //
 
-        [Test]
+        [Fact]
         public void ByteArray_ToUtf8_returns_string()
         {
-            Assert.That(new byte[] {}.ToUtf8(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+            Assert.Equal("", new byte[]{}.ToUtf8());
+            Assert.Equal(TestString, TestBytes.ToUtf8());
         }
 
-        [Test]
+        [Fact]
         public void ByteArray_Encode64_returns_base64()
         {
-            Assert.That(new byte[] { }.Encode64(), Is.EqualTo(""));
-            Assert.That(new byte[] { 0x61 }.Encode64(), Is.EqualTo("YQ=="));
-            Assert.That(new byte[] { 0x61, 0x62 }.Encode64(), Is.EqualTo("YWI="));
-            Assert.That(new byte[] { 0x61, 0x62, 0x63 }.Encode64(), Is.EqualTo("YWJj"));
-            Assert.That(new byte[] { 0x61, 0x62, 0x63, 0x64 }.Encode64(), Is.EqualTo("YWJjZA=="));
+            Assert.Equal("", new byte[]{}.Encode64());
+            Assert.Equal("YQ==", new byte[]{0x61}.Encode64());
+            Assert.Equal("YWI=", new byte[]{0x61, 0x62}.Encode64());
+            Assert.Equal("YWJj", new byte[]{0x61, 0x62, 0x63}.Encode64());
+            Assert.Equal("YWJjZA==", new byte[]{0x61, 0x62, 0x63, 0x64}.Encode64());
         }
 
         //
         // Stream
         //
 
-        [Test]
+        [Fact]
         public void Stream_ReadAll_reads_from_empty_stream()
         {
             var bytes = new[]
@@ -88,23 +88,18 @@ namespace PasswordManagerAccess.Test.StickyPassword
             foreach (var b in bytes)
             {
                 // Default buffer
-                Assert.That(
-                    new MemoryStream(b).ReadAll(),
-                    Is.EqualTo(b));
+                Assert.Equal(b, new MemoryStream(b).ReadAll());
 
                 // Custom buffer size
                 foreach (var size in bufferSizes)
-                    Assert.That(
-                        new MemoryStream(b).ReadAll(size),
-                        Is.EqualTo(b));
+                    Assert.Equal(b, new MemoryStream(b).ReadAll(size));
             }
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        [Fact]
         public void Stream_ReadAll_throws_on_zero_buffer_size()
         {
-            new MemoryStream().ReadAll(0);
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MemoryStream().ReadAll(0));
         }
     }
 }

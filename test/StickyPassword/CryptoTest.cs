@@ -2,14 +2,14 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Security.Cryptography;
-using NUnit.Framework;
+using PasswordManagerAccess.StickyPassword;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
-    [TestFixture]
-    class CryptoTest
+    public class CryptoTest
     {
-        [Test]
+        [Fact]
         public void DecryptToken_returns_token()
         {
             // The actual bytes dumped from the running app
@@ -22,12 +22,10 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40
             };
 
-            Assert.That(
-                Crypto.DecryptToken(Username, Password, encryptedToken),
-                Is.EqualTo(expected));
+            Assert.Equal(expected, Crypto.DecryptToken(Username, Password, encryptedToken));
         }
 
-        [Test]
+        [Fact]
         public void DeriveTokenKey_returns_key()
         {
             // The actual bytes dumped from the running app
@@ -39,20 +37,16 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xaa, 0x8f, 0x5c, 0x2f, 0x81, 0x0c, 0xb4, 0xf1
             };
 
-            Assert.That(
-                Crypto.DeriveTokenKey(Username, Password),
-                Is.EqualTo(expected));
+            Assert.Equal(expected, Crypto.DeriveTokenKey(Username, Password));
         }
 
-        [Test]
+        [Fact]
         public void DeriveDbKey_returns_key()
         {
-            Assert.That(
-                Crypto.DeriveDbKey(Password, DbKeySalt),
-                Is.EqualTo(DbKey));
+            Assert.Equal(DbKey, Crypto.DeriveDbKey(Password, DbKeySalt));
         }
 
-        [Test]
+        [Fact]
         public void Md5_computes_md5()
         {
             // From http://www.nsrl.nist.gov/testdata/
@@ -62,12 +56,10 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xd6, 0x96, 0x3f, 0x7d, 0x28, 0xe1, 0x7f, 0x72
             };
 
-            Assert.That(
-                Crypto.Md5("abc"),
-                Is.EqualTo(expected));
+            Assert.Equal(expected, Crypto.Md5("abc"));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256_returns_plaintext_without_padding()
         {
             // Generated with Ruby/openssl
@@ -77,14 +69,11 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xe2, 0xce, 0xc3, 0xf3, 0xe9, 0x73, 0x35, 0xe6
             };
 
-            Assert.That(
-                Crypto.DecryptAes256(
-                    ciphertext,
-                    "this is a very secure password!!".ToBytes()),
-                Is.EqualTo("decrypted data!!".ToBytes()));
+            Assert.Equal("decrypted data!!".ToBytes(),
+                         Crypto.DecryptAes256(ciphertext, "this is a very secure password!!".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256_returns_ciphertext_with_padding()
         {
             // Generated with Ruby/openssl
@@ -94,15 +83,13 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0x05, 0x47, 0x7d, 0x06, 0x25, 0x3e, 0x5f, 0x8f
             };
 
-            Assert.That(
-                Crypto.DecryptAes256(
-                    ciphertext,
-                    "this is a very secure password!!".ToBytes(),
-                    PaddingMode.PKCS7),
-                Is.EqualTo("decrypted data!".ToBytes()));
+            Assert.Equal("decrypted data!".ToBytes(),
+                         Crypto.DecryptAes256(ciphertext,
+                                              "this is a very secure password!!".ToBytes(),
+                                              PaddingMode.PKCS7));
         }
 
-        [Test]
+        [Fact]
         public void EncryptAes256_returns_ciphertext_without_padding()
         {
             // Generated with Ruby/openssl
@@ -112,14 +99,12 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0x08, 0x2f, 0x0a, 0xef, 0x2d, 0x8f, 0x51, 0x85,
             };
 
-            Assert.That(
-                Crypto.EncryptAes256(
-                    "data to encrypt!".ToBytes(),
-                    "this is a very secure password!!".ToBytes()),
-                Is.EqualTo(expected));
+            Assert.Equal(expected,
+                         Crypto.EncryptAes256("data to encrypt!".ToBytes(),
+                                              "this is a very secure password!!".ToBytes()));
         }
 
-        [Test]
+        [Fact]
         public void EncryptAes256_returns_ciphertext_with_padding()
         {
             // Generated with Ruby/openssl
@@ -129,12 +114,10 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xa7, 0xcb, 0x08, 0xe2, 0x2c, 0x24, 0xdc, 0xec
             };
 
-            Assert.That(
-                Crypto.EncryptAes256(
-                    "data to encrypt".ToBytes(),
-                    "this is a very secure password!!".ToBytes(),
-                    PaddingMode.PKCS7),
-                Is.EqualTo(expected));
+            Assert.Equal(expected,
+                         Crypto.EncryptAes256("data to encrypt".ToBytes(),
+                                              "this is a very secure password!!".ToBytes(),
+                                              PaddingMode.PKCS7));
         }
 
         //
