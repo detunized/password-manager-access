@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+  - RoboForm: ported from the original repo and now could be used
+  - ZohoVault: MFA "rememeber me" option
+  - Bitwarden: Fixed Duo on Xamarin Android
+
 ## 0.4.0
   - ZohoVault: support for regions
   - ZohoVault: support for shared items
