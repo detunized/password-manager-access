@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Web;
 
-namespace StickyPassword
+namespace PasswordManagerAccess.StickyPassword
 {
     // TODO: Would be good to have some tests for this implementation.
     //       WebRequest.Create would have to be replaced with some factory first.
