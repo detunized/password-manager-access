@@ -1,24 +1,19 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.IO;
-using StickyPassword;
+using PasswordManagerAccess.Example.Common;
+using PasswordManagerAccess.StickyPassword;
 
-namespace Example
+namespace PasswordManagerAccess.Example.StickyPassword
 {
-    class Program
+    public static class Program
     {
         static void Main(string[] args)
         {
-            // Read StickyPassword credentials from a file
-            // The file should contain 2 lines: username and password
-            // See credentials.txt.example for an example.
-            var credentials = File.ReadAllLines("../../credentials.txt");
-            var username = credentials[0];
-            var password = credentials[1];
+            var config = Util.ReadConfig();
 
-            var vault = Vault.Open(username, password);
+            var vault = Vault.Open(config["username"], config["password"]);
             for (var i = 0; i < vault.Accounts.Length; ++i)
             {
                 var a = vault.Accounts[i];
