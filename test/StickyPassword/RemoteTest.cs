@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using Amazon.Runtime;
 using Amazon.S3;
 using Moq;
@@ -299,9 +301,10 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var s3 = SetupS3(VersionInfo);
             Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object);
 
-            s3.Verify(x => x.GetObject(
+            s3.Verify(x => x.GetObjectAsync(
                 It.Is<string>(s => s == Bucket),
-                It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains("spc.info"))));
+                It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains("spc.info")),
+                It.IsAny<CancellationToken>()));
         }
 
         [Fact]
@@ -362,9 +365,10 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var s3 = SetupS3(CompressedDbContent);
             Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object);
 
-            s3.Verify(x => x.GetObject(
+            s3.Verify(x => x.GetObjectAsync(
                 It.Is<string>(s => s == Bucket),
-                It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains(Version))));
+                It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains(Version)),
+                It.IsAny<CancellationToken>()));
         }
 
         [Fact]
@@ -465,11 +469,11 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var s3 = new Mock<IAmazonS3>();
             s3
-                .Setup(x => x.GetObject(It.IsAny<string>(), It.IsAny<string>()))
-                .Returns(new Amazon.S3.Model.GetObjectResponse
+                .Setup(x => x.GetObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(new Amazon.S3.Model.GetObjectResponse
                 {
                     ResponseStream = new MemoryStream(response)
-                });
+                }));
 
             return s3;
         }
@@ -478,7 +482,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var s3 = new Mock<IAmazonS3>();
             s3
-                .Setup(x => x.GetObject(It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(x => x.GetObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Throws<T>();
 
             return s3;

@@ -331,7 +331,7 @@ namespace PasswordManagerAccess.StickyPassword
         {
             try
             {
-                return s3.GetObject(bucketName, filename);
+                return s3.GetObjectAsync(bucketName, filename).GetAwaiter().GetResult();
             }
             catch (WebException e)
             {
