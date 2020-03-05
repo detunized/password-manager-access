@@ -1,13 +1,13 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Common;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Web;
 
 namespace PasswordManagerAccess.StickyPassword
 {
@@ -50,8 +50,8 @@ namespace PasswordManagerAccess.StickyPassword
                 i => string.Format(
                     CultureInfo.InvariantCulture,
                     "{0}={1}",
-                    HttpUtility.UrlEncode(i.Key),
-                    HttpUtility.UrlEncode(i.Value)))).ToBytes();
+                    i.Key.EncodeUri(),
+                    i.Value.EncodeUri()))).ToBytes();
 
             using (var stream = request.GetRequestStream())
                 stream.Write(content, 0, content.Length);
