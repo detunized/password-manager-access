@@ -139,10 +139,10 @@ namespace PasswordManagerAccess.Common
                 // Redirect if still possible (HTTP Status 3XX)
                 if ((int)response.StatusCode / 100 == 3 && maxRedirectCount > 0)
                 {
-                    // Handle relative redirects (both local and starting at the root)
-                    var newUri = response.Headers.Location;
-                    if (!newUri.IsAbsoluteUri)
-                        newUri = new Uri(uri, newUri);
+                    // Uri ctor should take care of both abosulte and relative redirects. There have
+                    // been problems with Android in the past.
+                    // (see https://github.com/detunized/password-manager-access/issues/21)
+                    var newUri = new Uri(uri, response.Headers.Location);
 
                     // Redirect always does a GET with no content
                     MakeRequest(newUri,
