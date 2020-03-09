@@ -3,40 +3,11 @@
 
 using System;
 using System.IO;
-using System.Text;
 
 namespace PasswordManagerAccess.StickyPassword
 {
     internal static class Extensions
     {
-        //
-        // string
-        //
-
-        public static byte[] ToBytes(this string s)
-        {
-            return Encoding.UTF8.GetBytes(s);
-        }
-
-        public static byte[] Decode64(this string s)
-        {
-            return Convert.FromBase64String(s);
-        }
-
-        //
-        // byte[]
-        //
-
-        public static string ToUtf8(this byte[] x)
-        {
-            return Encoding.UTF8.GetString(x);
-        }
-
-        public static string Encode64(this byte[] x)
-        {
-            return Convert.ToBase64String(x);
-        }
-
         //
         // Stream
         //

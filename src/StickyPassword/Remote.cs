@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -15,6 +14,7 @@ using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.StickyPassword
 {
@@ -304,7 +304,7 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static string GetAuthorizationHeader(string username, byte[] token)
         {
-            return "Basic " + $"{username}:{token.Encode64()}".ToBytes().Encode64();
+            return "Basic " + $"{username}:{token.ToBase64()}".ToBase64();
         }
 
         private static string GetS3TokenItem(XmlResponse xml, string name)

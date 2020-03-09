@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Amazon.Runtime;
 using Amazon.S3;
 using Moq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.StickyPassword;
 using Xunit;
 
