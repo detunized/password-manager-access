@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace PasswordManagerAccess.StickyPassword
 {
-    internal static class Crypto
+    internal static class Util
     {
         public static byte[] DecryptToken(string username, string password, byte[] encryptedToken)
         {

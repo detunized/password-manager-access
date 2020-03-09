@@ -47,7 +47,7 @@ namespace PasswordManagerAccess.StickyPassword
                     db.Open();
 
                     var user = GetDefaultUser(db);
-                    var key = Crypto.DeriveDbKey(password, user.Salt);
+                    var key = Util.DeriveDbKey(password, user.Salt);
                     if (!IsKeyCorrect(key, user.Verification))
                         throw new ParseException(ParseException.FailureReason.IncorrectPassword,
                                                  "Password verification failed");
@@ -65,7 +65,7 @@ namespace PasswordManagerAccess.StickyPassword
 
         internal static bool IsKeyCorrect(byte[] key, byte[] verification)
         {
-            var test = Crypto.EncryptAes256("VERIFY".ToBytes(), key, PaddingMode.PKCS7);
+            var test = Util.EncryptAes256("VERIFY".ToBytes(), key, PaddingMode.PKCS7);
             return test.SequenceEqual(verification);
         }
 
@@ -142,7 +142,7 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static string DecryptTextField(object encrypted, byte[] key)
         {
-            var bytes = Crypto.DecryptAes256((byte[])encrypted, key, PaddingMode.PKCS7);
+            var bytes = Util.DecryptAes256((byte[])encrypted, key, PaddingMode.PKCS7);
             return Encoding.Unicode.GetString(bytes).TrimEnd('\0');
         }
 

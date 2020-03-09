@@ -11,7 +11,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void IsKeyCorrect_returns_true()
         {
-            var key = Crypto.DeriveDbKey(Password, KeySalt);
+            var key = Util.DeriveDbKey(Password, KeySalt);
 
             Assert.True(Parser.IsKeyCorrect(key, KeyVerification));
         }
@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void IsKeyCorrect_return_false()
         {
-            var key = Crypto.DeriveDbKey("Incorrect password", KeySalt);
+            var key = Util.DeriveDbKey("Incorrect password", KeySalt);
 
             Assert.False(Parser.IsKeyCorrect(key, KeyVerification));
         }

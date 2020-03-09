@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.StickyPassword
             var encryptedToken = Remote.GetEncryptedToken(username, deviceId, DateTime.Now);
 
             // Decrypt the token. This token is now used to authenticate with the server.
-            var token = Crypto.DecryptToken(username, password, encryptedToken);
+            var token = Util.DecryptToken(username, password, encryptedToken);
 
             // The device must be registered first.
             Remote.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);

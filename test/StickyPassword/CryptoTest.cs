@@ -22,7 +22,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40
             };
 
-            Assert.Equal(expected, Crypto.DecryptToken(Username, Password, encryptedToken));
+            Assert.Equal(expected, Util.DecryptToken(Username, Password, encryptedToken));
         }
 
         [Fact]
@@ -37,13 +37,13 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xaa, 0x8f, 0x5c, 0x2f, 0x81, 0x0c, 0xb4, 0xf1
             };
 
-            Assert.Equal(expected, Crypto.DeriveTokenKey(Username, Password));
+            Assert.Equal(expected, Util.DeriveTokenKey(Username, Password));
         }
 
         [Fact]
         public void DeriveDbKey_returns_key()
         {
-            Assert.Equal(DbKey, Crypto.DeriveDbKey(Password, DbKeySalt));
+            Assert.Equal(DbKey, Util.DeriveDbKey(Password, DbKeySalt));
         }
 
         [Fact]
@@ -56,7 +56,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 0xd6, 0x96, 0x3f, 0x7d, 0x28, 0xe1, 0x7f, 0x72
             };
 
-            Assert.Equal(expected, Crypto.Md5("abc"));
+            Assert.Equal(expected, Util.Md5("abc"));
         }
 
         [Fact]
@@ -70,7 +70,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             };
 
             Assert.Equal("decrypted data!!".ToBytes(),
-                         Crypto.DecryptAes256(ciphertext, "this is a very secure password!!".ToBytes()));
+                         Util.DecryptAes256(ciphertext, "this is a very secure password!!".ToBytes()));
         }
 
         [Fact]
@@ -84,7 +84,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             };
 
             Assert.Equal("decrypted data!".ToBytes(),
-                         Crypto.DecryptAes256(ciphertext,
+                         Util.DecryptAes256(ciphertext,
                                               "this is a very secure password!!".ToBytes(),
                                               PaddingMode.PKCS7));
         }
@@ -100,7 +100,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             };
 
             Assert.Equal(expected,
-                         Crypto.EncryptAes256("data to encrypt!".ToBytes(),
+                         Util.EncryptAes256("data to encrypt!".ToBytes(),
                                               "this is a very secure password!!".ToBytes()));
         }
 
@@ -115,7 +115,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             };
 
             Assert.Equal(expected,
-                         Crypto.EncryptAes256("data to encrypt".ToBytes(),
+                         Util.EncryptAes256("data to encrypt".ToBytes(),
                                               "this is a very secure password!!".ToBytes(),
                                               PaddingMode.PKCS7));
         }
