@@ -26,12 +26,12 @@ namespace PasswordManagerAccess.StickyPassword
 
         public static byte[] Decrypt(byte[] ciphertext, byte[] key)
         {
-            return Crypto.EncryptAes256Cbc(ciphertext, AesIv, key);
+            return Crypto.DecryptAes256Cbc(ciphertext, AesIv, key);
         }
 
         public static byte[] Encrypt(byte[] plaintext, byte[] key)
         {
-            return Crypto.DecryptAes256Cbc(plaintext, AesIv, key);
+            return Crypto.EncryptAes256Cbc(plaintext, AesIv, key);
         }
 
         //

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
-    public class CryptoTest
+    public class UtilTest
     {
         [Fact]
         public void DecryptToken_returns_token()
@@ -46,6 +46,18 @@ namespace PasswordManagerAccess.Test.StickyPassword
             Assert.Equal(DbKey, Util.DeriveDbKey(Password, DbKeySalt));
         }
 
+        [Fact]
+        public void Decrypt_returns_plaintext()
+        {
+            Assert.Equal(AesPlaintext, Util.Decrypt(AesCiphertext, AesKey));
+        }
+
+        [Fact]
+        public void Encrypt_returns_ciphertext()
+        {
+            Assert.Equal(AesCiphertext, Util.Encrypt(AesPlaintext, AesKey));
+        }
+
         //
         // Data
         //
@@ -68,5 +80,10 @@ namespace PasswordManagerAccess.Test.StickyPassword
             0x75, 0x44, 0x47, 0x95, 0x43, 0x72, 0x01, 0xf8,
             0x8f, 0xb6, 0x97, 0xd8, 0xdd, 0x55, 0xa1, 0x41
         };
+
+        // Generated with Ruby/openssl
+        private static readonly byte[] AesKey = "this is a very secure password!!".ToBytes();
+        private static readonly byte[] AesPlaintext = "decrypted data!".ToBytes();
+        private static readonly byte[] AesCiphertext = "BwhwrWXJmDUFR30GJT5fjw==".Decode64();
     }
 }
