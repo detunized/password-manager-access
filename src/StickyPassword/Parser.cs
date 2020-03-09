@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Data.SQLite;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -43,9 +42,7 @@ namespace PasswordManagerAccess.StickyPassword
         {
             try
             {
-                using (var db = new SQLiteConnection(string.Format(CultureInfo.InvariantCulture,
-                                                                   "Data Source={0};Version=3;",
-                                                                   filename)))
+                using (var db = new SQLiteConnection($"Data Source={filename};Version=3;"))
                 {
                     db.Open();
 
@@ -105,13 +102,13 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static Account[] GetAccounts(SQLiteConnection db, User user, byte[] key)
         {
-            var r = Sql(db, string.Format(CultureInfo.InvariantCulture,
+            var r = Sql(db,
                 "select ENTRY_ID, UDC_ENTRY_NAME, UDC_URL, UD_COMMENT " +
                 "from ACC_ACCOUNT " +
                 "where DATE_DELETED = 1 " +
-                    "and USER_ID = {0} " +
+                    $"and USER_ID = {user.Id} " +
                     "and GROUP_TYPE = 2 " +
-                "order by ENTRY_ID", user.Id));
+                "order by ENTRY_ID");
 
             return r.Select(i =>
             {
@@ -127,14 +124,14 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static Credentials[] GetCredentialsForAccount(SQLiteConnection db, User user, long accountId, byte[] key)
         {
-            var r = Sql(db, string.Format(CultureInfo.InvariantCulture,
+            var r = Sql(db,
                 "select LOG.UDC_USERNAME, LOG.UD_PASSWORD, LOG.UDC_DESCRIPTION " +
                     "from ACC_LOGIN LOG, ACC_LINK LINK " +
                     "where LINK.DATE_DELETED = 1 " +
-                        "and LINK.USER_ID = {0} " +
-                        "and LINK.ENTRY_ID = {1} " +
+                        $"and LINK.USER_ID = {user.Id} " +
+                        $"and LINK.ENTRY_ID = {accountId} " +
                         "and LOG.LOGIN_ID = LINK.LOGIN_ID " +
-                    "order by LINK.LOGIN_ID", user.Id, accountId));
+                    "order by LINK.LOGIN_ID");
 
             return r.Select(i => new Credentials(
                 username: DecryptTextField(i["UDC_USERNAME"], key),

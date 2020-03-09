@@ -182,10 +182,7 @@ namespace PasswordManagerAccess.StickyPassword
                                           string objectPrefix,
                                           IAmazonS3 s3)
         {
-            var filename = string.Format(CultureInfo.InvariantCulture,
-                                         "{0}1/db_{1}.dmp",
-                                         objectPrefix,
-                                         version);
+            var filename = $"{objectPrefix}1/db_{version}.dmp";
             using (var response = GetS3Object(s3, bucketName, filename, "the database"))
                 return Inflate(response.ResponseStream, "the database");
         }
@@ -247,10 +244,7 @@ namespace PasswordManagerAccess.StickyPassword
         private static FetchException CreateException(string operation, XmlResponse xml)
         {
             return new FetchException(FetchException.FailureReason.RespondedWithError,
-                                      string.Format(CultureInfo.InvariantCulture,
-                                                    "Failed to {0} (error: {1})",
-                                                    operation,
-                                                    xml.Status));
+                                      $"Failed to {operation} (error: {xml.Status})");
         }
 
         private static XmlResponse Post(IHttpClient client,
@@ -305,18 +299,12 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static string GetUserAgent(string deviceId)
         {
-            return string.Format(
-                CultureInfo.InvariantCulture,
-                "SP/8.0.3436 Prot=2 ID={0} Lng=EN Os=Android/4.4.4 Lic= LicStat= PackageID=",
-                deviceId);
+            return $"SP/8.0.3436 Prot=2 ID={deviceId} Lng=EN Os=Android/4.4.4 Lic= LicStat= PackageID=";
         }
 
         private static string GetAuthorizationHeader(string username, byte[] token)
         {
-            return "Basic " +
-                   string.Format(CultureInfo.InvariantCulture, "{0}:{1}", username, token.Encode64())
-                       .ToBytes()
-                       .Encode64();
+            return "Basic " + $"{username}:{token.Encode64()}".ToBytes().Encode64();
         }
 
         private static string GetS3TokenItem(XmlResponse xml, string name)
