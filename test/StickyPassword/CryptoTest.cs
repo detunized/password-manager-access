@@ -48,49 +48,6 @@ namespace PasswordManagerAccess.Test.StickyPassword
         }
 
         [Fact]
-        public void Md5_computes_md5()
-        {
-            // From http://www.nsrl.nist.gov/testdata/
-            var expected = new byte[]
-            {
-                0x90, 0x01, 0x50, 0x98, 0x3c, 0xd2, 0x4f, 0xb0,
-                0xd6, 0x96, 0x3f, 0x7d, 0x28, 0xe1, 0x7f, 0x72
-            };
-
-            Assert.Equal(expected, Util.Md5("abc"));
-        }
-
-        [Fact]
-        public void DecryptAes256_returns_plaintext_without_padding()
-        {
-            // Generated with Ruby/openssl
-            var ciphertext = new byte[]
-            {
-                0xa2, 0x25, 0xfd, 0x39, 0x21, 0x28, 0x30, 0xc5,
-                0xe2, 0xce, 0xc3, 0xf3, 0xe9, 0x73, 0x35, 0xe6
-            };
-
-            Assert.Equal("decrypted data!!".ToBytes(),
-                         Util.DecryptAes256(ciphertext, "this is a very secure password!!".ToBytes()));
-        }
-
-        [Fact]
-        public void DecryptAes256_returns_ciphertext_with_padding()
-        {
-            // Generated with Ruby/openssl
-            var ciphertext = new byte[]
-            {
-                0x07, 0x08, 0x70, 0xad, 0x65, 0xc9, 0x98, 0x35,
-                0x05, 0x47, 0x7d, 0x06, 0x25, 0x3e, 0x5f, 0x8f
-            };
-
-            Assert.Equal("decrypted data!".ToBytes(),
-                         Util.DecryptAes256(ciphertext,
-                                              "this is a very secure password!!".ToBytes(),
-                                              PaddingMode.PKCS7));
-        }
-
-        [Fact]
         public void EncryptAes256_returns_ciphertext_without_padding()
         {
             // Generated with Ruby/openssl

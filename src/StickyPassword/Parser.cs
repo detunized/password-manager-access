@@ -143,7 +143,7 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static string DecryptTextField(object encrypted, byte[] key)
         {
-            var bytes = Util.DecryptAes256((byte[])encrypted, key, PaddingMode.PKCS7);
+            var bytes = Crypto.DecryptAes256Cbc((byte[])encrypted, Util.AesIv, key);
             return Encoding.Unicode.GetString(bytes).TrimEnd('\0');
         }
 

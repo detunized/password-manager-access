@@ -12,37 +12,21 @@ namespace PasswordManagerAccess.StickyPassword
         public static byte[] DecryptToken(string username, string password, byte[] encryptedToken)
         {
             var key = DeriveTokenKey(username, password);
-            return DecryptAes256(encryptedToken, key);
+            return Crypto.DecryptAes256CbcNoPadding(encryptedToken, AesIv, key);
         }
 
         public static byte[] DeriveTokenKey(string username, string password)
         {
-            var salt = Md5(username.ToLowerInvariant());
-            using (var kdf = new Rfc2898DeriveBytes(password, salt, 5000))
-                return kdf.GetBytes(32);
+            var salt = Crypto.Md5(username.ToLowerInvariant());
+            return Crypto.Pbkdf2Sha1(password, salt, 5000, 32);
         }
 
         public static byte[] DeriveDbKey(string password, byte[] salt)
         {
-            using (var kdf = new Rfc2898DeriveBytes(password, salt, 10000))
-                return kdf.GetBytes(32);
+            return Crypto.Pbkdf2Sha1(password, salt, 10000, 32);
         }
 
-        public static byte[] Md5(string text)
-        {
-            using (var md5 = MD5.Create())
-                return md5.ComputeHash(text.ToBytes());
-        }
-
-        public static byte[] DecryptAes256(byte[] ciphertext, byte[] key, PaddingMode padding = PaddingMode.None)
-        {
-            using (var aes = CreateAes256Cbc(key, padding))
-            using (var decryptor = aes.CreateDecryptor())
-            using (var stream = new MemoryStream(ciphertext, false))
-            using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
-                return cryptoStream.ReadAll(256);
-        }
-
+        // TODO: Move to Common
         public static byte[] EncryptAes256(byte[] plaintext, byte[] key, PaddingMode padding = PaddingMode.None)
         {
             using (var aes = CreateAes256Cbc(key, padding))
@@ -68,5 +52,12 @@ namespace PasswordManagerAccess.StickyPassword
                 Padding = padding
             };
         }
+
+        //
+        // Data
+        //
+
+        // Secutity fuckup: StickyPassword uses static zero IV in their encryption everywhere!
+        public static readonly byte[] AesIv = new byte[16];
     }
 }
