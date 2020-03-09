@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.StickyPassword;
 using Xunit;
@@ -45,37 +44,6 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void DeriveDbKey_returns_key()
         {
             Assert.Equal(DbKey, Util.DeriveDbKey(Password, DbKeySalt));
-        }
-
-        [Fact]
-        public void EncryptAes256_returns_ciphertext_without_padding()
-        {
-            // Generated with Ruby/openssl
-            var expected = new byte[]
-            {
-                0xe9, 0x62, 0xaf, 0x73, 0x96, 0xb0, 0x88, 0x09,
-                0x08, 0x2f, 0x0a, 0xef, 0x2d, 0x8f, 0x51, 0x85,
-            };
-
-            Assert.Equal(expected,
-                         Util.EncryptAes256("data to encrypt!".ToBytes(),
-                                              "this is a very secure password!!".ToBytes()));
-        }
-
-        [Fact]
-        public void EncryptAes256_returns_ciphertext_with_padding()
-        {
-            // Generated with Ruby/openssl
-            var expected = new byte[]
-            {
-                0xf4, 0x9a, 0x26, 0x31, 0x08, 0x09, 0x8f, 0x54,
-                0xa7, 0xcb, 0x08, 0xe2, 0x2c, 0x24, 0xdc, 0xec
-            };
-
-            Assert.Equal(expected,
-                         Util.EncryptAes256("data to encrypt".ToBytes(),
-                                              "this is a very secure password!!".ToBytes(),
-                                              PaddingMode.PKCS7));
         }
 
         //

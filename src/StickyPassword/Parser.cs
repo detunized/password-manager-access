@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using PasswordManagerAccess.Common;
 
@@ -66,7 +65,7 @@ namespace PasswordManagerAccess.StickyPassword
 
         internal static bool IsKeyCorrect(byte[] key, byte[] verification)
         {
-            var test = Util.EncryptAes256("VERIFY".ToBytes(), key, PaddingMode.PKCS7);
+            var test = Util.Encrypt("VERIFY".ToBytes(), key);
             return test.SequenceEqual(verification);
         }
 
@@ -143,7 +142,7 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static string DecryptTextField(object encrypted, byte[] key)
         {
-            var bytes = Crypto.DecryptAes256Cbc((byte[])encrypted, Util.AesIv, key);
+            var bytes = Util.Decrypt((byte[])encrypted, key);
             return Encoding.Unicode.GetString(bytes).TrimEnd('\0');
         }
 

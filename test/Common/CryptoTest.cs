@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
@@ -156,23 +156,33 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void DecryptAes256Cbc_decrypts_ciphertext()
         {
-            var plaintext = Crypto.DecryptAes256Cbc(
-                ciphertext: "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64(),
-                iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                key: "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
+            var plaintext = Crypto.DecryptAes256Cbc(AesCiphertext, AesIv, AesKey);
 
-            Assert.Equal("All your base are belong to us".ToBytes(), plaintext);
+            Assert.Equal(AesPlaintext, plaintext);
         }
 
         [Fact]
         public void DecryptAes256CbcNoPadding_decrypts_ciphertext()
         {
-            var plaintext = Crypto.DecryptAes256CbcNoPadding(
-                ciphertext: "TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=".Decode64(),
-                iv: "YFuiAVZgOD2K+s6y8yaMOw==".Decode64(),
-                key: "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64());
+            var plaintext = Crypto.DecryptAes256CbcNoPadding(AesCiphertextAligned, AesIv, AesKey);
 
-            Assert.Equal("All your base are belong to us!!".ToBytes(), plaintext);
+            Assert.Equal(AesPlaintextAligned, plaintext);
+        }
+
+        [Fact]
+        public void EncryptAes256Cbc_encrypts_plaintext()
+        {
+            var ciphertext = Crypto.EncryptAes256Cbc(AesPlaintext, AesIv, AesKey);
+
+            Assert.Equal(AesCiphertext, ciphertext);
+        }
+
+        [Fact]
+        public void EncryptAes256CbcNoPadding_encrypts_plaintext()
+        {
+            var ciphertext = Crypto.EncryptAes256CbcNoPadding(AesPlaintextAligned, AesIv, AesKey);
+
+            Assert.Equal(AesCiphertextAligned, ciphertext);
         }
 
         //
@@ -206,6 +216,23 @@ namespace PasswordManagerAccess.Test.Common
 
         //
         // Data
+        //
+
+        //
+        // AES
+        //
+
+        private static readonly byte[] AesIv = "YFuiAVZgOD2K+s6y8yaMOw==".Decode64();
+        private static readonly byte[] AesKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
+
+        private static readonly byte[] AesPlaintext = "All your base are belong to us".ToBytes();
+        private static readonly byte[] AesCiphertext = "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64();
+
+        private static readonly byte[] AesPlaintextAligned = "All your base are belong to us!!".ToBytes();
+        private static readonly byte[] AesCiphertextAligned = "TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=".Decode64();
+
+        //
+        // RSA
         //
 
         private static readonly RSAParameters RsaKey = new RSAParameters()

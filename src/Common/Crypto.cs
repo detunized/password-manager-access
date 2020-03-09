@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -150,6 +150,45 @@ namespace PasswordManagerAccess.Common
 
                     using (var decryptor = aes.CreateDecryptor())
                     using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
+                                                               decryptor,
+                                                               CryptoStreamMode.Read))
+                    using (var outputStream = new MemoryStream())
+                    {
+                        cryptoStream.CopyTo(outputStream);
+                        return outputStream.ToArray();
+                    }
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new CryptoException("AES decryption failed", e);
+            }
+        }
+
+        public static byte[] EncryptAes256Cbc(byte[] plaintext, byte[] iv, byte[] key)
+        {
+            return EncryptAes256Cbc(plaintext, iv, key, PaddingMode.PKCS7);
+        }
+
+        public static byte[] EncryptAes256CbcNoPadding(byte[] plaintext, byte[] iv, byte[] key)
+        {
+            return EncryptAes256Cbc(plaintext, iv, key, PaddingMode.None);
+        }
+
+        public static byte[] EncryptAes256Cbc(byte[] plaintext, byte[] iv, byte[] key, PaddingMode padding)
+        {
+            try
+            {
+                using (var aes = Aes.Create())
+                {
+                    aes.KeySize = 256;
+                    aes.Key = key;
+                    aes.Mode = CipherMode.CBC;
+                    aes.IV = iv;
+                    aes.Padding = padding;
+
+                    using (var decryptor = aes.CreateEncryptor())
+                    using (var cryptoStream = new CryptoStream(new MemoryStream(plaintext, false),
                                                                decryptor,
                                                                CryptoStreamMode.Read))
                     using (var outputStream = new MemoryStream())
