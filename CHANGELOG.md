@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+  - Default `ISecureStorage` implementation that does nothing (`NullStorage`)
+    and could be used to disable "remember me" feature.
+
 ## 0.5.0
   - RoboForm: ported from the original repo and now could be used
   - ZohoVault: MFA "rememeber me" option
