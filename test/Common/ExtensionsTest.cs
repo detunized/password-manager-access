@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
@@ -518,6 +518,48 @@ namespace PasswordManagerAccess.Test.Common
         {
             Assert.Equal(new BigInteger(result),
                          new BigInteger(b).ModExp(new BigInteger(e), new BigInteger(m)));
+        }
+
+        //
+        // Stream
+        //
+
+        [Theory]
+        [InlineData(new byte[] { })]
+        [InlineData(new byte[] { 1 })]
+        [InlineData(new byte[] { 1, 2 })]
+        [InlineData(new byte[] { 1, 2, 3 })]
+        [InlineData(new byte[] { 1, 2, 3, 4 })]
+        public void Stream_ReadAll_reads_all_bytes_from_stream(byte[] bytes)
+        {
+            var bufferSizes = new int[]
+            {
+                1,
+                2,
+                3,
+                4,
+                100,
+                1024,
+                1337,
+                65536,
+            };
+
+            // Default buffer
+            Assert.Equal(bytes, new MemoryStream(bytes).ReadAll());
+
+            // Custom buffer size
+            foreach (var size in bufferSizes)
+                Assert.Equal(bytes, new MemoryStream(bytes).ReadAll(size));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(-1337)]
+        public void Stream_ReadAll_throws_on_zero_buffer_size(int size)
+        {
+            Exceptions.AssertThrowsInternalError(() => new MemoryStream().ReadAll(size),
+                                                 "Buffer size must be positive");
         }
 
         //

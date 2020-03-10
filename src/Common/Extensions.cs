@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -302,6 +302,22 @@ namespace PasswordManagerAccess.Common
         {
             var r = BigInteger.ModPow(b, e, m);
             return r >= 0 ? r : r + m;
+        }
+
+        //
+        // Stream
+        //
+
+        public static byte[] ReadAll(this Stream stream, int bufferSize = 4096)
+        {
+            if (bufferSize < 1)
+                throw new InternalErrorException($"Buffer size must be positive, got {bufferSize}");
+
+            using var outputStream = new MemoryStream();
+            stream.CopyTo(outputStream, bufferSize);
+
+            return outputStream.ToArray();
+
         }
 
         //
