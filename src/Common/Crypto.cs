@@ -138,31 +138,7 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] DecryptAes256Cbc(byte[] ciphertext, byte[] iv, byte[] key, PaddingMode padding)
         {
-            try
-            {
-                using (var aes = Aes.Create())
-                {
-                    aes.KeySize = 256;
-                    aes.Key = key;
-                    aes.Mode = CipherMode.CBC;
-                    aes.IV = iv;
-                    aes.Padding = padding;
-
-                    using (var decryptor = aes.CreateDecryptor())
-                    using (var cryptoStream = new CryptoStream(new MemoryStream(ciphertext, false),
-                                                               decryptor,
-                                                               CryptoStreamMode.Read))
-                    using (var outputStream = new MemoryStream())
-                    {
-                        cryptoStream.CopyTo(outputStream);
-                        return outputStream.ToArray();
-                    }
-                }
-            }
-            catch (CryptographicException e)
-            {
-                throw new CryptoException("AES decryption failed", e);
-            }
+            return CryptAes256Cbc(ciphertext, iv, key, padding, aes => aes.CreateDecryptor());
         }
 
         public static byte[] EncryptAes256Cbc(byte[] plaintext, byte[] iv, byte[] key)
@@ -177,26 +153,35 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] EncryptAes256Cbc(byte[] plaintext, byte[] iv, byte[] key, PaddingMode padding)
         {
+            return CryptAes256Cbc(plaintext, iv, key, padding, aes => aes.CreateEncryptor());
+        }
+
+        private static byte[] CryptAes256Cbc(byte[] text,
+                                             byte[] iv,
+                                             byte[] key,
+                                             PaddingMode padding,
+                                             Func<SymmetricAlgorithm, ICryptoTransform> createCryptor)
+        {
             try
             {
-                using (var aes = Aes.Create())
-                {
-                    aes.KeySize = 256;
-                    aes.Key = key;
-                    aes.Mode = CipherMode.CBC;
-                    aes.IV = iv;
-                    aes.Padding = padding;
+                using var aes = Aes.Create();
+                aes.KeySize = 256;
+                aes.Key = key;
+                aes.Mode = CipherMode.CBC;
+                aes.IV = iv;
+                aes.Padding = padding;
 
-                    using (var decryptor = aes.CreateEncryptor())
-                    using (var cryptoStream = new CryptoStream(new MemoryStream(plaintext, false),
-                                                               decryptor,
-                                                               CryptoStreamMode.Read))
-                    using (var outputStream = new MemoryStream())
-                    {
-                        cryptoStream.CopyTo(outputStream);
-                        return outputStream.ToArray();
-                    }
-                }
+                // TOOD: Look into performance of this thing. Sometimes there's a lot of these
+                // operations happening while the vault is being open. This is epecially true for
+                // large vaults with tousands of items in them. There's a lot of (unnecessary)
+                // temporary objects and memory copying here!
+                using var cryptor = createCryptor(aes);
+                using var inputStream = new MemoryStream(text, false);
+                using var cryptoStream = new CryptoStream(inputStream, cryptor, CryptoStreamMode.Read);
+                using var outputStream = new MemoryStream(text.Length);
+                cryptoStream.CopyTo(outputStream, 256);
+
+                return outputStream.ToArray();
             }
             catch (CryptographicException e)
             {
