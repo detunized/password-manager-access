@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -487,13 +487,9 @@ namespace PasswordManagerAccess.Dashlane
 
         public static byte[] Inflate(byte[] compressed)
         {
-            using (var inputStream = new MemoryStream(compressed, false))
-            using (var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress))
-            using (var outputStream = new MemoryStream())
-            {
-                deflateStream.CopyTo(outputStream);
-                return outputStream.ToArray();
-            }
+            using var inputStream = new MemoryStream(compressed, false);
+            using var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress);
+            return deflateStream.ReadAll();
         }
 
         public static Account[] ExtractAccountsFromXml(string xml)

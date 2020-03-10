@@ -195,14 +195,10 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static byte[] Decompress(byte[] content)
         {
-            using (var gzipStream = new GZipStream(new MemoryStream(content, false),
-                                                   CompressionMode.Decompress))
-            using (var outputStream = new MemoryStream())
-            {
-                // TODO: Handle exceptions in case of corruption
-                gzipStream.CopyTo(outputStream);
-                return outputStream.ToArray();
-            }
+            // TODO: Handle exceptions in case of corruption
+            using var contentStream = new MemoryStream(content, false);
+            using var gzipStream = new GZipStream(contentStream, CompressionMode.Decompress);
+            return gzipStream.ReadAll();
         }
 
         internal static JObject ParseJson(byte[] content)

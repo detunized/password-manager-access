@@ -178,10 +178,13 @@ namespace PasswordManagerAccess.Common
                 using var cryptor = createCryptor(aes);
                 using var inputStream = new MemoryStream(text, false);
                 using var cryptoStream = new CryptoStream(inputStream, cryptor, CryptoStreamMode.Read);
-                using var outputStream = new MemoryStream(text.Length);
-                cryptoStream.CopyTo(outputStream, 256);
 
-                return outputStream.ToArray();
+                // Here we use quite a small buffer, since most of the time the encrypted data is
+                // quite short.
+                //
+                // TODO: See if it makes sense to base the buffer size on the input size. Definitely
+                // it doesn't make sense to have a buffer that is lager than the input.
+                return cryptoStream.ReadAll(256);
             }
             catch (CryptographicException e)
             {

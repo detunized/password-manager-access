@@ -1,10 +1,11 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Test
 {
@@ -25,12 +26,8 @@ namespace PasswordManagerAccess.Test
 
         public byte[] GetBinaryFixture(string name, string extension)
         {
-            using (var stream = GetFixtureStream(name, extension))
-            using (var memory = new MemoryStream())
-            {
-                stream.CopyTo(memory);
-                return memory.ToArray();
-            }
+            using var stream = GetFixtureStream(name, extension);
+            return stream.ReadAll();
         }
 
         public T ParseFixture<T>(string name)
