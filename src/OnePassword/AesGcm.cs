@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -9,6 +9,7 @@ using PasswordManagerAccess.Common;
 namespace PasswordManagerAccess.OnePassword
 {
     // TODO: Write some comments here. Nothing is obvious in this file.
+    // TODO: Call to the native functions on the platforms where they are available
     class AesGcm
     {
         public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] authData)
@@ -79,23 +80,21 @@ namespace PasswordManagerAccess.OnePassword
             Debug.Assert(hashKey.Length == 16);
             Debug.Assert(hashSalt.Length == 16);
 
-            using (var aes = new AesManaged { Mode = CipherMode.ECB, Key = key })
-            using (var aesEnc = aes.CreateEncryptor())
+            using var aes = new AesManaged { Mode = CipherMode.ECB, Key = key };
+            using var encryptor = aes.CreateEncryptor();
+            var counter = InitializeCounter(iv);
+
+            encryptor.TransformBlock(new byte[16], 0, 16, hashKey, 0);
+            encryptor.TransformBlock(counter, 0, 16, hashSalt, 0);
+
+            var block = new byte[16];
+            for (int i = 0; i < length; i += 16)
             {
-                var counter = InitializeCounter(iv);
+                IncrementCounter(counter);
+                encryptor.TransformBlock(counter, 0, 16, block, 0);
 
-                aesEnc.TransformBlock(new byte[16], 0, 16, hashKey, 0);
-                aesEnc.TransformBlock(counter, 0, 16, hashSalt, 0);
-
-                var block = new byte[16];
-                for (int i = 0; i < length; i += 16)
-                {
-                    IncrementCounter(counter);
-                    aesEnc.TransformBlock(counter, 0, 16, block, 0);
-
-                    for (int j = 0; j < Math.Min(length - i, 16); ++j)
-                        output[i + j] = (byte)(input[i + j] ^ block[j]);
-                }
+                for (int j = 0; j < Math.Min(length - i, 16); ++j)
+                    output[i + j] = (byte)(input[i + j] ^ block[j]);
             }
         }
 

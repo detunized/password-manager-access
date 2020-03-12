@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -27,8 +27,8 @@ namespace PasswordManagerAccess.Bitwarden
                                  Ui ui,
                                  ISecureStorage storage)
         {
-            using (var transport = new RestTransport())
-                return new Vault(Client.OpenVault(username, password, deviceId, baseUrl, ui, storage, transport));
+            using var transport = new RestTransport();
+            return new Vault(Client.OpenVault(username, password, deviceId, baseUrl, ui, storage, transport));
         }
 
         public static string GenerateRandomDeviceId()

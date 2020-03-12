@@ -211,9 +211,9 @@ namespace PasswordManagerAccess.Common
 
         public static TResult Open<TResult>(this byte[] bytes, Func<BinaryReader, TResult> action)
         {
-            using (var stream = new MemoryStream(bytes, false))
-            using (var reader = new BinaryReader(stream))
-                return action(reader);
+            using var stream = new MemoryStream(bytes, false);
+            using var reader = new BinaryReader(stream);
+            return action(reader);
         }
 
         public static byte[] Sub(this byte[] array, int start, int length)

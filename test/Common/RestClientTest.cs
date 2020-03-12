@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -495,13 +495,12 @@ namespace PasswordManagerAccess.Test.Common
                                        IReadOnlyDictionary<string, string> defaultCookies,
                                        Action<HttpRequestMessage> assertRequest)
         {
-            using (var transport = new RestTransport(request => {
+            using var transport = new RestTransport(request =>
+            {
                 assertRequest(request);
                 return RespondWith(responseContent, NoHeaders)(request);
-            }))
-            {
-                restCall(new RestClient(transport, "", signer, defaultHeaders, defaultCookies));
-            }
+            });
+            restCall(new RestClient(transport, "", signer, defaultHeaders, defaultCookies));
         }
 
         internal static void InRequest(Action<RestClient> restCall,

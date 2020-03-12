@@ -19,9 +19,9 @@ namespace PasswordManagerAccess.Test
 
         public string GetFixture(string name, string extension = "json")
         {
-            using (var stream = GetFixtureStream(name, extension))
-            using (var reader = new StreamReader(stream))
-                return reader.ReadToEnd();
+            using var stream = GetFixtureStream(name, extension);
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
         }
 
         public byte[] GetBinaryFixture(string name, string extension)

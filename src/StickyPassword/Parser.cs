@@ -42,18 +42,16 @@ namespace PasswordManagerAccess.StickyPassword
         {
             try
             {
-                using (var db = new SQLiteConnection($"Data Source={filename};Version=3;"))
-                {
-                    db.Open();
+                using var db = new SQLiteConnection($"Data Source={filename};Version=3;");
+                db.Open();
 
-                    var user = GetDefaultUser(db);
-                    var key = Util.DeriveDbKey(password, user.Salt);
-                    if (!IsKeyCorrect(key, user.Verification))
-                        throw new ParseException(ParseException.FailureReason.IncorrectPassword,
-                                                 "Password verification failed");
+                var user = GetDefaultUser(db);
+                var key = Util.DeriveDbKey(password, user.Salt);
+                if (!IsKeyCorrect(key, user.Verification))
+                    throw new ParseException(ParseException.FailureReason.IncorrectPassword,
+                                             "Password verification failed");
 
-                    return GetAccounts(db, user, key);
-                }
+                return GetAccounts(db, user, key);
             }
             catch (SQLiteException e)
             {
@@ -149,18 +147,16 @@ namespace PasswordManagerAccess.StickyPassword
         private static Dictionary<string, object>[] Sql(SQLiteConnection db, string sql)
         {
             var result = new List<Dictionary<string, object>>();
+            using var command = new SQLiteCommand(sql, db);
+            using var reader = command.ExecuteReader();
 
-            using (var s = new SQLiteCommand(sql, db))
-            using (var r = s.ExecuteReader())
+            while (reader.Read())
             {
-                while (r.Read())
-                {
-                    var row = new Dictionary<string, object>();
-                    for (var i = 0; i < r.FieldCount; ++i)
-                        row[r.GetName(i)] = r.GetValue(i);
+                var row = new Dictionary<string, object>();
+                for (var i = 0; i < reader.FieldCount; ++i)
+                    row[reader.GetName(i)] = reader.GetValue(i);
 
-                    result.Add(row);
-                }
+                result.Add(row);
             }
 
             return result.ToArray();

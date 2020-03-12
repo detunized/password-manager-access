@@ -56,9 +56,9 @@ namespace PasswordManagerAccess.StickyPassword
             using (var stream = request.GetRequestStream())
                 stream.Write(content, 0, content.Length);
 
-            using (var response = (HttpWebResponse)request.GetResponse())
-            using (var reader = new StreamReader(response.GetResponseStream()))
-                return reader.ReadToEnd();
+            using var response = (HttpWebResponse)request.GetResponse();
+            using var reader = new StreamReader(response.GetResponseStream());
+            return reader.ReadToEnd();
         }
 
         private readonly string _baseUrl;

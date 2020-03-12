@@ -570,11 +570,11 @@ namespace PasswordManagerAccess.Test.Common
         public void BinaryReader_ReadUInt32BigEndian_reads_uint()
         {
             var bytes = new byte[] { 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE };
-            using (var r = new BinaryReader(new MemoryStream(bytes)))
-            {
-                Assert.Equal(0xDEADBEEF, r.ReadUInt32LittleEndian());
-                Assert.Equal(0xFEEDF00D, r.ReadUInt32LittleEndian());
-            }
+            using var s = new MemoryStream(bytes);
+            using var r = new BinaryReader(s);
+
+            Assert.Equal(0xDEADBEEF, r.ReadUInt32LittleEndian());
+            Assert.Equal(0xFEEDF00D, r.ReadUInt32LittleEndian());
         }
 
         //

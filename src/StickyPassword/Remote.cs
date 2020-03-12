@@ -58,11 +58,11 @@ namespace PasswordManagerAccess.StickyPassword
         // it from S3.
         public static byte[] DownloadLatestDb(S3Token s3Token)
         {
-            using (var s3 = new AmazonS3Client(s3Token.AccessKeyId,
-                                               s3Token.SecretAccessKey,
-                                               s3Token.SessionToken,
-                                               RegionEndpoint.USEast1))
-                return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
+            using var s3 = new AmazonS3Client(s3Token.AccessKeyId,
+                                              s3Token.SecretAccessKey,
+                                              s3Token.SessionToken,
+                                              RegionEndpoint.USEast1);
+            return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
         }
 
         //
@@ -162,10 +162,8 @@ namespace PasswordManagerAccess.StickyPassword
                                                    string objectPrefix,
                                                    IAmazonS3 s3)
         {
-            var filename = objectPrefix + "1/spc.info";
-            string info;
-            using (var response = GetS3Object(s3, bucketName, filename, "the database info"))
-                info = response.ResponseStream.ReadAll().ToUtf8();
+            using var response = GetS3Object(s3, bucketName, $"{objectPrefix}1/spc.info", "the database info");
+            var info = response.ResponseStream.ReadAll().ToUtf8();
 
             var re = new Regex(@"VERSION\s+(\d+)");
             var m = re.Match(info);
@@ -182,9 +180,8 @@ namespace PasswordManagerAccess.StickyPassword
                                           string objectPrefix,
                                           IAmazonS3 s3)
         {
-            var filename = $"{objectPrefix}1/db_{version}.dmp";
-            using (var response = GetS3Object(s3, bucketName, filename, "the database"))
-                return Inflate(response.ResponseStream, "the database");
+            using var response = GetS3Object(s3, bucketName, $"{objectPrefix}1/db_{version}.dmp", "the database");
+            return Inflate(response.ResponseStream, "the database");
         }
 
         //

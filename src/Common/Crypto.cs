@@ -15,12 +15,10 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] RandomBytes(int size)
         {
-            using (var random = new RNGCryptoServiceProvider())
-            {
-                var bytes = new byte[size];
-                random.GetBytes(bytes);
-                return bytes;
-            }
+            using var random = new RNGCryptoServiceProvider();
+            var bytes = new byte[size];
+            random.GetBytes(bytes);
+            return bytes;
         }
 
         public static string RandomHex(int length)
@@ -47,8 +45,8 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Md5(byte[] message)
         {
-            using (var md5 = MD5.Create())
-                return md5.ComputeHash(message);
+            using var md5 = MD5.Create();
+            return md5.ComputeHash(message);
         }
 
         //
@@ -62,8 +60,8 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Sha1(byte[] message)
         {
-            using (var sha = SHA1.Create())
-                return sha.ComputeHash(message);
+            using var sha = SHA1.Create();
+            return sha.ComputeHash(message);
         }
 
         public static byte[] Sha256(string message)
@@ -73,8 +71,8 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Sha256(byte[] message)
         {
-            using (var sha = SHA256.Create())
-                return sha.ComputeHash(message);
+            using var sha = SHA256.Create();
+            return sha.ComputeHash(message);
         }
 
         public static byte[] Sha512(string message)
@@ -84,8 +82,8 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Sha512(byte[] message)
         {
-            using (var sha = SHA512.Create())
-                return sha.ComputeHash(message);
+            using var sha = SHA512.Create();
+            return sha.ComputeHash(message);
         }
 
         //
@@ -99,8 +97,8 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] HmacSha256(byte[] message, byte[] key)
         {
-            using (var hmac = new HMACSHA256() { Key = key })
-                return hmac.ComputeHash(message);
+            using var hmac = new HMACSHA256() { Key = key };
+            return hmac.ComputeHash(message);
         }
 
         //
@@ -216,11 +214,9 @@ namespace PasswordManagerAccess.Common
         {
             try
             {
-                using (var rsa = new RSACryptoServiceProvider())
-                {
-                    rsa.ImportParameters(privateKey);
-                    return rsa.Decrypt(ciphertext, padding);
-                }
+                using var rsa = new RSACryptoServiceProvider();
+                rsa.ImportParameters(privateKey);
+                return rsa.Decrypt(ciphertext, padding);
             }
             catch (CryptographicException e)
             {

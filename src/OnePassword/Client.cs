@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -38,14 +38,12 @@ namespace PasswordManagerAccess.OnePassword
                                             ISecureStorage storage,
                                             ILogger logger = null)
         {
-            using (var transport = new RestTransport())
-            {
-                return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain),
-                                     ui,
-                                     storage,
-                                     logger,
-                                     transport);
-            }
+            using var transport = new RestTransport();
+            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain),
+                                 ui,
+                                 storage,
+                                 logger,
+                                 transport);
         }
 
         // Alternative entry point with a predefined region

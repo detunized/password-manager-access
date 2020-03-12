@@ -18,9 +18,9 @@ namespace PasswordManagerAccess.RoboForm
             var clientInfo = new ClientInfo(username: username,
                                             password: password,
                                             deviceId: deviceId);
+            using var transport = new RestTransport();
 
-            using (var transport = new RestTransport())
-                return Open(clientInfo, ui, transport);
+            return Open(clientInfo, ui, transport);
         }
 
         // Generates a random device id that should be used with every new device.

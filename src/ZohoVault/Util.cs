@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -56,14 +56,14 @@ namespace PasswordManagerAccess.ZohoVault
         {
             // The actual encryption key is the original key encrypted with AES-ECB
             // using itself as a key. Then it's duplicated and pasted together.
-            using (var aes = CreateAes256Ecb(key))
-            using (var encryptor = aes.CreateEncryptor())
-            {
-                var ctrKey = new byte[BlockSize * 2];
-                encryptor.TransformBlock(key, 0, BlockSize, ctrKey, 0);
-                Array.Copy(ctrKey, 0, ctrKey, BlockSize, BlockSize);
-                return ctrKey;
-            }
+            using var aes = CreateAes256Ecb(key);
+            using var encryptor = aes.CreateEncryptor();
+
+            var ctrKey = new byte[BlockSize * 2];
+            encryptor.TransformBlock(key, 0, BlockSize, ctrKey, 0);
+            Array.Copy(ctrKey, 0, ctrKey, BlockSize, BlockSize);
+
+            return ctrKey;
         }
 
         // TODO: Move this to the common crypto module
@@ -72,33 +72,32 @@ namespace PasswordManagerAccess.ZohoVault
             var length = ciphertext.Length;
             var plaintext = new byte[length];
 
-            using (var aes = CreateAes256Ecb(key))
-            using (var encryptor = aes.CreateEncryptor())
+            using var aes = CreateAes256Ecb(key);
+            using var encryptor = aes.CreateEncryptor();
+
+            // Clone the counter not to modify the input
+            var counter = initialCounter.Take(BlockSize).ToArray();
+
+            // Number of blocks in the input. The last block extends past
+            // the input buffer, when the size is not aligned.
+            var blockCount = (length + BlockSize - 1) / BlockSize;
+
+            // XOR mask, allocate once and reuse
+            var xor = new byte[BlockSize];
+
+            for (var block = 0; block < blockCount; block += 1)
             {
-                // Clone the counter not to modify the input
-                var counter = initialCounter.Take(BlockSize).ToArray();
+                // XOR mask is simply the AES-ECB encrypted counter value
+                encryptor.TransformBlock(counter, 0, BlockSize, xor, 0);
+                IncrementCounter(counter);
 
-                // Number of blocks in the input. The last block extends past
-                // the input buffer, when the size is not aligned.
-                var blockCount = (length + BlockSize - 1) / BlockSize;
+                // Need to pay attention no to poke outside of the buffers
+                var blockStartIndex = block * BlockSize;
+                var thisBlockSize = Math.Min(BlockSize, length - blockStartIndex);
 
-                // XOR mask, allocate once and reuse
-                var xor = new byte[BlockSize];
-
-                for (var block = 0; block < blockCount; block += 1)
-                {
-                    // XOR mask is simply the AES-ECB encrypted counter value
-                    encryptor.TransformBlock(counter, 0, BlockSize, xor, 0);
-                    IncrementCounter(counter);
-
-                    // Need to pay attention no to poke outside of the buffers
-                    var blockStartIndex = block * BlockSize;
-                    var thisBlockSize = Math.Min(BlockSize, length - blockStartIndex);
-
-                    // XOR input with the mask. That's all there is to CTR mode.
-                    for (var i = 0; i < thisBlockSize; i += 1)
-                        plaintext[blockStartIndex + i] = (byte)(ciphertext[blockStartIndex + i] ^ xor[i]);
-                }
+                // XOR input with the mask. That's all there is to CTR mode.
+                for (var i = 0; i < thisBlockSize; i += 1)
+                    plaintext[blockStartIndex + i] = (byte)(ciphertext[blockStartIndex + i] ^ xor[i]);
             }
 
             return plaintext;
