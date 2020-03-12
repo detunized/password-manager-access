@@ -18,7 +18,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.StickyPassword
 {
-    public static class Remote
+    public static class Client
     {
         // This function requests an encrypted token for the specified username. There's no
         // authentication of any kind at this point. The token is encrypted with the user's

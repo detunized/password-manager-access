@@ -16,7 +16,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
-    public class RemoteTest
+    public class ClientTest
     {
         private const string Username = "LastPass.Ruby@gmaiL.cOm";
         private const string DeviceId = "12345678-1234-1234-1234-123456789abc";
@@ -112,7 +112,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetEncryptedToken_makes_post_request()
         {
             var client = SetupClientForPost(GetTokenResponse);
-            Remote.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
+            Client.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
 
             client.Verify(x => x.Post(It.Is<string>(s => s == "GetCrpToken"),
                                       It.Is<string>(s => s.Contains(DeviceId)),
@@ -125,7 +125,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetEncryptedToken_returns_response()
         {
             Assert.Equal(EncryptedToken,
-                         Remote.GetEncryptedToken(Username,
+                         Client.GetEncryptedToken(Username,
                                                   DeviceId,
                                                   Timestamp,
                                                   SetupClientForPost(GetTokenResponse).Object));
@@ -134,7 +134,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void GetEncryptedToken_throws_on_network_error()
         {
-            TestThrowsNetworkError(client => Remote.GetEncryptedToken(Username,
+            TestThrowsNetworkError(client => Client.GetEncryptedToken(Username,
                                                                       DeviceId,
                                                                       Timestamp,
                                                                       client),
@@ -145,7 +145,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetEncryptedToken_throws_on_non_zero_status()
         {
             Assert.Throws<FetchException>(
-                () => Remote.GetEncryptedToken(Username,
+                () => Client.GetEncryptedToken(Username,
                                                DeviceId,
                                                Timestamp,
                                                SetupClientForPost(ResponseWithError).Object));
@@ -155,7 +155,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetEncryptedToken_throws_incorrect_username_on_1006_status()
         {
             var e = Assert.Throws<FetchException>(
-                () => Remote.GetEncryptedToken(Username,
+                () => Client.GetEncryptedToken(Username,
                                                DeviceId,
                                                Timestamp,
                                                SetupClientForPost(ResponseWithError1006).Object));
@@ -165,7 +165,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void GetEncryptedToken_throws_on_incorrect_xml()
         {
-            TestOnIncorrectXml(client => Remote.GetEncryptedToken(Username,
+            TestOnIncorrectXml(client => Client.GetEncryptedToken(Username,
                                                                   DeviceId,
                                                                   Timestamp,
                                                                   client),
@@ -176,7 +176,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void AuthorizeDevice_makes_post_request()
         {
             var client = SetupClientForPostWithAuth(AuthorizeDeviceResponse);
-            Remote.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
+            Client.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, client.Object);
 
             client.Verify(x => x.Post(It.Is<string>(s => s == "DevAuth"),
                                       It.Is<string>(s => s.Contains(DeviceId)),
@@ -189,7 +189,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void AuthorizeDevice_throws_on_network_error()
         {
-            TestThrowsNetworkError(client => Remote.AuthorizeDevice(Username,
+            TestThrowsNetworkError(client => Client.AuthorizeDevice(Username,
                                                                     Token,
                                                                     DeviceId,
                                                                     DeviceName,
@@ -202,7 +202,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void AuthorizeDevice_throws_on_non_zero_status()
         {
             Assert.Throws<FetchException>(
-                () => Remote.AuthorizeDevice(Username,
+                () => Client.AuthorizeDevice(Username,
                                              Token,
                                              DeviceId,
                                              DeviceName,
@@ -213,7 +213,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void AuthorizeDevice_throws_on_incorrect_xml()
         {
-            TestOnIncorrectXml(client => Remote.AuthorizeDevice(Username,
+            TestOnIncorrectXml(client => Client.AuthorizeDevice(Username,
                                                                 Token,
                                                                 DeviceId,
                                                                 DeviceName,
@@ -226,7 +226,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetS3Token_makes_post_request()
         {
             var client = SetupClientForPostWithAuth(GetS3TokenResponse);
-            Remote.GetS3Token(Username, Token, DeviceId, Timestamp, client.Object);
+            Client.GetS3Token(Username, Token, DeviceId, Timestamp, client.Object);
 
             client.Verify(x => x.Post(It.Is<string>(s => s == "GetS3Token"),
                                       It.Is<string>(s => s.Contains(DeviceId)),
@@ -239,7 +239,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetS3Token_returns_s3_token()
         {
             var client = SetupClientForPostWithAuth(GetS3TokenResponse);
-            var s3 = Remote.GetS3Token(Username, Token, DeviceId, Timestamp, client.Object);
+            var s3 = Client.GetS3Token(Username, Token, DeviceId, Timestamp, client.Object);
 
             Assert.Equal("ASIAIFIAL3EJEOPJXVCQ", s3.AccessKeyId);
             Assert.Equal("TRuR/+smCDzIqEcFTe+WCbgoNXK5OD0k4CdWhD6d", s3.SecretAccessKey);
@@ -259,7 +259,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetS3Token_throws_on_non_zero_status()
         {
             Assert.Throws<FetchException>(
-                () => Remote.GetS3Token(Username,
+                () => Client.GetS3Token(Username,
                                         Token,
                                         DeviceId,
                                         Timestamp,
@@ -269,7 +269,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void GetS3Token_throws_on_network_error()
         {
-            TestThrowsNetworkError(client => Remote.GetS3Token(Username,
+            TestThrowsNetworkError(client => Client.GetS3Token(Username,
                                                                Token,
                                                                DeviceId,
                                                                Timestamp,
@@ -280,7 +280,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void GetS3Token_throws_on_incorrect_xml()
         {
-            TestOnIncorrectXml(client => Remote.GetS3Token(Username,
+            TestOnIncorrectXml(client => Client.GetS3Token(Username,
                                                            Token,
                                                            DeviceId,
                                                            Timestamp,
@@ -293,14 +293,14 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var s3 = SetupS3(VersionInfo);
 
-            Assert.Equal(Version, Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
+            Assert.Equal(Version, Client.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
         }
 
         [Fact]
         public void FindLatestDbVersion_requests_file_from_s3()
         {
             var s3 = SetupS3(VersionInfo);
-            Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object);
+            Client.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object);
 
             s3.Verify(x => x.GetObjectAsync(
                 It.Is<string>(s => s == Bucket),
@@ -314,7 +314,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var s3 = SetupS3Error<WebException>();
 
             var e = Assert.Throws<FetchException>(
-                () => Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
+                () => Client.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
 
             Assert.Equal(FetchException.FailureReason.NetworkError, e.Reason);
             Assert.IsType<WebException>(e.InnerException);
@@ -326,7 +326,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var s3 = SetupS3Error<AmazonServiceException>();
 
             var e = Assert.Throws<FetchException>(
-                () => Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
+                () => Client.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
 
             Assert.Equal(FetchException.FailureReason.S3Error, e.Reason);
             Assert.IsType<AmazonServiceException>(e.InnerException);
@@ -347,7 +347,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             {
                 var s3 = SetupS3(i);
                 var e = Assert.Throws<FetchException>(
-                    () => Remote.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
+                    () => Client.FindLatestDbVersion(Bucket, ObjectPrefix, s3.Object));
                 Assert.Equal(FetchException.FailureReason.InvalidResponse, e.Reason);
             }
         }
@@ -357,14 +357,14 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var s3 = SetupS3(CompressedDbContent);
 
-            Assert.Equal(DbContent.ToBytes(), Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
+            Assert.Equal(DbContent.ToBytes(), Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
         }
 
         [Fact]
         public void DownloadDb_requests_file_from_s3()
         {
             var s3 = SetupS3(CompressedDbContent);
-            Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object);
+            Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object);
 
             s3.Verify(x => x.GetObjectAsync(
                 It.Is<string>(s => s == Bucket),
@@ -378,7 +378,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var s3 = SetupS3Error<WebException>();
 
             var e = Assert.Throws<FetchException>(
-                () => Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
+                () => Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
 
             Assert.Equal(FetchException.FailureReason.NetworkError, e.Reason);
             Assert.IsType<WebException>(e.InnerException);
@@ -390,7 +390,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var s3 = SetupS3Error<AmazonServiceException>();
 
             var e = Assert.Throws<FetchException>(
-                () => Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
+                () => Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
 
             Assert.Equal(FetchException.FailureReason.S3Error, e.Reason);
             Assert.IsType<AmazonServiceException>(e.InnerException);
@@ -402,7 +402,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var s3 = SetupS3("Not really deflated");
 
             var e = Assert.Throws<FetchException>(
-                () => Remote.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
+                () => Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
             Assert.Equal(FetchException.FailureReason.InvalidResponse, e.Reason);
             Assert.IsType<InvalidDataException>(e.InnerException);
         }
