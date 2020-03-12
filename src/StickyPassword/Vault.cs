@@ -1,8 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
-
 namespace PasswordManagerAccess.StickyPassword
 {
     public sealed class Vault
@@ -18,20 +16,11 @@ namespace PasswordManagerAccess.StickyPassword
                                  string deviceId = DefaultDeviceId,
                                  string deviceName = DefaultDeviceName)
         {
-            // Request the token that is encrypted with the master password.
-            var encryptedToken = Client.GetEncryptedToken(username, deviceId, DateTime.Now);
-
-            // Decrypt the token. This token is now used to authenticate with the server.
-            var token = Util.DecryptToken(username, password, encryptedToken);
-
-            // The device must be registered first.
-            Client.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);
-
-            // Get the S3 credentials to access the database on AWS.
-            var s3Token = Client.GetS3Token(username, token, deviceId, DateTime.Now);
-
             // Download the database.
-            var db = Client.DownloadLatestDb(s3Token);
+            var db = Client.OpenVaultDb(username: username,
+                                        password: password,
+                                        deviceId: deviceId,
+                                        deviceName: deviceName);
 
             // Parse the database, extract and decrypt all the account information.
             var accounts = Parser.ParseAccounts(db, password);

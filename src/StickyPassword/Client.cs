@@ -18,8 +18,26 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.StickyPassword
 {
-    public static class Client
+    internal static class Client
     {
+        public static byte[] OpenVaultDb(string username, string password, string deviceId, string deviceName)
+        {
+            // Request the token that is encrypted with the master password.
+            var encryptedToken = GetEncryptedToken(username, deviceId, DateTime.Now);
+
+            // Decrypt the token. This token is now used to authenticate with the server.
+            var token = Util.DecryptToken(username, password, encryptedToken);
+
+            // The device must be registered first.
+            Client.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);
+
+            // Get the S3 credentials to access the database on AWS.
+            var s3Token = GetS3Token(username, token, deviceId, DateTime.Now);
+
+            // Download the database.
+            return DownloadLatestDb(s3Token);
+        }
+
         // This function requests an encrypted token for the specified username. There's no
         // authentication of any kind at this point. The token is encrypted with the user's
         // master password. The user should decrypt it and supply with the subsequent POST
