@@ -3,6 +3,7 @@
 ## 0.7.0
   - The main library compiles with C# 8 instead of C# 7.3
   - 1Password: support for "server" secrets
+  - ZohoVault: fixed a rare bug with MFA and region redirect
 
 ## 0.6.0
   - Default `ISecureStorage` implementation that does nothing (`NullStorage`)
