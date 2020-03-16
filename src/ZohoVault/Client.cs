@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -190,7 +190,7 @@ namespace PasswordManagerAccess.ZohoVault
                 // Probably the only way to deal with that is either show the actual browser or tell
                 // the user to login manually and dismiss the message.
                 var url = ExtractSwitchToUrl(response.Content);
-                if (url.StartsWith($"https://accounts.zoho.{tld}/tfa/auth"))
+                if (Regex.IsMatch(url, $"^https://accounts.zoho.{tld}/[mt]fa/auth"))
                     response = LoginMfa(response, tld, ui, storage, rest);
                 else
                     throw MakeInvalidResponse($"Unexpected 'switchto' url: '{url}'");

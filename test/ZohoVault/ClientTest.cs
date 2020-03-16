@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using R = PasswordManagerAccess.ZohoVault.Response;
 
 namespace PasswordManagerAccess.Test.ZohoVault
 {
-    // TODO: Add MFA tests
+    // TODO: Add more MFA tests
     public class ClientTest: TestBase
     {
         [Fact]
@@ -177,6 +177,26 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Client.Login(Username, Password, OAuthCookieValue, "eu", null, GetSecureStorage(), flow);
         }
 
+        [Theory]
+        [InlineData("switch-to-mfa-response")]
+        [InlineData("switch-to-tfa-response")]
+        public void Login_recognizes_MFA_redirect(string fixture)
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture(fixture, "txt"), cookies: LoginCookies)
+                .Get("<html>Google Authenticator</html>");
+
+            Exceptions.AssertThrowsCanceledMultiFactor(
+                () => Client.Login(Username,
+                                   Password,
+                                   OAuthCookieValue,
+                                   "eu",
+                                   GetCancellingUi(),
+                                   GetSecureStorage(),
+                                   flow),
+                "canceled by the user");
+        }
+
         [Fact]
         public void Login_throws_on_response_with_failure()
         {
@@ -321,6 +341,14 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var mock = new Mock<ISecureStorage>();
             mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns((string)null);
+
+            return mock.Object;
+        }
+
+        private static Ui GetCancellingUi()
+        {
+            var mock = new Mock<Ui>();
+            mock.Setup(x => x.ProvideGoogleAuthPasscode(0)).Returns(Ui.Passcode.Cancel);
 
             return mock.Object;
         }
