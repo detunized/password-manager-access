@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Net.Http;
@@ -301,6 +301,23 @@ namespace PasswordManagerAccess.Test.OnePassword
                                     "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
             Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", TestData.SessionKey, keychain, rest, null);
+        }
+
+        [Fact]
+        public void GetVaultAccounts_returns_server_secrets()
+        {
+            var rest = new RestFlow().Get(EncryptFixture("get-vault-with-server-secrets-response"));
+            var keychain = new Keychain();
+            keychain.Add(new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e",
+                                    "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex()));
+
+            var accounts = Client.GetVaultAccounts("6xkojw55yh4uo4vtdewghr5boi",
+                                                   TestData.SessionKey,
+                                                   keychain,
+                                                   rest,
+                                                   null);
+
+            Assert.Contains(accounts, x => x.Name == "server-test");
         }
 
         [Fact]

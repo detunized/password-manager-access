@@ -605,7 +605,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static bool ShouldKeepAccount(R.VaultItem account)
         {
             // Reject everything but accounts/logins
-            if (account.TemplateId != AccountTemplateId)
+            if (!SupportedTemplateIds.Contains(account.TemplateId))
                 return false;
 
             // Reject deleted accounts (be conservative, throw only explicitly marked as "Y")
@@ -622,9 +622,22 @@ namespace PasswordManagerAccess.OnePassword
         {
             var overview = Decrypt<R.VaultItemOverview>(account.Overview, keychain);
             var details = Decrypt<R.VaultItemDetails>(account.Details, keychain);
-            var fields = details.Fields ?? NoFields;
 
-            return new Account(id: account.Id,
+            return account.TemplateId switch
+            {
+                LoginTemplateId => ParseLogin(account.Id, overview, details),
+                ServerTemplateId => ParseServer(account.Id, overview, details),
+
+                // This should never happen since we're checking for supported types before.
+                // Just the make the compiler happy.
+                _ => throw new InternalErrorException($"Unsupported vault item type '{account.TemplateId}'"),
+            };
+        }
+
+        internal static Account ParseLogin(string id, R.VaultItemOverview overview, R.VaultItemDetails details)
+        {
+            var fields = details.Fields ?? NoFields;
+            return new Account(id: id,
                                name: overview.Title,
                                username: FindAccountField(fields, "username"),
                                password: FindAccountField(fields, "password"),
@@ -634,9 +647,27 @@ namespace PasswordManagerAccess.OnePassword
                                fields: ExtractFields(details));
         }
 
+        internal static Account ParseServer(string id, R.VaultItemOverview overview, R.VaultItemDetails details)
+        {
+            var fields = details.Sections.SelectMany(x => x.Fields ?? NoSectionFields).ToArray();
+            return new Account(id: id,
+                               name: overview.Title,
+                               username: FindAccountField(fields, "username"),
+                               password: FindAccountField(fields, "password"),
+                               mainUrl: FindAccountField(fields, "URL"),
+                               note: details.Note,
+                               urls: new Account.Url[0],
+                               fields: ExtractFields(details));
+        }
+
         internal static string FindAccountField(R.VaultItemField[] fields, string name)
         {
             return Array.Find(fields, x => x.Designation == name)?.Value ?? "";
+        }
+
+        internal static string FindAccountField(R.VaultItemSectionField[] fields, string name)
+        {
+            return Array.Find(fields, x => x.Name == name)?.Value ?? "";
         }
 
         internal static Account.Url[] ExtractUrls(R.VaultItemOverview overview)
@@ -859,7 +890,15 @@ namespace PasswordManagerAccess.OnePassword
 
         private const string MasterKeyId = "mp";
         private const string RememberMeTokenKey = "remember-me-token";
-        private const string AccountTemplateId = "001";
+
+        private const string LoginTemplateId = "001";
+        private const string ServerTemplateId = "110";
+
+        private static readonly HashSet<string> SupportedTemplateIds = new HashSet<string>
+        {
+            LoginTemplateId,
+            ServerTemplateId
+        };
 
         private static readonly SecondFactor[] SecondFactorPriority = new[]
         {
