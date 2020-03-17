@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.1
+  - Unfinished StickyPassword port removed from the release
+
 ## 0.7.0
   - The main library compiles with C# 8 instead of C# 7.3
   - 1Password: support for "server" secrets
