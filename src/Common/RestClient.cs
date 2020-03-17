@@ -1,4 +1,4 @@
-// Copyright (C) 2012-2019 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -121,7 +121,7 @@ namespace PasswordManagerAccess.Common
 
                 // Set headers
                 foreach (var h in headers)
-                    request.Headers.Add(h.Key, h.Value);
+                    request.Headers.TryAddWithoutValidation(h.Key, h.Value);
 
                 // Set cookies
                 var cookieHeaderValue = string.Join("; ", cookies.Select(x => $"{x.Key}={x.Value}"));
