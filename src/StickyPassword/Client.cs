@@ -20,86 +20,49 @@ namespace PasswordManagerAccess.StickyPassword
 {
     internal static class Client
     {
-        public static byte[] OpenVaultDb(string username, string password, string deviceId, string deviceName)
+        public static byte[] OpenVaultDb(string username,
+                                         string password,
+                                         string deviceId,
+                                         string deviceName,
+                                         IRestTransport transport)
         {
+            var rest = new RestClient(transport, "https://spcb.stickypassword.com/SPCClient/");
+
             // Request the token that is encrypted with the master password.
-            var encryptedToken = GetEncryptedToken(username, deviceId, DateTime.Now);
+            var encryptedToken = GetEncryptedToken(username, deviceId, DateTime.Now, rest);
 
             // Decrypt the token. This token is now used to authenticate with the server.
             var token = Util.DecryptToken(username, password, encryptedToken);
 
             // The device must be registered first.
-            Client.AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now);
+            AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now, rest);
 
             // Get the S3 credentials to access the database on AWS.
-            var s3Token = GetS3Token(username, token, deviceId, DateTime.Now);
+            var s3Token = GetS3Token(username, token, deviceId, DateTime.Now, rest);
 
             // Download the database.
             return DownloadLatestDb(s3Token);
-        }
-
-        // This function requests an encrypted token for the specified username. There's no
-        // authentication of any kind at this point. The token is encrypted with the user's
-        // master password. The user should decrypt it and supply with the subsequent POST
-        // requests. If the password is incorrect, the following calls will be rejected with
-        // the 401 code and the database with fail to download.
-        public static byte[] GetEncryptedToken(string username, string deviceId, DateTime timestamp)
-        {
-            return GetEncryptedToken(username, deviceId, timestamp, new HttpClient());
-        }
-
-        // The device id and the device name identify the device in use. It's not 100% clear
-        // what the id and the name are for. Why not just one? The id is a random string of bytes.
-        // The name is the model of the device on Android. The device must be registered before
-        // it could be used to download the database. It doesn't return any information back from
-        // the server.
-        public static void AuthorizeDevice(string username,
-                                           byte[] token,
-                                           string deviceId,
-                                           string deviceName,
-                                           DateTime timestamp)
-        {
-            AuthorizeDevice(username, token, deviceId, deviceName, timestamp, new HttpClient());
-        }
-
-        // This function requests the AWS S3 access token and some additional info that
-        // is needed to download the database info and the database itself.
-        public static S3Token GetS3Token(string username,
-                                         byte[] token,
-                                         string deviceId,
-                                         DateTime timestamp)
-        {
-            return GetS3Token(username, token, deviceId, timestamp, new HttpClient());
-        }
-
-        // This functions finds out what the latest version of the database is and downloads
-        // it from S3.
-        public static byte[] DownloadLatestDb(S3Token s3Token)
-        {
-            using var s3 = new AmazonS3Client(s3Token.AccessKeyId,
-                                              s3Token.SecretAccessKey,
-                                              s3Token.SessionToken,
-                                              RegionEndpoint.USEast1);
-            return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
         }
 
         //
         // Internal (accessed by the tests)
         //
 
+        // This function requests an encrypted token for the specified username. There's no
+        // authentication of any kind at this point. The token is encrypted with the user's
+        // master password. The user should decrypt it and supply with the subsequent POST
+        // requests. If the password is incorrect, the following calls will be rejected with
+        // the 401 code and the database with fail to download.
         internal static byte[] GetEncryptedToken(string username,
                                                  string deviceId,
                                                  DateTime timestamp,
-                                                 IHttpClient client)
+                                                 RestClient rest)
         {
-            var response = Post(client,
+            var response = Post(rest,
                                 "GetCrpToken",
                                 deviceId,
                                 timestamp,
-                                new Dictionary<string, string>
-                                {
-                                    {"uaid", username},
-                                });
+                                new Dictionary<string, object> { ["uaid"] = username });
 
             switch (response.Status)
             {
@@ -113,23 +76,25 @@ namespace PasswordManagerAccess.StickyPassword
             }
         }
 
+        // The device id and the device name identify the device in use. It's not 100% clear
+        // what the id and the name are for. Why not just one? The id is a random string of bytes.
+        // The name is the model of the device on Android. The device must be registered before
+        // it could be used to download the database. It doesn't return any information back from
+        // the server.
         internal static void AuthorizeDevice(string username,
                                              byte[] token,
                                              string deviceId,
                                              string deviceName,
                                              DateTime timestamp,
-                                             IHttpClient client)
+                                             RestClient rest)
         {
-            var response = Post(client,
+            var response = Post(rest,
                                 "DevAuth",
                                 deviceId,
-                                username,
-                                token,
                                 timestamp,
-                                new Dictionary<string, string>
-                                {
-                                    {"hid", deviceName}
-                                });
+                                new Dictionary<string, object> { ["hid"] = deviceName },
+                                username,
+                                token);
 
 
             switch (response.Status)
@@ -143,31 +108,44 @@ namespace PasswordManagerAccess.StickyPassword
             }
         }
 
+        // This function requests the AWS S3 access token and some additional info that
+        // is needed to download the database info and the database itself.
         internal static S3Token GetS3Token(string username,
                                            byte[] token,
                                            string deviceId,
                                            DateTime timestamp,
-                                           IHttpClient client)
+                                           RestClient rest)
         {
-            var response = Post(client,
+            var response = Post(rest,
                                 "GetS3Token",
                                 deviceId,
-                                username,
-                                token,
                                 timestamp,
-                                new Dictionary<string, string>());
+                                new Dictionary<string, object>(),
+                                username,
+                                token);
 
             if (response.Status != "0")
                 throw CreateException("retrieve the S3 token", response);
 
             return new S3Token(
-                    accessKeyId: GetS3TokenItem(response, "AccessKeyId"),
+                accessKeyId: GetS3TokenItem(response, "AccessKeyId"),
                 secretAccessKey: GetS3TokenItem(response, "SecretAccessKey"),
-                   sessionToken: GetS3TokenItem(response, "SessionToken"),
-                 expirationDate: GetS3TokenItem(response, "DateExpiration"),
-                     bucketName: GetS3TokenItem(response, "BucketName"),
-                   objectPrefix: GetS3TokenItem(response, "ObjectPrefix")
+                sessionToken: GetS3TokenItem(response, "SessionToken"),
+                expirationDate: GetS3TokenItem(response, "DateExpiration"),
+                bucketName: GetS3TokenItem(response, "BucketName"),
+                objectPrefix: GetS3TokenItem(response, "ObjectPrefix")
             );
+        }
+
+        // This functions finds out what the latest version of the database is and downloads
+        // it from S3.
+        internal static byte[] DownloadLatestDb(S3Token s3Token)
+        {
+            using var s3 = new AmazonS3Client(s3Token.AccessKeyId,
+                                              s3Token.SecretAccessKey,
+                                              s3Token.SessionToken,
+                                              RegionEndpoint.USEast1);
+            return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
         }
 
         internal static byte[] DownloadLatestDb(string bucketName, string objectPrefix, IAmazonS3 s3)
@@ -262,38 +240,51 @@ namespace PasswordManagerAccess.StickyPassword
                                       $"Failed to {operation} (error: {xml.Status})");
         }
 
-        private static XmlResponse Post(IHttpClient client,
+        private static XmlResponse Post(RestClient rest,
                                         string endpoint,
                                         string deviceId,
                                         DateTime timestamp,
-                                        Dictionary<string, string> parameters)
+                                        Dictionary<string, object> parameters,
+                                        string username = null,
+                                        byte[] token = null)
         {
-            return HandlePostResponse(() => client.Post(endpoint,
-                                                        GetUserAgent(deviceId),
-                                                        timestamp,
-                                                        parameters));
-        }
+            var headers = new Dictionary<string, string>()
+            {
+                ["Accept"] = "application/xml",
+                ["Date"] = timestamp.ToUniversalTime().ToString("ddd, dd MMM yyyy HH:mm:ss 'GMT'"),
+                ["User-Agent"] = GetUserAgent(deviceId),
+            };
 
-        private static XmlResponse Post(IHttpClient client,
-                                        string endpoint,
-                                        string deviceId,
-                                        string username,
-                                        byte[] token,
-                                        DateTime timestamp,
-                                        Dictionary<string, string> parameters)
-        {
-            return HandlePostResponse(() => client.Post(endpoint,
-                                                        GetUserAgent(deviceId),
-                                                        GetAuthorizationHeader(username, token),
-                                                        timestamp,
-                                                        parameters));
+            if (!username.IsNullOrEmpty())
+                headers["Authorization"] = GetAuthorizationHeader(username, token);
+
+            var response = rest.PostForm(endpoint, parameters, headers);
+            if (response.IsSuccessful)
+                return HandlePostResponse(response.Content);
+
+            if (response.IsNetworkError)
+                throw new NetworkErrorException("Network error has occurred", response.Error);
+
+            // Special handling for 401. There's no other way to tell if the password is correct.
+            // TODO: Write a test for this path. Now it should be easy once we transitioned away
+            //       from HttpWebResponse.
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new BadCredentialsException("The password is incorrect");
+
+            throw new InternalErrorException(
+                $"HTTP request to '{response.RequestUri}' failed with status {response.StatusCode}");
         }
 
         private static XmlResponse HandlePostResponse(Func<string> post)
         {
+            return HandlePostResponse(post());
+        }
+
+        private static XmlResponse HandlePostResponse(string response)
+        {
             try
             {
-                return XmlResponse.Parse(post());
+                return XmlResponse.Parse(response);
             }
             catch (WebException e)
             {

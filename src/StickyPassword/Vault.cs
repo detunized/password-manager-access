@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Common;
+
 namespace PasswordManagerAccess.StickyPassword
 {
     public sealed class Vault
@@ -17,10 +19,12 @@ namespace PasswordManagerAccess.StickyPassword
                                  string deviceName = DefaultDeviceName)
         {
             // Download the database.
+            using var transport = new RestTransport();
             var db = Client.OpenVaultDb(username: username,
                                         password: password,
                                         deviceId: deviceId,
-                                        deviceName: deviceName);
+                                        deviceName: deviceName,
+                                        transport: transport);
 
             // Parse the database, extract and decrypt all the account information.
             var accounts = Parser.ParseAccounts(db, password);
