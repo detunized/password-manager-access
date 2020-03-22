@@ -1,30 +1,33 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Common;
+
 namespace PasswordManagerAccess.StickyPassword
 {
-    public class S3Token
+    internal class S3Token
     {
+        public readonly S3.Credentials Credentials;
+        public readonly string BucketName;
+        public readonly string ObjectPrefix;
+
         public S3Token(string accessKeyId,
                        string secretAccessKey,
-                       string sessionToken,
-                       string expirationDate,
+                       string securityToken,
                        string bucketName,
-                       string objectPrefix)
+                       string objectPrefix) : this(new S3.Credentials(accessKeyId: accessKeyId,
+                                                                      secretAccessKey: secretAccessKey,
+                                                                      securityToken: securityToken),
+                                                   bucketName,
+                                                   objectPrefix)
         {
-            AccessKeyId = accessKeyId;
-            SecretAccessKey = secretAccessKey;
-            SessionToken = sessionToken;
-            ExpirationDate = expirationDate;
+        }
+
+        public S3Token(S3.Credentials credentials, string bucketName, string objectPrefix)
+        {
+            Credentials = credentials;
             BucketName = bucketName;
             ObjectPrefix = objectPrefix;
         }
-
-        public string AccessKeyId { get; private set; }
-        public string SecretAccessKey { get; private set; }
-        public string SessionToken { get; private set; }
-        public string ExpirationDate { get; private set; }
-        public string BucketName { get; private set; }
-        public string ObjectPrefix { get; private set; }
     }
 }

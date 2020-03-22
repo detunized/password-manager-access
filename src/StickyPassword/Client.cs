@@ -10,10 +10,6 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
-using Amazon;
-using Amazon.Runtime;
-using Amazon.S3;
-using Amazon.S3.Model;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.StickyPassword
@@ -41,7 +37,7 @@ namespace PasswordManagerAccess.StickyPassword
             var s3Token = GetS3Token(username, token, deviceId, DateTime.Now, rest);
 
             // Download the database.
-            return DownloadLatestDb(s3Token);
+            return DownloadLatestDb(s3Token, transport);
         }
 
         //
@@ -130,8 +126,7 @@ namespace PasswordManagerAccess.StickyPassword
             return new S3Token(
                 accessKeyId: GetS3TokenItem(response, "AccessKeyId"),
                 secretAccessKey: GetS3TokenItem(response, "SecretAccessKey"),
-                sessionToken: GetS3TokenItem(response, "SessionToken"),
-                expirationDate: GetS3TokenItem(response, "DateExpiration"),
+                securityToken: GetS3TokenItem(response, "SessionToken"),
                 bucketName: GetS3TokenItem(response, "BucketName"),
                 objectPrefix: GetS3TokenItem(response, "ObjectPrefix")
             );
@@ -139,27 +134,21 @@ namespace PasswordManagerAccess.StickyPassword
 
         // This functions finds out what the latest version of the database is and downloads
         // it from S3.
-        internal static byte[] DownloadLatestDb(S3Token s3Token)
+        internal static byte[] DownloadLatestDb(S3Token token, IRestTransport transport)
         {
-            using var s3 = new AmazonS3Client(s3Token.AccessKeyId,
-                                              s3Token.SecretAccessKey,
-                                              s3Token.SessionToken,
-                                              RegionEndpoint.USEast1);
-            return DownloadLatestDb(s3Token.BucketName, s3Token.ObjectPrefix, s3);
+            return DownloadLatestDb(token, new RestClient(transport));
         }
 
-        internal static byte[] DownloadLatestDb(string bucketName, string objectPrefix, IAmazonS3 s3)
+        internal static byte[] DownloadLatestDb(S3Token token, RestClient rest)
         {
-            var version = FindLatestDbVersion(bucketName, objectPrefix, s3);
-            return DownloadDb(version, bucketName, objectPrefix, s3);
+            var version = FindLatestDbVersion(token, rest);
+            return DownloadDb(version, token, rest);
         }
 
-        internal static string FindLatestDbVersion(string bucketName,
-                                                   string objectPrefix,
-                                                   IAmazonS3 s3)
+        internal static string FindLatestDbVersion(S3Token token, RestClient rest)
         {
-            using var response = GetS3Object(s3, bucketName, $"{objectPrefix}1/spc.info", "the database info");
-            var info = response.ResponseStream.ReadAll().ToUtf8();
+            // TODO: Sort out binary/text Get
+            var info = GetS3Object("1/spc.info", token, "the database info", rest).ToUtf8();
 
             var re = new Regex(@"VERSION\s+(\d+)");
             var m = re.Match(info);
@@ -171,13 +160,10 @@ namespace PasswordManagerAccess.StickyPassword
             return m.Groups[1].Value;
         }
 
-        internal static byte[] DownloadDb(string version,
-                                          string bucketName,
-                                          string objectPrefix,
-                                          IAmazonS3 s3)
+        internal static byte[] DownloadDb(string version, S3Token token, RestClient rest)
         {
-            using var response = GetS3Object(s3, bucketName, $"{objectPrefix}1/db_{version}.dmp", "the database");
-            return Inflate(response.ResponseStream, "the database");
+            var db = GetS3Object($"1/db_{version}.dmp", token, "the database", rest);
+            return Inflate(db, "the database");
         }
 
         //
@@ -318,27 +304,23 @@ namespace PasswordManagerAccess.StickyPassword
             return xml.Get("/SpcResponse/GetS3TokenResponse/" + name);
         }
 
-        private static GetObjectResponse GetS3Object(IAmazonS3 s3,
-                                                     string bucketName,
-                                                     string filename,
-                                                     string name)
+        private static byte[] GetS3Object(string filename, S3Token token, string name, RestClient rest)
         {
             try
             {
-                return s3.GetObjectAsync(bucketName, filename).GetAwaiter().GetResult();
+                return S3.GetObject(token.BucketName, token.ObjectPrefix + filename, token.Credentials, rest);
             }
-            catch (WebException e)
+            catch (NetworkErrorException e)
             {
-                throw new FetchException(FetchException.FailureReason.NetworkError,
-                                         "Failed to download " + name,
-                                         e);
+                // TODO: Handle errors properly
+                throw e;
             }
-            catch (AmazonServiceException e)
-            {
-                throw new FetchException(FetchException.FailureReason.S3Error,
-                                         "Failed to download " + name,
-                                         e);
-            }
+        }
+
+        private static byte[] Inflate(byte[] bytes, string name)
+        {
+            using var inputStream = new MemoryStream(bytes, false);
+            return Inflate(inputStream, name);
         }
 
         private static byte[] Inflate(Stream s, string name)
@@ -350,7 +332,8 @@ namespace PasswordManagerAccess.StickyPassword
 
             try
             {
-                return new DeflateStream(s, CompressionMode.Decompress).ReadAll();
+                using var deflateStream = new DeflateStream(s, CompressionMode.Decompress);
+                return deflateStream.ReadAll();
             }
             catch (InvalidDataException e)
             {

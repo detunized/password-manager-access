@@ -13,22 +13,15 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var accessKeyId = "accessKeyId";
             var secretAccessKey = "secretAccessKey";
-            var sessionToken = "sessionToken";
-            var expirationDate = "expirationDate";
+            var securityToken = "securityToken";
             var bucketName = "bucketName";
             var objectPrefix = "objectPrefix";
 
-            var token = new S3Token(accessKeyId,
-                                    secretAccessKey,
-                                    sessionToken,
-                                    expirationDate,
-                                    bucketName,
-                                    objectPrefix);
+            var token = new S3Token(accessKeyId, secretAccessKey, securityToken, bucketName, objectPrefix);
 
-            Assert.Equal(accessKeyId, token.AccessKeyId);
-            Assert.Equal(secretAccessKey, token.SecretAccessKey);
-            Assert.Equal(sessionToken, token.SessionToken);
-            Assert.Equal(expirationDate, token.ExpirationDate);
+            Assert.Equal(accessKeyId, token.Credentials.AccessKeyId);
+            Assert.Equal(secretAccessKey, token.Credentials.SecretAccessKey);
+            Assert.Equal(securityToken, token.Credentials.SecurityToken);
             Assert.Equal(bucketName, token.BucketName);
             Assert.Equal(objectPrefix, token.ObjectPrefix);
         }

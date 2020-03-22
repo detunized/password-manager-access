@@ -47,9 +47,9 @@ namespace PasswordManagerAccess.Common
             var rootPath = path.StartsWith("/") ? path : '/' + path;
             var headers = MakeHeaders(host, rootPath, credentials, timestamp);
 
-            var response = rest.Get($"https://{host}{rootPath}", headers);
+            var response = rest.GetBinary($"https://{host}{rootPath}", headers);
             if (response.IsSuccessful)
-                return response.Content.ToBytes();
+                return response.Content;
 
             // TODO: Throw a proper error!
             throw new InternalErrorException("Failed to get an S3 object", response.Error);
