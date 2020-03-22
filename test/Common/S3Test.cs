@@ -8,22 +8,21 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
 {
-    // Generate a proper test case with AWS SDK
     public class S3Test
     {
         [Fact]
         public void GetObject_returns_bytes()
         {
             var flow = new RestFlow().Get("bytes");
-            var result = S3.GetObject("bucket", "path", Credentials, DateTime.Now, flow);
+            var result = S3.GetObject("bucket", "path", Credentials, Timestamp, flow);
 
             Assert.Equal("bytes", result.ToUtf8());
         }
 
         [Fact]
-        public void MakeHeaders_returns_headers()
+        public void MakeHeaders_returns_correct_headers()
         {
-            var headers = S3.MakeHeaders(Host, "path/to/object", Credentials, Timestamp);
+            var headers = S3.MakeHeaders(Host, RootPath, Credentials, Timestamp);
 
             var names = headers.Keys;
             Assert.Equal(6, names.Count);
@@ -33,6 +32,25 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Contains("X-Amz-Content-SHA256", names);
             Assert.Contains("X-Amz-Date", names);
             Assert.Contains("X-Amz-Security-Token", names);
+
+            // Generated with AWS SDK
+            Assert.Equal("AWS4-HMAC-SHA256 Credential=ASIASIFWL2FI3L4O3POJ/20200322/us-east-1/s3/aws4_request, Signed" +
+                         "Headers=host;user-agent;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=15c" +
+                         "71697075d159912e92afd149cc537ef2ded3f1421c315010ae8e4c03c4031",
+                         headers["Authorization"]);
+
+            Assert.Equal(Host, headers["Host"]);
+
+            Assert.Equal("aws-sdk-dotnet-45/3.3.110.30 aws-sdk-dotnet-core/3.3.104.32 .NET_Runtime/4.0 .NET_Framework" +
+                         "/4.0 OS/Microsoft_Windows_NT_6.2.9200.0 ClientAsync",
+                         headers["User-Agent"]);
+
+            Assert.Equal("20200322T131438Z", headers["X-Amz-Date"]);
+
+            Assert.Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                         headers["X-Amz-Content-SHA256"]);
+
+            Assert.Equal(Credentials.SecurityToken, headers["X-Amz-Security-Token"]);
         }
 
         [Fact]
@@ -94,15 +112,23 @@ namespace PasswordManagerAccess.Test.Common
         // Data
         //
 
-        private const string Host = "host.s3.aws";
-        private const string Path = "path/to/object";
-        private const string RootPath = "/path/to/object";
-        private const string UserAgent = "user-agent";
+        private const string Bucket = "spclouddata";
+        private const string Host = Bucket + ".s3.amazonaws.com";
+        private const string Path = "d31cc798-93cc-426b-b561-96590622720e/1/spc.info";
+        private const string RootPath = "/" + Path;
 
-        private static readonly S3.Credentials Credentials = new S3.Credentials("access-key-id",
-                                                                                "secret-access-key",
-                                                                                "security-token");
+        private static readonly S3.Credentials Credentials = new S3.Credentials(
+            accessKeyId: "ASIASIFWL2FI3L4O3POJ",
+            secretAccessKey: "yEODc90fX8vxx2XMrzjhlyggzk+HeVQn13r9UBnZ",
+            securityToken: "FwoGZXIvYXdzEBYaDBS3n1KkrWqWp560CCLbAvdGQLio1lrrl1y9VQlopjJY15iHRIRGxFNPZDj8Yy8qiKiGKtPE2" +
+                           "BoYOxxSxexcFcEKPnT4Xtyrwe80SCEIei2NYhszAd4UO/EIUY+Kffm/y4zktCnMScAoTP1jPOZcwoNxCSFVrBj5gn" +
+                           "A6QH10Q6GXy1QUObVfH8nnAhbFN1iV+tsKgK374hRBGxG/duswF+nZRRa4h8PL+NcfxLpHG26rytXi/IerWswxm36" +
+                           "uxc0PiIGtortVjsOIX0+Lc9ey/EH85a+QQOJeGe6ks0ML74EKS3uyWhQKGjsk9o8H23UvkW1Wq9qT3NnlGIgqMmbT" +
+                           "jtEmPhswtQkv6DPgKRViSPfi15nIG43zGKaht6Bk9agbrlESd7/jnYgdg016OMyNJybPbTXjegm6hlxqEoTC1vH8Y" +
+                           "tKCfwBYPD9HP3rhBAwdaZiJ98soG7st5l87rOaC7VNh/jMATliG9gHtKJ3m0vMFMilLyonsMTJnLGRleziy2lZOGH" +
+                           "ONkB22MEw8haKj441yH3MCbEKxV+GHZg==");
 
-        private static readonly DateTime Timestamp = new DateTime(2020, 12, 11);
+        // X-Amz-Date: 20200322T131438Z
+        private static readonly DateTime Timestamp = new DateTime(2020, 03, 22, 13, 14, 38, DateTimeKind.Utc);
     }
 }
