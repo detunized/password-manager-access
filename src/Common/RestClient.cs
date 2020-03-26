@@ -24,12 +24,49 @@ namespace PasswordManagerAccess.Common
     internal class RestResponse
     {
         public HttpStatusCode StatusCode { get; internal set; }
-        public string Content { get; internal set; }
-        public byte[] BinaryContent { get; internal set; }
         public HttpHeaders Headers { get; internal set; }
         public Exception Error { get; internal set; }
         public Dictionary<string, string> Cookies { get; internal set; }
         public Uri RequestUri { get; internal set; }
+
+        public bool IsText => Content != null;
+        public bool IsBinary => BinaryContent != null;
+
+        public string Content
+        {
+            get
+            {
+                if (_textContent == null)
+                    throw new InternalErrorException("Text content is not available");
+
+                return _textContent;
+            }
+
+            internal set
+            {
+                 _textContent = value;
+                 _binaryContent = null;
+            }
+        }
+
+        public string TextContent => Content;
+
+        public byte[] BinaryContent
+        {
+            get
+            {
+                if (_binaryContent == null)
+                    throw new InternalErrorException("Binary content is not available");
+
+                return _binaryContent;
+            }
+
+            internal set
+            {
+                _textContent = null;
+                _binaryContent = value;
+            }
+        }
 
         // On HTTP 2xx and no exceptions
         public virtual bool IsSuccessful => IsHttpOk && !HasError;
@@ -44,6 +81,13 @@ namespace PasswordManagerAccess.Common
         public bool HasError => Error != null;
 
         public bool IsNetworkError => HasError && Error is HttpRequestException;
+
+        //
+        // Private
+        //
+
+        private string _textContent;
+        private byte[] _binaryContent;
     }
 
     internal class RestResponse<T>: RestResponse
@@ -78,6 +122,13 @@ namespace PasswordManagerAccess.Common
     // IRestTransport
     //
 
+    internal enum ContentMode
+    {
+        Auto,
+        ForceText,
+        ForceBinary,
+    }
+
     // TODO: Maybe the transport should not handle the redirects
     internal interface IRestTransport: IDisposable
     {
@@ -87,7 +138,8 @@ namespace PasswordManagerAccess.Common
                          ReadOnlyHttpHeaders headers,
                          ReadOnlyHttpCookies cookies,
                          int maxRedirectCount,
-                         RestResponse allocatedResult);
+                         RestResponse allocatedResult,
+                         ContentMode contentMode = ContentMode.Auto);
     }
 
     //
@@ -110,7 +162,8 @@ namespace PasswordManagerAccess.Common
                                 ReadOnlyHttpHeaders headers,
                                 ReadOnlyHttpCookies cookies,
                                 int maxRedirectCount,
-                                RestResponse allocatedResult)
+                                RestResponse allocatedResult,
+                                ContentMode contentMode)
         {
             allocatedResult.RequestUri = uri;
 
@@ -139,7 +192,7 @@ namespace PasswordManagerAccess.Common
                 // Redirect if still possible (HTTP Status 3XX)
                 if ((int)response.StatusCode / 100 == 3 && maxRedirectCount > 0)
                 {
-                    // Uri ctor should take care of both abosulte and relative redirects. There have
+                    // Uri ctor should take care of both absolute and relative redirects. There have
                     // been problems with Android in the past.
                     // (see https://github.com/detunized/password-manager-access/issues/21)
                     var newUri = new Uri(uri, response.Headers.Location);
@@ -151,7 +204,8 @@ namespace PasswordManagerAccess.Common
                                 headers,
                                 allCookies,
                                 maxRedirectCount - 1,
-                                allocatedResult);
+                                allocatedResult,
+                                contentMode);
                     return;
                 }
 
@@ -159,18 +213,18 @@ namespace PasswordManagerAccess.Common
                 allocatedResult.StatusCode = response.StatusCode;
                 allocatedResult.Cookies = allCookies;
 
-                // Special handling for binary content when "Content-Type" is set to "application/octet-stream"
-                if (response.Content.Headers.TryGetValues("Content-Type", out var contentType) &&
-                    contentType.Contains("application/octet-stream"))
+                var binary = contentMode switch
                 {
+                    ContentMode.Auto => IsBinaryResponse(response),
+                    ContentMode.ForceText => false,
+                    ContentMode.ForceBinary => true,
+                    _ => throw new InternalErrorException($"Invalid content mode {contentMode}")
+                };
+
+                if (binary)
                     allocatedResult.BinaryContent = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
-                    allocatedResult.Content = "";
-                }
                 else
-                {
-                    allocatedResult.BinaryContent = new byte[0];
                     allocatedResult.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                }
 
                 // TODO: Here we're ignoring possible duplicated headers. See if we need to preserve those!
                 allocatedResult.Headers = response.Headers.ToDictionary(x => x.Key,
@@ -183,7 +237,7 @@ namespace PasswordManagerAccess.Common
         }
 
         //
-        // Internal
+        // Private
         //
 
         private static Dictionary<string, string> ParseResponseCookies(HttpResponseMessage response, Uri uri)
@@ -212,9 +266,12 @@ namespace PasswordManagerAccess.Common
                 .ToDictionary(x => x.Name, x => x.Value);
         }
 
-        //
-        // Private
-        //
+        private static bool IsBinaryResponse(HttpResponseMessage response)
+        {
+            // When "Content-Type" is present and is set to "application/octet-stream" it's binary
+            return response.Content.Headers.TryGetValues("Content-Type", out var contentType) &&
+                   contentType.Contains("application/octet-stream");
+        }
 
         private RestTransport(HttpClient http)
         {
@@ -315,14 +372,23 @@ namespace PasswordManagerAccess.Common
         // GET
         //
 
-        public RestResponse Get(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse Get(string endpoint,
+                                HttpHeaders headers = null,
+                                HttpCookies cookies = null,
+                                ContentMode contentMode = ContentMode.Auto)
         {
             return MakeRequest(endpoint,
                                HttpMethod.Get,
                                null,
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
-                               MaxRedirects);
+                               MaxRedirects,
+                               contentMode);
+        }
+
+        public RestResponse GetBinary(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            return Get(endpoint, headers, cookies, ContentMode.ForceBinary);
         }
 
         public RestResponse<T> Get<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
@@ -343,14 +409,16 @@ namespace PasswordManagerAccess.Common
         public RestResponse PostJson(string endpoint,
                                      PostParameters parameters,
                                      HttpHeaders headers = null,
-                                     HttpCookies cookies = null)
+                                     HttpCookies cookies = null,
+                                     ContentMode contentMode = ContentMode.Auto)
         {
             return MakeRequest(endpoint,
                                HttpMethod.Post,
                                ToJsonContent(parameters),
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
-                               MaxRedirects);
+                               MaxRedirects,
+                               contentMode);
         }
 
         public RestResponse<T> PostJson<T>(string endpoint,
@@ -374,7 +442,8 @@ namespace PasswordManagerAccess.Common
         public RestResponse PostForm(string endpoint,
                                      PostParameters parameters,
                                      HttpHeaders headers = null,
-                                     HttpCookies cookies = null)
+                                     HttpCookies cookies = null,
+                                     ContentMode contentMode = ContentMode.Auto)
         {
             return MakeRequest(endpoint,
                                HttpMethod.Post,
@@ -382,6 +451,7 @@ namespace PasswordManagerAccess.Common
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
                                MaxRedirects,
+                               contentMode,
                                () => new RestResponse());
         }
 
@@ -403,14 +473,18 @@ namespace PasswordManagerAccess.Common
         // PUT
         //
 
-        public RestResponse Put(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse Put(string endpoint,
+                                HttpHeaders headers = null,
+                                HttpCookies cookies = null,
+                                ContentMode contentMode = ContentMode.Auto)
         {
             return MakeRequest(endpoint,
                                HttpMethod.Put,
                                null,
                                headers ?? NoHeaders,
                                cookies ?? NoCookies,
-                               MaxRedirects);
+                               MaxRedirects,
+                               contentMode);
         }
 
         public RestResponse<T> Put<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
@@ -460,6 +534,7 @@ namespace PasswordManagerAccess.Common
                                        headers,
                                        cookies,
                                        maxRedirectCount,
+                                       ContentMode.ForceText,
                                        () => new RestResponse<T>());
             if (response.HasError)
                 return response;
@@ -482,7 +557,8 @@ namespace PasswordManagerAccess.Common
                                          HttpContent content,
                                          HttpHeaders headers,
                                          HttpCookies cookies,
-                                         int maxRedirectCount)
+                                         int maxRedirectCount,
+                                         ContentMode contentMode)
         {
             return MakeRequest(endpoint,
                                method,
@@ -490,6 +566,7 @@ namespace PasswordManagerAccess.Common
                                headers,
                                cookies,
                                maxRedirectCount,
+                               contentMode,
                                () => new RestResponse());
         }
 
@@ -499,6 +576,7 @@ namespace PasswordManagerAccess.Common
                                                  HttpHeaders headers,
                                                  HttpCookies cookies,
                                                  int maxRedirectCount,
+                                                 ContentMode contentMode,
                                                  Func<TResponse> responseFactory) where TResponse : RestResponse
         {
             return MakeRequest(MakeAbsoluteUri(endpoint),
@@ -507,6 +585,7 @@ namespace PasswordManagerAccess.Common
                                headers,
                                cookies,
                                maxRedirectCount,
+                               contentMode,
                                responseFactory);
         }
 
@@ -516,7 +595,8 @@ namespace PasswordManagerAccess.Common
                                                  HttpHeaders headers,
                                                  HttpCookies cookies,
                                                  int maxRedirectCount,
-                                                 Func<TResponse> responseFactory) where TResponse: RestResponse
+                                                 ContentMode contentMode,
+                                                 Func<TResponse> responseFactory) where TResponse : RestResponse
         {
             var response = responseFactory();
             Transport.MakeRequest(uri,
@@ -525,7 +605,8 @@ namespace PasswordManagerAccess.Common
                                   Signer.Sign(uri, method, DefaultHeaders.Merge(headers)),
                                   DefaultCookies.Merge(cookies),
                                   maxRedirectCount,
-                                  response);
+                                  response,
+                                  contentMode);
 
             return response;
         }

@@ -215,7 +215,8 @@ namespace PasswordManagerAccess.Test
                                         IReadOnlyDictionary<string, string> headers,
                                         IReadOnlyDictionary<string, string> cookies,
                                         int maxRedirectCount,
-                                        RestResponse allocatedResult)
+                                        RestResponse allocatedResult,
+                                        ContentMode contentMode)
         {
             var r = AdvanceToNextResponse();
             var e = r.Expected;
@@ -252,12 +253,24 @@ namespace PasswordManagerAccess.Test
 
             // Response
             allocatedResult.StatusCode = r.Status;
-            allocatedResult.Content = r.Content;
-            allocatedResult.BinaryContent = new byte[0]; // TODO: Add support for binary responses
             allocatedResult.Headers = new Dictionary<string, string>(); // TODO: Add support for response headers
             allocatedResult.Error = r.Error;
             allocatedResult.Cookies = r.Cookies;
             allocatedResult.RequestUri = uri;
+
+            // TODO: Add proper support for binary responses
+            switch (contentMode)
+            {
+            case ContentMode.Auto:
+            case ContentMode.ForceText:
+                allocatedResult.Content = r.Content;
+                break;
+            case ContentMode.ForceBinary:
+                allocatedResult.BinaryContent = r.Content.ToBytes();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(contentMode), contentMode, null);
+            }
         }
 
         void IDisposable.Dispose()
