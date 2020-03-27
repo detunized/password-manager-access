@@ -167,11 +167,11 @@ namespace PasswordManagerAccess.RoboForm
             var baseUrl = ApiBaseUrl(username);
             var url = $"{baseUrl}/user-data.rfo?_1337";
 
-            var response = rest.Get(url, cookies: session.Cookies);
+            var response = rest.GetBinary(url, cookies: session.Cookies);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            return response.BinaryContent;
+            return response.Content;
         }
 
         internal static Dictionary<string, string> ScramHeaders(string authorization, OtpOptions otp)

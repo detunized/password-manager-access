@@ -242,7 +242,7 @@ namespace PasswordManagerAccess.Dashlane
             throw MakeSpecializedError(response);
         }
 
-        private static void CheckForErrors(RestResponse response)
+        private static void CheckForErrors(RestResponse<string> response)
         {
             var json = ParseJson(response);
             var error = json.SelectToken("error");
@@ -268,7 +268,7 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        private static JObject ParseJson(RestResponse response)
+        private static JObject ParseJson(RestResponse<string> response)
         {
             try
             {

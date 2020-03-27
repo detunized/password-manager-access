@@ -209,14 +209,13 @@ namespace PasswordManagerAccess.Test
             return GetLastResponse().Expected;
         }
 
-        void IRestTransport.MakeRequest(Uri uri,
-                                        HttpMethod method,
-                                        HttpContent content,
-                                        IReadOnlyDictionary<string, string> headers,
-                                        IReadOnlyDictionary<string, string> cookies,
-                                        int maxRedirectCount,
-                                        RestResponse allocatedResult,
-                                        ContentMode contentMode)
+        void IRestTransport.MakeRequest<TContent>(Uri uri,
+                                                  HttpMethod method,
+                                                  HttpContent content,
+                                                  IReadOnlyDictionary<string, string> headers,
+                                                  IReadOnlyDictionary<string, string> cookies,
+                                                  int maxRedirectCount,
+                                                  RestResponse<TContent> allocatedResult)
         {
             var r = AdvanceToNextResponse();
             var e = r.Expected;
@@ -259,17 +258,16 @@ namespace PasswordManagerAccess.Test
             allocatedResult.RequestUri = uri;
 
             // TODO: Add proper support for binary responses
-            switch (contentMode)
+            switch (allocatedResult)
             {
-            case ContentMode.Auto:
-            case ContentMode.ForceText:
-                allocatedResult.Content = r.Content;
+            case RestResponse<string> text:
+                text.Content = r.Content;
                 break;
-            case ContentMode.ForceBinary:
-                allocatedResult.BinaryContent = r.Content.ToBytes();
+            case RestResponse<byte[]> text:
+                text.Content = r.Content.ToBytes();
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(contentMode), contentMode, null);
+                throw new ArgumentException($"Unsupported content type {typeof(TContent)}");
             }
         }
 

@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
+// TODO: Should this file be split?
 namespace PasswordManagerAccess.Common
 {
     using HttpCookies = Dictionary<string, string>;
@@ -21,6 +22,7 @@ namespace PasswordManagerAccess.Common
     using ReadOnlyHttpHeaders = IReadOnlyDictionary<string, string>;
     using SendAsyncType = Func<HttpRequestMessage, Task<HttpResponseMessage>>;
 
+    // Generic response
     internal class RestResponse
     {
         public HttpStatusCode StatusCode { get; internal set; }
@@ -28,45 +30,6 @@ namespace PasswordManagerAccess.Common
         public Exception Error { get; internal set; }
         public Dictionary<string, string> Cookies { get; internal set; }
         public Uri RequestUri { get; internal set; }
-
-        public bool IsText => Content != null;
-        public bool IsBinary => BinaryContent != null;
-
-        public string Content
-        {
-            get
-            {
-                if (_textContent == null)
-                    throw new InternalErrorException("Text content is not available");
-
-                return _textContent;
-            }
-
-            internal set
-            {
-                 _textContent = value;
-                 _binaryContent = null;
-            }
-        }
-
-        public string TextContent => Content;
-
-        public byte[] BinaryContent
-        {
-            get
-            {
-                if (_binaryContent == null)
-                    throw new InternalErrorException("Binary content is not available");
-
-                return _binaryContent;
-            }
-
-            internal set
-            {
-                _textContent = null;
-                _binaryContent = value;
-            }
-        }
 
         // On HTTP 2xx and no exceptions
         public virtual bool IsSuccessful => IsHttpOk && !HasError;
@@ -81,18 +44,19 @@ namespace PasswordManagerAccess.Common
         public bool HasError => Error != null;
 
         public bool IsNetworkError => HasError && Error is HttpRequestException;
-
-        //
-        // Private
-        //
-
-        private string _textContent;
-        private byte[] _binaryContent;
     }
 
-    internal class RestResponse<T>: RestResponse
+    // Adds original content received on top of the response
+    // TContent could be string (text) or byte[] (binary)
+    internal class RestResponse<TContent>: RestResponse
     {
-        public T Data { get; internal set; }
+        public TContent Content { get; internal set; }
+    }
+
+    // Adds deserialized data on top of the content
+    internal class RestResponse<TContent, TData>: RestResponse<TContent>
+    {
+        public TData Data { get; internal set; }
 
         // Also check if the de-serialization went through
         public override bool IsSuccessful => base.IsSuccessful && Data != null;
@@ -122,24 +86,16 @@ namespace PasswordManagerAccess.Common
     // IRestTransport
     //
 
-    internal enum ContentMode
-    {
-        Auto,
-        ForceText,
-        ForceBinary,
-    }
-
     // TODO: Maybe the transport should not handle the redirects
-    internal interface IRestTransport: IDisposable
+    internal interface IRestTransport : IDisposable
     {
-        void MakeRequest(Uri uri,
-                         HttpMethod method,
-                         HttpContent content,
-                         ReadOnlyHttpHeaders headers,
-                         ReadOnlyHttpCookies cookies,
-                         int maxRedirectCount,
-                         RestResponse allocatedResult,
-                         ContentMode contentMode = ContentMode.Auto);
+        void MakeRequest<TContent>(Uri uri,
+                                   HttpMethod method,
+                                   HttpContent content,
+                                   ReadOnlyHttpHeaders headers,
+                                   ReadOnlyHttpCookies cookies,
+                                   int maxRedirectCount,
+                                   RestResponse<TContent> allocatedResult);
     }
 
     //
@@ -156,14 +112,13 @@ namespace PasswordManagerAccess.Common
         {
         }
 
-        public void MakeRequest(Uri uri,
-                                HttpMethod method,
-                                HttpContent content,
-                                ReadOnlyHttpHeaders headers,
-                                ReadOnlyHttpCookies cookies,
-                                int maxRedirectCount,
-                                RestResponse allocatedResult,
-                                ContentMode contentMode)
+        public void MakeRequest<TContent>(Uri uri,
+                                          HttpMethod method,
+                                          HttpContent content,
+                                          ReadOnlyHttpHeaders headers,
+                                          ReadOnlyHttpCookies cookies,
+                                          int maxRedirectCount,
+                                          RestResponse<TContent> allocatedResult)
         {
             allocatedResult.RequestUri = uri;
 
@@ -204,8 +159,7 @@ namespace PasswordManagerAccess.Common
                                 headers,
                                 allCookies,
                                 maxRedirectCount - 1,
-                                allocatedResult,
-                                contentMode);
+                                allocatedResult);
                     return;
                 }
 
@@ -213,18 +167,17 @@ namespace PasswordManagerAccess.Common
                 allocatedResult.StatusCode = response.StatusCode;
                 allocatedResult.Cookies = allCookies;
 
-                var binary = contentMode switch
+                switch (allocatedResult)
                 {
-                    ContentMode.Auto => IsBinaryResponse(response),
-                    ContentMode.ForceText => false,
-                    ContentMode.ForceBinary => true,
-                    _ => throw new InternalErrorException($"Invalid content mode {contentMode}")
-                };
-
-                if (binary)
-                    allocatedResult.BinaryContent = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
-                else
-                    allocatedResult.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                case RestResponse<string> text:
+                    text.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    break;
+                case RestResponse<byte[]> binary:
+                    binary.Content = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                    break;
+                default:
+                    throw new ArgumentException($"Unsupported content type {typeof(TContent)}");
+                }
 
                 // TODO: Here we're ignoring possible duplicated headers. See if we need to preserve those!
                 allocatedResult.Headers = response.Headers.ToDictionary(x => x.Key,
@@ -372,130 +325,124 @@ namespace PasswordManagerAccess.Common
         // GET
         //
 
-        public RestResponse Get(string endpoint,
-                                HttpHeaders headers = null,
-                                HttpCookies cookies = null,
-                                ContentMode contentMode = ContentMode.Auto)
+        public RestResponse<string> Get(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return MakeRequest(endpoint,
-                               HttpMethod.Get,
-                               null,
-                               headers ?? NoHeaders,
-                               cookies ?? NoCookies,
-                               MaxRedirects,
-                               contentMode);
+            return MakeRequest<string>(endpoint,
+                                       HttpMethod.Get,
+                                       null,
+                                       headers ?? NoHeaders,
+                                       cookies ?? NoCookies,
+                                       MaxRedirects);
         }
 
-        public RestResponse GetBinary(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse<byte[]> GetBinary(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return Get(endpoint, headers, cookies, ContentMode.ForceBinary);
+            return MakeRequest<byte[]>(endpoint,
+                                       HttpMethod.Get,
+                                       null,
+                                       headers ?? NoHeaders,
+                                       cookies ?? NoCookies,
+                                       MaxRedirects);
         }
 
-        public RestResponse<T> Get<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse<string, T> Get<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return MakeRequest<T>(endpoint,
-                                  HttpMethod.Get,
-                                  null,
-                                  headers ?? NoHeaders,
-                                  cookies ?? NoCookies,
-                                  MaxRedirects,
-                                  JsonConvert.DeserializeObject<T>);
+            return MakeRequest<string, T>(endpoint,
+                                          HttpMethod.Get,
+                                          null,
+                                          headers ?? NoHeaders,
+                                          cookies ?? NoCookies,
+                                          MaxRedirects,
+                                          JsonConvert.DeserializeObject<T>);
         }
 
         //
         // POST JSON
         //
 
-        public RestResponse PostJson(string endpoint,
-                                     PostParameters parameters,
-                                     HttpHeaders headers = null,
-                                     HttpCookies cookies = null,
-                                     ContentMode contentMode = ContentMode.Auto)
+        public RestResponse<string> PostJson(string endpoint,
+                                             PostParameters parameters,
+                                             HttpHeaders headers = null,
+                                             HttpCookies cookies = null)
         {
-            return MakeRequest(endpoint,
-                               HttpMethod.Post,
-                               ToJsonContent(parameters),
-                               headers ?? NoHeaders,
-                               cookies ?? NoCookies,
-                               MaxRedirects,
-                               contentMode);
+            return MakeRequest<string>(endpoint,
+                                       HttpMethod.Post,
+                                       ToJsonContent(parameters),
+                                       headers ?? NoHeaders,
+                                       cookies ?? NoCookies,
+                                       MaxRedirects);
         }
 
-        public RestResponse<T> PostJson<T>(string endpoint,
-                                           PostParameters parameters,
-                                           HttpHeaders headers = null,
-                                           HttpCookies cookies = null)
+        public RestResponse<string, T> PostJson<T>(string endpoint,
+                                                   PostParameters parameters,
+                                                   HttpHeaders headers = null,
+                                                   HttpCookies cookies = null)
         {
-            return MakeRequest<T>(endpoint,
-                                  HttpMethod.Post,
-                                  ToJsonContent(parameters),
-                                  headers ?? NoHeaders,
-                                  cookies ?? NoCookies,
-                                  MaxRedirects,
-                                  JsonConvert.DeserializeObject<T>);
+            return MakeRequest<string, T>(endpoint,
+                                          HttpMethod.Post,
+                                          ToJsonContent(parameters),
+                                          headers ?? NoHeaders,
+                                          cookies ?? NoCookies,
+                                          MaxRedirects,
+                                          JsonConvert.DeserializeObject<T>);
         }
 
         //
         // POST form
         //
 
-        public RestResponse PostForm(string endpoint,
-                                     PostParameters parameters,
-                                     HttpHeaders headers = null,
-                                     HttpCookies cookies = null,
-                                     ContentMode contentMode = ContentMode.Auto)
+        public RestResponse<string> PostForm(string endpoint,
+                                             PostParameters parameters,
+                                             HttpHeaders headers = null,
+                                             HttpCookies cookies = null)
         {
-            return MakeRequest(endpoint,
-                               HttpMethod.Post,
-                               ToFormContent(parameters),
-                               headers ?? NoHeaders,
-                               cookies ?? NoCookies,
-                               MaxRedirects,
-                               contentMode,
-                               () => new RestResponse());
+            return MakeRequest<string>(endpoint,
+                                       HttpMethod.Post,
+                                       ToFormContent(parameters),
+                                       headers ?? NoHeaders,
+                                       cookies ?? NoCookies,
+                                       MaxRedirects);
         }
 
-        public RestResponse<T> PostForm<T>(string endpoint,
-                                           PostParameters parameters,
-                                           HttpHeaders headers = null,
-                                           HttpCookies cookies = null)
+        public RestResponse<string, T> PostForm<T>(string endpoint,
+                                                   PostParameters parameters,
+                                                   HttpHeaders headers = null,
+                                                   HttpCookies cookies = null)
         {
-            return MakeRequest<T>(endpoint,
-                                  HttpMethod.Post,
-                                  ToFormContent(parameters),
-                                  headers ?? NoHeaders,
-                                  cookies ?? NoCookies,
-                                  MaxRedirects,
-                                  JsonConvert.DeserializeObject<T>);
+            return MakeRequest<string, T>(endpoint,
+                                          HttpMethod.Post,
+                                          ToFormContent(parameters),
+                                          headers ?? NoHeaders,
+                                          cookies ?? NoCookies,
+                                          MaxRedirects,
+                                          JsonConvert.DeserializeObject<T>);
         }
 
         //
         // PUT
         //
 
-        public RestResponse Put(string endpoint,
-                                HttpHeaders headers = null,
-                                HttpCookies cookies = null,
-                                ContentMode contentMode = ContentMode.Auto)
+        public RestResponse<string> Put(string endpoint,
+                                        HttpHeaders headers = null,
+                                        HttpCookies cookies = null)
         {
-            return MakeRequest(endpoint,
-                               HttpMethod.Put,
-                               null,
-                               headers ?? NoHeaders,
-                               cookies ?? NoCookies,
-                               MaxRedirects,
-                               contentMode);
+            return MakeRequest<string>(endpoint,
+                                       HttpMethod.Put,
+                                       null,
+                                       headers ?? NoHeaders,
+                                       cookies ?? NoCookies,
+                                       MaxRedirects);
         }
 
-        public RestResponse<T> Put<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse<string, T> Put<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
         {
-            return MakeRequest<T>(endpoint,
-                                  HttpMethod.Put,
-                                  null,
-                                  headers ?? NoHeaders,
-                                  cookies ?? NoCookies,
-                                  MaxRedirects,
-                                  JsonConvert.DeserializeObject<T>);
+            return MakeRequest<string, T>(endpoint,
+                                          HttpMethod.Put,
+                                          null,
+                                          headers ?? NoHeaders,
+                                          cookies ?? NoCookies,
+                                          MaxRedirects,
+                                          JsonConvert.DeserializeObject<T>);
         }
 
         //
@@ -513,29 +460,45 @@ namespace PasswordManagerAccess.Common
             if (endpoint.IsNullOrEmpty())
                 return new Uri(BaseUrl);
 
-            return new Uri(string.Format("{0}{1}{2}", BaseUrl, endpoint.StartsWith("/") ? "" : "/", endpoint));
+            var maybeSlash = endpoint.StartsWith("/") ? "" : "/";
+            return new Uri($"{BaseUrl}{maybeSlash}{endpoint}");
         }
 
         //
         // Private
         //
 
-        private RestResponse<T> MakeRequest<T>(string endpoint,
-                                               HttpMethod method,
-                                               HttpContent content,
-                                               HttpHeaders headers,
-                                               HttpCookies cookies,
-                                               int maxRedirectCount,
-                                               Func<string, T> deserialize)
+        private RestResponse<TContent> MakeRequest<TContent>(string endpoint,
+                                                             HttpMethod method,
+                                                             HttpContent content,
+                                                             HttpHeaders headers,
+                                                             HttpCookies cookies,
+                                                             int maxRedirectCount)
         {
-            var response = MakeRequest(endpoint,
-                                       method,
-                                       content,
-                                       headers,
-                                       cookies,
-                                       maxRedirectCount,
-                                       ContentMode.ForceText,
-                                       () => new RestResponse<T>());
+            return MakeRequest<RestResponse<TContent>, TContent>(endpoint,
+                                                                 method,
+                                                                 content,
+                                                                 headers,
+                                                                 cookies,
+                                                                 maxRedirectCount,
+                                                                 new RestResponse<TContent>());
+        }
+
+        private RestResponse<TContent, TData> MakeRequest<TContent, TData>(string endpoint,
+                                                                           HttpMethod method,
+                                                                           HttpContent content,
+                                                                           HttpHeaders headers,
+                                                                           HttpCookies cookies,
+                                                                           int maxRedirectCount,
+                                                                           Func<TContent, TData> deserialize)
+        {
+            var response = MakeRequest<RestResponse<TContent, TData>, TContent>(endpoint,
+                                                                                method,
+                                                                                content,
+                                                                                headers,
+                                                                                cookies,
+                                                                                maxRedirectCount,
+                                                                                new RestResponse<TContent, TData>());
             if (response.HasError)
                 return response;
 
@@ -552,63 +515,25 @@ namespace PasswordManagerAccess.Common
             return response;
         }
 
-        private RestResponse MakeRequest(string endpoint,
-                                         HttpMethod method,
-                                         HttpContent content,
-                                         HttpHeaders headers,
-                                         HttpCookies cookies,
-                                         int maxRedirectCount,
-                                         ContentMode contentMode)
+        private TResponse MakeRequest<TResponse, TContent>(string endpoint,
+                                                           HttpMethod method,
+                                                           HttpContent content,
+                                                           HttpHeaders headers,
+                                                           HttpCookies cookies,
+                                                           int maxRedirectCount,
+                                                           TResponse allocatedResult)
+            where TResponse : RestResponse<TContent>
         {
-            return MakeRequest(endpoint,
-                               method,
-                               content,
-                               headers,
-                               cookies,
-                               maxRedirectCount,
-                               contentMode,
-                               () => new RestResponse());
-        }
-
-        private TResponse MakeRequest<TResponse>(string endpoint,
-                                                 HttpMethod method,
-                                                 HttpContent content,
-                                                 HttpHeaders headers,
-                                                 HttpCookies cookies,
-                                                 int maxRedirectCount,
-                                                 ContentMode contentMode,
-                                                 Func<TResponse> responseFactory) where TResponse : RestResponse
-        {
-            return MakeRequest(MakeAbsoluteUri(endpoint),
-                               method,
-                               content,
-                               headers,
-                               cookies,
-                               maxRedirectCount,
-                               contentMode,
-                               responseFactory);
-        }
-
-        private TResponse MakeRequest<TResponse>(Uri uri,
-                                                 HttpMethod method,
-                                                 HttpContent content,
-                                                 HttpHeaders headers,
-                                                 HttpCookies cookies,
-                                                 int maxRedirectCount,
-                                                 ContentMode contentMode,
-                                                 Func<TResponse> responseFactory) where TResponse : RestResponse
-        {
-            var response = responseFactory();
+            var uri = MakeAbsoluteUri(endpoint);
             Transport.MakeRequest(uri,
                                   method,
                                   content,
                                   Signer.Sign(uri, method, DefaultHeaders.Merge(headers)),
                                   DefaultCookies.Merge(cookies),
                                   maxRedirectCount,
-                                  response,
-                                  contentMode);
+                                  allocatedResult);
 
-            return response;
+            return allocatedResult;
         }
 
         private static HttpContent ToJsonContent(PostParameters parameters)

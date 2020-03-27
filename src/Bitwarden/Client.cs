@@ -353,7 +353,7 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static Response.SecondFactor? ExtractSecondFactorFromResponse(RestResponse response)
+        internal static Response.SecondFactor? ExtractSecondFactorFromResponse(RestResponse<string> response)
         {
             // In the case of 2FA the server returns some 400+ HTTP error and the response contains
             // extra information about the available 2FA methods.
@@ -497,7 +497,7 @@ namespace PasswordManagerAccess.Bitwarden
             return (int)response.StatusCode / 100 == 4;
         }
 
-        internal static BaseException MakeSpecializedError(RestResponse response)
+        internal static BaseException MakeSpecializedError(RestResponse<string> response)
         {
             if (response.IsNetworkError)
                 return new NetworkErrorException("Network error has occurred", response.Error);
@@ -529,7 +529,7 @@ namespace PasswordManagerAccess.Bitwarden
             return new InternalErrorException($"Server responded with an error: '{message}'");
         }
 
-        internal static Response.Error? GetServerError(RestResponse response)
+        internal static Response.Error? GetServerError(RestResponse<string> response)
         {
             try
             {

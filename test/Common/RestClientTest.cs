@@ -85,9 +85,9 @@ namespace PasswordManagerAccess.Test.Common
         public void Get_returns_binary_content()
         {
             var content = "binary".ToBytes();
-            var response = Serve(content).Get(Url);
+            var response = Serve(content).GetBinary(Url);
 
-            Assert.Equal(content, response.BinaryContent);
+            Assert.Equal(content, response.Content);
         }
 
         [Fact]
@@ -147,15 +147,6 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void PostJson_returns_binary_content()
-        {
-            var content = "binary".ToBytes();
-            var response = Serve(content).PostJson(Url, NoParameters);
-
-            Assert.Equal(content, response.BinaryContent);
-        }
-
-        [Fact]
         public void PostJson_returns_response_headers()
         {
             var response = Serve("", ResponseHeaders).PostJson(Url, NoParameters);
@@ -207,15 +198,6 @@ namespace PasswordManagerAccess.Test.Common
 
             Assert.True(response.IsSuccessful);
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
-        }
-
-        [Fact]
-        public void Put_returns_binary_content()
-        {
-            var content = "binary".ToBytes();
-            var response = Serve(content).Put(Url);
-
-            Assert.Equal(content, response.BinaryContent);
         }
 
         [Fact]

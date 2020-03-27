@@ -314,11 +314,11 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        internal static RestResponse LoginMfa(RestResponse loginResponse,
-                                              string tld,
-                                              Ui ui,
-                                              ISecureStorage storage,
-                                              RestClient rest)
+        internal static RestResponse<string> LoginMfa(RestResponse<string> loginResponse,
+                                                      string tld,
+                                                      Ui ui,
+                                                      ISecureStorage storage,
+                                                      RestClient rest)
         {
             var url = ExtractSwitchToUrl(loginResponse.Content);
 
@@ -372,7 +372,7 @@ namespace PasswordManagerAccess.ZohoVault
             return verifyResponse;
         }
 
-        internal static Ui.Passcode RequestMfaCode(RestResponse mfaPage, Ui ui)
+        internal static Ui.Passcode RequestMfaCode(RestResponse<string> mfaPage, Ui ui)
         {
             Ui.Passcode code = null;
             var html = mfaPage.Content;
@@ -420,7 +420,7 @@ namespace PasswordManagerAccess.ZohoVault
         // TODO: Is this even used?
         // TODO: OAuth is currently not working with the Zoho server, so this method should not be called.
         //       It requires some additional info that should be provided by the app.
-        internal static RestResponse Approve(RestResponse loginResponse, string tld, RestClient rest)
+        internal static RestResponse<string> Approve(RestResponse loginResponse, string tld, RestClient rest)
         {
             var response = rest.PostForm(
                 endpoint: ApproveUrl(tld),

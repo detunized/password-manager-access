@@ -378,7 +378,7 @@ namespace PasswordManagerAccess.Bitwarden
             return new InternalErrorException(text, response.Error);
         }
 
-        internal static BaseException MakeSpecializedError<T>(RestResponse<R.Envelope<T>> response)
+        internal static BaseException MakeSpecializedError<T>(RestResponse<string, R.Envelope<T>> response)
         {
             var message = response.Data.Message.IsNullOrEmpty() ? "none" : response.Data.Message;
             return MakeSpecializedError(response, $"Server message: {message}");

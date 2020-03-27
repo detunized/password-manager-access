@@ -776,7 +776,7 @@ namespace PasswordManagerAccess.OnePassword
         // HTTP
         //
 
-        internal static BaseException MakeError(RestResponse response)
+        internal static BaseException MakeError(RestResponse<string> response)
         {
             if (response.IsNetworkError)
                 return new NetworkErrorException("Network error has occurred", response.Error);
