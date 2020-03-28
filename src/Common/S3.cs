@@ -51,7 +51,6 @@ namespace PasswordManagerAccess.Common
             if (response.IsSuccessful)
                 return response.Content;
 
-            // TODO: Throw a proper error!
             throw new InternalErrorException("Failed to get an S3 object", response.Error);
         }
 

@@ -49,10 +49,7 @@ namespace PasswordManagerAccess.StickyPassword
         // master password. The user should decrypt it and supply with the subsequent POST
         // requests. If the password is incorrect, the following calls will be rejected with
         // the 401 code and the database with fail to download.
-        internal static byte[] GetEncryptedToken(string username,
-                                                 string deviceId,
-                                                 DateTime timestamp,
-                                                 RestClient rest)
+        internal static byte[] GetEncryptedToken(string username, string deviceId, DateTime timestamp, RestClient rest)
         {
             var response = Post(rest,
                                 "GetCrpToken",
@@ -65,8 +62,7 @@ namespace PasswordManagerAccess.StickyPassword
             case "0":
                 return response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken").Decode64();
             case "1006":
-                throw new FetchException(FetchException.FailureReason.IncorrectUsername,
-                                         "Incorrect username");
+                throw new BadCredentialsException("Invalid username");
             default:
                 throw CreateException("retrieve the encrypted token", response);
             }
@@ -92,11 +88,9 @@ namespace PasswordManagerAccess.StickyPassword
                                 username,
                                 token);
 
-
             switch (response.Status)
             {
             case "0": // A new device just got registered
-                return;
             case "4005": // The device is known and has been registered in the past
                 return;
             default:
@@ -154,8 +148,7 @@ namespace PasswordManagerAccess.StickyPassword
             var m = re.Match(info);
 
             if (!m.Success)
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         "Invalid database info format");
+                throw new InternalErrorException("Invalid database info format");
 
             return m.Groups[1].Value;
         }
@@ -174,35 +167,28 @@ namespace PasswordManagerAccess.StickyPassword
         {
             public static XmlResponse Parse(string text)
             {
-                XDocument doc;
                 try
                 {
-                    doc = XDocument.Parse(text);
+                    var doc = XDocument.Parse(text);
+                    var man = new XmlNamespaceManager(new NameTable());
+                    man.AddNamespace(NamespaceName, "http://www.stickypassword.com/cb/clientapi/schema/v2");
+
+                    return new XmlResponse(doc, man);
                 }
                 catch (XmlException e)
                 {
-                    throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                             "Unknown response format",
-                                             e);
+                    throw new InternalErrorException("Failed to parse XML in response", e);
                 }
-
-                var man = new XmlNamespaceManager(new NameTable());
-                man.AddNamespace(NamespaceName,
-                                 "http://www.stickypassword.com/cb/clientapi/schema/v2");
-
-                return new XmlResponse(doc, man);
             }
 
-            public string Status { get; private set; }
+            public string Status { get; }
 
             // Get is very simple. Every path component must start with /.
             public string Get(string path)
             {
-                var e = _document.XPathSelectElement(path.Replace("/", "/" + NamespaceName + ":"),
-                                                     _namespaceManager);
+                var e = _document.XPathSelectElement(path.Replace("/", $"/{NamespaceName}:"), _namespaceManager);
                 if (e == null)
-                    throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                             "Unknown response format");
+                    throw new InternalErrorException($"Failed to find '{path}' in response XML");
 
                 return e.Value;
             }
@@ -220,10 +206,9 @@ namespace PasswordManagerAccess.StickyPassword
             private readonly XmlNamespaceManager _namespaceManager;
         }
 
-        private static FetchException CreateException(string operation, XmlResponse xml)
+        private static InternalErrorException CreateException(string operation, XmlResponse xml)
         {
-            return new FetchException(FetchException.FailureReason.RespondedWithError,
-                                      $"Failed to {operation} (error: {xml.Status})");
+            return new InternalErrorException($"Failed to {operation} (error: {xml.Status})");
         }
 
         private static XmlResponse Post(RestClient rest,
@@ -234,7 +219,7 @@ namespace PasswordManagerAccess.StickyPassword
                                         string username = null,
                                         byte[] token = null)
         {
-            var headers = new Dictionary<string, string>()
+            var headers = new Dictionary<string, string>
             {
                 ["Accept"] = "application/xml",
                 ["Date"] = timestamp.ToUniversalTime().ToString("ddd, dd MMM yyyy HH:mm:ss 'GMT'"),
@@ -246,7 +231,7 @@ namespace PasswordManagerAccess.StickyPassword
 
             var response = rest.PostForm(endpoint, parameters, headers);
             if (response.IsSuccessful)
-                return HandlePostResponse(response.Content);
+                return XmlResponse.Parse(response.Content);
 
             if (response.IsNetworkError)
                 throw new NetworkErrorException("Network error has occurred", response.Error);
@@ -261,34 +246,6 @@ namespace PasswordManagerAccess.StickyPassword
                 $"HTTP request to '{response.RequestUri}' failed with status {response.StatusCode}");
         }
 
-        private static XmlResponse HandlePostResponse(Func<string> post)
-        {
-            return HandlePostResponse(post());
-        }
-
-        private static XmlResponse HandlePostResponse(string response)
-        {
-            try
-            {
-                return XmlResponse.Parse(response);
-            }
-            catch (WebException e)
-            {
-                // Special handling for 401. There's no other way to tell if the password is correct.
-                // TODO: Write a test for this path. It's not trivial to mock HttpWebResponse
-                //       if at all possible.
-                var r = e.Response as HttpWebResponse;
-                if (r != null && r.StatusCode == HttpStatusCode.Unauthorized)
-                    throw new FetchException(FetchException.FailureReason.IncorrectPassword,
-                                             "Incorrect password",
-                                             e);
-
-                throw new FetchException(FetchException.FailureReason.NetworkError,
-                                         "Network request failed",
-                                         e);
-            }
-        }
-
         private static string GetUserAgent(string deviceId)
         {
             return $"SP/8.0.3436 Prot=2 ID={deviceId} Lng=EN Os=Android/4.4.4 Lic= LicStat= PackageID=";
@@ -301,20 +258,12 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static string GetS3TokenItem(XmlResponse xml, string name)
         {
-            return xml.Get("/SpcResponse/GetS3TokenResponse/" + name);
+            return xml.Get($"/SpcResponse/GetS3TokenResponse/{name}");
         }
 
         private static byte[] GetS3Object(string filename, S3Token token, string name, RestClient rest)
         {
-            try
-            {
-                return S3.GetObject(token.BucketName, token.ObjectPrefix + filename, token.Credentials, rest);
-            }
-            catch (NetworkErrorException e)
-            {
-                // TODO: Handle errors properly
-                throw e;
-            }
+            return S3.GetObject(token.BucketName, token.ObjectPrefix + filename, token.Credentials, rest);
         }
 
         private static byte[] Inflate(byte[] bytes, string name)
@@ -337,9 +286,7 @@ namespace PasswordManagerAccess.StickyPassword
             }
             catch (InvalidDataException e)
             {
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         "Failed to decompress " + name,
-                                         e);
+                throw new InternalErrorException($"Failed to decompress {name}", e);
             }
         }
     }
