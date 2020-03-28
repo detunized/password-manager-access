@@ -8,6 +8,28 @@ namespace PasswordManagerAccess.Test.StickyPassword
 {
     public class ParserTest
     {
+        // There's been a lot of problems with simply opening an SQLite database on different platforms.
+        // So it makes sense to have a test just for that.
+        [Fact]
+        public void ParseAccounts_returns_accounts()
+        {
+            var accounts = Parser.ParseAccounts("StickyPassword/Fixtures/db.sqlite", Password);
+
+            Assert.NotEmpty(accounts);
+            var a = accounts[0];
+
+            Assert.Equal("Google", a.Name);
+            Assert.Equal("https://google.com", a.Url);
+            Assert.Equal("Good search", a.Notes);
+
+            Assert.NotEmpty(a.Credentials);
+            var c = a.Credentials[0];
+
+            Assert.Equal("larry", c.Username);
+            Assert.Equal("page", c.Password);
+            Assert.Equal("", c.Description);
+        }
+
         [Fact]
         public void IsKeyCorrect_returns_true()
         {

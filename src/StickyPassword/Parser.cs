@@ -1,17 +1,15 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Collections.Generic;
-using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
 using PasswordManagerAccess.Common;
+using SQLite;
 
 namespace PasswordManagerAccess.StickyPassword
 {
-    // TODO: Write more tests
-    public static class Parser
+    internal static class Parser
     {
         // This function saves the database to a temporary file (since System.Data.SQLite
         // cannot handle in memory databases) and parses it, extracts all the account
@@ -42,8 +40,7 @@ namespace PasswordManagerAccess.StickyPassword
         {
             try
             {
-                using var db = new SQLiteConnection($"Data Source={filename};Version=3;");
-                db.Open();
+                using var db = new SQLiteConnection(filename, SQLiteOpenFlags.ReadOnly);
 
                 var user = GetDefaultUser(db);
                 var key = Util.DeriveDbKey(password, user.Salt);
@@ -71,95 +68,93 @@ namespace PasswordManagerAccess.StickyPassword
         // Private
         //
 
-        private struct User
-        {
-            public User(long id, byte[] salt, byte[] verification)
-            {
-                Id = id;
-                Salt = salt;
-                Verification = verification;
-            }
-
-            public readonly long Id;
-            public readonly byte[] Salt;
-            public readonly byte[] Verification;
-        }
-
-        private static User GetDefaultUser(SQLiteConnection db)
+        private static Db.User GetDefaultUser(SQLiteConnection db)
         {
             // "6400..." is "default\0" in UTF-16
-            var r = Sql(db, "select USER_ID, KEY, PASSWORD " +
-                            "from USER " +
-                            "where DATE_DELETED = 1 " +
-                                "and USERNAME = x'640065006600610075006c0074000000'");
+            var r = db.Query<Db.User>(
+                "select USER_ID, KEY, PASSWORD " +
+                "from USER " +
+                "where DATE_DELETED = 1 and USERNAME = x'640065006600610075006c0074000000'");
 
-            return new User(id: (long)r[0]["USER_ID"],
-                            salt: (byte[])r[0]["KEY"],
-                            verification: (byte[])r[0]["PASSWORD"]);
+            return r[0];
         }
 
-        private static Account[] GetAccounts(SQLiteConnection db, User user, byte[] key)
+        private static Account[] GetAccounts(SQLiteConnection db, Db.User user, byte[] key)
         {
-            var r = Sql(db,
+            var r = db.Query<Db.Entry>(
                 "select ENTRY_ID, UDC_ENTRY_NAME, UDC_URL, UD_COMMENT " +
                 "from ACC_ACCOUNT " +
-                "where DATE_DELETED = 1 " +
-                    $"and USER_ID = {user.Id} " +
-                    "and GROUP_TYPE = 2 " +
-                "order by ENTRY_ID");
+                "where DATE_DELETED = 1 and USER_ID = ? and GROUP_TYPE = 2 " +
+                "order by ENTRY_ID",
+                user.Id);
 
-            return r.Select(i =>
-            {
-                var id = (long)i["ENTRY_ID"];
-                return new Account(
-                    id: id,
-                    name: DecryptTextField(i["UDC_ENTRY_NAME"], key),
-                    url: DecryptTextField(i["UDC_URL"], key),
-                    notes: DecryptTextField(i["UD_COMMENT"], key),
-                    credentials: GetCredentialsForAccount(db, user, id, key));
-            }).ToArray();
+            return r.Select(i => new Account(id: i.Id,
+                                             name: DecryptTextField(i.Name, key),
+                                             url: DecryptTextField(i.Url, key),
+                                             notes: DecryptTextField(i.Comment, key),
+                                             credentials: GetCredentialsForAccount(db, user, i.Id, key))).ToArray();
         }
 
-        private static Credentials[] GetCredentialsForAccount(SQLiteConnection db, User user, long accountId, byte[] key)
+        private static Credentials[] GetCredentialsForAccount(SQLiteConnection db,
+                                                              Db.User user,
+                                                              long accountId,
+                                                              byte[] key)
         {
-            var r = Sql(db,
+            var r = db.Query<Db.Credentials>(
                 "select LOG.UDC_USERNAME, LOG.UD_PASSWORD, LOG.UDC_DESCRIPTION " +
-                    "from ACC_LOGIN LOG, ACC_LINK LINK " +
-                    "where LINK.DATE_DELETED = 1 " +
-                        $"and LINK.USER_ID = {user.Id} " +
-                        $"and LINK.ENTRY_ID = {accountId} " +
-                        "and LOG.LOGIN_ID = LINK.LOGIN_ID " +
-                    "order by LINK.LOGIN_ID");
+                "from ACC_LOGIN LOG, ACC_LINK LINK " +
+                "where LINK.DATE_DELETED = 1 and LINK.USER_ID = ? and LINK.ENTRY_ID = ? and LOG.LOGIN_ID = LINK.LOGIN_ID " +
+                "order by LINK.LOGIN_ID",
+                user.Id,
+                accountId);
 
-            return r.Select(i => new Credentials(
-                username: DecryptTextField(i["UDC_USERNAME"], key),
-                password: DecryptTextField(i["UD_PASSWORD"], key),
-                description: DecryptTextField(i["UDC_DESCRIPTION"], key)
-            )).ToArray();
+            return r.Select(i => new Credentials(username: DecryptTextField(i.Username, key),
+                                                 password: DecryptTextField(i.Password, key),
+                                                 description: DecryptTextField(i.Description, key))).ToArray();
         }
 
-        private static string DecryptTextField(object encrypted, byte[] key)
+        private static string DecryptTextField(byte[] encrypted, byte[] key)
         {
-            var bytes = Util.Decrypt((byte[])encrypted, key);
+            var bytes = Util.Decrypt(encrypted, key);
             return Encoding.Unicode.GetString(bytes).TrimEnd('\0');
         }
+    }
 
-        private static Dictionary<string, object>[] Sql(SQLiteConnection db, string sql)
+    // Database models
+    internal static class Db
+    {
+        public class User
         {
-            var result = new List<Dictionary<string, object>>();
-            using var command = new SQLiteCommand(sql, db);
-            using var reader = command.ExecuteReader();
+            [Column("USER_ID")]
+            public long Id { get; set; }
 
-            while (reader.Read())
-            {
-                var row = new Dictionary<string, object>();
-                for (var i = 0; i < reader.FieldCount; ++i)
-                    row[reader.GetName(i)] = reader.GetValue(i);
+            [Column("KEY")]
+            public byte[] Salt { get; set; }
 
-                result.Add(row);
-            }
+            [Column("PASSWORD")]
+            public byte[] Verification { get; set; }
+        }
 
-            return result.ToArray();
+        public class Entry
+        {
+            [Column("ENTRY_ID")]
+            public long Id { get; set; }
+            [Column("UDC_ENTRY_NAME")]
+            public byte[] Name { get; set; }
+            [Column("UDC_URL")]
+            public byte[] Url { get; set; }
+            [Column("UD_COMMENT")]
+            public byte[] Comment { get; set; }
+        }
+
+        public class Credentials
+        {
+            [Column("UDC_USERNAME")]
+            public byte[] Username { get; set; }
+            [Column("UD_PASSWORD")]
+            public byte[] Password { get; set; }
+            [Column("UDC_DESCRIPTION")]
+            public byte[] Description { get; set; }
         }
     }
 }
