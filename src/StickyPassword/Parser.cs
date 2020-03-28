@@ -44,17 +44,15 @@ namespace PasswordManagerAccess.StickyPassword
 
                 var user = GetDefaultUser(db);
                 var key = Util.DeriveDbKey(password, user.Salt);
+
                 if (!IsKeyCorrect(key, user.Verification))
-                    throw new ParseException(ParseException.FailureReason.IncorrectPassword,
-                                             "Password verification failed");
+                    throw new BadCredentialsException("Password verification failed");
 
                 return GetAccounts(db, user, key);
             }
             catch (SQLiteException e)
             {
-                throw new ParseException(ParseException.FailureReason.SqliteError,
-                                         "Failed to parse the database",
-                                         e);
+                throw new InternalErrorException("Failed to parse the database", e);
             }
         }
 

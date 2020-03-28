@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void ParseAccounts_returns_accounts()
         {
-            var accounts = Parser.ParseAccounts("StickyPassword/Fixtures/db.sqlite", Password);
+            var accounts = Parser.ParseAccounts(DbFilename, Password);
 
             Assert.NotEmpty(accounts);
             var a = accounts[0];
@@ -28,6 +28,22 @@ namespace PasswordManagerAccess.Test.StickyPassword
             Assert.Equal("larry", c.Username);
             Assert.Equal("page", c.Password);
             Assert.Equal("", c.Description);
+        }
+
+        [Fact]
+        public void ParseAccounts_throws_on_incorrect_password()
+        {
+            Exceptions.AssertThrowsBadCredentials(
+                () => Parser.ParseAccounts(DbFilename, "incorrect password"),
+                "Password verification failed");
+        }
+
+        [Fact]
+        public void ParseAccounts_throws_on_corrupted_database()
+        {
+            Exceptions.AssertThrowsInternalError(
+                () => Parser.ParseAccounts(CorruptedDbFilename, Password),
+                "Failed to parse the database");
         }
 
         [Fact]
@@ -51,6 +67,9 @@ namespace PasswordManagerAccess.Test.StickyPassword
         //
 
         private const string Password = "Password123";
+        private const string FixtureDir = "StickyPassword/Fixtures/";
+        private const string DbFilename = FixtureDir + "db.sqlite";
+        private const string CorruptedDbFilename = FixtureDir + "corrupted.sqlite";
 
         // The actual bytes from the user database
         private static readonly byte[] KeySalt =
