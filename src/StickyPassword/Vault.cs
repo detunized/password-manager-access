@@ -15,6 +15,7 @@ namespace PasswordManagerAccess.StickyPassword
 
         public static Vault Open(string username,
                                  string password,
+                                 ISqliteProvider sqliteProvider,
                                  string deviceId = DefaultDeviceId,
                                  string deviceName = DefaultDeviceName)
         {
@@ -27,7 +28,7 @@ namespace PasswordManagerAccess.StickyPassword
                                         transport: transport);
 
             // Parse the database, extract and decrypt all the account information.
-            var accounts = Parser.ParseAccounts(db, password);
+            var accounts = Parser.ParseAccounts(db, password, sqliteProvider);
 
             return new Vault(accounts);
         }
