@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
 {
