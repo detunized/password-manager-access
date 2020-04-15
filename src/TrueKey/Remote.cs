@@ -33,7 +33,7 @@ namespace PasswordManagerAccess.TrueKey
         public static DeviceInfo RegisetNewDevice(string deviceName, IHttpClient http)
         {
             return Post(http,
-                        "https://truekeyapi.intelsecurity.com/sp/pabe/v2/so",
+                        "https://id-api.truekey.com/sp/pabe/v2/so",
                         new Dictionary<string, object>
                         {
                             {"clientUDID", "truekey-sharp"},
@@ -67,7 +67,7 @@ namespace PasswordManagerAccess.TrueKey
         public static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
         {
             return Post(http,
-                        "https://truekeyapi.intelsecurity.com/session/auth",
+                        "https://id-api.truekey.com/session/auth",
                         MakeCommonRequest(clientInfo, "session_id_token"),
                         response => response.StringAt("oAuthTransId"));
         }
@@ -93,7 +93,7 @@ namespace PasswordManagerAccess.TrueKey
             };
 
             return Post(http,
-                        "https://truekeyapi.intelsecurity.com/mp/auth",
+                        "https://id-api.truekey.com/mp/auth",
                         parameters,
                         ParseAuthStep2Response);
         }
@@ -113,7 +113,7 @@ namespace PasswordManagerAccess.TrueKey
                 };
 
             Post(http,
-                 "https://truekeyapi.intelsecurity.com/sp/dashboard/v2/udt",
+                 "https://id-api.truekey.com/sp/dashboard/v2/udt",
                  parameters,
                  new Dictionary<string, string> {{"x-idToken", oauthToken}},
                  response => true);
@@ -124,7 +124,7 @@ namespace PasswordManagerAccess.TrueKey
         public static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
         {
             return Post(http,
-                        "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
+                        "https://id-api.truekey.com/sp/profile/v1/gls",
                         MakeCommonRequest(clientInfo, "code", transactionId),
                         response =>
                         {
@@ -151,7 +151,7 @@ namespace PasswordManagerAccess.TrueKey
             };
 
             Post(http,
-                 "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                 "https://id-api.truekey.com/sp/oob/v1/son",
                  parameters,
                  response => true);
         }
@@ -171,7 +171,7 @@ namespace PasswordManagerAccess.TrueKey
             };
 
             Post(http,
-                 "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                 "https://id-api.truekey.com/sp/oob/v1/son",
                  parameters,
                  response => true);
         }
