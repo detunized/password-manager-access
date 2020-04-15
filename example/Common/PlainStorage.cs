@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Example.Common
@@ -32,14 +33,14 @@ namespace PasswordManagerAccess.Example.Common
             if (value == null)
                 _storage.Remove(name);
             else
-                _storage[name] = value;
+                _storage[name] = EncodeValue(value);
 
             Save();
         }
 
         public string LoadString(string name)
         {
-            return _storage.ContainsKey(name) ? _storage[name] : null;
+            return _storage.ContainsKey(name) ? DecodeValue(_storage[name]) : null;
         }
 
         private static string FindFilename()
@@ -51,6 +52,16 @@ namespace PasswordManagerAccess.Example.Common
                                                     "wanted to put storage.yaml in the same directory");
 
             return Path.GetDirectoryName(filename) + "/storage.yaml";
+        }
+
+        private static string EncodeValue(string s)
+        {
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(s));
+        }
+
+        private static string DecodeValue(string s)
+        {
+            return Encoding.UTF8.GetString(Convert.FromBase64String(s));
         }
 
         private void Save()
