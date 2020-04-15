@@ -44,8 +44,7 @@ namespace PasswordManagerAccess.TrueKey
             // We only support version 4 which seems to be the current.
             var version = encrypted[1];
             if (version != 4)
-                throw new CryptoException(string.Format("Unsupported cipher format version ({0})",
-                                                        version));
+                throw new CryptoException($"Unsupported cipher format version ({version})");
 
             if (encrypted.Length < 18)
                 throw new CryptoException("Ciphertext is too short (IV is missing)");
@@ -152,11 +151,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             Action<object, object, string> throwError = (actual, expected, name) =>
             {
-                throw new ArgumentException(
-                    string.Format("Invalid OTP {0} (expected {1}, got {2})",
-                                  name,
-                                  expected,
-                                  actual));
+                throw new ArgumentException($"Invalid OTP {name} (expected {expected}, got {actual})");
             };
 
             Action<int, int, string> verify = (actual, expected, name) =>
@@ -229,10 +224,9 @@ namespace PasswordManagerAccess.TrueKey
         internal static byte[] SignChallenge(OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
             if (challenge.Length != ChallengeSize)
-                throw new ArgumentOutOfRangeException(
-                    "challenge",
-                    challenge.Length,
-                    string.Format("Challenge must be {0} bytes long", ChallengeSize));
+                throw new ArgumentOutOfRangeException(nameof(challenge),
+                                                      challenge.Length,
+                                                      $"Challenge must be {ChallengeSize} bytes long");
 
             using (var s = new MemoryStream(1024))
             {

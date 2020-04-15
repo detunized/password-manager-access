@@ -243,7 +243,7 @@ namespace PasswordManagerAccess.TrueKey
                 break;
             default:
                 throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                    string.Format("Next two factor step {0} is not supported", nextStep));
+                                         $"Next two factor step {nextStep} is not supported");
             }
 
             return new TwoFactorAuth.Settings(step,
@@ -333,7 +333,7 @@ namespace PasswordManagerAccess.TrueKey
             }
             catch (JTokenAccessException e)
             {
-                throw MakeInvalidResponseError("Unexpected format in response from '{0}'", url, e);
+                throw MakeInvalidResponseError($"Unexpected format in response from '{url}'", e);
             }
         }
 
@@ -370,17 +370,13 @@ namespace PasswordManagerAccess.TrueKey
             }
             catch (JTokenAccessException e)
             {
-                throw MakeInvalidResponseError("Unexpected format in response from '{0}'", url, e);
+                throw MakeInvalidResponseError($"Unexpected format in response from '{url}'", e);
             }
 
             var code = response.StringAt("responseResult/errorCode", "");
             var message = response.StringAt("responseResult/errorDescription", "");
             throw new FetchException(FetchException.FailureReason.RespondedWithError,
-                                     string.Format(
-                                         "POST request to '{0}' failed with error ({1}: '{2}')",
-                                         url,
-                                         code,
-                                         message));
+                                     $"POST request to '{url}' failed with error ({code}: '{message}')");
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
@@ -405,7 +401,7 @@ namespace PasswordManagerAccess.TrueKey
             }
             catch (JsonException e)
             {
-                throw MakeInvalidResponseError("Invalid JSON in response from '{0}'", url, e);
+                throw MakeInvalidResponseError($"Invalid JSON in response from '{url}'", e);
             }
         }
 
@@ -413,7 +409,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             if (original.Status != WebExceptionStatus.ProtocolError)
                 return new FetchException(FetchException.FailureReason.NetworkError,
-                                          string.Format("Request to '{0}' failed", url),
+                                          $"Request to '{url}' failed",
                                           original);
 
 
@@ -431,33 +427,25 @@ namespace PasswordManagerAccess.TrueKey
             if ((int)response.StatusCode != 422)
                 return null;
 
-            return new FetchException(FetchException.FailureReason.IncorrectCredentials,
-                                      string.Format(
-                                          "{0} request to '{1}' failed, most likely username/password are incorrect",
-                                          response.Method,
-                                          url),
-                                      original);
+            return new FetchException(
+                FetchException.FailureReason.IncorrectCredentials,
+                $"{response.Method} request to '{url}' failed, most likely username/password are incorrect",
+                original);
         }
 
         private static FetchException MakeGenericHttpError(string url,
                                                            HttpWebResponse response,
                                                            WebException original)
         {
-            return new FetchException(FetchException.FailureReason.NetworkError,
-                                      string.Format("{0} request to '{1}' failed with HTTP status code {2}",
-                                                    response.Method,
-                                                    url,
-                                                    response.StatusCode),
-                                      original);
+            return new FetchException(
+                FetchException.FailureReason.NetworkError,
+                $"{response.Method} request to '{url}' failed with HTTP status code {response.StatusCode}",
+                original);
         }
 
-        private static FetchException MakeInvalidResponseError(string format,
-                                                               string url,
-                                                               Exception original)
+        private static FetchException MakeInvalidResponseError(string message, Exception original)
         {
-            return new FetchException(FetchException.FailureReason.InvalidResponse,
-                                      string.Format(format, url),
-                                      original);
+            return new FetchException(FetchException.FailureReason.InvalidResponse, message, original);
         }
     }
 }

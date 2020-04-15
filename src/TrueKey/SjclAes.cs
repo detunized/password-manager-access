@@ -210,7 +210,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             var keyLength = key.Length;
             if (keyLength != 16 && keyLength != 24 && keyLength != 32)
-                throw new ArgumentException(string.Format("Invalid key length: {0}", keyLength), "key");
+                throw new ArgumentException($"Invalid key length: {keyLength}", nameof(key));
 
             var keyLength4 = keyLength / 4;
             var encKeyLength = keyLength4 * 4 + 28;

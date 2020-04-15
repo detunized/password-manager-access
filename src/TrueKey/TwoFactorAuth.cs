@@ -194,7 +194,7 @@ namespace PasswordManagerAccess.TrueKey
                     return this;
                 }
 
-                throw new InvalidOperationException(string.Format("Invalid answer '{0}'", answer));
+                throw new InvalidOperationException($"Invalid answer '{answer}'");
             }
         }
 
@@ -229,7 +229,7 @@ namespace PasswordManagerAccess.TrueKey
                     return new WaitForEmail();
                 }
 
-                throw new InvalidOperationException(string.Format("Invalid answer '{0}'", answer));
+                throw new InvalidOperationException($"Invalid answer '{answer}'");
             }
 
             private readonly int _deviceIndex;
@@ -265,7 +265,7 @@ namespace PasswordManagerAccess.TrueKey
                     return new WaitForOob(deviceIndex);
                 }
 
-                throw new InvalidOperationException(string.Format("Invalid answer '{0}'", answer));
+                throw new InvalidOperationException($"Invalid answer '{answer}'");
             }
         }
 
@@ -286,8 +286,7 @@ namespace PasswordManagerAccess.TrueKey
             if (state.IsSuccess)
                 return state.Result;
 
-            throw new InvalidOperationException(string.Format("Two step verification failed: {0}",
-                                                              state.Result));
+            throw new InvalidOperationException($"Two step verification failed: {state.Result}");
         }
 
         private State CreateInitialState(Step step)
@@ -320,8 +319,7 @@ namespace PasswordManagerAccess.TrueKey
                 }
             }
 
-            throw new InvalidOperationException(
-                string.Format("Two factor auth step {0} is not supported", step));
+            throw new InvalidOperationException($"Two factor auth step {step} is not supported");
         }
 
         private readonly Remote.ClientInfo _clientInfo;

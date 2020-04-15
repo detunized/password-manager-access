@@ -15,10 +15,9 @@ namespace PasswordManagerAccess.Example.TrueKey
         {
             public override Answer AskToWaitForEmail(string email, Answer[] validAnswers)
             {
-                var answer = AskForAnswer(string.Format(
-                    "A verification email is sent to '{0}'.\n" +
-                    "Please check the inbox, confirm and then press enter.\n" +
-                    "Enter 'r' to resend the email to '{0}'.", email));
+                var answer = AskForAnswer($"A verification email is sent to '{email}'.\n" +
+                                          "Please check the inbox, confirm and then press enter.\n" +
+                                          $"Enter 'r' to resend the email to '{email}'.");
 
                 switch (answer.ToLowerInvariant())
                 {
@@ -31,11 +30,10 @@ namespace PasswordManagerAccess.Example.TrueKey
 
             public override Answer AskToWaitForOob(string name, string email, Answer[] validAnswers)
             {
-                var answer = AskForAnswer(string.Format(
-                    "A push message is sent to '{0}'.\n" +
-                    "Please check, confirm and then press enter.\n" +
-                    "Enter 'r' to resend the push message to '{0}'.\n" +
-                    "Enter 'e' to send a verification email to '{1}' instead.", name, email));
+                var answer = AskForAnswer($"A push message is sent to '{name}'.\n" +
+                                          "Please check, confirm and then press enter.\n" +
+                                          $"Enter 'r' to resend the push message to '{name}'.\n" +
+                                          $"Enter 'e' to send a verification email to '{email}' instead.");
 
                 switch (answer.ToLowerInvariant())
                 {
@@ -54,11 +52,8 @@ namespace PasswordManagerAccess.Example.TrueKey
                 {
                     "Please choose the second factor method:"
                 };
-                text.AddRange(names.Select((name, index) => string.Format(
-                    " - {0}: push message to '{1}'",
-                    index + 1,
-                    name)));
-                text.Add(string.Format(" - e: verification email to '{0}'", email));
+                text.AddRange(names.Select((name, index) => $" - {index + 1}: push message to '{name}'"));
+                text.Add($" - e: verification email to '{email}'");
 
                 for (;;)
                 {
