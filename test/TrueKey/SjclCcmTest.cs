@@ -2,8 +2,10 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
+using CryptoException = PasswordManagerAccess.TrueKey.CryptoException;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {

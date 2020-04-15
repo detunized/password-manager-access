@@ -4,8 +4,10 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
+using CryptoException = PasswordManagerAccess.TrueKey.CryptoException;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {

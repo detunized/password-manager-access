@@ -3,6 +3,7 @@
 
 using System;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
 {
@@ -26,10 +27,10 @@ namespace PasswordManagerAccess.TrueKey
         public static byte[] Generate(byte[] password, byte[] salt, int iterationCount, int byteCount)
         {
             if (iterationCount <= 0)
-                throw new ArgumentOutOfRangeException("iterationCount", "Iteration count should be positive");
+                throw new ArgumentOutOfRangeException(nameof(iterationCount), "Iteration count should be positive");
 
             if (byteCount < 0)
-                throw new ArgumentOutOfRangeException("byteCount", "Byte count should be nonnegative");
+                throw new ArgumentOutOfRangeException(nameof(byteCount), "Byte count should be nonnegative");
 
             using (var hmac = new HMACSHA512())
             {

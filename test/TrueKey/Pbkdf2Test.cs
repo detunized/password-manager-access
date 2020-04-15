@@ -2,8 +2,10 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
+using Pbkdf2 = PasswordManagerAccess.TrueKey.Pbkdf2;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {

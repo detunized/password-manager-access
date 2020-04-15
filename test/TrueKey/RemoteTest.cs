@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using Moq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
 
