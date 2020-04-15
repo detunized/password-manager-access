@@ -9,32 +9,32 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    public class CryptoTest
+    public class UtilTest
     {
         [Fact]
         public void HashPassword_returns_hash_string()
         {
             Assert.Equal("tk-v1-463d82f8e2378ed234ff98a84118636168b76a69cdac5fcb2b9594a0b18ad2ea",
-                         Crypto.HashPassword("username", "password"));
+                         Util.HashPassword("username", "password"));
         }
 
         [Fact]
         public void DecryptMasterKey_returns_key()
         {
-            Assert.Equal(MasterKey, Crypto.DecryptMasterKey(MasterPassword, MasterKeySalt, EncryptedMasterKey));
+            Assert.Equal(MasterKey, Util.DecryptMasterKey(MasterPassword, MasterKeySalt, EncryptedMasterKey));
         }
 
         [Fact]
         public void Decrypt_returns_correct_result()
         {
-            var decrypted = Crypto.Decrypt(Key, Ciphertext);
+            var decrypted = Util.Decrypt(Key, Ciphertext);
             Assert.Equal(Plaintext, decrypted);
         }
 
         [Fact]
         public void Decrypt_returns_empty_on_empty_input()
         {
-            var decrypted = Crypto.Decrypt(Key, "".ToBytes());
+            var decrypted = Util.Decrypt(Key, "".ToBytes());
             Assert.Empty(decrypted);
         }
 
@@ -42,35 +42,35 @@ namespace PasswordManagerAccess.Test.TrueKey
         public void Decrypt_uses_first_256_bits_of_key_only()
         {
             var key = Key.Concat("0102030405060708".DecodeHex()).ToArray();
-            var decrypted = Crypto.Decrypt(key, Ciphertext);
+            var decrypted = Util.Decrypt(key, Ciphertext);
             Assert.Equal(Plaintext, decrypted);
         }
 
         [Fact]
         public void Decrypt_throws_on_too_short_key()
         {
-            var e = Assert.Throws<CryptoException>(() => Crypto.Decrypt(new byte[15], Ciphertext));
+            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(new byte[15], Ciphertext));
             Assert.Equal("Encryption key should be at least 16 bytes long", e.Message);
         }
 
         [Fact]
         public void Decrypt_throws_on_missing_format_byte()
         {
-            var e = Assert.Throws<CryptoException>(() => Crypto.Decrypt(Key, "00".DecodeHex()));
+            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(Key, "00".DecodeHex()));
             Assert.Equal("Ciphertext is too short (version byte is missing)", e.Message);
         }
 
         [Fact]
         public void Decrypt_throws_on_missing_iv()
         {
-            var e = Assert.Throws<CryptoException>(() => Crypto.Decrypt(Key, "0004".DecodeHex()));
+            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(Key, "0004".DecodeHex()));
             Assert.Equal("Ciphertext is too short (IV is missing)", e.Message);
         }
 
         [Fact]
         public void Decrypt_throws_on_unsupported_version()
         {
-            var e = Assert.Throws<CryptoException>(() => Crypto.Decrypt(Key, "0005".DecodeHex()));
+            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(Key, "0005".DecodeHex()));
             Assert.Equal("Unsupported cipher format version (5)", e.Message);
         }
 
@@ -81,13 +81,13 @@ namespace PasswordManagerAccess.Test.TrueKey
             var ciphertext = Ciphertext.Skip(18).ToArray();
             var iv = Ciphertext.Skip(2).Take(16).ToArray();
 
-            Assert.Equal(Plaintext, Crypto.DecryptAes256Ccm(Key, ciphertext, iv));
+            Assert.Equal(Plaintext, Util.DecryptAes256Ccm(Key, ciphertext, iv));
         }
 
         [Fact]
         public void ParseClientToken_returns_otp_info()
         {
-            var otp = Crypto.ParseClientToken(ClientToken);
+            var otp = Util.ParseClientToken(ClientToken);
 
             Assert.Equal(3, otp.Version);
             Assert.Equal(1, otp.OtpAlgorithm);
@@ -103,7 +103,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void ValidateOtpInfo_throws_on_invalid_value()
         {
-            var otp = new Crypto.OtpInfo(version : 3,
+            var otp = new Util.OtpInfo(version : 3,
                                          otpAlgorithm : 1,
                                          otpLength : 0,
                                          hashAlgorithm : 2,
@@ -117,17 +117,17 @@ namespace PasswordManagerAccess.Test.TrueKey
             {
                 // This is a bit ugly but gets the job done.
                 // We clone the valid object and modify one field to something invalid.
-                var clone = (Crypto.OtpInfo)otp.GetType()
+                var clone = (Util.OtpInfo)otp.GetType()
                     .GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)
                     .Invoke(otp, null);
                 clone.GetType().GetField(name).SetValue(clone, value);
 
-                var e = Assert.Throws<ArgumentException>(() => Crypto.ValidateOtpInfo(clone));
+                var e = Assert.Throws<ArgumentException>(() => Util.ValidateOtpInfo(clone));
                 Assert.Contains(contains, e.Message);
             };
 
             // Doesn't throw
-            Crypto.ValidateOtpInfo(otp);
+            Util.ValidateOtpInfo(otp);
 
             check("Version", 13, "version");
             check("OtpAlgorithm", 13, "algorithm");
@@ -141,10 +141,10 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void GenerateRandomOtpChallenge_returns_challenge()
         {
-            var otp = Crypto.GenerateRandomOtpChallenge(OtpInfo);
+            var otp = Util.GenerateRandomOtpChallenge(OtpInfo);
 
             // It's not much to verify here as these things are random
-            Assert.Equal(Crypto.ChallengeSize, otp.Challenge.Length);
+            Assert.Equal(Util.ChallengeSize, otp.Challenge.Length);
             Assert.Equal(32, otp.Signature.Length);
 
             // We assume the test is running less than 10 seconds
@@ -154,21 +154,21 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void Sha256_returns_hashed_message()
         {
-            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), Crypto.Sha256("message"));
+            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), Util.Sha256("message"));
         }
 
         [Fact]
         public void Hmac_returns_hashed_message()
         {
             Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64(),
-                         Crypto.Hmac("salt".ToBytes(), "message".ToBytes()));
+                         Util.Hmac("salt".ToBytes(), "message".ToBytes()));
         }
 
         [Fact]
         public void RandomBytes_returns_array_of_requested_size()
         {
             foreach (var size in new[] { 0, 1, 2, 3, 4, 15, 255, 1024, 1337 })
-                Assert.Equal(size, Crypto.RandomBytes(size).Length);
+                Assert.Equal(size, Util.RandomBytes(size).Length);
         }
 
         [Fact]
@@ -177,17 +177,17 @@ namespace PasswordManagerAccess.Test.TrueKey
             var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
 
             Assert.Equal("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64(),
-                         Crypto.SignChallenge(OtpInfo, challege, 1493456789));
+                         Util.SignChallenge(OtpInfo, challege, 1493456789));
         }
 
         [Fact]
         public void SignChallenge_throws_on_invalid_challenge()
         {
             foreach (var size in
-                     new[] { 0, 1, 1024, 1337, Crypto.ChallengeSize - 1, Crypto.ChallengeSize + 1 })
+                     new[] { 0, 1, 1024, 1337, Util.ChallengeSize - 1, Util.ChallengeSize + 1 })
             {
                 var challenge = Enumerable.Repeat((byte)0, size).ToArray();
-                var e = Assert.Throws<ArgumentOutOfRangeException>(() => Crypto.SignChallenge(OtpInfo, challenge, 1));
+                var e = Assert.Throws<ArgumentOutOfRangeException>(() => Util.SignChallenge(OtpInfo, challenge, 1));
                 Assert.StartsWith("Challenge must be", e.Message);
             }
         }
@@ -225,7 +225,7 @@ namespace PasswordManagerAccess.Test.TrueKey
                                            "K6O0+LH8FRidFaZkJ2AlTu";
 
         // TODO: Remove copy paste
-        private static readonly Crypto.OtpInfo OtpInfo = new Crypto.OtpInfo(
+        private static readonly Util.OtpInfo OtpInfo = new Util.OtpInfo(
             version: 3,
             otpAlgorithm: 1,
             otpLength: 0,

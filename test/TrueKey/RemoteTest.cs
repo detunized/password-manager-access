@@ -175,7 +175,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             token: ClientToken,
             id: DeviceId);
 
-        private static readonly Crypto.OtpInfo OtpInfo = new Crypto.OtpInfo(
+        private static readonly Util.OtpInfo OtpInfo = new Util.OtpInfo(
             version: 3,
             otpAlgorithm: 1,
             otpLength: 0,

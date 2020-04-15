@@ -52,9 +52,9 @@ namespace PasswordManagerAccess.TrueKey
             public readonly string Username;
             public readonly string Name;
             public readonly DeviceInfo DeviceInfo;
-            public readonly Crypto.OtpInfo OtpInfo;
+            public readonly Util.OtpInfo OtpInfo;
 
-            public ClientInfo(string username, string name, DeviceInfo deviceInfo, Crypto.OtpInfo otpInfo)
+            public ClientInfo(string username, string name, DeviceInfo deviceInfo, Util.OtpInfo otpInfo)
             {
                 Username = username;
                 Name = name;
@@ -82,7 +82,7 @@ namespace PasswordManagerAccess.TrueKey
                 {"userData", new Dictionary<string, object> {
                     {"email", clientInfo.Username},
                     {"oAuthTransId", transactionId},
-                    {"pwd", Crypto.HashPassword(clientInfo.Username, password)},
+                    {"pwd", Util.HashPassword(clientInfo.Username, password)},
                 }},
                 {"deviceData", new Dictionary<string, object> {
                     {"deviceId", clientInfo.DeviceInfo.Id},
@@ -309,9 +309,9 @@ namespace PasswordManagerAccess.TrueKey
             };
         }
 
-        internal static Dictionary<string, object> RandomOtpChallngeAsDictionary(Crypto.OtpInfo otp)
+        internal static Dictionary<string, object> RandomOtpChallngeAsDictionary(Util.OtpInfo otp)
         {
-            var challenge = Crypto.GenerateRandomOtpChallenge(otp);
+            var challenge = Util.GenerateRandomOtpChallenge(otp);
             return new Dictionary<string, object> {
                 {"qn", challenge.Challenge.ToBase64()},
                 {"otpType", "time"},

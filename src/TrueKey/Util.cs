@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 
 namespace PasswordManagerAccess.TrueKey
 {
-    internal static class Crypto
+    internal static class Util
     {
         public const int ChallengeSize = 128;
 

@@ -28,11 +28,11 @@ namespace PasswordManagerAccess.TrueKey
                              Remote.RegisetNewDevice("truekey-sharp", http);
 
             // Step 2: Parse the token to decode OTP information.
-            var otpInfo = Crypto.ParseClientToken(deviceInfo.Token);
+            var otpInfo = Util.ParseClientToken(deviceInfo.Token);
 
             // Step 3: Validate the OTP info to make sure it's got only the
             //         things we support at the moment.
-            Crypto.ValidateOtpInfo(otpInfo);
+            Util.ValidateOtpInfo(otpInfo);
 
             // Store the token and ID for the next time.
             StoreDeviceInfo(deviceInfo, storage);
@@ -63,9 +63,9 @@ namespace PasswordManagerAccess.TrueKey
             var encryptedVault = Remote.GetVault(oauthToken, http);
 
             // Step 9: Compute the master key.
-            var masterKey = Crypto.DecryptMasterKey(password,
-                                                    encryptedVault.MasterKeySalt,
-                                                    encryptedVault.EncryptedMasterKey);
+            var masterKey = Util.DecryptMasterKey(password,
+                                                  encryptedVault.MasterKeySalt,
+                                                  encryptedVault.EncryptedMasterKey);
 
             // Step 10: Decrypt the accounts.
             var accounts = encryptedVault.EncryptedAccounts
@@ -73,9 +73,9 @@ namespace PasswordManagerAccess.TrueKey
                             i.Id,
                             i.Name,
                             i.Username,
-                            Crypto.Decrypt(masterKey, i.EncryptedPassword).ToUtf8(),
+                            Util.Decrypt(masterKey, i.EncryptedPassword).ToUtf8(),
                             i.Url,
-                            Crypto.Decrypt(masterKey, i.EncryptedNote).ToUtf8()))
+                            Util.Decrypt(masterKey, i.EncryptedNote).ToUtf8()))
                 .ToArray();
 
             return new Vault(accounts);
