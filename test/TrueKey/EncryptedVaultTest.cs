@@ -1,14 +1,14 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.TrueKey;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    [TestFixture]
-    class EncryptedVaultTest
+    public class EncryptedVaultTest
     {
-        [Test]
+        [Fact]
         public void EncryptedVault_properties_are_set()
         {
             var salt = "salt".ToBytes();
@@ -16,9 +16,9 @@ namespace PasswordManagerAccess.Test.TrueKey
             var accounts = new EncryptedAccount[0];
             var vault = new EncryptedVault(salt, key, accounts);
 
-            Assert.That(vault.MasterKeySalt, Is.EqualTo(salt));
-            Assert.That(vault.EncryptedMasterKey, Is.EqualTo(key));
-            Assert.That(vault.EncryptedAccounts, Is.SameAs(accounts));
+            Assert.Equal(salt, vault.MasterKeySalt);
+            Assert.Equal(key, vault.EncryptedMasterKey);
+            Assert.Same(accounts, vault.EncryptedAccounts);
         }
     }
 }

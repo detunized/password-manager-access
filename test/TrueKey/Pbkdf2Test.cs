@@ -2,12 +2,12 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using NUnit.Framework;
+using PasswordManagerAccess.TrueKey;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    [TestFixture]
-    class Pbkdf2Test
+    public class Pbkdf2Test
     {
         private class TestCase
         {
@@ -52,61 +52,43 @@ namespace PasswordManagerAccess.Test.TrueKey
             new TestCase("pass\0word", "sa\0lt", 4096, "nZ6cTNIf5L4k1bgkTHWWZQ=="),
         };
 
-        [Test]
+        [Fact]
         public void Generate_returns_correct_result()
         {
             foreach (var i in TestData)
             {
                 var expected = i.Expected.Decode64();
 
-                Assert.That(Pbkdf2.Generate(i.Password,
-                                            i.Salt,
-                                            i.IterationCount,
-                                            expected.Length),
-                            Is.EqualTo(expected));
-
-                Assert.That(Pbkdf2.Generate(i.Password.ToBytes(),
-                                            i.Salt,
-                                            i.IterationCount,
-                                            expected.Length),
-                            Is.EqualTo(expected));
-
-                Assert.That(Pbkdf2.Generate(i.Password,
-                                            i.Salt.ToBytes(),
-                                            i.IterationCount,
-                                            expected.Length),
-                            Is.EqualTo(expected));
-
-                Assert.That(Pbkdf2.Generate(i.Password.ToBytes(),
-                                            i.Salt.ToBytes(),
-                                            i.IterationCount,
-                                            expected.Length),
-                            Is.EqualTo(expected));
+                Assert.Equal(expected,
+                             Pbkdf2.Generate(i.Password, i.Salt, i.IterationCount, expected.Length));
+                Assert.Equal(expected,
+                             Pbkdf2.Generate(i.Password.ToBytes(), i.Salt, i.IterationCount, expected.Length));
+                Assert.Equal(expected,
+                             Pbkdf2.Generate(i.Password, i.Salt.ToBytes(), i.IterationCount, expected.Length));
+                Assert.Equal(expected,
+                             Pbkdf2.Generate(i.Password.ToBytes(), i.Salt.ToBytes(), i.IterationCount, expected.Length));
             }
         }
 
-        [Test]
+        [Fact]
         public void Generate_throws_on_zero_iterationCount()
         {
-            Assert.That(() => Pbkdf2.Generate("password", "salt", 0, 32),
-                        Throws.InstanceOf<ArgumentOutOfRangeException>()
-                            .And.Message.StartsWith("Iteration count should be positive"));
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => Pbkdf2.Generate("password", "salt", 0, 32));
+            Assert.StartsWith("Iteration count should be positive", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Generate_throws_on_negative_iterationCount()
         {
-            Assert.That(() => Pbkdf2.Generate("password", "salt", -1, 32),
-                        Throws.InstanceOf<ArgumentOutOfRangeException>()
-                            .And.Message.StartsWith("Iteration count should be positive"));
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => Pbkdf2.Generate("password", "salt", -1, 32));
+            Assert.StartsWith("Iteration count should be positive", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Generate_throws_on_negative_byteCount()
         {
-            Assert.That(() => Pbkdf2.Generate("password", "salt", 1, -1),
-                        Throws.InstanceOf<ArgumentOutOfRangeException>()
-                            .And.Message.StartsWith("Byte count should be nonnegative"));
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => Pbkdf2.Generate("password", "salt", 1, -1));
+            Assert.StartsWith("Byte count should be nonnegative", e.Message);
         }
     }
 }

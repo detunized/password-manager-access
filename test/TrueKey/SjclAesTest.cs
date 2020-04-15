@@ -2,12 +2,12 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using NUnit.Framework;
+using PasswordManagerAccess.TrueKey;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    [TestFixture]
-    class SjclAesTest
+    public class SjclAesTest
     {
         struct AesTestCase
         {
@@ -140,61 +140,61 @@ namespace PasswordManagerAccess.Test.TrueKey
                                              0x30313233, 0x1c1d1e1f, 0x38393a3b, 0x34353637}),
         };
 
-        [Test]
+        [Fact]
         public void Encrypt_returns_correct_value()
         {
             foreach (var i in AesTestCases)
             {
                 var ciphertext = new SjclAes(i.Key).Encrypt(i.Plaintext);
-                Assert.That(ciphertext, Is.EqualTo(i.Ciphertext));
+                Assert.Equal(i.Ciphertext, ciphertext);
             }
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_returns_correct_value()
         {
             foreach (var i in AesTestCases)
             {
                 var plaintext = new SjclAes(i.Key).Decrypt(i.Ciphertext);
-                Assert.That(plaintext, Is.EqualTo(i.Plaintext));
+                Assert.Equal(i.Plaintext, plaintext);
             }
         }
 
-        [Test]
+        [Fact]
         public void ComputeDoubleTable_returns_correct_result()
         {
             var table = SjclAes.ComputeDoubleTable();
 
             // Test data is generated with SJCL sources
-            Assert.That(table.Length, Is.EqualTo(256));
+            Assert.Equal(256, table.Length);
 
-            Assert.That(table[0x00], Is.EqualTo(0x00));
-            Assert.That(table[0x01], Is.EqualTo(0x02));
-            Assert.That(table[0x02], Is.EqualTo(0x04));
-            Assert.That(table[0x7f], Is.EqualTo(0xfe));
-            Assert.That(table[0x80], Is.EqualTo(0x1b));
-            Assert.That(table[0xfe], Is.EqualTo(0xe7));
-            Assert.That(table[0xff], Is.EqualTo(0xe5));
+            Assert.Equal(0x00, table[0x00]);
+            Assert.Equal(0x02, table[0x01]);
+            Assert.Equal(0x04, table[0x02]);
+            Assert.Equal(0xfe, table[0x7f]);
+            Assert.Equal(0x1b, table[0x80]);
+            Assert.Equal(0xe7, table[0xfe]);
+            Assert.Equal(0xe5, table[0xff]);
         }
 
-        [Test]
+        [Fact]
         public void ComputeTrippleTable_returns_correct_result()
         {
             var table = SjclAes.ComputeTrippleTable(SjclAes.ComputeDoubleTable());
 
             // Test data is generated with SJCL sources
-            Assert.That(table.Length, Is.EqualTo(256));
+            Assert.Equal(256, table.Length);
 
-            Assert.That(table[0x00], Is.EqualTo(0x00));
-            Assert.That(table[0x01], Is.EqualTo(0xf6));
-            Assert.That(table[0x02], Is.EqualTo(0xf7));
-            Assert.That(table[0x7f], Is.EqualTo(0xdc));
-            Assert.That(table[0x80], Is.EqualTo(0x89));
-            Assert.That(table[0xfe], Is.EqualTo(0xa3));
-            Assert.That(table[0xff], Is.EqualTo(0x55));
+            Assert.Equal(0x00, table[0x00]);
+            Assert.Equal(0xf6, table[0x01]);
+            Assert.Equal(0xf7, table[0x02]);
+            Assert.Equal(0xdc, table[0x7f]);
+            Assert.Equal(0x89, table[0x80]);
+            Assert.Equal(0xa3, table[0xfe]);
+            Assert.Equal(0x55, table[0xff]);
         }
 
-        [Test]
+        [Fact]
         public void ComputeSboxTable_returns_correct_result()
         {
             var dt = SjclAes.ComputeDoubleTable();
@@ -202,23 +202,23 @@ namespace PasswordManagerAccess.Test.TrueKey
             var table = SjclAes.ComputeSboxTable(dt, tt);
 
             // Test data is generated with SJCL sources
-            Assert.That(table.Length, Is.EqualTo(256));
+            Assert.Equal(256, table.Length);
 
-            Assert.That(table[0x00], Is.EqualTo(0x63));
-            Assert.That(table[0x01], Is.EqualTo(0x7c));
-            Assert.That(table[0x02], Is.EqualTo(0x77));
-            Assert.That(table[0x7f], Is.EqualTo(0xd2));
-            Assert.That(table[0x80], Is.EqualTo(0xcd));
-            Assert.That(table[0xfe], Is.EqualTo(0xbb));
-            Assert.That(table[0xff], Is.EqualTo(0x16));
+            Assert.Equal(0x63, table[0x00]);
+            Assert.Equal(0x7c, table[0x01]);
+            Assert.Equal(0x77, table[0x02]);
+            Assert.Equal(0xd2, table[0x7f]);
+            Assert.Equal(0xcd, table[0x80]);
+            Assert.Equal(0xbb, table[0xfe]);
+            Assert.Equal(0x16, table[0xff]);
 
             // Every value should be exactly once
             Array.Sort(table);
             for (var i = 0; i < 256; ++i)
-                Assert.That(table[i], Is.EqualTo(i));
+                Assert.Equal(i, table[i]);
         }
 
-        [Test]
+        [Fact]
         public void ComputeInverseSboxTable_returns_correct_result()
         {
             var dt = SjclAes.ComputeDoubleTable();
@@ -227,23 +227,23 @@ namespace PasswordManagerAccess.Test.TrueKey
             var table = SjclAes.ComputeInverseSboxTable(sbox);
 
             // Test data is generated with SJCL sources
-            Assert.That(table.Length, Is.EqualTo(256));
+            Assert.Equal(256, table.Length);
 
-            Assert.That(table[0x00], Is.EqualTo(0x52));
-            Assert.That(table[0x01], Is.EqualTo(0x09));
-            Assert.That(table[0x02], Is.EqualTo(0x6a));
-            Assert.That(table[0x7f], Is.EqualTo(0x6b));
-            Assert.That(table[0x80], Is.EqualTo(0x3a));
-            Assert.That(table[0xfe], Is.EqualTo(0x0c));
-            Assert.That(table[0xff], Is.EqualTo(0x7d));
+            Assert.Equal(0x52, table[0x00]);
+            Assert.Equal(0x09, table[0x01]);
+            Assert.Equal(0x6a, table[0x02]);
+            Assert.Equal(0x6b, table[0x7f]);
+            Assert.Equal(0x3a, table[0x80]);
+            Assert.Equal(0x0c, table[0xfe]);
+            Assert.Equal(0x7d, table[0xff]);
 
             // Every value should be exactly once
             Array.Sort(table);
             for (var i = 0; i < 256; ++i)
-                Assert.That(table[i], Is.EqualTo(i));
+                Assert.Equal(i, table[i]);
         }
 
-        [Test]
+        [Fact]
         public void ComputeEncodeTable_returns_correct_result()
         {
             var dt = SjclAes.ComputeDoubleTable();
@@ -251,47 +251,47 @@ namespace PasswordManagerAccess.Test.TrueKey
             var table = SjclAes.ComputeEncodeTable(dt, sbox);
 
             // Test data is generated with SJCL sources
-            Assert.That(table.GetLength(0), Is.EqualTo(4));
-            Assert.That(table.GetLength(1), Is.EqualTo(256));
+            Assert.Equal(4, table.GetLength(0));
+            Assert.Equal(256, table.GetLength(1));
 
             // 0
-            Assert.That(table[0, 0x00], Is.EqualTo(0xc66363a5));
-            Assert.That(table[0, 0x01], Is.EqualTo(0xf87c7c84));
-            Assert.That(table[0, 0x02], Is.EqualTo(0xee777799));
-            Assert.That(table[0, 0x7f], Is.EqualTo(0xbfd2d26d));
-            Assert.That(table[0, 0x80], Is.EqualTo(0x81cdcd4c));
-            Assert.That(table[0, 0xfe], Is.EqualTo(0x6dbbbbd6));
-            Assert.That(table[0, 0xff], Is.EqualTo(0x2c16163a));
+            Assert.Equal(0xc66363a5U, table[0, 0x00]);
+            Assert.Equal(0xf87c7c84U, table[0, 0x01]);
+            Assert.Equal(0xee777799U, table[0, 0x02]);
+            Assert.Equal(0xbfd2d26dU, table[0, 0x7f]);
+            Assert.Equal(0x81cdcd4cU, table[0, 0x80]);
+            Assert.Equal(0x6dbbbbd6U, table[0, 0xfe]);
+            Assert.Equal(0x2c16163aU, table[0, 0xff]);
 
             // 1
-            Assert.That(table[1, 0x00], Is.EqualTo(0xa5c66363));
-            Assert.That(table[1, 0x01], Is.EqualTo(0x84f87c7c));
-            Assert.That(table[1, 0x02], Is.EqualTo(0x99ee7777));
-            Assert.That(table[1, 0x7f], Is.EqualTo(0x6dbfd2d2));
-            Assert.That(table[1, 0x80], Is.EqualTo(0x4c81cdcd));
-            Assert.That(table[1, 0xfe], Is.EqualTo(0xd66dbbbb));
-            Assert.That(table[1, 0xff], Is.EqualTo(0x3a2c1616));
+            Assert.Equal(0xa5c66363U, table[1, 0x00]);
+            Assert.Equal(0x84f87c7cU, table[1, 0x01]);
+            Assert.Equal(0x99ee7777U, table[1, 0x02]);
+            Assert.Equal(0x6dbfd2d2U, table[1, 0x7f]);
+            Assert.Equal(0x4c81cdcdU, table[1, 0x80]);
+            Assert.Equal(0xd66dbbbbU, table[1, 0xfe]);
+            Assert.Equal(0x3a2c1616U, table[1, 0xff]);
 
             // 2
-            Assert.That(table[2, 0x00], Is.EqualTo(0x63a5c663));
-            Assert.That(table[2, 0x01], Is.EqualTo(0x7c84f87c));
-            Assert.That(table[2, 0x02], Is.EqualTo(0x7799ee77));
-            Assert.That(table[2, 0x7f], Is.EqualTo(0xd26dbfd2));
-            Assert.That(table[2, 0x80], Is.EqualTo(0xcd4c81cd));
-            Assert.That(table[2, 0xfe], Is.EqualTo(0xbbd66dbb));
-            Assert.That(table[2, 0xff], Is.EqualTo(0x163a2c16));
+            Assert.Equal(0x63a5c663U, table[2, 0x00]);
+            Assert.Equal(0x7c84f87cU, table[2, 0x01]);
+            Assert.Equal(0x7799ee77U, table[2, 0x02]);
+            Assert.Equal(0xd26dbfd2U, table[2, 0x7f]);
+            Assert.Equal(0xcd4c81cdU, table[2, 0x80]);
+            Assert.Equal(0xbbd66dbbU, table[2, 0xfe]);
+            Assert.Equal(0x163a2c16U, table[2, 0xff]);
 
             // 3
-            Assert.That(table[3, 0x00], Is.EqualTo(0x6363a5c6));
-            Assert.That(table[3, 0x01], Is.EqualTo(0x7c7c84f8));
-            Assert.That(table[3, 0x02], Is.EqualTo(0x777799ee));
-            Assert.That(table[3, 0x7f], Is.EqualTo(0xd2d26dbf));
-            Assert.That(table[3, 0x80], Is.EqualTo(0xcdcd4c81));
-            Assert.That(table[3, 0xfe], Is.EqualTo(0xbbbbd66d));
-            Assert.That(table[3, 0xff], Is.EqualTo(0x16163a2c));
+            Assert.Equal(0x6363a5c6U, table[3, 0x00]);
+            Assert.Equal(0x7c7c84f8U, table[3, 0x01]);
+            Assert.Equal(0x777799eeU, table[3, 0x02]);
+            Assert.Equal(0xd2d26dbfU, table[3, 0x7f]);
+            Assert.Equal(0xcdcd4c81U, table[3, 0x80]);
+            Assert.Equal(0xbbbbd66dU, table[3, 0xfe]);
+            Assert.Equal(0x16163a2cU, table[3, 0xff]);
         }
 
-        [Test]
+        [Fact]
         public void ComputeDecodeTable_returns_correct_result()
         {
             var dt = SjclAes.ComputeDoubleTable();
@@ -299,47 +299,47 @@ namespace PasswordManagerAccess.Test.TrueKey
             var table = SjclAes.ComputeDecodeTable(dt, sbox);
 
             // Test data is generated with SJCL sources
-            Assert.That(table.GetLength(0), Is.EqualTo(4));
-            Assert.That(table.GetLength(1), Is.EqualTo(256));
+            Assert.Equal(4, table.GetLength(0));
+            Assert.Equal(256, table.GetLength(1));
 
             // 0
-            Assert.That(table[0, 0x00], Is.EqualTo(0x51f4a750));
-            Assert.That(table[0, 0x01], Is.EqualTo(0x7e416553));
-            Assert.That(table[0, 0x02], Is.EqualTo(0x1a17a4c3));
-            Assert.That(table[0, 0x7f], Is.EqualTo(0x141ea9c8));
-            Assert.That(table[0, 0x80], Is.EqualTo(0x57f11985));
-            Assert.That(table[0, 0xfe], Is.EqualTo(0x486c5c74));
-            Assert.That(table[0, 0xff], Is.EqualTo(0xd0b85742));
+            Assert.Equal(0x51f4a750U, table[0, 0x00]);
+            Assert.Equal(0x7e416553U, table[0, 0x01]);
+            Assert.Equal(0x1a17a4c3U, table[0, 0x02]);
+            Assert.Equal(0x141ea9c8U, table[0, 0x7f]);
+            Assert.Equal(0x57f11985U, table[0, 0x80]);
+            Assert.Equal(0x486c5c74U, table[0, 0xfe]);
+            Assert.Equal(0xd0b85742U, table[0, 0xff]);
 
             // 1
-            Assert.That(table[1, 0x00], Is.EqualTo(0x5051f4a7));
-            Assert.That(table[1, 0x01], Is.EqualTo(0x537e4165));
-            Assert.That(table[1, 0x02], Is.EqualTo(0xc31a17a4));
-            Assert.That(table[1, 0x7f], Is.EqualTo(0xc8141ea9));
-            Assert.That(table[1, 0x80], Is.EqualTo(0x8557f119));
-            Assert.That(table[1, 0xfe], Is.EqualTo(0x74486c5c));
-            Assert.That(table[1, 0xff], Is.EqualTo(0x42d0b857));
+            Assert.Equal(0x5051f4a7U, table[1, 0x00]);
+            Assert.Equal(0x537e4165U, table[1, 0x01]);
+            Assert.Equal(0xc31a17a4U, table[1, 0x02]);
+            Assert.Equal(0xc8141ea9U, table[1, 0x7f]);
+            Assert.Equal(0x8557f119U, table[1, 0x80]);
+            Assert.Equal(0x74486c5cU, table[1, 0xfe]);
+            Assert.Equal(0x42d0b857U, table[1, 0xff]);
 
             // 2
-            Assert.That(table[2, 0x00], Is.EqualTo(0xa75051f4));
-            Assert.That(table[2, 0x01], Is.EqualTo(0x65537e41));
-            Assert.That(table[2, 0x02], Is.EqualTo(0xa4c31a17));
-            Assert.That(table[2, 0x7f], Is.EqualTo(0xa9c8141e));
-            Assert.That(table[2, 0x80], Is.EqualTo(0x198557f1));
-            Assert.That(table[2, 0xfe], Is.EqualTo(0x5c74486c));
-            Assert.That(table[2, 0xff], Is.EqualTo(0x5742d0b8));
+            Assert.Equal(0xa75051f4U, table[2, 0x00]);
+            Assert.Equal(0x65537e41U, table[2, 0x01]);
+            Assert.Equal(0xa4c31a17U, table[2, 0x02]);
+            Assert.Equal(0xa9c8141eU, table[2, 0x7f]);
+            Assert.Equal(0x198557f1U, table[2, 0x80]);
+            Assert.Equal(0x5c74486cU, table[2, 0xfe]);
+            Assert.Equal(0x5742d0b8U, table[2, 0xff]);
 
             // 3
-            Assert.That(table[3, 0x00], Is.EqualTo(0xf4a75051));
-            Assert.That(table[3, 0x01], Is.EqualTo(0x4165537e));
-            Assert.That(table[3, 0x02], Is.EqualTo(0x17a4c31a));
-            Assert.That(table[3, 0x7f], Is.EqualTo(0x1ea9c814));
-            Assert.That(table[3, 0x80], Is.EqualTo(0xf1198557));
-            Assert.That(table[3, 0xfe], Is.EqualTo(0x6c5c7448));
-            Assert.That(table[3, 0xff], Is.EqualTo(0xb85742d0));
+            Assert.Equal(0xf4a75051U, table[3, 0x00]);
+            Assert.Equal(0x4165537eU, table[3, 0x01]);
+            Assert.Equal(0x17a4c31aU, table[3, 0x02]);
+            Assert.Equal(0x1ea9c814U, table[3, 0x7f]);
+            Assert.Equal(0xf1198557U, table[3, 0x80]);
+            Assert.Equal(0x6c5c7448U, table[3, 0xfe]);
+            Assert.Equal(0xb85742d0U, table[3, 0xff]);
         }
 
-        [Test]
+        [Fact]
         public void ScheduleEncryptionKey_returns_correct_result()
         {
             var dt = SjclAes.ComputeDoubleTable();
@@ -348,11 +348,11 @@ namespace PasswordManagerAccess.Test.TrueKey
             foreach (var i in KeyTestCases)
             {
                 var key = SjclAes.ScheduleEncryptionKey(i.Key, sbox);
-                Assert.That(key, Is.EqualTo(i.EncryptionKey));
+                Assert.Equal(i.EncryptionKey, key);
             }
         }
 
-        [Test]
+        [Fact]
         public void ScheduleEncryptionKey_throws_on_incorrect_input_key_length()
         {
             var dt = SjclAes.ComputeDoubleTable();
@@ -360,13 +360,12 @@ namespace PasswordManagerAccess.Test.TrueKey
 
             foreach (var i in new[] {0, 1, 2, 3, 4, 15, 17, 23, 25, 31, 33, 1024})
             {
-                Assert.That(() => SjclAes.ScheduleEncryptionKey(new byte[i], sbox),
-                            Throws.TypeOf<ArgumentException>()
-                                .And.Message.StartsWith("Invalid key length"));
+                var e = Assert.Throws<ArgumentException>(() => SjclAes.ScheduleEncryptionKey(new byte[i], sbox));
+                Assert.StartsWith("Invalid key length", e.Message);
             }
         }
 
-        [Test]
+        [Fact]
         public void ScheduleDecryptionKey_returns_correct_result()
         {
             var dt = SjclAes.ComputeDoubleTable();
@@ -377,36 +376,27 @@ namespace PasswordManagerAccess.Test.TrueKey
             {
                 var encKey = SjclAes.ScheduleEncryptionKey(i.Key, sbox);
                 var key = SjclAes.ScheduleDecryptionKey(encKey, sbox, decode);
-                Assert.That(key, Is.EqualTo(i.DecryptionKey));
+                Assert.Equal(i.DecryptionKey, key);
             }
         }
 
-        [Test]
+        [Fact]
         public void ToQuads_converts_words_to_quads()
         {
-            Assert.That(
-                SjclAes.ToQuads(new uint[0]),
-                Is.EqualTo(new SjclQuad[0]));
+            Assert.Equal(new SjclQuad[0], SjclAes.ToQuads(new uint[0]));
 
-            Assert.That(
-                SjclAes.ToQuads(new uint[] {1, 2, 3, 4}),
-                Is.EqualTo(new SjclQuad[] {new SjclQuad(1, 2, 3, 4)}));
+            Assert.Equal(new SjclQuad[]{new SjclQuad(1, 2, 3, 4)}, SjclAes.ToQuads(new uint[]{1, 2, 3, 4}));
 
-            Assert.That(
-                SjclAes.ToQuads(new uint[] {1, 2, 3, 4, 5, 6, 7, 8}),
-                Is.EqualTo(new SjclQuad[] {new SjclQuad(1, 2, 3, 4), new SjclQuad(5, 6, 7, 8)}));
+            Assert.Equal(new SjclQuad[]{new SjclQuad(1, 2, 3, 4), new SjclQuad(5, 6, 7, 8)}, SjclAes.ToQuads(new uint[]{1, 2, 3, 4, 5, 6, 7, 8}));
 
-            Assert.That(
-                SjclAes.ToQuads(new uint[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                Is.EqualTo(new SjclQuad[] {new SjclQuad(1, 2, 3, 4), new SjclQuad(5, 6, 7, 8), new SjclQuad(9, 10, 11, 12)}));
+            Assert.Equal(new SjclQuad[]{new SjclQuad(1, 2, 3, 4), new SjclQuad(5, 6, 7, 8), new SjclQuad(9, 10, 11, 12)}, SjclAes.ToQuads(new uint[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}));
         }
 
-        [Test]
+        [Fact]
         public void ToQuads_throws_on_length_that_is_not_multiple_of_4()
         {
-            Assert.That(() => SjclAes.ToQuads(new uint[] {1, 2, 3}),
-                        Throws.TypeOf<ArgumentException>()
-                            .And.Message.StartsWith("Length must be a multiple of 4"));
+            var e = Assert.Throws<ArgumentException>(() => SjclAes.ToQuads(new uint[] {1, 2, 3}));
+            Assert.StartsWith("Length must be a multiple of 4", e.Message);
         }
     }
 }

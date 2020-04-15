@@ -6,45 +6,45 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using Moq;
-using NUnit.Framework;
+using PasswordManagerAccess.TrueKey;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    [TestFixture]
-    class RemoteTest
+    public class RemoteTest: TestBase
     {
-        [Test]
+        [Fact]
         public void RegisetNewDevice_returns_device_info()
         {
             var client = SetupPostWithFixture("register-new-device-response");
             var result = Remote.RegisetNewDevice("truekey-sharp", client.Object);
 
-            Assert.That(result.Token, Is.StringStarting("AQCmAwEA"));
-            Assert.That(result.Id, Is.StringStarting("d871347b"));
+            Assert.StartsWith("AQCmAwEA", result.Token);
+            Assert.StartsWith("d871347b", result.Id);
         }
 
-        [Test]
+        [Fact]
         public void RegisetNewDevice_throws_on_common_errors()
         {
             VerifyAllCommonErrorsWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
         }
 
-        [Test]
+        [Fact]
         public void AuthStep1_returns_transaction_id()
         {
             var client = SetupPostWithFixture("auth-step1-response");
             var result = Remote.AuthStep1(ClientInfo, client.Object);
 
-            Assert.That(result, Is.EqualTo("6cdfcd43-065c-43a1-aa7a-017de98eefd0"));
+            Assert.Equal("6cdfcd43-065c-43a1-aa7a-017de98eefd0", result);
         }
 
-        [Test]
+        [Fact]
         public void AuthStep1_throws_on_common_errors()
         {
             VerifyAllCommonErrorsWithPost(http => Remote.AuthStep1(ClientInfo, http));
         }
 
-        [Test]
+        [Fact]
         public void AuthStep2_returns_two_factor_settings()
         {
             // TODO: Test with specifically crafted broken/unsupported responses
@@ -53,24 +53,24 @@ namespace PasswordManagerAccess.Test.TrueKey
             var client = SetupPostWithFixture("auth-step2-response");
             var result = Remote.AuthStep2(ClientInfo, "password", "transaction-id", client.Object);
 
-            Assert.That(result.InitialStep, Is.EqualTo(TwoFactorAuth.Step.WaitForOob));
-            Assert.That(result.TransactionId, Is.EqualTo("ae830c59-634b-437c-95b6-58158e85ffae"));
-            Assert.That(result.Email, Is.EqualTo("username@example.com"));
-            Assert.That(result.OAuthToken, Is.EqualTo(""));
+            Assert.Equal(TwoFactorAuth.Step.WaitForOob, result.InitialStep);
+            Assert.Equal("ae830c59-634b-437c-95b6-58158e85ffae", result.TransactionId);
+            Assert.Equal("username@example.com", result.Email);
+            Assert.Equal("", result.OAuthToken);
 
-            Assert.That(result.Devices.Length, Is.EqualTo(1));
-            Assert.That(result.Devices[0].Name, Is.EqualTo("LGE Nexus 5"));
-            Assert.That(result.Devices[0].Id, Is.StringStarting("MTU5NjAwMjI3MQP04dNsmSNQ2L"));
+            Assert.Single(result.Devices);
+            Assert.Equal("LGE Nexus 5", result.Devices[0].Name);
+            Assert.StartsWith("MTU5NjAwMjI3MQP04dNsmSNQ2L", result.Devices[0].Id);
         }
 
-        [Test]
+        [Fact]
         public void AuthStep2_throws_on_common_errors()
         {
             VerifyAllCommonErrorsWithPost(
                 http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
         }
 
-        [Test]
+        [Fact]
         public void SaveDeviceAsTrusted_works()
         {
             // TODO: Write a better test
@@ -78,7 +78,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             Remote.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", client.Object);
         }
 
-        [Test]
+        [Fact]
         public void SaveDeviceAsTrusted_throws_on_common_errors()
         {
             VerifyMostCommonErrorsWithPost(http => Remote.SaveDeviceAsTrusted(ClientInfo,
@@ -87,61 +87,57 @@ namespace PasswordManagerAccess.Test.TrueKey
                                                                               http));
         }
 
-        [Test]
+        [Fact]
         public void AuthCheck_returns_oauth_token()
         {
             var client = SetupPostWithFixture("auth-check-success-response");
             var result = Remote.AuthCheck(ClientInfo, "transaction-id", client.Object);
 
-            Assert.That(result, Is.StringStarting("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI"));
+            Assert.StartsWith("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI", result);
         }
 
-        [Test]
+        [Fact]
         public void AuthCheck_throws_on_pending()
         {
             var client = SetupPostWithFixture("auth-check-pending-response");
 
-            Assert.That(() => Remote.AuthCheck(ClientInfo, "transaction-id", client.Object),
-                        Throws.TypeOf<FetchException>()
-                            .And.Property("Reason")
-                            .EqualTo(FetchException.FailureReason.RespondedWithError));
+            Assert.Throws<FetchException>(() => Remote.AuthCheck(ClientInfo, "transaction-id", client.Object));
         }
 
-        [Test]
+        [Fact]
         public void AuthCheck_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(
-                http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
+            VerifyAllCommonErrorsWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
         }
 
-        [Test]
+        [Fact]
         public void GetVault_returns_encrypted_vault()
         {
             var client = SetupGetWithFixture("get-vault-response");
             var vault = Remote.GetVault("oauth-token", client.Object);
 
-            Assert.That(vault.MasterKeySalt, Is.EqualTo(MasterKeySalt));
-            Assert.That(vault.EncryptedMasterKey, Is.EqualTo(EncryptedMasterKey));
+            Assert.Equal(MasterKeySalt, vault.MasterKeySalt);
+            Assert.Equal(EncryptedMasterKey, vault.EncryptedMasterKey);
 
             var accounts = vault.EncryptedAccounts;
-            Assert.That(accounts.Length, Is.EqualTo(2));
+            Assert.Equal(2, accounts.Length);
 
-            Assert.That(accounts[0].Id, Is.EqualTo(50934080));
-            Assert.That(accounts[0].Name, Is.EqualTo("Google"));
-            Assert.That(accounts[0].Username, Is.EqualTo("dude@gmail.com"));
-            Assert.That(accounts[0].EncryptedPassword, Is.EqualTo("AAR24UbLgkHUhsSXB2mndMISE7U5qn+WA3znhgdXex0br6y5".Decode64()));
-            Assert.That(accounts[0].Url, Is.EqualTo("https://accounts.google.com/ServiceLogin"));
-            Assert.That(accounts[0].EncryptedNote, Is.EqualTo("AAS2l1XcabgdPTM3CuUZDbT5txJu1ou0gOQ=".Decode64()));
+            Assert.Equal(50934080, accounts[0].Id);
+            Assert.Equal("Google", accounts[0].Name);
+            Assert.Equal("dude@gmail.com", accounts[0].Username);
+            Assert.Equal("AAR24UbLgkHUhsSXB2mndMISE7U5qn+WA3znhgdXex0br6y5".Decode64(), accounts[0].EncryptedPassword);
+            Assert.Equal("https://accounts.google.com/ServiceLogin", accounts[0].Url);
+            Assert.Equal("AAS2l1XcabgdPTM3CuUZDbT5txJu1ou0gOQ=".Decode64(), accounts[0].EncryptedNote);
 
-            Assert.That(accounts[1].Id, Is.EqualTo(60789074));
-            Assert.That(accounts[1].Name, Is.EqualTo("facebook"));
-            Assert.That(accounts[1].Username, Is.EqualTo("mark"));
-            Assert.That(accounts[1].EncryptedPassword, Is.EqualTo("AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw==".Decode64()));
-            Assert.That(accounts[1].Url, Is.EqualTo("http://facebook.com"));
-            Assert.That(accounts[1].EncryptedNote, Is.EqualTo("".Decode64()));
+            Assert.Equal(60789074, accounts[1].Id);
+            Assert.Equal("facebook", accounts[1].Name);
+            Assert.Equal("mark", accounts[1].Username);
+            Assert.Equal("AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw==".Decode64(), accounts[1].EncryptedPassword);
+            Assert.Equal("http://facebook.com", accounts[1].Url);
+            Assert.Equal("".Decode64(), accounts[1].EncryptedNote);
         }
 
-        [Test]
+        [Fact]
         public void GetVault_throws_common_errors()
         {
             VerifyCommonErrorsWithGet(http => Remote.GetVault("oauth-token", http));
@@ -207,13 +203,13 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyUnsupportedFormatWithGet(f);
         }
 
-        private static void VerifyAllCommonErrorsWithPost(Action<IHttpClient> f)
+        private void VerifyAllCommonErrorsWithPost(Action<IHttpClient> f)
         {
             VerifyMostCommonErrorsWithPost(f);
             VerifyUnsupportedFormatWithPost(f);
         }
 
-        private static void VerifyMostCommonErrorsWithPost(Action<IHttpClient> f)
+        private void VerifyMostCommonErrorsWithPost(Action<IHttpClient> f)
         {
             VerifyNetworkErrorWithPost(f);
             VerifyJsonErrorWithPost(f);
@@ -250,7 +246,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyError(FetchException.FailureReason.InvalidResponse, http, f);
         }
 
-        private static void VerifyReturnedErrorWithPost(Action<IHttpClient> f)
+        private void VerifyReturnedErrorWithPost(Action<IHttpClient> f)
         {
             VerifyReturnedError(SetupPostWithFixture("post-response-with-error"), f);
         }
@@ -283,8 +279,7 @@ namespace PasswordManagerAccess.Test.TrueKey
                                         Mock<IHttpClient> http,
                                         Action<IHttpClient> f)
         {
-            Assert.That(() => f(http.Object),
-                        Throws.TypeOf<FetchException>().And.Property("Reason").EqualTo(reason));
+            Assert.Throws<FetchException>(() => f(http.Object));
         }
 
         private static Mock<IHttpClient> SetupGet(string response)
@@ -296,9 +291,9 @@ namespace PasswordManagerAccess.Test.TrueKey
             return mock;
         }
 
-        private static Mock<IHttpClient> SetupGetWithFixture(string name)
+        private Mock<IHttpClient> SetupGetWithFixture(string name)
         {
-            return SetupGet(ReadFixture(name));
+            return SetupGet(GetFixture(name));
         }
 
         private static Mock<IHttpClient> SetupPost(string response)
@@ -311,9 +306,9 @@ namespace PasswordManagerAccess.Test.TrueKey
             return mock;
         }
 
-        private static Mock<IHttpClient> SetupPostWithFixture(string name)
+        private Mock<IHttpClient> SetupPostWithFixture(string name)
         {
-            return SetupPost(ReadFixture(name));
+            return SetupPost(GetFixture(name));
         }
 
         private static Mock<IHttpClient> SetupGetWithFailure()
@@ -333,11 +328,6 @@ namespace PasswordManagerAccess.Test.TrueKey
                                    It.IsAny<Dictionary<string, string>>()))
                 .Throws<WebException>();
             return mock;
-        }
-
-        private static string ReadFixture(string name)
-        {
-            return File.ReadAllText(string.Format("Fixtures/{0}.json", name));
         }
     }
 }

@@ -3,12 +3,12 @@
 
 using System;
 using System.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.TrueKey;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    [TestFixture]
-    class SjclQuadTest
+    public class SjclQuadTest
     {
         private const byte A0 = 0x00;
         private const byte A1 = 0x00;
@@ -44,20 +44,20 @@ namespace PasswordManagerAccess.Test.TrueKey
             D0, D1, D2, D3,
         };
 
-        [Test]
+        [Fact]
         public void Constructed_from_a_b_c_d()
         {
             VerifyDeadBeefQuad(new SjclQuad(A, B, C, D));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_abcd()
         {
             var abcd = new uint[] {A, B, C, D};
             VerifyDeadBeefQuad(new SjclQuad(abcd));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_abcd_with_offset()
         {
             var poison = new uint[] {0xCCCCCCCC, 0xCCCCCCCC, 0xCCCCCCCC};
@@ -65,28 +65,28 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyDeadBeefQuad(new SjclQuad(abcd, poison.Length));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_empty_abcd()
         {
             var abcd = new uint[0];
             VerifyZeroQuad(new SjclQuad(abcd));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_abcd()
         {
             var abcd = new uint[] {A, B};
             VerifyQuad(new SjclQuad(abcd), A, B, 0, 0);
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_abcd_with_offset()
         {
             var abcd = new uint[] {0xCCCCCCCC, 0xCCCCCCCC, A, B};
             VerifyQuad(new SjclQuad(abcd, 2), A, B, 0, 0);
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_abcd_with_negative_offset()
         {
             VerifyQuad(new SjclQuad(Abcd, -1), 0, A, B, C);
@@ -96,19 +96,19 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyZeroQuad(new SjclQuad(Abcd, -4));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_abcd_with_offset_past_end()
         {
             VerifyZeroQuad(new SjclQuad(Abcd, Abcd.Length * 2));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_bytes()
         {
             VerifyDeadBeefQuad(new SjclQuad(AbcdBytes));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_bytes_with_offset()
         {
             var poison = new byte[] {0xCC, 0xCC, 0xCC};
@@ -116,27 +116,27 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyDeadBeefQuad(new SjclQuad(bytes, poison.Length));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_empty_bytes()
         {
             VerifyZeroQuad(new SjclQuad(new byte[0]));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_bytes()
         {
             var bytes = new byte[] {A0, A1, A2, A3, B0, B1, B2};
             VerifyQuad(new SjclQuad(bytes), A, (uint)B0 << 24 | (uint)B1 << 16 | (uint)B2 << 8, 0, 0);
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_bytes_with_offset()
         {
             var bytes = new byte[] {0xCC, 0xCC, 0xCC, A0, A1, A2, A3, B0, B1, B2};
             VerifyQuad(new SjclQuad(bytes, 3), A, (uint)B0 << 24 | (uint)B1 << 16 | (uint)B2 << 8, 0, 0);
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_bytes_with_negative_offset()
         {
             VerifyQuad(new SjclQuad(AbcdBytes,  -1), W( 0, A0, A1, A2),
@@ -163,34 +163,34 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyZeroQuad(new SjclQuad(AbcdBytes, -15));
         }
 
-        [Test]
+        [Fact]
         public void Constructed_from_partial_bytes_with_offset_past_end()
         {
             VerifyZeroQuad(new SjclQuad(AbcdBytes, AbcdBytes.Length * 2));
         }
 
-        [Test]
+        [Fact]
         public void Indexer_gets_correct_values()
         {
-            Assert.That(Quad[0], Is.EqualTo(A));
-            Assert.That(Quad[1], Is.EqualTo(B));
-            Assert.That(Quad[2], Is.EqualTo(C));
-            Assert.That(Quad[3], Is.EqualTo(D));
+            Assert.Equal(A, Quad[0]);
+            Assert.Equal(B, Quad[1]);
+            Assert.Equal(C, Quad[2]);
+            Assert.Equal(D, Quad[3]);
         }
 
-        [Test]
+        [Fact]
         public void Indexer_get_throws_on_negative_index()
         {
-            Assert.That(() => Quad[-1], Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => Quad[-1]);
         }
 
-        [Test]
+        [Fact]
         public void Indexer_get_throws_on_too_large_index()
         {
-            Assert.That(() => Quad[4], Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => Quad[4]);
         }
 
-        [Test]
+        [Fact]
         public void Indexer_sets_correct_values()
         {
             var q = Quad;
@@ -202,64 +202,64 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyQuad(q, D, C, B, A);
         }
 
-        [Test]
+        [Fact]
         public void Indexer_set_throws_on_negative_index()
         {
             var q = Quad;
-            Assert.That(() => q[-1] = 0, Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => q[-1] = 0);
         }
 
-        [Test]
+        [Fact]
         public void Indexer_set_throws_on_too_large_index()
         {
             var q = Quad;
-            Assert.That(() => q[4] = 0, Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => q[4] = 0);
         }
 
-        [Test]
+        [Fact]
         public void ToAbcd_returns_abcd()
         {
             var abcd = Quad.ToAbcd();
-            Assert.That(abcd, Is.EqualTo(Abcd));
+            Assert.Equal(Abcd, abcd);
         }
 
-        [Test]
+        [Fact]
         public void GetByte_returns_correct_bytes()
         {
-            Assert.That(Quad.GetByte( 0), Is.EqualTo(A0));
-            Assert.That(Quad.GetByte( 1), Is.EqualTo(A1));
-            Assert.That(Quad.GetByte( 2), Is.EqualTo(A2));
-            Assert.That(Quad.GetByte( 3), Is.EqualTo(A3));
+            Assert.Equal(A0, Quad.GetByte(0));
+            Assert.Equal(A1, Quad.GetByte(1));
+            Assert.Equal(A2, Quad.GetByte(2));
+            Assert.Equal(A3, Quad.GetByte(3));
 
-            Assert.That(Quad.GetByte( 4), Is.EqualTo(B0));
-            Assert.That(Quad.GetByte( 5), Is.EqualTo(B1));
-            Assert.That(Quad.GetByte( 6), Is.EqualTo(B2));
-            Assert.That(Quad.GetByte( 7), Is.EqualTo(B3));
+            Assert.Equal(B0, Quad.GetByte(4));
+            Assert.Equal(B1, Quad.GetByte(5));
+            Assert.Equal(B2, Quad.GetByte(6));
+            Assert.Equal(B3, Quad.GetByte(7));
 
-            Assert.That(Quad.GetByte( 8), Is.EqualTo(C0));
-            Assert.That(Quad.GetByte( 9), Is.EqualTo(C1));
-            Assert.That(Quad.GetByte(10), Is.EqualTo(C2));
-            Assert.That(Quad.GetByte(11), Is.EqualTo(C3));
+            Assert.Equal(C0, Quad.GetByte(8));
+            Assert.Equal(C1, Quad.GetByte(9));
+            Assert.Equal(C2, Quad.GetByte(10));
+            Assert.Equal(C3, Quad.GetByte(11));
 
-            Assert.That(Quad.GetByte(12), Is.EqualTo(D0));
-            Assert.That(Quad.GetByte(13), Is.EqualTo(D1));
-            Assert.That(Quad.GetByte(14), Is.EqualTo(D2));
-            Assert.That(Quad.GetByte(15), Is.EqualTo(D3));
+            Assert.Equal(D0, Quad.GetByte(12));
+            Assert.Equal(D1, Quad.GetByte(13));
+            Assert.Equal(D2, Quad.GetByte(14));
+            Assert.Equal(D3, Quad.GetByte(15));
         }
 
-        [Test]
+        [Fact]
         public void GetByte_throws_on_negative_index()
         {
-            Assert.That(() => Quad.GetByte(-1), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => Quad.GetByte(-1));
         }
 
-        [Test]
+        [Fact]
         public void GetByte_throws_on_too_large_index()
         {
-            Assert.That(() => Quad.GetByte(16), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => Quad.GetByte(16));
         }
 
-        [Test]
+        [Fact]
         public void SetByte_sets_correct_bytes()
         {
             var q = Quad;
@@ -287,25 +287,25 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyQuad(q, D, C, B, A);
         }
 
-        [Test]
+        [Fact]
         public void SetByte_throws_on_negative_index()
         {
-            Assert.That(() => Quad.SetByte(-1, 0), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => Quad.SetByte(-1, 0));
         }
 
-        [Test]
+        [Fact]
         public void SetByte_throws_on_too_large_index()
         {
-            Assert.That(() => Quad.SetByte(16, 0), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.Throws<ArgumentOutOfRangeException>(() => Quad.SetByte(16, 0));
         }
 
-        [Test]
+        [Fact]
         public void ToBytes_returns_abcd_as_bytes()
         {
-            Assert.That(Quad.ToBytes(), Is.EqualTo(AbcdBytes));
+            Assert.Equal(AbcdBytes, Quad.ToBytes());
         }
 
-        [Test]
+        [Fact]
         public void Xor_returns_correct_result()
         {
             VerifyZeroQuad(Quad ^ Quad);
@@ -340,10 +340,10 @@ namespace PasswordManagerAccess.Test.TrueKey
 
         private static void VerifyQuad(SjclQuad quad, uint a, uint b, uint c, uint d)
         {
-            Assert.That(quad.A, Is.EqualTo(a));
-            Assert.That(quad.B, Is.EqualTo(b));
-            Assert.That(quad.C, Is.EqualTo(c));
-            Assert.That(quad.D, Is.EqualTo(d));
+            Assert.Equal(a, quad.A);
+            Assert.Equal(b, quad.B);
+            Assert.Equal(c, quad.C);
+            Assert.Equal(d, quad.D);
         }
     }
 }
