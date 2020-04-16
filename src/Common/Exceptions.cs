@@ -5,7 +5,7 @@ using System;
 
 namespace PasswordManagerAccess.Common
 {
-    // These are all the exceptions that are throw by the library. Each class of error has its own
+    // These are all the exceptions that are thrown by the library. Each class of error has its own
     // exception class. This way the error handling on the client is cleaner. Only the exceptions
     // the application could do something about have their own class. For example, when the
     // applications catches a BadCredentialsException it could present a user with a choice to

@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using Moq;
 using PasswordManagerAccess.Common;
@@ -15,19 +14,19 @@ namespace PasswordManagerAccess.Test.TrueKey
     public class RemoteTest: TestBase
     {
         [Fact]
-        public void RegisetNewDevice_returns_device_info()
+        public void RegisterNewDevice_returns_device_info()
         {
             var client = SetupPostWithFixture("register-new-device-response");
-            var result = Remote.RegisetNewDevice("truekey-sharp", client.Object);
+            var result = Remote.RegisterNewDevice("truekey-sharp", client.Object);
 
             Assert.StartsWith("AQCmAwEA", result.Token);
             Assert.StartsWith("d871347b", result.Id);
         }
 
         [Fact]
-        public void RegisetNewDevice_throws_on_common_errors()
+        public void RegisterNewDevice_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(http => Remote.RegisetNewDevice("truekey-sharp", http));
+            VerifyAllCommonErrorsWithPost(http => Remote.RegisterNewDevice("truekey-sharp", http));
         }
 
         [Fact]

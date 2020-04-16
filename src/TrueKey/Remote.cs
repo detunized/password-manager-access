@@ -31,7 +31,7 @@ namespace PasswordManagerAccess.TrueKey
         //
         // `deviceName` is the name of the device registered with the True Key service.
         // For example 'Chrome' or 'Nexus 5'.
-        public static DeviceInfo RegisetNewDevice(string deviceName, IHttpClient http)
+        public static DeviceInfo RegisterNewDevice(string deviceName, IHttpClient http)
         {
             return Post(http,
                         "https://id-api.truekey.com/sp/pabe/v2/so",

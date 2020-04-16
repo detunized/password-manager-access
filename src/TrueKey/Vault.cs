@@ -25,7 +25,7 @@ namespace PasswordManagerAccess.TrueKey
 
             // Step 1: Register a new deice or use the existing one from the previous run.
             var deviceInfo = LoadDeviceInfo(storage) ??
-                             Remote.RegisetNewDevice("truekey-sharp", http);
+                             Remote.RegisterNewDevice("truekey-sharp", http);
 
             // Step 2: Parse the token to decode OTP information.
             var otpInfo = Util.ParseClientToken(deviceInfo.Token);
