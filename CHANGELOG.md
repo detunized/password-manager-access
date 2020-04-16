@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.8.0
+  - StickyPassword: ported from the original repo and now could be used
+
 ## 0.7.1
   - Unfinished StickyPassword port removed from the release
 
