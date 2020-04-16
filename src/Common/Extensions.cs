@@ -151,6 +151,15 @@ namespace PasswordManagerAccess.Common
             return BigInteger.Parse('0' + s, NumberStyles.HexNumber);
         }
 
+        public static string Repeat(this string s, int times)
+        {
+            var result = new StringBuilder(s.Length * times);
+            for (var i = 0; i < times; ++i)
+                result.Append(s);
+
+            return result.ToString();
+        }
+
         //
         // byte[]
         //

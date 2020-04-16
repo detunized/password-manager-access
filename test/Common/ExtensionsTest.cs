@@ -226,6 +226,20 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(new BigInteger(number), str.ToBigInt());
         }
 
+        [Theory]
+        [InlineData("x", 0, "")]
+        [InlineData("x", 1, "x")]
+        [InlineData("x", 2, "xx")]
+        [InlineData("x", 3, "xxx")]
+        [InlineData("xyz", 0, "")]
+        [InlineData("xyz", 1, "xyz")]
+        [InlineData("xyz", 2, "xyzxyz")]
+        [InlineData("xyz", 3, "xyzxyzxyz")]
+        public void String_Repeat_returns_repeated_string(string s, int times, string expected)
+        {
+            Assert.Equal(expected, s.Repeat(times));
+        }
+
         //
         // byte[]
         //
