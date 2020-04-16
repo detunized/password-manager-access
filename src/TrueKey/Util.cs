@@ -14,14 +14,13 @@ namespace PasswordManagerAccess.TrueKey
 
         public static string HashPassword(string username, string password)
         {
-            var salt = Crypto.Sha256(username);
-            var derived = Pbkdf2.Generate(password, salt, 10000, 32);
-            return "tk-v1-" + derived.ToHex();
+            var keyHex = DeriveKey(password, Crypto.Sha256(username)).ToHex();
+            return $"tk-v1-{keyHex}";
         }
 
         public static byte[] DecryptMasterKey(string password, byte[] salt, byte[] encryptedKey)
         {
-            var key = Pbkdf2.Generate(password, salt, 10000, 32);
+            var key = DeriveKey(password, salt);
             return Decrypt(key, encryptedKey).ToUtf8().DecodeHex();
         }
 
@@ -198,6 +197,11 @@ namespace PasswordManagerAccess.TrueKey
         //
         // internal
         //
+
+        internal static byte[] DeriveKey(string password, byte[] salt)
+        {
+            return Pbkdf2.GenerateSha512(password.ToBytes(), salt, 10000, 32);
+        }
 
         internal static byte[] SignChallenge(OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
