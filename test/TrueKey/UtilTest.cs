@@ -154,26 +154,6 @@ namespace PasswordManagerAccess.Test.TrueKey
         }
 
         [Fact]
-        public void Sha256_returns_hashed_message()
-        {
-            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), Util.Sha256("message"));
-        }
-
-        [Fact]
-        public void Hmac_returns_hashed_message()
-        {
-            Assert.Equal("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64(),
-                         Util.Hmac("salt".ToBytes(), "message".ToBytes()));
-        }
-
-        [Fact]
-        public void RandomBytes_returns_array_of_requested_size()
-        {
-            foreach (var size in new[] { 0, 1, 2, 3, 4, 15, 255, 1024, 1337 })
-                Assert.Equal(size, Util.RandomBytes(size).Length);
-        }
-
-        [Fact]
         public void SignChallenge_returns_signature()
         {
             var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();

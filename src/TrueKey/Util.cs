@@ -4,7 +4,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
@@ -15,7 +14,7 @@ namespace PasswordManagerAccess.TrueKey
 
         public static string HashPassword(string username, string password)
         {
-            var salt = Sha256(username);
+            var salt = Crypto.Sha256(username);
             var derived = Pbkdf2.Generate(password, salt, 10000, 32);
             return "tk-v1-" + derived.ToHex();
         }
@@ -189,7 +188,7 @@ namespace PasswordManagerAccess.TrueKey
 
         public static OtpChallenge GenerateRandomOtpChallenge(OtpInfo otp)
         {
-            var challenge = RandomBytes(ChallengeSize);
+            var challenge = Crypto.RandomBytes(ChallengeSize);
             var time = DateTime.UtcNow;
             return new OtpChallenge(challenge,
                                     time,
@@ -199,28 +198,6 @@ namespace PasswordManagerAccess.TrueKey
         //
         // internal
         //
-
-        internal static byte[] Sha256(string data)
-        {
-            using (var sha = new SHA256Managed())
-                return sha.ComputeHash(data.ToBytes());
-        }
-
-        internal static byte[] Hmac(byte[] salt, byte[] message)
-        {
-            using (var hmac = new HMACSHA256 {Key = salt})
-                return hmac.ComputeHash(message);
-        }
-
-        internal static byte[] RandomBytes(int size)
-        {
-            using (var random = new RNGCryptoServiceProvider())
-            {
-                var bytes = new byte[size];
-                random.GetBytes(bytes);
-                return bytes;
-            }
-        }
 
         internal static byte[] SignChallenge(OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
@@ -244,7 +221,7 @@ namespace PasswordManagerAccess.TrueKey
                     Array.Reverse(t);
                 s.Write(t, 0, t.Length);
 
-                return Hmac(otp.HmacSeed, s.ToArray());
+                return Crypto.HmacSha256(s.ToArray(), otp.HmacSeed);
             }
         }
     }
