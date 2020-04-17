@@ -156,10 +156,10 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void SignChallenge_returns_signature()
         {
-            var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
+            var challenge = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
 
             Assert.Equal("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64(),
-                         Util.SignChallenge(OtpInfo, challege, 1493456789));
+                         Util.SignChallenge(OtpInfo, challenge, 1493456789));
         }
 
         [Fact]
