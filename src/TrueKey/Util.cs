@@ -58,8 +58,7 @@ namespace PasswordManagerAccess.TrueKey
         // TODO: See how this could be optimized to reuse AES object w/o recreating it every time!
         public static byte[] DecryptAes256Ccm(byte[] key, byte[] ciphertext, byte[] iv)
         {
-            var aes = new SjclAes(key);
-            return SjclCcm.Decrypt(aes, ciphertext, iv, new byte[0], 8);
+            return SjclCcm.Decrypt(key, ciphertext, iv, new byte[0], 8);
         }
 
         // Contains all the stuff that is needed to generate and verify

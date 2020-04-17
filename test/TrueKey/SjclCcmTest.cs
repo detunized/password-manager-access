@@ -136,8 +136,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             foreach (var i in Rfc3610TestCases)
             {
-                var aes = new SjclAes(i.Key);
-                var ciphertext = SjclCcm.Encrypt(aes, i.Plaintext, i.Iv, i.Adata, i.TagLength);
+                var ciphertext = SjclCcm.Encrypt(i.Key, i.Plaintext, i.Iv, i.Adata, i.TagLength);
                 Assert.Equal(i.Ciphertext, ciphertext);
             }
         }
@@ -145,11 +144,11 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void Encrypt_throws_on_too_short_iv()
         {
-            var aes = new SjclAes(new byte[16]);
+            var key = new byte[16];
             for (var i = 0; i < 7; ++i)
             {
                 var e = Assert.Throws<CryptoException>(
-                    () => SjclCcm.Encrypt(aes, new byte[1], new byte[i], new byte[0], 8));
+                    () => SjclCcm.Encrypt(key, new byte[1], new byte[i], new byte[0], 8));
                 Assert.Equal("IV must be at least 7 bytes long", e.Message);
             }
         }
@@ -159,11 +158,11 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             var testCases = new int[] {-1, 0, 1, 2, 3, 5, 7, 9, 11, 13, 15, 17, 18, 19, 20, 1024};
 
-            var aes = new SjclAes(new byte[16]);
+            var key = new byte[16];
             foreach (var i in testCases)
             {
                 var e = Assert.Throws<CryptoException>(
-                    () => SjclCcm.Encrypt(aes, new byte[1], new byte[16], new byte[0], i));
+                    () => SjclCcm.Encrypt(key, new byte[1], new byte[16], new byte[0], i));
                 Assert.Equal("Tag must be 4, 8, 10, 12, 14 or 16 bytes long", e.Message);
             }
         }
@@ -173,8 +172,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             foreach (var i in Rfc3610TestCases)
             {
-                var aes = new SjclAes(i.Key);
-                var plaintext = SjclCcm.Decrypt(aes, i.Ciphertext, i.Iv, i.Adata, i.TagLength);
+                var plaintext = SjclCcm.Decrypt(i.Key, i.Ciphertext, i.Iv, i.Adata, i.TagLength);
                 Assert.Equal(i.Plaintext, plaintext);
             }
         }
@@ -184,22 +182,20 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             foreach (var i in Rfc3610TestCases)
             {
-                var aes = new SjclAes(i.Key);
-
                 // Change ciphertext
                 var ciphertext = (byte[])i.Ciphertext.Clone();
                 ++ciphertext[ciphertext.Length / 2];
-                VerifyCmmMismatchThrown(aes, ciphertext, i.Iv, i.Adata, i.TagLength);
+                VerifyCcmMismatchThrown(i.Key, ciphertext, i.Iv, i.Adata, i.TagLength);
 
                 // Change iv
                 var iv = (byte[])i.Iv.Clone();
                 ++iv[iv.Length / 2];
-                VerifyCmmMismatchThrown(aes, i.Ciphertext, iv, i.Adata, i.TagLength);
+                VerifyCcmMismatchThrown(i.Key, i.Ciphertext, iv, i.Adata, i.TagLength);
 
                 // Change adata
                 var adata = (byte[])i.Adata.Clone();
                 ++adata[adata.Length / 2];
-                VerifyCmmMismatchThrown(aes, i.Ciphertext, i.Iv, adata, i.TagLength);
+                VerifyCcmMismatchThrown(i.Key, i.Ciphertext, i.Iv, adata, i.TagLength);
             }
         }
 
@@ -257,9 +253,9 @@ namespace PasswordManagerAccess.Test.TrueKey
         // Helpers
         //
 
-        private static void VerifyCmmMismatchThrown(SjclAes aes, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        private static void VerifyCcmMismatchThrown(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
         {
-            var e = Assert.Throws<CryptoException>(() => SjclCcm.Decrypt(aes, ciphertext, iv, adata, tagLength));
+            var e = Assert.Throws<CryptoException>(() => SjclCcm.Decrypt(key, ciphertext, iv, adata, tagLength));
             Assert.Equal("CCM tag doesn't match", e.Message);
         }
     }

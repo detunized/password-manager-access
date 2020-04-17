@@ -8,8 +8,18 @@ namespace PasswordManagerAccess.TrueKey
 {
     static class SjclCcm
     {
+        public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] adata, int tagLength)
+        {
+            return Encrypt(new SjclAes(key), plaintext, iv, adata, tagLength);
+        }
+
+        public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        {
+            return Decrypt(new SjclAes(key), ciphertext, iv, adata, tagLength);
+        }
+
         // TODO: Parametrize on cipher!
-        public static byte[] Encrypt(SjclAes aes, byte[] plaintext, byte[] iv, byte[] adata, int tagLength)
+        private static byte[] Encrypt(SjclAes aes, byte[] plaintext, byte[] iv, byte[] adata, int tagLength)
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
@@ -29,7 +39,7 @@ namespace PasswordManagerAccess.TrueKey
         // TODO: Parametrize on cipher!
         // TODO: Factor out shared code between Encrypt and Decrypt!
         // TODO: Validate parameters better!
-        public static byte[] Decrypt(SjclAes aes, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        private static byte[] Decrypt(SjclAes aes, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
