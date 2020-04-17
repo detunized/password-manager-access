@@ -9,7 +9,7 @@ using CryptoException = PasswordManagerAccess.TrueKey.CryptoException;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    public class SjclCcmTest
+    public class AesCcmTest
     {
         struct CcmTestCase
         {
@@ -136,7 +136,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             foreach (var i in Rfc3610TestCases)
             {
-                var ciphertext = SjclCcm.Encrypt(i.Key, i.Plaintext, i.Iv, i.Adata, i.TagLength);
+                var ciphertext = AesCcm.Encrypt(i.Key, i.Plaintext, i.Iv, i.Adata, i.TagLength);
                 Assert.Equal(i.Ciphertext, ciphertext);
             }
         }
@@ -148,7 +148,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             for (var i = 0; i < 7; ++i)
             {
                 var e = Assert.Throws<CryptoException>(
-                    () => SjclCcm.Encrypt(key, new byte[1], new byte[i], new byte[0], 8));
+                    () => AesCcm.Encrypt(key, new byte[1], new byte[i], new byte[0], 8));
                 Assert.Equal("IV must be at least 7 bytes long", e.Message);
             }
         }
@@ -162,7 +162,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             foreach (var i in testCases)
             {
                 var e = Assert.Throws<CryptoException>(
-                    () => SjclCcm.Encrypt(key, new byte[1], new byte[16], new byte[0], i));
+                    () => AesCcm.Encrypt(key, new byte[1], new byte[16], new byte[0], i));
                 Assert.Equal("Tag must be 4, 8, 10, 12, 14 or 16 bytes long", e.Message);
             }
         }
@@ -172,7 +172,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             foreach (var i in Rfc3610TestCases)
             {
-                var plaintext = SjclCcm.Decrypt(i.Key, i.Ciphertext, i.Iv, i.Adata, i.TagLength);
+                var plaintext = AesCcm.Decrypt(i.Key, i.Ciphertext, i.Iv, i.Adata, i.TagLength);
                 Assert.Equal(i.Plaintext, plaintext);
             }
         }
@@ -215,7 +215,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             };
 
             foreach (var i in testCases)
-                Assert.Equal(i.Value, SjclCcm.ComputeLengthLength(i.Key));
+                Assert.Equal(i.Value, AesCcm.ComputeLengthLength(i.Key));
         }
 
         [Fact]
@@ -232,20 +232,20 @@ namespace PasswordManagerAccess.Test.TrueKey
             };
 
             foreach (var i in testCases)
-                Assert.Equal(i.Value.DecodeHex(), SjclCcm.EncodeAdataLength(i.Key));
+                Assert.Equal(i.Value.DecodeHex(), AesCcm.EncodeAdataLength(i.Key));
         }
 
         [Fact]
         public void EncodeAdataLengt_throws_on_zero_length()
         {
-            var e = Assert.Throws<CryptoException>(() => SjclCcm.EncodeAdataLength(0));
+            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(0));
             Assert.Equal("Adata length must be positive", e.Message);
         }
 
         [Fact]
         public void EncodeAdataLengt_throws_on_negative_length()
         {
-            var e = Assert.Throws<CryptoException>(() => SjclCcm.EncodeAdataLength(-1));
+            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(-1));
             Assert.Equal("Adata length must be positive", e.Message);
         }
 
@@ -255,7 +255,7 @@ namespace PasswordManagerAccess.Test.TrueKey
 
         private static void VerifyCcmMismatchThrown(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
         {
-            var e = Assert.Throws<CryptoException>(() => SjclCcm.Decrypt(key, ciphertext, iv, adata, tagLength));
+            var e = Assert.Throws<CryptoException>(() => AesCcm.Decrypt(key, ciphertext, iv, adata, tagLength));
             Assert.Equal("CCM tag doesn't match", e.Message);
         }
     }

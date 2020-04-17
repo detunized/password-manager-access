@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace PasswordManagerAccess.TrueKey
 {
-    static class SjclCcm
+    static class AesCcm
     {
         public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] adata, int tagLength)
         {
