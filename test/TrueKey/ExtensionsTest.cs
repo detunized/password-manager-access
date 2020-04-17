@@ -106,32 +106,6 @@ namespace PasswordManagerAccess.Test.TrueKey
         }
 
         //
-        // BinaryReader
-        //
-
-        [Fact]
-        public void BinaryReader_ReadUInt16BigEndian_reads_ushort()
-        {
-            using (var s = new MemoryStream(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}))
-            using (var r = new BinaryReader(s))
-            {
-                Assert.Equal(0xDEAD, r.ReadUInt16BigEndian());
-                Assert.Equal(0xBEEF, r.ReadUInt16BigEndian());
-            }
-        }
-
-        [Fact]
-        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
-        {
-            using (var s = new MemoryStream(new byte[] {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED, 0xF0, 0x0D}))
-            using (var r = new BinaryReader(s))
-            {
-                Assert.Equal(0xDEADBEEF, r.ReadUInt32BigEndian());
-                Assert.Equal(0xFEEDF00D, r.ReadUInt32BigEndian());
-            }
-        }
-
-        //
         // JToken
         //
 

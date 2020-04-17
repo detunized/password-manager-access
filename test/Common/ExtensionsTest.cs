@@ -581,14 +581,36 @@ namespace PasswordManagerAccess.Test.Common
         //
 
         [Fact]
-        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
+        public void BinaryReader_ReadUInt16BigEndian_reads_ushort()
         {
-            var bytes = new byte[] { 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE };
+            var bytes = new byte[] {0xDE, 0xAD, 0xBE, 0xEF};
+            using var s = new MemoryStream(bytes);
+            using var r = new BinaryReader(s);
+
+            Assert.Equal(0xDEAD, r.ReadUInt16BigEndian());
+            Assert.Equal(0xBEEF, r.ReadUInt16BigEndian());
+        }
+
+        [Fact]
+        public void BinaryReader_ReadUInt32LittleEndian_reads_uint()
+        {
+            var bytes = new byte[] {0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE};
             using var s = new MemoryStream(bytes);
             using var r = new BinaryReader(s);
 
             Assert.Equal(0xDEADBEEF, r.ReadUInt32LittleEndian());
             Assert.Equal(0xFEEDF00D, r.ReadUInt32LittleEndian());
+        }
+
+        [Fact]
+        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
+        {
+            var bytes = new byte[] {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED, 0xF0, 0x0D};
+            using var s = new MemoryStream(bytes);
+            using var r = new BinaryReader(s);
+
+            Assert.Equal(0xDEADBEEF, r.ReadUInt32BigEndian());
+            Assert.Equal(0xFEEDF00D, r.ReadUInt32BigEndian());
         }
 
         //
