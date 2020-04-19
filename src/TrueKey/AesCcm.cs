@@ -3,23 +3,15 @@
 
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace PasswordManagerAccess.TrueKey
 {
+    // TODO: The implementation is not very efficient. There are a few temporary arrays allocated here and there.
+    //       This should be done in a pre-allocated buffer via Span.
     static class AesCcm
     {
         public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] adata, int tagLength)
-        {
-            return Encrypt(new SjclAes(key), plaintext, iv, adata, tagLength);
-        }
-
-        public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
-        {
-            return Decrypt(new SjclAes(key), ciphertext, iv, adata, tagLength);
-        }
-
-        // TODO: Parametrize on cipher!
-        private static byte[] Encrypt(SjclAes aes, byte[] plaintext, byte[] iv, byte[] adata, int tagLength)
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
@@ -30,16 +22,22 @@ namespace PasswordManagerAccess.TrueKey
                 inputLengthLength = 15 - ivLength;
             iv = iv.Take(15 - inputLengthLength).ToArray();
 
-            var tag = ComputeTag(aes, plaintext, iv, adata, tagLength, inputLengthLength);
-            var ciphertextTag = ApplyCtr(aes, plaintext, iv, tag, tagLength, inputLengthLength);
+            using var aes = Aes.Create();
+            aes.KeySize = 256;
+            aes.Key = key;
+            aes.Mode = CipherMode.ECB;
+            aes.Padding = PaddingMode.None;
 
-            return ciphertextTag.Text.Concat(ciphertextTag.Tag.ToBytes().Take(tagLength)).ToArray();
+            using var cryptor = aes.CreateEncryptor();
+            var tag = ComputeTag(cryptor, plaintext, iv, adata, tagLength, inputLengthLength);
+            var ctr = ApplyCtr(cryptor, plaintext, iv, tag, tagLength, inputLengthLength);
+
+            return ctr.Text.Concat(ctr.Tag.Take(tagLength)).ToArray();
         }
 
-        // TODO: Parametrize on cipher!
         // TODO: Factor out shared code between Encrypt and Decrypt!
         // TODO: Validate parameters better!
-        private static byte[] Decrypt(SjclAes aes, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
@@ -47,18 +45,27 @@ namespace PasswordManagerAccess.TrueKey
 
             var plaintextLength = ciphertext.Length - tagLength;
             var ciphertextOnly = ciphertext.Take(plaintextLength).ToArray();
-            var tag = new SjclQuad(ciphertext, plaintextLength);
+
+            var tag = new byte[16];
+            Array.Copy(ciphertext, plaintextLength, tag, 0, tagLength);
 
             var inputLengthLength = ComputeLengthLength(plaintextLength);
             if (inputLengthLength < 15 - ivLength)
                 inputLengthLength = 15 - ivLength;
             iv = iv.Take(15 - inputLengthLength).ToArray();
 
-            var plaintextWithTag = ApplyCtr(aes, ciphertextOnly, iv, tag, tagLength, inputLengthLength);
-            var expectedTag = ComputeTag(aes, plaintextWithTag.Text, iv, adata, tagLength, inputLengthLength);
+            using var aes = Aes.Create();
+            aes.KeySize = 256;
+            aes.Key = key;
+            aes.Mode = CipherMode.ECB;
+            aes.Padding = PaddingMode.None;
 
-            var expectedTagBytes = expectedTag.ToBytes().Take(tagLength);
-            var actualTagBytes = plaintextWithTag.Tag.ToBytes().Take(tagLength);
+            using var encryptor = aes.CreateEncryptor();
+            var plaintextWithTag = ApplyCtr(encryptor, ciphertextOnly, iv, tag, tagLength, inputLengthLength);
+            var expectedTag = ComputeTag(encryptor, plaintextWithTag.Text, iv, adata, tagLength, inputLengthLength);
+
+            var expectedTagBytes = expectedTag.Take(tagLength);
+            var actualTagBytes = plaintextWithTag.Tag.Take(tagLength);
 
             if (!actualTagBytes.SequenceEqual(expectedTagBytes))
                 throw new CryptoException("CCM tag doesn't match");
@@ -66,68 +73,107 @@ namespace PasswordManagerAccess.TrueKey
             return plaintextWithTag.Text;
         }
 
-        internal static SjclQuad ComputeTag(SjclAes aes, byte[] plaintext, byte[] iv, byte[] adata, int tagLength, int plaintextLengthLength)
+        private static byte[] ComputeTag(ICryptoTransform encryptor,
+                                         byte[] plaintext,
+                                         byte[] iv,
+                                         byte[] adata,
+                                         int tagLength,
+                                         int plaintextLengthLength)
         {
             if (tagLength % 2 != 0 || tagLength < 4 || tagLength > 16)
                 throw new CryptoException("Tag must be 4, 8, 10, 12, 14 or 16 bytes long");
 
             // flags + iv + plaintext-length
-            var tag = new SjclQuad(iv, -1);
             var flags = (adata.Length > 0 ? 0x40 : 0) | ((tagLength - 2) << 2) | (plaintextLengthLength - 1);
-            tag.SetByte(0, (byte)flags);
+
+            // Flags are at 0
+            var tag = new byte[16];
+            tag[0] = (byte) flags;
+
+            // IV starts at 1
+            var ivLength = Math.Min(iv.Length, 15 - plaintextLengthLength);
+            for (var i = 0; i < ivLength; i++)
+                tag[i + 1] = iv[i];
 
             // Append plaintext length
             for (var i = 0; i < plaintextLengthLength; ++i)
-                tag.SetByte(15 - i, (byte)(plaintext.Length >> i * 8));
+                tag[15 - i] = (byte) (plaintext.Length >> i * 8);
 
-            tag = aes.Encrypt(tag);
+            var outputBuffer = new byte[16];
+            encryptor.TransformBlock(tag, 0, 16, outputBuffer, 0);
+            outputBuffer.CopyTo(tag, 0);
 
             var adataLength = adata.Length;
             if (adataLength > 0)
             {
-
                 var adataWithLength = EncodeAdataLength(adataLength).Concat(adata).ToArray();
-                for (var i = 0; i < adataWithLength.Length; i += 16)
-                    tag = aes.Encrypt(tag ^ new SjclQuad(adataWithLength, i));
+                var adataWithLengthSize = adataWithLength.Length;
+                for (var offset = 0; offset < adataWithLengthSize; offset += 16)
+                {
+                    var blockSize = Math.Min(16, adataWithLengthSize - offset);
+                    for (var i = 0; i < blockSize; i++)
+                        tag[i] ^= adataWithLength[offset + i];
+
+                    encryptor.TransformBlock(tag, 0, 16, outputBuffer, 0);
+                    outputBuffer.CopyTo(tag, 0);
+                }
             }
 
-            for (var i = 0; i < plaintext.Length; i += 16)
-                tag = aes.Encrypt(tag ^ new SjclQuad(plaintext, i));
+            var plaintextSize = plaintext.Length;
+            for (var offset = 0; offset < plaintextSize; offset += 16)
+            {
+                var blockSize = Math.Min(16, plaintextSize - offset);
+                for (var i = 0; i < blockSize; i++)
+                    tag[i] ^= plaintext[offset + i];
+
+                encryptor.TransformBlock(tag, 0, 16, outputBuffer, 0);
+                outputBuffer.CopyTo(tag, 0);
+            }
 
             return tag;
         }
 
-        internal struct CtrResult
-        {
-            public CtrResult(byte[] text, SjclQuad tag)
-            {
-                Text = text;
-                Tag = tag;
-            }
-
-            public readonly byte[] Text;
-            public readonly SjclQuad Tag;
-        }
-
-        internal static CtrResult ApplyCtr(SjclAes aes, byte[] plaintext, byte[] iv, SjclQuad tag, int tagLength, int plaintextLengthLength)
+        private static (byte[] Text, byte[] Tag) ApplyCtr(ICryptoTransform encryptor,
+                                                          byte[] plaintext,
+                                                          byte[] iv,
+                                                          byte[] tag,
+                                                          int tagLength,
+                                                          int plaintextLengthLength)
         {
             // plaintextLength + iv
-            var ctr = new SjclQuad(iv, -1);
-            ctr.SetByte(0, (byte)(plaintextLengthLength - 1));
+            var ctr = new byte[16];
+            ctr[0] = (byte) (plaintextLengthLength - 1);
+
+            // IV starts at 1
+            var ivLength = Math.Min(iv.Length, 15 - plaintextLengthLength);
+            for (var i = 0; i < ivLength; i++)
+                ctr[i + 1] = iv[i];
 
             // Encrypt the tag
-            var encryptedTag = tag ^ aes.Encrypt(ctr);
+            var encryptedTag = new byte[16];
+            encryptor.TransformBlock(ctr, 0, 16, encryptedTag, 0);
+
+            for (var i = 0; i < 16; i++)
+                encryptedTag[i] ^= tag[i];
 
             // Encrypt the plaintext
-            var ciphertext = new byte[plaintext.Length];
-            for (var i = 0; i < plaintext.Length; i += 16)
+            var plaintextSize = plaintext.Length;
+            var ciphertext = new byte[plaintextSize];
+            var block = new byte[16];
+            for (var offset = 0; offset < plaintextSize; offset += 16)
             {
-                ++ctr.D;
-                var block = new SjclQuad(plaintext, i) ^ aes.Encrypt(ctr);
-                Array.Copy(block.ToBytes(), 0, ciphertext, i, Math.Min(16, plaintext.Length - i));
+                if (ctr[15]++ == 255) // TODO: Test on a really long input!
+                    if (ctr[14]++ == 255)
+                        if (ctr[13]++ == 255)
+                            ctr[12]++;
+
+                encryptor.TransformBlock(ctr, 0, 16, block, 0);
+                var blockSize = Math.Min(16, plaintextSize - offset);
+                for (var i = 0; i < blockSize; i++)
+                    ciphertext[offset + i] = (byte) (block[i] ^ plaintext[offset + i]);
             }
 
-            return new CtrResult(ciphertext, encryptedTag);
+            return (ciphertext, encryptedTag);
         }
 
         internal static int ComputeLengthLength(int plaintextLength)
