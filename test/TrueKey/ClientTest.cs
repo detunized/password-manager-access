@@ -11,13 +11,13 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
-    public class RemoteTest: TestBase
+    public class ClientTest: TestBase
     {
         [Fact]
         public void RegisterNewDevice_returns_device_info()
         {
             var client = SetupPostWithFixture("register-new-device-response");
-            var result = Remote.RegisterNewDevice("truekey-sharp", client.Object);
+            var result = Client.RegisterNewDevice("truekey-sharp", client.Object);
 
             Assert.StartsWith("AQCmAwEA", result.Token);
             Assert.StartsWith("d871347b", result.Id);
@@ -26,14 +26,14 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void RegisterNewDevice_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(http => Remote.RegisterNewDevice("truekey-sharp", http));
+            VerifyAllCommonErrorsWithPost(http => Client.RegisterNewDevice("truekey-sharp", http));
         }
 
         [Fact]
         public void AuthStep1_returns_transaction_id()
         {
             var client = SetupPostWithFixture("auth-step1-response");
-            var result = Remote.AuthStep1(ClientInfo, client.Object);
+            var result = Client.AuthStep1(ClientInfo, client.Object);
 
             Assert.Equal("6cdfcd43-065c-43a1-aa7a-017de98eefd0", result);
         }
@@ -41,7 +41,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void AuthStep1_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(http => Remote.AuthStep1(ClientInfo, http));
+            VerifyAllCommonErrorsWithPost(http => Client.AuthStep1(ClientInfo, http));
         }
 
         [Fact]
@@ -51,7 +51,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             //       The parsing logic is not trivial and it needs in-depth testing.
 
             var client = SetupPostWithFixture("auth-step2-response");
-            var result = Remote.AuthStep2(ClientInfo, "password", "transaction-id", client.Object);
+            var result = Client.AuthStep2(ClientInfo, "password", "transaction-id", client.Object);
 
             Assert.Equal(TwoFactorAuth.Step.WaitForOob, result.InitialStep);
             Assert.Equal("ae830c59-634b-437c-95b6-58158e85ffae", result.TransactionId);
@@ -67,7 +67,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         public void AuthStep2_throws_on_common_errors()
         {
             VerifyAllCommonErrorsWithPost(
-                http => Remote.AuthStep2(ClientInfo, "password", "transaction-id", http));
+                http => Client.AuthStep2(ClientInfo, "password", "transaction-id", http));
         }
 
         [Fact]
@@ -75,13 +75,13 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             // TODO: Write a better test
             var client = SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}");
-            Remote.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", client.Object);
+            Client.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", client.Object);
         }
 
         [Fact]
         public void SaveDeviceAsTrusted_throws_on_common_errors()
         {
-            VerifyMostCommonErrorsWithPost(http => Remote.SaveDeviceAsTrusted(ClientInfo,
+            VerifyMostCommonErrorsWithPost(http => Client.SaveDeviceAsTrusted(ClientInfo,
                                                                               "transaction-id",
                                                                               "oauth-token",
                                                                               http));
@@ -91,7 +91,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         public void AuthCheck_returns_oauth_token()
         {
             var client = SetupPostWithFixture("auth-check-success-response");
-            var result = Remote.AuthCheck(ClientInfo, "transaction-id", client.Object);
+            var result = Client.AuthCheck(ClientInfo, "transaction-id", client.Object);
 
             Assert.StartsWith("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI", result);
         }
@@ -101,20 +101,20 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             var client = SetupPostWithFixture("auth-check-pending-response");
 
-            Assert.Throws<FetchException>(() => Remote.AuthCheck(ClientInfo, "transaction-id", client.Object));
+            Assert.Throws<FetchException>(() => Client.AuthCheck(ClientInfo, "transaction-id", client.Object));
         }
 
         [Fact]
         public void AuthCheck_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(http => Remote.AuthCheck(ClientInfo, "transaction-id", http));
+            VerifyAllCommonErrorsWithPost(http => Client.AuthCheck(ClientInfo, "transaction-id", http));
         }
 
         [Fact]
         public void GetVault_returns_encrypted_vault()
         {
             var client = SetupGetWithFixture("get-vault-response");
-            var vault = Remote.GetVault("oauth-token", client.Object);
+            var vault = Client.GetVault("oauth-token", client.Object);
 
             Assert.Equal(MasterKeySalt, vault.MasterKeySalt);
             Assert.Equal(EncryptedMasterKey, vault.EncryptedMasterKey);
@@ -140,7 +140,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void GetVault_throws_common_errors()
         {
-            VerifyCommonErrorsWithGet(http => Remote.GetVault("oauth-token", http));
+            VerifyCommonErrorsWithGet(http => Client.GetVault("oauth-token", http));
         }
 
         //
@@ -171,7 +171,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         private static readonly byte[] MasterKeySalt = MasterKeySaltHex.DecodeHex();
         private static readonly byte[] EncryptedMasterKey = EncryptedMasterKeyBase64.Decode64();
 
-        private static readonly Remote.DeviceInfo DeviceInfo = new Remote.DeviceInfo(
+        private static readonly Client.DeviceInfo DeviceInfo = new Client.DeviceInfo(
             token: ClientToken,
             id: DeviceId);
 
@@ -186,7 +186,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             hmacSeed: "6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64(),
             iptmk: "HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64());
 
-        private static readonly Remote.ClientInfo ClientInfo = new Remote.ClientInfo(
+        private static readonly Client.ClientInfo ClientInfo = new Client.ClientInfo(
             username: Username,
             name: DeviceName,
             deviceInfo: DeviceInfo,

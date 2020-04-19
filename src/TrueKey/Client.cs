@@ -11,7 +11,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
 {
-    internal static class Remote
+    internal static class Client
     {
         public class DeviceInfo
         {

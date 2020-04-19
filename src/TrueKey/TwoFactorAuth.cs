@@ -57,12 +57,12 @@ namespace PasswordManagerAccess.TrueKey
             }
         }
 
-        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Ui ui)
+        public static string Start(Client.ClientInfo clientInfo, Settings settings, Ui ui)
         {
             return Start(clientInfo, settings, ui, new HttpClient());
         }
 
-        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
+        public static string Start(Client.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
         {
             return new TwoFactorAuth(clientInfo, settings, ui, http).Run(settings.InitialStep);
         }
@@ -96,7 +96,7 @@ namespace PasswordManagerAccess.TrueKey
             // TODO: Shared code for most states. It's not really good that it's in the base class.
             protected State Check(TwoFactorAuth owner)
             {
-                var result = Remote.AuthCheck(owner._clientInfo,
+                var result = Client.AuthCheck(owner._clientInfo,
                                               owner._settings.TransactionId,
                                               owner._http);
                 if (result == null)
@@ -149,7 +149,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             public override State Advance(TwoFactorAuth owner)
             {
-                Remote.AuthSendEmail(owner._clientInfo,
+                Client.AuthSendEmail(owner._clientInfo,
                                      owner._settings.Email,
                                      owner._settings.TransactionId,
                                      owner._http);
@@ -166,7 +166,7 @@ namespace PasswordManagerAccess.TrueKey
 
             public override State Advance(TwoFactorAuth owner)
             {
-                Remote.AuthSendPush(owner._clientInfo,
+                Client.AuthSendPush(owner._clientInfo,
                                     owner._settings.Devices[_deviceIndex].Id,
                                     owner._settings.TransactionId,
                                     owner._http);
@@ -187,7 +187,7 @@ namespace PasswordManagerAccess.TrueKey
                 case Ui.Answer.Check:
                     return Check(owner);
                 case Ui.Answer.Resend:
-                    Remote.AuthSendEmail(owner._clientInfo,
+                    Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
                                          owner._http);
@@ -216,13 +216,13 @@ namespace PasswordManagerAccess.TrueKey
                 case Ui.Answer.Check:
                     return Check(owner);
                 case Ui.Answer.Resend:
-                    Remote.AuthSendPush(owner._clientInfo,
+                    Client.AuthSendPush(owner._clientInfo,
                                         owner._settings.Devices[_deviceIndex].Id,
                                         owner._settings.TransactionId,
                                         owner._http);
                     return this;
                 case Ui.Answer.Email:
-                    Remote.AuthSendEmail(owner._clientInfo,
+                    Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
                                          owner._http);
@@ -248,7 +248,7 @@ namespace PasswordManagerAccess.TrueKey
 
                 if (answer == Ui.Answer.Email)
                 {
-                    Remote.AuthSendEmail(owner._clientInfo,
+                    Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
                                          owner._http);
@@ -258,7 +258,7 @@ namespace PasswordManagerAccess.TrueKey
                 var deviceIndex = answer - Ui.Answer.Device0;
                 if (deviceIndex >= 0 && deviceIndex < owner._settings.Devices.Length)
                 {
-                    Remote.AuthSendPush(owner._clientInfo,
+                    Client.AuthSendPush(owner._clientInfo,
                                         owner._settings.Devices[deviceIndex].Id,
                                         owner._settings.TransactionId,
                                         owner._http);
@@ -269,7 +269,7 @@ namespace PasswordManagerAccess.TrueKey
             }
         }
 
-        private TwoFactorAuth(Remote.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
+        private TwoFactorAuth(Client.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
         {
             _clientInfo = clientInfo;
             _settings = settings;
@@ -322,7 +322,7 @@ namespace PasswordManagerAccess.TrueKey
             throw new InvalidOperationException($"Two factor auth step {step} is not supported");
         }
 
-        private readonly Remote.ClientInfo _clientInfo;
+        private readonly Client.ClientInfo _clientInfo;
         private readonly Settings _settings;
         private readonly Ui _ui;
         private readonly IHttpClient _http;
