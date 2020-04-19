@@ -2,9 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
-using System.Net;
-using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
@@ -16,8 +13,8 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void RegisterNewDevice_returns_device_info()
         {
-            var client = SetupPostWithFixture("register-new-device-response");
-            var result = Client.RegisterNewDevice("truekey-sharp", client.Object);
+            var result = Client.RegisterNewDevice("truekey-sharp",
+                                                  SetupPostWithFixture("register-new-device-response"));
 
             Assert.StartsWith("AQCmAwEA", result.Token);
             Assert.StartsWith("d871347b", result.Id);
@@ -26,14 +23,13 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void RegisterNewDevice_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(http => Client.RegisterNewDevice("truekey-sharp", http));
+            VerifyAllCommonErrorsWithPost(flow => Client.RegisterNewDevice("truekey-sharp", flow));
         }
 
         [Fact]
         public void AuthStep1_returns_transaction_id()
         {
-            var client = SetupPostWithFixture("auth-step1-response");
-            var result = Client.AuthStep1(ClientInfo, client.Object);
+            var result = Client.AuthStep1(ClientInfo, SetupPostWithFixture("auth-step1-response"));
 
             Assert.Equal("6cdfcd43-065c-43a1-aa7a-017de98eefd0", result);
         }
@@ -41,7 +37,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void AuthStep1_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(http => Client.AuthStep1(ClientInfo, http));
+            VerifyAllCommonErrorsWithPost(flow => Client.AuthStep1(ClientInfo, flow));
         }
 
         [Fact]
@@ -50,8 +46,10 @@ namespace PasswordManagerAccess.Test.TrueKey
             // TODO: Test with specifically crafted broken/unsupported responses
             //       The parsing logic is not trivial and it needs in-depth testing.
 
-            var client = SetupPostWithFixture("auth-step2-response");
-            var result = Client.AuthStep2(ClientInfo, "password", "transaction-id", client.Object);
+            var result = Client.AuthStep2(ClientInfo,
+                                          "password",
+                                          "transaction-id",
+                                          SetupPostWithFixture("auth-step2-response"));
 
             Assert.Equal(TwoFactorAuth.Step.WaitForOob, result.InitialStep);
             Assert.Equal("ae830c59-634b-437c-95b6-58158e85ffae", result.TransactionId);
@@ -66,32 +64,32 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void AuthStep2_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(
-                http => Client.AuthStep2(ClientInfo, "password", "transaction-id", http));
+            VerifyAllCommonErrorsWithPost(flow => Client.AuthStep2(ClientInfo, "password", "transaction-id", flow));
         }
 
         [Fact]
         public void SaveDeviceAsTrusted_works()
         {
             // TODO: Write a better test
-            var client = SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}");
-            Client.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", client.Object);
+            Client.SaveDeviceAsTrusted(ClientInfo,
+                                       "transaction-id",
+                                       "oauth-token",
+                                       SetupPost("{'ResponseResult': {'IsSuccess': true}}"));
         }
 
         [Fact]
         public void SaveDeviceAsTrusted_throws_on_common_errors()
         {
-            VerifyMostCommonErrorsWithPost(http => Client.SaveDeviceAsTrusted(ClientInfo,
-                                                                              "transaction-id",
-                                                                              "oauth-token",
-                                                                              http));
+            VerifyMostCommonErrorsWithPost(
+                flow => Client.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", flow));
         }
 
         [Fact]
         public void AuthCheck_returns_oauth_token()
         {
-            var client = SetupPostWithFixture("auth-check-success-response");
-            var result = Client.AuthCheck(ClientInfo, "transaction-id", client.Object);
+            var result = Client.AuthCheck(ClientInfo,
+                                          "transaction-id",
+                                          SetupPostWithFixture("auth-check-success-response"));
 
             Assert.StartsWith("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI", result);
         }
@@ -99,22 +97,21 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void AuthCheck_throws_on_pending()
         {
-            var client = SetupPostWithFixture("auth-check-pending-response");
-
-            Assert.Throws<FetchException>(() => Client.AuthCheck(ClientInfo, "transaction-id", client.Object));
+            Assert.Throws<FetchException>(() => Client.AuthCheck(ClientInfo,
+                                                                 "transaction-id",
+                                                                 SetupPostWithFixture("auth-check-pending-response")));
         }
 
         [Fact]
         public void AuthCheck_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(http => Client.AuthCheck(ClientInfo, "transaction-id", http));
+            VerifyAllCommonErrorsWithPost(flow => Client.AuthCheck(ClientInfo, "transaction-id", flow));
         }
 
         [Fact]
         public void GetVault_returns_encrypted_vault()
         {
-            var client = SetupGetWithFixture("get-vault-response");
-            var vault = Client.GetVault("oauth-token", client.Object);
+            var vault = Client.GetVault("oauth-token", SetupGetWithFixture("get-vault-response"));
 
             Assert.Equal(MasterKeySalt, vault.MasterKeySalt);
             Assert.Equal(EncryptedMasterKey, vault.EncryptedMasterKey);
@@ -140,7 +137,127 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void GetVault_throws_common_errors()
         {
-            VerifyCommonErrorsWithGet(http => Client.GetVault("oauth-token", http));
+            VerifyCommonErrorsWithGet(flow => Client.GetVault("oauth-token", flow));
+        }
+
+        //
+        // Helpers
+        //
+
+        private static void VerifyCommonErrorsWithGet(Action<RestFlow> f)
+        {
+            VerifyNetworkErrorWithGet(f);
+            VerifyJsonErrorWithGet(f);
+            VerifyUnsupportedFormatWithGet(f);
+        }
+
+        private void VerifyAllCommonErrorsWithPost(Action<RestFlow> f)
+        {
+            VerifyMostCommonErrorsWithPost(f);
+            VerifyUnsupportedFormatWithPost(f);
+        }
+
+        private void VerifyMostCommonErrorsWithPost(Action<RestFlow> f)
+        {
+            VerifyNetworkErrorWithPost(f);
+            VerifyJsonErrorWithPost(f);
+            VerifyReturnedErrorWithPost(f);
+        }
+
+        private static void VerifyNetworkErrorWithGet(Action<RestFlow> f)
+        {
+            VerifyNetworkError(SetupGetWithFailure(), f);
+        }
+
+        private static void VerifyNetworkErrorWithPost(Action<RestFlow> f)
+        {
+            VerifyNetworkError(SetupPostWithFailure(), f);
+        }
+
+        private static void VerifyNetworkError(RestFlow flow, Action<RestFlow> f)
+        {
+            VerifyError(FetchException.FailureReason.NetworkError, flow, f);
+        }
+
+        private static void VerifyJsonErrorWithGet(Action<RestFlow> f)
+        {
+            VerifyJsonError(SetupGet("} invalid json {"), f);
+        }
+
+        private static void VerifyJsonErrorWithPost(Action<RestFlow> f)
+        {
+            VerifyJsonError(SetupPost("} invalid json {"), f);
+        }
+
+        private static void VerifyJsonError(RestFlow flow, Action<RestFlow> f)
+        {
+            VerifyError(FetchException.FailureReason.InvalidResponse, flow, f);
+        }
+
+        private void VerifyReturnedErrorWithPost(Action<RestFlow> f)
+        {
+            VerifyReturnedError(SetupPostWithFixture("post-response-with-error"), f);
+        }
+
+        private static void VerifyReturnedError(RestFlow flow, Action<RestFlow> f)
+        {
+            VerifyError(FetchException.FailureReason.RespondedWithError, flow, f);
+        }
+
+        private static void VerifyUnsupportedFormatWithGet(Action<RestFlow> f)
+        {
+            VerifyUnsupportedFormat(SetupGet("{}"), f);
+            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}}"), f);
+            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}, \"assets\": {}}"), f);
+        }
+
+        private static void VerifyUnsupportedFormatWithPost(Action<RestFlow> f)
+        {
+            VerifyUnsupportedFormat(SetupPost("{}"), f);
+            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{}}"), f);
+            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}"), f);
+        }
+
+        private static void VerifyUnsupportedFormat(RestFlow flow, Action<RestFlow> f)
+        {
+            VerifyError(FetchException.FailureReason.InvalidResponse, flow, f);
+        }
+
+        private static void VerifyError(FetchException.FailureReason reason,
+                                        RestFlow flow,
+                                        Action<RestFlow> f)
+        {
+            Assert.Throws<FetchException>(() => f(flow));
+        }
+
+        private static RestFlow SetupGet(string response)
+        {
+            return new RestFlow().Get(response);
+        }
+
+        private RestFlow SetupGetWithFixture(string name)
+        {
+            return SetupGet(GetFixture(name));
+        }
+
+        private static RestFlow SetupPost(string response)
+        {
+            return new RestFlow().Post(response);
+        }
+
+        private RestFlow SetupPostWithFixture(string name)
+        {
+            return SetupPost(GetFixture(name));
+        }
+
+        private static RestFlow SetupGetWithFailure()
+        {
+            return new RestFlow().Get(new Exception("TODO"));
+        }
+
+        private static RestFlow SetupPostWithFailure()
+        {
+            return new RestFlow().Post(new Exception("TODO"));
         }
 
         //
@@ -191,143 +308,5 @@ namespace PasswordManagerAccess.Test.TrueKey
             name: DeviceName,
             deviceInfo: DeviceInfo,
             otpInfo: OtpInfo);
-
-        //
-        // Helpers
-        //
-
-        private static void VerifyCommonErrorsWithGet(Action<IHttpClient> f)
-        {
-            VerifyNetworkErrorWithGet(f);
-            VerifyJsonErrorWithGet(f);
-            VerifyUnsupportedFormatWithGet(f);
-        }
-
-        private void VerifyAllCommonErrorsWithPost(Action<IHttpClient> f)
-        {
-            VerifyMostCommonErrorsWithPost(f);
-            VerifyUnsupportedFormatWithPost(f);
-        }
-
-        private void VerifyMostCommonErrorsWithPost(Action<IHttpClient> f)
-        {
-            VerifyNetworkErrorWithPost(f);
-            VerifyJsonErrorWithPost(f);
-            VerifyReturnedErrorWithPost(f);
-        }
-
-        private static void VerifyNetworkErrorWithGet(Action<IHttpClient> f)
-        {
-            VerifyNetworkError(SetupGetWithFailure(), f);
-        }
-
-        private static void VerifyNetworkErrorWithPost(Action<IHttpClient> f)
-        {
-            VerifyNetworkError(SetupPostWithFailure(), f);
-        }
-
-        private static void VerifyNetworkError(Mock<IHttpClient> http, Action<IHttpClient> f)
-        {
-            VerifyError(FetchException.FailureReason.NetworkError, http, f);
-        }
-
-        private static void VerifyJsonErrorWithGet(Action<IHttpClient> f)
-        {
-            VerifyJsonError(SetupGet("} invalid json {"), f);
-        }
-
-        private static void VerifyJsonErrorWithPost(Action<IHttpClient> f)
-        {
-            VerifyJsonError(SetupPost("} invalid json {"), f);
-        }
-
-        private static void VerifyJsonError(Mock<IHttpClient> http, Action<IHttpClient> f)
-        {
-            VerifyError(FetchException.FailureReason.InvalidResponse, http, f);
-        }
-
-        private void VerifyReturnedErrorWithPost(Action<IHttpClient> f)
-        {
-            VerifyReturnedError(SetupPostWithFixture("post-response-with-error"), f);
-        }
-
-        private static void VerifyReturnedError(Mock<IHttpClient> http, Action<IHttpClient> f)
-        {
-            VerifyError(FetchException.FailureReason.RespondedWithError, http, f);
-        }
-
-        private static void VerifyUnsupportedFormatWithGet(Action<IHttpClient> f)
-        {
-            VerifyUnsupportedFormat(SetupGet("{}"), f);
-            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}}"), f);
-            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}, \"assets\": {}}"), f);
-        }
-
-        private static void VerifyUnsupportedFormatWithPost(Action<IHttpClient> f)
-        {
-            VerifyUnsupportedFormat(SetupPost("{}"), f);
-            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{}}"), f);
-            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}"), f);
-        }
-
-        private static void VerifyUnsupportedFormat(Mock<IHttpClient> http, Action<IHttpClient> f)
-        {
-            VerifyError(FetchException.FailureReason.InvalidResponse, http, f);
-        }
-
-        private static void VerifyError(FetchException.FailureReason reason,
-                                        Mock<IHttpClient> http,
-                                        Action<IHttpClient> f)
-        {
-            Assert.Throws<FetchException>(() => f(http.Object));
-        }
-
-        private static Mock<IHttpClient> SetupGet(string response)
-        {
-            var mock = new Mock<IHttpClient>();
-            mock.Setup(x => x.Get(It.IsAny<string>(),
-                                  It.IsAny<Dictionary<string, string>>()))
-                .Returns(response);
-            return mock;
-        }
-
-        private Mock<IHttpClient> SetupGetWithFixture(string name)
-        {
-            return SetupGet(GetFixture(name));
-        }
-
-        private static Mock<IHttpClient> SetupPost(string response)
-        {
-            var mock = new Mock<IHttpClient>();
-            mock.Setup(x => x.Post(It.IsAny<string>(),
-                                   It.IsAny<Dictionary<string, object>>(),
-                                   It.IsAny<Dictionary<string, string>>()))
-                .Returns(response);
-            return mock;
-        }
-
-        private Mock<IHttpClient> SetupPostWithFixture(string name)
-        {
-            return SetupPost(GetFixture(name));
-        }
-
-        private static Mock<IHttpClient> SetupGetWithFailure()
-        {
-            var mock = new Mock<IHttpClient>();
-            mock.Setup(x => x.Get(It.IsAny<string>(),
-                                  It.IsAny<Dictionary<string, string>>()))
-                .Throws<WebException>();
-            return mock;
-        }
-
-        private static Mock<IHttpClient> SetupPostWithFailure()
-        {
-            var mock = new Mock<IHttpClient>();
-            mock.Setup(x => x.Post(It.IsAny<string>(),
-                                   It.IsAny<Dictionary<string, object>>(),
-                                   It.IsAny<Dictionary<string, string>>()))
-                .Throws<WebException>();
-            return mock;
-        }
     }
 }

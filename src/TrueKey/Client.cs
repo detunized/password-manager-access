@@ -17,10 +17,12 @@ namespace PasswordManagerAccess.TrueKey
                                           string password,
                                           Ui ui,
                                           ISecureStorage storage,
-                                          IHttpClient http)
+                                          IRestTransport transport)
         {
+            var rest = new RestClient(transport);
+
             // Step 1: Register a new deice or use the existing one from the previous run.
-            var deviceInfo = LoadDeviceInfo(storage) ?? RegisterNewDevice("truekey-sharp", http);
+            var deviceInfo = LoadDeviceInfo(storage) ?? RegisterNewDevice("truekey-sharp", rest);
 
             // Step 2: Parse the token to decode OTP information.
             var otpInfo = Util.ParseClientToken(deviceInfo.Token);
@@ -36,26 +38,26 @@ namespace PasswordManagerAccess.TrueKey
             var clientInfo = new ClientInfo(username, "truekey-sharp", deviceInfo, otpInfo);
 
             // Step 4: Auth step 1 gives us a transaction id to pass along to the next step.
-            var transactionId = AuthStep1(clientInfo, http);
+            var transactionId = AuthStep1(clientInfo, rest);
 
             // Step 5: Auth step 2 gives us the instructions on what to do next. For a new client that
             //         would be some form of second factor auth. For a known client that would be a
             //         pair of OAuth tokens.
-            var whatsNext = AuthStep2(clientInfo, password, transactionId, http);
+            var whatsNext = AuthStep2(clientInfo, password, transactionId, rest);
 
             // The device is trusted if it's already authenticated at this point and
             // no second factor is needed.
             var isTrusted = whatsNext.IsAuthenticated;
 
             // Step 6: Auth FSM -- walk through all the auth steps until we're done.
-            var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, ui, http);
+            var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, ui, rest);
 
             // Step 7: Save this device as trusted not to repeat the two factor dance next times.
             if (!isTrusted)
-                SaveDeviceAsTrusted(clientInfo, transactionId, oauthToken, http);
+                SaveDeviceAsTrusted(clientInfo, transactionId, oauthToken, rest);
 
             // Step 8: Get the vault from the server.
-            var encryptedVault = GetVault(oauthToken, http);
+            var encryptedVault = GetVault(oauthToken, rest);
 
             // Step 9: Compute the master key.
             var masterKey = Util.DecryptMasterKey(password,
@@ -116,9 +118,9 @@ namespace PasswordManagerAccess.TrueKey
         //
         // `deviceName` is the name of the device registered with the True Key service.
         // For example 'Chrome' or 'Nexus 5'.
-        internal static DeviceInfo RegisterNewDevice(string deviceName, IHttpClient http)
+        internal static DeviceInfo RegisterNewDevice(string deviceName, RestClient rest)
         {
-            return Post(http,
+            return Post(rest,
                         "https://id-api.truekey.com/sp/pabe/v2/so",
                         new Dictionary<string, object>
                         {
@@ -150,9 +152,9 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Returns OAuth transaction id that is used in the next step
-        internal static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
+        internal static string AuthStep1(ClientInfo clientInfo, RestClient rest)
         {
-            return Post(http,
+            return Post(rest,
                         "https://id-api.truekey.com/session/auth",
                         MakeCommonRequest(clientInfo, "session_id_token"),
                         response => response.StringAt("oAuthTransId"));
@@ -162,7 +164,7 @@ namespace PasswordManagerAccess.TrueKey
         internal static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
                                                          string password,
                                                          string transactionId,
-                                                         IHttpClient http)
+                                                         RestClient rest)
         {
             var parameters = new Dictionary<string, object> {
                 {"userData", new Dictionary<string, object> {
@@ -178,7 +180,7 @@ namespace PasswordManagerAccess.TrueKey
                 }},
             };
 
-            return Post(http,
+            return Post(rest,
                         "https://id-api.truekey.com/mp/auth",
                         parameters,
                         ParseAuthStep2Response);
@@ -189,7 +191,7 @@ namespace PasswordManagerAccess.TrueKey
         internal static void SaveDeviceAsTrusted(ClientInfo clientInfo,
                                                  string transactionId,
                                                  string oauthToken,
-                                                 IHttpClient http)
+                                                 RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["dashboardData"]
@@ -198,7 +200,7 @@ namespace PasswordManagerAccess.TrueKey
                     {"deviceData", new Dictionary<string, object> {{"isTrusted", true}}},
                 };
 
-            Post(http,
+            Post(rest,
                  "https://id-api.truekey.com/sp/dashboard/v2/udt",
                  parameters,
                  new Dictionary<string, string> {{"x-idToken", oauthToken}},
@@ -207,9 +209,9 @@ namespace PasswordManagerAccess.TrueKey
 
         // Check if the second factor has been completed by the user.
         // On success returns an OAuth token.
-        internal static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
+        internal static string AuthCheck(ClientInfo clientInfo, string transactionId, RestClient rest)
         {
-            return Post(http,
+            return Post(rest,
                         "https://id-api.truekey.com/sp/profile/v1/gls",
                         MakeCommonRequest(clientInfo, "code", transactionId),
                         response =>
@@ -226,7 +228,7 @@ namespace PasswordManagerAccess.TrueKey
         internal static void AuthSendEmail(ClientInfo clientInfo,
                                            string email,
                                            string transactionId,
-                                           IHttpClient http)
+                                           RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"]
@@ -236,7 +238,7 @@ namespace PasswordManagerAccess.TrueKey
                 {"RecipientId", email},
             };
 
-            Post(http,
+            Post(rest,
                  "https://id-api.truekey.com/sp/oob/v1/son",
                  parameters,
                  response => true);
@@ -246,7 +248,7 @@ namespace PasswordManagerAccess.TrueKey
         internal static void AuthSendPush(ClientInfo clientInfo,
                                           string deviceId,
                                           string transactionId,
-                                          IHttpClient http)
+                                          RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"]
@@ -256,16 +258,16 @@ namespace PasswordManagerAccess.TrueKey
                 {"RecipientId", deviceId},
             };
 
-            Post(http,
+            Post(rest,
                  "https://id-api.truekey.com/sp/oob/v1/son",
                  parameters,
                  response => true);
         }
 
         // Fetches the vault data, parses and returns in the encrypted form.
-        internal static EncryptedVault GetVault(string oauthToken, IHttpClient http)
+        internal static EncryptedVault GetVault(string oauthToken, RestClient rest)
         {
-            return Get(http,
+            return Get(rest,
                        "https://pm-api.truekey.com/data",
                        new Dictionary<string, string>
                        {
@@ -402,12 +404,12 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Make a JSON GET request and return the result as parsed JSON.
-        internal static T Get<T>(IHttpClient http,
+        internal static T Get<T>(RestClient rest,
                                  string url,
                                  Dictionary<string, string> headers,
                                  Func<JObject, T> parse)
         {
-            var response = Get(http, url, headers);
+            var response = Get(rest, url, headers);
 
             try
             {
@@ -420,30 +422,30 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Make a JSON GET request and return the result as parsed JSON.
-        internal static JObject Get(IHttpClient http, string url, Dictionary<string, string> headers)
+        internal static JObject Get(RestClient rest, string url, Dictionary<string, string> headers)
         {
-            return MakeRequest(() => http.Get(url, headers), url);
+            return MakeRequest(() => rest.Get(url, headers), url);
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
         // Checks if the operation was successful.
-        internal static T Post<T>(IHttpClient http,
+        internal static T Post<T>(RestClient rest,
                                   string url,
                                   Dictionary<string, object> parameters,
                                   Func<JObject, T> parse)
         {
-            return Post(http, url, parameters, new Dictionary<string, string>(), parse);
+            return Post(rest, url, parameters, new Dictionary<string, string>(), parse);
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
         // Checks if the operation was successful.
-        internal static T Post<T>(IHttpClient http,
+        internal static T Post<T>(RestClient rest,
                                   string url,
                                   Dictionary<string, object> parameters,
                                   Dictionary<string, string> headers,
                                   Func<JObject, T> parse)
         {
-            var response = PostNoCheck(http, url, parameters, headers);
+            var response = PostNoCheck(rest, url, parameters, headers);
 
             try
             {
@@ -462,24 +464,24 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
-        internal static JObject PostNoCheck(IHttpClient http,
+        internal static JObject PostNoCheck(RestClient rest,
                                             string url,
                                             Dictionary<string, object> parameters,
                                             Dictionary<string, string> headers)
         {
-            return MakeRequest(() => http.Post(url, parameters, headers), url);
+            return MakeRequest(() => rest.PostJson(url, parameters, headers), url);
         }
 
         // Make a JSON GET/POST request and return the result as parsed JSON.
-        internal static JObject MakeRequest(Func<string> request, string url)
+        internal static JObject MakeRequest(Func<RestResponse<string>> request, string url)
         {
             try
             {
-                return JObject.Parse(request());
-            }
-            catch (WebException e)
-            {
-                throw MakeNetworkError(url, e);
+                var response = request();
+                if (response.IsSuccessful)
+                    return JObject.Parse(response.Content);
+
+                throw MakeNetworkError(response);
             }
             catch (JsonException e)
             {
@@ -490,6 +492,19 @@ namespace PasswordManagerAccess.TrueKey
         //
         // Private
         //
+
+        private static FetchException MakeNetworkError(RestResponse<string> response)
+        {
+            if ((int)response.StatusCode == 422)
+                return new FetchException(
+                    FetchException.FailureReason.IncorrectCredentials,
+                    $"HTTP request to '{response.RequestUri}' failed, most likely username/password are incorrect",
+                    response.Error);
+
+            return new FetchException(FetchException.FailureReason.NetworkError,
+                                      $"Request to '{response.RequestUri}' failed",
+                                      response.Error);
+        }
 
         private static FetchException MakeNetworkError(string url, WebException original)
         {

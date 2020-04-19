@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
 {
@@ -57,14 +58,9 @@ namespace PasswordManagerAccess.TrueKey
             }
         }
 
-        public static string Start(Client.ClientInfo clientInfo, Settings settings, Ui ui)
+        public static string Start(Client.ClientInfo clientInfo, Settings settings, Ui ui, RestClient rest)
         {
-            return Start(clientInfo, settings, ui, new HttpClient());
-        }
-
-        public static string Start(Client.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
-        {
-            return new TwoFactorAuth(clientInfo, settings, ui, http).Run(settings.InitialStep);
+            return new TwoFactorAuth(clientInfo, settings, ui, rest).Run(settings.InitialStep);
         }
 
         //
@@ -98,7 +94,7 @@ namespace PasswordManagerAccess.TrueKey
             {
                 var result = Client.AuthCheck(owner._clientInfo,
                                               owner._settings.TransactionId,
-                                              owner._http);
+                                              owner._rest);
                 if (result == null)
                     return new Failure("Failed");
                 return new Done(result);
@@ -152,7 +148,7 @@ namespace PasswordManagerAccess.TrueKey
                 Client.AuthSendEmail(owner._clientInfo,
                                      owner._settings.Email,
                                      owner._settings.TransactionId,
-                                     owner._http);
+                                     owner._rest);
                 return new WaitForEmail();
             }
         }
@@ -169,7 +165,7 @@ namespace PasswordManagerAccess.TrueKey
                 Client.AuthSendPush(owner._clientInfo,
                                     owner._settings.Devices[_deviceIndex].Id,
                                     owner._settings.TransactionId,
-                                    owner._http);
+                                    owner._rest);
                 return new WaitForOob(_deviceIndex);
             }
 
@@ -190,7 +186,7 @@ namespace PasswordManagerAccess.TrueKey
                     Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
-                                         owner._http);
+                                         owner._rest);
                     return this;
                 }
 
@@ -219,13 +215,13 @@ namespace PasswordManagerAccess.TrueKey
                     Client.AuthSendPush(owner._clientInfo,
                                         owner._settings.Devices[_deviceIndex].Id,
                                         owner._settings.TransactionId,
-                                        owner._http);
+                                        owner._rest);
                     return this;
                 case Ui.Answer.Email:
                     Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
-                                         owner._http);
+                                         owner._rest);
                     return new WaitForEmail();
                 }
 
@@ -251,7 +247,7 @@ namespace PasswordManagerAccess.TrueKey
                     Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
-                                         owner._http);
+                                         owner._rest);
                     return new WaitForEmail();
                 }
 
@@ -261,7 +257,7 @@ namespace PasswordManagerAccess.TrueKey
                     Client.AuthSendPush(owner._clientInfo,
                                         owner._settings.Devices[deviceIndex].Id,
                                         owner._settings.TransactionId,
-                                        owner._http);
+                                        owner._rest);
                     return new WaitForOob(deviceIndex);
                 }
 
@@ -269,12 +265,12 @@ namespace PasswordManagerAccess.TrueKey
             }
         }
 
-        private TwoFactorAuth(Client.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
+        private TwoFactorAuth(Client.ClientInfo clientInfo, Settings settings, Ui ui, RestClient rest)
         {
             _clientInfo = clientInfo;
             _settings = settings;
             _ui = ui;
-            _http = http;
+            _rest = rest;
         }
 
         private string Run(Step nextStep)
@@ -325,6 +321,6 @@ namespace PasswordManagerAccess.TrueKey
         private readonly Client.ClientInfo _clientInfo;
         private readonly Settings _settings;
         private readonly Ui _ui;
-        private readonly IHttpClient _http;
+        private readonly RestClient _rest;
     }
 }

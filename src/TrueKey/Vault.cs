@@ -12,17 +12,18 @@ namespace PasswordManagerAccess.TrueKey
 
         public static Vault Open(string username, string password, Ui ui, ISecureStorage storage)
         {
-            return Open(username, password, ui, storage, new HttpClient());
+            using var transport = new RestTransport();
+            return Open(username, password, ui, storage, transport);
         }
 
         // TODO: Write a test that runs the whole sequence and checks the result.
-        public static Vault Open(string username,
-                                 string password,
-                                 Ui ui,
-                                 ISecureStorage storage,
-                                 IHttpClient http)
+        internal static Vault Open(string username,
+                                   string password,
+                                   Ui ui,
+                                   ISecureStorage storage,
+                                   IRestTransport transport)
         {
-            return new Vault(Client.OpenVault(username, password, ui, storage, http));
+            return new Vault(Client.OpenVault(username, password, ui, storage, transport));
         }
 
         //
