@@ -11,7 +11,146 @@ namespace PasswordManagerAccess.Test.TrueKey
 {
     public class AesCcmTest
     {
-        struct CcmTestCase
+        [Theory]
+        [MemberData(nameof(Rfc3610TestCases))]
+        public void Encrypt_returns_correct_value(CcmTestCase tc)
+        {
+            var ciphertext = AesCcm.Encrypt(tc.Key, tc.Plaintext, tc.Iv, tc.Adata, tc.TagLength);
+            Assert.Equal(tc.Ciphertext, ciphertext);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(4)]
+        [InlineData(5)]
+        [InlineData(6)]
+        public void Encrypt_throws_on_too_short_iv(int ivLength)
+        {
+            var key = new byte[16];
+            var e = Assert.Throws<CryptoException>(() => AesCcm.Encrypt(key: key,
+                                                                        plaintext: new byte[1],
+                                                                        iv: new byte[ivLength],
+                                                                        adata: new byte[0],
+                                                                        tagLength: 8));
+
+            Assert.Equal("IV must be at least 7 bytes long", e.Message);
+        }
+
+        [Theory]
+        [InlineData(-1)]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(5)]
+        [InlineData(7)]
+        [InlineData(9)]
+        [InlineData(11)]
+        [InlineData(13)]
+        [InlineData(15)]
+        [InlineData(17)]
+        [InlineData(18)]
+        [InlineData(19)]
+        [InlineData(20)]
+        [InlineData(1024)]
+        public void Encrypt_throws_on_invalid_tag_length(int tagLength)
+        {
+            var key = new byte[16];
+            var e = Assert.Throws<CryptoException>(() => AesCcm.Encrypt(key: key,
+                                                                        plaintext: new byte[1],
+                                                                        iv: new byte[16],
+                                                                        adata: new byte[0],
+                                                                        tagLength: tagLength));
+
+            Assert.Equal("Tag must be 4, 8, 10, 12, 14 or 16 bytes long", e.Message);
+        }
+
+        [Theory]
+        [MemberData(nameof(Rfc3610TestCases))]
+        public void Decrypt_returns_correct_value(CcmTestCase tc)
+        {
+            var plaintext = AesCcm.Decrypt(tc.Key, tc.Ciphertext, tc.Iv, tc.Adata, tc.TagLength);
+            Assert.Equal(tc.Plaintext, plaintext);
+        }
+
+        [Theory]
+        [MemberData(nameof(Rfc3610TestCases))]
+        public void Decrypt_throws_on_mismatching_tag(CcmTestCase tc)
+        {
+            // Change ciphertext
+            var ciphertext = (byte[])tc.Ciphertext.Clone();
+            ++ciphertext[ciphertext.Length / 2];
+            VerifyCcmMismatchThrown(tc.Key, ciphertext, tc.Iv, tc.Adata, tc.TagLength);
+
+            // Change iv
+            var iv = (byte[])tc.Iv.Clone();
+            ++iv[iv.Length / 2];
+            VerifyCcmMismatchThrown(tc.Key, tc.Ciphertext, iv, tc.Adata, tc.TagLength);
+
+            // Change adata
+            var adata = (byte[])tc.Adata.Clone();
+            ++adata[adata.Length / 2];
+            VerifyCcmMismatchThrown(tc.Key, tc.Ciphertext, tc.Iv, adata, tc.TagLength);
+        }
+
+        [Theory]
+        [InlineData(      0x01, 2)]
+        [InlineData(      0xff, 2)]
+        [InlineData(    0x0100, 2)]
+        [InlineData(    0xffff, 2)]
+        [InlineData(  0x010000, 3)]
+        [InlineData(  0xffffff, 3)]
+        [InlineData(0x01000000, 4)]
+        [InlineData(0x7fffffff, 4)]
+        public void ComputeLengthLength_returns_correct_value(int length, int lengthLength)
+        {
+            Assert.Equal(lengthLength, AesCcm.ComputeLengthLength(length));
+        }
+
+        [Theory]
+        [InlineData(    0x0001, "0001")]
+        [InlineData(    0x0010, "0010")]
+        [InlineData(    0xfefe, "fefe")]
+        [InlineData(    0xfeff, "fffe" + "0000feff")]
+        [InlineData(    0xffff, "fffe" + "0000ffff")]
+        [InlineData(0x7fffffff, "fffe" + "7fffffff")]
+        public void EncodeAdataLength_returns_correct_value(int adataLength, string encoded)
+        {
+            Assert.Equal(encoded.DecodeHex(), AesCcm.EncodeAdataLength(adataLength));
+        }
+
+        [Fact]
+        public void EncodeAdataLength_throws_on_zero_length()
+        {
+            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(0));
+            Assert.Equal("Adata length must be positive", e.Message);
+        }
+
+        [Fact]
+        public void EncodeAdataLength_throws_on_negative_length()
+        {
+            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(-1));
+            Assert.Equal("Adata length must be positive", e.Message);
+        }
+
+        //
+        // Helpers
+        //
+
+        private static void VerifyCcmMismatchThrown(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        {
+            var e = Assert.Throws<CryptoException>(() => AesCcm.Decrypt(key, ciphertext, iv, adata, tagLength));
+            Assert.Equal("CCM tag doesn't match", e.Message);
+        }
+
+        //
+        // Data
+        //
+
+        public class CcmTestCase
         {
             public CcmTestCase(string key, string plaintext, string ciphertext, string iv, string adata, int tagLength)
             {
@@ -32,7 +171,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         }
 
         // Test data from https://tools.ietf.org/html/rfc3610
-        private static readonly CcmTestCase[] Rfc3610TestCases =
+        private static readonly CcmTestCase[] Rfc3610TestData =
         {
             new CcmTestCase(
                        key: "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
@@ -131,132 +270,6 @@ namespace PasswordManagerAccess.Test.TrueKey
                  tagLength: 10),
         };
 
-        [Fact]
-        public void Encrypt_returns_correct_value()
-        {
-            foreach (var i in Rfc3610TestCases)
-            {
-                var ciphertext = AesCcm.Encrypt(i.Key, i.Plaintext, i.Iv, i.Adata, i.TagLength);
-                Assert.Equal(i.Ciphertext, ciphertext);
-            }
-        }
-
-        [Fact]
-        public void Encrypt_throws_on_too_short_iv()
-        {
-            var key = new byte[16];
-            for (var i = 0; i < 7; ++i)
-            {
-                var e = Assert.Throws<CryptoException>(
-                    () => AesCcm.Encrypt(key, new byte[1], new byte[i], new byte[0], 8));
-                Assert.Equal("IV must be at least 7 bytes long", e.Message);
-            }
-        }
-
-        [Fact]
-        public void Encrypt_throws_on_invalid_tag_length()
-        {
-            var testCases = new int[] {-1, 0, 1, 2, 3, 5, 7, 9, 11, 13, 15, 17, 18, 19, 20, 1024};
-
-            var key = new byte[16];
-            foreach (var i in testCases)
-            {
-                var e = Assert.Throws<CryptoException>(
-                    () => AesCcm.Encrypt(key, new byte[1], new byte[16], new byte[0], i));
-                Assert.Equal("Tag must be 4, 8, 10, 12, 14 or 16 bytes long", e.Message);
-            }
-        }
-
-        [Fact]
-        public void Decrypt_returns_correct_value()
-        {
-            foreach (var i in Rfc3610TestCases)
-            {
-                var plaintext = AesCcm.Decrypt(i.Key, i.Ciphertext, i.Iv, i.Adata, i.TagLength);
-                Assert.Equal(i.Plaintext, plaintext);
-            }
-        }
-
-        [Fact]
-        public void Decrypt_throws_on_mismatching_tag()
-        {
-            foreach (var i in Rfc3610TestCases)
-            {
-                // Change ciphertext
-                var ciphertext = (byte[])i.Ciphertext.Clone();
-                ++ciphertext[ciphertext.Length / 2];
-                VerifyCcmMismatchThrown(i.Key, ciphertext, i.Iv, i.Adata, i.TagLength);
-
-                // Change iv
-                var iv = (byte[])i.Iv.Clone();
-                ++iv[iv.Length / 2];
-                VerifyCcmMismatchThrown(i.Key, i.Ciphertext, iv, i.Adata, i.TagLength);
-
-                // Change adata
-                var adata = (byte[])i.Adata.Clone();
-                ++adata[adata.Length / 2];
-                VerifyCcmMismatchThrown(i.Key, i.Ciphertext, i.Iv, adata, i.TagLength);
-            }
-        }
-
-        [Fact]
-        public void ComputeLengthLength_returns_corrent_value()
-        {
-            var testCases = new Dictionary<int, int>
-            {
-                {      0x01, 2},
-                {      0xff, 2},
-                {    0x0100, 2},
-                {    0xffff, 2},
-                {  0x010000, 3},
-                {  0xffffff, 3},
-                {0x01000000, 4},
-                {0x7fffffff, 4},
-            };
-
-            foreach (var i in testCases)
-                Assert.Equal(i.Value, AesCcm.ComputeLengthLength(i.Key));
-        }
-
-        [Fact]
-        public void EncodeAdataLengt_returns_corrent_value()
-        {
-            var testCases = new Dictionary<int, string>
-            {
-                {    0x0001, "0001"},
-                {    0x0010, "0010"},
-                {    0xfefe, "fefe"},
-                {    0xfeff, "fffe" + "0000feff"},
-                {    0xffff, "fffe" + "0000ffff"},
-                {0x7fffffff, "fffe" + "7fffffff"},
-            };
-
-            foreach (var i in testCases)
-                Assert.Equal(i.Value.DecodeHex(), AesCcm.EncodeAdataLength(i.Key));
-        }
-
-        [Fact]
-        public void EncodeAdataLengt_throws_on_zero_length()
-        {
-            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(0));
-            Assert.Equal("Adata length must be positive", e.Message);
-        }
-
-        [Fact]
-        public void EncodeAdataLengt_throws_on_negative_length()
-        {
-            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(-1));
-            Assert.Equal("Adata length must be positive", e.Message);
-        }
-
-        //
-        // Helpers
-        //
-
-        private static void VerifyCcmMismatchThrown(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
-        {
-            var e = Assert.Throws<CryptoException>(() => AesCcm.Decrypt(key, ciphertext, iv, adata, tagLength));
-            Assert.Equal("CCM tag doesn't match", e.Message);
-        }
+        public static IEnumerable<object[]> Rfc3610TestCases = TestBase.ToMemberData(Rfc3610TestData);
     }
 }
