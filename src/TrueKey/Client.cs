@@ -13,7 +13,74 @@ namespace PasswordManagerAccess.TrueKey
 {
     internal static class Client
     {
-        public class DeviceInfo
+        public static Account[] OpenVault(string username,
+                                          string password,
+                                          Ui ui,
+                                          ISecureStorage storage,
+                                          IHttpClient http)
+        {
+            // Step 1: Register a new deice or use the existing one from the previous run.
+            var deviceInfo = LoadDeviceInfo(storage) ?? RegisterNewDevice("truekey-sharp", http);
+
+            // Step 2: Parse the token to decode OTP information.
+            var otpInfo = Util.ParseClientToken(deviceInfo.Token);
+
+            // Step 3: Validate the OTP info to make sure it's got only the
+            //         things we support at the moment.
+            Util.ValidateOtpInfo(otpInfo);
+
+            // Store the token and ID for the next time.
+            StoreDeviceInfo(deviceInfo, storage);
+
+            // Bundle up everything in one place
+            var clientInfo = new ClientInfo(username, "truekey-sharp", deviceInfo, otpInfo);
+
+            // Step 4: Auth step 1 gives us a transaction id to pass along to the next step.
+            var transactionId = AuthStep1(clientInfo, http);
+
+            // Step 5: Auth step 2 gives us the instructions on what to do next. For a new client that
+            //         would be some form of second factor auth. For a known client that would be a
+            //         pair of OAuth tokens.
+            var whatsNext = AuthStep2(clientInfo, password, transactionId, http);
+
+            // The device is trusted if it's already authenticated at this point and
+            // no second factor is needed.
+            var isTrusted = whatsNext.IsAuthenticated;
+
+            // Step 6: Auth FSM -- walk through all the auth steps until we're done.
+            var oauthToken = TwoFactorAuth.Start(clientInfo, whatsNext, ui, http);
+
+            // Step 7: Save this device as trusted not to repeat the two factor dance next times.
+            if (!isTrusted)
+                SaveDeviceAsTrusted(clientInfo, transactionId, oauthToken, http);
+
+            // Step 8: Get the vault from the server.
+            var encryptedVault = GetVault(oauthToken, http);
+
+            // Step 9: Compute the master key.
+            var masterKey = Util.DecryptMasterKey(password,
+                                                  encryptedVault.MasterKeySalt,
+                                                  encryptedVault.EncryptedMasterKey);
+
+            // Step 10: Decrypt the accounts.
+            var accounts = encryptedVault
+                .EncryptedAccounts
+                .Select(i => new Account(id: i.Id,
+                                         name: i.Name,
+                                         username: i.Username,
+                                         password: Util.Decrypt(masterKey, i.EncryptedPassword).ToUtf8(),
+                                         url: i.Url,
+                                         note: Util.Decrypt(masterKey, i.EncryptedNote).ToUtf8()))
+                .ToArray();
+
+            return accounts;
+        }
+
+        //
+        // Internal
+        //
+
+        internal class DeviceInfo
         {
             public readonly string Token;
             public readonly string Id;
@@ -25,13 +92,31 @@ namespace PasswordManagerAccess.TrueKey
             }
         }
 
+        internal static DeviceInfo LoadDeviceInfo(ISecureStorage storage)
+        {
+            var token = storage.LoadString("token");
+            var id = storage.LoadString("id");
+
+            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(id))
+                return null;
+
+            return new DeviceInfo(token, id);
+        }
+
+        internal static void StoreDeviceInfo(DeviceInfo deviceInfo, ISecureStorage storage)
+        {
+            storage.StoreString("token", deviceInfo.Token);
+            storage.StoreString("id", deviceInfo.Id);
+        }
+
+
         // This is the first step in authentication process for a new device.
         // This requests the client token with is used in OCRA (RFC 6287) exchange
         // later on. There's also a server assigned id for the new device.
         //
         // `deviceName` is the name of the device registered with the True Key service.
         // For example 'Chrome' or 'Nexus 5'.
-        public static DeviceInfo RegisterNewDevice(string deviceName, IHttpClient http)
+        internal static DeviceInfo RegisterNewDevice(string deviceName, IHttpClient http)
         {
             return Post(http,
                         "https://id-api.truekey.com/sp/pabe/v2/so",
@@ -48,7 +133,7 @@ namespace PasswordManagerAccess.TrueKey
                                                    response.StringAt("tkDeviceId")));
         }
 
-        public class ClientInfo
+        internal class ClientInfo
         {
             public readonly string Username;
             public readonly string Name;
@@ -65,7 +150,7 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Returns OAuth transaction id that is used in the next step
-        public static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
+        internal static string AuthStep1(ClientInfo clientInfo, IHttpClient http)
         {
             return Post(http,
                         "https://id-api.truekey.com/session/auth",
@@ -74,10 +159,10 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Returns instructions on what to do next
-        public static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
-                                                       string password,
-                                                       string transactionId,
-                                                       IHttpClient http)
+        internal static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
+                                                         string password,
+                                                         string transactionId,
+                                                         IHttpClient http)
         {
             var parameters = new Dictionary<string, object> {
                 {"userData", new Dictionary<string, object> {
@@ -101,10 +186,10 @@ namespace PasswordManagerAccess.TrueKey
 
         // Saves the device as trusted. Trusted devices do not need to perform the two
         // factor authentication and log in non-interactively.
-        public static void SaveDeviceAsTrusted(ClientInfo clientInfo,
-                                               string transactionId,
-                                               string oauthToken,
-                                               IHttpClient http)
+        internal static void SaveDeviceAsTrusted(ClientInfo clientInfo,
+                                                 string transactionId,
+                                                 string oauthToken,
+                                                 IHttpClient http)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["dashboardData"]
@@ -122,7 +207,7 @@ namespace PasswordManagerAccess.TrueKey
 
         // Check if the second factor has been completed by the user.
         // On success returns an OAuth token.
-        public static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
+        internal static string AuthCheck(ClientInfo clientInfo, string transactionId, IHttpClient http)
         {
             return Post(http,
                         "https://id-api.truekey.com/sp/profile/v1/gls",
@@ -138,10 +223,10 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Send a verification email as a second factor action.
-        public static void AuthSendEmail(ClientInfo clientInfo,
-                                         string email,
-                                         string transactionId,
-                                         IHttpClient http)
+        internal static void AuthSendEmail(ClientInfo clientInfo,
+                                           string email,
+                                           string transactionId,
+                                           IHttpClient http)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"]
@@ -158,10 +243,10 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Send a push message to a device as a second factor action.
-        public static void AuthSendPush(ClientInfo clientInfo,
-                                        string deviceId,
-                                        string transactionId,
-                                        IHttpClient http)
+        internal static void AuthSendPush(ClientInfo clientInfo,
+                                          string deviceId,
+                                          string transactionId,
+                                          IHttpClient http)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"]
@@ -178,7 +263,7 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Fetches the vault data, parses and returns in the encrypted form.
-        public static EncryptedVault GetVault(string oauthToken, IHttpClient http)
+        internal static EncryptedVault GetVault(string oauthToken, IHttpClient http)
         {
             return Get(http,
                        "https://pm-api.truekey.com/data",
@@ -194,10 +279,6 @@ namespace PasswordManagerAccess.TrueKey
                        ParseGetVaultResponse);
         }
 
-        //
-        // Internal
-        //
-
         internal static TwoFactorAuth.Settings ParseAuthStep2Response(JObject response)
         {
             var nextStep = response.IntAt("riskAnalysisInfo/nextStep");
@@ -205,7 +286,7 @@ namespace PasswordManagerAccess.TrueKey
 
             // Special case: done
             if (nextStep == 10)
-                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.Done,
+                return new TwoFactorAuth.Settings(initialStep: TwoFactorAuth.Step.Done,
                                                   transactionId: "",
                                                   email: "",
                                                   devices: new TwoFactorAuth.OobDevice[0],
@@ -405,6 +486,10 @@ namespace PasswordManagerAccess.TrueKey
                 throw MakeInvalidResponseError($"Invalid JSON in response from '{url}'", e);
             }
         }
+
+        //
+        // Private
+        //
 
         private static FetchException MakeNetworkError(string url, WebException original)
         {
