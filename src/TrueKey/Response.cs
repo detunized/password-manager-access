@@ -83,9 +83,48 @@ namespace PasswordManagerAccess.TrueKey.Response
     internal struct OobDevice
     {
         [JsonProperty("deviceId", Required = Required.Always)]
-        public string Id { get; set; }
+        public readonly string Id;
 
         [JsonProperty("deviceName", Required = Required.Always)]
-        public string Name { get; set; }
+        public readonly string Name;
+    }
+
+    internal class Vault
+    {
+        [JsonProperty("customer", Required = Required.Always)]
+        public readonly Customer Customer;
+
+        [JsonProperty("assets", Required = Required.Always)]
+        public readonly Account[] Accounts;
+    }
+
+    internal struct Customer
+    {
+        [JsonProperty("salt", Required = Required.Always)]
+        public readonly string Salt;
+
+        [JsonProperty("k_kek", Required = Required.Always)]
+        public readonly string Kek;
+    }
+
+    internal struct Account
+    {
+        [JsonProperty("id", Required = Required.Always)]
+        public readonly int Id;
+
+        [JsonProperty("name")]
+        public readonly string Name;
+
+        [JsonProperty("login")]
+        public readonly string Username;
+
+        [JsonProperty("password_k")]
+        public readonly string EncryptedPassword;
+
+        [JsonProperty("url")]
+        public readonly string Url;
+
+        [JsonProperty("memo_k")]
+        public readonly string EncryptedNote;
     }
 }

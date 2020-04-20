@@ -200,11 +200,10 @@ namespace PasswordManagerAccess.TrueKey
                 {"deviceData", new Dictionary<string, object> {{"isTrusted", true}}},
             };
 
-            Post(rest,
-                 "https://id-api.truekey.com/sp/dashboard/v2/udt",
-                 parameters,
-                 new Dictionary<string, string> {{"x-idToken", oauthToken}},
-                 response => true);
+            Post<R.Status>("https://id-api.truekey.com/sp/dashboard/v2/udt",
+                           parameters,
+                           new Dictionary<string, string> {{"x-idToken", oauthToken}},
+                           rest);
         }
 
         // Check if the second factor has been completed by the user.
@@ -267,18 +266,18 @@ namespace PasswordManagerAccess.TrueKey
         // Fetches the vault data, parses and returns in the encrypted form.
         internal static EncryptedVault GetVault(string oauthToken, RestClient rest)
         {
-            return Get(rest,
-                       "https://pm-api.truekey.com/data",
-                       new Dictionary<string, string>
-                       {
-                           {"Authorization", "Bearer " + oauthToken},
-                           {"Accept", "application/vnd.tk-pm-api.v1+json"},
-                           {"X-TK-Client-API", "TK-API-1.1"},
-                           {"X-TK-Client-Version", "2.6.3820"},
-                           {"X-TK-Client-Language", "en-US"},
-                           {"X-TK-Client-Context", "crx-mac"},
-                       },
-                       ParseGetVaultResponse);
+            var response = Get<R.Vault>("https://pm-api.truekey.com/data",
+                                        new Dictionary<string, string>
+                                        {
+                                            {"Authorization", "Bearer " + oauthToken},
+                                            {"Accept", "application/vnd.tk-pm-api.v1+json"},
+                                            {"X-TK-Client-API", "TK-API-1.1"},
+                                            {"X-TK-Client-Version", "2.6.3820"},
+                                            {"X-TK-Client-Language", "en-US"},
+                                            {"X-TK-Client-Context", "crx-mac"},
+                                        },
+                                        rest);
+            return ParseGetVaultResponse(response);
         }
 
         internal static TwoFactorAuth.Settings ParseAuthStep2Response(R.AuthStep2 response)
@@ -337,19 +336,19 @@ namespace PasswordManagerAccess.TrueKey
                                               oAuthToken: "");
         }
 
-        internal static EncryptedVault ParseGetVaultResponse(JObject response)
+        internal static EncryptedVault ParseGetVaultResponse(R.Vault response)
         {
-            var salt = response.StringAt("customer/salt").DecodeHex();
-            var key = response.StringAt("customer/k_kek").Decode64();
+            var salt = response.Customer.Salt.DecodeHex();
+            var key = response.Customer.Kek.Decode64();
             var accounts = response
-                .At("assets")
+                .Accounts
                 .Select(i => new EncryptedAccount(
-                    id : i.IntAt("id"),
-                    name : i.StringAt("name", ""),
-                    username : i.StringAt("login", ""),
-                    encryptedPassword : (i.StringAt("password_k", "")).Decode64(),
-                    url : i.StringAt("url", ""),
-                    encryptedNote : (i.StringAt("memo_k", "")).Decode64()))
+                    id : i.Id,
+                    name : i.Name ?? "",
+                    username : i.Username ?? "",
+                    encryptedPassword : (i.EncryptedPassword ?? "").Decode64(),
+                    url : i.Url ?? "",
+                    encryptedNote : (i.EncryptedNote ?? "").Decode64()))
                 .ToArray();
 
             return new EncryptedVault(salt, key, accounts);
@@ -412,7 +411,16 @@ namespace PasswordManagerAccess.TrueKey
             }
         }
 
-        // Make a JSON GET request and return the result as parsed JSON.
+       internal static T Get<T>(string url, Dictionary<string, string> headers, RestClient rest)
+       {
+           var response = rest.Get<T>(url, headers);
+           if (response.IsSuccessful)
+               return response.Data;
+
+           throw MakeNetworkError(response);
+       }
+
+       // Make a JSON GET request and return the result as parsed JSON.
         internal static JObject Get(RestClient rest, string url, Dictionary<string, string> headers)
         {
             return MakeRequest(() => rest.Get(url, headers), url);
@@ -430,7 +438,15 @@ namespace PasswordManagerAccess.TrueKey
 
         internal static T Post<T>(string url, Dictionary<string, object> parameters, RestClient rest) where T : R.Status
         {
-            var response = rest.PostJson<T>(url, parameters);
+            return Post<T>(url, parameters, RestClient.NoHeaders, rest);
+        }
+
+        internal static T Post<T>(string url,
+                                  Dictionary<string, object> parameters,
+                                  Dictionary<string, string> headers,
+                                  RestClient rest) where T : R.Status
+        {
+            var response = rest.PostJson<T>(url, parameters, headers);
             if (!response.IsSuccessful)
                 throw MakeNetworkError(response);
 
