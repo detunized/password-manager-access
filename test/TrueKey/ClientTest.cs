@@ -11,6 +11,21 @@ namespace PasswordManagerAccess.Test.TrueKey
     public class ClientTest: TestBase
     {
         [Fact]
+        public void OpenVault_returns_accounts_with_new_device()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("register-new-device-response"))
+                .Post(GetFixture("auth-step1-response"))
+                .Post(GetFixture("auth-step2-response"))
+                .Post(GetFixture("auth-check-success-response"))
+                .Post(GetFixture("save-device-response"))
+                .Get(GetFixture("get-vault-response"));
+
+            var accounts = Client.OpenVault(Username, "Password123", new CheckUi(), new NullStorage(), flow);
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
         public void RegisterNewDevice_returns_device_info()
         {
             var result = Client.RegisterNewDevice("truekey-sharp",
@@ -258,6 +273,14 @@ namespace PasswordManagerAccess.Test.TrueKey
         private static RestFlow SetupPostWithFailure()
         {
             return new RestFlow().Post(new Exception("TODO"));
+        }
+
+        // The Ui that always says "Check"
+        private class CheckUi : Ui
+        {
+            public override Answer AskToWaitForEmail(string email, Answer[] validAnswers) => Answer.Check;
+            public override Answer AskToWaitForOob(string name, string email, Answer[] validAnswers) => Answer.Check;
+            public override Answer AskToChooseOob(string[] names, string email, Answer[] validAnswers) => Answer.Email;
         }
 
         //

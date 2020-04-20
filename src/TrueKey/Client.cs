@@ -194,11 +194,10 @@ namespace PasswordManagerAccess.TrueKey
                                                  RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
-            ((Dictionary<string, object>)parameters["data"])["dashboardData"]
-                = new Dictionary<string, object>
-                {
-                    {"deviceData", new Dictionary<string, object> {{"isTrusted", true}}},
-                };
+            ((Dictionary<string, object>) parameters["data"])["dashboardData"] = new Dictionary<string, object>
+            {
+                {"deviceData", new Dictionary<string, object> {{"isTrusted", true}}},
+            };
 
             Post(rest,
                  "https://id-api.truekey.com/sp/dashboard/v2/udt",
