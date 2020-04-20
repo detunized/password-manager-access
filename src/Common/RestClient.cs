@@ -302,6 +302,10 @@ namespace PasswordManagerAccess.Common
     // the settings have to be changed, the new instance should be created.
     internal class RestClient
     {
+        // TODO: Make these readonly dictionaries
+        public static readonly HttpHeaders NoHeaders = new HttpHeaders();
+        public static readonly HttpCookies NoCookies = new HttpCookies();
+
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
         public readonly IRequestSigner Signer;
@@ -549,8 +553,6 @@ namespace PasswordManagerAccess.Common
                 parameters.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())));
         }
 
-        private static readonly HttpHeaders NoHeaders = new HttpHeaders();
-        private static readonly HttpCookies NoCookies = new HttpCookies();
         private const int MaxRedirects = 3;
         private const int NoRedirects = 0;
     }
