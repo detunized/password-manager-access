@@ -127,4 +127,13 @@ namespace PasswordManagerAccess.TrueKey.Response
         [JsonProperty("memo_k")]
         public readonly string EncryptedNote;
     }
+
+    internal class AuthCheck: Status
+    {
+        [JsonProperty("nextStep", Required = Required.Always)]
+        public readonly int NextStep;
+
+        [JsonProperty("idToken", Required = Required.Always)]
+        public string OAuthToken;
+    }
 }

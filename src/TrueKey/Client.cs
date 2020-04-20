@@ -5,8 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
@@ -210,17 +208,14 @@ namespace PasswordManagerAccess.TrueKey
         // On success returns an OAuth token.
         internal static string AuthCheck(ClientInfo clientInfo, string transactionId, RestClient rest)
         {
-            return Post(rest,
-                        "https://id-api.truekey.com/sp/profile/v1/gls",
-                        MakeCommonRequest(clientInfo, "code", transactionId),
-                        response =>
-                        {
-                            if (response.IntAt("nextStep") == 10)
-                                return response.StringAt("idToken");
+            var response = Post<R.AuthCheck>("https://id-api.truekey.com/sp/profile/v1/gls",
+                                             MakeCommonRequest(clientInfo, "code", transactionId),
+                                             rest);
+            if (response.NextStep == 10)
+                return response.OAuthToken;
 
-                            throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                                     "Invalid response in AuthCheck, expected an OAuth token");
-                        });
+            throw new FetchException(FetchException.FailureReason.InvalidResponse,
+                                     "Invalid response in AuthCheck, expected an OAuth token");
         }
 
         // Send a verification email as a second factor action.
@@ -230,17 +225,13 @@ namespace PasswordManagerAccess.TrueKey
                                            RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
-            ((Dictionary<string, object>)parameters["data"])["notificationData"]
-                = new Dictionary<string, object>
+            ((Dictionary<string, object>)parameters["data"])["notificationData"] = new Dictionary<string, object>
             {
                 {"NotificationType", 1},
                 {"RecipientId", email},
             };
 
-            Post(rest,
-                 "https://id-api.truekey.com/sp/oob/v1/son",
-                 parameters,
-                 response => true);
+            Post<R.Status>("https://id-api.truekey.com/sp/oob/v1/son", parameters, rest);
         }
 
         // Send a push message to a device as a second factor action.
@@ -250,17 +241,13 @@ namespace PasswordManagerAccess.TrueKey
                                           RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
-            ((Dictionary<string, object>)parameters["data"])["notificationData"]
-                = new Dictionary<string, object>
+            ((Dictionary<string, object>)parameters["data"])["notificationData"] = new Dictionary<string, object>
             {
                 {"NotificationType", 2},
                 {"RecipientId", deviceId},
             };
 
-            Post(rest,
-                 "https://id-api.truekey.com/sp/oob/v1/son",
-                 parameters,
-                 response => true);
+            Post<R.Status>("https://id-api.truekey.com/sp/oob/v1/son", parameters, rest);
         }
 
         // Fetches the vault data, parses and returns in the encrypted form.
@@ -340,15 +327,15 @@ namespace PasswordManagerAccess.TrueKey
         {
             var salt = response.Customer.Salt.DecodeHex();
             var key = response.Customer.Kek.Decode64();
+
             var accounts = response
                 .Accounts
-                .Select(i => new EncryptedAccount(
-                    id : i.Id,
-                    name : i.Name ?? "",
-                    username : i.Username ?? "",
-                    encryptedPassword : (i.EncryptedPassword ?? "").Decode64(),
-                    url : i.Url ?? "",
-                    encryptedNote : (i.EncryptedNote ?? "").Decode64()))
+                .Select(i => new EncryptedAccount(id: i.Id,
+                                                  name: i.Name ?? "",
+                                                  username: i.Username ?? "",
+                                                  encryptedPassword: (i.EncryptedPassword ?? "").Decode64(),
+                                                  url: i.Url ?? "",
+                                                  encryptedNote: (i.EncryptedNote ?? "").Decode64()))
                 .ToArray();
 
             return new EncryptedVault(salt, key, accounts);
@@ -393,24 +380,6 @@ namespace PasswordManagerAccess.TrueKey
             };
         }
 
-        // Make a JSON GET request and return the result as parsed JSON.
-        internal static T Get<T>(RestClient rest,
-                                 string url,
-                                 Dictionary<string, string> headers,
-                                 Func<JObject, T> parse)
-        {
-            var response = Get(rest, url, headers);
-
-            try
-            {
-                return parse(response);
-            }
-            catch (JTokenAccessException e)
-            {
-                throw MakeInvalidResponseError($"Unexpected format in response from '{url}'", e);
-            }
-        }
-
        internal static T Get<T>(string url, Dictionary<string, string> headers, RestClient rest)
        {
            var response = rest.Get<T>(url, headers);
@@ -419,22 +388,6 @@ namespace PasswordManagerAccess.TrueKey
 
            throw MakeNetworkError(response);
        }
-
-       // Make a JSON GET request and return the result as parsed JSON.
-        internal static JObject Get(RestClient rest, string url, Dictionary<string, string> headers)
-        {
-            return MakeRequest(() => rest.Get(url, headers), url);
-        }
-
-        // Make a JSON POST request and return the result as parsed JSON.
-        // Checks if the operation was successful.
-        internal static T Post<T>(RestClient rest,
-                                  string url,
-                                  Dictionary<string, object> parameters,
-                                  Func<JObject, T> parse)
-        {
-            return Post(rest, url, parameters, new Dictionary<string, string>(), parse);
-        }
 
         internal static T Post<T>(string url, Dictionary<string, object> parameters, RestClient rest) where T : R.Status
         {
@@ -459,58 +412,6 @@ namespace PasswordManagerAccess.TrueKey
 
             throw new FetchException(FetchException.FailureReason.RespondedWithError,
                                      $"POST request to '{url}' failed with error ({code}: '{description}')");
-        }
-
-        // Make a JSON POST request and return the result as parsed JSON.
-        // Checks if the operation was successful.
-        internal static T Post<T>(RestClient rest,
-                                  string url,
-                                  Dictionary<string, object> parameters,
-                                  Dictionary<string, string> headers,
-                                  Func<JObject, T> parse)
-        {
-            var response = PostNoCheck(rest, url, parameters, headers);
-
-            try
-            {
-                if (response.BoolAt("responseResult/isSuccess"))
-                    return parse(response);
-            }
-            catch (JTokenAccessException e)
-            {
-                throw MakeInvalidResponseError($"Unexpected format in response from '{url}'", e);
-            }
-
-            var code = response.StringAt("responseResult/errorCode", "");
-            var message = response.StringAt("responseResult/errorDescription", "");
-            throw new FetchException(FetchException.FailureReason.RespondedWithError,
-                                     $"POST request to '{url}' failed with error ({code}: '{message}')");
-        }
-
-        // Make a JSON POST request and return the result as parsed JSON.
-        internal static JObject PostNoCheck(RestClient rest,
-                                            string url,
-                                            Dictionary<string, object> parameters,
-                                            Dictionary<string, string> headers)
-        {
-            return MakeRequest(() => rest.PostJson(url, parameters, headers), url);
-        }
-
-        // Make a JSON GET/POST request and return the result as parsed JSON.
-        internal static JObject MakeRequest(Func<RestResponse<string>> request, string url)
-        {
-            try
-            {
-                var response = request();
-                if (response.IsSuccessful)
-                    return JObject.Parse(response.Content);
-
-                throw MakeNetworkError(response);
-            }
-            catch (JsonException e)
-            {
-                throw MakeInvalidResponseError($"Invalid JSON in response from '{url}'", e);
-            }
         }
 
         //

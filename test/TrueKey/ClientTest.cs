@@ -21,7 +21,7 @@ namespace PasswordManagerAccess.Test.TrueKey
                 .Post(GetFixture("save-device-response"))
                 .Get(GetFixture("get-vault-response"));
 
-            var accounts = Client.OpenVault(Username, "Password123", new CheckUi(), new NullStorage(), flow);
+            var accounts = Client.OpenVault(Username, Password123, new CheckUi(), new NullStorage(), flow);
             Assert.NotEmpty(accounts);
         }
 
@@ -288,6 +288,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         //
 
         private const string Username = "username@example.com";
+        private const string Password123 = "Password123";
         private const string DeviceName = "truekey-sharp";
 
         private const string ClientToken = "AQCmAwEAAh4AAAAAWMajHQAAGU9DUkEtMTpIT1RQLVNIQTI1Ni" +
@@ -307,6 +308,7 @@ namespace PasswordManagerAccess.Test.TrueKey
                                                         "t3bzQJO+Fyf4TnlA83Mbl1KrMI09iOd9VQJJl" +
                                                         "u4ivWMwCYhMB6Mw3LOoyS/2UjqmCnxAUqo6MT" +
                                                         "SnptgjlWO";
+
 
         private static readonly byte[] MasterKeySalt = MasterKeySaltHex.DecodeHex();
         private static readonly byte[] EncryptedMasterKey = EncryptedMasterKeyBase64.Decode64();
