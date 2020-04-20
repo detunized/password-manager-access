@@ -40,13 +40,10 @@ namespace PasswordManagerAccess.TrueKey
                 OAuthToken = oAuthToken;
             }
 
-            public bool IsAuthenticated
-            {
-                get { return InitialStep == Step.Done && !string.IsNullOrEmpty(OAuthToken); }
-            }
+            public bool IsAuthenticated => InitialStep == Step.Done && !OAuthToken.IsNullOrEmpty();
         }
 
-        public class OobDevice
+        public struct OobDevice
         {
             public readonly string Name;
             public readonly string Id;

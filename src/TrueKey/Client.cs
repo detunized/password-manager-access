@@ -11,6 +11,8 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
 {
+    using R = Response;
+
     internal static class Client
     {
         public static Account[] OpenVault(string username,
@@ -120,19 +122,19 @@ namespace PasswordManagerAccess.TrueKey
         // For example 'Chrome' or 'Nexus 5'.
         internal static DeviceInfo RegisterNewDevice(string deviceName, RestClient rest)
         {
-            return Post(rest,
-                        "https://id-api.truekey.com/sp/pabe/v2/so",
-                        new Dictionary<string, object>
-                        {
-                            {"clientUDID", "truekey-sharp"},
-                            {"deviceName", deviceName},
-                            {"devicePlatformID", 7},
-                            {"deviceType", 5},
-                            {"oSName", "Unknown"},
-                            {"oathTokenType", 1},
-                        },
-                        response => new DeviceInfo(response.StringAt("clientToken"),
-                                                   response.StringAt("tkDeviceId")));
+            var response = Post<R.RegisterNewDevice>("https://id-api.truekey.com/sp/pabe/v2/so",
+                                                     new Dictionary<string, object>
+                                                     {
+                                                         {"clientUDID", "truekey-sharp"},
+                                                         {"deviceName", deviceName},
+                                                         {"devicePlatformID", 7},
+                                                         {"deviceType", 5},
+                                                         {"oSName", "Unknown"},
+                                                         {"oathTokenType", 1},
+                                                     },
+                                                     rest);
+
+            return new DeviceInfo(response.ClientToken, response.DeviceId);
         }
 
         internal class ClientInfo
@@ -154,10 +156,11 @@ namespace PasswordManagerAccess.TrueKey
         // Returns OAuth transaction id that is used in the next step
         internal static string AuthStep1(ClientInfo clientInfo, RestClient rest)
         {
-            return Post(rest,
-                        "https://id-api.truekey.com/session/auth",
-                        MakeCommonRequest(clientInfo, "session_id_token"),
-                        response => response.StringAt("oAuthTransId"));
+            var response = Post<R.AuthStep1>("https://id-api.truekey.com/session/auth",
+                                             MakeCommonRequest(clientInfo, "session_id_token"),
+                                             rest);
+
+            return response.TransactionId;
         }
 
         // Returns instructions on what to do next
@@ -180,10 +183,8 @@ namespace PasswordManagerAccess.TrueKey
                 }},
             };
 
-            return Post(rest,
-                        "https://id-api.truekey.com/mp/auth",
-                        parameters,
-                        ParseAuthStep2Response);
+            var response = Post<R.AuthStep2>("https://id-api.truekey.com/mp/auth", parameters, rest);
+            return ParseAuthStep2Response(response);
         }
 
         // Saves the device as trusted. Trusted devices do not need to perform the two
@@ -280,10 +281,10 @@ namespace PasswordManagerAccess.TrueKey
                        ParseGetVaultResponse);
         }
 
-        internal static TwoFactorAuth.Settings ParseAuthStep2Response(JObject response)
+        internal static TwoFactorAuth.Settings ParseAuthStep2Response(R.AuthStep2 response)
         {
-            var nextStep = response.IntAt("riskAnalysisInfo/nextStep");
-            var data = response.At("riskAnalysisInfo/nextStepData");
+            var nextStep = response.Info.NextStep;
+            var data = response.Info.Data;
 
             // Special case: done
             if (nextStep == 10)
@@ -291,10 +292,10 @@ namespace PasswordManagerAccess.TrueKey
                                                   transactionId: "",
                                                   email: "",
                                                   devices: new TwoFactorAuth.OobDevice[0],
-                                                  oAuthToken: response.StringAt("idToken"));
+                                                  oAuthToken: response.OAuthToken ?? "");
 
-            var transactionId = response.StringAt("oAuthTransId");
-            var email = data.StringAt("verificationEmail");
+            var transactionId = response.TransactionId;
+            var email = data.VerificationEmail;
 
             // Special case: email doesn't need OOB devices
             if (nextStep == 14)
@@ -304,7 +305,7 @@ namespace PasswordManagerAccess.TrueKey
                                                   devices: new TwoFactorAuth.OobDevice[0],
                                                   oAuthToken: "");
 
-            var devices = ParseOobDevices(data.At("oobDevices"));
+            var devices = data.OobDevices.Select(x => new TwoFactorAuth.OobDevice(name: x.Name, id: x.Id)).ToArray();
             if (devices.Length < 1)
                 throw new FetchException(FetchException.FailureReason.InvalidResponse,
                                          "At least one OOB device is expected");
@@ -334,15 +335,6 @@ namespace PasswordManagerAccess.TrueKey
                                               email: email,
                                               devices: devices,
                                               oAuthToken: "");
-        }
-
-        internal static TwoFactorAuth.OobDevice[] ParseOobDevices(JToken deviceInfo)
-        {
-            if (deviceInfo.Type != JTokenType.Array)
-                return new TwoFactorAuth.OobDevice[0];
-
-            return deviceInfo.Select(i => new TwoFactorAuth.OobDevice(i.StringAt("deviceName"),
-                                                                      i.StringAt("deviceId"))).ToArray();
         }
 
         internal static EncryptedVault ParseGetVaultResponse(JObject response)
@@ -434,6 +426,23 @@ namespace PasswordManagerAccess.TrueKey
                                   Func<JObject, T> parse)
         {
             return Post(rest, url, parameters, new Dictionary<string, string>(), parse);
+        }
+
+        internal static T Post<T>(string url, Dictionary<string, object> parameters, RestClient rest) where T : R.Status
+        {
+            var response = rest.PostJson<T>(url, parameters);
+            if (!response.IsSuccessful)
+                throw MakeNetworkError(response);
+
+            var result = response.Data.Result;
+            if (result.IsSuccess)
+                return response.Data;
+
+            var code = result.ErrorCode ?? "unknown";
+            var description = result.ErrorDescription ?? "Unknown error";
+
+            throw new FetchException(FetchException.FailureReason.RespondedWithError,
+                                     $"POST request to '{url}' failed with error ({code}: '{description}')");
         }
 
         // Make a JSON POST request and return the result as parsed JSON.
