@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -368,6 +369,16 @@ namespace PasswordManagerAccess.Test.Common
         {
             Exceptions.AssertThrowsInternalError(() => new byte[] { }.Sub(0, -1337),
                                                  "length should not be negative");
+        }
+
+        //
+        // DateTime
+        //
+
+        [Fact]
+        public void DateTime_UnixSeconds_returns_number_of_seconds_since_epoch()
+        {
+            Assert.Equal(1493456789U, new DateTime(2017, 4, 29, 9, 6, 29, DateTimeKind.Utc).UnixSeconds());
         }
 
         //
