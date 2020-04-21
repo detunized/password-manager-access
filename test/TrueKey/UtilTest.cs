@@ -123,8 +123,7 @@ namespace PasswordManagerAccess.Test.TrueKey
                     .Invoke(otp, null);
                 clone.GetType().GetField(name).SetValue(clone, value);
 
-                var e = Assert.Throws<ArgumentException>(() => Util.ValidateOtpInfo(clone));
-                Assert.Contains(contains, e.Message);
+                Exceptions.AssertThrowsInternalError(() => Util.ValidateOtpInfo(clone), contains);
             };
 
             // Doesn't throw
@@ -161,16 +160,18 @@ namespace PasswordManagerAccess.Test.TrueKey
                          Util.SignChallenge(OtpInfo, challenge, 1493456789));
         }
 
-        [Fact]
-        public void SignChallenge_throws_on_invalid_challenge()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(1024)]
+        [InlineData(1337)]
+        [InlineData(Util.ChallengeSize - 1)]
+        [InlineData(Util.ChallengeSize + 1)]
+        public void SignChallenge_throws_on_invalid_challenge(int size)
         {
-            foreach (var size in
-                     new[] { 0, 1, 1024, 1337, Util.ChallengeSize - 1, Util.ChallengeSize + 1 })
-            {
-                var challenge = Enumerable.Repeat((byte)0, size).ToArray();
-                var e = Assert.Throws<ArgumentOutOfRangeException>(() => Util.SignChallenge(OtpInfo, challenge, 1));
-                Assert.StartsWith("Challenge must be", e.Message);
-            }
+            //var challenge = Enumerable.Repeat((byte)0, size).ToArray();
+            Exceptions.AssertThrowsInternalError(() => Util.SignChallenge(OtpInfo, new byte[size], 1),
+                                                 "Challenge must be");
         }
 
         //

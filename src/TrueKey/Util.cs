@@ -148,7 +148,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             Action<object, object, string> throwError = (actual, expected, name) =>
             {
-                throw new ArgumentException($"Invalid OTP {name} (expected {expected}, got {actual})");
+                throw new InternalErrorException($"Invalid OTP {name} (expected {expected}, got {actual})");
             };
 
             Action<int, int, string> verify = (actual, expected, name) =>
@@ -204,9 +204,7 @@ namespace PasswordManagerAccess.TrueKey
         internal static byte[] SignChallenge(OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
             if (challenge.Length != ChallengeSize)
-                throw new ArgumentOutOfRangeException(nameof(challenge),
-                                                      challenge.Length,
-                                                      $"Challenge must be {ChallengeSize} bytes long");
+                throw new InternalErrorException($"Challenge must be {ChallengeSize} bytes long");
 
             using (var s = new MemoryStream(1024))
             {

@@ -78,12 +78,12 @@ namespace PasswordManagerAccess.TrueKey
 
             public virtual string Result
             {
-                get { throw new InvalidOperationException("Unreachable code"); }
+                get { throw new InternalErrorException("Unreachable code"); }
             }
 
             public virtual State Advance(TwoFactorAuth owner)
             {
-                throw new InvalidOperationException("Unreachable code");
+                throw new InternalErrorException("Unreachable code");
             }
 
             // TODO: Shared code for most states. It's not really good that it's in the base class.
@@ -187,7 +187,7 @@ namespace PasswordManagerAccess.TrueKey
                     return this;
                 }
 
-                throw new InvalidOperationException($"Invalid answer '{answer}'");
+                throw new InternalErrorException($"Invalid answer '{answer}'");
             }
         }
 
@@ -222,7 +222,7 @@ namespace PasswordManagerAccess.TrueKey
                     return new WaitForEmail();
                 }
 
-                throw new InvalidOperationException($"Invalid answer '{answer}'");
+                throw new InternalErrorException($"Invalid answer '{answer}'");
             }
 
             private readonly int _deviceIndex;
@@ -258,7 +258,7 @@ namespace PasswordManagerAccess.TrueKey
                     return new WaitForOob(deviceIndex);
                 }
 
-                throw new InvalidOperationException($"Invalid answer '{answer}'");
+                throw new InternalErrorException($"Invalid answer '{answer}'");
             }
         }
 
@@ -279,7 +279,7 @@ namespace PasswordManagerAccess.TrueKey
             if (state.IsSuccess)
                 return state.Result;
 
-            throw new InvalidOperationException($"Two step verification failed: {state.Result}");
+            throw new InternalErrorException($"Two step verification failed: {state.Result}");
         }
 
         private State CreateInitialState(Step step)
@@ -312,7 +312,7 @@ namespace PasswordManagerAccess.TrueKey
                 }
             }
 
-            throw new InvalidOperationException($"Two factor auth step {step} is not supported");
+            throw new InternalErrorException($"Two factor auth step {step} is not supported");
         }
 
         private readonly Client.ClientInfo _clientInfo;
