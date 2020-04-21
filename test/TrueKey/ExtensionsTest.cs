@@ -16,55 +16,38 @@ namespace PasswordManagerAccess.Test.TrueKey
         // uint
         //
 
-        [Fact]
-        public void ChangeEndianness_swaps_bytes()
+        [Theory]
+        [InlineData(0x00000000u, 0x00000000u)]
+        [InlineData(0xFF000000u, 0x000000FFu)]
+        [InlineData(0x000000FFu, 0xFF000000u)]
+        [InlineData(0x00FF00FFu, 0xFF00FF00u)]
+        [InlineData(0x12345678u, 0x78563412u)]
+        [InlineData(0xEFBEADDEu, 0xDEADBEEFu)]
+        public void ChangeEndianness_swaps_bytes(uint big, uint little)
         {
-            var tests = new Dictionary<uint, uint>
-            {
-                {0x00000000u, 0x00000000u},
-                {0xFF000000u, 0x000000FFu},
-                {0x000000FFu, 0xFF000000u},
-                {0x00FF00FFu, 0xFF00FF00u},
-                {0x12345678u, 0x78563412u},
-                {0xEFBEADDEu, 0xDEADBEEFu},
-            };
-
-            foreach (var i in tests)
-            {
-                Assert.Equal(i.Value, i.Key.ChangeEndianness());
-                Assert.Equal(i.Key, i.Value.ChangeEndianness());
-            }
+            Assert.Equal(big, little.ChangeEndianness());
+            Assert.Equal(little, big.ChangeEndianness());
         }
 
-        [Fact]
-        public void ChangeEndianness_applied_twice_doesn_change_value()
+        [Theory]
+        [InlineData(0x00000000u)]
+        [InlineData(0x000000FFu)]
+        [InlineData(0xFF000000u)]
+        [InlineData(0xFF00FF00u)]
+        [InlineData(0x78563412u)]
+        [InlineData(0xDEADBEEFu)]
+        public void ChangeEndianness_applied_twice_doesnt_change_value(uint integer)
         {
-            var tests = new []
-            {
-                0x00000000u,
-                0x000000FFu,
-                0xFF000000u,
-                0xFF00FF00u,
-                0x78563412u,
-                0xDEADBEEFu,
-            };
-
-            foreach (var i in tests)
-                Assert.Equal(i, i.ChangeEndianness().ChangeEndianness());
+            Assert.Equal(integer, integer.ChangeEndianness().ChangeEndianness());
         }
 
-        [Fact]
-        public void FromBigEndian()
+        [Theory]
+        [InlineData(0x00000000u, new byte[] {0x00, 0x00, 0x00, 0x00})]
+        [InlineData(0x12345678u, new byte[] {0x12, 0x34, 0x56, 0x78})]
+        [InlineData(0xDEADBEEFu, new byte[] {0xde, 0xad, 0xbe, 0xef})]
+        public void FromBigEndian(uint integer, byte[] bytes)
         {
-            var tests = new Dictionary<uint, byte[]>
-            {
-                {0x00000000u, new byte[] {0x00, 0x00, 0x00, 0x00}},
-                {0x12345678u, new byte[] {0x12, 0x34, 0x56, 0x78}},
-                {0xDEADBEEFu, new byte[] {0xde, 0xad, 0xbe, 0xef}},
-            };
-
-            foreach (var i in tests)
-                Assert.Equal(i.Key, BitConverter.ToUInt32(i.Value, 0).FromBigEndian());
+            Assert.Equal(integer, BitConverter.ToUInt32(bytes, 0).FromBigEndian());
         }
 
         //
