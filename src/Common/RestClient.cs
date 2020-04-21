@@ -176,7 +176,7 @@ namespace PasswordManagerAccess.Common
                     binary.Content = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
                     break;
                 default:
-                    throw new ArgumentException($"Unsupported content type {typeof(TContent)}");
+                    throw new InternalErrorException($"Unsupported content type {typeof(TContent)}");
                 }
 
                 // TODO: Here we're ignoring possible duplicated headers. See if we need to preserve those!
