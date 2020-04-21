@@ -214,8 +214,7 @@ namespace PasswordManagerAccess.TrueKey
             if (response.NextStep == 10)
                 return response.OAuthToken;
 
-            throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                     "Invalid response in AuthCheck, expected an OAuth token");
+            throw MakeError("Invalid response in AuthCheck, expected an OAuth token");
         }
 
         // Send a verification email as a second factor action.
@@ -293,8 +292,7 @@ namespace PasswordManagerAccess.TrueKey
 
             var devices = data.OobDevices.Select(x => new TwoFactorAuth.OobDevice(name: x.Name, id: x.Id)).ToArray();
             if (devices.Length < 1)
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         "At least one OOB device is expected");
+                throw MakeError("At least one OOB device is expected");
 
             TwoFactorAuth.Step step;
             switch (nextStep)
@@ -312,8 +310,7 @@ namespace PasswordManagerAccess.TrueKey
                 step = TwoFactorAuth.Step.Fingerprint;
                 break;
             default:
-                throw new FetchException(FetchException.FailureReason.InvalidResponse,
-                                         $"Next two factor step {nextStep} is not supported");
+                throw MakeError($"Next two factor step {nextStep} is not supported");
             }
 
             return new TwoFactorAuth.Settings(step,
@@ -410,68 +407,34 @@ namespace PasswordManagerAccess.TrueKey
             var code = result.ErrorCode ?? "unknown";
             var description = result.ErrorDescription ?? "Unknown error";
 
-            throw new FetchException(FetchException.FailureReason.RespondedWithError,
-                                     $"POST request to '{url}' failed with error ({code}: '{description}')");
+            throw MakeError($"POST request to '{url}' failed with error ({code}: '{description}')");
         }
 
         //
         // Private
         //
 
-        private static FetchException MakeNetworkError(RestResponse<string> response)
+        private static Common.BaseException MakeNetworkError(RestResponse<string> response)
         {
+            if (response.IsNetworkError)
+                return new NetworkErrorException("Network error occurred", response.Error);
+
             if ((int)response.StatusCode == 422)
-                return new FetchException(
-                    FetchException.FailureReason.IncorrectCredentials,
+                return new BadCredentialsException(
                     $"HTTP request to '{response.RequestUri}' failed, most likely username/password are incorrect",
                     response.Error);
 
-            return new FetchException(FetchException.FailureReason.NetworkError,
-                                      $"Request to '{response.RequestUri}' failed",
-                                      response.Error);
+            if (response.StatusCode != HttpStatusCode.OK)
+                return new InternalErrorException(
+                    $"Request to '{response.RequestUri}' failed with HTTP status {(int)response.StatusCode}",
+                    response.Error);
+
+            return new InternalErrorException($"Request to '{response.RequestUri}' failed", response.Error);
         }
 
-        private static FetchException MakeNetworkError(string url, WebException original)
+        private static InternalErrorException MakeError(string message, Exception inner = null)
         {
-            if (original.Status != WebExceptionStatus.ProtocolError)
-                return new FetchException(FetchException.FailureReason.NetworkError,
-                                          $"Request to '{url}' failed",
-                                          original);
-
-
-            var response = (HttpWebResponse)original.Response;
-            return MakeSpecialHttpError(url, response, original) ??
-                   MakeGenericHttpError(url, response, original);
-        }
-
-        // Returns null if it's not special.
-        // A special error is the one when the status code has a specific meaning.
-        private static FetchException MakeSpecialHttpError(string url,
-                                                           HttpWebResponse response,
-                                                           WebException original)
-        {
-            if ((int)response.StatusCode != 422)
-                return null;
-
-            return new FetchException(
-                FetchException.FailureReason.IncorrectCredentials,
-                $"{response.Method} request to '{url}' failed, most likely username/password are incorrect",
-                original);
-        }
-
-        private static FetchException MakeGenericHttpError(string url,
-                                                           HttpWebResponse response,
-                                                           WebException original)
-        {
-            return new FetchException(
-                FetchException.FailureReason.NetworkError,
-                $"{response.Method} request to '{url}' failed with HTTP status code {response.StatusCode}",
-                original);
-        }
-
-        private static FetchException MakeInvalidResponseError(string message, Exception original)
-        {
-            return new FetchException(FetchException.FailureReason.InvalidResponse, message, original);
+            return new InternalErrorException(message, inner);
         }
     }
 }

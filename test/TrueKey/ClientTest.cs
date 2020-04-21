@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Net.Http;
+using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
@@ -38,7 +40,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void RegisterNewDevice_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(flow => Client.RegisterNewDevice("truekey-sharp", flow));
+            VerifyCommonErrorsWithPost(flow => Client.RegisterNewDevice("truekey-sharp", flow));
         }
 
         [Fact]
@@ -52,7 +54,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void AuthStep1_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(flow => Client.AuthStep1(ClientInfo, flow));
+            VerifyCommonErrorsWithPost(flow => Client.AuthStep1(ClientInfo, flow));
         }
 
         [Fact]
@@ -79,7 +81,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void AuthStep2_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(flow => Client.AuthStep2(ClientInfo, "password", "transaction-id", flow));
+            VerifyCommonErrorsWithPost(flow => Client.AuthStep2(ClientInfo, "password", "transaction-id", flow));
         }
 
         [Fact]
@@ -95,7 +97,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void SaveDeviceAsTrusted_throws_on_common_errors()
         {
-            VerifyMostCommonErrorsWithPost(
+            VerifyCommonErrorsWithPost(
                 flow => Client.SaveDeviceAsTrusted(ClientInfo, "transaction-id", "oauth-token", flow));
         }
 
@@ -112,15 +114,14 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void AuthCheck_throws_on_pending()
         {
-            Assert.Throws<FetchException>(() => Client.AuthCheck(ClientInfo,
-                                                                 "transaction-id",
-                                                                 SetupPostWithFixture("auth-check-pending-response")));
+            var flow = SetupPostWithFixture("auth-check-pending-response");
+            Exceptions.AssertThrowsInternalError(() => Client.AuthCheck(ClientInfo, "transaction-id", flow));
         }
 
         [Fact]
         public void AuthCheck_throws_on_common_errors()
         {
-            VerifyAllCommonErrorsWithPost(flow => Client.AuthCheck(ClientInfo, "transaction-id", flow));
+            VerifyCommonErrorsWithPost(flow => Client.AuthCheck(ClientInfo, "transaction-id", flow));
         }
 
         [Fact]
@@ -163,35 +164,29 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             VerifyNetworkErrorWithGet(f);
             VerifyJsonErrorWithGet(f);
-            VerifyUnsupportedFormatWithGet(f);
         }
 
-        private void VerifyAllCommonErrorsWithPost(Action<RestFlow> f)
-        {
-            VerifyMostCommonErrorsWithPost(f);
-            VerifyUnsupportedFormatWithPost(f);
-        }
-
-        private void VerifyMostCommonErrorsWithPost(Action<RestFlow> f)
+        private void VerifyCommonErrorsWithPost(Action<RestFlow> f)
         {
             VerifyNetworkErrorWithPost(f);
             VerifyJsonErrorWithPost(f);
-            VerifyReturnedErrorWithPost(f);
         }
 
         private static void VerifyNetworkErrorWithGet(Action<RestFlow> f)
         {
-            VerifyNetworkError(SetupGetWithFailure(), f);
+            var flow = new RestFlow().Get(new HttpRequestException("Oops"));
+            VerifyNetworkError(flow, f);
         }
 
         private static void VerifyNetworkErrorWithPost(Action<RestFlow> f)
         {
-            VerifyNetworkError(SetupPostWithFailure(), f);
+            var flow = new RestFlow().Post(new HttpRequestException("Oops"));
+            VerifyNetworkError(flow, f);
         }
 
         private static void VerifyNetworkError(RestFlow flow, Action<RestFlow> f)
         {
-            VerifyError(FetchException.FailureReason.NetworkError, flow, f);
+            Exceptions.AssertThrowsNetworkError(() => f(flow), "Network error");
         }
 
         private static void VerifyJsonErrorWithGet(Action<RestFlow> f)
@@ -206,43 +201,8 @@ namespace PasswordManagerAccess.Test.TrueKey
 
         private static void VerifyJsonError(RestFlow flow, Action<RestFlow> f)
         {
-            VerifyError(FetchException.FailureReason.InvalidResponse, flow, f);
-        }
-
-        private void VerifyReturnedErrorWithPost(Action<RestFlow> f)
-        {
-            VerifyReturnedError(SetupPostWithFixture("post-response-with-error"), f);
-        }
-
-        private static void VerifyReturnedError(RestFlow flow, Action<RestFlow> f)
-        {
-            VerifyError(FetchException.FailureReason.RespondedWithError, flow, f);
-        }
-
-        private static void VerifyUnsupportedFormatWithGet(Action<RestFlow> f)
-        {
-            VerifyUnsupportedFormat(SetupGet("{}"), f);
-            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}}"), f);
-            VerifyUnsupportedFormat(SetupGet("{\"customer\": {}, \"assets\": {}}"), f);
-        }
-
-        private static void VerifyUnsupportedFormatWithPost(Action<RestFlow> f)
-        {
-            VerifyUnsupportedFormat(SetupPost("{}"), f);
-            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{}}"), f);
-            VerifyUnsupportedFormat(SetupPost("{\"ResponseResult\" :{\"IsSuccess\": true}}"), f);
-        }
-
-        private static void VerifyUnsupportedFormat(RestFlow flow, Action<RestFlow> f)
-        {
-            VerifyError(FetchException.FailureReason.InvalidResponse, flow, f);
-        }
-
-        private static void VerifyError(FetchException.FailureReason reason,
-                                        RestFlow flow,
-                                        Action<RestFlow> f)
-        {
-            Assert.Throws<FetchException>(() => f(flow));
+            var e = Exceptions.AssertThrowsInternalError(() => f(flow));
+            Assert.IsAssignableFrom<JsonException>(e.InnerException);
         }
 
         private static RestFlow SetupGet(string response)
@@ -263,16 +223,6 @@ namespace PasswordManagerAccess.Test.TrueKey
         private RestFlow SetupPostWithFixture(string name)
         {
             return SetupPost(GetFixture(name));
-        }
-
-        private static RestFlow SetupGetWithFailure()
-        {
-            return new RestFlow().Get(new Exception("TODO"));
-        }
-
-        private static RestFlow SetupPostWithFailure()
-        {
-            return new RestFlow().Post(new Exception("TODO"));
         }
 
         // The Ui that always says "Check"

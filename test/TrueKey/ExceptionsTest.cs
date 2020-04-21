@@ -15,21 +15,12 @@ namespace PasswordManagerAccess.Test.TrueKey
             VerifyException(new BaseException(Message, InnerException));
         }
 
-        [Fact]
-        public void FetchException_properties_are_set()
-        {
-            VerifyExceptionWithReason(new FetchException(Reason, Message, InnerException));
-        }
-
         //
         // Data
         //
 
         private const string Message = "message";
         private static readonly Exception InnerException = new Exception();
-
-        private const FetchException.FailureReason Reason =
-            FetchException.FailureReason.UnknownError;
 
         //
         // Helpers
@@ -39,13 +30,6 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             Assert.Equal(Message, e.Message);
             Assert.Same(InnerException, e.InnerException);
-        }
-
-        private static void VerifyExceptionWithReason(BaseException e)
-        {
-            VerifyException(e);
-            // TODO: Don't need this after migration
-            //Assert.That(e, Has.Property("Reason").EqualTo(Reason));
         }
     }
 }
