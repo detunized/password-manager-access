@@ -22,12 +22,6 @@ namespace PasswordManagerAccess.Test.TrueKey
         }
 
         [Fact]
-        public void JTokenAccessException_properties_are_set()
-        {
-            VerifyException(new JTokenAccessException(Message, InnerException));
-        }
-
-        [Fact]
         public void FetchException_properties_are_set()
         {
             VerifyExceptionWithReason(new FetchException(Reason, Message, InnerException));
