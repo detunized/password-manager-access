@@ -100,45 +100,43 @@ namespace PasswordManagerAccess.TrueKey
         // OCRA/OPT/RFC 6287 information. This is used later on to sign messages.
         public static OtpInfo ParseClientToken(string encodedToken)
         {
-            using (var s = new MemoryStream(encodedToken.Decode64()))
-            using (var r = new BinaryReader(s))
-            {
-                var tokenType = r.ReadByte();
-                var tokenLength = r.ReadUInt16BigEndian();
-                var token = r.ReadBytes(tokenLength);
-                var iptmkTag = r.ReadByte();
-                var iptmkLength = r.ReadUInt16BigEndian();
-                var iptmk = r.ReadBytes(iptmkLength);
+            using var s = new MemoryStream(encodedToken.Decode64());
+            using var r = new BinaryReader(s);
 
-                using (var ts = new MemoryStream(token))
-                using (var tr = new BinaryReader(ts))
-                {
-                    var version = tr.ReadByte();
-                    var otpAlgorithm = tr.ReadByte();
-                    var otpLength = tr.ReadByte();
-                    var hashAlgorithm = tr.ReadByte();
-                    var timeStep = tr.ReadByte();
-                    var startTime = tr.ReadUInt32BigEndian();
-                    var serverTime = tr.ReadUInt32BigEndian();
-                    var wysOption = tr.ReadByte();
-                    var suiteLength = tr.ReadUInt16BigEndian();
-                    var suite = tr.ReadBytes(suiteLength);
+            var tokenType = r.ReadByte();
+            var tokenLength = r.ReadUInt16BigEndian();
+            var token = r.ReadBytes(tokenLength);
+            var iptmkTag = r.ReadByte();
+            var iptmkLength = r.ReadUInt16BigEndian();
+            var iptmk = r.ReadBytes(iptmkLength);
 
-                    ts.Position = 128;
-                    var hmacSeedLength = tr.ReadUInt16BigEndian();
-                    var hmacSeed = tr.ReadBytes(hmacSeedLength);
+            using var ts = new MemoryStream(token);
+            using var tr = new BinaryReader(ts);
 
-                    return new OtpInfo(version : version,
-                                       otpAlgorithm : otpAlgorithm,
-                                       otpLength : otpLength,
-                                       hashAlgorithm : hashAlgorithm,
-                                       timeStep : timeStep,
-                                       startTime : startTime,
-                                       suite : suite,
-                                       hmacSeed : hmacSeed,
-                                       iptmk : iptmk);
-                }
-            }
+            var version = tr.ReadByte();
+            var otpAlgorithm = tr.ReadByte();
+            var otpLength = tr.ReadByte();
+            var hashAlgorithm = tr.ReadByte();
+            var timeStep = tr.ReadByte();
+            var startTime = tr.ReadUInt32BigEndian();
+            var serverTime = tr.ReadUInt32BigEndian();
+            var wysOption = tr.ReadByte();
+            var suiteLength = tr.ReadUInt16BigEndian();
+            var suite = tr.ReadBytes(suiteLength);
+
+            ts.Position = 128;
+            var hmacSeedLength = tr.ReadUInt16BigEndian();
+            var hmacSeed = tr.ReadBytes(hmacSeedLength);
+
+            return new OtpInfo(version : version,
+                               otpAlgorithm : otpAlgorithm,
+                               otpLength : otpLength,
+                               hashAlgorithm : hashAlgorithm,
+                               timeStep : timeStep,
+                               startTime : startTime,
+                               suite : suite,
+                               hmacSeed : hmacSeed,
+                               iptmk : iptmk);
         }
 
         // Checks that the OTP info is something we can work with. The Chrome
@@ -206,23 +204,21 @@ namespace PasswordManagerAccess.TrueKey
             if (challenge.Length != ChallengeSize)
                 throw new InternalErrorException($"Challenge must be {ChallengeSize} bytes long");
 
-            using (var s = new MemoryStream(1024))
-            {
-                s.Write(otp.Suite, 0, otp.Suite.Length);
-                s.WriteByte(0);
-                s.Write(challenge, 0, challenge.Length);
+            using var s = new MemoryStream(1024);
+            s.Write(otp.Suite, 0, otp.Suite.Length);
+            s.WriteByte(0);
+            s.Write(challenge, 0, challenge.Length);
 
-                var z = BitConverter.GetBytes((UInt32)0);
-                s.Write(z, 0, z.Length);
+            var z = BitConverter.GetBytes(0u);
+            s.Write(z, 0, z.Length);
 
-                var time = (unixSeconds - otp.StartTime) / otp.TimeStep;
-                var t = BitConverter.GetBytes((UInt32)time);
-                if (BitConverter.IsLittleEndian)
-                    Array.Reverse(t);
-                s.Write(t, 0, t.Length);
+            var time = (unixSeconds - otp.StartTime) / otp.TimeStep;
+            var t = BitConverter.GetBytes((uint)time);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(t);
+            s.Write(t, 0, t.Length);
 
-                return Crypto.HmacSha256(s.ToArray(), otp.HmacSeed);
-            }
+            return Crypto.HmacSha256(s.ToArray(), otp.HmacSeed);
         }
     }
 }
