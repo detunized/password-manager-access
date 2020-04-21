@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
-using CryptoException = PasswordManagerAccess.TrueKey.CryptoException;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
@@ -30,13 +29,12 @@ namespace PasswordManagerAccess.Test.TrueKey
         public void Encrypt_throws_on_too_short_iv(int ivLength)
         {
             var key = new byte[16];
-            var e = Assert.Throws<CryptoException>(() => AesCcm.Encrypt(key: key,
-                                                                        plaintext: new byte[1],
-                                                                        iv: new byte[ivLength],
-                                                                        adata: new byte[0],
-                                                                        tagLength: 8));
-
-            Assert.Equal("IV must be at least 7 bytes long", e.Message);
+            Exceptions.AssertThrowsInternalError(() => AesCcm.Encrypt(key: key,
+                                                                      plaintext: new byte[1],
+                                                                      iv: new byte[ivLength],
+                                                                      adata: new byte[0],
+                                                                      tagLength: 8),
+                                                 "IV must be at least 7 bytes long");
         }
 
         [Theory]
@@ -59,13 +57,12 @@ namespace PasswordManagerAccess.Test.TrueKey
         public void Encrypt_throws_on_invalid_tag_length(int tagLength)
         {
             var key = new byte[16];
-            var e = Assert.Throws<CryptoException>(() => AesCcm.Encrypt(key: key,
-                                                                        plaintext: new byte[1],
-                                                                        iv: new byte[16],
-                                                                        adata: new byte[0],
-                                                                        tagLength: tagLength));
-
-            Assert.Equal("Tag must be 4, 8, 10, 12, 14 or 16 bytes long", e.Message);
+            Exceptions.AssertThrowsInternalError(() => AesCcm.Encrypt(key: key,
+                                                                      plaintext: new byte[1],
+                                                                      iv: new byte[16],
+                                                                      adata: new byte[0],
+                                                                      tagLength: tagLength),
+                                                 "Tag must be 4, 8, 10, 12, 14 or 16 bytes long");
         }
 
         [Theory]
@@ -125,25 +122,27 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void EncodeAdataLength_throws_on_zero_length()
         {
-            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(0));
-            Assert.Equal("Adata length must be positive", e.Message);
+            Exceptions.AssertThrowsInternalError(() => AesCcm.EncodeAdataLength(0), "Adata length must be positive");
         }
 
         [Fact]
         public void EncodeAdataLength_throws_on_negative_length()
         {
-            var e = Assert.Throws<CryptoException>(() => AesCcm.EncodeAdataLength(-1));
-            Assert.Equal("Adata length must be positive", e.Message);
+            Exceptions.AssertThrowsInternalError(() => AesCcm.EncodeAdataLength(-1), "Adata length must be positive");
         }
 
         //
         // Helpers
         //
 
-        private static void VerifyCcmMismatchThrown(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata, int tagLength)
+        private static void VerifyCcmMismatchThrown(byte[] key,
+                                                    byte[] ciphertext,
+                                                    byte[] iv,
+                                                    byte[] adata,
+                                                    int tagLength)
         {
-            var e = Assert.Throws<CryptoException>(() => AesCcm.Decrypt(key, ciphertext, iv, adata, tagLength));
-            Assert.Equal("CCM tag doesn't match", e.Message);
+            Exceptions.AssertThrowsInternalError(() => AesCcm.Decrypt(key, ciphertext, iv, adata, tagLength),
+                                                 "CCM tag doesn't match");
         }
 
         //

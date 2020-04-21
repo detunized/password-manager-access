@@ -7,7 +7,6 @@ using System.Reflection;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.TrueKey;
 using Xunit;
-using CryptoException = PasswordManagerAccess.TrueKey.CryptoException;
 
 namespace PasswordManagerAccess.Test.TrueKey
 {
@@ -51,29 +50,29 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void Decrypt_throws_on_too_short_key()
         {
-            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(new byte[15], Ciphertext));
-            Assert.Equal("Encryption key should be at least 16 bytes long", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(new byte[15], Ciphertext),
+                                                 "Encryption key should be at least 16 bytes long");
         }
 
         [Fact]
         public void Decrypt_throws_on_missing_format_byte()
         {
-            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(Key, "00".DecodeHex()));
-            Assert.Equal("Ciphertext is too short (version byte is missing)", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "00".DecodeHex()),
+                                                 "Ciphertext is too short (version byte is missing)");
         }
 
         [Fact]
         public void Decrypt_throws_on_missing_iv()
         {
-            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(Key, "0004".DecodeHex()));
-            Assert.Equal("Ciphertext is too short (IV is missing)", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0004".DecodeHex()),
+                                                 "Ciphertext is too short (IV is missing)");
         }
 
         [Fact]
         public void Decrypt_throws_on_unsupported_version()
         {
-            var e = Assert.Throws<CryptoException>(() => Util.Decrypt(Key, "0005".DecodeHex()));
-            Assert.Equal("Unsupported cipher format version (5)", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0005".DecodeHex()),
+                                                 "Unsupported cipher format version (5)");
         }
 
         // We don't test DecryptAes256Ccm extensively as it's well tested in SjclCcm.

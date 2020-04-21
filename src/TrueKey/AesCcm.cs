@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.TrueKey
 {
@@ -15,7 +16,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
-                throw new CryptoException("IV must be at least 7 bytes long");
+                throw new InternalErrorException ("IV must be at least 7 bytes long");
 
             var inputLengthLength = ComputeLengthLength(plaintext.Length);
             if (inputLengthLength < 15 - ivLength)
@@ -41,7 +42,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             var ivLength = iv.Length;
             if (ivLength < 7)
-                throw new CryptoException("IV must be at least 7 bytes long");
+                throw new InternalErrorException ("IV must be at least 7 bytes long");
 
             var plaintextLength = ciphertext.Length - tagLength;
             var ciphertextOnly = ciphertext.Take(plaintextLength).ToArray();
@@ -68,7 +69,7 @@ namespace PasswordManagerAccess.TrueKey
             var actualTagBytes = plaintextWithTag.Tag.Take(tagLength);
 
             if (!actualTagBytes.SequenceEqual(expectedTagBytes))
-                throw new CryptoException("CCM tag doesn't match");
+                throw new InternalErrorException ("CCM tag doesn't match");
 
             return plaintextWithTag.Text;
         }
@@ -81,7 +82,7 @@ namespace PasswordManagerAccess.TrueKey
                                          int plaintextLengthLength)
         {
             if (tagLength % 2 != 0 || tagLength < 4 || tagLength > 16)
-                throw new CryptoException("Tag must be 4, 8, 10, 12, 14 or 16 bytes long");
+                throw new InternalErrorException ("Tag must be 4, 8, 10, 12, 14 or 16 bytes long");
 
             // flags + iv + plaintext-length
             var flags = (adata.Length > 0 ? 0x40 : 0) | ((tagLength - 2) << 2) | (plaintextLengthLength - 1);
@@ -188,7 +189,7 @@ namespace PasswordManagerAccess.TrueKey
         internal static byte[] EncodeAdataLength(int length)
         {
             if (length <= 0)
-                throw new CryptoException("Adata length must be positive");
+                throw new InternalErrorException ("Adata length must be positive");
 
             if (length < 0xfeff) // 16 bit
                 return new byte[] {(byte)(length >> 8), (byte)length};
