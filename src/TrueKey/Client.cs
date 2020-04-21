@@ -414,7 +414,7 @@ namespace PasswordManagerAccess.TrueKey
         // Private
         //
 
-        private static Common.BaseException MakeNetworkError(RestResponse<string> response)
+        private static BaseException MakeNetworkError(RestResponse<string> response)
         {
             if (response.IsNetworkError)
                 return new NetworkErrorException("Network error occurred", response.Error);
