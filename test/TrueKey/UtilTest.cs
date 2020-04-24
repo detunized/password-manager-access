@@ -1,113 +1,110 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.TrueKey;
+using Xunit;
 
-namespace TrueKey.Test
+namespace PasswordManagerAccess.Test.TrueKey
 {
-    [TestFixture]
-    class CryptoTest
+    public class UtilTest
     {
-        [Test]
+        [Fact]
         public void HashPassword_returns_hash_string()
         {
-            Assert.That(
-                Crypto.HashPassword("username", "password"),
-                Is.EqualTo("tk-v1-463d82f8e2378ed234ff98a84118636168b76a69cdac5fcb2b9594a0b18ad2ea"));
+            Assert.Equal("tk-v1-463d82f8e2378ed234ff98a84118636168b76a69cdac5fcb2b9594a0b18ad2ea",
+                         Util.HashPassword("username", "password"));
         }
 
-        [Test]
+        [Fact]
         public void DecryptMasterKey_returns_key()
         {
-            Assert.That(Crypto.DecryptMasterKey(MasterPassword, MasterKeySalt, EncryptedMasterKey),
-                        Is.EqualTo(MasterKey));
+            Assert.Equal(MasterKey, Util.DecryptMasterKey(MasterPassword, MasterKeySalt, EncryptedMasterKey));
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_returns_correct_result()
         {
-            var decrypted = Crypto.Decrypt(Key, Ciphertext);
-            Assert.That(decrypted, Is.EqualTo(Plaintext));
+            var decrypted = Util.Decrypt(Key, Ciphertext);
+            Assert.Equal(Plaintext, decrypted);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_returns_empty_on_empty_input()
         {
-            var decrypted = Crypto.Decrypt(Key, "".ToBytes());
-            Assert.That(decrypted, Is.Empty);
+            var decrypted = Util.Decrypt(Key, "".ToBytes());
+            Assert.Empty(decrypted);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_uses_first_256_bits_of_key_only()
         {
             var key = Key.Concat("0102030405060708".DecodeHex()).ToArray();
-            var decrypted = Crypto.Decrypt(key, Ciphertext);
-            Assert.That(decrypted, Is.EqualTo(Plaintext));
+            var decrypted = Util.Decrypt(key, Ciphertext);
+            Assert.Equal(Plaintext, decrypted);
         }
 
+        [Fact]
         public void Decrypt_throws_on_too_short_key()
         {
-            Assert.That(() => Crypto.Decrypt(new byte[15], Ciphertext),
-                        Throws.TypeOf<CryptoException>()
-                            .And.Message.EqualTo("Encryption key should be at least 16 bytes long"));
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(new byte[15], Ciphertext),
+                                                 "Encryption key should be at least 16 bytes long");
         }
 
+        [Fact]
         public void Decrypt_throws_on_missing_format_byte()
         {
-            Assert.That(() => Crypto.Decrypt(Key, "00".DecodeHex()),
-                        Throws.TypeOf<CryptoException>()
-                            .And.Message.EqualTo("Ciphertext is too short (version byte is missing)"));
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "00".DecodeHex()),
+                                                 "Ciphertext is too short (version byte is missing)");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_missing_iv()
         {
-            Assert.That(() => Crypto.Decrypt(Key, "0004".DecodeHex()),
-                        Throws.TypeOf<CryptoException>()
-                            .And.Message.EqualTo("Ciphertext is too short (IV is missing)"));
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0004".DecodeHex()),
+                                                 "Ciphertext is too short (IV is missing)");
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_unsupported_version()
         {
-            Assert.That(() => Crypto.Decrypt(Key, "0005".DecodeHex()),
-                        Throws.TypeOf<CryptoException>()
-                            .And.Message.EqualTo("Unsupported cipher format version (5)"));
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0005".DecodeHex()),
+                                                 "Unsupported cipher format version (5)");
         }
 
         // We don't test DecryptAes256Ccm extensively as it's well tested in SjclCcm.
-        [Test]
+        [Fact]
         public void DecryptAes256Ccm_returns_plaintext()
         {
             var ciphertext = Ciphertext.Skip(18).ToArray();
             var iv = Ciphertext.Skip(2).Take(16).ToArray();
 
-            Assert.That(Crypto.DecryptAes256Ccm(Key, ciphertext, iv), Is.EqualTo(Plaintext));
+            Assert.Equal(Plaintext, Util.DecryptAes256Ccm(Key, ciphertext, iv));
         }
 
-        [Test]
+        [Fact]
         public void ParseClientToken_returns_otp_info()
         {
-            var otp = Crypto.ParseClientToken(ClientToken);
+            var otp = Util.ParseClientToken(ClientToken);
 
-            Assert.That(otp.Version, Is.EqualTo(3));
-            Assert.That(otp.OtpAlgorithm, Is.EqualTo(1));
-            Assert.That(otp.OtpLength, Is.EqualTo(0));
-            Assert.That(otp.HashAlgorithm, Is.EqualTo(2));
-            Assert.That(otp.TimeStep, Is.EqualTo(30));
-            Assert.That(otp.StartTime, Is.EqualTo(0));
-            Assert.That(otp.Suite, Is.EqualTo("OCRA-1:HOTP-SHA256-0:QA08".ToBytes()));
-            Assert.That(otp.HmacSeed, Is.EqualTo("6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64()));
-            Assert.That(otp.Iptmk, Is.EqualTo("HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64()));
+            Assert.Equal(3, otp.Version);
+            Assert.Equal(1, otp.OtpAlgorithm);
+            Assert.Equal(0, otp.OtpLength);
+            Assert.Equal(2, otp.HashAlgorithm);
+            Assert.Equal(30, otp.TimeStep);
+            Assert.Equal(0U, otp.StartTime);
+            Assert.Equal("OCRA-1:HOTP-SHA256-0:QA08".ToBytes(), otp.Suite);
+            Assert.Equal("6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64(), otp.HmacSeed);
+            Assert.Equal("HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64(), otp.Iptmk);
         }
 
-        [Test]
+        [Fact]
         public void ValidateOtpInfo_throws_on_invalid_value()
         {
-            var otp = new Crypto.OtpInfo(version : 3,
+            var otp = new Util.OtpInfo(version : 3,
                                          otpAlgorithm : 1,
                                          otpLength : 0,
                                          hashAlgorithm : 2,
@@ -121,16 +118,16 @@ namespace TrueKey.Test
             {
                 // This is a bit ugly but gets the job done.
                 // We clone the valid object and modify one field to something invalid.
-                var clone = (Crypto.OtpInfo)otp.GetType()
+                var clone = (Util.OtpInfo)otp.GetType()
                     .GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)
                     .Invoke(otp, null);
                 clone.GetType().GetField(name).SetValue(clone, value);
 
-                Assert.That(() => Crypto.ValidateOtpInfo(clone),
-                            Throws.ArgumentException.And.Message.Contains(contains));
+                Exceptions.AssertThrowsInternalError(() => Util.ValidateOtpInfo(clone), contains);
             };
 
-            Assert.That(() => Crypto.ValidateOtpInfo(otp), Throws.Nothing);
+            // Doesn't throw
+            Util.ValidateOtpInfo(otp);
 
             check("Version", 13, "version");
             check("OtpAlgorithm", 13, "algorithm");
@@ -141,61 +138,40 @@ namespace TrueKey.Test
             check("Iptmk", "invalid iptmk".ToBytes(), "IPTMK length");
         }
 
-        [Test]
+        [Fact]
         public void GenerateRandomOtpChallenge_returns_challenge()
         {
-            var otp = Crypto.GenerateRandomOtpChallenge(OtpInfo);
+            var otp = Util.GenerateRandomOtpChallenge(OtpInfo);
 
             // It's not much to verify here as these things are random
-            Assert.That(otp.Challenge.Length, Is.EqualTo(Crypto.ChallengeSize));
-            Assert.That(otp.Signature.Length, Is.EqualTo(32));
+            Assert.Equal(Util.ChallengeSize, otp.Challenge.Length);
+            Assert.Equal(32, otp.Signature.Length);
 
             // We assume the test is running less than 10 seconds
-            Assert.That((DateTime.UtcNow - otp.Timestamp).TotalSeconds, Is.LessThan(10));
+            Assert.True((DateTime.UtcNow - otp.Timestamp).TotalSeconds < 10);
         }
 
-        [Test]
-        public void Sha256_returns_hashed_message()
-        {
-            Assert.That(Crypto.Sha256("message"),
-                        Is.EqualTo("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64()));
-        }
-
-        [Test]
-        public void Hmac_returns_hashed_message()
-        {
-            Assert.That(Crypto.Hmac("salt".ToBytes(), "message".ToBytes()),
-                        Is.EqualTo("3b8WZhUCYErLcNYqWWvzwomOHB0vZS6seUq4xfkSSd0=".Decode64()));
-        }
-
-        [Test]
-        public void RandomBytes_returns_array_of_requested_size()
-        {
-            foreach (var size in new[] { 0, 1, 2, 3, 4, 15, 255, 1024, 1337 })
-                Assert.That(Crypto.RandomBytes(size).Length, Is.EqualTo(size));
-        }
-
-        [Test]
+        [Fact]
         public void SignChallenge_returns_signature()
         {
-            var challege = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
+            var challenge = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
 
-            Assert.That(
-                Crypto.SignChallenge(OtpInfo, challege, 1493456789),
-                Is.EqualTo("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64()));
+            Assert.Equal("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64(),
+                         Util.SignChallenge(OtpInfo, challenge, 1493456789));
         }
 
-        [Test]
-        public void SignChallenge_throws_on_invalid_challenge()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(1024)]
+        [InlineData(1337)]
+        [InlineData(Util.ChallengeSize - 1)]
+        [InlineData(Util.ChallengeSize + 1)]
+        public void SignChallenge_throws_on_invalid_challenge(int size)
         {
-            foreach (var size in
-                     new[] { 0, 1, 1024, 1337, Crypto.ChallengeSize - 1, Crypto.ChallengeSize + 1 })
-            {
-                var challenge = Enumerable.Repeat((byte)0, size).ToArray();
-                Assert.That(() => Crypto.SignChallenge(OtpInfo, challenge, 1),
-                            Throws.InstanceOf<ArgumentOutOfRangeException>()
-                                .And.Message.StartsWith("Challenge must be"));
-            }
+            //var challenge = Enumerable.Repeat((byte)0, size).ToArray();
+            Exceptions.AssertThrowsInternalError(() => Util.SignChallenge(OtpInfo, new byte[size], 1),
+                                                 "Challenge must be");
         }
 
         //
@@ -231,7 +207,7 @@ namespace TrueKey.Test
                                            "K6O0+LH8FRidFaZkJ2AlTu";
 
         // TODO: Remove copy paste
-        private static readonly Crypto.OtpInfo OtpInfo = new Crypto.OtpInfo(
+        private static readonly Util.OtpInfo OtpInfo = new Util.OtpInfo(
             version: 3,
             otpAlgorithm: 1,
             otpLength: 0,

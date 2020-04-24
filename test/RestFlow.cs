@@ -190,12 +190,6 @@ namespace PasswordManagerAccess.Test
             }
         }
 
-        private Response AdvanceToNextResponse()
-        {
-            Assert.True(_currentIndex < _responses.Count, "Too many requests");
-            return _responses[_currentIndex++];
-        }
-
         private Response GetLastResponse()
         {
             if (_responses.Count == 0)
@@ -217,7 +211,10 @@ namespace PasswordManagerAccess.Test
                                                   int maxRedirectCount,
                                                   RestResponse<TContent> allocatedResult)
         {
-            var r = AdvanceToNextResponse();
+            if (_currentIndex >= _responses.Count)
+                Assert.True(false, $"Too many requests, there's no response available for {method} to '{uri}'");
+
+            var r = _responses[_currentIndex++];
             var e = r.Expected;
 
             Assert.Equal(e.Method, method);

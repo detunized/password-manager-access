@@ -1,34 +1,33 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
-namespace TrueKey
+namespace PasswordManagerAccess.TrueKey
 {
-    internal static class Crypto
+    internal static class Util
     {
         public const int ChallengeSize = 128;
 
         public static string HashPassword(string username, string password)
         {
-            var salt = Sha256(username);
-            var derived = Pbkdf2.Generate(password, salt, 10000, 32);
-            return "tk-v1-" + derived.ToHex();
+            var keyHex = DeriveKey(password, Crypto.Sha256(username)).ToHex();
+            return $"tk-v1-{keyHex}";
         }
 
         public static byte[] DecryptMasterKey(string password, byte[] salt, byte[] encryptedKey)
         {
-            var key = Pbkdf2.Generate(password, salt, 10000, 32);
+            var key = DeriveKey(password, salt);
             return Decrypt(key, encryptedKey).ToUtf8().DecodeHex();
         }
 
         public static byte[] Decrypt(byte[] key, byte[] encrypted)
         {
             if (key.Length < 16)
-                throw new CryptoException("Encryption key should be at least 16 bytes long");
+                throw new InternalErrorException("Encryption key should be at least 16 bytes long");
 
             // Use only first 256 bits
             if (key.Length > 32)
@@ -38,17 +37,16 @@ namespace TrueKey
                 return new byte[0];
 
             if (encrypted.Length < 2)
-                throw new CryptoException("Ciphertext is too short (version byte is missing)");
+                throw new InternalErrorException("Ciphertext is too short (version byte is missing)");
 
             // Version byte is at offset 1.
             // We only support version 4 which seems to be the current.
             var version = encrypted[1];
             if (version != 4)
-                throw new CryptoException(string.Format("Unsupported cipher format version ({0})",
-                                                        version));
+                throw new InternalErrorException($"Unsupported cipher format version ({version})");
 
             if (encrypted.Length < 18)
-                throw new CryptoException("Ciphertext is too short (IV is missing)");
+                throw new InternalErrorException("Ciphertext is too short (IV is missing)");
 
             // Split encrypted into IV and cipher
             var ciphertext = encrypted.Skip(18).ToArray();
@@ -57,11 +55,9 @@ namespace TrueKey
             return DecryptAes256Ccm(key, ciphertext, iv);
         }
 
-        // TODO: See how this could be optimized to reuse AES object w/o recreating it every time!
         public static byte[] DecryptAes256Ccm(byte[] key, byte[] ciphertext, byte[] iv)
         {
-            var aes = new SjclAes(key);
-            return SjclCcm.Decrypt(aes, ciphertext, iv, new byte[0], 8);
+            return AesCcm.Decrypt(key, ciphertext, iv, new byte[0], 8);
         }
 
         // Contains all the stuff that is needed to generate and verify
@@ -104,45 +100,43 @@ namespace TrueKey
         // OCRA/OPT/RFC 6287 information. This is used later on to sign messages.
         public static OtpInfo ParseClientToken(string encodedToken)
         {
-            using (var s = new MemoryStream(encodedToken.Decode64()))
-            using (var r = new BinaryReader(s))
-            {
-                var tokenType = r.ReadByte();
-                var tokenLength = r.ReadUInt16BigEndian();
-                var token = r.ReadBytes(tokenLength);
-                var iptmkTag = r.ReadByte();
-                var iptmkLength = r.ReadUInt16BigEndian();
-                var iptmk = r.ReadBytes(iptmkLength);
+            using var s = new MemoryStream(encodedToken.Decode64());
+            using var r = new BinaryReader(s);
 
-                using (var ts = new MemoryStream(token))
-                using (var tr = new BinaryReader(ts))
-                {
-                    var version = tr.ReadByte();
-                    var otpAlgorithm = tr.ReadByte();
-                    var otpLength = tr.ReadByte();
-                    var hashAlgorithm = tr.ReadByte();
-                    var timeStep = tr.ReadByte();
-                    var startTime = tr.ReadUInt32BigEndian();
-                    var serverTime = tr.ReadUInt32BigEndian();
-                    var wysOption = tr.ReadByte();
-                    var suiteLength = tr.ReadUInt16BigEndian();
-                    var suite = tr.ReadBytes(suiteLength);
+            var tokenType = r.ReadByte();
+            var tokenLength = r.ReadUInt16BigEndian();
+            var token = r.ReadBytes(tokenLength);
+            var iptmkTag = r.ReadByte();
+            var iptmkLength = r.ReadUInt16BigEndian();
+            var iptmk = r.ReadBytes(iptmkLength);
 
-                    ts.Position = 128;
-                    var hmacSeedLength = tr.ReadUInt16BigEndian();
-                    var hmacSeed = tr.ReadBytes(hmacSeedLength);
+            using var ts = new MemoryStream(token);
+            using var tr = new BinaryReader(ts);
 
-                    return new OtpInfo(version : version,
-                                       otpAlgorithm : otpAlgorithm,
-                                       otpLength : otpLength,
-                                       hashAlgorithm : hashAlgorithm,
-                                       timeStep : timeStep,
-                                       startTime : startTime,
-                                       suite : suite,
-                                       hmacSeed : hmacSeed,
-                                       iptmk : iptmk);
-                }
-            }
+            var version = tr.ReadByte();
+            var otpAlgorithm = tr.ReadByte();
+            var otpLength = tr.ReadByte();
+            var hashAlgorithm = tr.ReadByte();
+            var timeStep = tr.ReadByte();
+            var startTime = tr.ReadUInt32BigEndian();
+            var serverTime = tr.ReadUInt32BigEndian();
+            var wysOption = tr.ReadByte();
+            var suiteLength = tr.ReadUInt16BigEndian();
+            var suite = tr.ReadBytes(suiteLength);
+
+            ts.Position = 128;
+            var hmacSeedLength = tr.ReadUInt16BigEndian();
+            var hmacSeed = tr.ReadBytes(hmacSeedLength);
+
+            return new OtpInfo(version : version,
+                               otpAlgorithm : otpAlgorithm,
+                               otpLength : otpLength,
+                               hashAlgorithm : hashAlgorithm,
+                               timeStep : timeStep,
+                               startTime : startTime,
+                               suite : suite,
+                               hmacSeed : hmacSeed,
+                               iptmk : iptmk);
         }
 
         // Checks that the OTP info is something we can work with. The Chrome
@@ -152,11 +146,7 @@ namespace TrueKey
         {
             Action<object, object, string> throwError = (actual, expected, name) =>
             {
-                throw new ArgumentException(
-                    string.Format("Invalid OTP {0} (expected {1}, got {2})",
-                                  name,
-                                  expected,
-                                  actual));
+                throw new InternalErrorException($"Invalid OTP {name} (expected {expected}, got {actual})");
             };
 
             Action<int, int, string> verify = (actual, expected, name) =>
@@ -193,7 +183,7 @@ namespace TrueKey
 
         public static OtpChallenge GenerateRandomOtpChallenge(OtpInfo otp)
         {
-            var challenge = RandomBytes(ChallengeSize);
+            var challenge = Crypto.RandomBytes(ChallengeSize);
             var time = DateTime.UtcNow;
             return new OtpChallenge(challenge,
                                     time,
@@ -204,53 +194,31 @@ namespace TrueKey
         // internal
         //
 
-        internal static byte[] Sha256(string data)
+        internal static byte[] DeriveKey(string password, byte[] salt)
         {
-            using (var sha = new SHA256Managed())
-                return sha.ComputeHash(data.ToBytes());
-        }
-
-        internal static byte[] Hmac(byte[] salt, byte[] message)
-        {
-            using (var hmac = new HMACSHA256 {Key = salt})
-                return hmac.ComputeHash(message);
-        }
-
-        internal static byte[] RandomBytes(int size)
-        {
-            using (var random = new RNGCryptoServiceProvider())
-            {
-                var bytes = new byte[size];
-                random.GetBytes(bytes);
-                return bytes;
-            }
+            return Pbkdf2.GenerateSha512(password.ToBytes(), salt, 10000, 32);
         }
 
         internal static byte[] SignChallenge(OtpInfo otp, byte[] challenge, uint unixSeconds)
         {
             if (challenge.Length != ChallengeSize)
-                throw new ArgumentOutOfRangeException(
-                    "challenge",
-                    challenge.Length,
-                    string.Format("Challenge must be {0} bytes long", ChallengeSize));
+                throw new InternalErrorException($"Challenge must be {ChallengeSize} bytes long");
 
-            using (var s = new MemoryStream(1024))
-            {
-                s.Write(otp.Suite, 0, otp.Suite.Length);
-                s.WriteByte(0);
-                s.Write(challenge, 0, challenge.Length);
+            using var s = new MemoryStream(1024);
+            s.Write(otp.Suite, 0, otp.Suite.Length);
+            s.WriteByte(0);
+            s.Write(challenge, 0, challenge.Length);
 
-                var z = BitConverter.GetBytes((UInt32)0);
-                s.Write(z, 0, z.Length);
+            var z = BitConverter.GetBytes(0u);
+            s.Write(z, 0, z.Length);
 
-                var time = (unixSeconds - otp.StartTime) / otp.TimeStep;
-                var t = BitConverter.GetBytes((UInt32)time);
-                if (BitConverter.IsLittleEndian)
-                    Array.Reverse(t);
-                s.Write(t, 0, t.Length);
+            var time = (unixSeconds - otp.StartTime) / otp.TimeStep;
+            var t = BitConverter.GetBytes((uint)time);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(t);
+            s.Write(t, 0, t.Length);
 
-                return Hmac(otp.HmacSeed, s.ToArray());
-            }
+            return Crypto.HmacSha256(s.ToArray(), otp.HmacSeed);
         }
     }
 }

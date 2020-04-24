@@ -180,7 +180,7 @@ namespace PasswordManagerAccess.Dashlane
 
             var salt = blob.Sub(0, saltLength);
             if (salt.Length < saltLength)
-                throw new ArgumentException("Blob is too short", "blob");
+                throw new InternalErrorException("Blob is too short");
 
             var version = blob.Sub(saltLength, versionLength);
 
@@ -246,10 +246,11 @@ namespace PasswordManagerAccess.Dashlane
 
             var version = GetNextComponent(blob, ref offset);
             if (version != "1")
-                throw new InvalidOperationException();
+                throw new InternalErrorException($"Unsupported version: {version}");
 
             IKdfConfig kdfConfig = null;
-            switch (GetNextComponent(blob, ref offset))
+            var method = GetNextComponent(blob, ref offset);
+            switch (method)
             {
             case "argon2d":
                 {
@@ -279,7 +280,7 @@ namespace PasswordManagerAccess.Dashlane
                         hashMethod = Pbkdf2Config.HashMethodType.Sha256;
                         break;
                     default:
-                        throw new InvalidOperationException($"Unknown PBKDF2 hashing method: {hashMethodStr}");
+                        throw new InternalErrorException($"Unknown PBKDF2 hashing method: {hashMethodStr}");
                     }
 
                     kdfConfig = new Pbkdf2Config(hashMethod: hashMethod,
@@ -288,12 +289,12 @@ namespace PasswordManagerAccess.Dashlane
                 }
                 break;
             default:
-                throw new InvalidOperationException();
+                throw new InternalErrorException($"Unexpected hashing method: {method}");
             }
 
             var cipher = GetNextComponent(blob, ref offset);
             if (cipher != "aes256")
-                throw new InvalidOperationException();
+                throw new InternalErrorException($"Unexpected cipher: {cipher}");
 
             CryptoConfig.CipherModeType cipherMode;
             var cipherModeStr = GetNextComponent(blob, ref offset);
@@ -309,7 +310,7 @@ namespace PasswordManagerAccess.Dashlane
                 cipherMode = CryptoConfig.CipherModeType.Gcm;
                 break;
             default:
-                throw new InvalidOperationException($"Unknown cipher mode: {cipherModeStr}");
+                throw new InternalErrorException($"Unknown cipher mode: {cipherModeStr}");
             }
 
             var cryptoConfig = new CryptoConfig(kdfConfig,
@@ -347,7 +348,7 @@ namespace PasswordManagerAccess.Dashlane
                 if (blob[i] == '$')
                     return i;
 
-            throw new InvalidOperationException();
+            throw new InternalErrorException("Invalid blob format: expected to find '$'");
         }
 
         public static byte[] DecryptBlob(byte[] blob, string password)

@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -226,6 +227,20 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(new BigInteger(number), str.ToBigInt());
         }
 
+        [Theory]
+        [InlineData("x", 0, "")]
+        [InlineData("x", 1, "x")]
+        [InlineData("x", 2, "xx")]
+        [InlineData("x", 3, "xxx")]
+        [InlineData("xyz", 0, "")]
+        [InlineData("xyz", 1, "xyz")]
+        [InlineData("xyz", 2, "xyzxyz")]
+        [InlineData("xyz", 3, "xyzxyzxyz")]
+        public void String_Repeat_returns_repeated_string(string s, int times, string expected)
+        {
+            Assert.Equal(expected, s.Repeat(times));
+        }
+
         //
         // byte[]
         //
@@ -354,6 +369,16 @@ namespace PasswordManagerAccess.Test.Common
         {
             Exceptions.AssertThrowsInternalError(() => new byte[] { }.Sub(0, -1337),
                                                  "length should not be negative");
+        }
+
+        //
+        // DateTime
+        //
+
+        [Fact]
+        public void DateTime_UnixSeconds_returns_number_of_seconds_since_epoch()
+        {
+            Assert.Equal(1493456789U, new DateTime(2017, 4, 29, 9, 6, 29, DateTimeKind.Utc).UnixSeconds());
         }
 
         //
@@ -567,14 +592,36 @@ namespace PasswordManagerAccess.Test.Common
         //
 
         [Fact]
-        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
+        public void BinaryReader_ReadUInt16BigEndian_reads_ushort()
         {
-            var bytes = new byte[] { 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE };
+            var bytes = new byte[] {0xDE, 0xAD, 0xBE, 0xEF};
+            using var s = new MemoryStream(bytes);
+            using var r = new BinaryReader(s);
+
+            Assert.Equal(0xDEAD, r.ReadUInt16BigEndian());
+            Assert.Equal(0xBEEF, r.ReadUInt16BigEndian());
+        }
+
+        [Fact]
+        public void BinaryReader_ReadUInt32LittleEndian_reads_uint()
+        {
+            var bytes = new byte[] {0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xED, 0xFE};
             using var s = new MemoryStream(bytes);
             using var r = new BinaryReader(s);
 
             Assert.Equal(0xDEADBEEF, r.ReadUInt32LittleEndian());
             Assert.Equal(0xFEEDF00D, r.ReadUInt32LittleEndian());
+        }
+
+        [Fact]
+        public void BinaryReader_ReadUInt32BigEndian_reads_uint()
+        {
+            var bytes = new byte[] {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED, 0xF0, 0x0D};
+            using var s = new MemoryStream(bytes);
+            using var r = new BinaryReader(s);
+
+            Assert.Equal(0xDEADBEEF, r.ReadUInt32BigEndian());
+            Assert.Equal(0xFEEDF00D, r.ReadUInt32BigEndian());
         }
 
         //

@@ -151,6 +151,15 @@ namespace PasswordManagerAccess.Common
             return BigInteger.Parse('0' + s, NumberStyles.HexNumber);
         }
 
+        public static string Repeat(this string s, int times)
+        {
+            var result = new StringBuilder(s.Length * times);
+            for (var i = 0; i < times; ++i)
+                result.Append(s);
+
+            return result.ToString();
+        }
+
         //
         // byte[]
         //
@@ -228,6 +237,19 @@ namespace PasswordManagerAccess.Common
                 Array.Copy(array, start, sub, 0, actualLength);
 
             return sub;
+        }
+
+        //
+        // DateTime
+        //
+
+        public static uint UnixSeconds(this DateTime time)
+        {
+            const long secondsSinceEpoch = 62135596800;
+            long seconds = time.ToUniversalTime().Ticks / TimeSpan.TicksPerSecond - secondsSinceEpoch;
+
+            // TODO: This will stop working on January 19, 2038 03:14:07. Fix ASAP!
+            return (uint)seconds;
         }
 
         //
@@ -324,6 +346,16 @@ namespace PasswordManagerAccess.Common
         // BinaryReader
         //
 
+        public static ushort ReadUInt16BigEndian(this BinaryReader r)
+        {
+            var result = r.ReadUInt16();
+
+            if (BitConverter.IsLittleEndian)
+                result = (ushort)((result << 8) | (result >> 8));
+
+            return result;
+        }
+
         public static uint ReadUInt32LittleEndian(this BinaryReader r)
         {
             var result = r.ReadUInt32();
@@ -332,6 +364,19 @@ namespace PasswordManagerAccess.Common
                 result = ((result & 0x000000FF) << 24) |
                          ((result & 0x0000FF00) << 8) |
                          ((result & 0x00FF0000) >> 8) |
+                         ((result & 0xFF000000) >> 24);
+
+            return result;
+        }
+
+        public static uint ReadUInt32BigEndian(this BinaryReader r)
+        {
+            var result = r.ReadUInt32();
+
+            if (BitConverter.IsLittleEndian)
+                result = ((result & 0x000000FF) << 24) |
+                         ((result & 0x0000FF00) <<  8) |
+                         ((result & 0x00FF0000) >>  8) |
                          ((result & 0xFF000000) >> 24);
 
             return result;

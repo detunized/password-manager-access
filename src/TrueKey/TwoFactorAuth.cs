@@ -1,10 +1,11 @@
-// Copyright (C) 2017 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.Linq;
+using PasswordManagerAccess.Common;
 
-namespace TrueKey
+namespace PasswordManagerAccess.TrueKey
 {
     internal class TwoFactorAuth
     {
@@ -39,13 +40,10 @@ namespace TrueKey
                 OAuthToken = oAuthToken;
             }
 
-            public bool IsAuthenticated
-            {
-                get { return InitialStep == Step.Done && !string.IsNullOrEmpty(OAuthToken); }
-            }
+            public bool IsAuthenticated => InitialStep == Step.Done && !OAuthToken.IsNullOrEmpty();
         }
 
-        public class OobDevice
+        public struct OobDevice
         {
             public readonly string Name;
             public readonly string Id;
@@ -57,14 +55,9 @@ namespace TrueKey
             }
         }
 
-        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Ui ui)
+        public static string Start(Client.ClientInfo clientInfo, Settings settings, Ui ui, RestClient rest)
         {
-            return Start(clientInfo, settings, ui, new HttpClient());
-        }
-
-        public static string Start(Remote.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
-        {
-            return new TwoFactorAuth(clientInfo, settings, ui, http).Run(settings.InitialStep);
+            return new TwoFactorAuth(clientInfo, settings, ui, rest).Run(settings.InitialStep);
         }
 
         //
@@ -85,20 +78,20 @@ namespace TrueKey
 
             public virtual string Result
             {
-                get { throw new InvalidOperationException("Unreachable code"); }
+                get { throw new InternalErrorException("Unreachable code"); }
             }
 
             public virtual State Advance(TwoFactorAuth owner)
             {
-                throw new InvalidOperationException("Unreachable code");
+                throw new InternalErrorException("Unreachable code");
             }
 
             // TODO: Shared code for most states. It's not really good that it's in the base class.
             protected State Check(TwoFactorAuth owner)
             {
-                var result = Remote.AuthCheck(owner._clientInfo,
+                var result = Client.AuthCheck(owner._clientInfo,
                                               owner._settings.TransactionId,
-                                              owner._http);
+                                              owner._rest);
                 if (result == null)
                     return new Failure("Failed");
                 return new Done(result);
@@ -149,10 +142,10 @@ namespace TrueKey
         {
             public override State Advance(TwoFactorAuth owner)
             {
-                Remote.AuthSendEmail(owner._clientInfo,
+                Client.AuthSendEmail(owner._clientInfo,
                                      owner._settings.Email,
                                      owner._settings.TransactionId,
-                                     owner._http);
+                                     owner._rest);
                 return new WaitForEmail();
             }
         }
@@ -166,10 +159,10 @@ namespace TrueKey
 
             public override State Advance(TwoFactorAuth owner)
             {
-                Remote.AuthSendPush(owner._clientInfo,
+                Client.AuthSendPush(owner._clientInfo,
                                     owner._settings.Devices[_deviceIndex].Id,
                                     owner._settings.TransactionId,
-                                    owner._http);
+                                    owner._rest);
                 return new WaitForOob(_deviceIndex);
             }
 
@@ -187,14 +180,14 @@ namespace TrueKey
                 case Ui.Answer.Check:
                     return Check(owner);
                 case Ui.Answer.Resend:
-                    Remote.AuthSendEmail(owner._clientInfo,
+                    Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
-                                         owner._http);
+                                         owner._rest);
                     return this;
                 }
 
-                throw new InvalidOperationException(string.Format("Invalid answer '{0}'", answer));
+                throw new InternalErrorException($"Invalid answer '{answer}'");
             }
         }
 
@@ -216,20 +209,20 @@ namespace TrueKey
                 case Ui.Answer.Check:
                     return Check(owner);
                 case Ui.Answer.Resend:
-                    Remote.AuthSendPush(owner._clientInfo,
+                    Client.AuthSendPush(owner._clientInfo,
                                         owner._settings.Devices[_deviceIndex].Id,
                                         owner._settings.TransactionId,
-                                        owner._http);
+                                        owner._rest);
                     return this;
                 case Ui.Answer.Email:
-                    Remote.AuthSendEmail(owner._clientInfo,
+                    Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
-                                         owner._http);
+                                         owner._rest);
                     return new WaitForEmail();
                 }
 
-                throw new InvalidOperationException(string.Format("Invalid answer '{0}'", answer));
+                throw new InternalErrorException($"Invalid answer '{answer}'");
             }
 
             private readonly int _deviceIndex;
@@ -248,33 +241,33 @@ namespace TrueKey
 
                 if (answer == Ui.Answer.Email)
                 {
-                    Remote.AuthSendEmail(owner._clientInfo,
+                    Client.AuthSendEmail(owner._clientInfo,
                                          owner._settings.Email,
                                          owner._settings.TransactionId,
-                                         owner._http);
+                                         owner._rest);
                     return new WaitForEmail();
                 }
 
                 var deviceIndex = answer - Ui.Answer.Device0;
                 if (deviceIndex >= 0 && deviceIndex < owner._settings.Devices.Length)
                 {
-                    Remote.AuthSendPush(owner._clientInfo,
+                    Client.AuthSendPush(owner._clientInfo,
                                         owner._settings.Devices[deviceIndex].Id,
                                         owner._settings.TransactionId,
-                                        owner._http);
+                                        owner._rest);
                     return new WaitForOob(deviceIndex);
                 }
 
-                throw new InvalidOperationException(string.Format("Invalid answer '{0}'", answer));
+                throw new InternalErrorException($"Invalid answer '{answer}'");
             }
         }
 
-        private TwoFactorAuth(Remote.ClientInfo clientInfo, Settings settings, Ui ui, IHttpClient http)
+        private TwoFactorAuth(Client.ClientInfo clientInfo, Settings settings, Ui ui, RestClient rest)
         {
             _clientInfo = clientInfo;
             _settings = settings;
             _ui = ui;
-            _http = http;
+            _rest = rest;
         }
 
         private string Run(Step nextStep)
@@ -286,8 +279,7 @@ namespace TrueKey
             if (state.IsSuccess)
                 return state.Result;
 
-            throw new InvalidOperationException(string.Format("Two step verification failed: {0}",
-                                                              state.Result));
+            throw new InternalErrorException($"Two step verification failed: {state.Result}");
         }
 
         private State CreateInitialState(Step step)
@@ -320,13 +312,12 @@ namespace TrueKey
                 }
             }
 
-            throw new InvalidOperationException(
-                string.Format("Two factor auth step {0} is not supported", step));
+            throw new InternalErrorException($"Two factor auth step {step} is not supported");
         }
 
-        private readonly Remote.ClientInfo _clientInfo;
+        private readonly Client.ClientInfo _clientInfo;
         private readonly Settings _settings;
         private readonly Ui _ui;
-        private readonly IHttpClient _http;
+        private readonly RestClient _rest;
     }
 }
