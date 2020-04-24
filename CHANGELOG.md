@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-preview
+  - TrueKey: ported from the original repo and now could be used
+  - Dashlane: the last System exceptions replaced with project local ones
+  - Examples: plain storage now stores all values in base64 (incompatible with
+    `storage.yaml` from the previous versions)
+
 ## 0.8.0
   - StickyPassword: ported from the original repo and now could be used
 
