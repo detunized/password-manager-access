@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace LastPass
+namespace PasswordManagerAccess.LastPass
 {
     // Very-very basic ASN.1 parser. Just enough to extract the RSA key
     // parameters stored in a vault. Supports only sequences, octet strings

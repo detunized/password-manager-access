@@ -4,7 +4,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace LastPass
+namespace PasswordManagerAccess.LastPass
 {
     static class FetcherHelper
     {

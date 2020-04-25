@@ -9,7 +9,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
-namespace LastPass
+namespace PasswordManagerAccess.LastPass
 {
     static class Fetcher
     {

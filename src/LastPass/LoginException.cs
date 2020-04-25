@@ -3,7 +3,7 @@
 
 using System;
 
-namespace LastPass
+namespace PasswordManagerAccess.LastPass
 {
     public class LoginException: BaseException
     {
