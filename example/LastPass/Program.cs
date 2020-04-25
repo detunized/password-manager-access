@@ -1,13 +1,13 @@
-// Copyright (C) 2013 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.IO;
-using LastPass;
+using PasswordManagerAccess.Example.Common;
+using PasswordManagerAccess.LastPass;
 
-namespace Example
+namespace PasswordManagerAccess.Example.LastPass
 {
-    class Program
+    public static class Program
     {
         // Very simple text based user interface that demonstrates how to respond to
         // to Vault UI requests.
@@ -33,27 +33,19 @@ namespace Example
             }
         }
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            // Read LastPass credentials from a file
-            // The file should contain 4 lines:
-            //   - username
-            //   - password
-            //   - client ID
-            //   - client description
-            // See credentials.txt.example for an example.
-            var credentials = File.ReadAllLines("../../credentials.txt");
-            var username = credentials[0];
-            var password = credentials[1];
-            var id = credentials[2];
-            var description = credentials[3];
+            var config = Util.ReadConfig();
 
             try
             {
                 // Fetch and create the vault from LastPass
-                var vault = Vault.Open(username,
-                                       password,
-                                       new ClientInfo(Platform.Desktop, id, description, false),
+                var vault = Vault.Open(config["username"],
+                                       config["password"],
+                                       new ClientInfo(Platform.Desktop,
+                                                      config["device-id"],
+                                                      config["client-description"],
+                                                      false),
                                        new TextUi());
 
                 // Dump all the accounts
