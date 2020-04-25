@@ -7,7 +7,7 @@ using System.Net;
 using Moq;
 using NUnit.Framework;
 
-namespace LastPass.Test
+namespace PasswordManagerAccess.Test.LastPass
 {
     [TestFixture]
     partial class FetcherTest

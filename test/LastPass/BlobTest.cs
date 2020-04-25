@@ -3,7 +3,7 @@
 
 using NUnit.Framework;
 
-namespace LastPass.Test
+namespace PasswordManagerAccess.Test.LastPass
 {
     [TestFixture]
     class BlobTest

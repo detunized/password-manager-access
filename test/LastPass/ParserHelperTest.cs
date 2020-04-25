@@ -8,7 +8,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using NUnit.Framework;
 
-namespace LastPass.Test
+namespace PasswordManagerAccess.Test.LastPass
 {
     [TestFixture]
     class ParserHelperTest

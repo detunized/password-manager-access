@@ -4,7 +4,7 @@
 using System;
 using NUnit.Framework;
 
-namespace LastPass.Test
+namespace PasswordManagerAccess.Test.LastPass
 {
     [TestFixture]
     class Pbkdf2Test

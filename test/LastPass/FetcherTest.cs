@@ -6,7 +6,7 @@ using Moq.Language;
 using Moq.Language.Flow;
 using NUnit.Framework;
 
-namespace LastPass.Test
+namespace PasswordManagerAccess.Test.LastPass
 {
     [TestFixture]
     partial class FetcherTest
