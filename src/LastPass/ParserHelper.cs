@@ -99,7 +99,7 @@ namespace PasswordManagerAccess.LastPass
             });
         }
 
-        public static RSAParameters ParseEcryptedPrivateKey(string encryptedPrivateKey, byte[] encryptionKey)
+        public static RSAParameters ParseEncryptedPrivateKey(string encryptedPrivateKey, byte[] encryptionKey)
         {
             var decrypted = DecryptAes256(encryptedPrivateKey.DecodeHex(),
                                           encryptionKey,

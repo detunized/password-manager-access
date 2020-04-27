@@ -58,7 +58,7 @@ namespace PasswordManagerAccess.LastPass
 
                     var privateKey = new RSAParameters();
                     if (blob.EncryptedPrivateKey != null)
-                        privateKey = ParserHelper.ParseEcryptedPrivateKey(blob.EncryptedPrivateKey,
+                        privateKey = ParserHelper.ParseEncryptedPrivateKey(blob.EncryptedPrivateKey,
                                                                           encryptionKey);
 
                     Accounts = ParseAccounts(chunks, encryptionKey, privateKey);
