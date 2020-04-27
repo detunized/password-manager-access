@@ -14,6 +14,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 "NMAC", "ACCT", "EQDN", "URUL", "ENDM"
             };
 
+        // TODO: Move to a fixture!
         public static readonly string BlobBase64 =
             "TFBBVgAAAAMxMThBVFZSAAAAAzEwMkVOQ1UAAABGITExVkVjWFVnelFramxranB2" +
             "VGZyR3c9PXxYUklhVVdQYlQzRXdRQlZCRUYxZUJTTDI3bWZ1cVViZmFCV3JCYnd5" +
@@ -1044,6 +1045,7 @@ namespace PasswordManagerAccess.Test.LastPass
             public string Group { get; private set; }
         }
 
+        // TOOD: Move to a fixture?
         public static readonly Account[] Accounts = new[] {
             new Account("1872745596", "Muller, Morar and Wisoky", "branson_cormier", "8jgLCzQSkB2rTZ1OtF9sNGpc", "http://nienow.net/meagan.greenholt", "three"),
             new Account("1872745606", "goyette.net", "kris_quigley@baileyjewe.biz", "S5@3^wPv!6JsFj", "http://bechtelar.biz/tristian.barrows", "four"),
