@@ -11,25 +11,6 @@ namespace PasswordManagerAccess.Test.LastPass
     public class ExtensionsTest
     {
         [Fact]
-        public void Reverse()
-        {
-            Assert.Equal(0u, 0u.Reverse());
-            Assert.Equal(0xffu, 0xff000000u.Reverse());
-            Assert.Equal(0xff000000u, 0xffu.Reverse());
-            Assert.Equal(0xff00ff00u, 0xff00ffu.Reverse());
-            Assert.Equal(0x78563412u, 0x12345678u.Reverse());
-            Assert.Equal(0xdeadbeefu, 0xefbeaddeu.Reverse());
-        }
-
-        [Fact]
-        public void FromBigEndian()
-        {
-            Assert.Equal(0u, BitConverter.ToUInt32(new byte[] {0x00, 0x00, 0x00, 0x00}, 0).FromBigEndian());
-            Assert.Equal(0x12345678u, BitConverter.ToUInt32(new byte[] {0x12, 0x34, 0x56, 0x78}, 0).FromBigEndian());
-            Assert.Equal(0xdeadbeefu, BitConverter.ToUInt32(new byte[] {0xde, 0xad, 0xbe, 0xef}, 0).FromBigEndian());
-        }
-
-        [Fact]
         public void ToUtf8()
         {
             Assert.Equal("", new byte[] {}.ToUtf8());
@@ -63,13 +44,13 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void DecodeHex_throws_on_odd_length()
         {
-            Assert.Throws<ArgumentException>(() => "0".DecodeHex());
+            Exceptions.AssertThrowsInternalError(() => "0".DecodeHex());
         }
 
         [Fact]
         public void DecodeHex_throws_on_non_hex_characters()
         {
-            Assert.Throws<ArgumentException>(() => "xz".DecodeHex());
+            Exceptions.AssertThrowsInternalError(() => "xz".DecodeHex());
         }
 
         [Fact]

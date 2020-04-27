@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass
 {
@@ -233,7 +234,7 @@ namespace PasswordManagerAccess.LastPass
 
         public static uint ReadSize(BinaryReader reader)
         {
-            return reader.ReadUInt32().FromBigEndian();
+            return reader.ReadUInt32BigEndian();
         }
 
         public static byte[] ReadPayload(BinaryReader reader, uint size)
