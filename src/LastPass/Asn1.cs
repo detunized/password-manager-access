@@ -25,6 +25,11 @@ namespace PasswordManagerAccess.LastPass
             return ParserHelper.WithBytes(bytes, reader => ExtractItem(reader));
         }
 
+        public static void SkipItem(BinaryReader reader)
+        {
+            _ = ExtractItem(reader);
+        }
+
         public static KeyValuePair<Kind, byte[]> ExtractItem(BinaryReader reader)
         {
             var id = reader.ReadByte();

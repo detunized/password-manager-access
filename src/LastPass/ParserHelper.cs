@@ -49,10 +49,12 @@ namespace PasswordManagerAccess.LastPass
                     return null;
 
                 var notes = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
-                2.Times(() => SkipItem(reader));
+                SkipItem(reader);
+                SkipItem(reader);
                 var username = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var password = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
-                2.Times(() => SkipItem(reader));
+                SkipItem(reader);
+                SkipItem(reader);
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
                 // Parse secure note
@@ -117,7 +119,8 @@ namespace PasswordManagerAccess.LastPass
 
             var enclosingSequence = Asn1.ParseItem(asn1EncodedKey);
             var anotherEnclosingSequence = WithBytes(enclosingSequence.Value, reader => {
-                2.Times(() => Asn1.ExtractItem(reader));
+                Asn1.SkipItem(reader);
+                Asn1.SkipItem(reader);
                 return Asn1.ExtractItem(reader);
             });
             var yetAnotherEnclosingSequence = Asn1.ParseItem(anotherEnclosingSequence.Value);

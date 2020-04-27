@@ -1,8 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
-
 namespace PasswordManagerAccess.LastPass
 {
     static class Extensions
@@ -30,12 +28,6 @@ namespace PasswordManagerAccess.LastPass
         public static byte[] Decode64(this string s)
         {
             return Common.Extensions.Decode64(s);
-        }
-
-        public static void Times(this int times, Action action)
-        {
-            for (var i = 0; i < times; ++i)
-                action();
         }
     }
 }
