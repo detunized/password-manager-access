@@ -1,40 +1,31 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    class VaultTest
+    public class VaultTest
     {
-        [Test]
+        [Fact]
         public void GenerateRandomClientId_returns_32_characters()
         {
             var id = Vault.GenerateRandomClientId();
-            Assert.That(id.Length, Is.EqualTo(32));
+            Assert.Equal(32, id.Length);
         }
 
-        [Test]
+        [Fact]
         public void GenerateRandomClientId_returns_different_ids()
         {
             var id1 = Vault.GenerateRandomClientId();
             var id2 = Vault.GenerateRandomClientId();
 
-            Assert.That(id1, Is.Not.EqualTo(id2));
+            Assert.NotEqual(id2, id1);
         }
 
-        //
-        // TODO: Figure out how to test this!
-        //       All methods require username/password which I don't want to expose here.
-        //       Actually, I'm pretty sure the password is lost and the whole test blob
-        //       needs to be regenerated.
-        //       Currently all the vault tests that deal with decryption are disabled.
-        //
-
-        [Test]
+        [Fact]
         public void Create_throws_on_truncated_blob()
         {
             var tests = new[] {1, 2, 3, 4, 5, 10, 100, 1000};
@@ -44,18 +35,24 @@ namespace PasswordManagerAccess.Test.LastPass
                     new Blob(TestData.Blob.Take(TestData.Blob.Length - i).ToArray(), 1, ""),
                     username: "",
                     password: ""));
-                Assert.AreEqual(ParseException.FailureReason.CorruptedBlob, e.Reason);
-                Assert.AreEqual("Blob is truncated", e.Message);
+                Assert.Equal(ParseException.FailureReason.CorruptedBlob, e.Reason);
+                Assert.Equal("Blob is truncated", e.Message);
             }
         }
 
-        //[Test]
+        // TODO: Figure out how to test this!
+        //       All methods require username/password which I don't want to expose here.
+        //       Actually, I'm pretty sure the password is lost and the whole test blob
+        //       needs to be regenerated.
+        //       Currently all the vault tests that deal with decryption are disabled.
+
+        [Fact(Skip = "The password is missing")]
         public void Create_returns_vault_with_correct_accounts()
         {
             var vault = Vault.Create(new Blob(TestData.Blob, 1, ""), username: "", password: "");
-            Assert.AreEqual(TestData.Accounts.Length, vault.Accounts.Length);
-            Assert.AreEqual(TestData.Accounts.Select(i => i.Id), vault.Accounts.Select(i => i.Id));
-            Assert.AreEqual(TestData.Accounts.Select(i => i.Url), vault.Accounts.Select(i => i.Url));
+            Assert.Equal(TestData.Accounts.Length, vault.Accounts.Length);
+            Assert.Equal(TestData.Accounts.Select(i => i.Id), vault.Accounts.Select(i => i.Id));
+            Assert.Equal(TestData.Accounts.Select(i => i.Url), vault.Accounts.Select(i => i.Url));
         }
     }
 }

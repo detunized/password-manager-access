@@ -4,12 +4,12 @@
 using System;
 using System.Net;
 using Moq;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    partial class FetcherTest
+    public partial class FetcherTest
     {
         //
         // Shared data
@@ -28,34 +28,34 @@ namespace PasswordManagerAccess.Test.LastPass
         // Fetch tests
         //
 
-        [Test]
+        [Fact]
         public void Fetch_sets_session_id_cookie()
         {
             var headers = new WebHeaderCollection();
             SuccessfullyFetch(headers);
 
-            Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
+            Assert.Equal(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_requests_accounts_from_correct_url()
         {
             var webClient = SuccessfullyFetch();
             webClient.Verify(x => x.DownloadData(It.Is<string>(a => a == AccountDownloadUrl)));
         }
 
-        [Test]
+        [Fact]
         public void Fetch_returns_blob()
         {
             Blob blob;
             SuccessfullyFetch(out blob);
 
-            Assert.AreEqual(Blob, blob.Bytes);
-            Assert.AreEqual(IterationCount, blob.KeyIterationCount);
-            Assert.AreEqual(EncryptedPrivateKey, blob.EncryptedPrivateKey);
+            Assert.Equal(Blob, blob.Bytes);
+            Assert.Equal(IterationCount, blob.KeyIterationCount);
+            Assert.Equal(EncryptedPrivateKey, blob.EncryptedPrivateKey);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_WebException()
         {
             FetchAndVerifyException<WebException>(new ResponseOrException(new WebException()),
@@ -63,7 +63,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   WebExceptionMessage);
         }
 
-        [Test]
+        [Fact]
         public void Fetch_throws_on_invalid_response()
         {
             FetchAndVerifyException<FormatException>(new ResponseOrException("Invalid base64 string!"),
@@ -109,9 +109,9 @@ namespace PasswordManagerAccess.Test.LastPass
             var webClient = SetupFetch(responseOrException);
             var exception = Assert.Throws<FetchException>(() => Fetcher.Fetch(Session, webClient.Object));
 
-            Assert.AreEqual(reason, exception.Reason);
-            Assert.AreEqual(message, exception.Message);
-            Assert.IsInstanceOf<TInnerExceptionType>(exception.InnerException);
+            Assert.Equal(reason, exception.Reason);
+            Assert.Equal(message, exception.Message);
+            Assert.IsType<TInnerExceptionType>(exception.InnerException);
         }
     }
 }

@@ -1,12 +1,12 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    class BlobTest
+    public class BlobTest
     {
         private static readonly byte[] Bytes = "TFBBVgAAAAMxMjJQUkVNAAAACjE0MTQ5".Decode64();
         private const int IterationCount = 500;
@@ -15,21 +15,21 @@ namespace PasswordManagerAccess.Test.LastPass
         private const string Password = "pl1234567890";
         private static readonly byte[] EncryptionKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
 
-        [Test]
+        [Fact]
         public void Blob_properties_are_set()
         {
             var blob = new Blob(Bytes, IterationCount, EncryptedPrivateKey);
-            Assert.AreEqual(Bytes, blob.Bytes);
-            Assert.AreEqual(IterationCount, blob.KeyIterationCount);
-            Assert.AreEqual(EncryptedPrivateKey, blob.EncryptedPrivateKey);
+            Assert.Equal(Bytes, blob.Bytes);
+            Assert.Equal(IterationCount, blob.KeyIterationCount);
+            Assert.Equal(EncryptedPrivateKey, blob.EncryptedPrivateKey);
         }
 
-        [Test]
+        [Fact]
         public void Blob_MakeEncryptionKey()
         {
             var key = new Blob(Bytes, IterationCount, EncryptedPrivateKey)
                 .MakeEncryptionKey(Username, Password);
-            Assert.AreEqual(EncryptionKey, key);
+            Assert.Equal(EncryptionKey, key);
         }
     }
 }

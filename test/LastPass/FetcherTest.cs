@@ -4,12 +4,12 @@
 using System;
 using Moq.Language;
 using Moq.Language.Flow;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    partial class FetcherTest
+    public partial class FetcherTest
     {
         //
         // Data shared between Login and Fetcher tests

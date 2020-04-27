@@ -1,14 +1,14 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    class AccountTest
+    public class AccountTest
     {
-        [Test]
+        [Fact]
         public void EncryptedAccount_properties_are_set()
         {
             var id = "1234567890";
@@ -19,12 +19,12 @@ namespace PasswordManagerAccess.Test.LastPass
             var group = "group";
 
             var account = new Account(id, name, username, password, url, group);
-            Assert.AreEqual(id, account.Id);
-            Assert.AreEqual(name, account.Name);
-            Assert.AreEqual(username, account.Username);
-            Assert.AreEqual(password, account.Password);
-            Assert.AreEqual(url, account.Url);
-            Assert.AreEqual(group, account.Group);
+            Assert.Equal(id, account.Id);
+            Assert.Equal(name, account.Name);
+            Assert.Equal(username, account.Username);
+            Assert.Equal(password, account.Password);
+            Assert.Equal(url, account.Url);
+            Assert.Equal(group, account.Group);
         }
     }
 }

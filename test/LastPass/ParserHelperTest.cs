@@ -6,14 +6,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    class ParserHelperTest
+    public class ParserHelperTest
     {
-        [Test]
+        [Fact]
         public void ParseAccount_returns_account()
         {
             WithBlob(reader => {
@@ -21,37 +21,37 @@ namespace PasswordManagerAccess.Test.LastPass
                 for (var i = 0; i < accounts.Length; ++i)
                 {
                     var account = ParserHelper.Parse_ACCT(accounts[i], TestData.EncryptionKey);
-                    Assert.True(account.Url.StartsWith(TestData.Accounts[i].Url));
+                    Assert.StartsWith(TestData.Accounts[i].Url, account.Url);
                 }
             });
         }
 
-        [Test]
-        public void ParseEcryptedPrivateKey_returns_private_key()
+        [Fact]
+        public void ParseEncryptedPrivateKey_returns_private_key()
         {
-            var rsa = ParserHelper.ParseEcryptedPrivateKey(TestData.EncryptedPrivateKey,
+            var rsa = ParserHelper.ParseEncryptedPrivateKey(TestData.EncryptedPrivateKey,
                                                            TestData.EncryptionKey);
 
-            Assert.AreEqual(TestData.RsaD, rsa.D);
-            Assert.AreEqual(TestData.RsaDP, rsa.DP);
-            Assert.AreEqual(TestData.RsaDQ, rsa.DQ);
-            Assert.AreEqual(TestData.RsaExponent, rsa.Exponent);
-            Assert.AreEqual(TestData.RsaInverseQ, rsa.InverseQ);
-            Assert.AreEqual(TestData.RsaModulus, rsa.Modulus);
-            Assert.AreEqual(TestData.RsaP, rsa.P);
-            Assert.AreEqual(TestData.RsaQ, rsa.Q);
+            Assert.Equal(TestData.RsaD, rsa.D);
+            Assert.Equal(TestData.RsaDP, rsa.DP);
+            Assert.Equal(TestData.RsaDQ, rsa.DQ);
+            Assert.Equal(TestData.RsaExponent, rsa.Exponent);
+            Assert.Equal(TestData.RsaInverseQ, rsa.InverseQ);
+            Assert.Equal(TestData.RsaModulus, rsa.Modulus);
+            Assert.Equal(TestData.RsaP, rsa.P);
+            Assert.Equal(TestData.RsaQ, rsa.Q);
         }
 
-        [Test]
+        [Fact]
         public void ParseEcryptedPrivateKey_throws_on_invalid_chunk()
         {
             var e = Assert.Throws<ParseException>(
-                () => ParserHelper.ParseEcryptedPrivateKey("", TestData.EncryptionKey));
-            Assert.AreEqual(ParseException.FailureReason.CorruptedBlob, e.Reason);
-            Assert.AreEqual("Failed to decrypt private key", e.Message);
+                () => ParserHelper.ParseEncryptedPrivateKey("", TestData.EncryptionKey));
+            Assert.Equal(ParseException.FailureReason.CorruptedBlob, e.Reason);
+            Assert.Equal("Failed to decrypt private key", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void ParseSecureNoteServer_parses_all_parameters()
         {
             string type = "";
@@ -64,13 +64,13 @@ namespace PasswordManagerAccess.Test.LastPass
                                                ref username,
                                                ref password);
 
-            Assert.AreEqual("type", type);
-            Assert.AreEqual("url", url);
-            Assert.AreEqual("username", username);
-            Assert.AreEqual("password", password);
+            Assert.Equal("type", type);
+            Assert.Equal("url", url);
+            Assert.Equal("username", username);
+            Assert.Equal("password", password);
         }
 
-        [Test]
+        [Fact]
         public void ParseSecureNoteServer_handles_extra_colons()
         {
             string type = "";
@@ -83,13 +83,13 @@ namespace PasswordManagerAccess.Test.LastPass
                                                ref username,
                                                ref password);
 
-            Assert.AreEqual("type:type", type);
-            Assert.AreEqual("url:url", url);
-            Assert.AreEqual("username:username", username);
-            Assert.AreEqual("password:password", password);
+            Assert.Equal("type:type", type);
+            Assert.Equal("url:url", url);
+            Assert.Equal("username:username", username);
+            Assert.Equal("password:password", password);
         }
 
-        [Test]
+        [Fact]
         public void ParseSecureNoteServer_skips_invalid_lines()
         {
             string type = "";
@@ -102,13 +102,13 @@ namespace PasswordManagerAccess.Test.LastPass
                                                ref username,
                                                ref password);
 
-            Assert.AreEqual("", type);
-            Assert.AreEqual("", url);
-            Assert.AreEqual("", username);
-            Assert.AreEqual("", password);
+            Assert.Equal("", type);
+            Assert.Equal("", url);
+            Assert.Equal("", username);
+            Assert.Equal("", password);
         }
 
-        [Test]
+        [Fact]
         public void ParseSecureNoteServer_does_not_modify_missing_parameters()
         {
             string type = "type";
@@ -117,75 +117,75 @@ namespace PasswordManagerAccess.Test.LastPass
             string password = "password";
             ParserHelper.ParseSecureNoteServer("", ref type, ref url, ref username, ref password);
 
-            Assert.AreEqual("type", type);
-            Assert.AreEqual("url", url);
-            Assert.AreEqual("username", username);
-            Assert.AreEqual("password", password);
+            Assert.Equal("type", type);
+            Assert.Equal("url", url);
+            Assert.Equal("username", username);
+            Assert.Equal("password", password);
         }
 
-        [Test]
+        [Fact]
         public void MakeAccountPath_returns_none_when_group_is_null_or_blank_and_not_in_shared_folder()
         {
-            Assert.AreEqual(ParserHelper.MakeAccountPath(null, null), "(none)");
-            Assert.AreEqual(ParserHelper.MakeAccountPath("", null), "(none)");
+            Assert.Equal("(none)", ParserHelper.MakeAccountPath(null, null));
+            Assert.Equal("(none)", ParserHelper.MakeAccountPath("", null));
         }
 
-        [Test]
+        [Fact]
         public void MakeAccountPath_returns_shared_folder_name_when_group_is_null_or_blank()
         {
             var folder = new SharedFolder("id", "folder", null);
 
-            Assert.AreEqual(ParserHelper.MakeAccountPath(null, folder), "folder");
-            Assert.AreEqual(ParserHelper.MakeAccountPath("", folder), "folder");
+            Assert.Equal("folder", ParserHelper.MakeAccountPath(null, folder));
+            Assert.Equal("folder", ParserHelper.MakeAccountPath("", folder));
         }
 
-        [Test]
+        [Fact]
         public void MakeAccountPath_combines_shared_folder_and_group()
         {
             var folder = new SharedFolder("id", "folder", null);
 
-            Assert.AreEqual(ParserHelper.MakeAccountPath("group", folder), "folder\\group");
+            Assert.Equal("folder\\group", ParserHelper.MakeAccountPath("group", folder));
         }
 
-        [Test]
+        [Fact]
         public void MakeAccountPath_returns_group_when_not_in_shared_folder()
         {
-            Assert.AreEqual(ParserHelper.MakeAccountPath("group", null), "group");
+            Assert.Equal("group", ParserHelper.MakeAccountPath("group", null));
         }
 
-        [Test]
+        [Fact]
         public void ReadChunk_returns_first_chunk()
         {
             WithBlob(reader => {
                 var chunk = ParserHelper.ReadChunk(reader);
-                Assert.AreEqual("LPAV", chunk.Id);
-                Assert.AreEqual(3, chunk.Payload.Length);
-                Assert.AreEqual(11, reader.BaseStream.Position);
+                Assert.Equal("LPAV", chunk.Id);
+                Assert.Equal(3, chunk.Payload.Length);
+                Assert.Equal(11, reader.BaseStream.Position);
             });
         }
 
-        [Test]
+        [Fact]
         public void ReadChunk_reads_all_chunks()
         {
             WithBlob(reader => {
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
                     ParserHelper.ReadChunk(reader);
 
-                Assert.AreEqual(reader.BaseStream.Length, reader.BaseStream.Position);
+                Assert.Equal(reader.BaseStream.Length, reader.BaseStream.Position);
             });
         }
 
-        [Test]
+        [Fact]
         public void ExtractChunks_returns_all_chunks()
         {
             WithBlob(reader => {
                 var chunks = ParserHelper.ExtractChunks(reader);
                 var ids = chunks.Select(i => i.Id).Distinct().ToArray();
-                Assert.AreEqual(TestData.ChunkIds, ids);
+                Assert.Equal(TestData.ChunkIds, ids);
             });
         }
 
-        [Test]
+        [Fact]
         public void ReadItem_returns_first_item()
         {
             WithBlob(reader => {
@@ -201,78 +201,78 @@ namespace PasswordManagerAccess.Test.LastPass
             });
         }
 
-        [Test]
+        [Fact]
         public void SkipItem_skips_empty_item()
         {
             WithHex("00000000", reader => {
                 ParserHelper.SkipItem(reader);
-                Assert.AreEqual(4, reader.BaseStream.Position);
+                Assert.Equal(4, reader.BaseStream.Position);
             });
         }
 
-        [Test]
+        [Fact]
         public void SkipItem_skips_non_empty_item()
         {
             WithHex("00000004DEADBEEF", reader => {
                 ParserHelper.SkipItem(reader);
-                Assert.AreEqual(8, reader.BaseStream.Position);
+                Assert.Equal(8, reader.BaseStream.Position);
             });
         }
 
-        [Test]
+        [Fact]
         public void ReadId_returns_id()
         {
             var expectedId = "ABCD";
             ParserHelper.WithBytes(expectedId.ToBytes(), reader => {
                 var id = ParserHelper.ReadId(reader);
-                Assert.AreEqual(expectedId, id);
-                Assert.AreEqual(4, reader.BaseStream.Position);
+                Assert.Equal(expectedId, id);
+                Assert.Equal(4, reader.BaseStream.Position);
             });
         }
 
-        [Test]
+        [Fact]
         public void ReadSize_returns_size()
         {
             WithHex("DEADBEEF", reader => {
                 var size = ParserHelper.ReadSize(reader);
-                Assert.AreEqual(0xDEADBEEF, size);
-                Assert.AreEqual(4, reader.BaseStream.Position);
+                Assert.Equal(0xDEADBEEF, size);
+                Assert.Equal(4, reader.BaseStream.Position);
             });
         }
 
-        [Test]
+        [Fact]
         public void ReadPayload_returns_payload()
         {
             var expectedPayload = "FEEDDEADBEEF".DecodeHex();
             var size = expectedPayload.Length;
             ParserHelper.WithBytes(expectedPayload, reader => {
                 var payload = ParserHelper.ReadPayload(reader, (uint)size);
-                Assert.AreEqual(expectedPayload, payload);
-                Assert.AreEqual(size, reader.BaseStream.Position);
+                Assert.Equal(expectedPayload, payload);
+                Assert.Equal(size, reader.BaseStream.Position);
             });
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256Plain_with_default_value()
         {
             var defVal = "ohai!";
             var plaintext = ParserHelper.DecryptAes256Plain("not a valid ciphertext".ToBytes(),
                                                             _encryptionKey,
                                                             defVal);
-            Assert.AreEqual(defVal, plaintext);
+            Assert.Equal(defVal, plaintext);
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256Base64_with_default_value()
         {
             var defVal = "ohai!";
             var plaintext = ParserHelper.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(),
                                                              _encryptionKey,
                                                              defVal);
-            Assert.AreEqual(defVal, plaintext);
+            Assert.Equal(defVal, plaintext);
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256Plain()
         {
             var tests = new[,] {
@@ -282,10 +282,10 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             for (var i = 0; i < tests.Rank; ++i)
-                Assert.AreEqual(tests[i, 0], ParserHelper.DecryptAes256Plain(tests[i, 1].Decode64(), _encryptionKey));
+                Assert.Equal(tests[i, 0], ParserHelper.DecryptAes256Plain(tests[i, 1].Decode64(), _encryptionKey));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256Base64()
         {
             var tests = new[,] {
@@ -295,10 +295,10 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             for (var i = 0; i < tests.Rank; ++i)
-                Assert.AreEqual(tests[i, 0], ParserHelper.DecryptAes256Base64(tests[i, 1].ToBytes(), _encryptionKey));
+                Assert.Equal(tests[i, 0], ParserHelper.DecryptAes256Base64(tests[i, 1].ToBytes(), _encryptionKey));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256EcbPlain()
         {
             var tests = new Dictionary<string, string> {
@@ -308,10 +308,10 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.AreEqual(i.Key, ParserHelper.DecryptAes256EcbPlain(i.Value.Decode64(), _encryptionKey));
+                Assert.Equal(i.Key, ParserHelper.DecryptAes256EcbPlain(i.Value.Decode64(), _encryptionKey));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256EcbBase64()
         {
             var tests = new Dictionary<string, string> {
@@ -321,10 +321,10 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.AreEqual(i.Key, ParserHelper.DecryptAes256EcbBase64(i.Value.ToBytes(), _encryptionKey));
+                Assert.Equal(i.Key, ParserHelper.DecryptAes256EcbBase64(i.Value.ToBytes(), _encryptionKey));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256CbcPlain()
         {
             var tests = new Dictionary<string, string> {
@@ -334,10 +334,10 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.AreEqual(i.Key, ParserHelper.DecryptAes256CbcPlain(i.Value.Decode64(), _encryptionKey));
+                Assert.Equal(i.Key, ParserHelper.DecryptAes256CbcPlain(i.Value.Decode64(), _encryptionKey));
         }
 
-        [Test]
+        [Fact]
         public void DecryptAes256CbcBase64()
         {
             var tests = new Dictionary<string, string> {
@@ -347,7 +347,7 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.AreEqual(i.Key, ParserHelper.DecryptAes256CbcBase64(i.Value.ToBytes(), _encryptionKey));
+                Assert.Equal(i.Key, ParserHelper.DecryptAes256CbcBase64(i.Value.ToBytes(), _encryptionKey));
         }
 
         //

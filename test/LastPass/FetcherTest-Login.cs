@@ -8,12 +8,12 @@ using System.Linq;
 using System.Net;
 using System.Xml;
 using Moq;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    partial class FetcherTest
+    public partial class FetcherTest
     {
         //
         // Shared data
@@ -97,7 +97,7 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             public MockWebClient(Request[] requests, int failIndex = -1)
             {
-                Assert.That(failIndex, Is.InRange(-1, requests.Length - 1));
+                Assert.InRange(failIndex, -1, requests.Length - 1);
 
                 Headers = new WebHeaderCollection();
                 _requests = requests;
@@ -108,7 +108,7 @@ namespace PasswordManagerAccess.Test.LastPass
             {
                 return CheckRequest(req =>
                 {
-                    Assert.That(req.Method, Is.EqualTo("GET"));
+                    Assert.Equal("GET", req.Method);
                     CheckCommonParts(req, address, null);
                 });
             }
@@ -117,7 +117,7 @@ namespace PasswordManagerAccess.Test.LastPass
             {
                 return CheckRequest(req =>
                 {
-                    Assert.That(req.Method, Is.EqualTo("POST"));
+                    Assert.Equal("POST", req.Method);
                     CheckCommonParts(req, address, data);
                 });
             }
@@ -126,12 +126,12 @@ namespace PasswordManagerAccess.Test.LastPass
 
             public void CheckFinished()
             {
-                Assert.That(_currentRequestIndex, Is.EqualTo(_requests.Length), "Too few requests have been made");
+                Assert.True(_requests.Length == _currentRequestIndex, "Too few requests have been made");
             }
 
             private byte[] CheckRequest(Action<Request> check)
             {
-                Assert.That(_currentRequestIndex, Is.LessThan(_requests.Length), "Too many requests");
+                Assert.True(_currentRequestIndex < _requests.Length, "Too many requests");
 
                 try
                 {
@@ -151,7 +151,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             private void CheckCommonParts(Request expected, string url, NameValueCollection parameters)
             {
-                Assert.That(url, Is.EqualTo(expected.Url));
+                Assert.Equal(expected.Url, url);
 
                 if (expected.Parameters != null)
                     CheckParameters(expected.Parameters, parameters);
@@ -159,27 +159,19 @@ namespace PasswordManagerAccess.Test.LastPass
 
             private void CheckParameters(Dictionary<string, string> expected, NameValueCollection actual)
             {
-                Assert.That(expected, Is.Not.Null);
-                Assert.That(actual, Is.Not.Null);
+                Assert.NotNull(expected);
+                Assert.NotNull(actual);
 
                 foreach (var expectedKey in expected)
                 {
                     var actualValues = actual.GetValues(expectedKey.Key);
-                    Assert.That(actualValues, Is.Not.Null, "Request parameter '{0}' is not found", expectedKey.Key);
-                    Assert.That(actualValues.Length,
-                                Is.EqualTo(1),
-                                "Request parameter '{0}' has multiple values",
-                                expectedKey.Key);
-                    Assert.That(actualValues[0],
-                                Is.EqualTo(expectedKey.Value),
-                                "Request parameter '{0}' is expected to be '{1}', got '{2}'",
-                                expectedKey.Key,
-                                expectedKey.Value,
-                                actualValues[0]);
+                    Assert.NotNull(actualValues);
+                    Assert.Single(actualValues);
+                    Assert.Equal(expectedKey.Value, actualValues[0]);
                 }
 
                 foreach (var key in actual.AllKeys)
-                    Assert.That(expected.ContainsKey(key), "Unexpected request parameter '{0}' found", key);
+                    Assert.Contains(key, expected.Keys);
             }
 
             private readonly Request[] _requests;
@@ -206,9 +198,10 @@ namespace PasswordManagerAccess.Test.LastPass
 
             // Test failure at each step
             for (var i = 0; i < requests.Length; ++i)
-                Assert.That(() => executeSequence(new MockWebClient(requests, i)),
-                            Throws.InstanceOf<LoginException>()
-                                .And.Property("Reason").EqualTo(LoginException.FailureReason.WebException));
+            {
+                var e = Assert.Throws<LoginException>(() => executeSequence(new MockWebClient(requests, i)));
+                Assert.Equal(LoginException.FailureReason.WebException, e.Reason);
+            }
         }
 
         private static readonly Dictionary<string, string> IterationsParameters = new Dictionary<string, string>
@@ -334,13 +327,13 @@ namespace PasswordManagerAccess.Test.LastPass
                                                             "<response />",
                                                             TrustParameters);
 
-        [Test]
+        [Fact]
         public void Basic_login_works()
         {
             CheckLoginSequence(new[] {IterationsValid, SimpleLoginOk});
         }
 
-        [Test]
+        [Fact]
         public void GoogleAuth_login_works()
         {
 
@@ -348,7 +341,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                SetupUi(GoogleAuthenticatorCode));
         }
 
-        [Test]
+        [Fact]
         public void Yubikey_login_works()
         {
 
@@ -356,7 +349,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                SetupUi(YubikeyPassword));
         }
 
-        [Test]
+        [Fact]
         public void LastPassAuth_login_works()
         {
 
@@ -364,7 +357,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                SetupUi(""));
         }
 
-        [Test]
+        [Fact]
         public void LastPassAuth_login_with_retry_works()
         {
 
@@ -380,28 +373,25 @@ namespace PasswordManagerAccess.Test.LastPass
                 SetupUi(""));
         }
 
-        [Test]
+        [Fact]
         public void Login_failed_because_of_invalid_iteration_count()
         {
-            Assert.That(() => LoginSequence(new[] {IterationsInvalid}),
-                        Throws.InstanceOf<LoginException>()
-                            .And.Property("Reason").EqualTo(LoginException.FailureReason.InvalidResponse)
-                            .And.Message.EqualTo("Iteration count is invalid")
-                            .And.InnerException.InstanceOf<FormatException>());
+            var e = Assert.Throws<LoginException>(() => LoginSequence(new[] {IterationsInvalid}));
+            Assert.Equal(LoginException.FailureReason.InvalidResponse, e.Reason);
+            Assert.Equal("Iteration count is invalid", e.Message);
+            Assert.IsType<FormatException>(e.InnerException);
         }
 
-        [Test]
+        [Fact]
         public void Login_failed_because_of_very_large_iteration_count()
         {
-            Assert.That(() => LoginSequence(new[] {IterationsTooBig}),
-                        Throws.InstanceOf<LoginException>()
-                            .And.Property("Reason").EqualTo(LoginException.FailureReason.InvalidResponse)
-                            .And.Message.EqualTo("Iteration count is invalid")
-                            .And.InnerException.InstanceOf<OverflowException>());
+            var e = Assert.Throws<LoginException>(() => LoginSequence(new[] {IterationsTooBig}));
+            Assert.Equal(LoginException.FailureReason.InvalidResponse, e.Reason);
+            Assert.Equal("Iteration count is invalid", e.Message);
+            Assert.IsType<OverflowException>(e.InnerException);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_invalid_xml()
         {
             LoginAndVerifyExceptionInLoginRequest<XmlException>(new ResponseOrException("Invalid XML!"),
@@ -409,8 +399,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                                 "Invalid XML in response");
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_unknown_email()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("unknownemail", "Unknown email address."),
@@ -418,8 +407,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   "Invalid username");
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_invalid_password()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("unknownpassword", "Invalid password!"),
@@ -427,8 +415,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   "Invalid password");
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_missing_google_authenticator_code()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("googleauthrequired",
@@ -437,8 +424,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   IncorrectGoogleAuthenticatorCodeMessage);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_incorrect_google_authenticator_code()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("googleauthfailed",
@@ -447,8 +433,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   IncorrectGoogleAuthenticatorCodeMessage);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_missing_yubikey_password()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("otprequired",
@@ -457,8 +442,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   IncorrectYubikeyPasswordMessage);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_incorrect_yubikey_password()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("otprequired",
@@ -467,8 +451,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   IncorrectYubikeyPasswordMessage);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_out_of_band_authentication_required()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("outofbandrequired",
@@ -477,8 +460,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   "Out of band authentication required");
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_out_of_band_authentication_failed()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse("multifactorresponsefailed",
@@ -487,8 +469,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   "Out of band authentication failed");
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_for_other_reason_with_message()
         {
             LoginAndVerifyExceptionInLoginRequest(FormatResponse(OtherCause, OtherReasonMessage),
@@ -496,8 +477,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   OtherReasonMessage);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_for_other_reason_without_message()
         {
             LoginAndVerifyExceptionInLoginRequest(new ResponseOrException(string.Format("<response><error cause=\"{0}\"/></response>",
@@ -506,8 +486,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   OtherCause);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_with_message_without_cause()
         {
             LoginAndVerifyExceptionInLoginRequest(new ResponseOrException(string.Format("<response><error message=\"{0}\"/></response>",
@@ -516,8 +495,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   OtherReasonMessage);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_for_unknown_reason_with_error_element()
         {
             LoginAndVerifyExceptionInLoginRequest(new ResponseOrException("<response><error /></response>"),
@@ -525,8 +503,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   "Unknown reason");
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_failed_because_of_unknown_xml_schema()
         {
             LoginAndVerifyExceptionInLoginRequest(new ResponseOrException("<response />"),
@@ -534,73 +511,63 @@ namespace PasswordManagerAccess.Test.LastPass
                                                   "Unknown response schema");
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_makes_iterations_request()
         {
             LoginAndVerifyIterationsRequest(NoMultifactorPassword, ExpectedIterationsRequestValues);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_makes_iterations_request_with_google_authenticator()
         {
             LoginAndVerifyIterationsRequest(GoogleAuthenticatorCode, ExpectedIterationsRequestValues);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_makes_iterations_request_with_yubikey()
         {
             LoginAndVerifyIterationsRequest(YubikeyPassword, ExpectedIterationsRequestValues);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_makes_login_request_without_multifactor_password()
         {
             LoginAndVerifyLoginRequest(NoMultifactorPassword, ExpectedLoginRequestValues);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_makes_login_request_with_google_authenticator()
         {
             LoginAndVerifyLoginRequest(GoogleAuthenticatorCode,
                                        new NameValueCollection(ExpectedLoginRequestValues) {{"otp", GoogleAuthenticatorCode}});
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_makes_login_request_with_yubikey()
         {
             LoginAndVerifyLoginRequest(YubikeyPassword,
                                        new NameValueCollection(ExpectedLoginRequestValues) {{"otp", YubikeyPassword}});
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_returns_session_without_multifactor_password()
         {
             LoginAndVerifySession(NoMultifactorPassword);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_returns_session_with_google_authenticator()
         {
             LoginAndVerifySession(GoogleAuthenticatorCode);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_returns_session_with_yubikey_password()
         {
             LoginAndVerifySession(YubikeyPassword);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_returns_session_without_private_key()
         {
             LoginAndVerifySession(NoMultifactorPassword,
@@ -608,8 +575,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                   expectedPrivateKey: null);
         }
 
-        [Test]
-        [Ignore("TODO: this test is no longer valid")]
+        [Fact(Skip = "TODO: this test is no longer valid")]
         public void Login_returns_session_with_blank_private_key()
         {
             LoginAndVerifySession(NoMultifactorPassword,
@@ -700,7 +666,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                     null,
                                     reason,
                                     message,
-                                    Assert.IsInstanceOf<TInnerExceptionType>);
+                                    e => Assert.IsType<TInnerExceptionType>(e));
         }
 
         // See the overload with an action.
@@ -711,7 +677,7 @@ namespace PasswordManagerAccess.Test.LastPass
             LoginAndVerifyExceptionInLoginRequest(loginResponseOrException,
                                                   reason,
                                                   message,
-                                                  Assert.IsInstanceOf<TInnerExceptionType>);
+                                                  e => Assert.IsType<TInnerExceptionType>(e));
         }
 
         // See the overload with an action.
@@ -719,7 +685,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                                   LoginException.FailureReason reason,
                                                                   string message)
         {
-            LoginAndVerifyExceptionInLoginRequest(loginResponseOrException, reason, message, Assert.IsNull);
+            LoginAndVerifyExceptionInLoginRequest(loginResponseOrException, reason, message, Assert.Null);
         }
 
         // Fail in login request and verify the exception.
@@ -751,8 +717,8 @@ namespace PasswordManagerAccess.Test.LastPass
                                                       iterationsResponseOrException,
                                                       loginResponseOrException);
 
-            Assert.AreEqual(reason, exception.Reason);
-            Assert.AreEqual(message, exception.Message);
+            Assert.Equal(reason, exception.Reason);
+            Assert.Equal(message, exception.Message);
             verifyInnerException(exception.InnerException);
         }
 
@@ -789,9 +755,9 @@ namespace PasswordManagerAccess.Test.LastPass
             Session session;
             SuccessfullyLogin(multifactorPassword, response, out session);
 
-            Assert.AreEqual(SessionId, session.Id);
-            Assert.AreEqual(IterationCount, session.KeyIterationCount);
-            Assert.AreEqual(expectedPrivateKey, session.EncryptedPrivateKey);
+            Assert.Equal(SessionId, session.Id);
+            Assert.Equal(IterationCount, session.KeyIterationCount);
+            Assert.Equal(expectedPrivateKey, session.EncryptedPrivateKey);
         }
 
         private static bool AreEqual(NameValueCollection a, NameValueCollection b)

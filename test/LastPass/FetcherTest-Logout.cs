@@ -5,12 +5,12 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using Moq;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    partial class FetcherTest
+    public partial class FetcherTest
     {
         private const string LogoutUrl = "https://lastpass.com/logout.php";
 
@@ -18,22 +18,23 @@ namespace PasswordManagerAccess.Test.LastPass
         // Logout tests
         //
 
-        [Test]
+        [Fact]
         public void Logout_failed_because_of_WebException()
         {
             var webClient = SetupLogout(new ResponseOrException(new WebException()));
             Assert.Throws<LogoutException>(() => Fetcher.Logout(Session, webClient.Object));
         }
 
-        [Test]
+        [Fact]
         public void Logout_sets_session_id_cookie()
         {
             var headers = new WebHeaderCollection();
             SuccessfullyLogout(headers);
 
-            Assert.AreEqual(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
+            Assert.Equal(string.Format("PHPSESSID={0}", Uri.EscapeDataString(SessionId)), headers["Cookie"]);
         }
 
+        [Fact]
         public void Logout_makes_POST_request_to_correct_url()
         {
             var webClient = SuccessfullyLogout();
@@ -41,6 +42,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                                  It.IsAny<NameValueCollection>()));
         }
 
+        [Fact]
         public void Logout_makes_POST_request_with_correct_parameters()
         {
             var expectedValues = new NameValueCollection

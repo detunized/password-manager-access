@@ -2,11 +2,11 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using NUnit.Framework;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
+#if DELETE_THIS
     class Pbkdf2Test
     {
         private struct TestData
@@ -36,7 +36,7 @@ namespace PasswordManagerAccess.Test.LastPass
             new TestData("pass\0word", "sa\0lt", 4096, "ibadBRb4KYk8aWImZQqGhw==")
         };
 
-        [Test]
+        [Fact]
         public void Generate_returns_correct_result()
         {
             foreach (var i in _testData)
@@ -53,25 +53,26 @@ namespace PasswordManagerAccess.Test.LastPass
             }
         }
 
-        [Test]
+        [Fact]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
         public void Generate_throws_on_zero_iterationCount()
         {
             Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, 0, _testData[0].Expected.Decode64().Length);
         }
 
-        [Test]
+        [Fact]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
         public void Generate_throws_on_negative_iterationCount()
         {
             Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, -1, _testData[0].Expected.Decode64().Length);
         }
 
-        [Test]
+        [Fact]
         [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Byte count should be nonnegative\r\nParameter name: byteCount")]
         public void Generate_throws_on_negative_byteCount()
         {
             Pbkdf2.Generate(_testData[0].Password, _testData[0].Salt, _testData[0].IterationCount, -1);
         }
     }
+#endif
 }

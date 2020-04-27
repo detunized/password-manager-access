@@ -3,88 +3,86 @@
 
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    class ExtensionsTest
+    public class ExtensionsTest
     {
-        [Test]
+        [Fact]
         public void Reverse()
         {
-            Assert.AreEqual(0u, 0u.Reverse());
-            Assert.AreEqual(0xffu, 0xff000000u.Reverse());
-            Assert.AreEqual(0xff000000u, 0xffu.Reverse());
-            Assert.AreEqual(0xff00ff00u, 0xff00ffu.Reverse());
-            Assert.AreEqual(0x78563412u, 0x12345678u.Reverse());
-            Assert.AreEqual(0xdeadbeefu, 0xefbeaddeu.Reverse());
+            Assert.Equal(0u, 0u.Reverse());
+            Assert.Equal(0xffu, 0xff000000u.Reverse());
+            Assert.Equal(0xff000000u, 0xffu.Reverse());
+            Assert.Equal(0xff00ff00u, 0xff00ffu.Reverse());
+            Assert.Equal(0x78563412u, 0x12345678u.Reverse());
+            Assert.Equal(0xdeadbeefu, 0xefbeaddeu.Reverse());
         }
 
-        [Test]
+        [Fact]
         public void FromBigEndian()
         {
-            Assert.AreEqual(0u, BitConverter.ToUInt32(new byte[] {0x00, 0x00, 0x00, 0x00}, 0).FromBigEndian());
-            Assert.AreEqual(0x12345678u, BitConverter.ToUInt32(new byte[] {0x12, 0x34, 0x56, 0x78}, 0).FromBigEndian());
-            Assert.AreEqual(0xdeadbeefu, BitConverter.ToUInt32(new byte[] {0xde, 0xad, 0xbe, 0xef}, 0).FromBigEndian());
+            Assert.Equal(0u, BitConverter.ToUInt32(new byte[] {0x00, 0x00, 0x00, 0x00}, 0).FromBigEndian());
+            Assert.Equal(0x12345678u, BitConverter.ToUInt32(new byte[] {0x12, 0x34, 0x56, 0x78}, 0).FromBigEndian());
+            Assert.Equal(0xdeadbeefu, BitConverter.ToUInt32(new byte[] {0xde, 0xad, 0xbe, 0xef}, 0).FromBigEndian());
         }
 
-        [Test]
+        [Fact]
         public void ToUtf8()
         {
-            Assert.AreEqual("", new byte[] {}.ToUtf8());
-            Assert.AreEqual(_helloUtf8, _helloUtf8Bytes.ToUtf8());
+            Assert.Equal("", new byte[] {}.ToUtf8());
+            Assert.Equal(_helloUtf8, _helloUtf8Bytes.ToUtf8());
         }
 
-        [Test]
+        [Fact]
         public void ToHex()
         {
             foreach (var i in _hexToBytes)
-                Assert.AreEqual(i.Key, i.Value.ToHex());
+                Assert.Equal(i.Key, i.Value.ToHex());
         }
 
-        [Test]
+        [Fact]
         public void ToBytes()
         {
-            Assert.AreEqual(new byte[] {}, "".ToBytes());
-            Assert.AreEqual(_helloUtf8Bytes, _helloUtf8.ToBytes());
+            Assert.Equal(new byte[] {}, "".ToBytes());
+            Assert.Equal(_helloUtf8Bytes, _helloUtf8.ToBytes());
         }
 
-        [Test]
+        [Fact]
         public void DecodeHex()
         {
             foreach (var i in _hexToBytes)
             {
-                Assert.AreEqual(i.Value, i.Key.DecodeHex());
-                Assert.AreEqual(i.Value, i.Key.ToUpper().DecodeHex());
+                Assert.Equal(i.Value, i.Key.DecodeHex());
+                Assert.Equal(i.Value, i.Key.ToUpper().DecodeHex());
             }
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Input length must be multiple of 2")]
+        [Fact]
         public void DecodeHex_throws_on_odd_length()
         {
-            "0".DecodeHex();
+            Assert.Throws<ArgumentException>(() => "0".DecodeHex());
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentException), ExpectedMessage = "Input contains invalid characters")]
+        [Fact]
         public void DecodeHex_throws_on_non_hex_characters()
         {
-            "xz".DecodeHex();
+            Assert.Throws<ArgumentException>(() => "xz".DecodeHex());
         }
 
-        [Test]
+        [Fact]
         public void Decode64()
         {
-            Assert.AreEqual(new byte[] {}, "".Decode64());
-            Assert.AreEqual(new byte[] {0x61}, "YQ==".Decode64());
-            Assert.AreEqual(new byte[] {0x61, 0x62}, "YWI=".Decode64());
-            Assert.AreEqual(new byte[] {0x61, 0x62, 0x63}, "YWJj".Decode64());
-            Assert.AreEqual(new byte[] {0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
+            Assert.Equal(new byte[] {}, "".Decode64());
+            Assert.Equal(new byte[] {0x61}, "YQ==".Decode64());
+            Assert.Equal(new byte[] {0x61, 0x62}, "YWI=".Decode64());
+            Assert.Equal(new byte[] {0x61, 0x62, 0x63}, "YWJj".Decode64());
+            Assert.Equal(new byte[] {0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
         }
 
-        [Test]
+        [Fact]
         public void Times()
         {
             var times = new int[] {0, 1, 2, 5, 10};
@@ -92,7 +90,7 @@ namespace PasswordManagerAccess.Test.LastPass
             {
                 var called = 0;
                 i.Times(() => ++called);
-                Assert.AreEqual(i, called);
+                Assert.Equal(i, called);
             }
         }
 

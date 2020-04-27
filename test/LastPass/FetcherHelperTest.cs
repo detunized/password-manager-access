@@ -3,14 +3,14 @@
 
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using PasswordManagerAccess.LastPass;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    [TestFixture]
-    class FetcherHelperTest
+    public class FetcherHelperTest
     {
-        [Test]
+        [Fact]
         public void MakeKey()
         {
             var testCases = new Dictionary<int, string>
@@ -27,25 +27,25 @@ namespace PasswordManagerAccess.Test.LastPass
             foreach (var i in testCases)
             {
                 var result = FetcherHelper.MakeKey(Username, Password, i.Key);
-                Assert.AreEqual(i.Value.Decode64(), result);
+                Assert.Equal(i.Value.Decode64(), result);
             }
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
+        [Fact]
         public void MakeKey_throws_on_zero_iterationCount()
         {
-            FetcherHelper.MakeKey(Username, Password, 0);
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => FetcherHelper.MakeKey(Username, Password, 0));
+            Assert.StartsWith("Iteration count should be positive", e.Message);
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
+        [Fact]
         public void MakeKey_throws_on_negative_iterationCount()
         {
-            FetcherHelper.MakeKey(Username, Password, -1);
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => FetcherHelper.MakeKey(Username, Password, -1));
+            Assert.StartsWith("Iteration count should be positive", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void MakeHash()
         {
             var testCases = new Dictionary<int, string>
@@ -62,22 +62,22 @@ namespace PasswordManagerAccess.Test.LastPass
             foreach (var i in testCases)
             {
                 var result = FetcherHelper.MakeHash(Username, Password, i.Key);
-                Assert.AreEqual(i.Value, result);
+                Assert.Equal(i.Value, result);
             }
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
+        [Fact]
         public void MakeHash_throws_on_zero_iterationCount()
         {
-            FetcherHelper.MakeHash(Username, Password, 0);
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => FetcherHelper.MakeHash(Username, Password, 0));
+            Assert.StartsWith("Iteration count should be positive", e.Message);
         }
 
-        [Test]
-        [ExpectedException(typeof(ArgumentOutOfRangeException), ExpectedMessage = "Iteration count should be positive\r\nParameter name: iterationCount")]
+        [Fact]
         public void MakeHash_throws_on_negative_iterationCount()
         {
-            FetcherHelper.MakeHash(Username, Password, -1);
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => FetcherHelper.MakeHash(Username, Password, -1));
+            Assert.StartsWith("Iteration count should be positive", e.Message);
         }
 
         private const string Username = "postlass@gmail.com";
