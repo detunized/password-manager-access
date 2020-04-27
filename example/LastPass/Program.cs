@@ -58,14 +58,14 @@ namespace PasswordManagerAccess.Example.LastPass
                                       "  username: {3}\n" +
                                       "  password: {4}\n" +
                                       "       url: {5}\n" +
-                                      "     group: {6}\n",
+                                      "      path: {6}\n",
                                       i + 1,
                                       account.Id,
                                       account.Name,
                                       account.Username,
                                       account.Password,
                                       account.Url,
-                                      account.Group);
+                                      account.Path);
                 }
             }
             catch (LoginException e)

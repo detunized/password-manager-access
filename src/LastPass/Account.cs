@@ -3,24 +3,23 @@
 
 namespace PasswordManagerAccess.LastPass
 {
-    // TODO: Rename Group to Path since it reflects the actual meaning better.
     public class Account
     {
-        public Account(string id, string name, string username, string password, string url, string group)
+        public readonly string Id;
+        public readonly string Name;
+        public readonly string Username;
+        public readonly string Password;
+        public readonly string Url;
+        public readonly string Path;
+
+        public Account(string id, string name, string username, string password, string url, string path)
         {
             Id = id;
             Name = name;
             Username = username;
             Password = password;
             Url = url;
-            Group = group;
+            Path = path;
         }
-
-        public string Id { get; private set; }
-        public string Name { get; private set; }
-        public string Username { get; private set; }
-        public string Password { get; private set; }
-        public string Url { get; private set; }
-        public string Group { get; private set; }
-    }
+   }
 }

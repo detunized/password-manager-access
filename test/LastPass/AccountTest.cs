@@ -16,15 +16,16 @@ namespace PasswordManagerAccess.Test.LastPass
             var username = "username";
             var password = "password";
             var url = "url";
-            var group = "group";
+            var path = "path/to/item";
 
-            var account = new Account(id, name, username, password, url, group);
+            var account = new Account(id, name, username, password, url, path);
+
             Assert.Equal(id, account.Id);
             Assert.Equal(name, account.Name);
             Assert.Equal(username, account.Username);
             Assert.Equal(password, account.Password);
             Assert.Equal(url, account.Url);
-            Assert.Equal(group, account.Group);
+            Assert.Equal(path, account.Path);
         }
     }
 }
