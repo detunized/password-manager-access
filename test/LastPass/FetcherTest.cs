@@ -4,8 +4,8 @@
 using System;
 using Moq.Language;
 using Moq.Language.Flow;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
-using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {

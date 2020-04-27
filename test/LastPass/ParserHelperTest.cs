@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
 

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Xml;
 using Moq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
 

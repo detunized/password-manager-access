@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
 

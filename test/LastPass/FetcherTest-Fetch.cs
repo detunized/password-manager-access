@@ -4,6 +4,7 @@
 using System;
 using System.Net;
 using Moq;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
 
