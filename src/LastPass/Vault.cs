@@ -1,7 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Security.Cryptography;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass
 {
@@ -16,12 +16,7 @@ namespace PasswordManagerAccess.LastPass
 
         public static string GenerateRandomClientId()
         {
-            using (var random = new RNGCryptoServiceProvider())
-            {
-                var bytes = new byte[16];
-                random.GetBytes(bytes);
-                return bytes.ToHex();
-            }
+            return Crypto.RandomHex(32);
         }
 
         //
