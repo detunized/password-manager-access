@@ -7,7 +7,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass
 {
-    static class FetcherHelper
+    internal static class FetcherHelper
     {
         public static byte[] MakeKey(string username, string password, int iterationCount)
         {

@@ -3,7 +3,7 @@
 
 namespace PasswordManagerAccess.LastPass
 {
-    public class SharedFolder
+    internal class SharedFolder
     {
         public SharedFolder(string id, string name, byte[] encryptionKey)
         {

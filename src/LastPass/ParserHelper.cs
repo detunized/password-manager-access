@@ -11,7 +11,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass
 {
-    static class ParserHelper
+    internal static class ParserHelper
     {
         public class Chunk
         {

@@ -12,7 +12,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass
 {
-    static class Fetcher
+    internal static class Fetcher
     {
         public static Session Login(string username, string password, ClientInfo clientInfo, Ui ui)
         {

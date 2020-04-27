@@ -4,7 +4,7 @@
 namespace PasswordManagerAccess.LastPass
 {
     [System.ComponentModel.DesignerCategory("Code")]
-    public class WebClient: System.Net.WebClient, IWebClient
+    internal class WebClient: System.Net.WebClient, IWebClient
     {
     }
 }

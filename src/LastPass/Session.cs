@@ -3,7 +3,7 @@
 
 namespace PasswordManagerAccess.LastPass
 {
-    class Session
+    internal class Session
     {
         public Session(string id, int keyIterationCount, string token, string encryptedPrivateKey, Platform platform)
         {

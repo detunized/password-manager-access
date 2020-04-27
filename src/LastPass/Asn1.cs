@@ -10,7 +10,7 @@ namespace PasswordManagerAccess.LastPass
     // Very-very basic ASN.1 parser. Just enough to extract the RSA key
     // parameters stored in a vault. Supports only sequences, octet strings
     // and numbers. Error handling is minimal too.
-    static class Asn1
+    internal static class Asn1
     {
         public enum Kind
         {
