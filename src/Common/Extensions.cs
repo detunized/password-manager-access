@@ -356,19 +356,6 @@ namespace PasswordManagerAccess.Common
             return result;
         }
 
-        public static uint ReadUInt32LittleEndian(this BinaryReader r)
-        {
-            var result = r.ReadUInt32();
-
-            if (!BitConverter.IsLittleEndian)
-                result = ((result & 0x000000FF) << 24) |
-                         ((result & 0x0000FF00) << 8) |
-                         ((result & 0x00FF0000) >> 8) |
-                         ((result & 0xFF000000) >> 24);
-
-            return result;
-        }
-
         public static uint ReadUInt32BigEndian(this BinaryReader r)
         {
             var result = r.ReadUInt32();
