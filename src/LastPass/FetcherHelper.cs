@@ -22,7 +22,7 @@ namespace PasswordManagerAccess.LastPass
                 }
             }
 
-            return Pbkdf2.Generate(password, username, iterationCount, 32);
+            return Pbkdf2.GenerateSha256(password.ToBytes(), username.ToBytes(), iterationCount, 32);
         }
 
         public static string MakeHash(string username, string password, int iterationCount)
@@ -39,7 +39,7 @@ namespace PasswordManagerAccess.LastPass
                 }
             }
 
-            return Pbkdf2.Generate(key, password, 1, 32).ToHex();
+            return Pbkdf2.GenerateSha256(key, password.ToBytes(), 1, 32).ToHex();
         }
     }
 }
