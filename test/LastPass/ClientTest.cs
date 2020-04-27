@@ -22,8 +22,15 @@ namespace PasswordManagerAccess.Test.LastPass
                                              TestData.EncryptionKey);
 
             Assert.Equal(TestData.Accounts.Length, accounts.Length);
-            Assert.Equal(TestData.Accounts.Select(i => i.Id), accounts.Select(i => i.Id));
-            Assert.Equal(TestData.Accounts.Select(i => i.Url), accounts.Select(i => i.Url));
+            for (var i = 0; i < accounts.Length; i++)
+            {
+                Assert.Equal(TestData.Accounts[i].Id, accounts[i].Id);
+                Assert.Equal(TestData.Accounts[i].Name, accounts[i].Name);
+                Assert.Equal(TestData.Accounts[i].Username, accounts[i].Username);
+                Assert.Equal(TestData.Accounts[i].Password, accounts[i].Password);
+                Assert.Equal(TestData.Accounts[i].Url, accounts[i].Url);
+                Assert.Equal(TestData.Accounts[i].Group, accounts[i].Path);
+            }
         }
 
         [Fact]
