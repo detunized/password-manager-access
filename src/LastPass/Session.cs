@@ -5,6 +5,12 @@ namespace PasswordManagerAccess.LastPass
 {
     internal class Session
     {
+        public readonly string Id;
+        public readonly int KeyIterationCount;
+        public readonly string Token;
+        public readonly string EncryptedPrivateKey;
+        public readonly Platform Platform;
+
         public Session(string id, int keyIterationCount, string token, string encryptedPrivateKey, Platform platform)
         {
             Id = id;
@@ -13,11 +19,5 @@ namespace PasswordManagerAccess.LastPass
             EncryptedPrivateKey = encryptedPrivateKey;
             Platform = platform;
         }
-
-        public string Id { get; private set; }
-        public int KeyIterationCount { get; private set; }
-        public string Token { get; private set; }
-        public string EncryptedPrivateKey { get; private set; }
-        public Platform Platform { get; private set; }
     }
 }
