@@ -317,8 +317,8 @@ namespace PasswordManagerAccess.LastPass
             return new Session(sessionId.Value,
                                keyIterationCount,
                                token.Value,
-                               GetEncryptedPrivateKey(ok),
-                               clientInfo.Platform);
+                               clientInfo.Platform,
+                               GetEncryptedPrivateKey(ok));
         }
 
         private static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)

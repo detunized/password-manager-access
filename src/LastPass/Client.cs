@@ -55,6 +55,35 @@ namespace PasswordManagerAccess.LastPass
             if (session != null)
                 return session;
 
+            // 3. The simple login failed. This is usually due to some error, invalid credentials or
+            //    a multifactor authentication being enabled.
+            var cause = GetOptionalErrorAttribute(response, "cause");
+
+            // 3.1. One-time-password is required
+            if (KnownOtpMethods.TryGetValue(cause, out var otpMethod))
+                session = LoginWithOtp(username,
+                                       password,
+                                       keyIterationCount,
+                                       otpMethod,
+                                       clientInfo,
+                                       ui,
+                                       rest);
+
+            // 3.2. Some out-of-bound authentication is enabled. This does not require any
+            //      additional input from the user.
+            else if (cause == "outofbandrequired")
+                session = LoginWithOob(username,
+                                       password,
+                                       keyIterationCount,
+                                       ExtractOobMethodFromLoginResponse(response),
+                                       clientInfo,
+                                       ui,
+                                       rest);
+
+            // Nothing worked
+            if (session == null)
+                throw MakeLoginError(response);
+
             // TODO: Work in progress...
 
             return null;
@@ -105,6 +134,63 @@ namespace PasswordManagerAccess.LastPass
             throw MakeError(response);
         }
 
+        // Returns a valid session or throws
+        internal static Session LoginWithOtp(string username,
+                                             string password,
+                                             int keyIterationCount,
+                                             Ui.SecondFactorMethod method,
+                                             ClientInfo clientInfo,
+                                             Ui ui,
+                                             RestClient rest)
+        {
+            // TODO: Support cancellation
+            var otp = ui.ProvideSecondFactorPassword(method);
+            var response = PerformSingleLoginRequest(username,
+                                                     password,
+                                                     keyIterationCount,
+                                                     new Dictionary<string, object> {["otp"] = otp},
+                                                     clientInfo,
+                                                     rest);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+            if (session != null)
+                return session;
+
+            throw MakeLoginError(response);
+        }
+
+        // Returns a valid session or throws
+        internal static Session LoginWithOob(string username,
+                                             string password,
+                                             int keyIterationCount,
+                                             Ui.OutOfBandMethod method,
+                                             ClientInfo clientInfo,
+                                             Ui ui,
+                                             RestClient rest)
+        {
+            var extraParameters = new Dictionary<string, object> {["outofbandrequest"] = 1};
+
+            ui.AskToApproveOutOfBand(method);
+            for (;;)
+            {
+                var response = PerformSingleLoginRequest(username,
+                                                         password,
+                                                         keyIterationCount,
+                                                         extraParameters,
+                                                         clientInfo,
+                                                         rest);
+                var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+                if (session != null)
+                    return session;
+
+                if (GetOptionalErrorAttribute(response, "cause") != "outofbandrequired")
+                    throw MakeLoginError(response);
+
+                // Retry
+                extraParameters["outofbandretry"] = "1";
+                extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
+            }
+        }
+
         internal static XDocument ParseXml(RestResponse<string> response)
         {
             try
@@ -136,19 +222,47 @@ namespace PasswordManagerAccess.LastPass
             return new Session(sessionId.Value,
                                keyIterationCount,
                                token.Value,
-                               GetEncryptedPrivateKey(ok),
-                               clientInfo.Platform);
+                               clientInfo.Platform,
+                               GetEncryptedPrivateKey(ok));
+        }
+
+        internal static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
+        {
+            var type = GetErrorAttribute(response, "outofbandtype");
+            if (KnownOobMethods.TryGetValue(type, out var oobMethod))
+                return oobMethod;
+
+            var name = GetOptionalErrorAttribute(response, "outofbandname");
+            throw new UnsupportedFeatureException($"Out-of-band method '{name ?? type}' is not supported");
         }
 
         internal static string GetEncryptedPrivateKey(XElement ok)
         {
-            var attr = ok.Attribute("privatekeyenc");
+            var attribute = ok.Attribute("privatekeyenc");
 
             // Returned value could be missing or blank. In both of these cases we need null.
-            if (attr == null || attr.Value.IsNullOrEmpty())
+            if (attribute == null || attribute.Value.IsNullOrEmpty())
                 return null;
 
-            return attr.Value;
+            return attribute.Value;
+        }
+
+        // returns a valid string or throws
+        internal static string GetErrorAttribute(XDocument response, string name)
+        {
+            var attribute = GetOptionalErrorAttribute(response, name);
+            if (attribute != null)
+                return attribute;
+
+            throw new InternalErrorException($"Unknown response schema: attribute '{name}' is missing");
+        }
+
+        internal static string GetOptionalErrorAttribute(XDocument response, string name)
+        {
+            return response
+                .XPathSelectElement("response/error")?
+                .Attribute(name)?
+                .Value;
         }
 
         internal static Account[] ParseVault(Blob blob, byte[] encryptionKey)
@@ -222,6 +336,11 @@ namespace PasswordManagerAccess.LastPass
                 response.Error);
         }
 
+        private static Exception MakeLoginError(XDocument response)
+        {
+            return new InternalErrorException("TODO");
+        }
+
         //
         // Data
         //
@@ -231,5 +350,21 @@ namespace PasswordManagerAccess.LastPass
             [Platform.Desktop] = "cli",
             [Platform.Mobile] = "android",
         };
+
+        private static readonly Dictionary<string, Ui.SecondFactorMethod> KnownOtpMethods =
+            new Dictionary<string, Ui.SecondFactorMethod>
+            {
+                ["googleauthrequired"] = Ui.SecondFactorMethod.GoogleAuth,
+                ["microsoftauthrequired"] = Ui.SecondFactorMethod.MicrosoftAuth,
+                ["otprequired"] = Ui.SecondFactorMethod.Yubikey,
+            };
+
+        private static readonly Dictionary<string, Ui.OutOfBandMethod> KnownOobMethods =
+            new Dictionary<string, Ui.OutOfBandMethod>
+            {
+                ["lastpassauth"] = Ui.OutOfBandMethod.LastPassAuth,
+                ["toopher"] = Ui.OutOfBandMethod.Toopher,
+                ["duo"] = Ui.OutOfBandMethod.Duo,
+            };
     }
 }

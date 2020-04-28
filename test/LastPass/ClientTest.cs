@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
@@ -16,16 +17,12 @@ namespace PasswordManagerAccess.Test.LastPass
         public void Login_returns_session()
         {
             var flow = new RestFlow()
-                .Post("1337")
+                .Post(KeyIterationCount.ToString())
                 .Post(OkResponse);
 
             var session = Client.Login(Username, Password, ClientInfo, null, flow);
 
-            Assert.Equal("session-id", session.Id);
-            Assert.Equal(1337, session.KeyIterationCount);
-            Assert.Equal("token", session.Token);
-            Assert.Equal("private-key", session.EncryptedPrivateKey);
-            Assert.Equal(Platform.Desktop, session.Platform);
+            AssertSessionWithPrivateKey(session);
         }
 
         [Theory]
@@ -87,19 +84,85 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("https://lastpass.com/login.php")
                     .ExpectContent("method=cli")
                     .ExpectContent($"username={Username}")
-                    .ExpectContent("iterations=1337")
+                    .ExpectContent($"iterations={KeyIterationCount}")
                     .ExpectContent($"trustlabel={ClientInfo.Description}");
 
             Client.PerformSingleLoginRequest(Username,
                                              Password,
-                                             1337,
+                                             KeyIterationCount,
                                              new Dictionary<string, object>(),
                                              ClientInfo,
                                              flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
-        public void ParseXml_returns_parsed_xml()
+        public void LoginWithOtp_returns_session()
+        {
+            var flow = new RestFlow().Post(OkResponse);
+            var session = Client.LoginWithOtp(Username,
+                                              Password,
+                                              KeyIterationCount,
+                                              Ui.SecondFactorMethod.GoogleAuth,
+                                              ClientInfo,
+                                              new OtpProvidingUi(),
+                                              flow);
+
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void LoginWithOtp_passes_otp_in_POST_parameters()
+        {
+            var flow = new RestFlow()
+                .Post(OkResponse)
+                    .ExpectContent($"otp={Otp}");
+
+            Client.LoginWithOtp(Username,
+                                Password,
+                                KeyIterationCount,
+                                Ui.SecondFactorMethod.GoogleAuth,
+                                ClientInfo,
+                                new OtpProvidingUi(),
+                                flow);
+        }
+
+        [Fact]
+        public void LoginWithOob_returns_session()
+        {
+            var flow = new RestFlow().Post(OkResponse);
+            var session = Client.LoginWithOob(Username,
+                                              Password,
+                                              KeyIterationCount,
+                                              Ui.OutOfBandMethod.LastPassAuth,
+                                              ClientInfo,
+                                              new OtpProvidingUi(),
+                                              flow);
+
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void LoginWithOob_retries_after_unsuccessful_attempt()
+        {
+            var flow = new RestFlow()
+                .Post(OobRetryResponse)
+                .Post(OkResponse)
+                    .ExpectContent("outofbandretry=1")
+                    .ExpectContent("outofbandretryid=retry-id");
+
+            var session = Client.LoginWithOob(Username,
+                                              Password,
+                                              KeyIterationCount,
+                                              Ui.OutOfBandMethod.LastPassAuth,
+                                              ClientInfo,
+                                              new OtpProvidingUi(),
+                                              flow);
+
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+         public void ParseXml_returns_parsed_xml()
         {
             var response = new RestResponse<string> {Content = "<ok />"};
 
@@ -118,6 +181,78 @@ namespace PasswordManagerAccess.Test.LastPass
             Exceptions.AssertThrowsInternalError(
                 () => Client.ParseXml(response),
                 "Failed to parse XML in response from https://int.er.net");
+        }
+
+        [Fact]
+        public void ExtractSessionFromLoginResponse_returns_session()
+        {
+            var xml = XDocument.Parse(OkResponse);
+            var session = Client.ExtractSessionFromLoginResponse(xml, KeyIterationCount, ClientInfo);
+
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Theory]
+        [InlineData(OkResponseNoPrivateKey)]
+        [InlineData(OkResponseBlankPrivateKey)]
+        public void ExtractSessionFromLoginResponse_returns_session_without_private_key(string response)
+        {
+            var xml = XDocument.Parse(response);
+            var session = Client.ExtractSessionFromLoginResponse(xml, KeyIterationCount, ClientInfo);
+
+            AssertSessionWithoutPrivateKey(session);
+        }
+
+        [Theory]
+        [InlineData("<response><error outofbandtype='lastpassauth' /></response>", Ui.OutOfBandMethod.LastPassAuth)]
+        [InlineData("<response><error outofbandtype='toopher' /></response>", Ui.OutOfBandMethod.Toopher)]
+        [InlineData("<response><error outofbandtype='duo' /></response>", Ui.OutOfBandMethod.Duo)]
+        public void ExtractOobMethodFromLoginResponse_returns_oob_method(string response, Ui.OutOfBandMethod expected)
+        {
+            var xml = XDocument.Parse(response);
+            var method = Client.ExtractOobMethodFromLoginResponse(xml);
+
+            Assert.Equal(expected, method);
+        }
+
+        [Fact]
+        public void ExtractOobMethodFromLoginResponse_throws_on_unknown_method()
+        {
+            var xml = XDocument.Parse("<response><error outofbandtype='blah' /></response>");
+
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Client.ExtractOobMethodFromLoginResponse(xml),
+                "Out-of-band method 'blah' is not supported");
+        }
+
+        [Theory]
+        [InlineData("<response><error blah='' /></response>", "")]
+        [InlineData("<response><error blah='blah-blah' /></response>", "blah-blah")]
+        public void GetErrorAttribute_returns_attribute_value(string response, string expected)
+        {
+            var xml = XDocument.Parse(response);
+            var value = Client.GetErrorAttribute(xml, "blah");
+
+            Assert.Equal(expected, value);
+        }
+
+        [Fact]
+        public void GetErrorAttribute_throws_when_attribute_is_not_present()
+        {
+            var xml = XDocument.Parse("<response><error blah='blah-blah' /></response>");
+
+            Exceptions.AssertThrowsInternalError(
+                () => Client.GetErrorAttribute(xml, "poof"),
+                "Unknown response schema: attribute 'poof' is missing");
+        }
+
+        [Fact]
+        public void GetOptionalErrorAttribute_returns_null_when_attribute_is_not_present()
+        {
+            var xml = XDocument.Parse("<response><error blah='blah-blah' /></response>");
+            var value = Client.GetOptionalErrorAttribute(xml, "poof");
+
+            Assert.Null(value);
         }
 
         // TODO: Figure out how to test this!
@@ -159,12 +294,50 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         //
+        // Helpers
+        //
+
+        private class OtpProvidingUi: Ui
+        {
+            public override string ProvideSecondFactorPassword(SecondFactorMethod method)
+            {
+                return Otp;
+            }
+
+            public override void AskToApproveOutOfBand(OutOfBandMethod method)
+            {
+            }
+        }
+
+        private static void AssertSessionWithPrivateKey(Session session)
+        {
+            AssertSessionCommon(session);
+            Assert.Equal("private-key", session.EncryptedPrivateKey);
+        }
+
+        private static void AssertSessionWithoutPrivateKey(Session session)
+        {
+            AssertSessionCommon(session);
+            Assert.Null(session.EncryptedPrivateKey);
+        }
+
+        private static void AssertSessionCommon(Session session)
+        {
+            Assert.Equal("session-id", session.Id);
+            Assert.Equal(KeyIterationCount, session.KeyIterationCount);
+            Assert.Equal("token", session.Token);
+            Assert.Equal(Platform.Desktop, session.Platform);
+        }
+
+        //
         // Data
         //
 
         private const string BaseUrl = "https://lastpass.com";
         private const string Username = "username";
         private const string Password = "password";
+        private const string Otp = "123456";
+        private const int KeyIterationCount = 1337;
 
         private static readonly ClientInfo ClientInfo = new ClientInfo(Platform.Desktop, "id", "description", true);
 
@@ -172,5 +345,20 @@ namespace PasswordManagerAccess.Test.LastPass
             "<response>" +
                 "<ok sessionid='session-id' token='token' privatekeyenc='private-key' />" +
              "</response>";
+
+        private const string OkResponseNoPrivateKey =
+            "<response>" +
+                "<ok sessionid='session-id' token='token' />" +
+             "</response>";
+
+        private const string OkResponseBlankPrivateKey =
+            "<response>" +
+                "<ok sessionid='session-id' token='token' privatekeyenc='' />" +
+             "</response>";
+
+        private const string OobRetryResponse =
+            "<response>" +
+                "<error cause='outofbandrequired' retryid='retry-id' />" +
+            "</response>";
     }
 }

@@ -20,8 +20,8 @@ namespace PasswordManagerAccess.Test.LastPass
         private static readonly Session Session = new Session(SessionId,
                                                               IterationCount,
                                                               Token,
-                                                              EncryptedPrivateKey,
-                                                              Platform.Desktop);
+                                                              Platform.Desktop,
+                                                              EncryptedPrivateKey);
         private const string FetchResponse = "VGVzdCBibG9i";
         private static readonly byte[] Blob = "Test blob".ToBytes();
 

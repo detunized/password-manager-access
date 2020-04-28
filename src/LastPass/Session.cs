@@ -8,16 +8,16 @@ namespace PasswordManagerAccess.LastPass
         public readonly string Id;
         public readonly int KeyIterationCount;
         public readonly string Token;
-        public readonly string EncryptedPrivateKey;
         public readonly Platform Platform;
+        public readonly string EncryptedPrivateKey;
 
-        public Session(string id, int keyIterationCount, string token, string encryptedPrivateKey, Platform platform)
+        public Session(string id, int keyIterationCount, string token, Platform platform, string encryptedPrivateKey)
         {
             Id = id;
             KeyIterationCount = keyIterationCount;
             Token = token;
-            EncryptedPrivateKey = encryptedPrivateKey;
             Platform = platform;
+            EncryptedPrivateKey = encryptedPrivateKey;
         }
     }
 }
