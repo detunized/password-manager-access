@@ -3,6 +3,7 @@
 
 namespace PasswordManagerAccess.LastPass
 {
+    // TODO: Remove this!
     internal class Blob
     {
         public Blob(byte[] bytes, int keyIterationCount, string encryptedPrivateKey)

@@ -189,6 +189,38 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void DownloadVault_returns_blob()
+        {
+            var expected = "blah-blah".ToBytes();
+            var flow = new RestFlow().Get(expected.ToBase64());
+            var blob = Client.DownloadVault(Session, flow);
+
+            Assert.Equal(expected, blob.Bytes);
+        }
+
+        [Fact]
+        public void DownloadVault_makes_GET_request_to_specific_url_with_cookies()
+        {
+            var flow = new RestFlow()
+                .Get("blah-blah".ToBase64())
+                    .ExpectUrl("https://lastpass.com/getaccts.php?")
+                    .ExpectUrl("requestsrc=cli")
+                    .ExpectCookie("PHPSESSID", Session.Id);
+
+            Client.DownloadVault(Session, flow.ToRestClient(BaseUrl));
+        }
+
+        [Theory]
+        [InlineData(Platform.Desktop, "cli")]
+        [InlineData(Platform.Mobile, "android")]
+        public void GetVaultEndpoint_includes_platform_in_endpoint(Platform platform, string expected)
+        {
+            var endpoint = Client.GetVaultEndpoint(platform);
+
+            Assert.Contains($"requestsrc={expected}", endpoint);
+        }
+
+        [Fact]
         public void GetSessionCookies_escapes_session_id()
         {
             var session = new Session(" /:;?=", -1, "", Platform.Desktop, "");

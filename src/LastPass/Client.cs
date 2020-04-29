@@ -24,7 +24,7 @@ namespace PasswordManagerAccess.LastPass
             var session = Login(username, password, clientInfo, ui, rest);
             try
             {
-                var blob = Fetcher.Fetch(session);
+                var blob = DownloadVault(session, rest);
                 var key = blob.MakeEncryptionKey(username, password);
                 return ParseVault(blob, key);
             }
@@ -223,6 +223,20 @@ namespace PasswordManagerAccess.LastPass
                 return;
 
             throw MakeError(response);
+        }
+
+        internal static Blob DownloadVault(Session session, RestClient rest)
+        {
+            var response = rest.Get(GetVaultEndpoint(session.Platform), cookies: GetSessionCookies(session));
+            if (response.IsSuccessful)
+                return new Blob(response.Content.Decode64(), session.KeyIterationCount, session.EncryptedPrivateKey);
+
+            throw MakeError(response);
+        }
+
+        internal static string GetVaultEndpoint(Platform platform)
+        {
+            return $"getaccts.php?mobile=1&b64=1&hash=0.0&hasplugin=3.0.23&requestsrc={PlatformToUserAgent[platform]}";
         }
 
         internal static Dictionary<string, string> GetSessionCookies(Session session)
