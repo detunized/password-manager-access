@@ -52,7 +52,7 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void RequestIterationCount_makes_POST_request_to_specific_url_and_parameters()
+        public void RequestIterationCount_makes_POST_request_to_specific_url_with_parameters()
         {
             var flow = new RestFlow()
                 .Post("0")
@@ -77,7 +77,7 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void PerformSingleLoginRequest_makes_POST_request_to_specific_url_and_parameters()
+        public void PerformSingleLoginRequest_makes_POST_request_to_specific_url_with_parameters()
         {
             var flow = new RestFlow()
                 .Post("<ok />")
@@ -159,6 +159,42 @@ namespace PasswordManagerAccess.Test.LastPass
                                               flow);
 
             AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void MarkDeviceAsTrusted_makes_POST_request_to_specific_url_with_parameters_and_cookies()
+        {
+            var flow = new RestFlow()
+                .Post("")
+                    .ExpectUrl("https://lastpass.com/trust.php")
+                    .ExpectContent($"uuid={ClientInfo.Id}")
+                    .ExpectContent($"trustlabel={ClientInfo.Description}")
+                    .ExpectContent($"token={Session.Token}")
+                    .ExpectCookie("PHPSESSID", Session.Id);
+
+            Client.MarkDeviceAsTrusted(Session, ClientInfo, flow.ToRestClient(BaseUrl));
+        }
+
+        [Fact]
+        public void Logout_makes_POST_request_to_specific_url_with_parameters_and_cookies()
+        {
+            var flow = new RestFlow()
+                .Post("")
+                    .ExpectUrl("https://lastpass.com/logout.php")
+                    .ExpectContent("method=cli")
+                    .ExpectContent("noredirect=1")
+                    .ExpectCookie("PHPSESSID", Session.Id);
+
+            Client.Logout(Session, flow.ToRestClient(BaseUrl));
+        }
+
+        [Fact]
+        public void GetSessionCookies_escapes_session_id()
+        {
+            var session = new Session(" /:;?=", -1, "", Platform.Desktop, "");
+            var cookies = Client.GetSessionCookies(session);
+
+            Assert.Equal("%20%2F%3A%3B%3F%3D", cookies["PHPSESSID"]);
         }
 
         [Fact]
@@ -339,7 +375,16 @@ namespace PasswordManagerAccess.Test.LastPass
         private const string Otp = "123456";
         private const int KeyIterationCount = 1337;
 
-        private static readonly ClientInfo ClientInfo = new ClientInfo(Platform.Desktop, "id", "description", true);
+        private static readonly ClientInfo ClientInfo = new ClientInfo(Platform.Desktop,
+                                                                       "client-id",
+                                                                       "description",
+                                                                       true);
+
+        private static readonly Session Session = new Session("session-id",
+                                                              KeyIterationCount,
+                                                              "token",
+                                                              Platform.Desktop,
+                                                              "private-key");
 
         private const string OkResponse =
             "<response>" +

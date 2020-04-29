@@ -21,16 +21,16 @@ namespace PasswordManagerAccess.LastPass
                                           IRestTransport transport)
         {
             var rest = new RestClient(transport, "https://lastpass.com");
-            var session = Fetcher.Login(username, password, clientInfo, ui);
+            var session = Login(username, password, clientInfo, ui, rest);
             try
             {
                 var blob = Fetcher.Fetch(session);
                 var key = blob.MakeEncryptionKey(username, password);
-                return new Account[0];
+                return ParseVault(blob, key);
             }
             finally
             {
-                Fetcher.Logout(session);
+                Logout(session, rest);
             }
         }
 
@@ -84,9 +84,11 @@ namespace PasswordManagerAccess.LastPass
             if (session == null)
                 throw MakeLoginError(response);
 
-            // TODO: Work in progress...
+            // 4. The login with OTP or OOB is successful. Tell the server to trust this device next time.
+            if (clientInfo.TrustThisDevice)
+                MarkDeviceAsTrusted(session, clientInfo, rest);
 
-            return null;
+            return session;
         }
 
         internal static int RequestIterationCount(string username, RestClient rest)
@@ -189,6 +191,43 @@ namespace PasswordManagerAccess.LastPass
                 extraParameters["outofbandretry"] = "1";
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
             }
+        }
+
+        internal static void MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest)
+        {
+            var response = rest.PostForm("trust.php",
+                                         new Dictionary<string, object>
+                                         {
+                                             ["uuid"] = clientInfo.Id,
+                                             ["trustlabel"] = clientInfo.Description,
+                                             ["token"] = session.Token,
+                                         },
+                                         cookies: GetSessionCookies(session));
+            if (response.IsSuccessful)
+                return;
+
+            throw MakeError(response);
+        }
+
+        internal static void Logout(Session session, RestClient rest)
+        {
+            var response = rest.PostForm("logout.php",
+                                         new Dictionary<string, object>
+                                         {
+                                             ["method"] = PlatformToUserAgent[session.Platform],
+                                             ["noredirect"] = 1,
+                                         },
+                                         cookies: GetSessionCookies(session));
+
+            if (response.IsSuccessful)
+                return;
+
+            throw MakeError(response);
+        }
+
+        internal static Dictionary<string, string> GetSessionCookies(Session session)
+        {
+            return new Dictionary<string, string> {["PHPSESSID"] = Uri.EscapeDataString(session.Id)};
         }
 
         internal static XDocument ParseXml(RestResponse<string> response)
