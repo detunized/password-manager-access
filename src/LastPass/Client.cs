@@ -58,6 +58,8 @@ namespace PasswordManagerAccess.LastPass
             // 3. The simple login failed. This is usually due to some error, invalid credentials or
             //    a multifactor authentication being enabled.
             var cause = GetOptionalErrorAttribute(response, "cause");
+            if (cause == null)
+                throw MakeLoginError(response);
 
             // 3.1. One-time-password is required
             if (KnownOtpMethods.TryGetValue(cause, out var otpMethod))
@@ -190,6 +192,9 @@ namespace PasswordManagerAccess.LastPass
                 // Retry
                 extraParameters["outofbandretry"] = "1";
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
+
+                // TODO: I think we should sleep here for a bit before retrying or ask the user again.
+                //      Otherwise we might flood the server with too many requests.
             }
         }
 
@@ -389,9 +394,47 @@ namespace PasswordManagerAccess.LastPass
                 response.Error);
         }
 
-        private static Exception MakeLoginError(XDocument response)
+        internal static Common.BaseException MakeLoginError(XDocument response)
         {
-            return new InternalErrorException("TODO");
+            // XML is valid but there's nothing in it we can understand
+            var error = response.XPathSelectElement("response/error");
+            if (error == null)
+                return new InternalErrorException("Unknown response schema");
+
+            // Both of these are optional
+            var cause = error.Attribute("cause");
+            var message = error.Attribute("message");
+
+            // We have a cause element, see if it's one of ones we know
+            if (cause != null)
+            {
+                switch (cause.Value)
+                {
+                case "unknownemail":
+                    return new BadCredentialsException("Invalid username");
+
+                case "unknownpassword":
+                    return new BadCredentialsException("Invalid password");
+
+                case "googleauthfailed":
+                case "microsoftauthfailed":
+                case "otpfailed":
+                    return new BadMultiFactorException("Second factor code is incorrect");
+
+                case "multifactorresponsefailed":
+                    return new BadMultiFactorException("Out of band authentication failed");
+
+                default:
+                    return new InternalErrorException(message?.Value ?? cause.Value);
+                }
+            }
+
+            // No cause, maybe at least a message
+            if (message != null)
+                return new InternalErrorException(message.Value);
+
+            // Nothing we know, just the error element
+            return new InternalErrorException("Unknown error");
         }
 
         //

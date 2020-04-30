@@ -14,12 +14,6 @@ namespace PasswordManagerAccess.LastPass
 {
     internal static class Fetcher
     {
-        public static Session Login(string username, string password, ClientInfo clientInfo, Ui ui)
-        {
-            using (var webClient = new WebClient())
-                return Login(username, password, clientInfo, ui, webClient);
-        }
-
         // TODO: Write tests for this. Possibly the whole current concept of how it's tested
         //       should be rethought. Maybe should simply tests against a fake server.
         public static Session Login(string username, string password, ClientInfo clientInfo, Ui ui, IWebClient webClient)
@@ -74,12 +68,6 @@ namespace PasswordManagerAccess.LastPass
             return session;
         }
 
-        public static void Logout(Session session)
-        {
-            using (var webClient = new WebClient())
-                Logout(session, webClient);
-        }
-
         public static void Logout(Session session, IWebClient webClient)
         {
             try
@@ -98,12 +86,6 @@ namespace PasswordManagerAccess.LastPass
                                           "WebException occurred",
                                           e);
             }
-        }
-
-        public static Blob Fetch(Session session)
-        {
-            using (var webClient = new WebClient())
-                return Fetch(session, webClient);
         }
 
         public static Blob Fetch(Session session, IWebClient webClient)

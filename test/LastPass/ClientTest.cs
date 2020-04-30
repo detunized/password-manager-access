@@ -13,6 +13,147 @@ namespace PasswordManagerAccess.Test.LastPass
 {
     public class ClientTest
     {
+        // The general idea is to test as high level as possible even though it might get tedious.
+        // This ensures that if/when the implementation changes we still get the same behavior.
+
+        [Fact]
+        public void OpenVault_returns_accounts()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                    .ExpectUrl("/iterations.php")
+                .Post(OkResponseNoPrivateKey)
+                    .ExpectUrl("/login.php")
+                .Get(TestData.BlobBase64)
+                    .ExpectUrl("/getaccts.php?")
+                .Post("")
+                    .ExpectUrl("/logout.php");
+
+            // TODO: Decryption fails here because of the incorrect password
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void OpenVault_returns_accounts_with_otp()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                    .ExpectUrl("/iterations.php")
+                .Post(OtpRequiredResponse)
+                    .ExpectUrl("/login.php")
+                .Post(OkResponseNoPrivateKey)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent($"otp={Otp}")
+                .Post("")
+                    .ExpectUrl("/trust.php")
+                .Get(TestData.BlobBase64)
+                    .ExpectUrl("/getaccts.php?")
+                .Post("")
+                    .ExpectUrl("/logout.php");
+
+            // TODO: Decryption fails here because of the incorrect password
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void OpenVault_returns_accounts_with_oob()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                    .ExpectUrl("/iterations.php")
+                .Post(OobRequiredResponse)
+                    .ExpectUrl("/login.php")
+                .Post(OobRetryResponse)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent("outofbandrequest=1")
+                .Post(OkResponseNoPrivateKey)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent("outofbandrequest=1")
+                    .ExpectContent("outofbandretry=1")
+                    .ExpectContent("outofbandretryid=retry-id")
+                .Post("")
+                    .ExpectUrl("/trust.php")
+                .Get(TestData.BlobBase64)
+                    .ExpectUrl("/getaccts.php?")
+                .Post("")
+                    .ExpectUrl("/logout.php");
+
+            // TODO: Decryption fails here because of the incorrect password
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void OpenVault_throws_on_invalid_username()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                .Post("<response><error cause='unknownemail' /></response>");
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                "Invalid username");
+        }
+
+        [Fact]
+        public void OpenVault_throws_on_invalid_password()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                .Post("<response><error cause='unknownpassword' /></response>");
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                "Invalid password");
+        }
+
+        [Fact]
+        public void OpenVault_throws_on_failed_otp()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                .Post(OtpRequiredResponse)
+                .Post("<response><error cause='googleauthfailed' /></response>");
+
+            Exceptions.AssertThrowsBadMultiFactor(
+                () => Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow),
+                "Second factor code is incorrect");
+        }
+
+        [Fact]
+        public void OpenVault_throws_on_failed_oob()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                .Post(OobRequiredResponse)
+                .Post("<response><error cause='multifactorresponsefailed' /></response>");
+
+            Exceptions.AssertThrowsBadMultiFactor(
+                () => Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow),
+                "Out of band authentication failed");
+        }
+
+        [Theory]
+        [InlineData("<response><error cause='Blah' /></response>", "Blah")]
+        [InlineData("<response><error cause='Pfff' message='Blah' /></response>", "Blah")]
+        [InlineData("<response><error message='Blah' /></response>", "Blah")]
+        [InlineData("<response><error /></response>", "Unknown error")]
+        public void OpenVault_throws_on_other_errors(string response, string expected)
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                .Post(response);
+
+            Exceptions.AssertThrowsInternalError(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                expected);
+        }
+
         [Fact]
         public void Login_returns_session()
         {
@@ -21,6 +162,34 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse);
 
             var session = Client.Login(Username, Password, ClientInfo, null, flow);
+
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void Login_returns_session_with_otp()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString()) // 1. iterations
+                .Post(OtpRequiredResponse)          // 2. normal login attempt
+                .Post(OkResponse)                   // 3. login with otp
+                .Post("");                          // 4. save trusted device
+
+            var session = Client.Login(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void Login_returns_session_with_oob()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString()) // 1. iterations
+                .Post(OobRequiredResponse)          // 2. normal login attempt
+                .Post(OkResponse)                   // 3. check oob
+                .Post("");                          // 4. save trusted device
+
+            var session = Client.Login(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -432,6 +601,16 @@ namespace PasswordManagerAccess.Test.LastPass
             "<response>" +
                 "<ok sessionid='session-id' token='token' privatekeyenc='' />" +
              "</response>";
+
+        private const string OtpRequiredResponse =
+            "<response>" +
+                "<error cause='googleauthrequired' />" +
+            "</response>";
+
+        private const string OobRequiredResponse =
+            "<response>" +
+                "<error cause='outofbandrequired' outofbandtype='lastpassauth' />" +
+            "</response>";
 
         private const string OobRetryResponse =
             "<response>" +
