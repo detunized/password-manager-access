@@ -22,7 +22,7 @@ namespace PasswordManagerAccess.LastPass
 
         public static KeyValuePair<Kind, byte[]> ParseItem(byte[] bytes)
         {
-            return ParserHelper.WithBytes(bytes, reader => ExtractItem(reader));
+            return Parser.WithBytes(bytes, reader => ExtractItem(reader));
         }
 
         public static void SkipItem(BinaryReader reader)

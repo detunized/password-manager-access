@@ -325,30 +325,30 @@ namespace PasswordManagerAccess.LastPass
 
         internal static Account[] ParseVault(Blob blob, byte[] encryptionKey)
         {
-            return ParserHelper.WithBytes(
+            return Parser.WithBytes(
                 blob.Bytes,
                 reader =>
                 {
-                    var chunks = ParserHelper.ExtractChunks(reader);
+                    var chunks = Parser.ExtractChunks(reader);
                     if (!IsComplete(chunks))
                         throw new ParseException(ParseException.FailureReason.CorruptedBlob, "Blob is truncated");
 
                     var privateKey = new RSAParameters();
                     if (blob.EncryptedPrivateKey != null)
-                        privateKey = ParserHelper.ParseEncryptedPrivateKey(blob.EncryptedPrivateKey, encryptionKey);
+                        privateKey = Parser.ParseEncryptedPrivateKey(blob.EncryptedPrivateKey, encryptionKey);
 
                     return ParseAccounts(chunks, encryptionKey, privateKey);
                 });
         }
 
-        internal static bool IsComplete(List<ParserHelper.Chunk> chunks)
+        internal static bool IsComplete(List<Parser.Chunk> chunks)
         {
             return chunks.Count > 0 &&
                    chunks.Last().Id == "ENDM" &&
                    chunks.Last().Payload.SequenceEqual("OK".ToBytes());
         }
 
-        internal static Account[] ParseAccounts(List<ParserHelper.Chunk> chunks,
+        internal static Account[] ParseAccounts(List<Parser.Chunk> chunks,
                                                 byte[] encryptionKey,
                                                 RSAParameters privateKey)
         {
@@ -360,7 +360,7 @@ namespace PasswordManagerAccess.LastPass
                 switch (i.Id)
                 {
                 case "ACCT":
-                    var account = ParserHelper.Parse_ACCT(
+                    var account = Parser.Parse_ACCT(
                         i,
                         folder == null ? encryptionKey : folder.EncryptionKey,
                         folder);
@@ -369,7 +369,7 @@ namespace PasswordManagerAccess.LastPass
                         accounts.Add(account);
                     break;
                 case "SHAR":
-                    folder = ParserHelper.Parse_SHAR(i, encryptionKey, privateKey);
+                    folder = Parser.Parse_SHAR(i, encryptionKey, privateKey);
                     break;
                 }
             }

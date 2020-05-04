@@ -12,16 +12,16 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    public class ParserHelperTest
+    public class ParserTest
     {
         [Fact]
         public void ParseAccount_returns_account()
         {
             WithBlob(reader => {
-                var accounts = ParserHelper.ExtractChunks(reader).Where(i => i.Id == "ACCT").ToArray();
+                var accounts = Parser.ExtractChunks(reader).Where(i => i.Id == "ACCT").ToArray();
                 for (var i = 0; i < accounts.Length; ++i)
                 {
-                    var account = ParserHelper.Parse_ACCT(accounts[i], TestData.EncryptionKey);
+                    var account = Parser.Parse_ACCT(accounts[i], TestData.EncryptionKey);
                     Assert.StartsWith(TestData.Accounts[i].Url, account.Url);
                 }
             });
@@ -30,7 +30,7 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void ParseEncryptedPrivateKey_returns_private_key()
         {
-            var rsa = ParserHelper.ParseEncryptedPrivateKey(TestData.EncryptedPrivateKey,
+            var rsa = Parser.ParseEncryptedPrivateKey(TestData.EncryptedPrivateKey,
                                                            TestData.EncryptionKey);
 
             Assert.Equal(TestData.RsaD, rsa.D);
@@ -47,7 +47,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ParseEcryptedPrivateKey_throws_on_invalid_chunk()
         {
             var e = Assert.Throws<ParseException>(
-                () => ParserHelper.ParseEncryptedPrivateKey("", TestData.EncryptionKey));
+                () => Parser.ParseEncryptedPrivateKey("", TestData.EncryptionKey));
             Assert.Equal(ParseException.FailureReason.CorruptedBlob, e.Reason);
             Assert.Equal("Failed to decrypt private key", e.Message);
         }
@@ -59,11 +59,11 @@ namespace PasswordManagerAccess.Test.LastPass
             string url = "";
             string username = "";
             string password = "";
-            ParserHelper.ParseSecureNoteServer("NoteType:type\nHostname:url\nUsername:username\nPassword:password",
-                                               ref type,
-                                               ref url,
-                                               ref username,
-                                               ref password);
+            Parser.ParseSecureNoteServer("NoteType:type\nHostname:url\nUsername:username\nPassword:password",
+                                         ref type,
+                                         ref url,
+                                         ref username,
+                                         ref password);
 
             Assert.Equal("type", type);
             Assert.Equal("url", url);
@@ -78,11 +78,11 @@ namespace PasswordManagerAccess.Test.LastPass
             string url = "";
             string username = "";
             string password = "";
-            ParserHelper.ParseSecureNoteServer("NoteType:type:type\nHostname:url:url\nUsername:username:username\nPassword:password:password",
-                                               ref type,
-                                               ref url,
-                                               ref username,
-                                               ref password);
+            Parser.ParseSecureNoteServer("NoteType:type:type\nHostname:url:url\nUsername:username:username\nPassword:password:password",
+                                         ref type,
+                                         ref url,
+                                         ref username,
+                                         ref password);
 
             Assert.Equal("type:type", type);
             Assert.Equal("url:url", url);
@@ -97,11 +97,11 @@ namespace PasswordManagerAccess.Test.LastPass
             string url = "";
             string username = "";
             string password = "";
-            ParserHelper.ParseSecureNoteServer("Something:Else\nHostname\nUsername:\n:\n::\n\n",
-                                               ref type,
-                                               ref url,
-                                               ref username,
-                                               ref password);
+            Parser.ParseSecureNoteServer("Something:Else\nHostname\nUsername:\n:\n::\n\n",
+                                         ref type,
+                                         ref url,
+                                         ref username,
+                                         ref password);
 
             Assert.Equal("", type);
             Assert.Equal("", url);
@@ -116,7 +116,7 @@ namespace PasswordManagerAccess.Test.LastPass
             string url = "url";
             string username = "username";
             string password = "password";
-            ParserHelper.ParseSecureNoteServer("", ref type, ref url, ref username, ref password);
+            Parser.ParseSecureNoteServer("", ref type, ref url, ref username, ref password);
 
             Assert.Equal("type", type);
             Assert.Equal("url", url);
@@ -127,8 +127,8 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void MakeAccountPath_returns_none_when_group_is_null_or_blank_and_not_in_shared_folder()
         {
-            Assert.Equal("(none)", ParserHelper.MakeAccountPath(null, null));
-            Assert.Equal("(none)", ParserHelper.MakeAccountPath("", null));
+            Assert.Equal("(none)", Parser.MakeAccountPath(null, null));
+            Assert.Equal("(none)", Parser.MakeAccountPath("", null));
         }
 
         [Fact]
@@ -136,8 +136,8 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var folder = new SharedFolder("id", "folder", null);
 
-            Assert.Equal("folder", ParserHelper.MakeAccountPath(null, folder));
-            Assert.Equal("folder", ParserHelper.MakeAccountPath("", folder));
+            Assert.Equal("folder", Parser.MakeAccountPath(null, folder));
+            Assert.Equal("folder", Parser.MakeAccountPath("", folder));
         }
 
         [Fact]
@@ -145,20 +145,20 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var folder = new SharedFolder("id", "folder", null);
 
-            Assert.Equal("folder\\group", ParserHelper.MakeAccountPath("group", folder));
+            Assert.Equal("folder\\group", Parser.MakeAccountPath("group", folder));
         }
 
         [Fact]
         public void MakeAccountPath_returns_group_when_not_in_shared_folder()
         {
-            Assert.Equal("group", ParserHelper.MakeAccountPath("group", null));
+            Assert.Equal("group", Parser.MakeAccountPath("group", null));
         }
 
         [Fact]
         public void ReadChunk_returns_first_chunk()
         {
             WithBlob(reader => {
-                var chunk = ParserHelper.ReadChunk(reader);
+                var chunk = Parser.ReadChunk(reader);
                 Assert.Equal("LPAV", chunk.Id);
                 Assert.Equal(3, chunk.Payload.Length);
                 Assert.Equal(11, reader.BaseStream.Position);
@@ -170,7 +170,7 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             WithBlob(reader => {
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
-                    ParserHelper.ReadChunk(reader);
+                    Parser.ReadChunk(reader);
 
                 Assert.Equal(reader.BaseStream.Length, reader.BaseStream.Position);
             });
@@ -180,7 +180,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ExtractChunks_returns_all_chunks()
         {
             WithBlob(reader => {
-                var chunks = ParserHelper.ExtractChunks(reader);
+                var chunks = Parser.ExtractChunks(reader);
                 var ids = chunks.Select(i => i.Id).Distinct().ToArray();
                 Assert.Equal(TestData.ChunkIds, ids);
             });
@@ -190,13 +190,11 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ReadItem_returns_first_item()
         {
             WithBlob(reader => {
-                var chunks = ParserHelper.ExtractChunks(reader);
-
+                var chunks = Parser.ExtractChunks(reader);
                 var account = chunks.Find(i => i.Id == "ACCT");
-                Assert.NotNull(account);
 
-                ParserHelper.WithBytes(account.Payload, chunkReader => {
-                    var item = ParserHelper.ReadItem(chunkReader);
+                Parser.WithBytes(account.Payload, chunkReader => {
+                    var item = Parser.ReadItem(chunkReader);
                     Assert.NotNull(item);
                 });
             });
@@ -206,7 +204,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void SkipItem_skips_empty_item()
         {
             WithHex("00000000", reader => {
-                ParserHelper.SkipItem(reader);
+                Parser.SkipItem(reader);
                 Assert.Equal(4, reader.BaseStream.Position);
             });
         }
@@ -215,7 +213,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void SkipItem_skips_non_empty_item()
         {
             WithHex("00000004DEADBEEF", reader => {
-                ParserHelper.SkipItem(reader);
+                Parser.SkipItem(reader);
                 Assert.Equal(8, reader.BaseStream.Position);
             });
         }
@@ -224,8 +222,8 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ReadId_returns_id()
         {
             var expectedId = "ABCD";
-            ParserHelper.WithBytes(expectedId.ToBytes(), reader => {
-                var id = ParserHelper.ReadId(reader);
+            Parser.WithBytes(expectedId.ToBytes(), reader => {
+                var id = Parser.ReadId(reader);
                 Assert.Equal(expectedId, id);
                 Assert.Equal(4, reader.BaseStream.Position);
             });
@@ -235,7 +233,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ReadSize_returns_size()
         {
             WithHex("DEADBEEF", reader => {
-                var size = ParserHelper.ReadSize(reader);
+                var size = Parser.ReadSize(reader);
                 Assert.Equal(0xDEADBEEF, size);
                 Assert.Equal(4, reader.BaseStream.Position);
             });
@@ -246,8 +244,8 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var expectedPayload = "FEEDDEADBEEF".DecodeHex();
             var size = expectedPayload.Length;
-            ParserHelper.WithBytes(expectedPayload, reader => {
-                var payload = ParserHelper.ReadPayload(reader, (uint)size);
+            Parser.WithBytes(expectedPayload, reader => {
+                var payload = Parser.ReadPayload(reader, (uint)size);
                 Assert.Equal(expectedPayload, payload);
                 Assert.Equal(size, reader.BaseStream.Position);
             });
@@ -257,7 +255,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void DecryptAes256Plain_with_default_value()
         {
             var defVal = "ohai!";
-            var plaintext = ParserHelper.DecryptAes256Plain("not a valid ciphertext".ToBytes(),
+            var plaintext = Parser.DecryptAes256Plain("not a valid ciphertext".ToBytes(),
                                                             _encryptionKey,
                                                             defVal);
             Assert.Equal(defVal, plaintext);
@@ -267,7 +265,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void DecryptAes256Base64_with_default_value()
         {
             var defVal = "ohai!";
-            var plaintext = ParserHelper.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(),
+            var plaintext = Parser.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(),
                                                              _encryptionKey,
                                                              defVal);
             Assert.Equal(defVal, plaintext);
@@ -283,7 +281,7 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             for (var i = 0; i < tests.Rank; ++i)
-                Assert.Equal(tests[i, 0], ParserHelper.DecryptAes256Plain(tests[i, 1].Decode64(), _encryptionKey));
+                Assert.Equal(tests[i, 0], Parser.DecryptAes256Plain(tests[i, 1].Decode64(), _encryptionKey));
         }
 
         [Fact]
@@ -296,7 +294,7 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             for (var i = 0; i < tests.Rank; ++i)
-                Assert.Equal(tests[i, 0], ParserHelper.DecryptAes256Base64(tests[i, 1].ToBytes(), _encryptionKey));
+                Assert.Equal(tests[i, 0], Parser.DecryptAes256Base64(tests[i, 1].ToBytes(), _encryptionKey));
         }
 
         [Fact]
@@ -309,7 +307,7 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.Equal(i.Key, ParserHelper.DecryptAes256EcbPlain(i.Value.Decode64(), _encryptionKey));
+                Assert.Equal(i.Key, Parser.DecryptAes256EcbPlain(i.Value.Decode64(), _encryptionKey));
         }
 
         [Fact]
@@ -322,7 +320,7 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.Equal(i.Key, ParserHelper.DecryptAes256EcbBase64(i.Value.ToBytes(), _encryptionKey));
+                Assert.Equal(i.Key, Parser.DecryptAes256EcbBase64(i.Value.ToBytes(), _encryptionKey));
         }
 
         [Fact]
@@ -335,7 +333,7 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.Equal(i.Key, ParserHelper.DecryptAes256CbcPlain(i.Value.Decode64(), _encryptionKey));
+                Assert.Equal(i.Key, Parser.DecryptAes256CbcPlain(i.Value.Decode64(), _encryptionKey));
         }
 
         [Fact]
@@ -348,7 +346,7 @@ namespace PasswordManagerAccess.Test.LastPass
             };
 
             foreach (var i in tests)
-                Assert.Equal(i.Key, ParserHelper.DecryptAes256CbcBase64(i.Value.ToBytes(), _encryptionKey));
+                Assert.Equal(i.Key, Parser.DecryptAes256CbcBase64(i.Value.ToBytes(), _encryptionKey));
         }
 
         //
@@ -357,12 +355,12 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private static void WithBlob(Action<BinaryReader> action)
         {
-            ParserHelper.WithBytes(TestData.Blob, action);
+            Parser.WithBytes(TestData.Blob, action);
         }
 
         private static void WithHex(string hex, Action<BinaryReader> action)
         {
-            ParserHelper.WithBytes(hex.DecodeHex(), action);
+            Parser.WithBytes(hex.DecodeHex(), action);
         }
 
         private static byte[] MakeItem(string payload)
@@ -379,11 +377,11 @@ namespace PasswordManagerAccess.Test.LastPass
             return sizeBits.Concat(payload).ToArray();
         }
 
-        private static ParserHelper.Chunk MakeChunk(string id, byte[][] items)
+        private static Parser.Chunk MakeChunk(string id, byte[][] items)
         {
             IEnumerable<IEnumerable<byte>> itemsAsEnumerable = items;
             var chained = itemsAsEnumerable.Aggregate((chain, i) => chain.Concat(i));
-            return new ParserHelper.Chunk(id, chained.ToArray());
+            return new Parser.Chunk(id, chained.ToArray());
         }
 
         private static string Encode64(byte[] data)

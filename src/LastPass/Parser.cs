@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -11,18 +10,18 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass
 {
-    internal static class ParserHelper
+    internal static class Parser
     {
-        public class Chunk
+        public readonly struct Chunk
         {
+            public readonly string Id;
+            public readonly byte[] Payload;
+
             public Chunk(string id, byte[] payload)
             {
                 Id = id;
                 Payload = payload;
             }
-
-            public string Id { get; private set; }
-            public byte[] Payload { get; private set; }
         }
 
         // May return null when the chunk does not represent an account.
@@ -32,8 +31,6 @@ namespace PasswordManagerAccess.LastPass
         // TODO: Add a test case that covers secure note account!
         public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder = null)
         {
-            Debug.Assert(chunk.Id == "ACCT");
-
             return WithBytes(chunk.Payload, reader =>
             {
                 var placeholder = "decryption failed";
@@ -78,8 +75,6 @@ namespace PasswordManagerAccess.LastPass
         // TODO: Write a test for the RSA case!
         public static SharedFolder Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
         {
-            Debug.Assert(chunk.Id == "SHAR");
-
             return WithBytes(chunk.Payload, reader =>
             {
                 // Id
@@ -194,6 +189,7 @@ namespace PasswordManagerAccess.LastPass
             }
             catch (EndOfStreamException)
             {
+                // TODO: Is this a good idea?
                 // In case the stream is truncated we just ignore the incomplete chunk.
             }
 
