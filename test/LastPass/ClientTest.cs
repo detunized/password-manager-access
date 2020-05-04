@@ -516,19 +516,22 @@ namespace PasswordManagerAccess.Test.LastPass
             }
         }
 
-        [Fact]
-        public void ParseVault_throws_on_truncated_blob()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(4)]
+        [InlineData(5)]
+        [InlineData(10)]
+        [InlineData(100)]
+        [InlineData(1000)]
+        public void ParseVault_throws_on_truncated_blob(int cut)
         {
-            var tests = new[] {1, 2, 3, 4, 5, 10, 100, 1000};
-            foreach (var i in tests)
-            {
-                var e = Assert.Throws<ParseException>(
-                    () => Client.ParseVault(TestData.Blob.Take(TestData.Blob.Length - i).ToArray(),
-                                            TestData.EncryptionKey,
-                                            TestData.PrivateKey));
-                Assert.Equal(ParseException.FailureReason.CorruptedBlob, e.Reason);
-                Assert.Equal("Blob is truncated", e.Message);
-            }
+            Exceptions.AssertThrowsInternalError(
+                () => Client.ParseVault(TestData.Blob.Sub(0, TestData.Blob.Length - cut),
+                                        TestData.EncryptionKey,
+                                        TestData.PrivateKey),
+                "Blob is truncated or corrupted");
         }
 
         //

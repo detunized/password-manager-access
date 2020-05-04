@@ -46,9 +46,9 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void ParseEncryptedPrivateKey_throws_on_invalid_chunk()
         {
-            var e = Assert.Throws<ParseException>(() => Parser.ParseEncryptedPrivateKey("", TestData.EncryptionKey));
-            Assert.Equal(ParseException.FailureReason.CorruptedBlob, e.Reason);
-            Assert.Equal("Failed to decrypt private key", e.Message);
+            Exceptions.AssertThrowsInternalError(
+                () => Parser.ParseEncryptedPrivateKey("", TestData.EncryptionKey),
+                "Failed to decrypt private key");
         }
 
         [Fact]

@@ -106,8 +106,9 @@ namespace PasswordManagerAccess.LastPass
 
             const string header = "LastPassPrivateKey<";
             const string footer = ">LastPassPrivateKey";
+
             if (!decrypted.StartsWith(header) || !decrypted.EndsWith(footer))
-                throw new ParseException(ParseException.FailureReason.CorruptedBlob, "Failed to decrypt private key");
+                throw new InternalErrorException("Failed to decrypt private key");
 
             var asn1EncodedKey = decrypted.Substring(header.Length,
                                                      decrypted.Length - header.Length - footer.Length).DecodeHex();

@@ -335,7 +335,7 @@ namespace PasswordManagerAccess.LastPass
                 {
                     var chunks = Parser.ExtractChunks(reader);
                     if (!IsComplete(chunks))
-                        throw new ParseException(ParseException.FailureReason.CorruptedBlob, "Blob is truncated");
+                        throw new InternalErrorException("Blob is truncated or corrupted");
 
                     return ParseAccounts(chunks, encryptionKey, privateKey);
                 });
