@@ -213,11 +213,17 @@ namespace PasswordManagerAccess.Common
             return new BigInteger(x.Reverse().Concat(new byte[] { 0 }).ToArray());
         }
 
+        // Open bytes like an in-memory file and apply a lambda to it.
         public static void Open(this byte[] bytes, Action<BinaryReader> action)
         {
-            bytes.Open(reader => action(reader));
+            bytes.Open(reader =>
+            {
+                action(reader);
+                return 0;
+            });
         }
 
+        // Open bytes like an in-memory file and apply a lambda to it.
         public static TResult Open<TResult>(this byte[] bytes, Func<BinaryReader, TResult> action)
         {
             using var stream = new MemoryStream(bytes, false);

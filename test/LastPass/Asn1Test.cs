@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void Asn1_ParseItem_reads_packed_size()
         {
             const int size = 127;
-            var item = Asn1.ParseItem(("027F" + Repeat("AB", size)).DecodeHex());
+            var item = Asn1.ParseItem(("027F" + "AB".Repeat(size)).DecodeHex());
 
             Assert.Equal(size, item.Value.Length);
         }
@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void Asn1_ParseItem_reads_single_byte_size()
         {
             const int size = 128;
-            var item = Asn1.ParseItem(("028180" + Repeat("AB", size)).DecodeHex());
+            var item = Asn1.ParseItem(("028180" + "AB".Repeat(size)).DecodeHex());
 
             Assert.Equal(size, item.Value.Length);
         }
@@ -63,7 +63,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void Asn1_ParseItem_reads_multi_byte_size()
         {
             const int size = 260;
-            var item = Asn1.ParseItem(("02820104" + Repeat("AB", size)).DecodeHex());
+            var item = Asn1.ParseItem(("02820104" + "AB".Repeat(size)).DecodeHex());
 
             Assert.Equal(size, item.Value.Length);
         }
@@ -74,16 +74,6 @@ namespace PasswordManagerAccess.Test.LastPass
 
             Assert.Equal(kind, item.Key);
             Assert.Equal(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}, item.Value);
-        }
-
-        private static string Repeat(string s, int times)
-        {
-            // Inefficient! Who cares?!
-            var result = "";
-            for (var i = 0; i < times; ++i)
-                result += s;
-
-            return result;
         }
     }
 }

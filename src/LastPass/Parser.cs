@@ -31,7 +31,7 @@ namespace PasswordManagerAccess.LastPass
         // TODO: Add a test case that covers secure note account!
         public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder = null)
         {
-            return WithBytes(chunk.Payload, reader =>
+            return chunk.Payload.Open(reader =>
             {
                 var placeholder = "decryption failed";
 
@@ -75,7 +75,7 @@ namespace PasswordManagerAccess.LastPass
         // TODO: Write a test for the RSA case!
         public static SharedFolder Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
         {
-            return WithBytes(chunk.Payload, reader =>
+            return chunk.Payload.Open(reader =>
             {
                 // Id
                 var id = ReadItem(reader).ToUtf8();
@@ -113,30 +113,29 @@ namespace PasswordManagerAccess.LastPass
                                                      decrypted.Length - header.Length - footer.Length).DecodeHex();
 
             var enclosingSequence = Asn1.ParseItem(asn1EncodedKey);
-            var anotherEnclosingSequence = WithBytes(enclosingSequence.Value, reader => {
+            var anotherEnclosingSequence = enclosingSequence.Value.Open(reader => {
                 Asn1.SkipItem(reader);
                 Asn1.SkipItem(reader);
                 return Asn1.ExtractItem(reader);
             });
             var yetAnotherEnclosingSequence = Asn1.ParseItem(anotherEnclosingSequence.Value);
 
-            return WithBytes(yetAnotherEnclosingSequence.Value, reader => {
+            return yetAnotherEnclosingSequence.Value.Open(reader => {
                 Asn1.ExtractItem(reader);
 
                 // There are occasional leading zeros that need to be stripped.
-                Func<byte[]> readInteger =
-                    () => Asn1.ExtractItem(reader).Value.SkipWhile(i => i == 0).ToArray();
+                byte[] ReadInteger() => Asn1.ExtractItem(reader).Value.SkipWhile(i => i == 0).ToArray();
 
                 return new RSAParameters
                 {
-                    Modulus = readInteger(),
-                    Exponent = readInteger(),
-                    D = readInteger(),
-                    P = readInteger(),
-                    Q = readInteger(),
-                    DP = readInteger(),
-                    DQ = readInteger(),
-                    InverseQ = readInteger()
+                    Modulus = ReadInteger(),
+                    Exponent = ReadInteger(),
+                    D = ReadInteger(),
+                    P = ReadInteger(),
+                    Q = ReadInteger(),
+                    DP = ReadInteger(),
+                    DQ = ReadInteger(),
+                    InverseQ = ReadInteger()
                 };
             });
         }
@@ -321,21 +320,6 @@ namespace PasswordManagerAccess.LastPass
                 //       data. Luckily we have only text encrypted. Pay attention when refactoring!
                 return reader.ReadToEnd();
             }
-        }
-
-        public static void WithBytes(byte[] bytes, Action<BinaryReader> action)
-        {
-            WithBytes(bytes, (reader) => {
-                action(reader);
-                return 0;
-            });
-        }
-
-        public static TResult WithBytes<TResult>(byte[] bytes, Func<BinaryReader, TResult> action)
-        {
-            using (var stream = new MemoryStream(bytes, false))
-            using (var reader = new BinaryReader(stream))
-                return action(reader);
         }
 
         private static string DecryptAes256WithDefaultValue(byte[] data,

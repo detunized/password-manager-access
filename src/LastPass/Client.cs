@@ -325,8 +325,7 @@ namespace PasswordManagerAccess.LastPass
 
         internal static Account[] ParseVault(Blob blob, byte[] encryptionKey)
         {
-            return Parser.WithBytes(
-                blob.Bytes,
+            return blob.Bytes.Open(
                 reader =>
                 {
                     var chunks = Parser.ExtractChunks(reader);

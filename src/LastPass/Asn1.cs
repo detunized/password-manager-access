@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass
 {
@@ -22,7 +23,7 @@ namespace PasswordManagerAccess.LastPass
 
         public static KeyValuePair<Kind, byte[]> ParseItem(byte[] bytes)
         {
-            return Parser.WithBytes(bytes, reader => ExtractItem(reader));
+            return bytes.Open(ExtractItem);
         }
 
         public static void SkipItem(BinaryReader reader)

@@ -193,7 +193,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 var chunks = Parser.ExtractChunks(reader);
                 var account = chunks.Find(i => i.Id == "ACCT");
 
-                Parser.WithBytes(account.Payload, chunkReader => {
+                account.Payload.Open(chunkReader => {
                     var item = Parser.ReadItem(chunkReader);
                     Assert.NotNull(item);
                 });
@@ -222,7 +222,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ReadId_returns_id()
         {
             var expectedId = "ABCD";
-            Parser.WithBytes(expectedId.ToBytes(), reader => {
+            expectedId.ToBytes().Open(reader => {
                 var id = Parser.ReadId(reader);
                 Assert.Equal(expectedId, id);
                 Assert.Equal(4, reader.BaseStream.Position);
@@ -244,7 +244,7 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var expectedPayload = "FEEDDEADBEEF".DecodeHex();
             var size = expectedPayload.Length;
-            Parser.WithBytes(expectedPayload, reader => {
+            expectedPayload.Open(reader => {
                 var payload = Parser.ReadPayload(reader, (uint)size);
                 Assert.Equal(expectedPayload, payload);
                 Assert.Equal(size, reader.BaseStream.Position);
@@ -355,12 +355,12 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private static void WithBlob(Action<BinaryReader> action)
         {
-            Parser.WithBytes(TestData.Blob, action);
+            TestData.Blob.Open(action);
         }
 
         private static void WithHex(string hex, Action<BinaryReader> action)
         {
-            Parser.WithBytes(hex.DecodeHex(), action);
+            hex.DecodeHex().Open(action);
         }
 
         private static byte[] MakeItem(string payload)
