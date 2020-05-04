@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
 
@@ -13,11 +14,13 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var id = "1234567890";
             var name = "name";
+            var key = "blah".ToBytes();
 
-            var folder = new SharedFolder(id, name, TestData.EncryptionKey);
+            var folder = new SharedFolder(id, name, key);
+
             Assert.Equal(id, folder.Id);
             Assert.Equal(name, folder.Name);
-            Assert.Equal(TestData.EncryptionKey, folder.EncryptionKey);
+            Assert.Equal(key, folder.EncryptionKey);
         }
     }
 }

@@ -5,15 +5,15 @@ namespace PasswordManagerAccess.LastPass
 {
     internal class SharedFolder
     {
+        public readonly string Id;
+        public readonly string Name;
+        public readonly byte[] EncryptionKey;
+
         public SharedFolder(string id, string name, byte[] encryptionKey)
         {
             Id = id;
             Name = name;
             EncryptionKey = encryptionKey;
         }
-
-        public string Id { get; private set; }
-        public string Name { get; private set; }
-        public byte[] EncryptionKey { get; private set; }
     }
 }
