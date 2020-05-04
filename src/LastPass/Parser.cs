@@ -37,19 +37,19 @@ namespace PasswordManagerAccess.LastPass
 
                 // Read all items
                 var id = ReadItem(reader).ToUtf8();
-                var name = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
-                var group = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+                var name = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+                var group = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
 
                 // Ignore "group" accounts. They have no credentials.
                 if (url == "http://group")
                     return null;
 
-                var notes = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+                var notes = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 SkipItem(reader);
                 SkipItem(reader);
-                var username = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
-                var password = DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+                var username = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+                var password = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 SkipItem(reader);
                 SkipItem(reader);
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
@@ -91,7 +91,7 @@ namespace PasswordManagerAccess.LastPass
 
                 // Name
                 var encryptedName = ReadItem(reader);
-                var name = DecryptAes256Base64(encryptedName, key);
+                var name = Util.DecryptAes256Base64(encryptedName, key);
 
                 return new SharedFolder(id, name, key);
             });
@@ -99,10 +99,10 @@ namespace PasswordManagerAccess.LastPass
 
         public static RSAParameters ParseEncryptedPrivateKey(string encryptedPrivateKey, byte[] encryptionKey)
         {
-            var decrypted = DecryptAes256(encryptedPrivateKey.DecodeHex(),
-                                          encryptionKey,
-                                          CipherMode.CBC,
-                                          encryptionKey.Take(16).ToArray());
+            var decrypted = Util.DecryptAes256(encryptedPrivateKey.DecodeHex(),
+                                               encryptionKey,
+                                               CipherMode.CBC,
+                                               encryptionKey.Take(16).ToArray());
 
             const string header = "LastPassPrivateKey<";
             const string footer = ">LastPassPrivateKey";
@@ -238,103 +238,6 @@ namespace PasswordManagerAccess.LastPass
         public static byte[] ReadPayload(BinaryReader reader, uint size)
         {
             return reader.ReadBytes((int)size);
-        }
-
-        public static string DecryptAes256Plain(byte[] data, byte[] encryptionKey, string defaultValue)
-        {
-            return DecryptAes256WithDefaultValue(data, encryptionKey, defaultValue, DecryptAes256Plain);
-        }
-
-        public static string DecryptAes256Base64(byte[] data, byte[] encryptionKey, string defaultValue)
-        {
-            return DecryptAes256WithDefaultValue(data, encryptionKey, defaultValue, DecryptAes256Base64);
-        }
-
-        public static string DecryptAes256Plain(byte[] data, byte[] encryptionKey)
-        {
-            var length = data.Length;
-
-            if (length == 0)
-                return "";
-            else if (data[0] == '!' && length % 16 == 1 && length > 32)
-                return DecryptAes256CbcPlain(data, encryptionKey);
-            else
-                return DecryptAes256EcbPlain(data, encryptionKey);
-        }
-
-        public static string DecryptAes256Base64(byte[] data, byte[] encryptionKey)
-        {
-            var length = data.Length;
-
-            if (length == 0)
-                return "";
-            else if (data[0] == '!')
-                return DecryptAes256CbcBase64(data, encryptionKey);
-            else
-                return DecryptAes256EcbBase64(data, encryptionKey);
-        }
-
-        public static string DecryptAes256EcbPlain(byte[] data, byte[] encryptionKey)
-        {
-            return DecryptAes256(data, encryptionKey, CipherMode.ECB);
-        }
-
-        public static string DecryptAes256EcbBase64(byte[] data, byte[] encryptionKey)
-        {
-            return DecryptAes256(data.ToUtf8().Decode64(), encryptionKey, CipherMode.ECB);
-        }
-
-        public static string DecryptAes256CbcPlain(byte[] data, byte[] encryptionKey)
-        {
-            return DecryptAes256(data.Skip(17).ToArray(),
-                                 encryptionKey,
-                                 CipherMode.CBC,
-                                 data.Skip(1).Take(16).ToArray());
-        }
-
-        public static string DecryptAes256CbcBase64(byte[] data, byte[] encryptionKey)
-        {
-            return DecryptAes256(data.Skip(26).ToArray().ToUtf8().Decode64(),
-                                 encryptionKey,
-                                 CipherMode.CBC,
-                                 data.Skip(1).Take(24).ToArray().ToUtf8().Decode64());
-        }
-
-        public static string DecryptAes256(byte[] data, byte[] encryptionKey, CipherMode mode)
-        {
-            return DecryptAes256(data, encryptionKey, mode, new byte[16]);
-        }
-
-        public static string DecryptAes256(byte[] data, byte[] encryptionKey, CipherMode mode, byte[] iv)
-        {
-            if (data.Length == 0)
-                return "";
-
-            using (var aes = new AesManaged {KeySize = 256, Key = encryptionKey, Mode = mode, IV = iv})
-            using (var decryptor = aes.CreateDecryptor())
-            using (var stream = new MemoryStream(data, false))
-            using (var cryptoStream = new CryptoStream(stream, decryptor, CryptoStreamMode.Read))
-            using (var reader = new StreamReader(cryptoStream))
-            {
-                // TODO: StreamReader is a text reader. This might fail with arbitrary binary encrypted
-                //       data. Luckily we have only text encrypted. Pay attention when refactoring!
-                return reader.ReadToEnd();
-            }
-        }
-
-        private static string DecryptAes256WithDefaultValue(byte[] data,
-                                                            byte[] encryptionKey,
-                                                            string defaultValue,
-                                                            Func<byte[], byte[], string> decrypt)
-        {
-            try
-            {
-                return decrypt(data, encryptionKey);
-            }
-            catch (CryptographicException)
-            {
-                return defaultValue;
-            }
         }
 
         private static readonly HashSet<string> AllowedSecureNoteTypes = new HashSet<string>

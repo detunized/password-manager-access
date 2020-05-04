@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
@@ -59,11 +60,89 @@ namespace PasswordManagerAccess.Test.LastPass
                 "Iteration count should be positive");
         }
 
+        [Fact]
+        public void DecryptAes256Plain_with_default_value()
+        {
+            var defVal = "ohai!";
+            var plaintext = Util.DecryptAes256Plain("not a valid ciphertext".ToBytes(),
+                                                    EncryptionKey,
+                                                    defVal);
+
+            Assert.Equal(defVal, plaintext);
+        }
+
+        [Fact]
+        public void DecryptAes256Base64_with_default_value()
+        {
+            var defVal = "ohai!";
+            var plaintext = Util.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(),
+                                                     EncryptionKey,
+                                                     defVal);
+            Assert.Equal(defVal, plaintext);
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM=")]
+        [InlineData("All your base are belong to us", "IcokDWmjOkKtLpZehWKL6666Uj6fNXPpX6lLWlou+1Lrwb+D3ymP6BAwd6C0TB3hSA==")]
+        public void DecryptAes256Plain(string plaintext, string ciphertext)
+        {
+            Assert.Equal(plaintext, Util.DecryptAes256Plain(ciphertext.Decode64(), EncryptionKey));
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM=")]
+        [InlineData("All your base are belong to us", "!YFuiAVZgOD2K+s6y8yaMOw==|TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=")]
+        public void DecryptAes256Base64(string plaintext, string ciphertext)
+        {
+            Assert.Equal(plaintext, Util.DecryptAes256Base64(ciphertext.ToBytes(), EncryptionKey));
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("0123456789", "8mHxIA8rul6eq72a/Gq2iw==")]
+        [InlineData("All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM=")]
+        public void DecryptAes256EcbPlain(string plaintext, string ciphertext)
+        {
+            Assert.Equal(plaintext, Util.DecryptAes256EcbPlain(ciphertext.Decode64(), EncryptionKey));
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("0123456789", "8mHxIA8rul6eq72a/Gq2iw==")]
+        [InlineData("All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM=")]
+        public void DecryptAes256EcbBase64(string plaintext, string ciphertext)
+        {
+            Assert.Equal(plaintext, Util.DecryptAes256EcbBase64(ciphertext.ToBytes(), EncryptionKey));
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("0123456789", "IQ+hiIy0vGG4srsHmXChe3ehWc/rYPnfiyqOG8h78DdX")]
+        [InlineData("All your base are belong to us", "IcokDWmjOkKtLpZehWKL6666Uj6fNXPpX6lLWlou+1Lrwb+D3ymP6BAwd6C0TB3hSA==")]
+        public void DecryptAes256CbcPlain(string plaintext, string ciphertext)
+        {
+            Assert.Equal(plaintext, Util.DecryptAes256CbcPlain(ciphertext.Decode64(), EncryptionKey));
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("0123456789", "!6TZb9bbrqpocMaNgFjrhjw==|f7RcJ7UowesqGk+um+P5ug==")]
+        [InlineData("All your base are belong to us", "!YFuiAVZgOD2K+s6y8yaMOw==|TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=")]
+        public void DecryptAes256CbcBase64(string plaintext, string ciphertext)
+        {
+            Assert.Equal(plaintext, Util.DecryptAes256CbcBase64(ciphertext.ToBytes(), EncryptionKey));
+        }
+
         //
         // Data
         //
 
         private const string Username = "postlass@gmail.com";
         private const string Password = "pl1234567890";
+
+        private static readonly byte[] EncryptionKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
+
     }
 }

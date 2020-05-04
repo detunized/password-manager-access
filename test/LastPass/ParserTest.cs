@@ -44,10 +44,9 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void ParseEcryptedPrivateKey_throws_on_invalid_chunk()
+        public void ParseEncryptedPrivateKey_throws_on_invalid_chunk()
         {
-            var e = Assert.Throws<ParseException>(
-                () => Parser.ParseEncryptedPrivateKey("", TestData.EncryptionKey));
+            var e = Assert.Throws<ParseException>(() => Parser.ParseEncryptedPrivateKey("", TestData.EncryptionKey));
             Assert.Equal(ParseException.FailureReason.CorruptedBlob, e.Reason);
             Assert.Equal("Failed to decrypt private key", e.Message);
         }
@@ -251,104 +250,6 @@ namespace PasswordManagerAccess.Test.LastPass
             });
         }
 
-        [Fact]
-        public void DecryptAes256Plain_with_default_value()
-        {
-            var defVal = "ohai!";
-            var plaintext = Parser.DecryptAes256Plain("not a valid ciphertext".ToBytes(),
-                                                            _encryptionKey,
-                                                            defVal);
-            Assert.Equal(defVal, plaintext);
-        }
-
-        [Fact]
-        public void DecryptAes256Base64_with_default_value()
-        {
-            var defVal = "ohai!";
-            var plaintext = Parser.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(),
-                                                             _encryptionKey,
-                                                             defVal);
-            Assert.Equal(defVal, plaintext);
-        }
-
-        [Fact]
-        public void DecryptAes256Plain()
-        {
-            var tests = new[,] {
-                {"", ""},
-                {"All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM="},
-                {"All your base are belong to us", "IcokDWmjOkKtLpZehWKL6666Uj6fNXPpX6lLWlou+1Lrwb+D3ymP6BAwd6C0TB3hSA=="}
-            };
-
-            for (var i = 0; i < tests.Rank; ++i)
-                Assert.Equal(tests[i, 0], Parser.DecryptAes256Plain(tests[i, 1].Decode64(), _encryptionKey));
-        }
-
-        [Fact]
-        public void DecryptAes256Base64()
-        {
-            var tests = new[,] {
-                {"", ""},
-                {"All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM="},
-                {"All your base are belong to us", "!YFuiAVZgOD2K+s6y8yaMOw==|TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI="}
-            };
-
-            for (var i = 0; i < tests.Rank; ++i)
-                Assert.Equal(tests[i, 0], Parser.DecryptAes256Base64(tests[i, 1].ToBytes(), _encryptionKey));
-        }
-
-        [Fact]
-        public void DecryptAes256EcbPlain()
-        {
-            var tests = new Dictionary<string, string> {
-                {"", ""},
-                {"0123456789", "8mHxIA8rul6eq72a/Gq2iw=="},
-                {"All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM="}
-            };
-
-            foreach (var i in tests)
-                Assert.Equal(i.Key, Parser.DecryptAes256EcbPlain(i.Value.Decode64(), _encryptionKey));
-        }
-
-        [Fact]
-        public void DecryptAes256EcbBase64()
-        {
-            var tests = new Dictionary<string, string> {
-                {"", ""},
-                {"0123456789", "8mHxIA8rul6eq72a/Gq2iw=="},
-                {"All your base are belong to us", "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM="}
-            };
-
-            foreach (var i in tests)
-                Assert.Equal(i.Key, Parser.DecryptAes256EcbBase64(i.Value.ToBytes(), _encryptionKey));
-        }
-
-        [Fact]
-        public void DecryptAes256CbcPlain()
-        {
-            var tests = new Dictionary<string, string> {
-                {"", ""},
-                {"0123456789", "IQ+hiIy0vGG4srsHmXChe3ehWc/rYPnfiyqOG8h78DdX"},
-                {"All your base are belong to us", "IcokDWmjOkKtLpZehWKL6666Uj6fNXPpX6lLWlou+1Lrwb+D3ymP6BAwd6C0TB3hSA=="}
-            };
-
-            foreach (var i in tests)
-                Assert.Equal(i.Key, Parser.DecryptAes256CbcPlain(i.Value.Decode64(), _encryptionKey));
-        }
-
-        [Fact]
-        public void DecryptAes256CbcBase64()
-        {
-            var tests = new Dictionary<string, string> {
-                {"", ""},
-                {"0123456789", "!6TZb9bbrqpocMaNgFjrhjw==|f7RcJ7UowesqGk+um+P5ug=="},
-                {"All your base are belong to us", "!YFuiAVZgOD2K+s6y8yaMOw==|TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI="}
-            };
-
-            foreach (var i in tests)
-                Assert.Equal(i.Key, Parser.DecryptAes256CbcBase64(i.Value.ToBytes(), _encryptionKey));
-        }
-
         //
         // Helpers
         //
@@ -407,7 +308,5 @@ namespace PasswordManagerAccess.Test.LastPass
                 return encryptedStream.ToArray();
             }
         }
-
-        private static readonly byte[] _encryptionKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
     }
 }

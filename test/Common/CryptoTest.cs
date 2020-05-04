@@ -150,13 +150,49 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
-        // AES
+        // AES (ECB)
+        //
+
+        [Fact]
+        public void DecryptAes256Ecb_decrypts_ciphertext()
+        {
+            var plaintext = Crypto.DecryptAes256Ecb(AesCiphertextEcb, AesIv, AesKey);
+
+            Assert.Equal(AesPlaintext, plaintext);
+        }
+
+        [Fact]
+        public void DecryptAes256EcbNoPadding_decrypts_ciphertext()
+        {
+            var plaintext = Crypto.DecryptAes256EcbNoPadding(AesCiphertextEcbAligned, AesIv, AesKey);
+
+            Assert.Equal(AesPlaintextAligned, plaintext);
+        }
+
+        [Fact]
+        public void EncryptAes256Ecb_encrypts_plaintext()
+        {
+            var ciphertext = Crypto.EncryptAes256Ecb(AesPlaintext, AesIv, AesKey);
+
+            Assert.Equal(AesCiphertextEcb, ciphertext);
+        }
+
+        [Fact]
+        public void EncryptAes256EcbNoPadding_encrypts_plaintext()
+        {
+            var ciphertext = Crypto.EncryptAes256EcbNoPadding(AesPlaintextAligned, AesIv, AesKey);
+
+            Assert.Equal(AesCiphertextEcbAligned, ciphertext);
+        }
+
+        //
+        // AES (CBC)
         //
 
         [Fact]
         public void DecryptAes256Cbc_decrypts_ciphertext()
         {
-            var plaintext = Crypto.DecryptAes256Cbc(AesCiphertext, AesIv, AesKey);
+            var plaintext = Crypto.DecryptAes256Cbc(AesCiphertextCbc, AesIv, AesKey);
 
             Assert.Equal(AesPlaintext, plaintext);
         }
@@ -164,7 +200,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void DecryptAes256CbcNoPadding_decrypts_ciphertext()
         {
-            var plaintext = Crypto.DecryptAes256CbcNoPadding(AesCiphertextAligned, AesIv, AesKey);
+            var plaintext = Crypto.DecryptAes256CbcNoPadding(AesCiphertextCbcAligned, AesIv, AesKey);
 
             Assert.Equal(AesPlaintextAligned, plaintext);
         }
@@ -174,7 +210,7 @@ namespace PasswordManagerAccess.Test.Common
         {
             var ciphertext = Crypto.EncryptAes256Cbc(AesPlaintext, AesIv, AesKey);
 
-            Assert.Equal(AesCiphertext, ciphertext);
+            Assert.Equal(AesCiphertextCbc, ciphertext);
         }
 
         [Fact]
@@ -182,7 +218,26 @@ namespace PasswordManagerAccess.Test.Common
         {
             var ciphertext = Crypto.EncryptAes256CbcNoPadding(AesPlaintextAligned, AesIv, AesKey);
 
-            Assert.Equal(AesCiphertextAligned, ciphertext);
+            Assert.Equal(AesCiphertextCbcAligned, ciphertext);
+        }
+
+        //
+        // AES (general)
+        //
+
+        [Theory]
+        [InlineData("invalid ciphertext", "invalid iv", "invalid key")]
+        [InlineData("too short", "iviviviviviviviv", "key key key key key key key key!")]
+        [InlineData("too long too long", "iviviviviviviviv", "key key key key key key key key!")]
+        public void DecryptAes256_throws_on_invalid_input(string ciphertext, string iv, string key)
+        {
+            foreach (var cipherMode in new[] {CipherMode.ECB, CipherMode.CBC})
+            foreach (var padding in new[] {PaddingMode.None, PaddingMode.PKCS7})
+                Exceptions.AssertThrowsCrypto(() => Crypto.DecryptAes256(ciphertext.ToBytes(),
+                                                                         iv.ToBytes(),
+                                                                         key.ToBytes(),
+                                                                         cipherMode,
+                                                                         padding));
         }
 
         //
@@ -222,14 +277,27 @@ namespace PasswordManagerAccess.Test.Common
         // AES
         //
 
-        private static readonly byte[] AesIv = "YFuiAVZgOD2K+s6y8yaMOw==".Decode64();
-        private static readonly byte[] AesKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
+        private static readonly byte[] AesIv = "605ba2015660383d8afaceb2f3268c3b".DecodeHex();
+        private static readonly byte[] AesKey = "39f394bd59d0cc1e2fe3db0d878f8f7702056fd16be7e8d57d64537fe1361a18".DecodeHex();
 
         private static readonly byte[] AesPlaintext = "All your base are belong to us".ToBytes();
-        private static readonly byte[] AesCiphertext = "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64();
-
         private static readonly byte[] AesPlaintextAligned = "All your base are belong to us!!".ToBytes();
-        private static readonly byte[] AesCiphertextAligned = "TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=".Decode64();
+
+        // $ echo -n 'All your base are belong to us' | openssl enc -aes-256-ecb -K 39f394bd59d0cc1e2fe3db0d878f8f7702056fd16be7e8d57d64537fe1361a18 -iv 605ba2015660383d8afaceb2f3268c3b | base64
+        // BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM=
+        private static readonly byte[] AesCiphertextEcb = "BNhd3Q3ZVODxk9c0C788NUPTIfYnZuxXfkghtMJ8jVM=".Decode64();
+
+        // $ echo -n 'All your base are belong to us!!' | openssl enc -aes-256-ecb -K 39f394bd59d0cc1e2fe3db0d878f8f7702056fd16be7e8d57d64537fe1361a18 -iv 605ba2015660383d8afaceb2f3268c3b -nopad | base64
+        // BNhd3Q3ZVODxk9c0C788NUNlKltXfjtuF6YrSq9K+lo=
+        private static readonly byte[] AesCiphertextEcbAligned = "BNhd3Q3ZVODxk9c0C788NUNlKltXfjtuF6YrSq9K+lo=".Decode64();
+
+        // $ echo -n 'All your base are belong to us' | openssl enc -aes-256-cbc -K 39f394bd59d0cc1e2fe3db0d878f8f7702056fd16be7e8d57d64537fe1361a18 -iv 605ba2015660383d8afaceb2f3268c3b | base64
+        // TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=
+        private static readonly byte[] AesCiphertextCbc = "TZ1+if9ofqRKTatyUaOnfudletslMJ/RZyUwJuR/+aI=".Decode64();
+
+        // $ echo -n 'All your base are belong to us!!' | openssl enc -aes-256-cbc -K 39f394bd59d0cc1e2fe3db0d878f8f7702056fd16be7e8d57d64537fe1361a18 -iv 605ba2015660383d8afaceb2f3268c3b -nopad | base64
+        // TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=
+        private static readonly byte[] AesCiphertextCbcAligned = "TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=".Decode64();
 
         //
         // RSA
