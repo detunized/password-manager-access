@@ -118,7 +118,7 @@ namespace PasswordManagerAccess.LastPass
                 ["method"] = PlatformToUserAgent[clientInfo.Platform],
                 ["xml"] = "2",
                 ["username"] = username,
-                ["hash"] = FetcherHelper.MakeHash(username, password, keyIterationCount),
+                ["hash"] = Util.DeriveKeyHash(username, password, keyIterationCount).ToHex(),
                 ["iterations"] = keyIterationCount,
                 ["includeprivatekeyenc"] = "1",
                 ["outofbandsupported"] = "1",

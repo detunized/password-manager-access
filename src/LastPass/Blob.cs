@@ -15,7 +15,7 @@ namespace PasswordManagerAccess.LastPass
 
         public byte[] MakeEncryptionKey(string username, string password)
         {
-            return FetcherHelper.MakeKey(username, password, KeyIterationCount);
+            return Util.DeriveKey(username, password, KeyIterationCount);
         }
 
         public byte[] Bytes { get; private set; }

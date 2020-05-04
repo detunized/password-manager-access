@@ -254,6 +254,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectContent("method=cli")
                     .ExpectContent($"username={Username}")
                     .ExpectContent($"iterations={KeyIterationCount}")
+                    .ExpectContent("hash=5e966139c28deab2c5955fcfa66ae6bebb55548a5f79d1d639abf7b0ce78d891")
                     .ExpectContent($"trustlabel={ClientInfo.Description}");
 
             Client.PerformSingleLoginRequest(Username,
