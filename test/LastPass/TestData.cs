@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Test.LastPass
@@ -1024,6 +1025,18 @@ namespace PasswordManagerAccess.Test.LastPass
             "0Zl0W6Cz920jJqy4RzwNwlaQ133n/+PnimMHROy69aNy90JgElhtyFnW54S/" +
             "9hl+eqRPVBbcw7lLCTSKi4VrZpcy22j1y9aDXJ3Baovq3yjHt8XvgoX44ZVI" +
             "EVu5r0tI9yd0LDIhG0Dy1uTT69JjEHni/3ccNto3Ua4soEDmEpc=").Decode64();
+
+        public static readonly RSAParameters PrivateKey = new RSAParameters
+        {
+            D = RsaD,
+            DP = RsaDP,
+            DQ = RsaDQ,
+            Exponent = RsaExponent,
+            InverseQ = RsaInverseQ,
+            Modulus = RsaModulus,
+            P = RsaP,
+            Q = RsaQ,
+        };
 
         public class Account
         {

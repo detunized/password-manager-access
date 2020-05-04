@@ -365,7 +365,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Get(expected.ToBase64());
             var blob = Client.DownloadVault(Session, flow);
 
-            Assert.Equal(expected, blob.Bytes);
+            Assert.Equal(expected, blob);
         }
 
         [Fact]
@@ -502,8 +502,7 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void ParseVault_returns_vault_with_correct_accounts()
         {
-            var accounts = Client.ParseVault(new Blob(TestData.Blob, 1, TestData.EncryptedPrivateKey),
-                                             TestData.EncryptionKey);
+            var accounts = Client.ParseVault(TestData.Blob, TestData.EncryptionKey, TestData.PrivateKey);
 
             Assert.Equal(TestData.Accounts.Length, accounts.Length);
             for (var i = 0; i < accounts.Length; i++)
@@ -524,8 +523,9 @@ namespace PasswordManagerAccess.Test.LastPass
             foreach (var i in tests)
             {
                 var e = Assert.Throws<ParseException>(
-                    () => Client.ParseVault(new Blob(TestData.Blob.Take(TestData.Blob.Length - i).ToArray(), 1, ""),
-                                            new byte[16]));
+                    () => Client.ParseVault(TestData.Blob.Take(TestData.Blob.Length - i).ToArray(),
+                                            TestData.EncryptionKey,
+                                            TestData.PrivateKey));
                 Assert.Equal(ParseException.FailureReason.CorruptedBlob, e.Reason);
                 Assert.Equal("Blob is truncated", e.Message);
             }

@@ -25,8 +25,13 @@ namespace PasswordManagerAccess.LastPass
             try
             {
                 var blob = DownloadVault(session, rest);
-                var key = blob.MakeEncryptionKey(username, password);
-                return ParseVault(blob, key);
+                var key = Util.DeriveKey(username, password, session.KeyIterationCount);
+
+                var privateKey = new RSAParameters();
+                if (!session.EncryptedPrivateKey.IsNullOrEmpty())
+                    privateKey = Parser.ParseEncryptedPrivateKey(session.EncryptedPrivateKey, key);
+
+                return ParseVault(blob, key, privateKey);
             }
             finally
             {
@@ -230,11 +235,11 @@ namespace PasswordManagerAccess.LastPass
             throw MakeError(response);
         }
 
-        internal static Blob DownloadVault(Session session, RestClient rest)
+        internal static byte[] DownloadVault(Session session, RestClient rest)
         {
             var response = rest.Get(GetVaultEndpoint(session.Platform), cookies: GetSessionCookies(session));
             if (response.IsSuccessful)
-                return new Blob(response.Content.Decode64(), session.KeyIterationCount, session.EncryptedPrivateKey);
+                return response.Content.Decode64();
 
             throw MakeError(response);
         }
@@ -323,18 +328,14 @@ namespace PasswordManagerAccess.LastPass
                 .Value;
         }
 
-        internal static Account[] ParseVault(Blob blob, byte[] encryptionKey)
+        internal static Account[] ParseVault(byte[] blob, byte[] encryptionKey, RSAParameters privateKey)
         {
-            return blob.Bytes.Open(
+            return blob.Open(
                 reader =>
                 {
                     var chunks = Parser.ExtractChunks(reader);
                     if (!IsComplete(chunks))
                         throw new ParseException(ParseException.FailureReason.CorruptedBlob, "Blob is truncated");
-
-                    var privateKey = new RSAParameters();
-                    if (blob.EncryptedPrivateKey != null)
-                        privateKey = Parser.ParseEncryptedPrivateKey(blob.EncryptedPrivateKey, encryptionKey);
 
                     return ParseAccounts(chunks, encryptionKey, privateKey);
                 });
