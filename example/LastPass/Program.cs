@@ -68,7 +68,7 @@ namespace PasswordManagerAccess.Example.LastPass
                                       account.Path);
                 }
             }
-            catch (LoginException e)
+            catch (BaseException e)
             {
                 Console.WriteLine("Something went wrong: {0}", e);
             }
