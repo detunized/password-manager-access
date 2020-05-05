@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private static void ParseDeadBeefItem(byte tag, Asn1.Kind kind)
         {
-            var item = Asn1.ParseItem(string.Format("{0:X2}04DEADBEEF", tag).DecodeHex());
+            var item = Asn1.ParseItem($"{tag:X2}04DEADBEEF".DecodeHex());
 
             Assert.Equal(kind, item.Key);
             Assert.Equal(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}, item.Value);

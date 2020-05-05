@@ -82,12 +82,9 @@ namespace PasswordManagerAccess.LastPass
 
                 // Key
                 var rsaEncryptedFolderKey = ReadItem(reader);
-                byte[] key;
-                using (var rsa = new RSACryptoServiceProvider())
-                {
-                    rsa.ImportParameters(rsaKey);
-                    key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
-                }
+                using var rsa = new RSACryptoServiceProvider();
+                rsa.ImportParameters(rsaKey);
+                var key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
 
                 // Name
                 var encryptedName = ReadItem(reader);
@@ -176,7 +173,7 @@ namespace PasswordManagerAccess.LastPass
             if (folder == null)
                 return string.IsNullOrEmpty(group) ? "(none)" : group;
 
-            return string.IsNullOrEmpty(group) ? folder.Name : string.Format("{0}\\{1}", folder.Name, group);
+            return string.IsNullOrEmpty(group) ? folder.Name : $"{folder.Name}\\{group}";
         }
 
         public static List<Chunk> ExtractChunks(BinaryReader reader)

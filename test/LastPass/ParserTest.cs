@@ -2,10 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using Xunit;
@@ -262,51 +260,6 @@ namespace PasswordManagerAccess.Test.LastPass
         private static void WithHex(string hex, Action<BinaryReader> action)
         {
             hex.DecodeHex().Open(action);
-        }
-
-        private static byte[] MakeItem(string payload)
-        {
-            return MakeItem(payload.ToBytes());
-        }
-
-        private static byte[] MakeItem(byte[] payload)
-        {
-            var sizeBits = BitConverter.GetBytes(payload.Length);
-            if (BitConverter.IsLittleEndian)
-                sizeBits = sizeBits.Reverse().ToArray();
-
-            return sizeBits.Concat(payload).ToArray();
-        }
-
-        private static Parser.Chunk MakeChunk(string id, byte[][] items)
-        {
-            IEnumerable<IEnumerable<byte>> itemsAsEnumerable = items;
-            var chained = itemsAsEnumerable.Aggregate((chain, i) => chain.Concat(i));
-            return new Parser.Chunk(id, chained.ToArray());
-        }
-
-        private static string Encode64(byte[] data)
-        {
-            return Convert.ToBase64String(data);
-        }
-
-        private static byte[] EncryptAes256(string data, byte[] encryptionKey)
-        {
-            return EncryptAes256(data.ToBytes(), encryptionKey);
-        }
-
-        private static byte[] EncryptAes256(byte[] data, byte[] encryptionKey)
-        {
-            using (var aes = new AesManaged { KeySize = 256, Key = encryptionKey, Mode = CipherMode.ECB })
-            using (var encryptor = aes.CreateEncryptor())
-            using (var encryptedStream = new MemoryStream())
-            using (var cryptoStream = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write))
-            {
-                cryptoStream.Write(data, 0, data.Length);
-                cryptoStream.FlushFinalBlock();
-
-                return encryptedStream.ToArray();
-            }
         }
     }
 }
