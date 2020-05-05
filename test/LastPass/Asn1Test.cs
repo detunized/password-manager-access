@@ -37,8 +37,9 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void Asn1_ParseItem_throws_on_invalid_tag()
         {
-            var e = Assert.Throws<ArgumentException>(() => Asn1.ParseItem("0D04DEADBEEF".DecodeHex()));
-            Assert.Equal("Unknown ASN.1 tag 13", e.Message);
+            Exceptions.AssertThrowsInternalError(
+                () => Asn1.ParseItem("0D04DEADBEEF".DecodeHex()),
+                "Unknown ASN.1 tag 13");
         }
 
         [Fact]
