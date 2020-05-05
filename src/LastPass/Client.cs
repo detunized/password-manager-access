@@ -91,10 +91,6 @@ namespace PasswordManagerAccess.LastPass
             if (session == null)
                 throw MakeLoginError(response);
 
-            // 4. The login with OTP or OOB is successful. Tell the server to trust this device next time.
-            if (clientInfo.TrustThisDevice)
-                MarkDeviceAsTrusted(session, clientInfo, rest);
-
             return session;
         }
 
@@ -128,10 +124,8 @@ namespace PasswordManagerAccess.LastPass
                 ["includeprivatekeyenc"] = "1",
                 ["outofbandsupported"] = "1",
                 ["uuid"] = clientInfo.Id,
+                ["trustlabel"] = clientInfo.Description, // TODO: Test against the real server if it's ok to send this every time!
             };
-
-            if (clientInfo.TrustThisDevice)
-                parameters["trustlabel"] = clientInfo.Description;
 
             foreach (var kv in extraParameters)
                 parameters[kv.Key] = kv.Value;
@@ -152,19 +146,25 @@ namespace PasswordManagerAccess.LastPass
                                              Ui ui,
                                              RestClient rest)
         {
-            // TODO: Support cancellation
-            var otp = ui.ProvideSecondFactorPassword(method);
+            var passcode = ui.ProvideSecondFactorPasscode(method);
+            if (passcode == Ui.Passcode.Cancel)
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+
             var response = PerformSingleLoginRequest(username,
                                                      password,
                                                      keyIterationCount,
-                                                     new Dictionary<string, object> {["otp"] = otp},
+                                                     new Dictionary<string, object> {["otp"] = passcode.Code},
                                                      clientInfo,
                                                      rest);
-            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
-            if (session != null)
-                return session;
 
-            throw MakeLoginError(response);
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+            if (session == null)
+                throw MakeLoginError(response);
+
+            if (passcode.RememberMe)
+                MarkDeviceAsTrusted(session, clientInfo, rest);
+
+            return session;
         }
 
         // Returns a valid session or throws
@@ -178,7 +178,11 @@ namespace PasswordManagerAccess.LastPass
         {
             var extraParameters = new Dictionary<string, object> {["outofbandrequest"] = 1};
 
-            ui.AskToApproveOutOfBand(method);
+            var action = ui.AskToApproveOutOfBand(method);
+            if (action == Ui.OufOfBandAction.Cancel)
+                throw new CanceledMultiFactorException("Out of band step is canceled by the user");
+
+            Session session;
             for (;;)
             {
                 var response = PerformSingleLoginRequest(username,
@@ -187,9 +191,10 @@ namespace PasswordManagerAccess.LastPass
                                                          extraParameters,
                                                          clientInfo,
                                                          rest);
-                var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+
+                session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
                 if (session != null)
-                    return session;
+                    break;
 
                 if (GetOptionalErrorAttribute(response, "cause") != "outofbandrequired")
                     throw MakeLoginError(response);
@@ -201,6 +206,11 @@ namespace PasswordManagerAccess.LastPass
                 // TODO: I think we should sleep here for a bit before retrying or ask the user again.
                 //      Otherwise we might flood the server with too many requests.
             }
+
+            if (action == Ui.OufOfBandAction.ContinueAndRememberMe)
+                MarkDeviceAsTrusted(session, clientInfo, rest);
+
+            return session;
         }
 
         internal static void MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest)
@@ -394,7 +404,7 @@ namespace PasswordManagerAccess.LastPass
                 response.Error);
         }
 
-        internal static Common.BaseException MakeLoginError(XDocument response)
+        internal static BaseException MakeLoginError(XDocument response)
         {
             // XML is valid but there's nothing in it we can understand
             var error = response.XPathSelectElement("response/error");

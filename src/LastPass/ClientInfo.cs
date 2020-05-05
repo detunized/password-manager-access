@@ -8,14 +8,12 @@ namespace PasswordManagerAccess.LastPass
         public readonly Platform Platform;
         public readonly string Id;
         public readonly string Description;
-        public readonly bool TrustThisDevice;
 
-        public ClientInfo(Platform platform, string id, string description, bool trustThisDevice)
+        public ClientInfo(Platform platform, string id, string description)
         {
             Platform = platform;
             Id = id;
             Description = description;
-            TrustThisDevice = trustThisDevice;
         }
     }
 }

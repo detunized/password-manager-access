@@ -14,14 +14,21 @@ namespace PasswordManagerAccess.Example.LastPass
         // to Vault UI requests.
         private class TextUi: Ui
         {
-            public override string ProvideSecondFactorPassword(SecondFactorMethod method)
+            private const string ToCancel = "or just press ENTER to cancel";
+
+            public override Passcode ProvideSecondFactorPasscode(SecondFactorMethod method)
             {
-                return GetAnswer(string.Format("Please enter {0} code", method));
+                var answer = GetAnswer($"Please enter {method} code {ToCancel}");
+                return answer == "" ? Passcode.Cancel : new Passcode(answer, GetRememberMe());
             }
 
-            public override void AskToApproveOutOfBand(OutOfBandMethod method)
+            public override OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method)
             {
-                Console.WriteLine("Please approve out-of-band via {0}", method);
+                Console.WriteLine($"Please approve out-of-band via {method}");
+                if (GetAnswer("press ENTER to continue or 'c' to cancel").ToLower() == "c")
+                    return OufOfBandAction.Cancel;
+
+                return GetRememberMe() ? OufOfBandAction.ContinueAndRememberMe : OufOfBandAction.Continue;
             }
 
             private static string GetAnswer(string prompt)
@@ -31,6 +38,12 @@ namespace PasswordManagerAccess.Example.LastPass
                 var input = Console.ReadLine();
 
                 return input == null ? "" : input.Trim();
+            }
+
+            private static bool GetRememberMe()
+            {
+                var remember = GetAnswer("Remember this device?").ToLower();
+                return remember == "y" || remember == "yes";
             }
         }
 
@@ -45,8 +58,7 @@ namespace PasswordManagerAccess.Example.LastPass
                                        config["password"],
                                        new ClientInfo(Platform.Desktop,
                                                       config["device-id"],
-                                                      config["client-description"],
-                                                      false),
+                                                      config["client-description"]),
                                        new TextUi());
 
                 // Dump all the accounts

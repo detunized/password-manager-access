@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Xml.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
@@ -46,6 +45,28 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponseNoPrivateKey)
                     .ExpectUrl("/login.php")
                     .ExpectContent($"otp={Otp}")
+                .Get(TestData.BlobBase64)
+                    .ExpectUrl("/getaccts.php?")
+                .Post("")
+                    .ExpectUrl("/logout.php");
+
+            // TODO: Decryption fails here because of the incorrect password
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void OpenVault_returns_accounts_with_otp_and_rememeber_me()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                    .ExpectUrl("/iterations.php")
+                .Post(OtpRequiredResponse)
+                    .ExpectUrl("/login.php")
+                .Post(OkResponseNoPrivateKey)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent($"otp={Otp}")
                 .Post("")
                     .ExpectUrl("/trust.php")
                 .Get(TestData.BlobBase64)
@@ -54,13 +75,40 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingWithRememberMeUi(), flow);
 
             Assert.NotEmpty(accounts);
         }
 
         [Fact]
         public void OpenVault_returns_accounts_with_oob()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                    .ExpectUrl("/iterations.php")
+                .Post(OobRequiredResponse)
+                    .ExpectUrl("/login.php")
+                .Post(OobRetryResponse)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent("outofbandrequest=1")
+                .Post(OkResponseNoPrivateKey)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent("outofbandrequest=1")
+                    .ExpectContent("outofbandretry=1")
+                    .ExpectContent("outofbandretryid=retry-id")
+                .Get(TestData.BlobBase64)
+                    .ExpectUrl("/getaccts.php?")
+                .Post("")
+                    .ExpectUrl("/logout.php");
+
+            // TODO: Decryption fails here because of the incorrect password
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void OpenVault_returns_accounts_with_oob_and_rememeber_me()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
@@ -83,7 +131,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingWithRememberMeUi(), flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -113,6 +161,18 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void OpenVault_throws_on_canceled_otp()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                .Post(OtpRequiredResponse);
+
+            Exceptions.AssertThrowsCanceledMultiFactor(
+                () => Client.OpenVault(Username, Password, ClientInfo, new CancelingUi(), flow),
+                "Second factor step is canceled by the user");
+        }
+
+        [Fact]
         public void OpenVault_throws_on_failed_otp()
         {
             var flow = new RestFlow()
@@ -121,8 +181,20 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='googleauthfailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow),
                 "Second factor code is incorrect");
+        }
+
+        [Fact]
+        public void OpenVault_throws_on_canceled_oob()
+        {
+            var flow = new RestFlow()
+                .Post(KeyIterationCount.ToString())
+                .Post(OobRequiredResponse);
+
+            Exceptions.AssertThrowsCanceledMultiFactor(
+                () => Client.OpenVault(Username, Password, ClientInfo, new CancelingUi(), flow),
+                "Out of band step is canceled by the user");
         }
 
         [Fact]
@@ -134,7 +206,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='multifactorresponsefailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow),
                 "Out of band authentication failed");
         }
 
@@ -175,7 +247,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. login with otp
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+            var session = Client.Login(Username, Password, ClientInfo, new ContinuingUi(), flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -189,7 +261,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. check oob
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+            var session = Client.Login(Username, Password, ClientInfo, new ContinuingUi(), flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -274,7 +346,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               Ui.SecondFactorMethod.GoogleAuth,
                                               ClientInfo,
-                                              new OtpProvidingUi(),
+                                              new ContinuingUi(),
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -292,7 +364,25 @@ namespace PasswordManagerAccess.Test.LastPass
                                 KeyIterationCount,
                                 Ui.SecondFactorMethod.GoogleAuth,
                                 ClientInfo,
-                                new OtpProvidingUi(),
+                                new ContinuingUi(),
+                                flow);
+        }
+
+        [Fact]
+        public void LoginWithOtp_with_remember_me_marks_device_as_trusted()
+        {
+            var flow = new RestFlow()
+                .Post(OkResponse)
+                    .ExpectUrl("/login.php")
+                .Post("")
+                    .ExpectUrl("/trust.php");
+
+            Client.LoginWithOtp(Username,
+                                Password,
+                                KeyIterationCount,
+                                Ui.SecondFactorMethod.GoogleAuth,
+                                ClientInfo,
+                                new ContinuingWithRememberMeUi(),
                                 flow);
         }
 
@@ -305,7 +395,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               Ui.OutOfBandMethod.LastPassAuth,
                                               ClientInfo,
-                                              new OtpProvidingUi(),
+                                              new ContinuingUi(),
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -325,10 +415,28 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               Ui.OutOfBandMethod.LastPassAuth,
                                               ClientInfo,
-                                              new OtpProvidingUi(),
+                                              new ContinuingUi(),
                                               flow);
 
             AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void LoginWithOob_with_remember_me_marks_device_as_trusted()
+        {
+            var flow = new RestFlow()
+                .Post(OkResponse)
+                    .ExpectUrl("/login.php")
+                .Post("")
+                    .ExpectUrl("/trust.php");
+
+            Client.LoginWithOob(Username,
+                                Password,
+                                KeyIterationCount,
+                                Ui.OutOfBandMethod.LastPassAuth,
+                                ClientInfo,
+                                new ContinuingWithRememberMeUi(),
+                                flow);
         }
 
         [Fact]
@@ -538,16 +646,40 @@ namespace PasswordManagerAccess.Test.LastPass
         // Helpers
         //
 
-        private class OtpProvidingUi: Ui
+        private class ContinuingUi: FakeUi
         {
-            public override string ProvideSecondFactorPassword(SecondFactorMethod method)
+            public ContinuingUi(): base(new Passcode(Otp, false), OufOfBandAction.Continue)
             {
-                return Otp;
+            }
+        }
+
+        private class ContinuingWithRememberMeUi: FakeUi
+        {
+            public ContinuingWithRememberMeUi(): base(new Passcode(Otp, true), OufOfBandAction.ContinueAndRememberMe)
+            {
+            }
+        }
+
+        private class CancelingUi: FakeUi
+        {
+            public CancelingUi(): base(Passcode.Cancel, OufOfBandAction.Cancel)
+            {
+            }
+        }
+
+        private class FakeUi: Ui
+        {
+            protected FakeUi(Passcode otp, OufOfBandAction oob)
+            {
+                _otp = otp;
+                _oob = oob;
             }
 
-            public override void AskToApproveOutOfBand(OutOfBandMethod method)
-            {
-            }
+            public override Passcode ProvideSecondFactorPasscode(SecondFactorMethod method) => _otp;
+            public override OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method) => _oob;
+
+            private Passcode _otp;
+            private OufOfBandAction _oob;
         }
 
         private static void AssertSessionWithPrivateKey(Session session)
@@ -582,8 +714,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private static readonly ClientInfo ClientInfo = new ClientInfo(Platform.Desktop,
                                                                        "client-id",
-                                                                       "description",
-                                                                       true);
+                                                                       "description");
 
         private static readonly Session Session = new Session("session-id",
                                                               KeyIterationCount,
