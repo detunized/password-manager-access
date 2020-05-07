@@ -3,6 +3,7 @@
 
 namespace PasswordManagerAccess.LastPass
 {
+    // TODO: We need to support optional passcodes on out-of-band auth.
     public abstract class Ui
     {
         // TODO: Think about how to deal with the cancellation.
