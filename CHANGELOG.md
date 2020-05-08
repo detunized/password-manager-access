@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+  - LastPass: ported from the original repo and now could be used
+  - Better error handling in Crypto on Mono
+
 ## 0.9.0
   - TrueKey: ported from the original repo and now could be used
   - Dashlane: the last System exceptions replaced with project local ones
