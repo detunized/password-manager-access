@@ -27,14 +27,14 @@ namespace PasswordManagerAccess.Common
         {
             var rest = new RestClient(transport, $"https://{host}");
 
-            var parsedSignature = ParseSignature(signature);
-            var html = DownloadFrame(parsedSignature.Tx, rest);
-            var parsedFrame = ParseFrame(html);
+            var (tx, app) = ParseSignature(signature);
+            var html = DownloadFrame(tx, rest);
+            var (sid, devices) = ParseFrame(html);
 
             while (true)
             {
                 // Ask the user to choose what to do
-                var choice = ui.ChooseDuoFactor(parsedFrame.Devices);
+                var choice = ui.ChooseDuoFactor(devices);
                 if (choice == null)
                     return null; // Canceled by user
 
@@ -42,7 +42,7 @@ namespace PasswordManagerAccess.Common
                 // a new batch of passcodes to the phone via SMS.
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
-                    SubmitFactor(parsedFrame.Sid, choice, "", rest);
+                    SubmitFactor(sid, choice, "", rest);
                     choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -55,37 +55,25 @@ namespace PasswordManagerAccess.Common
                         return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(parsedFrame.Sid, choice, passcode, ui, rest);
+                var token = SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
                     continue;
 
                 // All good
-                return new Result($"{token}:{parsedSignature.App}", choice.RememberMe);
+                return new Result($"{token}:{app}", choice.RememberMe);
             }
         }
 
-        // TODO: Use a tuple once we're on C# 7
-        internal struct ParsedSignature
-        {
-            public readonly string Tx;
-            public readonly string App;
-
-            public ParsedSignature(string tx, string app)
-            {
-                Tx = tx;
-                App = app;
-            }
-        }
-
-        internal static ParsedSignature ParseSignature(string signature)
+        // Duo signature looks like this: TX|ZGV...Dgx|5a8...cd4:APP|ZGV...zgx|f8d...24f
+        internal static (string Tx, string App) ParseSignature(string signature)
         {
             var parts = signature.Split(':');
             if (parts.Length != 2)
                 throw MakeInvalidResponseError("Duo HTML: the signature is invalid or in an unsupported format");
 
-            return new ParsedSignature(parts[0], parts[1]);
+            return (parts[0], parts[1]);
         }
 
         internal static HtmlDocument DownloadFrame(string tx, RestClient rest)
@@ -112,20 +100,7 @@ namespace PasswordManagerAccess.Common
             return doc;
         }
 
-        // TODO: Use a tuple once we're on C# 7
-        internal struct ParsedFrame
-        {
-            public readonly string Sid;
-            public readonly DuoDevice[] Devices;
-
-            public ParsedFrame(string sid, DuoDevice[] devices)
-            {
-                Sid = sid;
-                Devices = devices;
-            }
-        }
-
-        internal static ParsedFrame ParseFrame(HtmlDocument html)
+        internal static (string Sid, DuoDevice[] Devices) ParseFrame(HtmlDocument html)
         {
             // Find the main form
             var form = html.DocumentNode.SelectSingleNode("//form[@id='login-form']");
@@ -139,7 +114,7 @@ namespace PasswordManagerAccess.Common
             if (sid == null || devices == null)
                 throw MakeInvalidResponseError("Duo HTML: signature or devices are not found");
 
-            return new ParsedFrame(sid, devices);
+            return (sid, devices);
         }
 
         // All the info is the frame is stored in input fields <input name="name" value="value">
@@ -194,20 +169,20 @@ namespace PasswordManagerAccess.Common
         // TODO: Don't return null, use something more obvious
         internal static string PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
         {
-            const int MaxPollAttempts = 100;
+            const int maxPollAttempts = 100;
 
             // Normally it wouldn't poll nearly as many times. Just a few at most. It either bails on error or
             // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
-            for (var i = 0; i < MaxPollAttempts; i += 1)
+            for (var i = 0; i < maxPollAttempts; i += 1)
             {
                 var response = PostForm<R.Poll>("frame/status",
-                                                new Dictionary<string, object> {{"sid", sid}, {"txid", txid}},
+                                                new Dictionary<string, object> {["sid"] = sid, ["txid"] = txid},
                                                 rest);
 
-                var responseStatus = GetResponseStatus(response);
-                UpdateUi(responseStatus, ui);
+                var (status, text) = GetResponseStatus(response);
+                UpdateUi(status, text, ui);
 
-                switch (responseStatus.Status)
+                switch (status)
                 {
                 case DuoStatus.Success:
                     var url = response.Url;
@@ -226,7 +201,9 @@ namespace PasswordManagerAccess.Common
 
         internal static string FetchToken(string sid, string url, IDuoUi ui, RestClient rest)
         {
-            var response = PostForm<R.FetchToken>(url, new Dictionary<string, object> {{"sid", sid}}, rest);
+            var response = PostForm<R.FetchToken>(url,
+                                                  new Dictionary<string, object> {["sid"] = sid},
+                                                  rest);
 
             UpdateUi(response, ui);
 
@@ -250,62 +227,45 @@ namespace PasswordManagerAccess.Common
 
         internal static void UpdateUi(R.Status response, IDuoUi ui)
         {
-            UpdateUi(GetResponseStatus(response), ui);
+            var (status, text) = GetResponseStatus(response);
+            UpdateUi(status, text, ui);
         }
 
-        internal static void UpdateUi(ResponseStatus responseStatus, IDuoUi ui)
+        internal static void UpdateUi(DuoStatus status, string text, IDuoUi ui)
         {
-            if (responseStatus.Text.IsNullOrEmpty())
+            if (text.IsNullOrEmpty())
                 return;
 
-            ui.UpdateDuoStatus(responseStatus.Status, responseStatus.Text);
+            ui.UpdateDuoStatus(status, text);
         }
 
-        // TODO: Use a tuple once we're on C# 7
-        internal struct ResponseStatus
+        internal static (DuoStatus Status, string Text) GetResponseStatus(R.Status response)
         {
-            public readonly DuoStatus Status;
-            public readonly string Text;
-
-            public ResponseStatus(DuoStatus status, string text)
+            var status = response.Result switch
             {
-                Status = status;
-                Text = text;
-            }
-        }
+                "SUCCESS" => DuoStatus.Success,
+                "FAILURE" => DuoStatus.Error,
+                _ => DuoStatus.Info
+            };
 
-        internal static ResponseStatus GetResponseStatus(R.Status response)
-        {
-            var status = DuoStatus.Info;
-            switch (response.Result)
-            {
-            case "SUCCESS":
-                status = DuoStatus.Success;
-                break;
-            case "FAILURE":
-                status = DuoStatus.Error;
-                break;
-            }
-
-            return new ResponseStatus(status, response.Message ?? "");
+            return (status, response.Message ?? "");
         }
 
         // Extracts all devices listed in the login form.
         // Devices with no supported methods are ignored.
         internal static DuoDevice[] GetDevices(HtmlNode form)
         {
-            // Use key-value pair as an ad-hoc data structure to store the device id and name
-            // TODO: Use a tuple once we're on C# 7
             var devices = form
                 .SelectNodes("//select[@name='device']/option")?
-                .Select(x => new KeyValuePair<string, string>(x.Attributes["value"]?.DeEntitizeValue,
-                                                              HtmlEntity.DeEntitize(x.InnerText ?? "")));
+                .Select(x => (Id: x.Attributes["value"]?.DeEntitizeValue,
+                              Name: HtmlEntity.DeEntitize(x.InnerText ?? "")))
+                .ToArray();
 
-            if (devices == null || devices.Any(x => x.Key == null || x.Value == null))
+            if (devices == null || devices.Any(x => x.Id == null || x.Name == null))
                 return null;
 
             return devices
-                .Select(x => new DuoDevice(x.Key, x.Value, GetDeviceFactors(form, x.Key)))
+                .Select(x => new DuoDevice(x.Id, x.Name, GetDeviceFactors(form, x.Id)))
                 .Where(x => x.Factors.Length > 0)
                 .ToArray();
         }
@@ -315,7 +275,7 @@ namespace PasswordManagerAccess.Common
         internal static DuoFactor[] GetDeviceFactors(HtmlNode form, string deviceId)
         {
             var sms = CanSendSmsToDevice(form, deviceId)
-                ? new DuoFactor[] {DuoFactor.SendPasscodesBySms}
+                ? new[] {DuoFactor.SendPasscodesBySms}
                 : new DuoFactor[0];
 
             return form
@@ -336,36 +296,27 @@ namespace PasswordManagerAccess.Common
                 .SelectSingleNode(".//input[@name='phone-smsable' and @value='true']") != null;
         }
 
-        internal static DuoFactor? ParseFactor(string s)
+        internal static DuoFactor? ParseFactor(string factor)
         {
-            switch (s)
+            return factor switch
             {
-            case "Duo Push":
-                return DuoFactor.Push;
-            case "Phone Call":
-                return DuoFactor.Call;
-            case "Passcode":
-                return DuoFactor.Passcode;
-            }
-
-            return null;
+                "Duo Push" => DuoFactor.Push,
+                "Phone Call" => DuoFactor.Call,
+                "Passcode" => DuoFactor.Passcode,
+                _ => null
+            };
         }
 
         internal static string GetFactorParameterValue(DuoFactor factor)
         {
-            switch (factor)
+            return factor switch
             {
-            case DuoFactor.Push:
-                return "Duo Push";
-            case DuoFactor.Call:
-                return "Phone Call";
-            case DuoFactor.Passcode:
-                return "Passcode";
-            case DuoFactor.SendPasscodesBySms:
-                return "sms";
-            }
-
-            return "";
+                DuoFactor.Push => "Duo Push",
+                DuoFactor.Call => "Phone Call",
+                DuoFactor.Passcode => "Passcode",
+                DuoFactor.SendPasscodesBySms => "sms",
+                _ => ""
+            };
         }
 
         internal static InternalErrorException MakeInvalidResponseError(string message)
@@ -400,40 +351,40 @@ namespace PasswordManagerAccess.Common
         {
             public struct Envelope<T>
             {
-                [JsonProperty(PropertyName = "stat", Required = Required.Always)]
+                [JsonProperty("stat", Required = Required.Always)]
                 public string Status;
 
-                [JsonProperty(PropertyName = "message")]
+                [JsonProperty("message")]
                 public string Message;
 
-                [JsonProperty(PropertyName = "response")]
+                [JsonProperty("response")]
                 public T Payload;
             }
 
             public class SubmitFactor
             {
-                [JsonProperty(PropertyName = "txid")]
+                [JsonProperty("txid")]
                 public string TransactionId;
             }
 
             public class Status
             {
-                [JsonProperty(PropertyName = "result")]
+                [JsonProperty("result")]
                 public string Result;
 
-                [JsonProperty(PropertyName = "status")]
+                [JsonProperty("status")]
                 public string Message;
             }
 
             public class FetchToken: Status
             {
-                [JsonProperty(PropertyName = "cookie")]
+                [JsonProperty("cookie")]
                 public string Cookie;
             }
 
             public class Poll: Status
             {
-                [JsonProperty(PropertyName = "result_url")]
+                [JsonProperty("result_url")]
                 public string Url;
             }
         }

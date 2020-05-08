@@ -12,10 +12,10 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void ParseSignature_returns_parts()
         {
-            var parsed = Duo.ParseSignature("tx:app");
+            var (tx, app) = Duo.ParseSignature("tx:app");
 
-            Assert.Equal("tx", parsed.Tx);
-            Assert.Equal("app", parsed.App);
+            Assert.Equal("tx", tx);
+            Assert.Equal("app", app);
         }
 
         [Theory]
