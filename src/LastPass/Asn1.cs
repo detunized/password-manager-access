@@ -1,16 +1,16 @@
-// Copyright (C) 2013 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
+using PasswordManagerAccess.Common;
 
-namespace LastPass
+namespace PasswordManagerAccess.LastPass
 {
     // Very-very basic ASN.1 parser. Just enough to extract the RSA key
     // parameters stored in a vault. Supports only sequences, octet strings
     // and numbers. Error handling is minimal too.
-    static class Asn1
+    internal static class Asn1
     {
         public enum Kind
         {
@@ -22,7 +22,12 @@ namespace LastPass
 
         public static KeyValuePair<Kind, byte[]> ParseItem(byte[] bytes)
         {
-            return ParserHelper.WithBytes(bytes, reader => ExtractItem(reader));
+            return bytes.Open(ExtractItem);
+        }
+
+        public static void SkipItem(BinaryReader reader)
+        {
+            _ = ExtractItem(reader);
         }
 
         public static KeyValuePair<Kind, byte[]> ExtractItem(BinaryReader reader)
@@ -46,7 +51,7 @@ namespace LastPass
                 kind = Kind.Sequence;
                 break;
             default:
-                throw new ArgumentException(string.Format("Unknown ASN.1 tag {0}", tag));
+                throw new InternalErrorException($"Unknown ASN.1 tag {tag}");
             }
 
             int size = reader.ReadByte();

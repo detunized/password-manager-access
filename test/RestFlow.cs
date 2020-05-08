@@ -217,7 +217,8 @@ namespace PasswordManagerAccess.Test
             var r = _responses[_currentIndex++];
             var e = r.Expected;
 
-            Assert.Equal(e.Method, method);
+            Assert.True(e.Method == method,
+                        $"Expected {e.Method}, got {method} for request at index {_currentIndex - 1}");
 
             foreach (var u in e.UrlFragments)
                 Assert.Contains(u, uri.AbsoluteUri);

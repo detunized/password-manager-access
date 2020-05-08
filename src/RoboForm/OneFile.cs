@@ -84,7 +84,7 @@ namespace PasswordManagerAccess.RoboForm
         {
             // All the offsets here are for the first block only.
             // 10-13 (4): encrypted content length (LE)
-            var length = (int)io.ReadUInt32LittleEndian();
+            var length = io.ReadInt32();
             if (length < 0)
                 throw ParseError("Content length is negative");
 
@@ -149,7 +149,7 @@ namespace PasswordManagerAccess.RoboForm
             }
 
             // 10-13 (4): KDF iterations
-            var iterations = io.ReadUInt32LittleEndian();
+            var iterations = io.ReadUInt32();
             if (iterations == 0 || iterations > 512 * 1024)
                 throw ParseError($"KDF iteration count is invalid {iterations}");
 

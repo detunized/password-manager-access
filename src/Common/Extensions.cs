@@ -213,11 +213,17 @@ namespace PasswordManagerAccess.Common
             return new BigInteger(x.Reverse().Concat(new byte[] { 0 }).ToArray());
         }
 
+        // Open bytes like an in-memory file and apply a lambda to it.
         public static void Open(this byte[] bytes, Action<BinaryReader> action)
         {
-            bytes.Open(reader => action(reader));
+            bytes.Open(reader =>
+            {
+                action(reader);
+                return 0;
+            });
         }
 
+        // Open bytes like an in-memory file and apply a lambda to it.
         public static TResult Open<TResult>(this byte[] bytes, Func<BinaryReader, TResult> action)
         {
             using var stream = new MemoryStream(bytes, false);
@@ -352,19 +358,6 @@ namespace PasswordManagerAccess.Common
 
             if (BitConverter.IsLittleEndian)
                 result = (ushort)((result << 8) | (result >> 8));
-
-            return result;
-        }
-
-        public static uint ReadUInt32LittleEndian(this BinaryReader r)
-        {
-            var result = r.ReadUInt32();
-
-            if (!BitConverter.IsLittleEndian)
-                result = ((result & 0x000000FF) << 24) |
-                         ((result & 0x0000FF00) << 8) |
-                         ((result & 0x00FF0000) >> 8) |
-                         ((result & 0xFF000000) >> 24);
 
             return result;
         }
