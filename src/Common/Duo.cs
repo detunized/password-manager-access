@@ -1,15 +1,13 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Bitwarden;
 
-namespace PasswordManagerAccess.Bitwarden
+namespace PasswordManagerAccess.Common
 {
     // TODO: Move Duo out of Bitwarden
     internal static class Duo

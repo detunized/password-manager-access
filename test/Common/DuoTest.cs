@@ -2,11 +2,10 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Net;
-using PasswordManagerAccess.Bitwarden;
-using PasswordManagerAccess.Test.Common;
+using PasswordManagerAccess.Common;
 using Xunit;
 
-namespace PasswordManagerAccess.Test.Bitwarden
+namespace PasswordManagerAccess.Test.Common
 {
     public class DuoTest
     {
