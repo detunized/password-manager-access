@@ -97,7 +97,8 @@ namespace PasswordManagerAccess.Bitwarden
 
             var method = ChooseSecondFactorMethod(secondFactor, ui);
             var extra = secondFactor.Methods[method];
-            Ui.Passcode passcode;
+            Ui.Passcode passcode = null;
+
             switch (method)
             {
             case Response.SecondFactorMethod.GoogleAuth:
@@ -112,11 +113,17 @@ namespace PasswordManagerAccess.Bitwarden
                 passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
                 break;
             case Response.SecondFactorMethod.Duo:
-                passcode = Duo.Authenticate((string)extra["Host"] ?? "",
-                                            (string)extra["Signature"] ?? "",
-                                            ui,
-                                            rest.Transport);
+            {
+                var duo = Duo.Authenticate((string)extra["Host"] ?? "",
+                                           (string)extra["Signature"] ?? "",
+                                           ui,
+                                           rest.Transport);
+
+                if (duo != null)
+                    passcode = new Ui.Passcode(duo.Passcode, duo.RememberMe);
+
                 break;
+            }
             case Response.SecondFactorMethod.YubiKey:
                 passcode = ui.ProvideYubiKeyPasscode();
                 break;

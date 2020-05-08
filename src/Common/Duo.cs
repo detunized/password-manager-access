@@ -5,15 +5,25 @@ using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
-using PasswordManagerAccess.Bitwarden;
 
 namespace PasswordManagerAccess.Common
 {
-    // TODO: Move Duo out of Bitwarden
     internal static class Duo
     {
-        // Returns the second factor token from Duo or blank when canceled by the user.
-        public static Ui.Passcode Authenticate(string host, string signature, Ui ui, IRestTransport transport)
+        public class Result
+        {
+            public readonly string Passcode;
+            public readonly bool RememberMe;
+
+            public Result(string passcode, bool rememberMe)
+            {
+                Passcode = passcode;
+                RememberMe = rememberMe;
+            }
+        }
+
+        // Returns the second factor token from Duo or null when canceled by the user.
+        public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport)
         {
             var rest = new RestClient(transport, $"https://{host}");
 
@@ -30,15 +40,15 @@ namespace PasswordManagerAccess.Common
 
                 // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
                 // a new batch of passcodes to the phone via SMS.
-                if (choice.Factor == Ui.DuoFactor.SendPasscodesBySms)
+                if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
                     SubmitFactor(parsedFrame.Sid, choice, "", rest);
-                    choice = new Ui.DuoChoice(choice.Device, Ui.DuoFactor.Passcode, choice.RememberMe);
+                    choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
                 // Ask for the passcode
                 var passcode = "";
-                if (choice.Factor == Ui.DuoFactor.Passcode)
+                if (choice.Factor == DuoFactor.Passcode)
                 {
                     passcode = ui.ProvideDuoPasscode(choice.Device);
                     if (passcode.IsNullOrEmpty())
@@ -52,7 +62,7 @@ namespace PasswordManagerAccess.Common
                     continue;
 
                 // All good
-                return new Ui.Passcode($"{token}:{parsedSignature.App}", choice.RememberMe);
+                return new Result($"{token}:{parsedSignature.App}", choice.RememberMe);
             }
         }
 
@@ -106,9 +116,9 @@ namespace PasswordManagerAccess.Common
         internal struct ParsedFrame
         {
             public readonly string Sid;
-            public readonly Ui.DuoDevice[] Devices;
+            public readonly DuoDevice[] Devices;
 
-            public ParsedFrame(string sid, Ui.DuoDevice[] devices)
+            public ParsedFrame(string sid, DuoDevice[] devices)
             {
                 Sid = sid;
                 Devices = devices;
@@ -142,7 +152,7 @@ namespace PasswordManagerAccess.Common
         }
 
         // Returns the transaction id
-        internal static string SubmitFactor(string sid, Ui.DuoChoice choice, string passcode, RestClient rest)
+        internal static string SubmitFactor(string sid, DuoChoice choice, string passcode, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -166,9 +176,9 @@ namespace PasswordManagerAccess.Common
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
         internal static string SubmitFactorAndWaitForToken(string sid,
-                                                           Ui.DuoChoice choice,
+                                                           DuoChoice choice,
                                                            string passcode,
-                                                           Ui ui,
+                                                           IDuoUi ui,
                                                            RestClient rest)
         {
             var txid = SubmitFactor(sid, choice, passcode, rest);
@@ -182,7 +192,7 @@ namespace PasswordManagerAccess.Common
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string PollForResultUrl(string sid, string txid, Ui ui, RestClient rest)
+        internal static string PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
         {
             const int MaxPollAttempts = 100;
 
@@ -199,14 +209,14 @@ namespace PasswordManagerAccess.Common
 
                 switch (responseStatus.Status)
                 {
-                case Ui.DuoStatus.Success:
+                case DuoStatus.Success:
                     var url = response.Url;
                     if (url.IsNullOrEmpty())
                         throw MakeInvalidResponseError("Duo: result URL (result_url) was expected but wasn't found");
 
                     // Done
                     return url;
-                case Ui.DuoStatus.Error:
+                case DuoStatus.Error:
                     return null; // TODO: Use something better than null
                 }
             }
@@ -214,7 +224,7 @@ namespace PasswordManagerAccess.Common
             throw MakeInvalidResponseError("Duo: expected to receive a valid result or error, got none of it");
         }
 
-        internal static string FetchToken(string sid, string url, Ui ui, RestClient rest)
+        internal static string FetchToken(string sid, string url, IDuoUi ui, RestClient rest)
         {
             var response = PostForm<R.FetchToken>(url, new Dictionary<string, object> {{"sid", sid}}, rest);
 
@@ -238,12 +248,12 @@ namespace PasswordManagerAccess.Common
             throw MakeSpecializedError(response);
         }
 
-        internal static void UpdateUi(R.Status response, Ui ui)
+        internal static void UpdateUi(R.Status response, IDuoUi ui)
         {
             UpdateUi(GetResponseStatus(response), ui);
         }
 
-        internal static void UpdateUi(ResponseStatus responseStatus, Ui ui)
+        internal static void UpdateUi(ResponseStatus responseStatus, IDuoUi ui)
         {
             if (responseStatus.Text.IsNullOrEmpty())
                 return;
@@ -254,10 +264,10 @@ namespace PasswordManagerAccess.Common
         // TODO: Use a tuple once we're on C# 7
         internal struct ResponseStatus
         {
-            public readonly Ui.DuoStatus Status;
+            public readonly DuoStatus Status;
             public readonly string Text;
 
-            public ResponseStatus(Ui.DuoStatus status, string text)
+            public ResponseStatus(DuoStatus status, string text)
             {
                 Status = status;
                 Text = text;
@@ -266,14 +276,14 @@ namespace PasswordManagerAccess.Common
 
         internal static ResponseStatus GetResponseStatus(R.Status response)
         {
-            var status = Ui.DuoStatus.Info;
+            var status = DuoStatus.Info;
             switch (response.Result)
             {
             case "SUCCESS":
-                status = Ui.DuoStatus.Success;
+                status = DuoStatus.Success;
                 break;
             case "FAILURE":
-                status = Ui.DuoStatus.Error;
+                status = DuoStatus.Error;
                 break;
             }
 
@@ -282,7 +292,7 @@ namespace PasswordManagerAccess.Common
 
         // Extracts all devices listed in the login form.
         // Devices with no supported methods are ignored.
-        internal static Ui.DuoDevice[] GetDevices(HtmlNode form)
+        internal static DuoDevice[] GetDevices(HtmlNode form)
         {
             // Use key-value pair as an ad-hoc data structure to store the device id and name
             // TODO: Use a tuple once we're on C# 7
@@ -295,18 +305,18 @@ namespace PasswordManagerAccess.Common
                 return null;
 
             return devices
-                .Select(x => new Ui.DuoDevice(x.Key, x.Value, GetDeviceFactors(form, x.Key)))
+                .Select(x => new DuoDevice(x.Key, x.Value, GetDeviceFactors(form, x.Key)))
                 .Where(x => x.Factors.Length > 0)
                 .ToArray();
         }
 
         // Extracts all the second factor methods supported by the device.
         // Unsupported methods are ignored.
-        internal static Ui.DuoFactor[] GetDeviceFactors(HtmlNode form, string deviceId)
+        internal static DuoFactor[] GetDeviceFactors(HtmlNode form, string deviceId)
         {
             var sms = CanSendSmsToDevice(form, deviceId)
-                ? new Ui.DuoFactor[] {Ui.DuoFactor.SendPasscodesBySms}
-                : new Ui.DuoFactor[0];
+                ? new DuoFactor[] {DuoFactor.SendPasscodesBySms}
+                : new DuoFactor[0];
 
             return form
                 .SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")?
@@ -316,7 +326,7 @@ namespace PasswordManagerAccess.Common
                 .Where(x => x != null)?
                 .Select(x => x.Value)?
                 .Concat(sms)?
-                .ToArray() ?? new Ui.DuoFactor[0];
+                .ToArray() ?? new DuoFactor[0];
         }
 
         internal static bool CanSendSmsToDevice(HtmlNode form, string deviceId)
@@ -326,32 +336,32 @@ namespace PasswordManagerAccess.Common
                 .SelectSingleNode(".//input[@name='phone-smsable' and @value='true']") != null;
         }
 
-        internal static Ui.DuoFactor? ParseFactor(string s)
+        internal static DuoFactor? ParseFactor(string s)
         {
             switch (s)
             {
             case "Duo Push":
-                return Ui.DuoFactor.Push;
+                return DuoFactor.Push;
             case "Phone Call":
-                return Ui.DuoFactor.Call;
+                return DuoFactor.Call;
             case "Passcode":
-                return Ui.DuoFactor.Passcode;
+                return DuoFactor.Passcode;
             }
 
             return null;
         }
 
-        internal static string GetFactorParameterValue(Ui.DuoFactor factor)
+        internal static string GetFactorParameterValue(DuoFactor factor)
         {
             switch (factor)
             {
-            case Ui.DuoFactor.Push:
+            case DuoFactor.Push:
                 return "Duo Push";
-            case Ui.DuoFactor.Call:
+            case DuoFactor.Call:
                 return "Phone Call";
-            case Ui.DuoFactor.Passcode:
+            case DuoFactor.Passcode:
                 return "Passcode";
-            case Ui.DuoFactor.SendPasscodesBySms:
+            case DuoFactor.SendPasscodesBySms:
                 return "sms";
             }
 
