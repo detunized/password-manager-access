@@ -30,8 +30,8 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void DownloadFrame_returns_html_document()
         {
-            var rest = RestClientTest.Serve("<html></html>", BaseUrl);
-            var html = Duo.DownloadFrame("tx", rest);
+            var flow = new RestFlow().Post("<html></html>");
+            var html = Duo.DownloadFrame("tx", flow);
 
             Assert.Equal("<html></html>", html.DocumentNode.InnerHtml);
         }
@@ -39,9 +39,9 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void DownloadFrame_throws_on_network_error()
         {
-            var rest = RestClientTest.Fail(HttpStatusCode.BadRequest, BaseUrl);
+            var flow = new RestFlow().Post("", HttpStatusCode.BadRequest);
 
-            Exceptions.AssertThrowsInternalError(() => Duo.DownloadFrame("tx", rest));
+            Exceptions.AssertThrowsInternalError(() => Duo.DownloadFrame("tx", flow));
         }
 
         //
