@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Xml.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
+using PasswordManagerAccess.LastPass.Ui;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
@@ -344,7 +345,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOtp(Username,
                                               Password,
                                               KeyIterationCount,
-                                              Ui.SecondFactorMethod.GoogleAuth,
+                                              SecondFactorMethod.GoogleAuth,
                                               ClientInfo,
                                               new ContinuingUi(),
                                               flow);
@@ -362,7 +363,7 @@ namespace PasswordManagerAccess.Test.LastPass
             Client.LoginWithOtp(Username,
                                 Password,
                                 KeyIterationCount,
-                                Ui.SecondFactorMethod.GoogleAuth,
+                                SecondFactorMethod.GoogleAuth,
                                 ClientInfo,
                                 new ContinuingUi(),
                                 flow);
@@ -380,7 +381,7 @@ namespace PasswordManagerAccess.Test.LastPass
             Client.LoginWithOtp(Username,
                                 Password,
                                 KeyIterationCount,
-                                Ui.SecondFactorMethod.GoogleAuth,
+                                SecondFactorMethod.GoogleAuth,
                                 ClientInfo,
                                 new ContinuingWithRememberMeUi(),
                                 flow);
@@ -393,7 +394,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOob(Username,
                                               Password,
                                               KeyIterationCount,
-                                              Ui.OutOfBandMethod.LastPassAuth,
+                                              OutOfBandMethod.LastPassAuth,
                                               ClientInfo,
                                               new ContinuingUi(),
                                               flow);
@@ -413,7 +414,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOob(Username,
                                               Password,
                                               KeyIterationCount,
-                                              Ui.OutOfBandMethod.LastPassAuth,
+                                              OutOfBandMethod.LastPassAuth,
                                               ClientInfo,
                                               new ContinuingUi(),
                                               flow);
@@ -433,7 +434,7 @@ namespace PasswordManagerAccess.Test.LastPass
             Client.LoginWithOob(Username,
                                 Password,
                                 KeyIterationCount,
-                                Ui.OutOfBandMethod.LastPassAuth,
+                                OutOfBandMethod.LastPassAuth,
                                 ClientInfo,
                                 new ContinuingWithRememberMeUi(),
                                 flow);
@@ -550,10 +551,10 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Theory]
-        [InlineData("<response><error outofbandtype='lastpassauth' /></response>", Ui.OutOfBandMethod.LastPassAuth)]
-        [InlineData("<response><error outofbandtype='toopher' /></response>", Ui.OutOfBandMethod.Toopher)]
-        [InlineData("<response><error outofbandtype='duo' /></response>", Ui.OutOfBandMethod.Duo)]
-        public void ExtractOobMethodFromLoginResponse_returns_oob_method(string response, Ui.OutOfBandMethod expected)
+        [InlineData("<response><error outofbandtype='lastpassauth' /></response>", OutOfBandMethod.LastPassAuth)]
+        [InlineData("<response><error outofbandtype='toopher' /></response>", OutOfBandMethod.Toopher)]
+        [InlineData("<response><error outofbandtype='duo' /></response>", OutOfBandMethod.Duo)]
+        public void ExtractOobMethodFromLoginResponse_returns_oob_method(string response, OutOfBandMethod expected)
         {
             var xml = XDocument.Parse(response);
             var method = Client.ExtractOobMethodFromLoginResponse(xml);
@@ -667,7 +668,7 @@ namespace PasswordManagerAccess.Test.LastPass
             }
         }
 
-        private class FakeUi: Ui
+        private class FakeUi: IUi
         {
             protected FakeUi(Passcode otp, OufOfBandAction oob)
             {
@@ -675,8 +676,8 @@ namespace PasswordManagerAccess.Test.LastPass
                 _oob = oob;
             }
 
-            public override Passcode ProvideSecondFactorPasscode(SecondFactorMethod method) => _otp;
-            public override OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method) => _oob;
+            public Passcode ProvideSecondFactorPasscode(SecondFactorMethod method) => _otp;
+            public OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method) => _oob;
 
             private Passcode _otp;
             private OufOfBandAction _oob;

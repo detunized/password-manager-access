@@ -9,6 +9,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.LastPass.Ui;
 
 namespace PasswordManagerAccess.LastPass
 {
@@ -17,7 +18,7 @@ namespace PasswordManagerAccess.LastPass
         public static Account[] OpenVault(string username,
                                           string password,
                                           ClientInfo clientInfo,
-                                          Ui ui,
+                                          IUi ui,
                                           IRestTransport transport)
         {
             var rest = new RestClient(transport, "https://lastpass.com");
@@ -43,7 +44,7 @@ namespace PasswordManagerAccess.LastPass
         // Internal
         //
 
-        internal static Session Login(string username, string password, ClientInfo clientInfo, Ui ui, RestClient rest)
+        internal static Session Login(string username, string password, ClientInfo clientInfo,IUi ui, RestClient rest)
         {
             // 1. First we need to request PBKDF2 key iteration count.
             var keyIterationCount = RequestIterationCount(username, rest);
@@ -141,13 +142,13 @@ namespace PasswordManagerAccess.LastPass
         internal static Session LoginWithOtp(string username,
                                              string password,
                                              int keyIterationCount,
-                                             Ui.SecondFactorMethod method,
+                                             SecondFactorMethod method,
                                              ClientInfo clientInfo,
-                                             Ui ui,
+                                             IUi ui,
                                              RestClient rest)
         {
             var passcode = ui.ProvideSecondFactorPasscode(method);
-            if (passcode == Ui.Passcode.Cancel)
+            if (passcode == Passcode.Cancel)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             var response = PerformSingleLoginRequest(username,
@@ -171,15 +172,15 @@ namespace PasswordManagerAccess.LastPass
         internal static Session LoginWithOob(string username,
                                              string password,
                                              int keyIterationCount,
-                                             Ui.OutOfBandMethod method,
+                                             OutOfBandMethod method,
                                              ClientInfo clientInfo,
-                                             Ui ui,
+                                             IUi ui,
                                              RestClient rest)
         {
             var extraParameters = new Dictionary<string, object> {["outofbandrequest"] = 1};
 
             var action = ui.AskToApproveOutOfBand(method);
-            if (action == Ui.OufOfBandAction.Cancel)
+            if (action == OufOfBandAction.Cancel)
                 throw new CanceledMultiFactorException("Out of band step is canceled by the user");
 
             Session session;
@@ -207,7 +208,7 @@ namespace PasswordManagerAccess.LastPass
                 //      Otherwise we might flood the server with too many requests.
             }
 
-            if (action == Ui.OufOfBandAction.ContinueAndRememberMe)
+            if (action == OufOfBandAction.ContinueAndRememberMe)
                 MarkDeviceAsTrusted(session, clientInfo, rest);
 
             return session;
@@ -299,7 +300,7 @@ namespace PasswordManagerAccess.LastPass
                                GetEncryptedPrivateKey(ok));
         }
 
-        internal static Ui.OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
+        internal static OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
         {
             var type = GetErrorAttribute(response, "outofbandtype");
             if (KnownOobMethods.TryGetValue(type, out var oobMethod))
@@ -457,20 +458,20 @@ namespace PasswordManagerAccess.LastPass
             [Platform.Mobile] = "android",
         };
 
-        private static readonly Dictionary<string, Ui.SecondFactorMethod> KnownOtpMethods =
-            new Dictionary<string, Ui.SecondFactorMethod>
+        private static readonly Dictionary<string, SecondFactorMethod> KnownOtpMethods =
+            new Dictionary<string, SecondFactorMethod>
             {
-                ["googleauthrequired"] = Ui.SecondFactorMethod.GoogleAuth,
-                ["microsoftauthrequired"] = Ui.SecondFactorMethod.MicrosoftAuth,
-                ["otprequired"] = Ui.SecondFactorMethod.Yubikey,
+                ["googleauthrequired"] = SecondFactorMethod.GoogleAuth,
+                ["microsoftauthrequired"] = SecondFactorMethod.MicrosoftAuth,
+                ["otprequired"] = SecondFactorMethod.Yubikey,
             };
 
-        private static readonly Dictionary<string, Ui.OutOfBandMethod> KnownOobMethods =
-            new Dictionary<string, Ui.OutOfBandMethod>
+        private static readonly Dictionary<string, OutOfBandMethod> KnownOobMethods =
+            new Dictionary<string, OutOfBandMethod>
             {
-                ["lastpassauth"] = Ui.OutOfBandMethod.LastPassAuth,
-                ["toopher"] = Ui.OutOfBandMethod.Toopher,
-                ["duo"] = Ui.OutOfBandMethod.Duo,
+                ["lastpassauth"] = OutOfBandMethod.LastPassAuth,
+                ["toopher"] = OutOfBandMethod.Toopher,
+                ["duo"] = OutOfBandMethod.Duo,
             };
     }
 }

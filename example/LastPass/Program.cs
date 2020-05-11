@@ -5,6 +5,7 @@ using System;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.LastPass;
+using PasswordManagerAccess.LastPass.Ui;
 
 namespace PasswordManagerAccess.Example.LastPass
 {
@@ -12,17 +13,17 @@ namespace PasswordManagerAccess.Example.LastPass
     {
         // Very simple text based user interface that demonstrates how to respond to
         // to Vault UI requests.
-        private class TextUi: Ui
+        private class TextUi: IUi
         {
             private const string ToCancel = "or just press ENTER to cancel";
 
-            public override Passcode ProvideSecondFactorPasscode(SecondFactorMethod method)
+            public Passcode ProvideSecondFactorPasscode(SecondFactorMethod method)
             {
                 var answer = GetAnswer($"Please enter {method} code {ToCancel}");
                 return answer == "" ? Passcode.Cancel : new Passcode(answer, GetRememberMe());
             }
 
-            public override OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method)
+            public OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method)
             {
                 Console.WriteLine($"Please approve out-of-band via {method}");
                 if (GetAnswer("press ENTER to continue or 'c' to cancel").ToLower() == "c")

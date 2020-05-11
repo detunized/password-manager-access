@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.LastPass.Ui;
 
 namespace PasswordManagerAccess.LastPass
 {
@@ -9,7 +10,7 @@ namespace PasswordManagerAccess.LastPass
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, ClientInfo clientInfo, Ui ui)
+        public static Vault Open(string username, string password, ClientInfo clientInfo, IUi ui)
         {
             using var transport = new RestTransport();
             return new Vault(Client.OpenVault(username, password, clientInfo, ui, transport));
