@@ -15,34 +15,53 @@ namespace PasswordManagerAccess.Example.LastPass
         // to Vault UI requests.
         private class TextUi: IUi
         {
-            public Passcode ProvideGoogleAuthPasscode()
+            public OtpResult ProvideGoogleAuthPasscode()
             {
                 return ProvideOtpPasscode("Google Authenticator");
             }
 
-            public Passcode ProvideMicrosoftAuthPasscode()
+            public OtpResult ProvideMicrosoftAuthPasscode()
             {
                 return ProvideOtpPasscode("Microsoft Authenticator");
             }
 
-            public Passcode ProvideYubikeyPasscode()
+            public OtpResult ProvideYubikeyPasscode()
             {
                 return ProvideOtpPasscode("Yubikey");
             }
 
-            public OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method)
+            public OobResult ApproveLastPassAuth()
             {
-                Console.WriteLine($"Please approve out-of-band via {method}");
-                if (GetAnswer("press ENTER to continue or 'c' to cancel").ToLower() == "c")
-                    return OufOfBandAction.Cancel;
-
-                return GetRememberMe() ? OufOfBandAction.ContinueAndRememberMe : OufOfBandAction.Continue;
+                return ApproveOutOfBand("LastPass Authenticator");
             }
 
-            private static Passcode ProvideOtpPasscode(string method)
+            public OobResult ApproveDuo()
+            {
+                return ApproveOutOfBand("Duo Security");
+            }
+
+            //
+            // Private
+            //
+
+            private static OtpResult ProvideOtpPasscode(string method)
             {
                 var answer = GetAnswer($"Please enter {method} code {ToCancel}");
-                return answer == "" ? Passcode.Cancel : new Passcode(answer, GetRememberMe());
+                return answer == "" ? OtpResult.Cancel : new OtpResult(answer, GetRememberMe());
+            }
+
+            private static OobResult ApproveOutOfBand(string method)
+            {
+                Console.WriteLine($"> Please approve out-of-band via {method} and press ENTER");
+                var answer = GetAnswer($"Or enter the {method} passcode from the app or 'c' to cancel");
+
+                if (answer.ToLower() == "c")
+                    return OobResult.Cancel;
+
+                var rememberMe = GetRememberMe();
+                return answer.Length == 0
+                    ? OobResult.WaitForApproval(rememberMe)
+                    : OobResult.ContinueWithPasscode(answer, rememberMe);
             }
 
             private static string GetAnswer(string prompt)

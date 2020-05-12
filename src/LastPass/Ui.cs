@@ -3,45 +3,69 @@
 
 namespace PasswordManagerAccess.LastPass.Ui
 {
-    // TODO: We need to support optional passcodes on out-of-band auth.
     public interface IUi
     {
         // To cancel return Passcode.Cancel, otherwise only valid data is expected.
-        Passcode ProvideGoogleAuthPasscode();
-        Passcode ProvideMicrosoftAuthPasscode();
-        Passcode ProvideYubikeyPasscode();
+        OtpResult ProvideGoogleAuthPasscode();
+        OtpResult ProvideMicrosoftAuthPasscode();
+        OtpResult ProvideYubikeyPasscode();
 
-        // Should return immediately to allow the login process to continue. Once the OOB is approved
-        // or declined by the user the library will return the result or throw an error.
-        OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method);
+        // The UI implementations should provide the following possibilities for the user:
+        //
+        // 1. Cancel. Return OobResult.Cancel to cancel.
+        //
+        // 2. Go through with the out-of-band authentication where a third party app is used to approve or decline
+        //    the action. In this case return OobResult.WaitForApproval(rememberMe). The UI should return as soon
+        //    as possible to allow the library to continue polling the service. Even though it's possible to return
+        //    control to the library only after the user performed the out-of-band action, it's not necessary. It
+        //    could be also done sooner.
+        //
+        // 3. Allow the user to provide the passcode manually. All supported OOB methods allow to enter the
+        //    passcode instead of performing an action in the app. In this case the UI should return
+        //    OobResult.ContinueWithPasscode(passcode, rememberMe).
+        OobResult ApproveLastPassAuth();
+        OobResult ApproveDuo();
     }
 
-    public class Passcode
+    public class OtpResult
     {
         // Return this to signal the cancellation of the operation
-        public static readonly Passcode Cancel = new Passcode("cancel", false);
+        public static readonly OtpResult Cancel = new OtpResult("cancel", false);
 
         public readonly string Code;
         public readonly bool RememberMe;
 
-        public Passcode(string code, bool rememberMe)
+        public OtpResult(string code, bool rememberMe)
         {
             Code = code;
             RememberMe = rememberMe;
         }
     }
 
-    public enum OutOfBandMethod
+    public class OobResult
     {
-        LastPassAuth,
-        Toopher,
-        Duo,
-    }
+        // Return this to signal the cancellation of the operation
+        public static readonly OobResult Cancel = new OobResult(false, "cancel", false);
 
-    public enum OufOfBandAction
-    {
-        Cancel,
-        Continue,
-        ContinueAndRememberMe,
+        public readonly bool WaitForOutOfBand;
+        public readonly string Passcode;
+        public readonly bool RememberMe;
+
+        public static OobResult WaitForApproval(bool rememberMe)
+        {
+            return new OobResult(true, "", rememberMe);
+        }
+
+        public static OobResult ContinueWithPasscode(string passcode, bool rememberMe)
+        {
+            return new OobResult(false, passcode, rememberMe);
+        }
+
+        private OobResult(bool waitForOutOfBand, string passcode, bool rememberMe)
+        {
+            WaitForOutOfBand = waitForOutOfBand;
+            Passcode = passcode;
+            RememberMe = rememberMe;
+        }
     }
 }

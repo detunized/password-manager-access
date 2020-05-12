@@ -162,7 +162,7 @@ namespace PasswordManagerAccess.LastPass
                 _ => throw new InternalErrorException("Invalid OTP method")
             };
 
-            if (passcode == Passcode.Cancel)
+            if (passcode == OtpResult.Cancel)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             var response = PerformSingleLoginRequest(username,
@@ -182,20 +182,36 @@ namespace PasswordManagerAccess.LastPass
             return session;
         }
 
+        internal enum OobMethod
+        {
+            LastPassAuth,
+            Duo,
+        }
+
         // Returns a valid session or throws
         internal static Session LoginWithOob(string username,
                                              string password,
                                              int keyIterationCount,
-                                             OutOfBandMethod method,
+                                             OobMethod method,
                                              ClientInfo clientInfo,
                                              IUi ui,
                                              RestClient rest)
         {
             var extraParameters = new Dictionary<string, object> {["outofbandrequest"] = 1};
 
-            var action = ui.AskToApproveOutOfBand(method);
-            if (action == OufOfBandAction.Cancel)
+            var answer = method switch
+            {
+                OobMethod.LastPassAuth => ui.ApproveLastPassAuth(),
+                OobMethod.Duo => ui.ApproveDuo(),
+                _ => throw new InternalErrorException("Invalid OOB method")
+            };
+
+            if (answer == OobResult.Cancel)
                 throw new CanceledMultiFactorException("Out of band step is canceled by the user");
+
+            // TODO: Support passcodes (#30)
+            if (!answer.WaitForOutOfBand)
+                throw new UnsupportedFeatureException("Out of band passcodes are not supported yet");
 
             Session session;
             for (;;)
@@ -222,7 +238,7 @@ namespace PasswordManagerAccess.LastPass
                 //      Otherwise we might flood the server with too many requests.
             }
 
-            if (action == OufOfBandAction.ContinueAndRememberMe)
+            if (answer.RememberMe)
                 MarkDeviceAsTrusted(session, clientInfo, rest);
 
             return session;
@@ -314,7 +330,7 @@ namespace PasswordManagerAccess.LastPass
                                GetEncryptedPrivateKey(ok));
         }
 
-        internal static OutOfBandMethod ExtractOobMethodFromLoginResponse(XDocument response)
+        internal static OobMethod ExtractOobMethodFromLoginResponse(XDocument response)
         {
             var type = GetErrorAttribute(response, "outofbandtype");
             if (KnownOobMethods.TryGetValue(type, out var oobMethod))
@@ -479,12 +495,10 @@ namespace PasswordManagerAccess.LastPass
             ["otprequired"] = OtpMethod.Yubikey,
         };
 
-        private static readonly Dictionary<string, OutOfBandMethod> KnownOobMethods =
-            new Dictionary<string, OutOfBandMethod>
-            {
-                ["lastpassauth"] = OutOfBandMethod.LastPassAuth,
-                ["toopher"] = OutOfBandMethod.Toopher,
-                ["duo"] = OutOfBandMethod.Duo,
-            };
+        private static readonly Dictionary<string, OobMethod> KnownOobMethods = new Dictionary<string, OobMethod>
+        {
+            ["lastpassauth"] = OobMethod.LastPassAuth,
+            ["duo"] = OobMethod.Duo,
+        };
     }
 }

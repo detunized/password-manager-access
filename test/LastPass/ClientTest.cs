@@ -394,7 +394,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOob(Username,
                                               Password,
                                               KeyIterationCount,
-                                              OutOfBandMethod.LastPassAuth,
+                                              Client.OobMethod.LastPassAuth,
                                               ClientInfo,
                                               new ContinuingUi(),
                                               flow);
@@ -414,7 +414,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOob(Username,
                                               Password,
                                               KeyIterationCount,
-                                              OutOfBandMethod.LastPassAuth,
+                                              Client.OobMethod.LastPassAuth,
                                               ClientInfo,
                                               new ContinuingUi(),
                                               flow);
@@ -434,7 +434,7 @@ namespace PasswordManagerAccess.Test.LastPass
             Client.LoginWithOob(Username,
                                 Password,
                                 KeyIterationCount,
-                                OutOfBandMethod.LastPassAuth,
+                                Client.OobMethod.LastPassAuth,
                                 ClientInfo,
                                 new ContinuingWithRememberMeUi(),
                                 flow);
@@ -551,10 +551,9 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Theory]
-        [InlineData("<response><error outofbandtype='lastpassauth' /></response>", OutOfBandMethod.LastPassAuth)]
-        [InlineData("<response><error outofbandtype='toopher' /></response>", OutOfBandMethod.Toopher)]
-        [InlineData("<response><error outofbandtype='duo' /></response>", OutOfBandMethod.Duo)]
-        public void ExtractOobMethodFromLoginResponse_returns_oob_method(string response, OutOfBandMethod expected)
+        [InlineData("<response><error outofbandtype='lastpassauth' /></response>", Client.OobMethod.LastPassAuth)]
+        [InlineData("<response><error outofbandtype='duo' /></response>", Client.OobMethod.Duo)]
+        internal void ExtractOobMethodFromLoginResponse_returns_oob_method(string response, Client.OobMethod expected)
         {
             var xml = XDocument.Parse(response);
             var method = Client.ExtractOobMethodFromLoginResponse(xml);
@@ -649,40 +648,41 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private class ContinuingUi: FakeUi
         {
-            public ContinuingUi(): base(new Passcode(Otp, false), OufOfBandAction.Continue)
+            public ContinuingUi(): base(new OtpResult(Otp, false), OobResult.WaitForApproval(false))
             {
             }
         }
 
         private class ContinuingWithRememberMeUi: FakeUi
         {
-            public ContinuingWithRememberMeUi(): base(new Passcode(Otp, true), OufOfBandAction.ContinueAndRememberMe)
+            public ContinuingWithRememberMeUi(): base(new OtpResult(Otp, true), OobResult.WaitForApproval(true))
             {
             }
         }
 
         private class CancelingUi: FakeUi
         {
-            public CancelingUi(): base(Passcode.Cancel, OufOfBandAction.Cancel)
+            public CancelingUi(): base(OtpResult.Cancel, OobResult.Cancel)
             {
             }
         }
 
         private class FakeUi: IUi
         {
-            protected FakeUi(Passcode otp, OufOfBandAction oob)
+            protected FakeUi(OtpResult otp, OobResult oob)
             {
                 _otp = otp;
                 _oob = oob;
             }
 
-            public Passcode ProvideGoogleAuthPasscode() => _otp;
-            public Passcode ProvideMicrosoftAuthPasscode() => _otp;
-            public Passcode ProvideYubikeyPasscode() => _otp;
-            public OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method) => _oob;
+            public OtpResult ProvideGoogleAuthPasscode() => _otp;
+            public OtpResult ProvideMicrosoftAuthPasscode() => _otp;
+            public OtpResult ProvideYubikeyPasscode() => _otp;
+            public OobResult ApproveLastPassAuth() => _oob;
+            public OobResult ApproveDuo() => _oob;
 
-            private readonly Passcode _otp;
-            private readonly OufOfBandAction _oob;
+            private readonly OtpResult _otp;
+            private readonly OobResult _oob;
         }
 
         private static void AssertSessionWithPrivateKey(Session session)
