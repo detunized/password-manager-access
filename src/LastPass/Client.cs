@@ -168,7 +168,7 @@ namespace PasswordManagerAccess.LastPass
             var response = PerformSingleLoginRequest(username,
                                                      password,
                                                      keyIterationCount,
-                                                     new Dictionary<string, object> {["otp"] = passcode.Code},
+                                                     new Dictionary<string, object> {["otp"] = passcode.Passcode},
                                                      clientInfo,
                                                      rest);
 
@@ -197,8 +197,6 @@ namespace PasswordManagerAccess.LastPass
                                              IUi ui,
                                              RestClient rest)
         {
-            var extraParameters = new Dictionary<string, object> {["outofbandrequest"] = 1};
-
             var answer = method switch
             {
                 OobMethod.LastPassAuth => ui.ApproveLastPassAuth(),
@@ -209,13 +207,17 @@ namespace PasswordManagerAccess.LastPass
             if (answer == OobResult.Cancel)
                 throw new CanceledMultiFactorException("Out of band step is canceled by the user");
 
-            // TODO: Support passcodes (#30)
-            if (!answer.WaitForOutOfBand)
-                throw new UnsupportedFeatureException("Out of band passcodes are not supported yet");
+            var extraParameters = new Dictionary<string, object>(1);
+            if (answer.WaitForOutOfBand)
+                extraParameters["outofbandrequest"] = 1;
+            else
+                extraParameters["otp"] = answer.Passcode;
 
             Session session;
             for (;;)
             {
+                // In case of the OOB auth the server doesn't respond instantly. This works more like a long poll.
+                // The server times out in about 10 seconds so there's no need to back off.
                 var response = PerformSingleLoginRequest(username,
                                                          password,
                                                          keyIterationCount,
@@ -233,9 +235,6 @@ namespace PasswordManagerAccess.LastPass
                 // Retry
                 extraParameters["outofbandretry"] = "1";
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
-
-                // TODO: I think we should sleep here for a bit before retrying or ask the user again.
-                //      Otherwise we might flood the server with too many requests.
             }
 
             if (answer.RememberMe)

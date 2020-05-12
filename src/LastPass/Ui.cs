@@ -32,12 +32,12 @@ namespace PasswordManagerAccess.LastPass.Ui
         // Return this to signal the cancellation of the operation
         public static readonly OtpResult Cancel = new OtpResult("cancel", false);
 
-        public readonly string Code;
+        public readonly string Passcode;
         public readonly bool RememberMe;
 
-        public OtpResult(string code, bool rememberMe)
+        public OtpResult(string passcode, bool rememberMe)
         {
-            Code = code;
+            Passcode = passcode;
             RememberMe = rememberMe;
         }
     }
