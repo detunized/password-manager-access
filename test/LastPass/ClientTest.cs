@@ -552,7 +552,9 @@ namespace PasswordManagerAccess.Test.LastPass
 
         [Theory]
         [InlineData("<response><error outofbandtype='lastpassauth' /></response>", Client.OobMethod.LastPassAuth)]
-        [InlineData("<response><error outofbandtype='duo' /></response>", Client.OobMethod.Duo)]
+        [InlineData("<response><error outofbandtype='duo' /></response>", Client.OobMethod.DuoBuiltin)]
+        [InlineData("<response><error outofbandtype='duo' preferduowebsdk='0' /></response>", Client.OobMethod.DuoBuiltin)]
+        [InlineData("<response><error outofbandtype='duo' preferduowebsdk='1' /></response>", Client.OobMethod.DuoSdk)]
         internal void ExtractOobMethodFromLoginResponse_returns_oob_method(string response, Client.OobMethod expected)
         {
             var xml = XDocument.Parse(response);
@@ -680,6 +682,22 @@ namespace PasswordManagerAccess.Test.LastPass
             public OtpResult ProvideYubikeyPasscode() => _otp;
             public OobResult ApproveLastPassAuth() => _oob;
             public OobResult ApproveDuo() => _oob;
+
+            public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
+            {
+                return new DuoChoice(new DuoDevice("id", "name", new[] {DuoFactor.Push}),
+                                     DuoFactor.Push,
+                                     false);
+            }
+
+            public string ProvideDuoPasscode(DuoDevice device)
+            {
+                return "passcode";
+            }
+
+            public void UpdateDuoStatus(DuoStatus status, string text)
+            {
+            }
 
             private readonly OtpResult _otp;
             private readonly OobResult _oob;

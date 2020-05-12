@@ -185,7 +185,8 @@ namespace PasswordManagerAccess.LastPass
         internal enum OobMethod
         {
             LastPassAuth,
-            Duo,
+            DuoBuiltin,
+            DuoSdk,
         }
 
         // Returns a valid session or throws
@@ -200,7 +201,8 @@ namespace PasswordManagerAccess.LastPass
             var answer = method switch
             {
                 OobMethod.LastPassAuth => ui.ApproveLastPassAuth(),
-                OobMethod.Duo => ui.ApproveDuo(),
+                OobMethod.DuoBuiltin => ui.ApproveDuo(),
+                OobMethod.DuoSdk => throw new UnsupportedFeatureException("Duo SDK is not yet supported"),
                 _ => throw new InternalErrorException("Invalid OOB method")
             };
 
@@ -332,11 +334,18 @@ namespace PasswordManagerAccess.LastPass
         internal static OobMethod ExtractOobMethodFromLoginResponse(XDocument response)
         {
             var type = GetErrorAttribute(response, "outofbandtype");
-            if (KnownOobMethods.TryGetValue(type, out var oobMethod))
-                return oobMethod;
-
-            var name = GetOptionalErrorAttribute(response, "outofbandname");
-            throw new UnsupportedFeatureException($"Out-of-band method '{name ?? type}' is not supported");
+            switch (type)
+            {
+            case "lastpassauth":
+                return OobMethod.LastPassAuth;
+            case "duo":
+                return GetOptionalErrorAttribute(response, "preferduowebsdk") == "1"
+                    ? OobMethod.DuoSdk
+                    : OobMethod.DuoBuiltin;
+            default:
+                var name = GetOptionalErrorAttribute(response, "outofbandname");
+                throw new UnsupportedFeatureException($"Out-of-band method '{name ?? type}' is not supported");
+            }
         }
 
         internal static string GetEncryptedPrivateKey(XElement ok)
@@ -492,12 +501,6 @@ namespace PasswordManagerAccess.LastPass
             ["googleauthrequired"] = OtpMethod.GoogleAuth,
             ["microsoftauthrequired"] = OtpMethod.MicrosoftAuth,
             ["otprequired"] = OtpMethod.Yubikey,
-        };
-
-        private static readonly Dictionary<string, OobMethod> KnownOobMethods = new Dictionary<string, OobMethod>
-        {
-            ["lastpassauth"] = OobMethod.LastPassAuth,
-            ["duo"] = OobMethod.Duo,
         };
     }
 }

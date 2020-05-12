@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.Example.LastPass
     {
         // Very simple text based user interface that demonstrates how to respond to
         // to Vault UI requests.
-        private class TextUi: IUi
+        private class TextUi: DuoUi, IUi
         {
             public OtpResult ProvideGoogleAuthPasscode()
             {
@@ -63,23 +63,6 @@ namespace PasswordManagerAccess.Example.LastPass
                     ? OobResult.WaitForApproval(rememberMe)
                     : OobResult.ContinueWithPasscode(answer, rememberMe);
             }
-
-            private static string GetAnswer(string prompt)
-            {
-                Console.WriteLine(prompt);
-                Console.Write("> ");
-                var input = Console.ReadLine();
-
-                return input == null ? "" : input.Trim();
-            }
-
-            private static bool GetRememberMe()
-            {
-                var remember = GetAnswer("Remember this device?").ToLower();
-                return remember == "y" || remember == "yes";
-            }
-
-            private const string ToCancel = "or just press ENTER to cancel";
         }
 
         public static void Main(string[] args)

@@ -1,9 +1,11 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using PasswordManagerAccess.Common;
+
 namespace PasswordManagerAccess.LastPass.Ui
 {
-    public interface IUi
+    public interface IUi: IDuoUi
     {
         // To cancel return Passcode.Cancel, otherwise only valid data is expected.
         OtpResult ProvideGoogleAuthPasscode();
