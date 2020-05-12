@@ -345,7 +345,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOtp(Username,
                                               Password,
                                               KeyIterationCount,
-                                              SecondFactorMethod.GoogleAuth,
+                                              Client.OtpMethod.GoogleAuth,
                                               ClientInfo,
                                               new ContinuingUi(),
                                               flow);
@@ -363,7 +363,7 @@ namespace PasswordManagerAccess.Test.LastPass
             Client.LoginWithOtp(Username,
                                 Password,
                                 KeyIterationCount,
-                                SecondFactorMethod.GoogleAuth,
+                                Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
                                 new ContinuingUi(),
                                 flow);
@@ -381,7 +381,7 @@ namespace PasswordManagerAccess.Test.LastPass
             Client.LoginWithOtp(Username,
                                 Password,
                                 KeyIterationCount,
-                                SecondFactorMethod.GoogleAuth,
+                                Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
                                 new ContinuingWithRememberMeUi(),
                                 flow);
@@ -676,11 +676,13 @@ namespace PasswordManagerAccess.Test.LastPass
                 _oob = oob;
             }
 
-            public Passcode ProvideSecondFactorPasscode(SecondFactorMethod method) => _otp;
+            public Passcode ProvideGoogleAuthPasscode() => _otp;
+            public Passcode ProvideMicrosoftAuthPasscode() => _otp;
+            public Passcode ProvideYubikeyPasscode() => _otp;
             public OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method) => _oob;
 
-            private Passcode _otp;
-            private OufOfBandAction _oob;
+            private readonly Passcode _otp;
+            private readonly OufOfBandAction _oob;
         }
 
         private static void AssertSessionWithPrivateKey(Session session)

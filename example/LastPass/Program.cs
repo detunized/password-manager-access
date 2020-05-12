@@ -15,12 +15,19 @@ namespace PasswordManagerAccess.Example.LastPass
         // to Vault UI requests.
         private class TextUi: IUi
         {
-            private const string ToCancel = "or just press ENTER to cancel";
-
-            public Passcode ProvideSecondFactorPasscode(SecondFactorMethod method)
+            public Passcode ProvideGoogleAuthPasscode()
             {
-                var answer = GetAnswer($"Please enter {method} code {ToCancel}");
-                return answer == "" ? Passcode.Cancel : new Passcode(answer, GetRememberMe());
+                return ProvideOtpPasscode("Google Authenticator");
+            }
+
+            public Passcode ProvideMicrosoftAuthPasscode()
+            {
+                return ProvideOtpPasscode("Microsoft Authenticator");
+            }
+
+            public Passcode ProvideYubikeyPasscode()
+            {
+                return ProvideOtpPasscode("Yubikey");
             }
 
             public OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method)
@@ -30,6 +37,12 @@ namespace PasswordManagerAccess.Example.LastPass
                     return OufOfBandAction.Cancel;
 
                 return GetRememberMe() ? OufOfBandAction.ContinueAndRememberMe : OufOfBandAction.Continue;
+            }
+
+            private static Passcode ProvideOtpPasscode(string method)
+            {
+                var answer = GetAnswer($"Please enter {method} code {ToCancel}");
+                return answer == "" ? Passcode.Cancel : new Passcode(answer, GetRememberMe());
             }
 
             private static string GetAnswer(string prompt)
@@ -46,6 +59,8 @@ namespace PasswordManagerAccess.Example.LastPass
                 var remember = GetAnswer("Remember this device?").ToLower();
                 return remember == "y" || remember == "yes";
             }
+
+            private const string ToCancel = "or just press ENTER to cancel";
         }
 
         public static void Main(string[] args)

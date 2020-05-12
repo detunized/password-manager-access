@@ -138,16 +138,30 @@ namespace PasswordManagerAccess.LastPass
             throw MakeError(response);
         }
 
+        internal enum OtpMethod
+        {
+            GoogleAuth,
+            MicrosoftAuth,
+            Yubikey,
+        }
+
         // Returns a valid session or throws
         internal static Session LoginWithOtp(string username,
                                              string password,
                                              int keyIterationCount,
-                                             SecondFactorMethod method,
+                                             OtpMethod method,
                                              ClientInfo clientInfo,
                                              IUi ui,
                                              RestClient rest)
         {
-            var passcode = ui.ProvideSecondFactorPasscode(method);
+            var passcode = method switch
+            {
+                OtpMethod.GoogleAuth => ui.ProvideGoogleAuthPasscode(),
+                OtpMethod.MicrosoftAuth => ui.ProvideMicrosoftAuthPasscode(),
+                OtpMethod.Yubikey => ui.ProvideYubikeyPasscode(),
+                _ => throw new InternalErrorException("Invalid OTP method")
+            };
+
             if (passcode == Passcode.Cancel)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
@@ -458,13 +472,12 @@ namespace PasswordManagerAccess.LastPass
             [Platform.Mobile] = "android",
         };
 
-        private static readonly Dictionary<string, SecondFactorMethod> KnownOtpMethods =
-            new Dictionary<string, SecondFactorMethod>
-            {
-                ["googleauthrequired"] = SecondFactorMethod.GoogleAuth,
-                ["microsoftauthrequired"] = SecondFactorMethod.MicrosoftAuth,
-                ["otprequired"] = SecondFactorMethod.Yubikey,
-            };
+        private static readonly Dictionary<string, OtpMethod> KnownOtpMethods = new Dictionary<string, OtpMethod>
+        {
+            ["googleauthrequired"] = OtpMethod.GoogleAuth,
+            ["microsoftauthrequired"] = OtpMethod.MicrosoftAuth,
+            ["otprequired"] = OtpMethod.Yubikey,
+        };
 
         private static readonly Dictionary<string, OutOfBandMethod> KnownOobMethods =
             new Dictionary<string, OutOfBandMethod>

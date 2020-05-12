@@ -7,18 +7,13 @@ namespace PasswordManagerAccess.LastPass.Ui
     public interface IUi
     {
         // To cancel return Passcode.Cancel, otherwise only valid data is expected.
-        public abstract Passcode ProvideSecondFactorPasscode(SecondFactorMethod method);
+        Passcode ProvideGoogleAuthPasscode();
+        Passcode ProvideMicrosoftAuthPasscode();
+        Passcode ProvideYubikeyPasscode();
 
         // Should return immediately to allow the login process to continue. Once the OOB is approved
         // or declined by the user the library will return the result or throw an error.
-        public abstract OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method);
-    }
-
-    public enum SecondFactorMethod
-    {
-        GoogleAuth,
-        MicrosoftAuth,
-        Yubikey,
+        OufOfBandAction AskToApproveOutOfBand(OutOfBandMethod method);
     }
 
     public class Passcode
