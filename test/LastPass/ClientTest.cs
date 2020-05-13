@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Xml.Linq;
+using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass;
 using PasswordManagerAccess.LastPass.Ui;
@@ -52,7 +53,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -76,7 +77,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingWithRememberMeUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingWithRememberMeUi(), flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -103,7 +104,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new WaitingForOobUi(), flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -132,7 +133,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new ContinuingWithRememberMeUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, new WaitingForOobWithRememberMeUi(), flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -182,7 +183,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='googleauthfailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow),
                 "Second factor code is incorrect");
         }
 
@@ -207,7 +208,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='multifactorresponsefailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new ContinuingUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, new WaitingForOobUi(), flow),
                 "Out of band authentication failed");
         }
 
@@ -248,7 +249,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. login with otp
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, new ContinuingUi(), flow);
+            var session = Client.Login(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -262,7 +263,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. check oob
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, new ContinuingUi(), flow);
+            var session = Client.Login(Username, Password, ClientInfo, new WaitingForOobUi(), flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -347,7 +348,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               Client.OtpMethod.GoogleAuth,
                                               ClientInfo,
-                                              new ContinuingUi(),
+                                              new OtpProvidingUi(),
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -365,7 +366,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                 KeyIterationCount,
                                 Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
-                                new ContinuingUi(),
+                                new OtpProvidingUi(),
                                 flow);
         }
 
@@ -383,7 +384,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                 KeyIterationCount,
                                 Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
-                                new ContinuingWithRememberMeUi(),
+                                new OtpProvidingWithRememberMeUi(),
                                 flow);
         }
 
@@ -394,9 +395,9 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOob(Username,
                                               Password,
                                               KeyIterationCount,
-                                              Client.OobMethod.LastPassAuth,
+                                              LastPassAuthOobParameters,
                                               ClientInfo,
-                                              new ContinuingUi(),
+                                              new WaitingForOobUi(),
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -414,9 +415,27 @@ namespace PasswordManagerAccess.Test.LastPass
             var session = Client.LoginWithOob(Username,
                                               Password,
                                               KeyIterationCount,
-                                              Client.OobMethod.LastPassAuth,
+                                              LastPassAuthOobParameters,
                                               ClientInfo,
-                                              new ContinuingUi(),
+                                              new WaitingForOobUi(),
+                                              flow);
+
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void LoginWithOob_sends_otp_in_POST_parameters()
+        {
+            var flow = new RestFlow()
+                .Post(OkResponse)
+                    .ExpectContent($"otp={Otp}");
+
+            var session = Client.LoginWithOob(Username,
+                                              Password,
+                                              KeyIterationCount,
+                                              LastPassAuthOobParameters,
+                                              ClientInfo,
+                                              new PasscodeProvidingOobUi(),
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -434,10 +453,72 @@ namespace PasswordManagerAccess.Test.LastPass
             Client.LoginWithOob(Username,
                                 Password,
                                 KeyIterationCount,
-                                Client.OobMethod.LastPassAuth,
+                                LastPassAuthOobParameters,
                                 ClientInfo,
-                                new ContinuingWithRememberMeUi(),
+                                new WaitingForOobWithRememberMeUi(),
                                 flow);
+        }
+
+        [Fact]
+        public void ApproveOob_calls_Ui_ApproveLastPassAuth()
+        {
+            var ui = new Mock<IUi>();
+            ui.Setup(x => x.ApproveLastPassAuth()).Returns(OobResult.Cancel);
+
+            Client.ApproveOob(LastPassAuthOobParameters, ui.Object, null);
+
+            ui.VerifyAll();
+        }
+
+        [Fact]
+        public void ApproveOob_calls_Ui_ApproveDuo()
+        {
+            var ui = new Mock<IUi>();
+            ui.Setup(x => x.ApproveDuo()).Returns(OobResult.Cancel);
+
+            Client.ApproveOob(DuoOobParameters, ui.Object, null);
+
+            ui.VerifyAll();
+        }
+
+        [Fact]
+        public void ApproveOob_calls_IDuoUi()
+        {
+            // TODO: See how to test this
+        }
+
+        [Fact]
+        public void ApproveOob_throws_on_missing_method()
+        {
+            Exceptions.AssertThrowsInternalError(
+                () => Client.ApproveOob(new Dictionary<string, string>(), null, null),
+                "Out of band method is not specified");
+        }
+
+        [Fact]
+        public void ApproveOob_throws_on_unknown_method()
+        {
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Client.ApproveOob(new Dictionary<string, string> {["outofbandtype"] = "blah"}, null, null),
+                "Out of band method 'blah' is not supported");
+        }
+
+        [Theory]
+        [InlineData("duo_host")]
+        [InlineData("duo_signature")]
+        public void ApproveOob_throws_on_missing_duo_host(string name)
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                ["outofbandtype"] = "duo",
+                ["preferduowebsdk"] = "1",
+                ["duo_host"] = "duo-host",
+                ["duo_signature"] = "duo-signature",
+            };
+            parameters.Remove(name);
+
+            Exceptions.AssertThrowsInternalError(() => Client.ApproveOob(parameters, null, null),
+                                                 $"Invalid response: '{name}' parameter not found");
         }
 
         [Fact]
@@ -551,29 +632,6 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Theory]
-        [InlineData("<response><error outofbandtype='lastpassauth' /></response>", Client.OobMethod.LastPassAuth)]
-        [InlineData("<response><error outofbandtype='duo' /></response>", Client.OobMethod.DuoBuiltin)]
-        [InlineData("<response><error outofbandtype='duo' preferduowebsdk='0' /></response>", Client.OobMethod.DuoBuiltin)]
-        [InlineData("<response><error outofbandtype='duo' preferduowebsdk='1' /></response>", Client.OobMethod.DuoSdk)]
-        internal void ExtractOobMethodFromLoginResponse_returns_oob_method(string response, Client.OobMethod expected)
-        {
-            var xml = XDocument.Parse(response);
-            var method = Client.ExtractOobMethodFromLoginResponse(xml);
-
-            Assert.Equal(expected, method);
-        }
-
-        [Fact]
-        public void ExtractOobMethodFromLoginResponse_throws_on_unknown_method()
-        {
-            var xml = XDocument.Parse("<response><error outofbandtype='blah' /></response>");
-
-            Exceptions.AssertThrowsUnsupportedFeature(
-                () => Client.ExtractOobMethodFromLoginResponse(xml),
-                "Out-of-band method 'blah' is not supported");
-        }
-
-        [Theory]
         [InlineData("<response><error blah='' /></response>", "")]
         [InlineData("<response><error blah='blah-blah' /></response>", "blah-blah")]
         public void GetErrorAttribute_returns_attribute_value(string response, string expected)
@@ -601,6 +659,16 @@ namespace PasswordManagerAccess.Test.LastPass
             var value = Client.GetOptionalErrorAttribute(xml, "poof");
 
             Assert.Null(value);
+        }
+
+        [Fact]
+        public void GetAllErrorAttributes_returns_all_names_and_values()
+        {
+            var expected = new Dictionary<string, string> {["a"] = "b", ["c"] = "d", ["e"] = "f"};
+            var xml = XDocument.Parse("<response><error a='b' c='d' e='f' /></response>");
+            var all = Client.GetAllErrorAttributes(xml);
+
+            Assert.Equal(expected, all);
         }
 
         // TODO: Figure out how to test this!
@@ -648,23 +716,49 @@ namespace PasswordManagerAccess.Test.LastPass
         // Helpers
         //
 
-        private class ContinuingUi: FakeUi
-        {
-            public ContinuingUi(): base(new OtpResult(Otp, false), OobResult.WaitForApproval(false))
-            {
-            }
-        }
-
-        private class ContinuingWithRememberMeUi: FakeUi
-        {
-            public ContinuingWithRememberMeUi(): base(new OtpResult(Otp, true), OobResult.WaitForApproval(true))
-            {
-            }
-        }
-
+        // OTP and OOB
         private class CancelingUi: FakeUi
         {
             public CancelingUi(): base(OtpResult.Cancel, OobResult.Cancel)
+            {
+            }
+        }
+
+        // OTP only
+        private class OtpProvidingUi: FakeUi
+        {
+            public OtpProvidingUi(): base(new OtpResult(Otp, false), null)
+            {
+            }
+        }
+
+        // OTP only
+        private class OtpProvidingWithRememberMeUi: FakeUi
+        {
+            public OtpProvidingWithRememberMeUi(): base(new OtpResult(Otp, true), null)
+            {
+            }
+        }
+
+        // OOB only
+        private class WaitingForOobUi: FakeUi
+        {
+            public WaitingForOobUi(): base(null, OobResult.WaitForApproval(false))
+            {
+            }
+        }
+
+        // OOB only
+        private class WaitingForOobWithRememberMeUi: FakeUi
+        {
+            public WaitingForOobWithRememberMeUi(): base(null, OobResult.WaitForApproval(true))
+            {
+            }
+        }
+
+        private class PasscodeProvidingOobUi: FakeUi
+        {
+            public PasscodeProvidingOobUi(): base(null, OobResult.ContinueWithPasscode(Otp, false))
             {
             }
         }
@@ -742,6 +836,16 @@ namespace PasswordManagerAccess.Test.LastPass
                                                               "token",
                                                               Platform.Desktop,
                                                               "private-key");
+
+        private static readonly Dictionary<string, string> LastPassAuthOobParameters = new Dictionary<string, string>
+        {
+            ["outofbandtype"] = "lastpassauth"
+        };
+
+        private static readonly Dictionary<string, string> DuoOobParameters = new Dictionary<string, string>
+        {
+            ["outofbandtype"] = "duo"
+        };
 
         private const string OkResponse =
             "<response>" +

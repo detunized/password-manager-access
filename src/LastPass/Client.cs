@@ -83,7 +83,7 @@ namespace PasswordManagerAccess.LastPass
                 session = LoginWithOob(username,
                                        password,
                                        keyIterationCount,
-                                       ExtractOobMethodFromLoginResponse(response),
+                                       GetAllErrorAttributes(response),
                                        clientInfo,
                                        ui,
                                        rest);
@@ -182,29 +182,16 @@ namespace PasswordManagerAccess.LastPass
             return session;
         }
 
-        internal enum OobMethod
-        {
-            LastPassAuth,
-            DuoBuiltin,
-            DuoSdk,
-        }
-
         // Returns a valid session or throws
         internal static Session LoginWithOob(string username,
                                              string password,
                                              int keyIterationCount,
-                                             OobMethod method,
+                                             Dictionary<string, string> parameters,
                                              ClientInfo clientInfo,
                                              IUi ui,
                                              RestClient rest)
         {
-            var answer = method switch
-            {
-                OobMethod.LastPassAuth => ui.ApproveLastPassAuth(),
-                OobMethod.DuoBuiltin => ui.ApproveDuo(),
-                OobMethod.DuoSdk => throw new UnsupportedFeatureException("Duo SDK is not yet supported"),
-                _ => throw new InternalErrorException("Invalid OOB method")
-            };
+            var answer = ApproveOob(parameters, ui, rest);
 
             if (answer == OobResult.Cancel)
                 throw new CanceledMultiFactorException("Out of band step is canceled by the user");
@@ -243,6 +230,39 @@ namespace PasswordManagerAccess.LastPass
                 MarkDeviceAsTrusted(session, clientInfo, rest);
 
             return session;
+        }
+
+        internal static OobResult ApproveOob(Dictionary<string, string> parameters, IUi ui, RestClient rest)
+        {
+            if (!parameters.TryGetValue("outofbandtype", out var method))
+                throw new InternalErrorException("Out of band method is not specified");
+
+            switch (method)
+            {
+            case "lastpassauth":
+                return ui.ApproveLastPassAuth();
+            case "duo":
+                if (parameters.GetOrDefault("preferduowebsdk", "") == "1")
+                {
+                    if (!parameters.TryGetValue("duo_host", out var host))
+                        throw new InternalErrorException($"Invalid response: 'duo_host' parameter not found");
+
+                    if (!parameters.TryGetValue("duo_signature", out var signature))
+                        throw new InternalErrorException($"Invalid response: 'duo_signature' parameter not found");
+
+                    // Returns: AUTH|ZGV...Tcx|545...07b:APP|ZGV...TAx|145...09e
+                    var result = Duo.Authenticate(host, signature, ui, rest.Transport);
+                    return result == null
+                        ? OobResult.Cancel
+                        : OobResult.ContinueWithPasscode(result.Passcode, result.RememberMe);
+                }
+                else
+                {
+                    return ui.ApproveDuo();
+                }
+            default:
+                throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported");
+            }
         }
 
         internal static void MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest)
@@ -331,23 +351,6 @@ namespace PasswordManagerAccess.LastPass
                                GetEncryptedPrivateKey(ok));
         }
 
-        internal static OobMethod ExtractOobMethodFromLoginResponse(XDocument response)
-        {
-            var type = GetErrorAttribute(response, "outofbandtype");
-            switch (type)
-            {
-            case "lastpassauth":
-                return OobMethod.LastPassAuth;
-            case "duo":
-                return GetOptionalErrorAttribute(response, "preferduowebsdk") == "1"
-                    ? OobMethod.DuoSdk
-                    : OobMethod.DuoBuiltin;
-            default:
-                var name = GetOptionalErrorAttribute(response, "outofbandname");
-                throw new UnsupportedFeatureException($"Out-of-band method '{name ?? type}' is not supported");
-            }
-        }
-
         internal static string GetEncryptedPrivateKey(XElement ok)
         {
             var attribute = ok.Attribute("privatekeyenc");
@@ -375,6 +378,14 @@ namespace PasswordManagerAccess.LastPass
                 .XPathSelectElement("response/error")?
                 .Attribute(name)?
                 .Value;
+        }
+
+        internal static Dictionary<string, string> GetAllErrorAttributes(XDocument response)
+        {
+            return response
+                .XPathSelectElement("response/error")?
+                .Attributes()
+                .ToDictionary(x => x.Name.LocalName, x => x.Value);
         }
 
         internal static Account[] ParseVault(byte[] blob, byte[] encryptionKey, RSAParameters privateKey)
