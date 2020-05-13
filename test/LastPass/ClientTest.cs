@@ -53,7 +53,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -77,7 +77,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingWithRememberMeUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, OtpProvidingWithRememberMeUi, flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -104,7 +104,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new WaitingForOobUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -133,7 +133,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, new WaitingForOobWithRememberMeUi(), flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, WaitingForOobWithRememberMeUi, flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -170,7 +170,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OtpRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new CancelingUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
                 "Second factor step is canceled by the user");
         }
 
@@ -183,7 +183,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='googleauthfailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new OtpProvidingUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow),
                 "Second factor code is incorrect");
         }
 
@@ -195,7 +195,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OobRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new CancelingUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
                 "Out of band step is canceled by the user");
         }
 
@@ -208,7 +208,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='multifactorresponsefailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, new WaitingForOobUi(), flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow),
                 "Out of band authentication failed");
         }
 
@@ -249,7 +249,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. login with otp
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, new OtpProvidingUi(), flow);
+            var session = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -263,7 +263,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. check oob
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, new WaitingForOobUi(), flow);
+            var session = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -348,7 +348,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               Client.OtpMethod.GoogleAuth,
                                               ClientInfo,
-                                              new OtpProvidingUi(),
+                                              OtpProvidingUi,
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -366,7 +366,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                 KeyIterationCount,
                                 Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
-                                new OtpProvidingUi(),
+                                OtpProvidingUi,
                                 flow);
         }
 
@@ -384,7 +384,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                 KeyIterationCount,
                                 Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
-                                new OtpProvidingWithRememberMeUi(),
+                                OtpProvidingWithRememberMeUi,
                                 flow);
         }
 
@@ -397,7 +397,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               LastPassAuthOobParameters,
                                               ClientInfo,
-                                              new WaitingForOobUi(),
+                                              WaitingForOobUi,
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -417,7 +417,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               LastPassAuthOobParameters,
                                               ClientInfo,
-                                              new WaitingForOobUi(),
+                                              WaitingForOobUi,
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -435,7 +435,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                               KeyIterationCount,
                                               LastPassAuthOobParameters,
                                               ClientInfo,
-                                              new PasscodeProvidingOobUi(),
+                                              PasscodeProvidingOobUi,
                                               flow);
 
             AssertSessionWithPrivateKey(session);
@@ -455,7 +455,7 @@ namespace PasswordManagerAccess.Test.LastPass
                                 KeyIterationCount,
                                 LastPassAuthOobParameters,
                                 ClientInfo,
-                                new WaitingForOobWithRememberMeUi(),
+                                WaitingForOobWithRememberMeUi,
                                 flow);
         }
 
@@ -716,56 +716,9 @@ namespace PasswordManagerAccess.Test.LastPass
         // Helpers
         //
 
-        // OTP and OOB
-        private class CancelingUi: FakeUi
-        {
-            public CancelingUi(): base(OtpResult.Cancel, OobResult.Cancel)
-            {
-            }
-        }
-
-        // OTP only
-        private class OtpProvidingUi: FakeUi
-        {
-            public OtpProvidingUi(): base(new OtpResult(Otp, false), null)
-            {
-            }
-        }
-
-        // OTP only
-        private class OtpProvidingWithRememberMeUi: FakeUi
-        {
-            public OtpProvidingWithRememberMeUi(): base(new OtpResult(Otp, true), null)
-            {
-            }
-        }
-
-        // OOB only
-        private class WaitingForOobUi: FakeUi
-        {
-            public WaitingForOobUi(): base(null, OobResult.WaitForApproval(false))
-            {
-            }
-        }
-
-        // OOB only
-        private class WaitingForOobWithRememberMeUi: FakeUi
-        {
-            public WaitingForOobWithRememberMeUi(): base(null, OobResult.WaitForApproval(true))
-            {
-            }
-        }
-
-        private class PasscodeProvidingOobUi: FakeUi
-        {
-            public PasscodeProvidingOobUi(): base(null, OobResult.ContinueWithPasscode(Otp, false))
-            {
-            }
-        }
-
         private class FakeUi: IUi
         {
-            protected FakeUi(OtpResult otp, OobResult oob)
+            public FakeUi(OtpResult otp, OobResult oob)
             {
                 _otp = otp;
                 _oob = oob;
@@ -846,6 +799,18 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             ["outofbandtype"] = "duo"
         };
+
+        // OTP and OOB
+        private static readonly IUi CancelingUi = new FakeUi(OtpResult.Cancel, OobResult.Cancel);
+
+        // OTP only
+        private static readonly IUi OtpProvidingUi = new FakeUi(new OtpResult(Otp, false), null);
+        private static readonly IUi OtpProvidingWithRememberMeUi = new FakeUi(new OtpResult(Otp, true), null);
+
+        // OOB only
+        private static readonly IUi WaitingForOobUi = new FakeUi(null, OobResult.WaitForApproval(false));
+        private static readonly IUi WaitingForOobWithRememberMeUi = new FakeUi(null, OobResult.WaitForApproval(true));
+        private static readonly IUi PasscodeProvidingOobUi = new FakeUi(null, OobResult.ContinueWithPasscode(Otp, false));
 
         private const string OkResponse =
             "<response>" +
