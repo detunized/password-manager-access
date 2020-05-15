@@ -295,34 +295,30 @@ namespace PasswordManagerAccess.LastPass
         {
             var parameters = new Dictionary<string, object>
             {
+                ["xml"] = 1,
                 ["akey"] = salt,
                 ["username"] = username,
                 ["uuid"] = "",
-                ["canexpire"] = "1",
-                ["cansetuuid"] = "1",
+                ["canexpire"] = 1,
+                ["cansetuuid"] = 1,
                 ["trustlabel"] = "",
                 ["sig_response"] = signature,
             };
 
             var response = rest.PostForm("duo.php", parameters);
             if (response.IsSuccessful)
-                return "checkduo" + ExtractDuoPasscodeFromHtml(response.Content);
+                return "checkduo" + ExtractDuoPasscodeFromDuoResponse(ParseXml(response));
 
             throw MakeError(response);
         }
 
-        internal static string ExtractDuoPasscodeFromHtml(string html)
+        internal static string ExtractDuoPasscodeFromDuoResponse(XDocument response)
         {
-            // Somewhere on the page there's something like this:
-            // if (typeof(parent.duo_result) == "function") {
-            //     parent.duo_result(true, 'ab7b5391225d3428b5de93d7242d5744a860be6b4cd1c1a3c58be543d9bfeab2', '');
-            // }
-            // So naturally we use a classic and the most bulletproof way to parse HTML... regular expressions!
-            var match = Regex.Match(html, "duo_result\\(.*?\\s*,\\s*['\"](.*?)['\"]\\s*,");
-            if (match.Success)
-                return match.Groups[1].Value;
+            var code = response.Element("ok")?.Attribute("code")?.Value;
+            if (code.IsNullOrEmpty())
+                throw new InternalErrorException("Invalid response: ok/code not found");
 
-            throw new InternalErrorException("Failed to find Duo passcode in HTML body");
+            return code;
         }
 
         internal static void MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest)

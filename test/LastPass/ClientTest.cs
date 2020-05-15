@@ -524,6 +524,62 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void ExchangeDuoSignatureForPasscode_returns_checkduo_code()
+        {
+            var flow = new RestFlow().Post("<ok code='blah' />");
+            var passcode = Client.ExchangeDuoSignatureForPasscode("", "", "", flow);
+
+            Assert.Equal("checkduoblah", passcode);
+        }
+
+        [Fact]
+        public void ExchangeDuoSignatureForPasscode_makes_POST_request_to_specific_url_with_parameters()
+        {
+            var salt = "salt-salt";
+            var signature = "signature-signature";
+
+            var flow = new RestFlow()
+                .Post("<ok code='blah' />")
+                    .ExpectUrl("https://lastpass.com/duo.php")
+                    .ExpectContent($"username={Username}")
+                    .ExpectContent($"akey={salt}")
+                    .ExpectContent($"sig_response={signature}");
+
+            Client.ExchangeDuoSignatureForPasscode(username: Username,
+                                                   signature: signature,
+                                                   salt: salt,
+                                                   rest: flow.ToRestClient(BaseUrl));
+        }
+
+        [Theory]
+        [InlineData("<ok code='blah' />")]
+        [InlineData("<ok code='blah'></ok>")]
+        [InlineData("<ok code='blah' more='not less'></ok>")]
+        [InlineData("<ok code='blah' more='not less'><moretags><inside /></moretags></ok>")]
+        public void ExtractDuoPasscodeFromDuoResponse_returns_passcode(string response)
+        {
+            var xml = XDocument.Parse(response);
+            var passcode = Client.ExtractDuoPasscodeFromDuoResponse(xml);
+
+            Assert.Equal("blah", passcode);
+        }
+
+        [Theory]
+        [InlineData("<ok />")]
+        [InlineData("<ok ></ok>")]
+        [InlineData("<ok code=''></ok>")]
+        [InlineData("<ok notcode='blah'></ok>")]
+        [InlineData("<notok code='blah'></notok>")]
+        [InlineData("<notok><ok code='blah' /></notok>")]
+        public void ExtractDuoPasscodeFromDuoResponse_throws_on_invalid_response(string response)
+        {
+            var xml = XDocument.Parse(response);
+
+            Exceptions.AssertThrowsInternalError(() => Client.ExtractDuoPasscodeFromDuoResponse(xml),
+                                                 "Invalid response");
+        }
+
+        [Fact]
         public void MarkDeviceAsTrusted_makes_POST_request_to_specific_url_with_parameters_and_cookies()
         {
             var flow = new RestFlow()
