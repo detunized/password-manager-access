@@ -465,7 +465,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var ui = new Mock<IUi>();
             ui.Setup(x => x.ApproveLastPassAuth()).Returns(OobResult.Cancel);
 
-            Client.ApproveOob(LastPassAuthOobParameters, ui.Object, null);
+            Client.ApproveOob(Username, LastPassAuthOobParameters, ui.Object, null);
 
             ui.VerifyAll();
         }
@@ -476,7 +476,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var ui = new Mock<IUi>();
             ui.Setup(x => x.ApproveDuo()).Returns(OobResult.Cancel);
 
-            Client.ApproveOob(DuoOobParameters, ui.Object, null);
+            Client.ApproveOob(Username, DuoOobParameters, ui.Object, null);
 
             ui.VerifyAll();
         }
@@ -484,14 +484,14 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void ApproveOob_calls_IDuoUi()
         {
-            // TODO: See how to test this
+            // TODO: See how to test this. Maybe Duo.Authenticate should be hidden behind an interface that we can mock.
         }
 
         [Fact]
         public void ApproveOob_throws_on_missing_method()
         {
             Exceptions.AssertThrowsInternalError(
-                () => Client.ApproveOob(new Dictionary<string, string>(), null, null),
+                () => Client.ApproveOob(Username, new Dictionary<string, string>(), null, null),
                 "Out of band method is not specified");
         }
 
@@ -499,14 +499,15 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ApproveOob_throws_on_unknown_method()
         {
             Exceptions.AssertThrowsUnsupportedFeature(
-                () => Client.ApproveOob(new Dictionary<string, string> {["outofbandtype"] = "blah"}, null, null),
+                () => Client.ApproveOob(Username, new Dictionary<string, string> {["outofbandtype"] = "blah"}, null, null),
                 "Out of band method 'blah' is not supported");
         }
 
         [Theory]
         [InlineData("duo_host")]
         [InlineData("duo_signature")]
-        public void ApproveOob_throws_on_missing_duo_host(string name)
+        [InlineData("duo_bytes")]
+        public void ApproveOob_throws_on_missing_duo_parameters(string name)
         {
             var parameters = new Dictionary<string, string>
             {
@@ -514,10 +515,11 @@ namespace PasswordManagerAccess.Test.LastPass
                 ["preferduowebsdk"] = "1",
                 ["duo_host"] = "duo-host",
                 ["duo_signature"] = "duo-signature",
+                ["duo_bytes"] = "duo-bytes",
             };
             parameters.Remove(name);
 
-            Exceptions.AssertThrowsInternalError(() => Client.ApproveOob(parameters, null, null),
+            Exceptions.AssertThrowsInternalError(() => Client.ApproveOob(Username, parameters, null, null),
                                                  $"Invalid response: '{name}' parameter not found");
         }
 

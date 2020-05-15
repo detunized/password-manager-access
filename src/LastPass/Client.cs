@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -191,7 +192,7 @@ namespace PasswordManagerAccess.LastPass
                                              IUi ui,
                                              RestClient rest)
         {
-            var answer = ApproveOob(parameters, ui, rest);
+            var answer = ApproveOob(username, parameters, ui, rest);
 
             if (answer == OobResult.Cancel)
                 throw new CanceledMultiFactorException("Out of band step is canceled by the user");
@@ -232,37 +233,96 @@ namespace PasswordManagerAccess.LastPass
             return session;
         }
 
-        internal static OobResult ApproveOob(Dictionary<string, string> parameters, IUi ui, RestClient rest)
+        internal static OobResult ApproveOob(string username,
+                                             Dictionary<string, string> parameters,
+                                             IUi ui,
+                                             RestClient rest)
         {
             if (!parameters.TryGetValue("outofbandtype", out var method))
                 throw new InternalErrorException("Out of band method is not specified");
 
-            switch (method)
+            return method switch
             {
-            case "lastpassauth":
-                return ui.ApproveLastPassAuth();
-            case "duo":
-                if (parameters.GetOrDefault("preferduowebsdk", "") == "1")
-                {
-                    if (!parameters.TryGetValue("duo_host", out var host))
-                        throw new InternalErrorException($"Invalid response: 'duo_host' parameter not found");
+                "lastpassauth" => ui.ApproveLastPassAuth(),
+                "duo" => ApproveDuo(username, parameters, ui, rest),
+                _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported")
+            };
+        }
 
-                    if (!parameters.TryGetValue("duo_signature", out var signature))
-                        throw new InternalErrorException($"Invalid response: 'duo_signature' parameter not found");
+        internal static OobResult ApproveDuo(string username,
+                                             Dictionary<string, string> parameters,
+                                             IUi ui,
+                                             RestClient rest)
+        {
+            return parameters.GetOrDefault("preferduowebsdk", "") == "1"
+                ? ApproveDuoWebSdk(username, parameters, ui, rest)
+                : ui.ApproveDuo();
+        }
 
-                    // Returns: AUTH|ZGV...Tcx|545...07b:APP|ZGV...TAx|145...09e
-                    var result = Duo.Authenticate(host, signature, ui, rest.Transport);
-                    return result == null
-                        ? OobResult.Cancel
-                        : OobResult.ContinueWithPasscode(result.Passcode, result.RememberMe);
-                }
-                else
-                {
-                    return ui.ApproveDuo();
-                }
-            default:
-                throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported");
+        internal static OobResult ApproveDuoWebSdk(string username,
+                                                   Dictionary<string, string> parameters,
+                                                   IUi ui,
+                                                   RestClient rest)
+        {
+            string GetParam(string name)
+            {
+                if (parameters.TryGetValue(name, out var value))
+                    return value;
+
+                throw new InternalErrorException($"Invalid response: '{name}' parameter not found");
             }
+
+            var host = GetParam("duo_host");
+            var signature = GetParam("duo_signature");
+            var salt = GetParam("duo_bytes");
+
+            // Returns: AUTH|ZGV...Tcx|545...07b:APP|ZGV...TAx|145...09e
+            var result = Duo.Authenticate(host, signature, ui, rest.Transport);
+            if (result == null)
+                return OobResult.Cancel;
+
+            var passcode = ExchangeDuoSignatureForPasscode(username: username,
+                                                           signature: result.Passcode,
+                                                           salt: salt,
+                                                           rest: rest);
+            return OobResult.ContinueWithPasscode(passcode, result.RememberMe);
+        }
+
+        internal static string ExchangeDuoSignatureForPasscode(string username,
+                                                               string signature,
+                                                               string salt,
+                                                               RestClient rest)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                ["akey"] = salt,
+                ["username"] = username,
+                ["uuid"] = "",
+                ["canexpire"] = "1",
+                ["cansetuuid"] = "1",
+                ["trustlabel"] = "",
+                ["sig_response"] = signature,
+            };
+
+            var response = rest.PostForm("duo.php", parameters);
+            if (response.IsSuccessful)
+                return "checkduo" + ExtractDuoPasscodeFromHtml(response.Content);
+
+            throw MakeError(response);
+        }
+
+        internal static string ExtractDuoPasscodeFromHtml(string html)
+        {
+            // Somewhere on the page there's something like this:
+            // if (typeof(parent.duo_result) == "function") {
+            //     parent.duo_result(true, 'ab7b5391225d3428b5de93d7242d5744a860be6b4cd1c1a3c58be543d9bfeab2', '');
+            // }
+            // So naturally we use a classic and the most bulletproof way to parse HTML... regular expressions!
+            var match = Regex.Match(html, "duo_result\\(.*?\\s*,\\s*['\"](.*?)['\"]\\s*,");
+            if (match.Success)
+                return match.Groups[1].Value;
+
+            throw new InternalErrorException("Failed to find Duo passcode in HTML body");
         }
 
         internal static void MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest)
