@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.1
+  - TrueKey: fixed a crash that sometimes happened during the login process
+
 ## 0.10.0
   - LastPass: ported from the original repo and now could be used
   - Better error handling in Crypto on Mono
