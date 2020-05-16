@@ -280,7 +280,7 @@ namespace PasswordManagerAccess.TrueKey
                                                   oAuthToken: response.OAuthToken ?? "");
 
             var transactionId = response.TransactionId;
-            var email = data.VerificationEmail;
+            var email = data.VerificationEmail ?? "";
 
             // Special case: email doesn't need OOB devices
             if (nextStep == 14)
@@ -290,7 +290,10 @@ namespace PasswordManagerAccess.TrueKey
                                                   devices: new TwoFactorAuth.OobDevice[0],
                                                   oAuthToken: "");
 
-            var devices = data.OobDevices.Select(x => new TwoFactorAuth.OobDevice(name: x.Name, id: x.Id)).ToArray();
+            var devices = (data.OobDevices ?? new R.OobDevice[0])
+                .Select(x => new TwoFactorAuth.OobDevice(name: x.Name, id: x.Id))
+                .ToArray();
+
             if (devices.Length < 1)
                 throw MakeError("At least one OOB device is expected");
 

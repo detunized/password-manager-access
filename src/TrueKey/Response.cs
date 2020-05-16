@@ -70,14 +70,11 @@ namespace PasswordManagerAccess.TrueKey.Response
 
     internal struct NextStepData
     {
-        [JsonProperty("oobDevices", Required = Required.Always)]
+        [JsonProperty("oobDevices")]
         public readonly OobDevice[] OobDevices;
 
-        [JsonProperty("verificationEmail", Required = Required.Always)]
+        [JsonProperty("verificationEmail")]
         public readonly string VerificationEmail;
-
-        [JsonProperty("bcaResyncToken", Required = Required.AllowNull)]
-        public readonly object BcaResyncToken;
     }
 
     internal struct OobDevice

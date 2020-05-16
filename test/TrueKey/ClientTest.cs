@@ -79,6 +79,21 @@ namespace PasswordManagerAccess.Test.TrueKey
         }
 
         [Fact]
+        public void AuthStep2_returns_OAuth_token()
+        {
+            var result = Client.AuthStep2(ClientInfo,
+                                          "password",
+                                          "transaction-id",
+                                          SetupPostWithFixture("auth-step2-success-response"));
+
+            Assert.Equal(TwoFactorAuth.Step.Done, result.InitialStep);
+            Assert.Equal("", result.TransactionId);
+            Assert.Equal("", result.Email);
+            Assert.Empty(result.Devices);
+            Assert.StartsWith("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1", result.OAuthToken);
+        }
+
+        [Fact]
         public void AuthStep2_throws_on_common_errors()
         {
             VerifyCommonErrorsWithPost(flow => Client.AuthStep2(ClientInfo, "password", "transaction-id", flow));
