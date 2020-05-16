@@ -4,6 +4,7 @@
 using System;
 using System.Globalization;
 using System.Threading;
+using System.Net.Http;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.StickyPassword;
 using Xunit;
@@ -12,6 +13,26 @@ namespace PasswordManagerAccess.Test.StickyPassword
 {
     public class ClientTest
     {
+        [Fact]
+        public void GetEncryptedToken_returns_response()
+        {
+            var flow = new RestFlow().Post(GetTokenResponse);
+            var token = Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow);
+
+            Assert.Equal(EncryptedToken, token);
+        }
+
+        [Fact]
+        public void GetEncryptedToken_makes_post_request_with_specific_url_and_parameters()
+        {
+            var flow = new RestFlow()
+                .Post(GetTokenResponse)
+                    .ExpectUrl("https://spcb.stickypassword.com/SPCClient/GetCrpToken")
+                    .ExpectContent($"uaid={UrlEncodedUsername}");
+
+            Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow.ToRestClient(BaseUrl));
+        }
+
         [Fact]
         public void GetEncryptedToken_converts_date_to_utc_and_formats_correctly()
         {
@@ -25,7 +46,53 @@ namespace PasswordManagerAccess.Test.StickyPassword
                                      flow);
         }
 
+        [Fact]
+        public void GetEncryptedToken_throws_on_network_error()
+        {
+            var flow = new RestFlow().Post(new HttpRequestException());
+
+            Exceptions.AssertThrowsNetworkError(() => Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow),
+                                                "Network error has occurred");
+        }
+
+        [Fact]
+        public void GetEncryptedToken_throws_on_non_zero_status()
+        {
+            var flow = new RestFlow().Post(ResponseWithError);
+
+            Exceptions.AssertThrowsInternalError(() => Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow),
+                                                 "Failed to retrieve the encrypted token");
+        }
+
+        [Fact]
+        public void GetEncryptedToken_throws_incorrect_username_on_1006_status()
+        {
+            var flow = new RestFlow().Post(ResponseWithError1006);
+
+            Exceptions.AssertThrowsBadCredentials(() => Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow),
+                                                  "Invalid username");
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("<xml />")]
+        [InlineData(">invalid<")]
+        [InlineData("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")]
+        public void GetEncryptedToken_throws_on_incorrect_xml(string response)
+        {
+            var flow = new RestFlow().Post(response);
+
+            Exceptions.AssertThrowsInternalError(() => Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow),
+                                                 "Failed to parse XML in response");
+        }
+
+        //
+        // Data
+        //
+
+        private const string BaseUrl = "https://spcb.stickypassword.com/SPCClient/";
         internal const string Username = "LastPass.Ruby@gmaiL.cOm";
+        private const string UrlEncodedUsername = "LastPass.Ruby%40gmaiL.cOm";
         internal const string DeviceId = "12345678-1234-1234-1234-123456789abc";
         private const string DeviceName = "stickypassword-sharp";
 
@@ -116,70 +183,6 @@ namespace PasswordManagerAccess.Test.StickyPassword
             "</SpcResponse>";
 
 #if FIX_THIS
-        [Fact]
-        public void GetEncryptedToken_makes_post_request()
-        {
-            var client = SetupClientForPost(GetTokenResponse);
-            Client.GetEncryptedToken(Username, DeviceId, Timestamp, client.Object);
-
-            client.Verify(x => x.Post(It.Is<string>(s => s == "GetCrpToken"),
-                                      It.Is<string>(s => s.Contains(DeviceId)),
-                                      It.Is<DateTime>(d => d == Timestamp),
-                                      It.Is<Dictionary<string, string>>(
-                                          d => d.ContainsKey("uaid") && d["uaid"] == Username)));
-        }
-
-        [Fact]
-        public void GetEncryptedToken_returns_response()
-        {
-            Assert.Equal(EncryptedToken,
-                         Client.GetEncryptedToken(Username,
-                                                  DeviceId,
-                                                  Timestamp,
-                                                  SetupClientForPost(GetTokenResponse).Object));
-        }
-
-        [Fact]
-        public void GetEncryptedToken_throws_on_network_error()
-        {
-            TestThrowsNetworkError(client => Client.GetEncryptedToken(Username,
-                                                                      DeviceId,
-                                                                      Timestamp,
-                                                                      client),
-                                   SetupClientForPostError);
-        }
-
-        [Fact]
-        public void GetEncryptedToken_throws_on_non_zero_status()
-        {
-            Assert.Throws<FetchException>(
-                () => Client.GetEncryptedToken(Username,
-                                               DeviceId,
-                                               Timestamp,
-                                               SetupClientForPost(ResponseWithError).Object));
-        }
-
-        [Fact]
-        public void GetEncryptedToken_throws_incorrect_username_on_1006_status()
-        {
-            var e = Assert.Throws<FetchException>(
-                () => Client.GetEncryptedToken(Username,
-                                               DeviceId,
-                                               Timestamp,
-                                               SetupClientForPost(ResponseWithError1006).Object));
-            Assert.Equal(FetchException.FailureReason.IncorrectUsername, e.Reason);
-        }
-
-        [Fact]
-        public void GetEncryptedToken_throws_on_incorrect_xml()
-        {
-            TestOnIncorrectXml(client => Client.GetEncryptedToken(Username,
-                                                                  DeviceId,
-                                                                  Timestamp,
-                                                                  client),
-                               SetupClientForPost);
-        }
-
         [Fact]
         public void AuthorizeDevice_makes_post_request()
         {
