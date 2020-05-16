@@ -1,19 +1,19 @@
 {
-  "refreshToken": null,
-  "refreshTokenExpiry": 0.0,
-  "ResponseResult": {
-    "IsSuccess": false,
-    "ErrorCode": "E3013",
-    "ErrorDescription": "Authentication Pending",
-    "TransactionId": null
-  },
-  "nextStep": 0,
-  "NextStepData": null,
-  "authCode": null,
-  "redirectUri": null,
-  "idToken": null,
-  "state": null,
-  "cloudKey": null,
-  "isTrustedDevice": false,
-  "uasTokenInfo": null
+    "refreshToken": null,
+    "refreshTokenExpiry": 0.0,
+    "ResponseResult": {
+        "IsSuccess": false,
+        "ErrorCode": "E3013",
+        "ErrorDescription": "Authentication Pending",
+        "TransactionId": null
+    },
+    "nextStep": 0,
+    "NextStepData": null,
+    "authCode": null,
+    "redirectUri": null,
+    "idToken": null,
+    "state": null,
+    "cloudKey": null,
+    "isTrustedDevice": false,
+    "uasTokenInfo": null
 }

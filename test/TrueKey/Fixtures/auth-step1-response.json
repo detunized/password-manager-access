@@ -1,10 +1,10 @@
 {
-  "oAuthTransId": "6cdfcd43-065c-43a1-aa7a-017de98eefd0",
-  "responseResult": {
-    "isSuccess": true,
-    "errorCode": null,
-    "errorDescription": null,
-    "transactionId": null
-  },
-  "riskAnalysisInfo": null
+    "oAuthTransId": "6cdfcd43-065c-43a1-aa7a-017de98eefd0",
+    "responseResult": {
+        "isSuccess": true,
+        "errorCode": null,
+        "errorDescription": null,
+        "transactionId": null
+    },
+    "riskAnalysisInfo": null
 }
