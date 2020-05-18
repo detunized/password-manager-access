@@ -305,6 +305,7 @@ namespace PasswordManagerAccess.Common
         // TODO: Make these readonly dictionaries
         public static readonly HttpHeaders NoHeaders = new HttpHeaders();
         public static readonly HttpCookies NoCookies = new HttpCookies();
+        public static readonly PostParameters NoParameters = new PostParameters();
 
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
