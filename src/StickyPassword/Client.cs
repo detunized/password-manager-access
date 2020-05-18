@@ -111,7 +111,7 @@ namespace PasswordManagerAccess.StickyPassword
                                 "GetS3Token",
                                 deviceId,
                                 timestamp,
-                                new Dictionary<string, object>(),
+                                RestClient.NoParameters,
                                 username,
                                 token);
 
@@ -160,11 +160,7 @@ namespace PasswordManagerAccess.StickyPassword
             return Inflate(db, "the database");
         }
 
-        //
-        // Private
-        //
-
-        private class XmlResponse
+        internal class XmlResponse
         {
             public static XmlResponse Parse(string text)
             {
@@ -207,18 +203,13 @@ namespace PasswordManagerAccess.StickyPassword
             private readonly XmlNamespaceManager _namespaceManager;
         }
 
-        private static InternalErrorException CreateException(string operation, XmlResponse xml)
-        {
-            return new InternalErrorException($"Failed to {operation} (error: {xml.Status})");
-        }
-
-        private static XmlResponse Post(RestClient rest,
-                                        string endpoint,
-                                        string deviceId,
-                                        DateTime timestamp,
-                                        Dictionary<string, object> parameters,
-                                        string username = null,
-                                        byte[] token = null)
+        internal static XmlResponse Post(RestClient rest,
+                                         string endpoint,
+                                         string deviceId,
+                                         DateTime timestamp,
+                                         Dictionary<string, object> parameters,
+                                         string username = null,
+                                         byte[] token = null)
         {
             var headers = new Dictionary<string, string>
             {
@@ -245,6 +236,15 @@ namespace PasswordManagerAccess.StickyPassword
 
             throw new InternalErrorException(
                 $"HTTP request to '{response.RequestUri}' failed with status {response.StatusCode}");
+        }
+
+        //
+        // Private
+        //
+
+        private static InternalErrorException CreateException(string operation, XmlResponse xml)
+        {
+            return new InternalErrorException($"Failed to {operation} (error: {xml.Status})");
         }
 
         private static string GetUserAgent(string deviceId)
