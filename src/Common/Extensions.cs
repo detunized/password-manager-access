@@ -345,7 +345,6 @@ namespace PasswordManagerAccess.Common
             stream.CopyTo(outputStream, bufferSize);
 
             return outputStream.ToArray();
-
         }
 
         //

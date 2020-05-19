@@ -115,7 +115,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void FindLatestDbVersion_returns_version_from_s3()
         {
             var flow = new RestFlow().Get(VersionInfo);
-            var version = Client.FindLatestDbVersion(new S3Token("", "", "", "", ""), flow);
+            var version = Client.FindLatestDbVersion(S3Token, flow);
 
             Assert.Equal(Version, version);
         }
@@ -129,7 +129,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                     .ExpectUrl(ObjectPrefix)
                     .ExpectUrl("spc.info");
 
-            Client.FindLatestDbVersion(new S3Token("", "", "", Bucket, ObjectPrefix), flow);
+            Client.FindLatestDbVersion(S3Token, flow);
         }
 
         [Theory]
@@ -142,8 +142,39 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var flow = new RestFlow().Get(response);
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.FindLatestDbVersion(new S3Token("", "", "", "", ""), flow),
+                () => Client.FindLatestDbVersion(S3Token, flow),
                 "Invalid database info format");
+        }
+
+        [Fact]
+        public void DownloadDb_returns_content_from_s3()
+        {
+            // TOOD: Need RestFlow binary support to implement this
+            var flow = new RestFlow().Get("");
+            var db = Client.DownloadDb(Version, S3Token, flow);
+
+            Assert.Equal("".ToBytes(), db);
+        }
+
+        [Fact]
+        public void DownloadDb_requests_file_from_s3()
+        {
+            var flow = new RestFlow()
+                .Get("")
+                    .ExpectUrl(Bucket)
+                    .ExpectUrl(ObjectPrefix)
+                    .ExpectUrl(Version);
+
+            Client.DownloadDb(Version, S3Token, flow);
+        }
+
+        [Fact]
+        public void DownloadDb_throws_on_invalid_deflated_content()
+        {
+            var flow = new RestFlow().Get("Not really deflated");
+
+            Exceptions.AssertThrowsInternalError(() => Client.DownloadDb(Version, S3Token, flow),
+                                                 "Failed to decompress the database");
         }
 
         //
@@ -236,6 +267,13 @@ namespace PasswordManagerAccess.Test.StickyPassword
 
         private const string Bucket = "bucket";
         private const string ObjectPrefix = "objectPrefix/";
+
+        private static readonly S3Token S3Token = new S3Token("access-key-id",
+                                                              "secret-access-key",
+                                                              "security-token",
+                                                              Bucket,
+                                                              ObjectPrefix);
+
         private const string Version = "123456789";
         private const string VersionInfo = "VERSION 123456789\nMILESTONE 987654321";
 
@@ -323,172 +361,6 @@ namespace PasswordManagerAccess.Test.StickyPassword
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>1006</Status>" +
             "</SpcResponse>";
-
-#if FIX_THIS
-        [Fact]
-        public void DownloadDb_returns_content_from_s3()
-        {
-            var s3 = SetupS3(CompressedDbContent);
-
-            Assert.Equal(DbContent.ToBytes(), Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
-        }
-
-        [Fact]
-        public void DownloadDb_requests_file_from_s3()
-        {
-            var s3 = SetupS3(CompressedDbContent);
-            Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object);
-
-            s3.Verify(x => x.GetObjectAsync(
-                It.Is<string>(s => s == Bucket),
-                It.Is<string>(s => s.Contains(ObjectPrefix) && s.Contains(Version)),
-                It.IsAny<CancellationToken>()));
-        }
-
-        [Fact]
-        public void DownloadDb_throws_on_network_error()
-        {
-            var s3 = SetupS3Error<WebException>();
-
-            var e = Assert.Throws<FetchException>(
-                () => Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
-
-            Assert.Equal(FetchException.FailureReason.NetworkError, e.Reason);
-            Assert.IsType<WebException>(e.InnerException);
-        }
-
-        [Fact]
-        public void DownloadDb_throws_on_aws_error()
-        {
-            var s3 = SetupS3Error<AmazonServiceException>();
-
-            var e = Assert.Throws<FetchException>(
-                () => Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
-
-            Assert.Equal(FetchException.FailureReason.S3Error, e.Reason);
-            Assert.IsType<AmazonServiceException>(e.InnerException);
-        }
-
-        [Fact]
-        public void DownloadDb_throws_on_invalid_deflated_content()
-        {
-            var s3 = SetupS3("Not really deflated");
-
-            var e = Assert.Throws<FetchException>(
-                () => Client.DownloadDb(Version, Bucket, ObjectPrefix, s3.Object));
-            Assert.Equal(FetchException.FailureReason.InvalidResponse, e.Reason);
-            Assert.IsType<InvalidDataException>(e.InnerException);
-        }
-
-        //
-        // Helpers
-        //
-
-        private static Mock<IHttpClient> SetupClientForPost(string response)
-        {
-            var mock = new Mock<IHttpClient>();
-            mock
-                .Setup(x => x.Post(It.IsAny<string>(),
-                                   It.IsAny<string>(),
-                                   It.IsAny<DateTime>(),
-                                   It.IsAny<Dictionary<string, string>>()))
-                .Returns(response);
-            return mock;
-        }
-
-        private static Mock<IHttpClient> SetupClientForPostError()
-        {
-            var mock = new Mock<IHttpClient>();
-            mock
-                .Setup(x => x.Post(It.IsAny<string>(),
-                                   It.IsAny<string>(),
-                                   It.IsAny<DateTime>(),
-                                   It.IsAny<Dictionary<string, string>>()))
-                .Throws<WebException>();
-            return mock;
-        }
-
-        private static Mock<IHttpClient> SetupClientForPostWithAuth(string response)
-        {
-            var mock = new Mock<IHttpClient>();
-            mock
-                .Setup(x => x.Post(It.IsAny<string>(),
-                                   It.IsAny<string>(),
-                                   It.IsAny<string>(),
-                                   It.IsAny<DateTime>(),
-                                   It.IsAny<Dictionary<string, string>>()))
-                .Returns(response);
-            return mock;
-        }
-
-        private static Mock<IHttpClient> SetupClientForPostWithAuthError()
-        {
-            var mock = new Mock<IHttpClient>();
-            mock
-                .Setup(x => x.Post(It.IsAny<string>(),
-                                   It.IsAny<string>(),
-                                   It.IsAny<string>(),
-                                   It.IsAny<DateTime>(),
-                                   It.IsAny<Dictionary<string, string>>()))
-                .Throws<WebException>();
-            return mock;
-        }
-
-        private static Mock<IAmazonS3> SetupS3(string response)
-        {
-            return SetupS3(response.ToBytes());
-        }
-
-        private static Mock<IAmazonS3> SetupS3(byte[] response)
-        {
-            var s3 = new Mock<IAmazonS3>();
-            s3
-                .Setup(x => x.GetObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(new Amazon.S3.Model.GetObjectResponse
-                {
-                    ResponseStream = new MemoryStream(response)
-                }));
-
-            return s3;
-        }
-
-        private static Mock<IAmazonS3> SetupS3Error<T>() where T : Exception, new()
-        {
-            var s3 = new Mock<IAmazonS3>();
-            s3
-                .Setup(x => x.GetObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Throws<T>();
-
-            return s3;
-        }
-
-        private void TestThrowsNetworkError(Action<IHttpClient> what,
-                                            Func<Mock<IHttpClient>> setup)
-        {
-            var client = setup();
-            var e = Assert.Throws<FetchException>(() => what(client.Object));
-            Assert.Equal(FetchException.FailureReason.NetworkError, e.Reason);
-            Assert.IsType<WebException>(e.InnerException);
-        }
-
-        private void TestOnIncorrectXml(Action<IHttpClient> what,
-                                        Func<string, Mock<IHttpClient>> setup)
-        {
-            var responses = new[]
-            {
-                "",
-                "<xml />",
-                ">invalid<",
-                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-            };
-
-            foreach (var i in responses)
-            {
-                var e = Assert.Throws<FetchException>(() => what(setup(i).Object));
-                Assert.Equal(FetchException.FailureReason.InvalidResponse, e.Reason);
-            }
-        }
-#endif
     }
 
     // These tests (hopefully) run in an isolated thread. Here we change the thread global state which might

@@ -275,19 +275,28 @@ namespace PasswordManagerAccess.StickyPassword
 
         private static byte[] Inflate(Stream s, string name)
         {
-            // Eat first two bytes
-            // See: http://stackoverflow.com/a/21544269/362938
-            s.ReadByte();
-            s.ReadByte();
+            InternalErrorException MakeError(Exception e)
+            {
+                return new InternalErrorException($"Failed to decompress {name}", e);
+            }
 
             try
             {
+                // Eat first two bytes
+                // See: http://stackoverflow.com/a/21544269/362938
+                s.ReadByte();
+                s.ReadByte();
+
                 using var deflateStream = new DeflateStream(s, CompressionMode.Decompress);
                 return deflateStream.ReadAll();
             }
             catch (InvalidDataException e)
             {
-                throw new InternalErrorException($"Failed to decompress {name}", e);
+                throw MakeError(e);
+            }
+            catch (IOException e)
+            {
+                throw MakeError(e);
             }
         }
 
