@@ -203,7 +203,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 .ExpectHeader("Accept", "application/xml")
                 .ExpectHeader("Authorization",
                               "Basic TGFzdFBhc3MuUnVieUBnbWFpTC5jT206WlRRMU1HVmpNMlJsWlRRMk5HTTNaV0V4TlRoallqY3dOMlk0Tm1NMU1tUT0=")
-                .ExpectHeader("Date", "Thu, 05 Mar 1998 23:00:00 GMT")
+                .ExpectHeader("Date", "Fri, 06 Mar 1998 17:24:56 GMT")
                 .ExpectHeader("User-Agent",
                               $"SP/8.0.3436 Prot=2 ID={DeviceId} Lng=EN Os=Android/4.4.4 Lic= LicStat= PackageID=");
 
@@ -263,7 +263,13 @@ namespace PasswordManagerAccess.Test.StickyPassword
         internal const string DeviceId = "12345678-1234-1234-1234-123456789abc";
         private const string DeviceName = "stickypassword-sharp";
 
-        private static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
+        private static readonly DateTime Timestamp = new DateTime(year: 1998,
+                                                                  month: 3,
+                                                                  day: 6,
+                                                                  hour: 17,
+                                                                  minute: 24,
+                                                                  second: 56,
+                                                                  kind: DateTimeKind.Utc);
 
         private const string Bucket = "bucket";
         private const string ObjectPrefix = "objectPrefix/";
