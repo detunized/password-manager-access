@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Globalization;
+using System.Threading;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.StickyPassword;
 using Xunit;
@@ -23,8 +25,8 @@ namespace PasswordManagerAccess.Test.StickyPassword
                                      flow);
         }
 
-        private const string Username = "LastPass.Ruby@gmaiL.cOm";
-        private const string DeviceId = "12345678-1234-1234-1234-123456789abc";
+        internal const string Username = "LastPass.Ruby@gmaiL.cOm";
+        internal const string DeviceId = "12345678-1234-1234-1234-123456789abc";
         private const string DeviceName = "stickypassword-sharp";
 
         private static readonly DateTime Timestamp = new DateTime(1998, 3, 6);
@@ -53,7 +55,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             0xff, 0x79, 0xc1, 0x0b, 0xa9, 0x19, 0xce, 0x40,
         };
 
-        private const string GetTokenResponse =
+        internal const string GetTokenResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>0</Status>" +
@@ -522,5 +524,38 @@ namespace PasswordManagerAccess.Test.StickyPassword
             }
         }
 #endif
+    }
+
+    // These tests (hopefully) run in an isolated thread. Here we change the thread global state which might
+    // affect other tests that are running in parallel. `DisableParallelization = true` should prevent this.
+    [CollectionDefinition("IsolatedThreadClientTest", DisableParallelization = true)]
+    public class IsolatedThreadClientTest
+    {
+        [Fact]
+        public void GetEncryptedToken_formats_date_in_en_culture()
+        {
+            var savedCulture = Thread.CurrentThread.CurrentCulture;
+            var savedUiCulture = Thread.CurrentThread.CurrentUICulture;
+
+            try
+            {
+                Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-FR");
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo("fr-FR");
+
+                var flow = new RestFlow()
+                    .Post(ClientTest.GetTokenResponse)
+                    .ExpectHeader("Date", "Tue, 17 Mar 2020 11:34:56 GMT"); // UTC/GMT time here
+
+                Client.GetEncryptedToken(ClientTest.Username,
+                                         ClientTest.DeviceId,
+                                         DateTime.Parse("Tue, 17 Mar 2020 12:34:56 +01:00"), // Local time here
+                                         flow);
+            }
+            finally
+            {
+                Thread.CurrentThread.CurrentCulture = savedCulture;
+                Thread.CurrentThread.CurrentUICulture = savedUiCulture;
+            }
+        }
     }
 }

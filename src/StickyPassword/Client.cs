@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -222,7 +223,7 @@ namespace PasswordManagerAccess.StickyPassword
             var headers = new Dictionary<string, string>
             {
                 ["Accept"] = "application/xml",
-                ["Date"] = timestamp.ToUniversalTime().ToString("ddd, dd MMM yyyy HH:mm:ss 'GMT'"),
+                ["Date"] = timestamp.ToUniversalTime().ToString("ddd, dd MMM yyyy HH:mm:ss 'GMT'", EnUs),
                 ["User-Agent"] = GetUserAgent(deviceId),
             };
 
@@ -289,5 +290,11 @@ namespace PasswordManagerAccess.StickyPassword
                 throw new InternalErrorException($"Failed to decompress {name}", e);
             }
         }
+
+        //
+        // Data
+        //
+
+        private static readonly CultureInfo EnUs = new CultureInfo("en-US");
     }
 }
