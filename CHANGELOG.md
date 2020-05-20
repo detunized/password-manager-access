@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.2
+  - StickyPassword: fixed Xamarin.Android problem with the Date header formatting
+
 ## 0.10.1
   - TrueKey: fixed a crash that sometimes happened during the login process
 
