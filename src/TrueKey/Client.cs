@@ -111,7 +111,6 @@ namespace PasswordManagerAccess.TrueKey
             storage.StoreString("id", deviceInfo.Id);
         }
 
-
         // This is the first step in authentication process for a new device.
         // This requests the client token with is used in OCRA (RFC 6287) exchange
         // later on. There's also a server assigned id for the new device.

@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
@@ -25,6 +26,28 @@ namespace PasswordManagerAccess.Test.TrueKey
 
             var accounts = Client.OpenVault(Username, Password123, new CheckUi(), new NullStorage(), flow);
             Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void LoadDeviceInfo_returns_device_info()
+        {
+            var info = Client.LoadDeviceInfo(new Storage());
+
+            Assert.Equal(ClientToken, info.Token);
+            Assert.Equal(DeviceId, info.Id);
+        }
+
+        [Fact]
+        public void StoreDeviceInfo_stores_device_info()
+        {
+            var storage = new Storage();
+            Client.StoreDeviceInfo(DeviceInfo, storage);
+
+            Assert.Contains("token", storage.Map.Keys);
+            Assert.Equal(ClientToken, storage.Map["token"]);
+
+            Assert.Contains("id", storage.Map.Keys);
+            Assert.Equal(DeviceId, storage.Map["id"]);
         }
 
         [Fact]
@@ -248,6 +271,26 @@ namespace PasswordManagerAccess.Test.TrueKey
             public override Answer AskToChooseOob(string[] names, string email, Answer[] validAnswers) => Answer.Email;
         }
 
+        private class Storage: ISecureStorage
+        {
+            public readonly  Dictionary<string, string> Map = new Dictionary<string, string>();
+
+            public string LoadString(string name)
+            {
+                return name switch
+                {
+                    "token" => ClientToken,
+                    "id" => DeviceId,
+                    _ => throw new ArgumentException($"Invalid name {name}")
+                };
+            }
+
+            public void StoreString(string name, string value)
+            {
+                Map[name] = value;
+            }
+        }
+
         //
         // Data
         //
@@ -278,9 +321,8 @@ namespace PasswordManagerAccess.Test.TrueKey
         private static readonly byte[] MasterKeySalt = MasterKeySaltHex.DecodeHex();
         private static readonly byte[] EncryptedMasterKey = EncryptedMasterKeyBase64.Decode64();
 
-        private static readonly Client.DeviceInfo DeviceInfo = new Client.DeviceInfo(
-            token: ClientToken,
-            id: DeviceId);
+        private static readonly Client.DeviceInfo DeviceInfo = new Client.DeviceInfo(token: ClientToken,
+                                                                                     id: DeviceId);
 
         private static readonly Util.OtpInfo OtpInfo = new Util.OtpInfo(
             version: 3,
