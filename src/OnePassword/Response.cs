@@ -204,16 +204,28 @@ namespace PasswordManagerAccess.OnePassword.Response
     internal class MfaInfo
     {
         [JsonProperty("dsecret")]
-        public readonly MfaEnabled RememberMe;
+        public readonly BasicMfa RememberMe;
 
         [JsonProperty("totp")]
-        public readonly MfaEnabled GoogleAuth;
+        public readonly BasicMfa GoogleAuth;
+
+        [JsonProperty("duo")]
+        public readonly DuoMfa Duo;
     }
 
-    internal class MfaEnabled
+    internal class BasicMfa
     {
         [JsonProperty("enabled", Required = Required.Always)]
         public readonly bool Enabled;
+    }
+
+    internal class DuoMfa: BasicMfa
+    {
+        [JsonProperty("host")]
+        public readonly string Host;
+
+        [JsonProperty("sigRequest")]
+        public readonly string Signature;
     }
 
     internal class Error

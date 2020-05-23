@@ -12,6 +12,30 @@
         "totp": {
             "enabled": true,
             "digits": 6
+        },
+        "duo":
+        {
+            "enabled": true,
+            "host": "api-005dde75.duosecurity.com",
+            "sigRequest": "TX|YmxhaEBnbWFpbC5jb218RElSVDZQOUk5TkxGVlU3QzJVMk98MTU5MDE0NDIxNg==|c6dbf2cf961d7c8b2ce89737038ba5a2bb39b9a3:APP|YmxhaEBnbWFpbC5jb218RElSVDZQOUk5TkxGVlU3QzJVMk98MTU5MDE0NzUxNg==|87f7a9f378151a85cc2a1c3ffc5d6cd68fcb80b7",
+            "preauth":
+            {
+                "stat": "OK",
+                "response":
+                {
+                    "result": "auth",
+                    "statusMessage": "Account is active",
+                    "enrollPortalURL": "",
+                    "devices": [
+                        {
+                            "device": "DPAMJAIFXBD0GWIT0AT8",
+                            "type": "phone",
+                            "name": "OnePlus 1",
+                            "number": "+XX XXXX XXX1337",
+                            "capabilities": ["auto", "push", "sms", "phone", "mobile_otp"]
+                        }]
+                }
+            }
         }
     },
     "serverVerifyHash": "Ke81HUwT13BAW5OrymPX7i7Aii_3cnCKSDJOlt55HMc"

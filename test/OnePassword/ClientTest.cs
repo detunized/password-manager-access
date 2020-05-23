@@ -149,7 +149,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var rest = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
             var result = Client.VerifySessionKey(TestData.Session, TestData.SessionKey, rest);
 
-            Assert.Equal(2, result.Factors.Length);
+            Assert.Equal(3, result.Factors.Length);
         }
 
         [Fact]
@@ -165,31 +165,44 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetSecondFactors_returns_factors()
         {
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
-                "{'totp': {'enabled': true}, 'dsecret': {'enabled': true}}");
+            var expected = new[]
+            {
+                Client.SecondFactor.GoogleAuthenticator,
+                Client.SecondFactor.RememberMeToken,
+                Client.SecondFactor.Duo,
+            };
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{" +
+                                                               "'duo': {'enabled': true}, " +
+                                                               "'totp': {'enabled': true}, " +
+                                                               "'dsecret': {'enabled': true}" +
+                                                               "}");
             var factors = Client.GetSecondFactors(mfa);
 
-            Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator, Client.SecondFactor.RememberMeToken },
-                         factors);
+            Assert.Equal(expected, factors);
         }
 
         [Fact]
         public void GetSecondFactors_ignores_missing_factors()
         {
+            var expected = new[] { Client.SecondFactor.GoogleAuthenticator };
             var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{'totp': {'enabled': true}}");
             var factors = Client.GetSecondFactors(mfa);
 
-            Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator }, factors);
+            Assert.Equal(expected, factors);
         }
 
         [Fact]
         public void GetSecondFactors_ignores_disabled_factors()
         {
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
-                "{'totp': {'enabled': true}, 'dsecret': {'enabled': false}}");
+            var expected = new[] { Client.SecondFactor.GoogleAuthenticator };
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{" +
+                                                               "'duo': {'enabled': false}, " +
+                                                               "'totp': {'enabled': true}, " +
+                                                               "'dsecret': {'enabled': false}" +
+                                                               "}");
             var factors = Client.GetSecondFactors(mfa);
 
-            Assert.Equal(new[] { Client.SecondFactor.GoogleAuthenticator }, factors);
+            Assert.Equal(expected, factors);
         }
 
         [Fact]

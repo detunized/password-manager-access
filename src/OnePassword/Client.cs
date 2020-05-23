@@ -295,7 +295,8 @@ namespace PasswordManagerAccess.OnePassword
         internal enum SecondFactor
         {
             GoogleAuthenticator,
-            RememberMeToken
+            RememberMeToken,
+            Duo,
         }
 
         internal struct VerifyResult
@@ -346,6 +347,9 @@ namespace PasswordManagerAccess.OnePassword
 
             if (mfa.RememberMe?.Enabled == true)
                 factors.Add(SecondFactor.RememberMeToken);
+
+            if (mfa.Duo?.Enabled == true)
+                factors.Add(SecondFactor.Duo);
 
             if (factors.Count == 0)
                 throw new InternalErrorException("No supported 2FA methods found");
