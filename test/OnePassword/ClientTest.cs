@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Linq;
 using System.Net.Http;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
@@ -167,16 +168,18 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var expected = new[]
             {
-                Client.SecondFactor.GoogleAuthenticator,
-                Client.SecondFactor.RememberMeToken,
-                Client.SecondFactor.Duo,
+                Client.SecondFactorKind.GoogleAuthenticator,
+                Client.SecondFactorKind.RememberMeToken,
+                Client.SecondFactorKind.Duo,
             };
             var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{" +
                                                                "'duo': {'enabled': true}, " +
                                                                "'totp': {'enabled': true}, " +
                                                                "'dsecret': {'enabled': true}" +
                                                                "}");
-            var factors = Client.GetSecondFactors(mfa);
+            var factors = Client.GetSecondFactors(mfa)
+                .Select(x => x.Kind)
+                .ToArray();
 
             Assert.Equal(expected, factors);
         }
@@ -184,9 +187,11 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetSecondFactors_ignores_missing_factors()
         {
-            var expected = new[] { Client.SecondFactor.GoogleAuthenticator };
+            var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
             var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{'totp': {'enabled': true}}");
-            var factors = Client.GetSecondFactors(mfa);
+            var factors = Client.GetSecondFactors(mfa)
+                .Select(x => x.Kind)
+                .ToArray();
 
             Assert.Equal(expected, factors);
         }
@@ -194,13 +199,15 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetSecondFactors_ignores_disabled_factors()
         {
-            var expected = new[] { Client.SecondFactor.GoogleAuthenticator };
+            var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
             var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{" +
                                                                "'duo': {'enabled': false}, " +
                                                                "'totp': {'enabled': true}, " +
                                                                "'dsecret': {'enabled': false}" +
                                                                "}");
-            var factors = Client.GetSecondFactors(mfa);
+            var factors = Client.GetSecondFactors(mfa)
+                .Select(x => x.Kind)
+                .ToArray();
 
             Assert.Equal(expected, factors);
         }
@@ -209,7 +216,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void SubmitSecondFactorCode_returns_remember_me_token()
         {
             var rest = new RestFlow().Post(EncryptFixture("mfa-response"));
-            var token = Client.SubmitSecondFactorCode(Client.SecondFactor.GoogleAuthenticator,
+            var token = Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                                       "123456",
                                                       TestData.Session,
                                                       TestData.SessionKey,
@@ -226,7 +233,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ExpectUrl("1password.com/api/v1/auth/mfa")
                 .ToRestClient(ApiUrl);
 
-            Client.SubmitSecondFactorCode(Client.SecondFactor.GoogleAuthenticator,
+            Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                           "123456",
                                           TestData.Session,
                                           TestData.SessionKey,
@@ -239,7 +246,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var rest = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.SubmitSecondFactorCode(Client.SecondFactor.GoogleAuthenticator,
+                () => Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                                     "123456",
                                                     TestData.Session,
                                                     TestData.SessionKey,
