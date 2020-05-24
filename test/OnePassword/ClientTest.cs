@@ -213,6 +213,36 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
+        public void ChooseInteractiveSecondFactor_returns_high_priority_factor()
+        {
+            var factors = new[]
+            {
+                new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator),
+                new Client.SecondFactor(Client.SecondFactorKind.Duo),
+            };
+            var chosen = Client.ChooseInteractiveSecondFactor(factors);
+
+            Assert.Equal(Client.SecondFactorKind.Duo, chosen.Kind);
+        }
+
+        [Fact]
+        public void ChooseInteractiveSecondFactor_throws_on_empty_factors()
+        {
+            Exceptions.AssertThrowsInternalError(
+                () => Client.ChooseInteractiveSecondFactor(new Client.SecondFactor[0]),
+                "The list of 2FA methods is empty");
+        }
+
+        [Fact]
+        public void ChooseInteractiveSecondFactor_throws_on_missing_factors()
+        {
+            var factors = new[] {new Client.SecondFactor(Client.SecondFactorKind.RememberMeToken)};
+
+            Exceptions.AssertThrowsInternalError(() => Client.ChooseInteractiveSecondFactor(factors),
+                                                 "doesn't contain any supported methods");
+        }
+
+        [Fact]
         public void SubmitSecondFactorCode_returns_remember_me_token()
         {
             var rest = new RestFlow().Post(EncryptFixture("mfa-response"));
