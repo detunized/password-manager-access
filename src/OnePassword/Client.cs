@@ -381,15 +381,15 @@ namespace PasswordManagerAccess.OnePassword
             if (TrySubmitRememberMeToken(factors, session, sessionKey, storage, rest))
                 return;
 
-            // TODO: Allow to choose 2FA method like in TrueKey
+            // TODO: Allow to choose 2FA method via UI like in Bitwarden
             var factor = ChooseInteractiveSecondFactor(factors);
-            var passcode = GetSecondFactorPasscode(factor, ui);
+            var passcode = GetSecondFactorPasscode(factor, ui, rest);
 
             // Null or blank means the user canceled the 2FA
             if (passcode == null)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
-            var token = SubmitSecondFactorCode(factor, passcode.Code, session, sessionKey, rest);
+            var token = SubmitSecondFactorCode(factor.Kind, passcode.Code, session, sessionKey, rest);
 
             // Store the token with the application. Next time we're not gonna need to enter any passcodes.
             if (passcode.RememberMe)
@@ -427,30 +427,50 @@ namespace PasswordManagerAccess.OnePassword
             return true;
         }
 
-        internal static SecondFactorKind ChooseInteractiveSecondFactor(SecondFactor[] factors)
+        internal static SecondFactor ChooseInteractiveSecondFactor(SecondFactor[] factors)
         {
             if (factors.Length == 0)
                 throw new InternalErrorException("The list of 2FA methods is empty");
 
-            // Contains is O(N) for arrays, so technically we have O(N^2) here.
-            // But it's ok, since it's at most just a handful of elements. Converting
-            // them to a hash set would take longer.
+            // We have O(N^2) here, but it's ok, since it's at most just a handful of elements.
+            // Converting them to a hash set would take longer.
             foreach (var i in SecondFactorPriority)
-                if (factors.Any(x => x.Kind == i))
-                    return i;
+                foreach (var f in factors)
+                    if (f.Kind == i)
+                        return f;
 
             throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
         }
 
-        internal static Ui.Passcode GetSecondFactorPasscode(SecondFactorKind factor, Ui ui)
+        internal static Ui.Passcode GetSecondFactorPasscode(SecondFactor factor, Ui ui, RestClient rest)
         {
-            switch (factor)
+            return factor.Kind switch
             {
-            case SecondFactorKind.GoogleAuthenticator:
-                return ui.ProvideGoogleAuthPasscode();
-            default:
-                throw new InternalErrorException($"2FA method {factor} is not valid");
+                SecondFactorKind.GoogleAuthenticator => ui.ProvideGoogleAuthPasscode(),
+                SecondFactorKind.Duo => AuthenticateWithDuo(factor, ui, rest),
+                _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here")
+            };
+        }
+
+        internal static Ui.Passcode AuthenticateWithDuo(SecondFactor factor, Ui ui, RestClient rest)
+        {
+            if (!(factor.Parameters is R.DuoMfa extra))
+                throw new InternalErrorException("Duo extra parameters expected");
+
+            static string CheckParam(string param, string name)
+            {
+                if (param.IsNullOrEmpty())
+                    throw new InternalErrorException($"Duo parameter '{name}' is invalid");
+
+                return param;
             }
+
+            var result = Duo.Authenticate(CheckParam(extra.Host, "host"),
+                                          CheckParam(extra.Signature, "sigRequest"),
+                                          ui,
+                                          rest.Transport);
+
+            return result == null ? null : new Ui.Passcode(result.Passcode, result.RememberMe);
         }
 
         // Returns "remember me" token when successful
@@ -467,11 +487,15 @@ namespace PasswordManagerAccess.OnePassword
             {
             case SecondFactorKind.GoogleAuthenticator:
                 key = "totp";
-                data = new Dictionary<string, string> { { "code", code } };
+                data = new Dictionary<string, string> {["code"] = code};
                 break;
             case SecondFactorKind.RememberMeToken:
                 key = "dsecret";
-                data = new Dictionary<string, string> { { "dshmac", Util.HashRememberMeToken(code, session) } };
+                data = new Dictionary<string, string> {["dshmac"] = Util.HashRememberMeToken(code, session)};
+                break;
+            case SecondFactorKind.Duo:
+                key = "duo";
+                data = new Dictionary<string, string> {["sigResponse"] = code};
                 break;
             default:
                 throw new InternalErrorException($"2FA method {factor} is not valid");
@@ -482,9 +506,9 @@ namespace PasswordManagerAccess.OnePassword
                 var response = PostEncryptedJson<R.Mfa>("v1/auth/mfa",
                                                         new Dictionary<string, object>
                                                         {
-                                                            {"sessionID", session.Id},
-                                                            {"client", ClientId},
-                                                            {key, data},
+                                                            ["sessionID"] = session.Id,
+                                                            ["client"] = ClientId,
+                                                            [key] = data,
                                                         },
                                                         sessionKey,
                                                         rest);

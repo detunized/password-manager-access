@@ -221,6 +221,9 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     internal class DuoMfa: BasicMfa
     {
+        // Cannot make these fields required in case they are not sent when Duo is disabled.
+        // Need to check for validity later where they are being used.
+
         [JsonProperty("host")]
         public readonly string Host;
 
