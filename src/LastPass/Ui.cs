@@ -7,7 +7,7 @@ namespace PasswordManagerAccess.LastPass.Ui
 {
     public interface IUi: IDuoUi
     {
-        // To cancel return Passcode.Cancel, otherwise only valid data is expected.
+        // To cancel return OtpResult.Cancel, otherwise only valid data is expected.
         OtpResult ProvideGoogleAuthPasscode();
         OtpResult ProvideMicrosoftAuthPasscode();
         OtpResult ProvideYubikeyPasscode();
