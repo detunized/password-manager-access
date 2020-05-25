@@ -2,9 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
@@ -14,146 +11,22 @@ namespace Example
 {
     public static class Program
     {
-        private class TextUi: IUi
+        private class TextUi: DuoUi, IUi
         {
-            private const string ToCancel = "or just press ENTER to cancel";
-
             public Passcode ProvideGoogleAuthPasscode()
             {
-                return GetPasscode("Enter Google Authenticator passcode");
+                var passcode = GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}");
+                return string.IsNullOrWhiteSpace(passcode)
+                    ? Passcode.Cancel
+                    : new Passcode(passcode, GetRememberMe());
             }
-
-            public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
-            {
-                var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
-                var index = 1;
-                foreach (var d in devices)
-                {
-                    prompt += $"{d.Name}\n";
-                    foreach (var f in d.Factors)
-                    {
-                        prompt += $"  {index}. {f}\n";
-                        index += 1;
-                    }
-                }
-
-                while (true)
-                {
-                    var answer = GetAnswer(prompt);
-
-                    // Blank means canceled by the user
-                    if (string.IsNullOrWhiteSpace(answer))
-                        return null;
-
-                    int choice;
-                    if (int.TryParse(answer, out choice))
-                        foreach (var d in devices)
-                            foreach (var f in d.Factors)
-                                if (--choice == 0)
-                                    return new DuoChoice(d, f, GetRememberMe());
-
-                    Console.WriteLine("Wrong input, try again");
-                }
-            }
-
-            public string ProvideDuoPasscode(DuoDevice device)
-            {
-                return GetAnswer($"Enter the passcode for {device.Name} {ToCancel}");
-            }
-
-            public void UpdateDuoStatus(DuoStatus status, string text)
-            {
-                switch (status)
-                {
-                case DuoStatus.Success:
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    break;
-                case DuoStatus.Error:
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    break;
-                case DuoStatus.Info:
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                    break;
-                }
-
-                Console.WriteLine($"Duo {status}: {text}");
-                Console.ResetColor();
-            }
-
-            private static Passcode GetPasscode(string prompt)
-            {
-                var passcode = GetAnswer($"{prompt} {ToCancel}");
-                if (string.IsNullOrWhiteSpace(passcode))
-                    return Passcode.Cancel;
-
-                return new Passcode(passcode, GetRememberMe());
-            }
-
-            private static string GetAnswer(string prompt)
-            {
-                Console.WriteLine(prompt);
-                Console.Write("> ");
-                var input = Console.ReadLine();
-
-                return input == null ? "" : input.Trim();
-            }
-
-            private static bool GetRememberMe()
-            {
-                var remember = GetAnswer("Remember this device?").ToLower();
-                return remember == "y" || remember == "yes";
-            }
-        }
-
-        // A primitive not-so-secure secure storage implementation. It stores a dictionary
-        // as a list of strings in a text file. It could be JSON or something but we don't
-        // want any extra dependencies.
-        private class PlainStorage: ISecureStorage
-        {
-            public PlainStorage(string filename)
-            {
-                _filename = filename;
-
-                var lines = File.Exists(filename) ? File.ReadAllLines(filename) : new string[0];
-                for (var i = 0; i < lines.Length / 2; ++i)
-                    _storage[lines[i * 2]] = lines[i * 2 + 1];
-            }
-
-            public void StoreString(string name, string value)
-            {
-                _storage[name] = value;
-                Save();
-            }
-
-            public string LoadString(string name)
-            {
-                return _storage.ContainsKey(name) ? _storage[name] : null;
-            }
-
-            private void Save()
-            {
-                File.WriteAllLines(_filename, _storage.SelectMany(i => new[] { i.Key, i.Value }));
-            }
-
-            private readonly string _filename;
-            private readonly Dictionary<string, string> _storage = new Dictionary<string, string>();
         }
 
         private class ConsoleLogger: ILogger
         {
             public void Log(DateTime timestamp, string text)
             {
-                var originalColor = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Green;
-
-                try
-                {
-                    Console.WriteLine($"{timestamp}: {text}");
-                }
-                finally
-                {
-                    Console.ForegroundColor = originalColor;
-                }
+                Util.WriteLine($"{timestamp}: {text}", ConsoleColor.Green);
             }
         }
 
@@ -171,7 +44,11 @@ namespace Example
 
             try
             {
-                DumpAllVaults(config["username"], config["password"], config["account-key"], config["device-id"], config["domain"]);
+                DumpAllVaults(config["username"],
+                              config["password"],
+                              config["account-key"],
+                              config["device-id"],
+                              config["domain"]);
             }
             catch (BaseException e)
             {
@@ -191,7 +68,7 @@ namespace Example
                                               uuid,
                                               domain,
                                               new TextUi(),
-                                              new PlainStorage("../../storage.txt"),
+                                              new PlainStorage(),
                                               new ConsoleLogger());
 
             foreach (var vault in vaults)

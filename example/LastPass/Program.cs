@@ -46,7 +46,7 @@ namespace PasswordManagerAccess.Example.LastPass
 
             private static OtpResult ProvideOtpPasscode(string method)
             {
-                var answer = GetAnswer($"Please enter {method} code {ToCancel}");
+                var answer = GetAnswer($"Please enter {method} code {PressEnterToCancel}");
                 return answer == "" ? OtpResult.Cancel : new OtpResult(answer, GetRememberMe());
             }
 
@@ -101,7 +101,7 @@ namespace PasswordManagerAccess.Example.LastPass
             }
             catch (BaseException e)
             {
-                Console.WriteLine("Something went wrong: {0}", e);
+                Util.PrintException(e);
             }
         }
     }

@@ -60,5 +60,19 @@ namespace PasswordManagerAccess.Example.Common
             Console.WriteLine(e.StackTrace);
             Console.ForegroundColor = color;
         }
+
+        public static void WriteLine(string text, ConsoleColor color)
+        {
+            var originalColor = Console.ForegroundColor;
+            try
+            {
+                Console.ForegroundColor = color;
+                Console.WriteLine(text);
+            }
+            finally
+            {
+                Console.ForegroundColor = originalColor;
+            }
+        }
     }
 }

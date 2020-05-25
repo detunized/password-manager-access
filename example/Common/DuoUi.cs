@@ -6,11 +6,11 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Example.Common
 {
-    public class DuoUi: IDuoUi
+    public class DuoUi: BaseUi, IDuoUi
     {
         public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
         {
-            var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
+            var prompt = $"Choose a factor you want to use {PressEnterToCancel}:\n\n";
             var index = 1;
             foreach (var d in devices)
             {
@@ -43,47 +43,27 @@ namespace PasswordManagerAccess.Example.Common
 
         public string ProvideDuoPasscode(DuoDevice device)
         {
-            return GetAnswer($"Enter the passcode for {device.Name} {ToCancel}");
+            return GetAnswer($"Enter the passcode for {device.Name} {PressEnterToCancel}");
         }
 
         public void UpdateDuoStatus(DuoStatus status, string text)
         {
+            WriteLine($"Duo {status}: {text}", StatusToColor(status));
+        }
+
+        private static ConsoleColor StatusToColor(DuoStatus status)
+        {
             switch (status)
             {
             case DuoStatus.Success:
-                Console.ForegroundColor = ConsoleColor.Green;
-                break;
+                return ConsoleColor.Green;
             case DuoStatus.Error:
-                Console.ForegroundColor = ConsoleColor.Red;
-                break;
+                return ConsoleColor.Red;
             case DuoStatus.Info:
-                Console.ForegroundColor = ConsoleColor.Blue;
-                break;
+                return ConsoleColor.Blue;
             }
 
-            Console.WriteLine($"Duo {status}: {text}");
-            Console.ResetColor();
+            throw new ArgumentException("Unknown status");
         }
-
-        //
-        // Protected
-        //
-
-        protected static string GetAnswer(string prompt)
-        {
-            Console.WriteLine(prompt);
-            Console.Write("> ");
-            var input = Console.ReadLine();
-
-            return input == null ? "" : input.Trim();
-        }
-
-        protected static bool GetRememberMe()
-        {
-            var remember = GetAnswer("Remember this device?").ToLower();
-            return remember == "y" || remember == "yes";
-        }
-
-        protected const string ToCancel = "or just press ENTER to cancel";
     }
 }
