@@ -3,28 +3,25 @@
 
 using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.OnePassword
+namespace PasswordManagerAccess.OnePassword.Ui
 {
-    public abstract class Ui: IDuoUi
+    public interface IUi: IDuoUi
     {
-        public class Passcode
+        // Return Passcode.Cancel
+        Passcode ProvideGoogleAuthPasscode();
+    }
+
+    public class Passcode
+    {
+        public static readonly Passcode Cancel = new Passcode("cancel", false);
+
+        public readonly string Code;
+        public readonly bool RememberMe;
+
+        public Passcode(string code, bool rememberMe)
         {
-            public readonly string Code;
-            public readonly bool RememberMe;
-
-            public Passcode(string code, bool rememberMe)
-            {
-                Code = code;
-                RememberMe = rememberMe;
-            }
+            Code = code;
+            RememberMe = rememberMe;
         }
-
-        // Return null or cancel
-        public abstract Passcode ProvideGoogleAuthPasscode();
-
-        // Duo
-        public abstract DuoChoice ChooseDuoFactor(DuoDevice[] devices);
-        public abstract string ProvideDuoPasscode(DuoDevice device);
-        public abstract void UpdateDuoStatus(DuoStatus status, string text);
     }
 }

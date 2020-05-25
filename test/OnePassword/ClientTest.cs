@@ -1,11 +1,13 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Linq;
 using System.Net.Http;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
+using PasswordManagerAccess.OnePassword.Ui;
 using Xunit;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -210,6 +212,21 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ToArray();
 
             Assert.Equal(expected, factors);
+        }
+
+        [Fact]
+        public void PerformSecondFactorAuthentication_throws_on_canceled_mfa()
+        {
+            var flow = new RestFlow();
+
+            Exceptions.AssertThrowsCanceledMultiFactor(
+                () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors,
+                                                               TestData.Session,
+                                                               TestData.SessionKey,
+                                                               new CancelingUi(),
+                                                               null,
+                                                               flow),
+                "Second factor step is canceled by the user");
         }
 
         [Fact]
@@ -501,6 +518,19 @@ namespace PasswordManagerAccess.Test.OnePassword
         // Helpers
         //
 
+        private class NotImplementedUi: IUi
+        {
+            public virtual Passcode ProvideGoogleAuthPasscode() => throw new NotImplementedException();
+            public virtual DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw new NotImplementedException();
+            public virtual string ProvideDuoPasscode(DuoDevice device) => throw new NotImplementedException();
+            public virtual void UpdateDuoStatus(DuoStatus status, string text) => throw new NotImplementedException();
+        }
+
+        private class CancelingUi: NotImplementedUi
+        {
+            public override Passcode ProvideGoogleAuthPasscode() => Passcode.Cancel;
+        }
+
         private string EncryptFixture(string name)
         {
             var encrypted = TestData.SessionKey.Encrypt(GetFixture(name).ToBytes());
@@ -512,6 +542,11 @@ namespace PasswordManagerAccess.Test.OnePassword
         //
 
         private const string ApiUrl = "https://my.1password.com/api";
+
+        private static readonly Client.SecondFactor[] GoogleAuthFactors =
+        {
+            new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator),
+        };
 
         // TODO: All the tests here use the data from this account. I don't care about the account
         //       or exposing its credentials, but I don't want to have inconsistent test data.

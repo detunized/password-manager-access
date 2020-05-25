@@ -8,21 +8,22 @@ using System.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
+using PasswordManagerAccess.OnePassword.Ui;
 
 namespace Example
 {
     public static class Program
     {
-        private class TextUi: Ui
+        private class TextUi: IUi
         {
             private const string ToCancel = "or just press ENTER to cancel";
 
-            public override Passcode ProvideGoogleAuthPasscode()
+            public Passcode ProvideGoogleAuthPasscode()
             {
                 return GetPasscode("Enter Google Authenticator passcode");
             }
 
-            public override DuoChoice ChooseDuoFactor(DuoDevice[] devices)
+            public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
             {
                 var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
                 var index = 1;
@@ -55,12 +56,12 @@ namespace Example
                 }
             }
 
-            public override string ProvideDuoPasscode(DuoDevice device)
+            public string ProvideDuoPasscode(DuoDevice device)
             {
                 return GetAnswer($"Enter the passcode for {device.Name} {ToCancel}");
             }
 
-            public override void UpdateDuoStatus(DuoStatus status, string text)
+            public void UpdateDuoStatus(DuoStatus status, string text)
             {
                 switch (status)
                 {
@@ -83,7 +84,7 @@ namespace Example
             {
                 var passcode = GetAnswer($"{prompt} {ToCancel}");
                 if (string.IsNullOrWhiteSpace(passcode))
-                    return null;
+                    return Passcode.Cancel;
 
                 return new Passcode(passcode, GetRememberMe());
             }

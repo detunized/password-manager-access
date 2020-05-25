@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword.Ui;
 using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
@@ -34,7 +35,7 @@ namespace PasswordManagerAccess.OnePassword
                                             string accountKey,
                                             string uuid,
                                             string domain,
-                                            Ui ui,
+                                            IUi ui,
                                             ISecureStorage storage,
                                             ILogger logger = null)
         {
@@ -52,7 +53,7 @@ namespace PasswordManagerAccess.OnePassword
                                             string accountKey,
                                             string uuid,
                                             Region region,
-                                            Ui ui,
+                                            IUi ui,
                                             ISecureStorage storage,
                                             ILogger logger = null)
         {
@@ -94,7 +95,7 @@ namespace PasswordManagerAccess.OnePassword
         // TODO: Should we make the logger a global service or a member variable not to pass it around?
 
         internal static Vault[] OpenAllVaults(ClientInfo clientInfo,
-                                              Ui ui,
+                                              IUi ui,
                                               ISecureStorage storage,
                                               ILogger logger,
                                               IRestTransport transport)
@@ -155,7 +156,7 @@ namespace PasswordManagerAccess.OnePassword
         {
         }
 
-        internal static LoginResult Login(ClientInfo clientInfo, Ui ui, ISecureStorage storage, RestClient rest)
+        internal static LoginResult Login(ClientInfo clientInfo, IUi ui, ISecureStorage storage, RestClient rest)
         {
             while (true)
             {
@@ -169,7 +170,7 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        private static LoginResult LoginAttempt(ClientInfo clientInfo, Ui ui, ISecureStorage storage, RestClient rest)
+        private static LoginResult LoginAttempt(ClientInfo clientInfo, IUi ui, ISecureStorage storage, RestClient rest)
         {
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo, rest);
@@ -372,7 +373,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static void PerformSecondFactorAuthentication(SecondFactor[] factors,
                                                                Session session,
                                                                AesKey sessionKey,
-                                                               Ui ui,
+                                                               IUi ui,
                                                                ISecureStorage storage,
                                                                RestClient rest)
         {
@@ -385,8 +386,7 @@ namespace PasswordManagerAccess.OnePassword
             var factor = ChooseInteractiveSecondFactor(factors);
             var passcode = GetSecondFactorPasscode(factor, ui, rest);
 
-            // Null or blank means the user canceled the 2FA
-            if (passcode == null)
+            if (passcode == Passcode.Cancel)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             var token = SubmitSecondFactorCode(factor.Kind, passcode.Code, session, sessionKey, rest);
@@ -442,7 +442,7 @@ namespace PasswordManagerAccess.OnePassword
             throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
         }
 
-        internal static Ui.Passcode GetSecondFactorPasscode(SecondFactor factor, Ui ui, RestClient rest)
+        internal static Passcode GetSecondFactorPasscode(SecondFactor factor, IUi ui, RestClient rest)
         {
             return factor.Kind switch
             {
@@ -452,7 +452,7 @@ namespace PasswordManagerAccess.OnePassword
             };
         }
 
-        internal static Ui.Passcode AuthenticateWithDuo(SecondFactor factor, Ui ui, RestClient rest)
+        internal static Passcode AuthenticateWithDuo(SecondFactor factor, IUi ui, RestClient rest)
         {
             if (!(factor.Parameters is R.DuoMfa extra))
                 throw new InternalErrorException("Duo extra parameters expected");
@@ -470,7 +470,7 @@ namespace PasswordManagerAccess.OnePassword
                                           ui,
                                           rest.Transport);
 
-            return result == null ? null : new Ui.Passcode(result.Passcode, result.RememberMe);
+            return result == null ? null : new Passcode(result.Passcode, result.RememberMe);
         }
 
         // Returns "remember me" token when successful
