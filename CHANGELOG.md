@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0
+  - Duo: moved out of Bitwarden and made part of the Common module so it could
+    be used by other modules
+  - Bitwarden: `Ui` class refactored to `Ui.IUi` interface
+
 ## 0.10.4
   - StickyPassword: support for second factor PIN code from the verification
     email for new devices
