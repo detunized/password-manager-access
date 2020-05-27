@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.3
+  - StickyPassword: fixed issues with incorrect exceptions thrown on Mono
+
 ## 0.10.2
   - StickyPassword: fixed Xamarin.Android problem with the Date header formatting
 
