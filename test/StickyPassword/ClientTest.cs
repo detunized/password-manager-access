@@ -3,15 +3,17 @@
 
 using System;
 using System.Globalization;
-using System.Threading;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.StickyPassword;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
 {
+    using static ClientTestData;
+
     public class ClientTest
     {
         [Fact]
@@ -252,39 +254,72 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 () => Client.Post(flow, "endpoint", DeviceId, Timestamp, RestClient.NoParameters),
                 "failed with status");
         }
+    }
 
-        //
-        // Data
-        //
+    // These tests (hopefully) run in an isolated thread. Here we change the thread global state which might
+    // affect other tests that are running in parallel. `DisableParallelization = true` should prevent this.
+    [CollectionDefinition("IsolatedThreadClientTest", DisableParallelization = true)]
+    public class IsolatedThreadClientTest
+    {
+        [Fact]
+        public void GetEncryptedToken_formats_date_in_en_culture()
+        {
+            var savedCulture = Thread.CurrentThread.CurrentCulture;
+            var savedUiCulture = Thread.CurrentThread.CurrentUICulture;
 
-        private const string BaseUrl = "https://spcb.stickypassword.com/SPCClient/";
+            try
+            {
+                Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-FR");
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo("fr-FR");
+
+                var flow = new RestFlow()
+                    .Post(GetTokenResponse)
+                    .ExpectHeader("Date", "Tue, 17 Mar 2020 11:34:56 GMT"); // UTC/GMT time here
+
+                Client.GetEncryptedToken(Username,
+                                         DeviceId,
+                                         DateTime.Parse("Tue, 17 Mar 2020 12:34:56 +01:00"), // Local time here
+                                         flow);
+            }
+            finally
+            {
+                Thread.CurrentThread.CurrentCulture = savedCulture;
+                Thread.CurrentThread.CurrentUICulture = savedUiCulture;
+            }
+        }
+    }
+
+    // This data is shared between ClientTest and IsolatedThreadClientTest
+    internal static class ClientTestData
+    {
+        internal const string BaseUrl = "https://spcb.stickypassword.com/SPCClient/";
         internal const string Username = "LastPass.Ruby@gmaiL.cOm";
-        private const string UrlEncodedUsername = "LastPass.Ruby%40gmaiL.cOm";
+        internal const string UrlEncodedUsername = "LastPass.Ruby%40gmaiL.cOm";
         internal const string DeviceId = "12345678-1234-1234-1234-123456789abc";
-        private const string DeviceName = "stickypassword-sharp";
+        internal const string DeviceName = "stickypassword-sharp";
 
-        private static readonly DateTime Timestamp = new DateTime(year: 1998,
-                                                                  month: 3,
-                                                                  day: 6,
-                                                                  hour: 17,
-                                                                  minute: 24,
-                                                                  second: 56,
-                                                                  kind: DateTimeKind.Utc);
+        internal static readonly DateTime Timestamp = new DateTime(year: 1998,
+                                                                   month: 3,
+                                                                   day: 6,
+                                                                   hour: 17,
+                                                                   minute: 24,
+                                                                   second: 56,
+                                                                   kind: DateTimeKind.Utc);
 
-        private const string Bucket = "bucket";
-        private const string ObjectPrefix = "objectPrefix/";
+        internal const string Bucket = "bucket";
+        internal const string ObjectPrefix = "objectPrefix/";
 
-        private static readonly S3Token S3Token = new S3Token("access-key-id",
-                                                              "secret-access-key",
-                                                              "security-token",
-                                                              Bucket,
-                                                              ObjectPrefix);
+        internal static readonly S3Token S3Token = new S3Token("access-key-id",
+                                                               "secret-access-key",
+                                                               "security-token",
+                                                               Bucket,
+                                                               ObjectPrefix);
 
-        private const string Version = "123456789";
-        private const string VersionInfo = "VERSION 123456789\nMILESTONE 987654321";
+        internal const string Version = "123456789";
+        internal const string VersionInfo = "VERSION 123456789\nMILESTONE 987654321";
 
-        private const string DbContent = "All your base are belong to us";
-        private static readonly byte[] CompressedDbContent =
+        internal const string DbContent = "All your base are belong to us";
+        internal static readonly byte[] CompressedDbContent =
         {
             0x78, 0x9c, 0x73, 0xcc, 0xc9, 0x51, 0xa8, 0xcc,
             0x2f, 0x2d, 0x52, 0x48, 0x4a, 0x2c, 0x4e, 0x55,
@@ -293,8 +328,8 @@ namespace PasswordManagerAccess.Test.StickyPassword
             0x06, 0x00, 0xa5, 0x50, 0x0a, 0xbe,
         };
 
-        private static readonly byte[] Token = "e450ec3dee464c7ea158cb707f86c52d".ToBytes();
-        private static readonly byte[] EncryptedToken =
+        internal static readonly byte[] Token = "e450ec3dee464c7ea158cb707f86c52d".ToBytes();
+        internal static readonly byte[] EncryptedToken =
         {
             0xd8, 0xcc, 0xc2, 0x1c, 0x69, 0x0a, 0xdb, 0xad,
             0x20, 0x95, 0x5c, 0x1b, 0xf0, 0xaf, 0xdf, 0x78,
@@ -311,7 +346,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 "</GetCrpTokenResponse>" +
             "</SpcResponse>";
 
-        private const string AuthorizeDeviceResponse =
+        internal const string AuthorizeDeviceResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>0</Status>" +
@@ -323,7 +358,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 "</AccountInfo>" +
             "</SpcResponse>";
 
-        private const string GetS3TokenResponse =
+        internal const string GetS3TokenResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>0</Status>" +
@@ -350,55 +385,22 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 "</GetS3TokenResponse>" +
             "</SpcResponse>";
 
-        private const string SuccessfulResponse =
+        internal const string SuccessfulResponse =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>0</Status>" +
             "</SpcResponse>";
 
-        private const string ResponseWithError =
+        internal const string ResponseWithError =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>13</Status>" +
             "</SpcResponse>";
 
-        private const string ResponseWithError1006 =
+        internal const string ResponseWithError1006 =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>1006</Status>" +
             "</SpcResponse>";
-    }
-
-    // These tests (hopefully) run in an isolated thread. Here we change the thread global state which might
-    // affect other tests that are running in parallel. `DisableParallelization = true` should prevent this.
-    [CollectionDefinition("IsolatedThreadClientTest", DisableParallelization = true)]
-    public class IsolatedThreadClientTest
-    {
-        [Fact]
-        public void GetEncryptedToken_formats_date_in_en_culture()
-        {
-            var savedCulture = Thread.CurrentThread.CurrentCulture;
-            var savedUiCulture = Thread.CurrentThread.CurrentUICulture;
-
-            try
-            {
-                Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-FR");
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo("fr-FR");
-
-                var flow = new RestFlow()
-                    .Post(ClientTest.GetTokenResponse)
-                    .ExpectHeader("Date", "Tue, 17 Mar 2020 11:34:56 GMT"); // UTC/GMT time here
-
-                Client.GetEncryptedToken(ClientTest.Username,
-                                         ClientTest.DeviceId,
-                                         DateTime.Parse("Tue, 17 Mar 2020 12:34:56 +01:00"), // Local time here
-                                         flow);
-            }
-            finally
-            {
-                Thread.CurrentThread.CurrentCulture = savedCulture;
-                Thread.CurrentThread.CurrentUICulture = savedUiCulture;
-            }
-        }
     }
 }
