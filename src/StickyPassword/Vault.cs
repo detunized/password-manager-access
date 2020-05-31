@@ -33,6 +33,11 @@ namespace PasswordManagerAccess.StickyPassword
             return new Vault(accounts);
         }
 
+        public static string GenerateRandomDeviceId()
+        {
+            return new [] {8, 4, 4, 4, 12}.Select(Crypto.RandomHex).JoinToString("-");
+        }
+
         //
         // Private
         //
