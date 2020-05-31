@@ -32,12 +32,10 @@ namespace PasswordManagerAccess.StickyPassword
             var encryptedToken = GetEncryptedToken(username, deviceId, NoPasscode, DateTime.Now, rest);
 
             // It's a new device, the email PIN is required
-            var passcode = encryptedToken == EmailPasscodeRequired
-                ? ui.ProvideEmailPasscode().Code
-                : NoPasscode;
+            var passcode = encryptedToken == EmailPasscodeRequired ? AskUserForPasscode(ui) : NoPasscode;
 
             // Now try with the PIN from the email
-            if (passcode != null)
+            if (passcode != NoPasscode)
                 encryptedToken = GetEncryptedToken(username, deviceId, passcode, DateTime.Now, rest);
 
             // Decrypt the token. This token is now used to authenticate with the server.
@@ -56,6 +54,15 @@ namespace PasswordManagerAccess.StickyPassword
         //
         // Internal (accessed by the tests)
         //
+
+        internal static string AskUserForPasscode(IUi ui)
+        {
+            var passcode = ui.ProvideEmailPasscode();
+            if (passcode == Passcode.Cancel)
+                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+
+            return passcode.Code;
+        }
 
         // This function requests an encrypted token for the specified username. There's no
         // authentication of any kind at this point. The token is encrypted with the user's

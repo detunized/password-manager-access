@@ -14,10 +14,12 @@ namespace PasswordManagerAccess.Example.StickyPassword
 {
     internal class TextUi: IUi
     {
+        private const string ToCancel = "or just press ENTER to cancel";
+
         public Passcode ProvideEmailPasscode()
         {
-            var passcode = GetAnswer("Enter one-time PIN sent to your email address");
-            return new Passcode(passcode);
+            var passcode = GetAnswer($"Enter one-time PIN sent to your email address {ToCancel}");
+            return passcode == "" ? Passcode.Cancel : new Passcode(passcode);
         }
 
         private static string GetAnswer(string prompt)

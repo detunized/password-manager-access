@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Threading;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.StickyPassword;
+using PasswordManagerAccess.StickyPassword.Ui;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.StickyPassword
@@ -16,6 +17,16 @@ namespace PasswordManagerAccess.Test.StickyPassword
 
     public class ClientTest
     {
+        [Fact]
+        public void OpenVaultDb_throws_CanceledMultiFactorException_when_user_cancels()
+        {
+            var flow = new RestFlow().Post(ResponseWithError4002);
+
+            Exceptions.AssertThrowsCanceledMultiFactor(
+                () => Client.OpenVaultDb(Username, Password, DeviceId, DeviceName, new CancelingUi(), flow),
+                "Second factor step is canceled by the user");
+        }
+
         [Fact]
         public void GetEncryptedToken_returns_response()
         {
@@ -70,9 +81,9 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var flow = new RestFlow()
                 .Post(GetTokenResponse)
-                .ExpectContent($"pin={Passcode}");
+                .ExpectContent($"pin={EmailPasscode}");
 
-            Client.GetEncryptedToken(Username, DeviceId, Passcode, Timestamp, flow.ToRestClient(BaseUrl));
+            Client.GetEncryptedToken(Username, DeviceId, EmailPasscode, Timestamp, flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -82,13 +93,13 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 .Post(AuthorizeDeviceResponse)
                     .ExpectUrl("https://spcb.stickypassword.com/SPCClient/DevAuth")
                     .ExpectContent($"hid={DeviceName}")
-                    .ExpectContent($"pin={Passcode}");
+                    .ExpectContent($"pin={EmailPasscode}");
 
             Client.AuthorizeDevice(Username,
                                    Token,
                                    DeviceId,
                                    DeviceName,
-                                   Passcode,
+                                   EmailPasscode,
                                    Timestamp,
                                    flow.ToRestClient(BaseUrl));
         }
@@ -282,6 +293,15 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 () => Client.Post(flow, "endpoint", DeviceId, Timestamp, RestClient.NoParameters),
                 "failed with status");
         }
+
+        //
+        // Helpers
+        //
+
+        private class CancelingUi: IUi
+        {
+            public Passcode ProvideEmailPasscode() => Passcode.Cancel;
+        }
     }
 
     // These tests (hopefully) run in an isolated thread. Here we change the thread global state which might
@@ -323,10 +343,11 @@ namespace PasswordManagerAccess.Test.StickyPassword
     {
         internal const string BaseUrl = "https://spcb.stickypassword.com/SPCClient/";
         internal const string Username = "LastPass.Ruby@gmaiL.cOm";
+        internal const string Password = "Password123!";
         internal const string UrlEncodedUsername = "LastPass.Ruby%40gmaiL.cOm";
         internal const string DeviceId = "12345678-1234-1234-1234-123456789abc";
         internal const string DeviceName = "stickypassword-sharp";
-        internal const string Passcode = "passcode-1234";
+        internal const string EmailPasscode = "passcode-1234";
         internal const string NoPasscode = Client.NoPasscode;
 
         internal static readonly DateTime Timestamp = new DateTime(year: 1998,

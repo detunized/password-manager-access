@@ -10,6 +10,8 @@ namespace PasswordManagerAccess.StickyPassword.Ui
 
     public class Passcode
     {
+        public static readonly Passcode Cancel = new Passcode("cancel");
+
         public readonly string Code;
 
         public Passcode(string code)
