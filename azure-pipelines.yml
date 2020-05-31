@@ -1,6 +1,7 @@
 trigger:
 - master
 - merge
+- develop
 - refs/tags/v*
 
 jobs:
