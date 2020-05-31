@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.4
+  - StickyPassword: support for second factor PIN code from the verification
+    email for new devices
+
 ## 0.10.3
   - StickyPassword: fixed issues with incorrect exceptions thrown on Mono
 
