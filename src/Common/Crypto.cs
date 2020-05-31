@@ -29,7 +29,7 @@ namespace PasswordManagerAccess.Common
             return RandomBytes(length / 2).ToHex();
         }
 
-        public static uint RandonUInt32()
+        public static uint RandomUInt32()
         {
             return BitConverter.ToUInt32(RandomBytes(sizeof(uint)), 0);
         }
