@@ -12,27 +12,39 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.StickyPassword.Ui;
 
 namespace PasswordManagerAccess.StickyPassword
 {
     internal static class Client
     {
+        // TODO: It's impossible to test this function because of the S3.* static calls.
         public static byte[] OpenVaultDb(string username,
                                          string password,
                                          string deviceId,
                                          string deviceName,
+                                         IUi ui,
                                          IRestTransport transport)
         {
             var rest = new RestClient(transport, "https://spcb.stickypassword.com/SPCClient/");
 
             // Request the token that is encrypted with the master password.
-            var encryptedToken = GetEncryptedToken(username, deviceId, DateTime.Now, rest);
+            var encryptedToken = GetEncryptedToken(username, deviceId, NoPasscode, DateTime.Now, rest);
+
+            // It's a new device, the email PIN is required
+            var passcode = encryptedToken == EmailPasscodeRequired
+                ? ui.ProvideEmailPasscode().Code
+                : NoPasscode;
+
+            // Now try with the PIN from the email
+            if (passcode != null)
+                encryptedToken = GetEncryptedToken(username, deviceId, passcode, DateTime.Now, rest);
 
             // Decrypt the token. This token is now used to authenticate with the server.
             var token = Util.DecryptToken(username, password, encryptedToken);
 
             // The device must be registered first.
-            AuthorizeDevice(username, token, deviceId, deviceName, DateTime.Now, rest);
+            AuthorizeDevice(username, token, deviceId, deviceName, passcode, DateTime.Now, rest);
 
             // Get the S3 credentials to access the database on AWS.
             var s3Token = GetS3Token(username, token, deviceId, DateTime.Now, rest);
@@ -50,20 +62,25 @@ namespace PasswordManagerAccess.StickyPassword
         // master password. The user should decrypt it and supply with the subsequent POST
         // requests. If the password is incorrect, the following calls will be rejected with
         // the 401 code and the database with fail to download.
-        internal static byte[] GetEncryptedToken(string username, string deviceId, DateTime timestamp, RestClient rest)
+        internal static byte[] GetEncryptedToken(string username,
+                                                 string deviceId,
+                                                 string passcode,
+                                                 DateTime timestamp,
+                                                 RestClient rest)
         {
-            var response = Post(rest,
-                                "GetCrpToken",
-                                deviceId,
-                                timestamp,
-                                new Dictionary<string, object> { ["uaid"] = username });
+            var parameters = new Dictionary<string, object>(2) {["uaid"] = username};
+            if (!passcode.IsNullOrEmpty())
+                parameters["pin"] = passcode;
 
+            var response = Post(rest, "GetCrpToken", deviceId, timestamp, parameters);
             switch (response.Status)
             {
             case "0":
                 return response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken").Decode64();
             case "1006":
                 throw new BadCredentialsException("Invalid username");
+            case "4002":
+                return EmailPasscodeRequired;
             default:
                 throw CreateException("retrieve the encrypted token", response);
             }
@@ -78,14 +95,19 @@ namespace PasswordManagerAccess.StickyPassword
                                              byte[] token,
                                              string deviceId,
                                              string deviceName,
+                                             string passcode,
                                              DateTime timestamp,
                                              RestClient rest)
         {
+            var parameters = new Dictionary<string, object>(2) {["hid"] = deviceName};
+            if (!passcode.IsNullOrEmpty())
+                parameters["pin"] = passcode;
+
             var response = Post(rest,
                                 "DevAuth",
                                 deviceId,
                                 timestamp,
-                                new Dictionary<string, object> { ["hid"] = deviceName },
+                                parameters,
                                 username,
                                 token);
 
@@ -304,6 +326,9 @@ namespace PasswordManagerAccess.StickyPassword
         // Data
         //
 
-        private static readonly CultureInfo EnUs = new CultureInfo("en-US");
+        internal static readonly CultureInfo EnUs = new CultureInfo("en-US");
+
+        internal const string NoPasscode = "";
+        internal static readonly byte[] EmailPasscodeRequired = {(byte)'P', (byte)'I', (byte)'N'};
     }
 }

@@ -7,10 +7,29 @@ using System.IO;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.StickyPassword;
+using PasswordManagerAccess.StickyPassword.Ui;
 using SQLitePCL;
 
 namespace PasswordManagerAccess.Example.StickyPassword
 {
+    internal class TextUi: IUi
+    {
+        public Passcode ProvideEmailPasscode()
+        {
+            var passcode = GetAnswer("Enter one-time PIN sent to your email address");
+            return new Passcode(passcode);
+        }
+
+        private static string GetAnswer(string prompt)
+        {
+            Console.WriteLine(prompt);
+            Console.Write("> ");
+            var input = Console.ReadLine();
+
+            return input == null ? "" : input.Trim();
+        }
+    }
+
     internal class SqliteProvider : ISqliteProvider
     {
         private string _filename = "";
@@ -129,9 +148,30 @@ namespace PasswordManagerAccess.Example.StickyPassword
         {
             var config = Util.ReadConfig();
 
+            var deviceId = config.ContainsKey("device-id")
+                ? config["device-id"]
+                : null;
+
+            if (deviceId == null)
+            {
+                deviceId = Vault.GenerateRandomDeviceId();
+                Console.WriteLine("A new unique ID is generated for this device: {0}", deviceId);
+                Console.WriteLine("Please save this ID and reuse on subsequent calls from this device");
+            }
+
+            var deviceName = config.ContainsKey("device-name")
+                ? config["device-name"]
+                : "password-manager-access-stickypassword-example";
+
             try
             {
-                var vault = Vault.Open(config["username"], config["password"], new SqliteProvider());
+                var vault = Vault.Open(config["username"],
+                                       config["password"],
+                                       deviceId,
+                                       deviceName,
+                                       new TextUi(),
+                                       new SqliteProvider());
+
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];

@@ -1,23 +1,24 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
-
+using System.Linq;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.StickyPassword.Ui;
 
 namespace PasswordManagerAccess.StickyPassword
 {
     public sealed class Vault
     {
-        // TODO: Get rid of this?
-        public const string DefaultDeviceId = "4ee845e4-0ee9-a7e9-ca24-63c02571c132";
-        public const string DefaultDeviceName = "stickypassword-sharp";
-
         public Account[] Accounts { get; }
 
+        // The deviceId should be generated via Vault.GenerateRandomDeviceId on the first call and reused
+        // later on for the same device. This allows to bypass the email verification on every connection and
+        // prevents the pollution of the server side list of known devices.
         public static Vault Open(string username,
                                  string password,
-                                 ISqliteProvider sqliteProvider,
-                                 string deviceId = DefaultDeviceId,
-                                 string deviceName = DefaultDeviceName)
+                                 string deviceId,
+                                 string deviceName,
+                                 IUi ui,
+                                 ISqliteProvider sqliteProvider)
         {
             // Download the database.
             using var transport = new RestTransport();
@@ -25,6 +26,7 @@ namespace PasswordManagerAccess.StickyPassword
                                         password: password,
                                         deviceId: deviceId,
                                         deviceName: deviceName,
+                                        ui: ui,
                                         transport: transport);
 
             // Parse the database, extract and decrypt all the account information.

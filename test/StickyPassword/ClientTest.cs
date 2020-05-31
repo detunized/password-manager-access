@@ -20,7 +20,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void GetEncryptedToken_returns_response()
         {
             var flow = new RestFlow().Post(GetTokenResponse);
-            var token = Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow);
+            var token = Client.GetEncryptedToken(Username, DeviceId, NoPasscode, Timestamp, flow);
 
             Assert.Equal(EncryptedToken, token);
         }
@@ -33,7 +33,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                     .ExpectUrl("https://spcb.stickypassword.com/SPCClient/GetCrpToken")
                     .ExpectContent($"uaid={UrlEncodedUsername}");
 
-            Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow.ToRestClient(BaseUrl));
+            Client.GetEncryptedToken(Username, DeviceId, NoPasscode, Timestamp, flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -41,8 +41,9 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var flow = new RestFlow().Post(ResponseWithError);
 
-            Exceptions.AssertThrowsInternalError(() => Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow),
-                                                 "Failed to retrieve the encrypted token");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.GetEncryptedToken(Username, DeviceId, NoPasscode, Timestamp, flow),
+                "Failed to retrieve the encrypted token");
         }
 
         [Fact]
@@ -50,8 +51,28 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             var flow = new RestFlow().Post(ResponseWithError1006);
 
-            Exceptions.AssertThrowsBadCredentials(() => Client.GetEncryptedToken(Username, DeviceId, Timestamp, flow),
-                                                  "Invalid username");
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.GetEncryptedToken(Username, DeviceId, NoPasscode, Timestamp, flow),
+                "Invalid username");
+        }
+
+        [Fact]
+        public void GetEncryptedToken_returns_EmailPasscodeRequired_on_4002_status()
+        {
+            var flow = new RestFlow().Post(ResponseWithError4002);
+            var token = Client.GetEncryptedToken(Username, DeviceId, NoPasscode, Timestamp, flow);
+
+            Assert.Equal(Client.EmailPasscodeRequired, token);
+        }
+
+        [Fact]
+        public void GetEncryptedToken_sends_passcode()
+        {
+            var flow = new RestFlow()
+                .Post(GetTokenResponse)
+                .ExpectContent($"pin={Passcode}");
+
+            Client.GetEncryptedToken(Username, DeviceId, Passcode, Timestamp, flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -60,9 +81,16 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var flow = new RestFlow()
                 .Post(AuthorizeDeviceResponse)
                     .ExpectUrl("https://spcb.stickypassword.com/SPCClient/DevAuth")
-                    .ExpectContent($"hid={DeviceName}");
+                    .ExpectContent($"hid={DeviceName}")
+                    .ExpectContent($"pin={Passcode}");
 
-            Client.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, flow.ToRestClient(BaseUrl));
+            Client.AuthorizeDevice(Username,
+                                   Token,
+                                   DeviceId,
+                                   DeviceName,
+                                   Passcode,
+                                   Timestamp,
+                                   flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -71,7 +99,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var flow = new RestFlow().Post(ResponseWithError);
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.AuthorizeDevice(Username, Token, DeviceId, DeviceName, Timestamp, flow),
+                () => Client.AuthorizeDevice(Username, Token, DeviceId, DeviceName, NoPasscode, Timestamp, flow),
                 "Failed to authorize the device");
         }
 
@@ -278,6 +306,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
 
                 Client.GetEncryptedToken(Username,
                                          DeviceId,
+                                         NoPasscode,
                                          DateTime.Parse("Tue, 17 Mar 2020 12:34:56 +01:00"), // Local time here
                                          flow);
             }
@@ -297,6 +326,8 @@ namespace PasswordManagerAccess.Test.StickyPassword
         internal const string UrlEncodedUsername = "LastPass.Ruby%40gmaiL.cOm";
         internal const string DeviceId = "12345678-1234-1234-1234-123456789abc";
         internal const string DeviceName = "stickypassword-sharp";
+        internal const string Passcode = "passcode-1234";
+        internal const string NoPasscode = Client.NoPasscode;
 
         internal static readonly DateTime Timestamp = new DateTime(year: 1998,
                                                                    month: 3,
@@ -401,6 +432,12 @@ namespace PasswordManagerAccess.Test.StickyPassword
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
                 "<Status>1006</Status>" +
+            "</SpcResponse>";
+
+        internal const string ResponseWithError4002 =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
+                "<Status>4002</Status>" +
             "</SpcResponse>";
     }
 }
