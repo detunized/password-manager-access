@@ -18,8 +18,17 @@ namespace PasswordManagerAccess.Example.StickyPassword
 
         public Passcode ProvideEmailPasscode()
         {
-            var passcode = GetAnswer($"Enter one-time PIN sent to your email address {ToCancel}");
-            return passcode == "" ? Passcode.Cancel : new Passcode(passcode);
+            var passcode = GetAnswer($"Enter one-time PIN sent to your email address, 'r' to resend {ToCancel}");
+            switch (passcode)
+            {
+            case "":
+                return Passcode.Cancel;
+            case "r":
+            case "R":
+                return Passcode.Resend;
+            default:
+                return new Passcode(passcode);
+            }
         }
 
         private static string GetAnswer(string prompt)

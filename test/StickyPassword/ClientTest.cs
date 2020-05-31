@@ -23,8 +23,53 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var flow = new RestFlow().Post(ResponseWithError4002);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVaultDb(Username, Password, DeviceId, DeviceName, new CancelingUi(), flow),
+                () => Client.OpenVaultDb(Username, Password, DeviceId, DeviceName, GetCancelingUi(), flow),
                 "Second factor step is canceled by the user");
+        }
+
+        [Fact]
+        public void OpenVaultDb_throws_BadMultiFactorException_on_incorrect_passcode()
+        {
+            var flow = new RestFlow()
+                .Post(ResponseWithError4002)
+                .Post(ResponseWithError4003);
+
+            Exceptions.AssertThrowsBadMultiFactor(
+                () => Client.OpenVaultDb(Username, Password, DeviceId, DeviceName, GetPasscodeProvidingUi(), flow),
+                "Second factor code is not correct");
+        }
+
+        [Fact]
+        public void GetEncryptedTokenAndPasscode_returns_token_and_passcode()
+        {
+            var flow = new RestFlow()
+                .Post(ResponseWithError4002)
+                .Post(GetTokenResponse)
+                    .ExpectContent($"pin={EmailPasscode}");
+
+            var (token, passcode) = Client.GetEncryptedTokenAndPasscode(Username,
+                                                                        DeviceId,
+                                                                        GetPasscodeProvidingUi(),
+                                                                        flow);
+
+            Assert.Equal(EncryptedToken, token);
+            Assert.Equal(EmailPasscode, passcode);
+        }
+
+        [Fact]
+        public void GetEncryptedTokenAndPasscode_triggers_email_resend()
+        {
+            var flow = new RestFlow()
+                .Post(ResponseWithError4002)
+                .Post(ResponseWithError4002)
+                .Post(GetTokenResponse)
+                    .ExpectContent($"pin={EmailPasscode}");
+
+            var ui = GetUi(Passcode.Resend, new Passcode(EmailPasscode));
+            var (token, passcode) = Client.GetEncryptedTokenAndPasscode(Username, DeviceId, ui, flow);
+
+            Assert.Equal(EncryptedToken, token);
+            Assert.Equal(EmailPasscode, passcode);
         }
 
         [Fact]
@@ -58,7 +103,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         }
 
         [Fact]
-        public void GetEncryptedToken_throws_incorrect_username_on_1006_status()
+        public void GetEncryptedToken_throws_BadCredentialsException_on_1006_status()
         {
             var flow = new RestFlow().Post(ResponseWithError1006);
 
@@ -74,6 +119,16 @@ namespace PasswordManagerAccess.Test.StickyPassword
             var token = Client.GetEncryptedToken(Username, DeviceId, NoPasscode, Timestamp, flow);
 
             Assert.Equal(Client.EmailPasscodeRequired, token);
+        }
+
+        [Fact]
+        public void GetEncryptedToken_throws_BadMultiFactorException_on_4003_status()
+        {
+            var flow = new RestFlow().Post(ResponseWithError4003);
+
+            Exceptions.AssertThrowsBadMultiFactor(
+                () => Client.GetEncryptedToken(Username, DeviceId, EmailPasscode, Timestamp, flow),
+                "Second factor code is not correct");
         }
 
         [Fact]
@@ -298,10 +353,22 @@ namespace PasswordManagerAccess.Test.StickyPassword
         // Helpers
         //
 
-        private class CancelingUi: IUi
+        private class SequenceUi: IUi
         {
-            public Passcode ProvideEmailPasscode() => Passcode.Cancel;
+            private readonly Passcode[] _passcodes;
+            private int _current = 0;
+
+            public SequenceUi(params Passcode[] passcodes)
+            {
+                _passcodes = passcodes;
+            }
+
+            public Passcode ProvideEmailPasscode() => _passcodes[_current++];
         }
+
+        private static IUi GetUi(params Passcode[] passcodes) => new SequenceUi(passcodes);
+        private static IUi GetCancelingUi() => GetUi(Passcode.Cancel);
+        private static IUi GetPasscodeProvidingUi() => GetUi(new Passcode(EmailPasscode));
     }
 
     // These tests (hopefully) run in an isolated thread. Here we change the thread global state which might
@@ -437,28 +504,17 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 "</GetS3TokenResponse>" +
             "</SpcResponse>";
 
-        internal const string SuccessfulResponse =
+        internal static readonly string SuccessfulResponse = ResponseWithStatus(0);
+        internal static readonly string ResponseWithError = ResponseWithStatus(13);
+        internal static readonly string ResponseWithError1006 = ResponseWithStatus(1006);
+        internal static readonly string ResponseWithError4002 = ResponseWithStatus(4002);
+        internal static readonly string ResponseWithError4003 = ResponseWithStatus(4003);
+
+        internal static string ResponseWithStatus(int status) =>
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
-                "<Status>0</Status>" +
+                $"<Status>{status}</Status>" +
             "</SpcResponse>";
 
-        internal const string ResponseWithError =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
-                "<Status>13</Status>" +
-            "</SpcResponse>";
-
-        internal const string ResponseWithError1006 =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
-                "<Status>1006</Status>" +
-            "</SpcResponse>";
-
-        internal const string ResponseWithError4002 =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-            "<SpcResponse xmlns=\"http://www.stickypassword.com/cb/clientapi/schema/v2\">" +
-                "<Status>4002</Status>" +
-            "</SpcResponse>";
     }
 }

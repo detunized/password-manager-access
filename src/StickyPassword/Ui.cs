@@ -11,6 +11,7 @@ namespace PasswordManagerAccess.StickyPassword.Ui
     public class Passcode
     {
         public static readonly Passcode Cancel = new Passcode("cancel");
+        public static readonly Passcode Resend = new Passcode("resend");
 
         public readonly string Code;
 

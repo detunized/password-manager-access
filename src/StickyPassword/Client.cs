@@ -28,15 +28,9 @@ namespace PasswordManagerAccess.StickyPassword
         {
             var rest = new RestClient(transport, "https://spcb.stickypassword.com/SPCClient/");
 
-            // Request the token that is encrypted with the master password.
-            var encryptedToken = GetEncryptedToken(username, deviceId, NoPasscode, DateTime.Now, rest);
-
-            // It's a new device, the email PIN is required
-            var passcode = encryptedToken == EmailPasscodeRequired ? AskUserForPasscode(ui) : NoPasscode;
-
-            // Now try with the PIN from the email
-            if (passcode != NoPasscode)
-                encryptedToken = GetEncryptedToken(username, deviceId, passcode, DateTime.Now, rest);
+            // Request the token that is encrypted with the master password and get the one-time PIN
+            // when a new device is registered for the first time.
+            var (encryptedToken, passcode) = GetEncryptedTokenAndPasscode(username, deviceId, ui, rest);
 
             // Decrypt the token. This token is now used to authenticate with the server.
             var token = Util.DecryptToken(username, password, encryptedToken);
@@ -55,13 +49,38 @@ namespace PasswordManagerAccess.StickyPassword
         // Internal (accessed by the tests)
         //
 
-        internal static string AskUserForPasscode(IUi ui)
+        internal static (byte[] EncryptedToken, string Passcode) GetEncryptedTokenAndPasscode(string username,
+                                                                                              string deviceId,
+                                                                                              IUi ui,
+                                                                                              RestClient rest)
         {
-            var passcode = ui.ProvideEmailPasscode();
-            if (passcode == Passcode.Cancel)
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+            byte[] GetToken(string code) => GetEncryptedToken(username, deviceId, code, DateTime.Now, rest);
 
-            return passcode.Code;
+            // First request without any passcode. This should succeed for known devices.
+            var encryptedToken = GetToken(NoPasscode);
+            if (encryptedToken != EmailPasscodeRequired)
+                return (encryptedToken, NoPasscode);
+
+            // It's a new device, the email PIN is required
+            for (;;)
+            {
+                var passcode = ui.ProvideEmailPasscode();
+                if (passcode == Passcode.Cancel)
+                    throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+
+                if (passcode == Passcode.Resend)
+                {
+                    GetToken(NoPasscode);
+                    continue;
+                }
+
+                // Now try with the PIN from the email
+                encryptedToken = GetToken(passcode.Code);
+                if (encryptedToken == EmailPasscodeRequired)
+                    throw new InternalErrorException("Unexpected response");
+
+                return (encryptedToken, passcode.Code);
+            }
         }
 
         // This function requests an encrypted token for the specified username. There's no
@@ -88,6 +107,8 @@ namespace PasswordManagerAccess.StickyPassword
                 throw new BadCredentialsException("Invalid username");
             case "4002":
                 return EmailPasscodeRequired;
+            case "4003":
+                throw new BadMultiFactorException("Second factor code is not correct");
             default:
                 throw CreateException("retrieve the encrypted token", response);
             }
