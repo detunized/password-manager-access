@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using PasswordManagerAccess.Bitwarden;
+using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 
@@ -11,15 +12,15 @@ namespace PasswordManagerAccess.Example.Bitwarden
 {
     public static class Program
     {
-        private class TextUi: Ui
+        private class TextUi: IUi
         {
             private const string ToCancel = "or just press ENTER to cancel";
 
-            public override void Close()
+            public void Close()
             {
             }
 
-            public override MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
+            public MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
             {
                 var methods = availableMethods.Where(m => m != MfaMethod.Cancel).OrderBy(m => m).ToArray();
                 var lines = methods.Select((m, i) => $"{i + 1} {m}");
@@ -46,22 +47,22 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 }
             }
 
-            public override Passcode ProvideGoogleAuthPasscode()
+            public Passcode ProvideGoogleAuthPasscode()
             {
                 return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
             }
 
-            public override Passcode ProvideEmailPasscode(string emailHint)
+            public Passcode ProvideEmailPasscode(string emailHint)
             {
                 return GetPasscode($"Please check you email ({emailHint}) and enter the code {ToCancel}");
             }
 
-            public override Passcode ProvideYubiKeyPasscode()
+            public Passcode ProvideYubiKeyPasscode()
             {
                 return GetPasscode($"Please enter the YubiKey code {ToCancel}");
             }
 
-            public override DuoChoice ChooseDuoFactor(DuoDevice[] devices)
+            public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
             {
                 var prompt = $"Choose a factor you want to use {ToCancel}:\n\n";
                 var index = 1;
@@ -94,12 +95,12 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 }
             }
 
-            public override string ProvideDuoPasscode(DuoDevice device)
+            public string ProvideDuoPasscode(DuoDevice device)
             {
                 return GetAnswer($"Enter the passcode for {device.Name} {ToCancel}");
             }
 
-            public override void UpdateDuoStatus(DuoStatus status, string text)
+            public void UpdateDuoStatus(DuoStatus status, string text)
             {
                 switch (status)
                 {

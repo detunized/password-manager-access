@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Bitwarden
@@ -14,7 +15,7 @@ namespace PasswordManagerAccess.Bitwarden
         // The device ID should be unique to each installation, but it should not be new on
         // every run. A new random device ID should be generated with GenerateRandomDeviceId
         // on the first run and reused later on.
-        public static Vault Open(string username, string password, string deviceId, Ui ui, ISecureStorage storage)
+        public static Vault Open(string username, string password, string deviceId, IUi ui, ISecureStorage storage)
         {
             return Open(username, password, deviceId, null, ui, storage);
         }
@@ -24,7 +25,7 @@ namespace PasswordManagerAccess.Bitwarden
                                  string password,
                                  string deviceId,
                                  string baseUrl,
-                                 Ui ui,
+                                 IUi ui,
                                  ISecureStorage storage)
         {
             using var transport = new RestTransport();

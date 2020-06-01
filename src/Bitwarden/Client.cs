@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Bitwarden
@@ -15,7 +16,7 @@ namespace PasswordManagerAccess.Bitwarden
                                           string password,
                                           string deviceId,
                                           string baseUrl,
-                                          Ui ui,
+                                          IUi ui,
                                           ISecureStorage storage,
                                           IRestTransport transport)
         {
@@ -74,7 +75,7 @@ namespace PasswordManagerAccess.Bitwarden
         internal static string Login(string username,
                                      byte[] passwordHash,
                                      string deviceId,
-                                     Ui ui,
+                                     IUi ui,
                                      ISecureStorage storage,
                                      RestClient rest)
         {
@@ -97,7 +98,7 @@ namespace PasswordManagerAccess.Bitwarden
 
             var method = ChooseSecondFactorMethod(secondFactor, ui);
             var extra = secondFactor.Methods[method];
-            Ui.Passcode passcode = null;
+            Passcode passcode = null;
 
             switch (method)
             {
@@ -120,7 +121,7 @@ namespace PasswordManagerAccess.Bitwarden
                                            rest.Transport);
 
                 if (duo != null)
-                    passcode = new Ui.Passcode(duo.Passcode, duo.RememberMe);
+                    passcode = new Passcode(duo.Passcode, duo.RememberMe);
 
                 break;
             }
@@ -179,7 +180,7 @@ namespace PasswordManagerAccess.Bitwarden
             storage.StoreString(RememberMeTokenKey, "");
         }
 
-        internal static Ui.Passcode AskU2fPasscode(JObject u2fParams, Ui ui)
+        internal static Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
         {
             // TODO: Decide what to do on other platforms
             // TODO: See how to get rid of the #if in favor of some cleaner way (partial classes?)
@@ -208,38 +209,38 @@ namespace PasswordManagerAccess.Bitwarden
             });
 
             // TODO: Add support for remember-me.
-            return new Ui.Passcode(token, false);
+            return new Passcode(token, false);
 #else
             throw new UnsupportedFeatureException("U2f is not supported on this platform");
 #endif
         }
 
-        internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor, Ui ui)
+        internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor, IUi ui)
         {
             var methods = secondFactor.Methods;
             if (methods == null || methods.Count == 0)
                 throw new InternalErrorException("Logical error: should be called with non empty list of methods");
 
-            var availableMethods = new List<Ui.MfaMethod>();
+            var availableMethods = new List<MfaMethod>();
             foreach (var m in methods.Keys)
             {
                 switch (m)
                 {
                 case Response.SecondFactorMethod.GoogleAuth:
-                    availableMethods.Add(Ui.MfaMethod.GoogleAuth);
+                    availableMethods.Add(MfaMethod.GoogleAuth);
                     break;
                 case Response.SecondFactorMethod.Email:
-                    availableMethods.Add(Ui.MfaMethod.Email);
+                    availableMethods.Add(MfaMethod.Email);
                     break;
                 case Response.SecondFactorMethod.Duo:
-                    availableMethods.Add(Ui.MfaMethod.Duo);
+                    availableMethods.Add(MfaMethod.Duo);
                     break;
                 case Response.SecondFactorMethod.YubiKey:
-                    availableMethods.Add(Ui.MfaMethod.YubiKey);
+                    availableMethods.Add(MfaMethod.YubiKey);
                     break;
                 case Response.SecondFactorMethod.U2f:
 #if NETFRAMEWORK
-                    availableMethods.Add(Ui.MfaMethod.U2f);
+                    availableMethods.Add(MfaMethod.U2f);
 #endif
                     break;
                 case Response.SecondFactorMethod.RememberMe:
@@ -255,21 +256,21 @@ namespace PasswordManagerAccess.Bitwarden
             }
 
             // Cancel is always available
-            availableMethods.Add(Ui.MfaMethod.Cancel);
+            availableMethods.Add(MfaMethod.Cancel);
 
             switch (ui.ChooseMfaMethod(availableMethods.ToArray()))
             {
-            case Ui.MfaMethod.Cancel:
+            case MfaMethod.Cancel:
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
-            case Ui.MfaMethod.GoogleAuth:
+            case MfaMethod.GoogleAuth:
                 return Response.SecondFactorMethod.GoogleAuth;
-            case Ui.MfaMethod.Email:
+            case MfaMethod.Email:
                 return Response.SecondFactorMethod.Email;
-            case Ui.MfaMethod.Duo:
+            case MfaMethod.Duo:
                 return Response.SecondFactorMethod.Duo;
-            case Ui.MfaMethod.YubiKey:
+            case MfaMethod.YubiKey:
                 return Response.SecondFactorMethod.YubiKey;
-            case Ui.MfaMethod.U2f:
+            case MfaMethod.U2f:
                 return Response.SecondFactorMethod.U2f;
             default:
                 throw new InternalErrorException("The user responded with invalid input");

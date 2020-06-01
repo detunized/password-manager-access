@@ -3,51 +3,43 @@
 
 using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Bitwarden
+namespace PasswordManagerAccess.Bitwarden.Ui
 {
-    public abstract class Ui: IDuoUi
+    public interface IUi: IDuoUi
     {
         // The UI will no longer be used and could be closed
         public abstract void Close();
 
-        public enum MfaMethod
-        {
-            // Always available
-            Cancel,
-
-            GoogleAuth,
-            Email,
-            Duo,
-            YubiKey,
-            U2f,
-        }
-
         // To cancel return Method.Cancel (always available)
-        public abstract MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods);
-
-        public class Passcode
-        {
-            public readonly string Code;
-            public readonly bool RememberMe;
-
-            public Passcode(string code, bool rememberMe)
-            {
-                Code = code;
-                RememberMe = rememberMe;
-            }
-        }
+        MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods);
 
         // To cancel any of these return null
-        public abstract Passcode ProvideGoogleAuthPasscode();
-        public abstract Passcode ProvideEmailPasscode(string emailHint);
-        public abstract Passcode ProvideYubiKeyPasscode();
+        Passcode ProvideGoogleAuthPasscode();
+        Passcode ProvideEmailPasscode(string emailHint);
+        Passcode ProvideYubiKeyPasscode();
+    }
 
-        //
-        // Duo
-        //
+    public enum MfaMethod
+    {
+        // Always available
+        Cancel,
 
-        public abstract DuoChoice ChooseDuoFactor(DuoDevice[] devices);
-        public abstract string ProvideDuoPasscode(DuoDevice device);
-        public abstract void UpdateDuoStatus(DuoStatus status, string text);
+        GoogleAuth,
+        Email,
+        Duo,
+        YubiKey,
+        U2f,
+    }
+
+    public class Passcode
+    {
+        public readonly string Code;
+        public readonly bool RememberMe;
+
+        public Passcode(string code, bool rememberMe)
+        {
+            Code = code;
+            RememberMe = rememberMe;
+        }
     }
 }

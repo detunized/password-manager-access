@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Xunit;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Bitwarden;
+using PasswordManagerAccess.Bitwarden.Ui;
 using Response = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
@@ -94,13 +95,13 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
                 .ToRestClient();
 
-            var ui = new Mock<Ui>();
-            ui.Setup(x => x.ChooseMfaMethod(It.IsAny<Ui.MfaMethod[]>())).Returns(Ui.MfaMethod.GoogleAuth);
-            ui.Setup(x => x.ProvideGoogleAuthPasscode()).Returns(new Ui.Passcode("123456", false));
+            var ui = new Mock<IUi>();
+            ui.Setup(x => x.ChooseMfaMethod(It.IsAny<MfaMethod[]>())).Returns(MfaMethod.GoogleAuth);
+            ui.Setup(x => x.ProvideGoogleAuthPasscode()).Returns(new Passcode("123456", false));
 
             Client.Login(Username, PasswordHash, DeviceId, ui.Object, SetupSecureStorage(null), rest);
 
-            ui.Verify(x => x.ChooseMfaMethod(It.IsAny<Ui.MfaMethod[]>()), Times.Once);
+            ui.Verify(x => x.ChooseMfaMethod(It.IsAny<MfaMethod[]>()), Times.Once);
         }
 
         [Fact]
