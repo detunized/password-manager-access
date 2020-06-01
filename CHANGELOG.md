@@ -1,7 +1,7 @@
 # Changelog
 
 ## 3.0.0
-  - Bitwarden: added support Duo multifactor authentication
+  - Bitwarden: added support for the Duo multifactor authentication
   - Examples: many refactored to share code and make things simpler
 
 ## 2.0.0
