@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0
+  - LastPass: added support for the Duo SDK option in the settings to allow
+    for the Duo device selection
+  - LastPass: added support for passcodes for the out-of-band authentication
+    modes
+  - LastPass: Toopher support removed as it's no longer available
+  - LastPass: `Ui` class refactored to `Ui.IUi` interface
+
 ## 1.0.0
   - Duo: moved out of Bitwarden and made part of the Common module so it could
     be used by other modules
