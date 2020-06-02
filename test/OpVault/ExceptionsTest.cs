@@ -1,11 +1,11 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using NUnit.Framework;
 using NUnit.Framework.Constraints;
 
-namespace OPVault.Test
+namespace PasswordManagerAccess.Test.OpVault
 {
     [TestFixture]
     public class ExceptionsTest
