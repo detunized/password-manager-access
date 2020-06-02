@@ -1,10 +1,10 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
 using System.Linq;
 
-namespace OPVault
+namespace PasswordManagerAccess.OpVault
 {
     // Represents a key and [H]MAC key pair. They always go together since all the encryption is
     // authenticated: every times something is encrypted a MAC/tag is added.

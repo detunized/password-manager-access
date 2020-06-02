@@ -1,7 +1,7 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-namespace OPVault
+namespace PasswordManagerAccess.OpVault
 {
     public class Account
     {

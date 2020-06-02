@@ -1,10 +1,10 @@
-// Copyright (C) 2018 Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.IO;
 using System.Linq;
 
-namespace OPVault
+namespace PasswordManagerAccess.OpVault
 {
     // TODO: Performance might be an issue here. There's a lot of small temporary objects in this code.
     //       For small vaults it wouldn't worth the effort to make it more efficient. On big vaults this
