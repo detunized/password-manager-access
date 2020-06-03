@@ -16,7 +16,7 @@ namespace PasswordManagerAccess.Example.OpVault
             // Use one from the tests by default
             if (!config.ContainsKey("path") || !config.ContainsKey("password"))
             {
-                config["path"] = "../../..";
+                config["path"] = "../../../../../test/OpVault/Fixtures/test.opvault";
                 config["password"] = "password";
             }
 
