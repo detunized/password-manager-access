@@ -3,6 +3,7 @@
 
 using System.IO;
 using System.Linq;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OpVault
 {

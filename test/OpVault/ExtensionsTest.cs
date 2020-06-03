@@ -11,38 +11,6 @@ namespace PasswordManagerAccess.Test.OpVault
     public class ExtensionsTest
     {
         //
-        // string
-        //
-
-        [Fact]
-        public void String_ToBytes_converts_string_to_utf8_bytes()
-        {
-            Assert.Equal(new byte[]{}, "".ToBytes());
-            Assert.Equal(TestBytes, TestString.ToBytes());
-        }
-
-        [Fact]
-        public void String_String_Decode64_decodes_base64()
-        {
-            Assert.Equal(new byte[]{}, "".Decode64());
-            Assert.Equal(new byte[]{0x61}, "YQ==".Decode64());
-            Assert.Equal(new byte[]{0x61, 0x62}, "YWI=".Decode64());
-            Assert.Equal(new byte[]{0x61, 0x62, 0x63}, "YWJj".Decode64());
-            Assert.Equal(new byte[]{0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
-        }
-
-        //
-        // byte[]
-        //
-
-        [Fact]
-        public void ByteArray_ToUtf8_returns_string()
-        {
-            Assert.Equal("", new byte[]{}.ToUtf8());
-            Assert.Equal(TestString, TestBytes.ToUtf8());
-        }
-
-        //
         // JToken
         //
 
