@@ -114,9 +114,9 @@ namespace PasswordManagerAccess.OpVault
 
         internal static KeyMac DeriveKek(JObject profile, string password)
         {
-            return Crypto.DeriveKek(password.ToBytes(),
-                                    profile.StringAt("salt").Decode64(),
-                                    profile.IntAt("iterations"));
+            return Util.DeriveKek(password.ToBytes(),
+                                  profile.StringAt("salt").Decode64(),
+                                  profile.IntAt("iterations"));
         }
 
         internal static KeyMac DecryptMasterKey(JObject profile, KeyMac kek)
@@ -149,7 +149,7 @@ namespace PasswordManagerAccess.OpVault
         internal static KeyMac DecryptBase64Key(string encryptedKeyBase64, KeyMac kek)
         {
             var raw = Opdata01.Decrypt(encryptedKeyBase64, kek);
-            return new KeyMac(Crypto.Sha512(raw));
+            return new KeyMac(Util.Sha512(raw));
         }
 
         internal static Dictionary<string, Folder> DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
@@ -229,7 +229,7 @@ namespace PasswordManagerAccess.OpVault
 
             // Check against the stored HMAC/tag
             var storedTag = encryptedItem.StringAt("hmac").Decode64();
-            var computedTag = Crypto.Hmac(hashedContent.ToString().ToBytes(), key);
+            var computedTag = Util.Hmac(hashedContent.ToString().ToBytes(), key);
 
             if (!computedTag.SequenceEqual(storedTag))
                 throw CorruptedError("Vault item is corrupted: tag doesn't match");
@@ -256,11 +256,11 @@ namespace PasswordManagerAccess.OpVault
                 io.BaseStream.Seek(0, SeekOrigin.Begin);
                 var hashedContent = io.ReadBytes(80);
 
-                var computedTag = Crypto.Hmac(hashedContent, masterKey);
+                var computedTag = Util.Hmac(hashedContent, masterKey);
                 if (!computedTag.SequenceEqual(storedTag))
                     throw CorruptedError("Vault item key is corrupted: tag doesn't match");
 
-                return new KeyMac(Crypto.DecryptAes(ciphertext, iv, masterKey));
+                return new KeyMac(Util.DecryptAes(ciphertext, iv, masterKey));
             }
         }
 

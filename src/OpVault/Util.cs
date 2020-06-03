@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace PasswordManagerAccess.OpVault
 {
-    internal static class Crypto
+    internal static class Util
     {
         public static KeyMac DeriveKek(byte[] password, byte[] salt, int iterations)
         {

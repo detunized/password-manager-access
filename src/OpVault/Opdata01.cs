@@ -43,11 +43,11 @@ namespace PasswordManagerAccess.OpVault
                 io.BaseStream.Seek(0, SeekOrigin.Begin);
                 var hashedContent = io.ReadBytes(32 + padding + length);
 
-                var computedTag = Crypto.Hmac(hashedContent, key);
+                var computedTag = Util.Hmac(hashedContent, key);
                 if (!computedTag.SequenceEqual(storedTag))
                     throw CurruptedError("tag doesn't match");
 
-                var plaintext = Crypto.DecryptAes(ciphertext, iv, key);
+                var plaintext = Util.DecryptAes(ciphertext, iv, key);
                 return plaintext.Skip(padding).Take(length).ToArray();
             }
         }
