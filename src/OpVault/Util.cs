@@ -14,18 +14,6 @@ namespace PasswordManagerAccess.OpVault
             return new KeyMac(Pbkdf2.GenerateSha512(password, salt, iterations, 64));
         }
 
-        public static byte[] Sha512(byte[] data)
-        {
-            using (var sha = new SHA512Managed())
-                return sha.ComputeHash(data);
-        }
-
-        public static byte[] Hmac(byte[] message, KeyMac key)
-        {
-            using (var hmac = new HMACSHA256 {Key = key.MacKey})
-                return hmac.ComputeHash(message);
-        }
-
         public static byte[] DecryptAes(byte[] ciphertext, byte[] iv, KeyMac key)
         {
             using (var aes = CreateAes256Cbc(key, iv))

@@ -150,7 +150,7 @@ namespace PasswordManagerAccess.OpVault
         internal static KeyMac DecryptBase64Key(string encryptedKeyBase64, KeyMac kek)
         {
             var raw = Opdata01.Decrypt(encryptedKeyBase64, kek);
-            return new KeyMac(Util.Sha512(raw));
+            return new KeyMac(Crypto.Sha512(raw));
         }
 
         internal static Dictionary<string, Folder> DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
@@ -230,7 +230,7 @@ namespace PasswordManagerAccess.OpVault
 
             // Check against the stored HMAC/tag
             var storedTag = encryptedItem.StringAt("hmac").Decode64();
-            var computedTag = Util.Hmac(hashedContent.ToString().ToBytes(), key);
+            var computedTag = Crypto.HmacSha256(hashedContent.ToString().ToBytes(), key.MacKey);
 
             if (!computedTag.SequenceEqual(storedTag))
                 throw CorruptedError("Vault item is corrupted: tag doesn't match");
@@ -257,7 +257,7 @@ namespace PasswordManagerAccess.OpVault
                 io.BaseStream.Seek(0, SeekOrigin.Begin);
                 var hashedContent = io.ReadBytes(80);
 
-                var computedTag = Util.Hmac(hashedContent, masterKey);
+                var computedTag = Crypto.HmacSha256(hashedContent, masterKey.MacKey);
                 if (!computedTag.SequenceEqual(storedTag))
                     throw CorruptedError("Vault item key is corrupted: tag doesn't match");
 
