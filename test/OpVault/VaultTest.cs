@@ -31,8 +31,7 @@ namespace PasswordManagerAccess.Test.OpVault
         [Fact]
         public void Open_throws_on_invalid_path()
         {
-            var e = Assert.Throws<ParseException>(() => Vault.Open("does/not/exist", Password));
-            Assert.Contains("doesn't exist", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Vault.Open("does/not/exist", Password), "doesn't exist");
         }
 
         [Fact]

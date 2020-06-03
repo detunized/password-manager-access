@@ -84,8 +84,7 @@ namespace PasswordManagerAccess.OpVault
             // We're deliberately not trying to catch all the possible file/io errors.
             // It's impossible to handle them all. Just a basic check that the file is there.
             if (!File.Exists(filename))
-                throw new ParseException(ParseException.FailureReason.FileNotFound,
-                                         string.Format("File '{0}' doesn't exist", filename));
+                throw new InternalErrorException($"File '{filename}' doesn't exist");
 
             return File.ReadAllText(filename);
         }
