@@ -24,8 +24,7 @@ namespace PasswordManagerAccess.Test.OpVault
         [Fact]
         public void Decrypt_throws_short_input()
         {
-            var e = Assert.Throws<ParseException>(() => Opdata01.Decrypt(new byte[63], TestKey));
-            Assert.Contains("too short", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Opdata01.Decrypt(new byte[63], TestKey), "too short");
         }
 
         [Fact]
@@ -34,8 +33,7 @@ namespace PasswordManagerAccess.Test.OpVault
             var blob = TestBlob.Decode64();
             blob[0] += 1;
 
-            var e = Assert.Throws<ParseException>(() => Opdata01.Decrypt(blob, TestKey));
-            Assert.Contains("invalid signature", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Opdata01.Decrypt(blob, TestKey), "invalid signature");
         }
 
         [Fact]
@@ -44,8 +42,7 @@ namespace PasswordManagerAccess.Test.OpVault
             var blob = TestBlob.Decode64();
             blob[blob.Length - 1] += 1;
 
-            var e = Assert.Throws<ParseException>(() => Opdata01.Decrypt(blob, TestKey));
-            Assert.Contains("tag doesn't match", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Opdata01.Decrypt(blob, TestKey), "tag doesn't match");
         }
 
         //

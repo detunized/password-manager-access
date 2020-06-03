@@ -53,10 +53,9 @@ namespace PasswordManagerAccess.OpVault
             }
         }
 
-        private static ParseException CurruptedError(string message)
+        private static InternalErrorException CurruptedError(string message)
         {
-            return new ParseException(ParseException.FailureReason.Corrupted,
-                                      string.Format("Opdata01 container is corrupted: {0}", message));
+            return new InternalErrorException($"Opdata01 container is corrupted: {message}");
         }
     }
 }

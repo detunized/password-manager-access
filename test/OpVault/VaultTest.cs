@@ -20,7 +20,7 @@ namespace PasswordManagerAccess.Test.OpVault
         }
 
         [Fact]
-        public void Open_supprts_nested_folders()
+        public void Open_supports_nested_folders()
         {
             var accounts = Vault.Open(TestVaultPath, Password);
             var childFolder = accounts.First(i => i.Folder.Name == "Even Cooler Stuff").Folder;
@@ -38,8 +38,14 @@ namespace PasswordManagerAccess.Test.OpVault
         [Fact]
         public void Open_throws_on_incorrect_password()
         {
-            var e = Assert.Throws<ParseException>(() => Vault.Open(TestVaultPath, "incorrect password"));
-            Assert.Contains("password is incorrect", e.Message);
+            Exceptions.AssertThrowsBadCredentials(() => Vault.Open(TestVaultPath, "incorrect password"),
+                                                  "password is incorrect");
+        }
+
+        [Fact]
+        public void Open_throws_on_corrupted_vault()
+        {
+            Exceptions.AssertThrowsInternalError(() => Vault.Open(CorruptedVaultPath, Password), "corrupted");
         }
 
         [Fact]
@@ -82,22 +88,22 @@ namespace PasswordManagerAccess.Test.OpVault
         [Fact]
         public void LoadJsAsJsonFromString_throws_on_too_short_input()
         {
-            var e = Assert.Throws<ParseException>(() => Vault.LoadJsAsJsonFromString("-", "var j = ", ";"));
-            Assert.Contains("too short", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Vault.LoadJsAsJsonFromString("-", "var j = ", ";"),
+                                                 "too short");
         }
 
         [Fact]
         public void LoadJsAsJsonFromString_throws_on_missing_prefix()
         {
-            var e = Assert.Throws<ParseException>(() => Vault.LoadJsAsJsonFromString("var j = {};", "-", ";"));
-            Assert.Contains("prefix is not found", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Vault.LoadJsAsJsonFromString("var j = {};", "-", ";"),
+                                                 "prefix is not found");
         }
 
         [Fact]
         public void LoadJsAsJsonFromString_throws_on_missing_suffix()
         {
-            var e = Assert.Throws<ParseException>(() => Vault.LoadJsAsJsonFromString("var j = {};", "var j =", "-"));
-            Assert.Contains("suffix is not found", e.Message);
+            Exceptions.AssertThrowsInternalError(() => Vault.LoadJsAsJsonFromString("var j = {};", "var j =", "-"),
+                                                 "suffix is not found");
         }
 
         [Fact]
@@ -157,7 +163,9 @@ namespace PasswordManagerAccess.Test.OpVault
         // Data
         //
 
-        private const string TestVaultPath = "OpVault/Fixtures/test.opvault";
+        private const string FixturePath = "OpVault/Fixtures/";
+        private const string TestVaultPath = FixturePath + "test.opvault";
+        private const string CorruptedVaultPath = FixturePath + "corrupted.opvault";
         private const string Password = "password";
     }
 }

@@ -25,7 +25,7 @@ namespace PasswordManagerAccess.OpVault
                 // Derive key encryption key
                 var kek = DeriveKek(profile, password);
 
-                // sDecrypt main keys
+                // Decrypt main keys
                 var masterKey = DecryptMasterKey(profile, kek);
                 var overviewKey = DecryptOverviewKey(profile, kek);
 
@@ -126,19 +126,14 @@ namespace PasswordManagerAccess.OpVault
             {
                 return DecryptBase64Key(profile.StringAt("masterKey"), kek);
             }
-            catch (ParseException e)
+            catch (InternalErrorException e) when (e.Message.Contains("tag doesn't match"))
             {
                 // This is a bit hacky. There's no sure way to verify if the password is correct. The things
                 // will start failing to decrypt on HMAC/tag verification. So only for the master key we assume
                 // that the structure of the vault is not corrupted (which is unlikely) but rather the master
                 // password wasn't given correctly. So we rethrow the "corrupted" exception as the "incorrect
                 // password". Unfortunately we have to rely on the contents of the error message as well.
-                if (e.Reason == ParseException.FailureReason.Corrupted && e.Message.Contains("tag doesn't match"))
-                    throw new ParseException(ParseException.FailureReason.IncorrectPassword,
-                                             "Most likely the master password is incorrect",
-                                             e);
-
-                throw;
+                throw new BadCredentialsException("Most likely the master password is incorrect", e);
             }
         }
 
@@ -233,7 +228,7 @@ namespace PasswordManagerAccess.OpVault
             var computedTag = Crypto.HmacSha256(hashedContent.ToString().ToBytes(), key.MacKey);
 
             if (!computedTag.SequenceEqual(storedTag))
-                throw CorruptedError("Vault item is corrupted: tag doesn't match");
+                throw CorruptedError("tag doesn't match");
         }
 
         private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
@@ -245,7 +240,7 @@ namespace PasswordManagerAccess.OpVault
         {
             var raw = encryptedItem.StringAt("k").Decode64();
             if (raw.Length != 112)
-                throw CorruptedError("Vault item key is corrupted: invalid size");
+                throw CorruptedError("key has invalid size");
 
             using (var io = new BinaryReader(new MemoryStream(raw, false)))
             {
@@ -259,7 +254,7 @@ namespace PasswordManagerAccess.OpVault
 
                 var computedTag = Crypto.HmacSha256(hashedContent, masterKey.MacKey);
                 if (!computedTag.SequenceEqual(storedTag))
-                    throw CorruptedError("Vault item key is corrupted: tag doesn't match");
+                    throw CorruptedError("key tag doesn't match");
 
                 return new KeyMac(Util.DecryptAes(ciphertext, iv, masterKey));
             }
@@ -285,14 +280,14 @@ namespace PasswordManagerAccess.OpVault
             return "";
         }
 
-        private static ParseException FormatError(string message, Exception innerException = null)
+        private static InternalErrorException FormatError(string message, Exception innerException = null)
         {
-            return new ParseException(ParseException.FailureReason.InvalidFormat, message, innerException);
+            return new InternalErrorException(message, innerException);
         }
 
-        private static ParseException CorruptedError(string message)
+        private static InternalErrorException CorruptedError(string message)
         {
-            return new ParseException(ParseException.FailureReason.Corrupted, message);
+            return new InternalErrorException($"Vault item is corrupted: {message}");
         }
     }
 }

@@ -9,11 +9,7 @@ namespace PasswordManagerAccess.OpVault
     {
         public enum FailureReason
         {
-            IncorrectPassword,
-            InvalidFormat,
-            Corrupted,
-            FileNotFound,
-            UnknownError
+            FileNotFound
         }
 
         public ParseException(FailureReason reason, string message):
