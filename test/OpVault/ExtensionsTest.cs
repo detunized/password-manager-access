@@ -3,50 +3,50 @@
 
 using System;
 using Newtonsoft.Json.Linq;
-using NUnit.Framework;
+using PasswordManagerAccess.OpVault;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.OpVault
 {
-    [TestFixture]
     public class ExtensionsTest
     {
         //
         // string
         //
 
-        [Test]
+        [Fact]
         public void String_ToBytes_converts_string_to_utf8_bytes()
         {
-            Assert.That("".ToBytes(), Is.EqualTo(new byte[] { }));
-            Assert.That(TestString.ToBytes(), Is.EqualTo(TestBytes));
+            Assert.Equal(new byte[]{}, "".ToBytes());
+            Assert.Equal(TestBytes, TestString.ToBytes());
         }
 
-        [Test]
+        [Fact]
         public void String_String_Decode64_decodes_base64()
         {
-            Assert.That("".Decode64(), Is.EqualTo(new byte[] { }));
-            Assert.That("YQ==".Decode64(), Is.EqualTo(new byte[] { 0x61 }));
-            Assert.That("YWI=".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62 }));
-            Assert.That("YWJj".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63 }));
-            Assert.That("YWJjZA==".Decode64(), Is.EqualTo(new byte[] { 0x61, 0x62, 0x63, 0x64 }));
+            Assert.Equal(new byte[]{}, "".Decode64());
+            Assert.Equal(new byte[]{0x61}, "YQ==".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62}, "YWI=".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63}, "YWJj".Decode64());
+            Assert.Equal(new byte[]{0x61, 0x62, 0x63, 0x64}, "YWJjZA==".Decode64());
         }
 
         //
         // byte[]
         //
 
-        [Test]
+        [Fact]
         public void ByteArray_ToUtf8_returns_string()
         {
-            Assert.That(new byte[] { }.ToUtf8(), Is.EqualTo(""));
-            Assert.That(TestBytes.ToUtf8(), Is.EqualTo(TestString));
+            Assert.Equal("", new byte[]{}.ToUtf8());
+            Assert.Equal(TestString, TestBytes.ToUtf8());
         }
 
         //
         // JToken
         //
 
-        [Test]
+        [Fact]
         public void JToken_chained_At_returns_token()
         {
             var j = JObject.Parse(@"{
@@ -57,15 +57,15 @@ namespace PasswordManagerAccess.Test.OpVault
             var k2 = j["k1"]["k2"];
             var k3 = j["k1"]["k2"]["k3"];
 
-            Assert.That(j.At("k1"), Is.EqualTo(k1));
-            Assert.That(j.At("k1").At("k2"), Is.EqualTo(k2));
-            Assert.That(j.At("k1").At("k2").At("k3"), Is.EqualTo(k3));
+            Assert.Equal(k1, j.At("k1"));
+            Assert.Equal(k2, j.At("k1").At("k2"));
+            Assert.Equal(k3, j.At("k1").At("k2").At("k3"));
 
-            Assert.That(j.At("k1").At("k2/k3"), Is.EqualTo(k3));
-            Assert.That(j.At("k1/k2").At("k3"), Is.EqualTo(k3));
+            Assert.Equal(k3, j.At("k1").At("k2/k3"));
+            Assert.Equal(k3, j.At("k1/k2").At("k3"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_At_throws_on_invalid_path()
         {
             var j = JObject.Parse(@"{
@@ -83,7 +83,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyAtThrows(j, "k3/k33/k333/i333");
         }
 
-        [Test]
+        [Fact]
         public void JToken_At_throws_on_non_objects()
         {
             var j = JObject.Parse(@"{
@@ -97,7 +97,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyAtThrows(j, "k3/k33/k333");
         }
 
-        [Test]
+        [Fact]
         public void JToken_At_returns_default_value_on_invalid_path()
         {
             var j = JObject.Parse(@"{
@@ -115,7 +115,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyAtReturnsDefault(j, "k3/k33/k333/i333");
         }
 
-        [Test]
+        [Fact]
         public void JToken_StringAt_returns_string()
         {
             var j = JObject.Parse(@"{
@@ -124,12 +124,12 @@ namespace PasswordManagerAccess.Test.OpVault
                 'k3': {'k33': {'k333': 'v333'}}
             }");
 
-            Assert.That(j.StringAt("k1"), Is.EqualTo("v1"));
-            Assert.That(j.StringAt("k2/k22"), Is.EqualTo("v22"));
-            Assert.That(j.StringAt("k3/k33/k333"), Is.EqualTo("v333"));
+            Assert.Equal("v1", j.StringAt("k1"));
+            Assert.Equal("v22", j.StringAt("k2/k22"));
+            Assert.Equal("v333", j.StringAt("k3/k33/k333"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_StringAt_throws_on_non_stings()
         {
             var j = JObject.Parse(@"{
@@ -147,7 +147,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyStringAtThrows(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_StringAt_returns_default_value_on_non_strings()
         {
             var j = JObject.Parse(@"{
@@ -165,7 +165,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyStringAtReturnsDefault(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_IntAt_returns_int()
         {
             var j = JObject.Parse(@"{
@@ -174,12 +174,12 @@ namespace PasswordManagerAccess.Test.OpVault
                 'k3': {'k33': {'k333': 1337}}
             }");
 
-            Assert.That(j.IntAt("k1"), Is.EqualTo(13));
-            Assert.That(j.IntAt("k2/k22"), Is.EqualTo(42));
-            Assert.That(j.IntAt("k3/k33/k333"), Is.EqualTo(1337));
+            Assert.Equal(13, j.IntAt("k1"));
+            Assert.Equal(42, j.IntAt("k2/k22"));
+            Assert.Equal(1337, j.IntAt("k3/k33/k333"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_IntAt_throws_on_non_ints()
         {
             var j = JObject.Parse(@"{
@@ -197,7 +197,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyIntAtThrows(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_IntAtOrNull_returns_default_value_on_non_ints()
         {
             var j = JObject.Parse(@"{
@@ -215,7 +215,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyIntAtReturnsDefault(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_BoolAt_returns_bools()
         {
             var j = JObject.Parse(@"{
@@ -224,12 +224,12 @@ namespace PasswordManagerAccess.Test.OpVault
                 'k3': {'k33': {'k333': true}}
             }");
 
-            Assert.That(j.BoolAt("k1"), Is.EqualTo(true));
-            Assert.That(j.BoolAt("k2/k22"), Is.EqualTo(false));
-            Assert.That(j.BoolAt("k3/k33/k333"), Is.EqualTo(true));
+            Assert.True(j.BoolAt("k1"));
+            Assert.False(j.BoolAt("k2/k22"));
+            Assert.True(j.BoolAt("k3/k33/k333"));
         }
 
-        [Test]
+        [Fact]
         public void JToken_BoolAt_throws_on_non_bools()
         {
             var j = JObject.Parse(@"{
@@ -247,7 +247,7 @@ namespace PasswordManagerAccess.Test.OpVault
             VerifyBoolAtThrows(j, "k5");
         }
 
-        [Test]
+        [Fact]
         public void JToken_BoolAtOrNull_returns_null_on_non_bools()
         {
             var j = JObject.Parse(@"{
@@ -303,29 +303,29 @@ namespace PasswordManagerAccess.Test.OpVault
 
         private static void VerifyAccessThrows(JToken token, string path, Action<JToken, string> access)
         {
-            Assert.That(() => access(token, path), Throws.TypeOf<JTokenAccessException>());
+            Assert.Throws<JTokenAccessException>(() => access(token, path));
         }
 
         private static void VerifyAtReturnsDefault(JToken token, string path)
         {
             var dv = new JArray();
-            Assert.That(token.At(path, dv), Is.SameAs(dv));
+            Assert.Same(dv, token.At(path, dv));
         }
 
         private static void VerifyStringAtReturnsDefault(JToken token, string path)
         {
-            Assert.That(token.StringAt(path, "default"), Is.EqualTo("default"));
+            Assert.Equal("default", token.StringAt(path, "default"));
         }
 
         private static void VerifyIntAtReturnsDefault(JToken token, string path)
         {
-            Assert.That(token.IntAt(path, 1337), Is.EqualTo(1337));
+            Assert.Equal(1337, token.IntAt(path, 1337));
         }
 
         private static void VerifyBoolAtReturnsDefault(JToken token, string path)
         {
-            Assert.That(token.BoolAt(path, false), Is.EqualTo(false));
-            Assert.That(token.BoolAt(path, true), Is.EqualTo(true));
+            Assert.False(token.BoolAt(path, false));
+            Assert.True(token.BoolAt(path, true));
         }
     }
 }

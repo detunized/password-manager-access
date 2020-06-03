@@ -1,29 +1,29 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.OpVault;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.OpVault
 {
-    [TestFixture]
     public class KeyMacTest
     {
-        [Test]
+        [Fact]
         public void KeyMac_created_from_bytes()
         {
             var key = new KeyMac(Buffer.Decode64());
 
-            Assert.That(key.Key, Is.EqualTo(Key.Decode64()));
-            Assert.That(key.MacKey, Is.EqualTo(MacKey.Decode64()));
+            Assert.Equal(Key.Decode64(), key.Key);
+            Assert.Equal(MacKey.Decode64(), key.MacKey);
         }
 
-        [Test]
+        [Fact]
         public void KeyMac_created_from_base64()
         {
             var key = new KeyMac(Buffer);
 
-            Assert.That(key.Key, Is.EqualTo(Key.Decode64()));
-            Assert.That(key.MacKey, Is.EqualTo(MacKey.Decode64()));
+            Assert.Equal(Key.Decode64(), key.Key);
+            Assert.Equal(MacKey.Decode64(), key.MacKey);
         }
 
         //

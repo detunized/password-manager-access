@@ -1,50 +1,50 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.OpVault;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.OpVault
 {
-    [TestFixture]
     public class Opdata01Test
     {
-        [Test]
+        [Fact]
         public void Decrypt_base64_returns_plaintext()
         {
-            Assert.That(Opdata01.Decrypt(TestBlob, TestKey).Length, Is.EqualTo(256));
+            Assert.Equal(256, Opdata01.Decrypt(TestBlob, TestKey).Length);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_bytes_returns_plaintext()
         {
-            Assert.That(Opdata01.Decrypt(TestBlob.Decode64(), TestKey).Length, Is.EqualTo(256));
+            Assert.Equal(256, Opdata01.Decrypt(TestBlob.Decode64(), TestKey).Length);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_short_input()
         {
-            Assert.That(() => Opdata01.Decrypt(new byte[63], TestKey),
-                        ExceptionsTest.ThrowsCorruptedWithMessage("too short"));
+            var e = Assert.Throws<ParseException>(() => Opdata01.Decrypt(new byte[63], TestKey));
+            Assert.Contains("too short", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_invalid_signature()
         {
             var blob = TestBlob.Decode64();
             blob[0] += 1;
 
-            Assert.That(() => Opdata01.Decrypt(blob, TestKey),
-                        ExceptionsTest.ThrowsCorruptedWithMessage("invalid signature"));
+            var e = Assert.Throws<ParseException>(() => Opdata01.Decrypt(blob, TestKey));
+            Assert.Contains("invalid signature", e.Message);
         }
 
-        [Test]
+        [Fact]
         public void Decrypt_throws_on_mismatching_tag()
         {
             var blob = TestBlob.Decode64();
             blob[blob.Length - 1] += 1;
 
-            Assert.That(() => Opdata01.Decrypt(blob, TestKey),
-                        ExceptionsTest.ThrowsCorruptedWithMessage("tag doesn't match"));
+            var e = Assert.Throws<ParseException>(() => Opdata01.Decrypt(blob, TestKey));
+            Assert.Contains("tag doesn't match", e.Message);
         }
 
         //

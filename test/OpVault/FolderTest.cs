@@ -1,14 +1,14 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using NUnit.Framework;
+using PasswordManagerAccess.OpVault;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.OpVault
 {
-    [TestFixture]
     public class FolderTest
     {
-        [Test]
+        [Fact]
         public void Folder_properties_are_set()
         {
             var id = "id";
@@ -16,8 +16,8 @@ namespace PasswordManagerAccess.Test.OpVault
 
             var folder = new Folder(id, name);
 
-            Assert.That(folder.Id, Is.EqualTo(id));
-            Assert.That(folder.Name, Is.EqualTo(name));
+            Assert.Equal(id, folder.Id);
+            Assert.Equal(name, folder.Name);
         }
     }
 }
