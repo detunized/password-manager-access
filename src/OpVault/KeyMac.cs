@@ -8,7 +8,7 @@ using PasswordManagerAccess.Common;
 namespace PasswordManagerAccess.OpVault
 {
     // Represents a key and [H]MAC key pair. They always go together since all the encryption is
-    // authenticated: every times something is encrypted a MAC/tag is added.
+    // authenticated: every time something is encrypted a MAC/tag is added.
     internal class KeyMac
     {
         public readonly byte[] Key;

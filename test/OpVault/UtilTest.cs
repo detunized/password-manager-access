@@ -24,7 +24,11 @@ namespace PasswordManagerAccess.Test.OpVault
         public void DecryptAes_returns_plaintext_without_padding()
         {
             // Generated with Ruby/openssl
-            Assert.Equal("decrypted data!!".ToBytes(), Util.DecryptAes("yNVOKI5bgIJ0lPdVszvlEQ==".Decode64(), "iviviviviviviviv".ToBytes(), TestKey));
+            var plaintext = Util.DecryptAes("yNVOKI5bgIJ0lPdVszvlEQ==".Decode64(),
+                                            "iviviviviviviviv".ToBytes(),
+                                            TestKey);
+
+            Assert.Equal("decrypted data!!".ToBytes(), plaintext);
         }
 
         //
