@@ -197,7 +197,7 @@ namespace PasswordManagerAccess.Bitwarden
             var clientData = $"{{\"challenge\":\"{challenge}\",\"origin\":\"{appId}\",\"typ\":\"navigator.id.getAssertion\"}}";
 
             var signature = U2fWin10.U2f.Sign(appId, clientData.ToBytes(), keyHandle.Decode64Loose());
-            if (signature == null || signature.Length == 0)
+            if (signature.IsNullOrEmpty())
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             // This is the 2FA token that is expected by the BW server
