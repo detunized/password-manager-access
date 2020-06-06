@@ -139,7 +139,7 @@ namespace PasswordManagerAccess.Bitwarden
             ui.Close();
 
             if (passcode == null)
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+                throw MakeCancelledMfaError();
 
             var secondFactorResponse = RequestAuthToken(username,
                                                         passwordHash,
@@ -198,7 +198,7 @@ namespace PasswordManagerAccess.Bitwarden
 
             var signature = U2fWin10.U2f.Sign(appId, clientData.ToBytes(), keyHandle.Decode64Loose());
             if (signature.IsNullOrEmpty())
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+                throw MakeCancelledMfaError();
 
             // This is the 2FA token that is expected by the BW server
             var token = JsonConvert.SerializeObject(new
@@ -258,23 +258,16 @@ namespace PasswordManagerAccess.Bitwarden
             // Cancel is always available
             availableMethods.Add(MfaMethod.Cancel);
 
-            switch (ui.ChooseMfaMethod(availableMethods.ToArray()))
+            return ui.ChooseMfaMethod(availableMethods.ToArray()) switch
             {
-            case MfaMethod.Cancel:
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
-            case MfaMethod.GoogleAuth:
-                return Response.SecondFactorMethod.GoogleAuth;
-            case MfaMethod.Email:
-                return Response.SecondFactorMethod.Email;
-            case MfaMethod.Duo:
-                return Response.SecondFactorMethod.Duo;
-            case MfaMethod.YubiKey:
-                return Response.SecondFactorMethod.YubiKey;
-            case MfaMethod.U2f:
-                return Response.SecondFactorMethod.U2f;
-            default:
-                throw new InternalErrorException("The user responded with invalid input");
-            }
+                MfaMethod.Cancel => throw MakeCancelledMfaError(),
+                MfaMethod.GoogleAuth => Response.SecondFactorMethod.GoogleAuth,
+                MfaMethod.Email => Response.SecondFactorMethod.Email,
+                MfaMethod.Duo => Response.SecondFactorMethod.Duo,
+                MfaMethod.YubiKey => Response.SecondFactorMethod.YubiKey,
+                MfaMethod.U2f => Response.SecondFactorMethod.U2f,
+                _ => throw new InternalErrorException("The user responded with invalid input")
+            };
         }
 
         internal struct TokenOrSecondFactor
@@ -547,6 +540,11 @@ namespace PasswordManagerAccess.Bitwarden
             {
                 return null;
             }
+        }
+
+        internal static CanceledMultiFactorException MakeCancelledMfaError()
+        {
+            return new CanceledMultiFactorException("Second factor step is canceled by the user");
         }
 
         //
