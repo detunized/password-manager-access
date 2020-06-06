@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.ComponentModel;
 using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.OpVault.Model
@@ -20,4 +21,21 @@ namespace PasswordManagerAccess.OpVault.Model
         public readonly string OverviewKey;
     }
 
+    internal class Folder
+    {
+        [JsonProperty("uuid", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty("parent")]
+        public readonly string ParentId;
+
+        [JsonProperty("overview", Required = Required.Always)]
+        public readonly string Overview;
+
+        [JsonProperty("trashed",
+                      Required = Required.DisallowNull,
+                      DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public readonly bool Deleted;
+    }
 }

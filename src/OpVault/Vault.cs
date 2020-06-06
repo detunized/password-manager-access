@@ -48,11 +48,11 @@ namespace PasswordManagerAccess.OpVault
             return LoadJsAsJson(MakeFilename(path, "profile.js"), "var profile=", ";").ToObject<M.Profile>();
         }
 
-        internal static JObject[] LoadFolders(string path)
+        internal static M.Folder[] LoadFolders(string path)
         {
             return LoadJsAsJson(MakeFilename(path, "folders.js"), "loadFolders(", ");")
                 .Values()
-                .Select(i => (JObject)i)
+                .Select(i => i.ToObject<M.Folder>())
                 .ToArray();
         }
 
@@ -147,10 +147,10 @@ namespace PasswordManagerAccess.OpVault
             return new KeyMac(Crypto.Sha512(raw));
         }
 
-        internal static Dictionary<string, Folder> DecryptFolders(JObject[] encryptedFolders, KeyMac overviewKey)
+        internal static Dictionary<string, Folder> DecryptFolders(M.Folder[] encryptedFolders, KeyMac overviewKey)
         {
-            var activeFolders = encryptedFolders.Where(i => !i.BoolAt("trashed", false)).ToArray();
-            var childToParent = activeFolders.ToDictionary(i => i.StringAt("uuid"), i => i.StringAt("parent", ""));
+            var activeFolders = encryptedFolders.Where(i => !i.Deleted).ToArray();
+            var childToParent = activeFolders.ToDictionary(i => i.Id, i => i.ParentId ?? "");
             var folders = activeFolders.Select(i => DecryptFolder(i, overviewKey)).ToDictionary(i => i.Id);
 
             // Assign parent folders
@@ -176,10 +176,10 @@ namespace PasswordManagerAccess.OpVault
                 .ToArray();
         }
 
-        private static Folder DecryptFolder(JObject folder, KeyMac overviewKey)
+        private static Folder DecryptFolder(M.Folder folder, KeyMac overviewKey)
         {
-            var overview = DecryptJson(folder.StringAt("overview"), overviewKey);
-            return new Folder(folder.StringAt("uuid"), overview.StringAt("title"));
+            var overview = DecryptJson(folder.Overview, overviewKey);
+            return new Folder(folder.Id, overview.StringAt("title"));
         }
 
         private static Account DecryptAccount(JObject encryptedItem,
