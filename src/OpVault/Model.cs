@@ -44,4 +44,31 @@ namespace PasswordManagerAccess.OpVault.Model
         [JsonProperty("title", Required = Required.Always)]
         public readonly string Title;
     }
+
+    internal class Item
+    {
+        [JsonProperty("uuid", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty("category")]
+        public readonly string Category;
+
+        [JsonProperty("folder")]
+        public readonly string FolderId;
+
+        [JsonProperty("k", Required = Required.Always)]
+        public readonly string Key;
+
+        [JsonProperty("o", Required = Required.Always)]
+        public readonly string Overview;
+
+        [JsonProperty("d", Required = Required.Always)]
+        public readonly string Details;
+
+        [JsonProperty("trashed",
+                      Required = Required.DisallowNull,
+                      DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public readonly bool Deleted;
+    }
 }

@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
@@ -13,6 +12,7 @@ namespace PasswordManagerAccess.OpVault
 {
     using M = Model;
 
+    // TODO: Get rid of ToObject<> everywhere, deserialize directly!
     public static class Vault
     {
         public static Account[] Open(string path, string password)
@@ -56,16 +56,16 @@ namespace PasswordManagerAccess.OpVault
                 .ToArray();
         }
 
-        internal static JObject[] LoadItems(string path)
+        internal static M.Item[] LoadItems(string path)
         {
-            var items = new List<JObject>();
+            var items = new List<M.Item>();
             foreach (var c in "0123456789ABCDEF")
             {
                 var filename = MakeFilename(path, $"band_{c}.js");
                 if (!File.Exists(filename))
                     continue;
 
-                items.AddRange(LoadBand(filename).Values().Select(i => (JObject)i));
+                items.AddRange(LoadBand(filename).Values().Select(i => i.ToObject<M.Item>()));
             }
 
             return items.ToArray();
@@ -164,14 +164,14 @@ namespace PasswordManagerAccess.OpVault
             return folders;
         }
 
-        internal static Account[] DecryptAccounts(JObject[] encryptedItems,
+        internal static Account[] DecryptAccounts(M.Item[] encryptedItems,
                                                   KeyMac masterKey,
                                                   KeyMac overviewKey,
                                                   Dictionary<string, Folder> folders)
         {
             return encryptedItems
-                .Where(i => !i.BoolAt("trashed", false))
-                .Where(i => i.StringAt("category", "") == "001")
+                .Where(i => !i.Deleted)
+                .Where(i => i.Category == "001")
                 .Select(i => DecryptAccount(i, masterKey, overviewKey, folders))
                 .ToArray();
         }
@@ -182,61 +182,32 @@ namespace PasswordManagerAccess.OpVault
             return new Folder(folder.Id, overview.Title);
         }
 
-        private static Account DecryptAccount(JObject encryptedItem,
+        private static Account DecryptAccount(M.Item encryptedItem,
                                               KeyMac masterKey,
                                               KeyMac overviewKey,
                                               Dictionary<string, Folder> folders)
         {
-            VerifyAccountTag(encryptedItem, overviewKey);
-
             var overview = DecryptAccountOverview(encryptedItem, overviewKey);
             var accountKey = DecryptAccountKey(encryptedItem, masterKey);
             var details = DecryptAccountDetails(encryptedItem, accountKey);
 
-            // Folder is optional. Use null to mark a non-existent folder.
-            folders.TryGetValue(encryptedItem.StringAt("folder", ""), out var folder);
-
-            return new Account(id: encryptedItem.StringAt("uuid", ""),
+            return new Account(id: encryptedItem.Id,
                                name: overview.StringAt("title", ""),
                                username: FindDetailField(details, "username"),
                                password: FindDetailField(details, "password"),
                                url: overview.StringAt("url", ""),
                                note: details.StringAt("notesPlain", ""),
-                               folder: folder ?? Folder.None);
+                               folder: folders.GetOrDefault(encryptedItem.FolderId ?? "", Folder.None));
         }
 
-        private static void VerifyAccountTag(JObject encryptedItem, KeyMac key)
+        private static JObject DecryptAccountOverview(M.Item encryptedItem, KeyMac overviewKey)
         {
-            // We need to hash everything but the "hmac" field
-            var properties = encryptedItem
-                .Properties()
-                .Where(i => i.Name != "hmac")
-                .OrderBy(i => i.Name);
-
-            // Join all the properties in the alphabetical oder into a flat string
-            var hashedContent = new StringBuilder();
-            foreach (var i in properties)
-            {
-                hashedContent.Append(i.Name);
-                hashedContent.Append(i.Value);
-            }
-
-            // Check against the stored HMAC/tag
-            var storedTag = encryptedItem.StringAt("hmac").Decode64();
-            var computedTag = Crypto.HmacSha256(hashedContent.ToString().ToBytes(), key.MacKey);
-
-            if (!computedTag.SequenceEqual(storedTag))
-                throw CorruptedError("tag doesn't match");
+            return DecryptJson(encryptedItem.Overview, overviewKey);
         }
 
-        private static JObject DecryptAccountOverview(JObject encryptedItem, KeyMac overviewKey)
+        private static KeyMac DecryptAccountKey(M.Item encryptedItem, KeyMac masterKey)
         {
-            return DecryptJson(encryptedItem.StringAt("o"), overviewKey);
-        }
-
-        private static KeyMac DecryptAccountKey(JObject encryptedItem, KeyMac masterKey)
-        {
-            var raw = encryptedItem.StringAt("k").Decode64();
+            var raw = encryptedItem.Key.Decode64();
             if (raw.Length != 112)
                 throw CorruptedError("key has invalid size");
 
@@ -256,9 +227,9 @@ namespace PasswordManagerAccess.OpVault
             return new KeyMac(Util.DecryptAes(ciphertext, iv, masterKey));
         }
 
-        private static JObject DecryptAccountDetails(JObject encryptedItem, KeyMac accountKey)
+        private static JObject DecryptAccountDetails(M.Item encryptedItem, KeyMac accountKey)
         {
-            return DecryptJson(encryptedItem.StringAt("d"), accountKey);
+            return DecryptJson(encryptedItem.Details, accountKey);
         }
 
         private static JObject DecryptJson(string encryptedJsonBase64, KeyMac key)
