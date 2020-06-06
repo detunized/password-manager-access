@@ -20,13 +20,13 @@ namespace PasswordManagerAccess.OpVault
         public static byte[] Decrypt(byte[] blob, KeyMac key)
         {
             if (blob.Length < 64)
-                throw CurruptedError("too short");
+                throw CorruptedError("too short");
 
             using (var io = new BinaryReader(new MemoryStream(blob)))
             {
                 var magic = io.ReadBytes(8);
                 if (!magic.SequenceEqual("opdata01".ToBytes()))
-                    throw CurruptedError("invalid signature");
+                    throw CorruptedError("invalid signature");
 
                 // TODO: Sloppy! Assume 2G should be enough.
                 // TODO: Should be little endian! This will not work on big endian platform!
@@ -35,7 +35,7 @@ namespace PasswordManagerAccess.OpVault
                 var padding = 16 - length % 16;
 
                 if (blob.Length != 32 + padding + length + 32)
-                    throw CurruptedError("invalid length");
+                    throw CorruptedError("invalid length");
 
                 var ciphertext = io.ReadBytes(padding + length);
                 var storedTag = io.ReadBytes(32);
@@ -46,14 +46,14 @@ namespace PasswordManagerAccess.OpVault
 
                 var computedTag = Crypto.HmacSha256(hashedContent, key.MacKey);
                 if (!computedTag.SequenceEqual(storedTag))
-                    throw CurruptedError("tag doesn't match");
+                    throw CorruptedError("tag doesn't match");
 
                 var plaintext = Util.DecryptAes(ciphertext, iv, key);
                 return plaintext.Skip(padding).Take(length).ToArray();
             }
         }
 
-        private static InternalErrorException CurruptedError(string message)
+        private static InternalErrorException CorruptedError(string message)
         {
             return new InternalErrorException($"Opdata01 container is corrupted: {message}");
         }
