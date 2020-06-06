@@ -194,8 +194,7 @@ namespace PasswordManagerAccess.OpVault
             var details = DecryptAccountDetails(encryptedItem, accountKey);
 
             // Folder is optional. Use null to mark a non-existent folder.
-            Folder folder;
-            folders.TryGetValue(encryptedItem.StringAt("folder", ""), out folder);
+            folders.TryGetValue(encryptedItem.StringAt("folder", ""), out var folder);
 
             return new Account(id: encryptedItem.StringAt("uuid", ""),
                                name: overview.StringAt("title", ""),
