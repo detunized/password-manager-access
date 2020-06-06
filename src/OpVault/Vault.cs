@@ -59,7 +59,7 @@ namespace PasswordManagerAccess.OpVault
             var items = new List<JObject>();
             foreach (var c in "0123456789ABCDEF")
             {
-                var filename = MakeFilename(path, string.Format("band_{0}.js", c));
+                var filename = MakeFilename(path, $"band_{c}.js");
                 if (!File.Exists(filename))
                     continue;
 

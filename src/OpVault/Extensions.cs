@@ -19,12 +19,11 @@ namespace PasswordManagerAccess.OpVault
             foreach (var i in path.Split('/'))
             {
                 if (c.Type != JTokenType.Object)
-                    throw new JTokenAccessException(
-                        string.Format("Expected nested objects at '{0}'", path));
+                    throw new JTokenAccessException($"Expected nested objects at '{path}'");
 
                 c = c[i];
                 if (c == null)
-                    throw new JTokenAccessException(string.Format("Path '{0}' doesn't exist", path));
+                    throw new JTokenAccessException($"Path '{path}' doesn't exist");
             }
 
             return c;
@@ -46,7 +45,7 @@ namespace PasswordManagerAccess.OpVault
         {
             var s = j.At(path);
             if (s.Type != JTokenType.String)
-                throw new JTokenAccessException(string.Format("Expected a string at '{0}'", path));
+                throw new JTokenAccessException($"Expected a string at '{path}'");
 
             return (string)s;
         }
@@ -67,7 +66,7 @@ namespace PasswordManagerAccess.OpVault
         {
             var i = j.At(path);
             if (i.Type != JTokenType.Integer)
-                throw new JTokenAccessException(string.Format("Expected an integer at '{0}'", path));
+                throw new JTokenAccessException($"Expected an integer at '{path}'");
 
             return (int)i;
         }
@@ -88,7 +87,7 @@ namespace PasswordManagerAccess.OpVault
         {
             var b = j.At(path);
             if (b.Type != JTokenType.Boolean)
-                throw new JTokenAccessException(string.Format("Expected a boolean at '{0}'", path));
+                throw new JTokenAccessException($"Expected a boolean at '{path}'");
 
             return (bool)b;
         }
