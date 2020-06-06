@@ -22,35 +22,33 @@ namespace PasswordManagerAccess.OpVault
             if (blob.Length < 64)
                 throw CorruptedError("too short");
 
-            using (var io = new BinaryReader(new MemoryStream(blob)))
-            {
-                var magic = io.ReadBytes(8);
-                if (!magic.SequenceEqual("opdata01".ToBytes()))
-                    throw CorruptedError("invalid signature");
+            using var io = new BinaryReader(new MemoryStream(blob));
+            var magic = io.ReadBytes(8);
+            if (!magic.SequenceEqual("opdata01".ToBytes()))
+                throw CorruptedError("invalid signature");
 
-                // TODO: Sloppy! Assume 2G should be enough.
-                // TODO: Should be little endian! This will not work on big endian platform!
-                var length = (int)io.ReadInt64();
-                var iv = io.ReadBytes(16);
-                var padding = 16 - length % 16;
+            // TODO: Sloppy! Assume 2G should be enough.
+            // TODO: Should be little endian! This will not work on big endian platform!
+            var length = (int)io.ReadInt64();
+            var iv = io.ReadBytes(16);
+            var padding = 16 - length % 16;
 
-                if (blob.Length != 32 + padding + length + 32)
-                    throw CorruptedError("invalid length");
+            if (blob.Length != 32 + padding + length + 32)
+                throw CorruptedError("invalid length");
 
-                var ciphertext = io.ReadBytes(padding + length);
-                var storedTag = io.ReadBytes(32);
+            var ciphertext = io.ReadBytes(padding + length);
+            var storedTag = io.ReadBytes(32);
 
-                // Rewind and reread everything to the tag
-                io.BaseStream.Seek(0, SeekOrigin.Begin);
-                var hashedContent = io.ReadBytes(32 + padding + length);
+            // Rewind and reread everything to the tag
+            io.BaseStream.Seek(0, SeekOrigin.Begin);
+            var hashedContent = io.ReadBytes(32 + padding + length);
 
-                var computedTag = Crypto.HmacSha256(hashedContent, key.MacKey);
-                if (!computedTag.SequenceEqual(storedTag))
-                    throw CorruptedError("tag doesn't match");
+            var computedTag = Crypto.HmacSha256(hashedContent, key.MacKey);
+            if (!computedTag.SequenceEqual(storedTag))
+                throw CorruptedError("tag doesn't match");
 
-                var plaintext = Util.DecryptAes(ciphertext, iv, key);
-                return plaintext.Skip(padding).Take(length).ToArray();
-            }
+            var plaintext = Util.DecryptAes(ciphertext, iv, key);
+            return plaintext.Skip(padding).Take(length).ToArray();
         }
 
         private static InternalErrorException CorruptedError(string message)

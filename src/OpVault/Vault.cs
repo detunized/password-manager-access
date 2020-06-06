@@ -241,22 +241,20 @@ namespace PasswordManagerAccess.OpVault
             if (raw.Length != 112)
                 throw CorruptedError("key has invalid size");
 
-            using (var io = new BinaryReader(new MemoryStream(raw, false)))
-            {
-                var iv = io.ReadBytes(16);
-                var ciphertext = io.ReadBytes(64);
-                var storedTag = io.ReadBytes(32);
+            using var io = new BinaryReader(new MemoryStream(raw, false));
+            var iv = io.ReadBytes(16);
+            var ciphertext = io.ReadBytes(64);
+            var storedTag = io.ReadBytes(32);
 
-                // Rewind and reread everything to the tag
-                io.BaseStream.Seek(0, SeekOrigin.Begin);
-                var hashedContent = io.ReadBytes(80);
+            // Rewind and reread everything to the tag
+            io.BaseStream.Seek(0, SeekOrigin.Begin);
+            var hashedContent = io.ReadBytes(80);
 
-                var computedTag = Crypto.HmacSha256(hashedContent, masterKey.MacKey);
-                if (!computedTag.SequenceEqual(storedTag))
-                    throw CorruptedError("key tag doesn't match");
+            var computedTag = Crypto.HmacSha256(hashedContent, masterKey.MacKey);
+            if (!computedTag.SequenceEqual(storedTag))
+                throw CorruptedError("key tag doesn't match");
 
-                return new KeyMac(Util.DecryptAes(ciphertext, iv, masterKey));
-            }
+            return new KeyMac(Util.DecryptAes(ciphertext, iv, masterKey));
         }
 
         private static JObject DecryptAccountDetails(JObject encryptedItem, KeyMac accountKey)
