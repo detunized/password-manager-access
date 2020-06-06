@@ -30,24 +30,14 @@ namespace PasswordManagerAccess.Bitwarden
             var id = reader.ReadByte();
             var tag = id & 0x1F;
 
-            Kind kind;
-            switch (tag)
+            Kind kind = tag switch
             {
-            case 2:
-                kind = Kind.Integer;
-                break;
-            case 4:
-                kind = Kind.OctetString;
-                break;
-            case 5:
-                kind = Kind.Null;
-                break;
-            case 16:
-                kind = Kind.Sequence;
-                break;
-            default:
-                throw new InternalErrorException($"Unknown ASN.1 tag {tag}");
-            }
+                2 => Kind.Integer,
+                4 => Kind.OctetString,
+                5 => Kind.Null,
+                16 => Kind.Sequence,
+                _ => throw new InternalErrorException($"Unknown ASN.1 tag {tag}")
+            };
 
             int size = reader.ReadByte();
             if ((size & 0x80) != 0)

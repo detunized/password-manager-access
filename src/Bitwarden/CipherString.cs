@@ -98,19 +98,14 @@ namespace PasswordManagerAccess.Bitwarden
             }
 
             // The mac is ignored in the original implementation and we only keep it to pass the validation.
-            switch (mode)
+            mac = mode switch
             {
-            case CipherMode.Rsa2048OaepSha256:
-            case CipherMode.Rsa2048OaepSha1:
-                mac = new byte[0];
-                break;
-            case CipherMode.Rsa2048OaepSha256HmacSha256:
-            case CipherMode.Rsa2048OaepSha1HmacSha256:
-                mac = new byte[32];
-                break;
-            default:
-                throw MakeError("Invalid RSA cipher string format");
-            }
+                CipherMode.Rsa2048OaepSha256 => new byte[0],
+                CipherMode.Rsa2048OaepSha1 => new byte[0],
+                CipherMode.Rsa2048OaepSha256HmacSha256 => new byte[32],
+                CipherMode.Rsa2048OaepSha1HmacSha256 => new byte[32],
+                _ => throw MakeError("Invalid RSA cipher string format")
+            };
 
             return new CipherString(mode, new byte[0], ciphertext.Decode64(), mac);
         }
@@ -127,25 +122,17 @@ namespace PasswordManagerAccess.Bitwarden
 
         public byte[] Decrypt(byte[] key)
         {
-            switch (Mode)
+            return Mode switch
             {
-            case CipherMode.Aes256Cbc:
-                return DecryptAes256Cbc(key);
-            case CipherMode.Aes128CbcHmacSha256:
-                return DecryptAes128CbcHmacSha256(key);
-            case CipherMode.Aes256CbcHmacSha256:
-                return DecryptAes256CbcHmacSha256(key);
-            case CipherMode.Rsa2048OaepSha256:
-                return DecryptRsa2048OaepSha256(key);
-            case CipherMode.Rsa2048OaepSha1:
-                return DecryptRsa2048OaepSha1(key);
-            case CipherMode.Rsa2048OaepSha256HmacSha256:
-                return DecryptRsa2048OaepSha256HmacSha256(key);
-            case CipherMode.Rsa2048OaepSha1HmacSha256:
-                return DecryptRsa2048OaepSha1HmacSha256(key);
-            default:
-                throw MakeError($"Invalid cipher mode: {Mode}");
-            }
+                CipherMode.Aes256Cbc => DecryptAes256Cbc(key),
+                CipherMode.Aes128CbcHmacSha256 => DecryptAes128CbcHmacSha256(key),
+                CipherMode.Aes256CbcHmacSha256 => DecryptAes256CbcHmacSha256(key),
+                CipherMode.Rsa2048OaepSha256 => DecryptRsa2048OaepSha256(key),
+                CipherMode.Rsa2048OaepSha1 => DecryptRsa2048OaepSha1(key),
+                CipherMode.Rsa2048OaepSha256HmacSha256 => DecryptRsa2048OaepSha256HmacSha256(key),
+                CipherMode.Rsa2048OaepSha1HmacSha256 => DecryptRsa2048OaepSha1HmacSha256(key),
+                _ => throw MakeError($"Invalid cipher mode: {Mode}")
+            };
         }
 
         //
@@ -154,25 +141,17 @@ namespace PasswordManagerAccess.Bitwarden
 
         private static CipherMode ParseCipherMode(string s)
         {
-            switch (s)
+            return s switch
             {
-            case "0":
-                return CipherMode.Aes256Cbc;
-            case "1":
-                return CipherMode.Aes128CbcHmacSha256;
-            case "2":
-                return CipherMode.Aes256CbcHmacSha256;
-            case "3":
-                return CipherMode.Rsa2048OaepSha256;
-            case "4":
-                return CipherMode.Rsa2048OaepSha1;
-            case "5":
-                return CipherMode.Rsa2048OaepSha256HmacSha256;
-            case "6":
-                return CipherMode.Rsa2048OaepSha1HmacSha256;
-            }
-
-            throw MakeError($"Invalid/unsupported cipher mode: {s}");
+                "0" => CipherMode.Aes256Cbc,
+                "1" => CipherMode.Aes128CbcHmacSha256,
+                "2" => CipherMode.Aes256CbcHmacSha256,
+                "3" => CipherMode.Rsa2048OaepSha256,
+                "4" => CipherMode.Rsa2048OaepSha1,
+                "5" => CipherMode.Rsa2048OaepSha256HmacSha256,
+                "6" => CipherMode.Rsa2048OaepSha1HmacSha256,
+                _ => throw MakeError($"Invalid/unsupported cipher mode: {s}")
+            };
         }
 
         private static void Validate(CipherMode mode, byte[] iv, byte[] ciphertext, byte[] mac)
