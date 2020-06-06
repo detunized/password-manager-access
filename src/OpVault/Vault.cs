@@ -178,8 +178,8 @@ namespace PasswordManagerAccess.OpVault
 
         private static Folder DecryptFolder(M.Folder folder, KeyMac overviewKey)
         {
-            var overview = DecryptJson(folder.Overview, overviewKey);
-            return new Folder(folder.Id, overview.StringAt("title"));
+            var overview = DecryptJson(folder.Overview, overviewKey).ToObject<M.FolderOverview>();
+            return new Folder(folder.Id, overview.Title);
         }
 
         private static Account DecryptAccount(JObject encryptedItem,

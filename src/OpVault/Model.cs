@@ -38,4 +38,10 @@ namespace PasswordManagerAccess.OpVault.Model
         [DefaultValue(false)]
         public readonly bool Deleted;
     }
+
+    internal class FolderOverview
+    {
+        [JsonProperty("title", Required = Required.Always)]
+        public readonly string Title;
+    }
 }
