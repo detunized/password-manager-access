@@ -51,7 +51,8 @@ namespace PasswordManagerAccess.Test.OpVault
         public void LoadProfile_reads_profile_js()
         {
             var profile = Vault.LoadProfile(TestVaultPath);
-            Assert.Equal("714A14D7017048CC9577AD050FC9C6CA", (string)profile["uuid"]);
+            Assert.Equal("pzJ5y/CiCeU8Sbo8+k4/zg==", profile.Salt);
+            Assert.Equal(40000, profile.Iterations);
         }
 
         [Fact]

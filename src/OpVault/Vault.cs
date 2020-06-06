@@ -11,7 +11,9 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OpVault
 {
-    public class Vault
+    using M = Model;
+
+    public static class Vault
     {
         public static Account[] Open(string path, string password)
         {
@@ -41,9 +43,9 @@ namespace PasswordManagerAccess.OpVault
             }
         }
 
-        internal static JObject LoadProfile(string path)
+        internal static M.Profile LoadProfile(string path)
         {
-            return LoadJsAsJson(MakeFilename(path, "profile.js"), "var profile=", ";");
+            return LoadJsAsJson(MakeFilename(path, "profile.js"), "var profile=", ";").ToObject<M.Profile>();
         }
 
         internal static JObject[] LoadFolders(string path)
@@ -112,18 +114,16 @@ namespace PasswordManagerAccess.OpVault
             return path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
         }
 
-        internal static KeyMac DeriveKek(JObject profile, string password)
+        internal static KeyMac DeriveKek(M.Profile profile, string password)
         {
-            return Util.DeriveKek(password.ToBytes(),
-                                  profile.StringAt("salt").Decode64(),
-                                  profile.IntAt("iterations"));
+            return Util.DeriveKek(password.ToBytes(), profile.Salt.Decode64(), profile.Iterations);
         }
 
-        internal static KeyMac DecryptMasterKey(JObject profile, KeyMac kek)
+        internal static KeyMac DecryptMasterKey(M.Profile profile, KeyMac kek)
         {
             try
             {
-                return DecryptBase64Key(profile.StringAt("masterKey"), kek);
+                return DecryptBase64Key(profile.MasterKey, kek);
             }
             catch (InternalErrorException e) when (e.Message.Contains("tag doesn't match"))
             {
@@ -136,9 +136,9 @@ namespace PasswordManagerAccess.OpVault
             }
         }
 
-        internal static KeyMac DecryptOverviewKey(JObject profile, KeyMac kek)
+        internal static KeyMac DecryptOverviewKey(M.Profile profile, KeyMac kek)
         {
-            return DecryptBase64Key(profile.StringAt("overviewKey"), kek);
+            return DecryptBase64Key(profile.OverviewKey, kek);
         }
 
         internal static KeyMac DecryptBase64Key(string encryptedKeyBase64, KeyMac kek)
