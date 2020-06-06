@@ -164,6 +164,11 @@ namespace PasswordManagerAccess.Common
         // byte[]
         //
 
+        public static bool IsNullOrEmpty(this byte[] x)
+        {
+            return x == null || x.Length == 0;
+        }
+
         public static string ToUtf8(this byte[] x)
         {
             return Encoding.UTF8.GetString(x);

@@ -245,6 +245,23 @@ namespace PasswordManagerAccess.Test.Common
         // byte[]
         //
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData(new byte[0])]
+        public void ByteArray_IsNullOrEmpty_returns_true_for_null_and_empty_array(byte[] bytes)
+        {
+            Assert.True(bytes.IsNullOrEmpty());
+        }
+
+        [Theory]
+        [InlineData(new byte[] {13})]
+        [InlineData(new byte[] {13, 37})]
+        [InlineData(new byte[] {1, 3, 3, 7})]
+        public void ByteArray_IsNullOrEmpty_returns_false_for_non_empty_array(byte[] bytes)
+        {
+            Assert.False(bytes.IsNullOrEmpty());
+        }
+
         [Fact]
         public void ByteArray_ToUtf8_returns_string()
         {
