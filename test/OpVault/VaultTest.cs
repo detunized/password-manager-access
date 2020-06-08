@@ -13,6 +13,13 @@ namespace PasswordManagerAccess.Test.OpVault
     public class VaultTest
     {
         [Fact]
+        public void Official_test_vault_works()
+        {
+            var accounts = Vault.Open(OfficialTestVaultPath, OfficialTestPassword);
+            Assert.Equal(10, accounts.Length);
+        }
+
+        [Fact]
         public void Open_returns_accounts()
         {
             var accounts = Vault.Open(TestVaultPath, Password);
@@ -167,5 +174,9 @@ namespace PasswordManagerAccess.Test.OpVault
         private const string TestVaultPath = FixturePath + "test.opvault";
         private const string CorruptedVaultPath = FixturePath + "corrupted.opvault";
         private const string Password = "password";
+
+        // From here: https://cache.agilebits.com/security-kb/
+        private const string OfficialTestVaultPath = FixturePath + "onepassword_data";
+        private const string OfficialTestPassword = "freddy";
     }
 }
