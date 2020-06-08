@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
@@ -37,7 +38,7 @@ namespace PasswordManagerAccess.OpVault
                 // Decrypt, parse, convert and assign folders
                 return DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
             }
-            catch (JTokenAccessException e)
+            catch (JsonException e)
             {
                 throw FormatError("Unexpected JSON schema", e);
             }
