@@ -71,4 +71,31 @@ namespace PasswordManagerAccess.OpVault.Model
         [DefaultValue(false)]
         public readonly bool Deleted;
     }
+
+    internal class ItemOverview
+    {
+        [JsonProperty("title")]
+        public readonly string Title;
+
+        [JsonProperty("url")]
+        public readonly string Url;
+    }
+
+    internal class ItemDetails
+    {
+        [JsonProperty("notesPlain")]
+        public readonly string Notes;
+
+        [JsonProperty("fields")]
+        public readonly ItemField[] Fields;
+    }
+
+    internal class ItemField
+    {
+        [JsonProperty("designation")]
+        public readonly string Designation;
+
+        [JsonProperty("value")]
+        public readonly string Value;
+    }
 }

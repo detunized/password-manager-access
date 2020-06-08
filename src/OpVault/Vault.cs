@@ -192,17 +192,17 @@ namespace PasswordManagerAccess.OpVault
             var details = DecryptAccountDetails(encryptedItem, accountKey);
 
             return new Account(id: encryptedItem.Id,
-                               name: overview.StringAt("title", ""),
+                               name: overview.Title ?? "",
                                username: FindDetailField(details, "username"),
                                password: FindDetailField(details, "password"),
-                               url: overview.StringAt("url", ""),
-                               note: details.StringAt("notesPlain", ""),
+                               url: overview.Url ?? "",
+                               note: details.Notes ?? "",
                                folder: folders.GetOrDefault(encryptedItem.FolderId ?? "", Folder.None));
         }
 
-        private static JObject DecryptAccountOverview(M.Item encryptedItem, KeyMac overviewKey)
+        private static M.ItemOverview DecryptAccountOverview(M.Item encryptedItem, KeyMac overviewKey)
         {
-            return DecryptJson(encryptedItem.Overview, overviewKey);
+            return DecryptJson(encryptedItem.Overview, overviewKey).ToObject<M.ItemOverview>();
         }
 
         private static KeyMac DecryptAccountKey(M.Item encryptedItem, KeyMac masterKey)
@@ -227,9 +227,9 @@ namespace PasswordManagerAccess.OpVault
             return new KeyMac(Util.DecryptAes(ciphertext, iv, masterKey));
         }
 
-        private static JObject DecryptAccountDetails(M.Item encryptedItem, KeyMac accountKey)
+        private static M.ItemDetails DecryptAccountDetails(M.Item encryptedItem, KeyMac accountKey)
         {
-            return DecryptJson(encryptedItem.Details, accountKey);
+            return DecryptJson(encryptedItem.Details, accountKey).ToObject<M.ItemDetails>();
         }
 
         private static JObject DecryptJson(string encryptedJsonBase64, KeyMac key)
@@ -238,11 +238,14 @@ namespace PasswordManagerAccess.OpVault
         }
 
         // TODO: Write a test
-        private static string FindDetailField(JObject details, string name)
+        private static string FindDetailField(M.ItemDetails details, string name)
         {
-            foreach (var i in details.At("fields", new JArray()))
-                if (i.StringAt("designation", "") == name)
-                    return i.StringAt("value", "");
+            if (details.Fields == null)
+                return "";
+
+            foreach (var i in details.Fields)
+                if (i.Designation == name)
+                    return i.Value ?? "";
 
             return "";
         }
