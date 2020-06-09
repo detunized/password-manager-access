@@ -46,15 +46,15 @@ namespace PasswordManagerAccess.OpVault
 
         internal static M.Profile LoadProfile(string path)
         {
-            return LoadJsAsJson(MakeFilename(path, "profile.js"), "var profile=", ";").ToObject<M.Profile>();
+            return LoadJsAsJson<M.Profile>(MakeFilename(path, "profile.js"), "var profile=", ";");
         }
 
         internal static M.Folder[] LoadFolders(string path)
         {
-            return LoadJsAsJson(MakeFilename(path, "folders.js"), "loadFolders(", ");")
-                .Values()
-                .Select(i => i.ToObject<M.Folder>())
-                .ToArray();
+            var folders = LoadJsAsJson<Dictionary<string, M.Folder>>(MakeFilename(path, "folders.js"),
+                                                                     "loadFolders(",
+                                                                     ");");
+            return folders.Values.ToArray();
         }
 
         internal static M.Item[] LoadItems(string path)
@@ -66,20 +66,21 @@ namespace PasswordManagerAccess.OpVault
                 if (!File.Exists(filename))
                     continue;
 
-                items.AddRange(LoadBand(filename).Values().Select(i => i.ToObject<M.Item>()));
+                items.AddRange(LoadBand(filename));
             }
 
             return items.ToArray();
         }
 
-        internal static JObject LoadBand(string filename)
+        internal static IEnumerable<M.Item> LoadBand(string filename)
         {
-            return LoadJsAsJson(filename, "ld(", ");");
+            var band = LoadJsAsJson<Dictionary<string, M.Item>>(filename, "ld(", ");");
+            return band.Values;
         }
 
-        internal static JObject LoadJsAsJson(string filename, string prefix, string suffix)
+        internal static T LoadJsAsJson<T>(string filename, string prefix, string suffix)
         {
-            return LoadJsAsJsonFromString(LoadTextFile(filename), prefix, suffix);
+            return LoadJsAsJsonFromString<T>(LoadTextFile(filename), prefix, suffix);
         }
 
         internal static string LoadTextFile(string filename)
@@ -92,16 +93,28 @@ namespace PasswordManagerAccess.OpVault
             return File.ReadAllText(filename);
         }
 
-        internal static JObject LoadJsAsJsonFromString(string content, string prefix, string suffix)
+        internal static T LoadJsAsJsonFromString<T>(string content, string prefix, string suffix)
         {
             if (content.Length < prefix.Length + suffix.Length)
                 throw FormatError("JS/JSON: Content is too short");
+
             if (!content.StartsWith(prefix))
                 throw FormatError("JS/JSON: Expected prefix is not found in the content");
+
             if (!content.EndsWith(suffix))
                 throw FormatError("JS/JSON: Expected suffix is not found in the content");
 
-            return JObject.Parse(content.Substring(prefix.Length, content.Length - prefix.Length - suffix.Length));
+            var json = content.Substring(prefix.Length, content.Length - prefix.Length - suffix.Length);
+
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(json);
+            }
+            catch (JsonException e)
+            {
+                // TODO: Generic types have ugly names
+                throw FormatError($"JS/JSON: Invalid JSON schema for {typeof(T).Name}", e);
+            }
         }
 
         internal static string MakeFilename(string path, string filename)
