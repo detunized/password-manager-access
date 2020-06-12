@@ -19,8 +19,8 @@ namespace PasswordManagerAccess.OpVault
             if (buffer.Length != 64)
                 throw new InvalidOperationException("Buffer must be exactly 64 bytes long");
 
-            Key = buffer.Take(32).ToArray();
-            MacKey = buffer.Skip(32).ToArray();
+            Key = buffer.Sub(0, 32);
+            MacKey = buffer.Sub(32, 32);
         }
 
         public KeyMac(string base64): this(base64.Decode64())

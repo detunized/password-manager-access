@@ -48,7 +48,7 @@ namespace PasswordManagerAccess.OpVault
                 throw CorruptedError("tag doesn't match");
 
             var plaintext = Util.DecryptAes(ciphertext, iv, key);
-            return plaintext.Skip(padding).Take(length).ToArray();
+            return plaintext.Sub(padding, length);
         }
 
         private static InternalErrorException CorruptedError(string message)
