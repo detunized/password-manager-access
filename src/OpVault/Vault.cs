@@ -6,14 +6,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OpVault
 {
     using M = Model;
 
-    // TODO: Get rid of ToObject<> everywhere, deserialize directly!
     public static class Vault
     {
         public static Account[] Open(string path, string password)
@@ -43,6 +41,10 @@ namespace PasswordManagerAccess.OpVault
                 throw FormatError("Unexpected JSON schema", e);
             }
         }
+
+        //
+        // Internal
+        //
 
         internal static M.Profile LoadProfile(string path)
         {
@@ -192,7 +194,7 @@ namespace PasswordManagerAccess.OpVault
 
         private static Folder DecryptFolder(M.Folder folder, KeyMac overviewKey)
         {
-            var overview = DecryptJson(folder.Overview, overviewKey).ToObject<M.FolderOverview>();
+            var overview = DecryptJson<M.FolderOverview>(folder.Overview, overviewKey);
             return new Folder(folder.Id, overview.Title);
         }
 
@@ -216,7 +218,7 @@ namespace PasswordManagerAccess.OpVault
 
         private static M.ItemOverview DecryptAccountOverview(M.Item encryptedItem, KeyMac overviewKey)
         {
-            return DecryptJson(encryptedItem.Overview, overviewKey).ToObject<M.ItemOverview>();
+            return DecryptJson<M.ItemOverview>(encryptedItem.Overview, overviewKey);
         }
 
         private static KeyMac DecryptAccountKey(M.Item encryptedItem, KeyMac masterKey)
@@ -243,12 +245,12 @@ namespace PasswordManagerAccess.OpVault
 
         private static M.ItemDetails DecryptAccountDetails(M.Item encryptedItem, KeyMac accountKey)
         {
-            return DecryptJson(encryptedItem.Details, accountKey).ToObject<M.ItemDetails>();
+            return DecryptJson<M.ItemDetails>(encryptedItem.Details, accountKey);
         }
 
-        private static JObject DecryptJson(string encryptedJsonBase64, KeyMac key)
+        private static T DecryptJson<T>(string encryptedJsonBase64, KeyMac key)
         {
-            return JObject.Parse(Opdata01.Decrypt(encryptedJsonBase64, key).ToUtf8());
+            return JsonConvert.DeserializeObject<T>(Opdata01.Decrypt(encryptedJsonBase64, key).ToUtf8());
         }
 
         // TODO: Write a test
