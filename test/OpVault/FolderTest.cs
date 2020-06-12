@@ -18,6 +18,23 @@ namespace PasswordManagerAccess.Test.OpVault
 
             Assert.Equal(id, folder.Id);
             Assert.Equal(name, folder.Name);
+            Assert.Same(Folder.None, folder.Parent);
+        }
+
+        [Fact]
+        public void Null_or_unset_parent_is_reference_equal_to_None()
+        {
+            var folder = new Folder("", "");
+            Assert.Same(Folder.None, folder.Parent);
+
+            folder.Parent = null;
+            Assert.Same(Folder.None, folder.Parent);
+        }
+
+        [Fact]
+        public void Parent_of_None_is_None()
+        {
+            Assert.Same(Folder.None, Folder.None.Parent);
         }
     }
 }

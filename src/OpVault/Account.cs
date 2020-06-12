@@ -5,21 +5,25 @@ namespace PasswordManagerAccess.OpVault
 {
     public class Account
     {
-        public readonly string Id;
-        public readonly string Name;
-        public readonly string Username;
-        public readonly string Password;
-        public readonly string Url;
-        public readonly string Note;
-        public readonly Folder Folder;
+        public string Id { get; }
+        public string Name { get; }
+        public string Username { get; }
+        public string Password { get; }
+        public string Url { get; }
+        public string Note { get; }
+        public Folder Folder { get; }
 
-        public Account(string id,
-                       string name,
-                       string username,
-                       string password,
-                       string url,
-                       string note,
-                       Folder folder)
+        //
+        // Non-public
+        //
+
+        internal Account(string id,
+                         string name,
+                         string username,
+                         string password,
+                         string url,
+                         string note,
+                         Folder folder)
         {
             Id = id;
             Name = name;

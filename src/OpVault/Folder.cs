@@ -5,24 +5,31 @@ namespace PasswordManagerAccess.OpVault
 {
     public class Folder
     {
-        // Used to mark no folder situation not to use null and avoid crashes.
-        public static Folder None = new Folder("", "");
+        // `None` is used to mark "no folder" situation not to use null and avoid crashes.
+        // It guaranteed to be exactly this instance, so it's ok to use reference compare to check for no parent:
+        // if (folder.Parent == Folder.None) { ... }
+        public static readonly Folder None = new Folder("", "");
 
-        public string Id { get; private set; }
-        public string Name { get; private set; }
-        public Folder Parent { get; set; }
+        public string Id { get; }
+        public string Name { get; }
 
-        static Folder()
+        public Folder Parent
         {
-            // Make sure there are no nulls
-            None.Parent = None;
+            get => _parent ?? None;
+            internal set => _parent = value;
         }
 
-        public Folder(string id, string name)
+        //
+        // Non-public
+        //
+
+        internal Folder(string id, string name)
         {
             Id = id;
             Name = name;
-            Parent = None;
         }
+
+        // `_parent` is nullable. The public `Parent` property hides the null value by returning `None` instead.
+        private Folder _parent;
     }
 }

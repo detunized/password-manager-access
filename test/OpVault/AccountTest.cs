@@ -18,7 +18,14 @@ namespace PasswordManagerAccess.Test.OpVault
             var url = "url";
             var note = "note";
             var folder = new Folder("id", "name");
-            var account = new Account(id, name, username, password, url, note, folder);
+
+            var account = new Account(id: id,
+                                      name: name,
+                                      username: username,
+                                      password: password,
+                                      url: url,
+                                      note: note,
+                                      folder: folder);
 
             Assert.Equal(id, account.Id);
             Assert.Equal(name, account.Name);
