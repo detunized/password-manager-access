@@ -259,6 +259,24 @@ namespace PasswordManagerAccess.Test.OpVault
             }
         }
 
+        [Fact]
+        public void DecryptJson_returns_decrypted_and_deserialized_object()
+        {
+            var result = Vault.DecryptJson<M.ItemOverview>(EncryptedItemOverview, ItemOverviewKey);
+
+            Assert.Equal("facebook.com", result.Title);
+            Assert.Equal("http://facebook.com", result.Url);
+        }
+
+        [Fact]
+        public void DecryptJson_throws_on_bad_schema()
+        {
+            // We need to use a type here with some required properties that are missing in the encrypted data
+            Exceptions.AssertThrowsInternalError(
+                () => Vault.DecryptJson<M.Item>(EncryptedItemOverview, ItemOverviewKey),
+                "JSON: Invalid JSON schema for Item");
+        }
+
         //
         // Helpers
         //
@@ -293,5 +311,13 @@ namespace PasswordManagerAccess.Test.OpVault
         // From here: https://cache.agilebits.com/security-kb/
         private const string OfficialTestVaultPath = FixturePath + "onepassword_data";
         private const string OfficialTestPassword = "freddy";
+
+        private const string EncryptedItemOverview = "b3BkYXRhMDFvAAAAAAAAAABUfMSKAQo2xA4jIxRdDsuUSk9uQmJouYHJ5CT6CIg" +
+                                                     "Y3DZd7qrc2VejvzfkMLVTaZI9DRHdgS75LG16kL8xaUmVtGk2ZqnVWJ2UA8y4S6" +
+                                                     "QPdjoWzJLJbiYvGhYicNYgK5A2WzFTrCXPT2vQfHzZeh2gJohM4ZI5wmpHPN5Xc" +
+                                                     "hepRpyIptYTjkyg0ssLjSISul9j/4vuP4FDwH9W6Vr31JQ=";
+        private static readonly KeyMac ItemOverviewKey = new KeyMac("oMDgYulnpl83PKSEycLJg1fqkvxqU3bo4MliEGlN12i4" +
+                                                                    "eUt7qRdl06zVKKbxRLAnra3TvKz0LDdZnV/hlQkjBQ==");
+
     }
 }

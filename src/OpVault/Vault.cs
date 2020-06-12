@@ -21,25 +21,18 @@ namespace PasswordManagerAccess.OpVault
             var encryptedFolders = LoadFolders(path);
             var encryptedItems = LoadItems(path);
 
-            try
-            {
-                // Derive key encryption key
-                var kek = DeriveKek(profile, password);
+            // Derive key encryption key
+            var kek = DeriveKek(profile, password);
 
-                // Decrypt main keys
-                var masterKey = DecryptMasterKey(profile, kek);
-                var overviewKey = DecryptOverviewKey(profile, kek);
+            // Decrypt main keys
+            var masterKey = DecryptMasterKey(profile, kek);
+            var overviewKey = DecryptOverviewKey(profile, kek);
 
-                // Decrypt, parse and convert folders
-                var folders = DecryptFolders(encryptedFolders, overviewKey);
+            // Decrypt, parse and convert folders
+            var folders = DecryptFolders(encryptedFolders, overviewKey);
 
-                // Decrypt, parse, convert and assign folders
-                return DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
-            }
-            catch (JsonException e)
-            {
-                throw FormatError("Unexpected JSON schema", e);
-            }
+            // Decrypt, parse, convert and assign folders
+            return DecryptAccounts(encryptedItems, masterKey, overviewKey, folders);
         }
 
         //
@@ -192,16 +185,16 @@ namespace PasswordManagerAccess.OpVault
                 .ToArray();
         }
 
-        private static Folder DecryptFolder(M.Folder folder, KeyMac overviewKey)
+        internal static Folder DecryptFolder(M.Folder folder, KeyMac overviewKey)
         {
             var overview = DecryptJson<M.FolderOverview>(folder.Overview, overviewKey);
             return new Folder(folder.Id, overview.Title);
         }
 
-        private static Account DecryptAccount(M.Item encryptedItem,
-                                              KeyMac masterKey,
-                                              KeyMac overviewKey,
-                                              Dictionary<string, Folder> folders)
+        internal static Account DecryptAccount(M.Item encryptedItem,
+                                               KeyMac masterKey,
+                                               KeyMac overviewKey,
+                                               Dictionary<string, Folder> folders)
         {
             var overview = DecryptAccountOverview(encryptedItem, overviewKey);
             var accountKey = DecryptAccountKey(encryptedItem, masterKey);
@@ -216,12 +209,12 @@ namespace PasswordManagerAccess.OpVault
                                folder: folders.GetOrDefault(encryptedItem.FolderId ?? "", Folder.None));
         }
 
-        private static M.ItemOverview DecryptAccountOverview(M.Item encryptedItem, KeyMac overviewKey)
+        internal static M.ItemOverview DecryptAccountOverview(M.Item encryptedItem, KeyMac overviewKey)
         {
             return DecryptJson<M.ItemOverview>(encryptedItem.Overview, overviewKey);
         }
 
-        private static KeyMac DecryptAccountKey(M.Item encryptedItem, KeyMac masterKey)
+        internal static KeyMac DecryptAccountKey(M.Item encryptedItem, KeyMac masterKey)
         {
             var raw = encryptedItem.Key.Decode64();
             if (raw.Length != 112)
@@ -243,18 +236,26 @@ namespace PasswordManagerAccess.OpVault
             return new KeyMac(Util.DecryptAes(ciphertext, iv, masterKey));
         }
 
-        private static M.ItemDetails DecryptAccountDetails(M.Item encryptedItem, KeyMac accountKey)
+        internal static M.ItemDetails DecryptAccountDetails(M.Item encryptedItem, KeyMac accountKey)
         {
             return DecryptJson<M.ItemDetails>(encryptedItem.Details, accountKey);
         }
 
-        private static T DecryptJson<T>(string encryptedJsonBase64, KeyMac key)
+        internal static T DecryptJson<T>(string encryptedJsonBase64, KeyMac key)
         {
-            return JsonConvert.DeserializeObject<T>(Opdata01.Decrypt(encryptedJsonBase64, key).ToUtf8());
+            try
+            {
+                var json = Opdata01.Decrypt(encryptedJsonBase64, key).ToUtf8();
+                return JsonConvert.DeserializeObject<T>(json);
+            }
+            catch (JsonException e)
+            {
+                throw FormatError($"JSON: Invalid JSON schema for {typeof(T).Name}", e);
+            }
         }
 
         // TODO: Write a test
-        private static string FindDetailField(M.ItemDetails details, string name)
+        internal static string FindDetailField(M.ItemDetails details, string name)
         {
             if (details.Fields == null)
                 return "";
