@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.0.0
+  - OpVault: ported from the original repo and now could be used
+
 ## 3.0.0
   - Bitwarden: added support for the Duo multifactor authentication
   - Examples: many refactored to share code and make things simpler
