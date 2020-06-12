@@ -1,8 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
-using System.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OpVault
@@ -17,7 +15,7 @@ namespace PasswordManagerAccess.OpVault
         public KeyMac(byte[] buffer)
         {
             if (buffer.Length != 64)
-                throw new InvalidOperationException("Buffer must be exactly 64 bytes long");
+                throw new InternalErrorException("Buffer must be exactly 64 bytes long");
 
             Key = buffer.Sub(0, 32);
             MacKey = buffer.Sub(32, 32);

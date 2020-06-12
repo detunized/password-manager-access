@@ -27,6 +27,16 @@ namespace PasswordManagerAccess.Test.OpVault
             Assert.Equal(MacKey.Decode64(), key.MacKey);
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(63)]
+        [InlineData(65)]
+        public void KeyMac_ctor_throws_on_invalid_length(int length)
+        {
+            Exceptions.AssertThrowsInternalError(() => new KeyMac("0".Repeat(length).ToBytes()),
+                                                 "Buffer must be exactly 64 bytes long");
+        }
+
         //
         // Data
         //
