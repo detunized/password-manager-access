@@ -48,9 +48,21 @@ namespace PasswordManagerAccess.Example.RoboForm
         {
             var config = Util.ReadConfig();
 
+            var username = config["username"];
+            var password = config["password"];
+            var deviceId = config["device-id"];
+
             try
             {
-                var vault = Vault.Open(config["username"], config["password"], config["device-id"], new TextUi());
+                Util.WriteLine("Logging in with:", ConsoleColor.Gray);
+                Util.WriteLine($"  - username: '{username}'", ConsoleColor.Gray);
+                Util.WriteLine($"  - password: '{password}'", ConsoleColor.Gray);
+                Util.WriteLine($"  - device ID: '{deviceId}'", ConsoleColor.Gray);
+
+                var vault = Vault.Open(username, password, deviceId, new TextUi());
+
+                Util.WriteLine($"Got {vault.Accounts.Length} accounts", ConsoleColor.Green);
+
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];
