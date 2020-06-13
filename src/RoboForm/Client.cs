@@ -72,9 +72,7 @@ namespace PasswordManagerAccess.RoboForm
             public readonly string Password;
             public readonly bool ShouldRemember;
 
-            public OtpOptions(string channel = null,
-                              string password = null,
-                              bool shouldRemember = false)
+            public OtpOptions(string channel = null, string password = null, bool shouldRemember = false)
             {
                 Channel = channel;
                 Password = password;
@@ -110,9 +108,7 @@ namespace PasswordManagerAccess.RoboForm
 
             // Step 3: Send the OTP.
             var shouldBeSession = PerformScramSequence(credentials,
-                                                       new OtpOptions(otpChannel,
-                                                                      otp.Password,
-                                                                      otp.RememberDevice),
+                                                       new OtpOptions(otpChannel, otp.Password, otp.RememberDevice),
                                                        rest);
 
             // We should be really logged in this time.
@@ -176,10 +172,10 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static Dictionary<string, string> ScramHeaders(string authorization, OtpOptions otp)
         {
-            var headers = new Dictionary<string, string>()
+            var headers = new Dictionary<string, string>
             {
-                {"Authorization", authorization},
-                {"x-sib-auth-alt-channel", otp.Channel ?? "-"},
+                ["Authorization"] = authorization,
+                ["x-sib-auth-alt-channel"] = otp.Channel ?? "-",
             };
 
             if (otp.Password != null)
@@ -193,7 +189,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static Dictionary<string, string> ScramCookies(string deviceId)
         {
-            return new Dictionary<string, string>() { { "sib-deviceid", deviceId } };
+            return new Dictionary<string, string> {["sib-deviceid"] = deviceId};
         }
 
         internal static string Step1(Credentials credentials, OtpOptions otp, RestClient rest)
