@@ -107,6 +107,7 @@ namespace PasswordManagerAccess.LastPass
             if (!decrypted.StartsWith(header) || !decrypted.EndsWith(footer))
                 throw new InternalErrorException("Failed to decrypt private key");
 
+            // TODO: Use PEM parser from Common
             var asn1EncodedKey = decrypted.Substring(header.Length,
                                                      decrypted.Length - header.Length - footer.Length).DecodeHex();
 
