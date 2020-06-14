@@ -55,7 +55,7 @@ namespace PasswordManagerAccess.Bitwarden
                 ExtractAsn1Item(reader, Asn1.Kind.Integer); // Discard the version
                 ExtractAsn1Item(reader, Asn1.Kind.Sequence); // Discard the algorithm
 
-                return ExtractAsn1Item(reader, Asn1.Kind.OctetString);
+                return ExtractAsn1Item(reader, Asn1.Kind.Bytes);
             });
             var berEncodedPrivateKey = ExtractAsn1Item(privateKey, Asn1.Kind.Sequence);
 

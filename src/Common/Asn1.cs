@@ -3,9 +3,8 @@
 
 using System.Collections.Generic;
 using System.IO;
-using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.LastPass
+namespace PasswordManagerAccess.Common
 {
     // Very-very basic ASN.1 parser. Just enough to extract the RSA key
     // parameters stored in a vault. Supports only sequences, octet strings
@@ -35,26 +34,16 @@ namespace PasswordManagerAccess.LastPass
             var id = reader.ReadByte();
             var tag = id & 0x1F;
 
-            Kind kind;
-            switch (tag)
+            var kind = tag switch
             {
-            case 2:
-                kind = Kind.Integer;
-                break;
-            case 4:
-                kind = Kind.Bytes;
-                break;
-            case 5:
-                kind = Kind.Null;
-                break;
-            case 16:
-                kind = Kind.Sequence;
-                break;
-            default:
-                throw new InternalErrorException($"Unknown ASN.1 tag {tag}");
-            }
+                2 => Kind.Integer,
+                4 => Kind.Bytes,
+                5 => Kind.Null,
+                16 => Kind.Sequence,
+                _ => throw new InternalErrorException($"Unknown ASN.1 tag {tag}")
+            };
 
-            int size = reader.ReadByte();
+            var size = (int)reader.ReadByte();
             if ((size & 0x80) != 0)
             {
                 var sizeLength = size & 0x7F;

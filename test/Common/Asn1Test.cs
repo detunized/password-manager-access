@@ -1,12 +1,10 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using PasswordManagerAccess.Common;
-using PasswordManagerAccess.LastPass;
 using Xunit;
 
-namespace PasswordManagerAccess.Test.LastPass
+namespace PasswordManagerAccess.Test.Common
 {
     public class Asn1Test
     {
@@ -37,9 +35,8 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void Asn1_ParseItem_throws_on_invalid_tag()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Asn1.ParseItem("0D04DEADBEEF".DecodeHex()),
-                "Unknown ASN.1 tag 13");
+            Exceptions.AssertThrowsInternalError(() => Asn1.ParseItem("0D04DEADBEEF".DecodeHex()),
+                                                 "Unknown ASN.1 tag 13");
         }
 
         [Fact]
