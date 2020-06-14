@@ -19,10 +19,17 @@ namespace PasswordManagerAccess.Common
 
                 return ExtractAsn1Item(reader, Asn1.Kind.Bytes);
             });
-            var berEncodedPrivateKey = ExtractAsn1Item(privateKey, Asn1.Kind.Sequence);
+
+            return ParseRsaPrivateKeyPkcs1(privateKey);
+        }
+
+        public static RSAParameters ParseRsaPrivateKeyPkcs1(byte[] asn1)
+        {
+            var berEncodedPrivateKey = ExtractAsn1Item(asn1, Asn1.Kind.Sequence);
 
             // See: https://tools.ietf.org/html/rfc3447#appendix-C
-            return berEncodedPrivateKey.Open(reader => {
+            return berEncodedPrivateKey.Open(reader =>
+            {
                 ExtractAsn1Item(reader, Asn1.Kind.Integer); // Discard the version
 
                 // There are occasional leading zeros that must be stripped
@@ -54,10 +61,10 @@ namespace PasswordManagerAccess.Common
         internal static byte[] ExtractAsn1Item(BinaryReader reader, Asn1.Kind expectedKind)
         {
             var item = Asn1.ExtractItem(reader);
-            if (item.Key != expectedKind)
-                throw new InternalErrorException($"ASN1 decoding failed, expected {expectedKind}, got {item.Key}");
+            if (item.Key == expectedKind)
+                return item.Value;
 
-            return item.Value;
+            throw new InternalErrorException($"ASN.1 decoding failed, expected {expectedKind}, got {item.Key}");
         }
     }
 }
