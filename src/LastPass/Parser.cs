@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -107,36 +106,10 @@ namespace PasswordManagerAccess.LastPass
             if (!decrypted.StartsWith(header) || !decrypted.EndsWith(footer))
                 throw new InternalErrorException("Failed to decrypt private key");
 
-            // TODO: Use PEM parser from Common
-            var asn1EncodedKey = decrypted.Substring(header.Length,
-                                                     decrypted.Length - header.Length - footer.Length).DecodeHex();
+            var pkcs8 = decrypted.Substring(header.Length,
+                                            decrypted.Length - header.Length - footer.Length).DecodeHex();
 
-            var enclosingSequence = Asn1.ParseItem(asn1EncodedKey);
-            var anotherEnclosingSequence = enclosingSequence.Value.Open(reader => {
-                Asn1.SkipItem(reader);
-                Asn1.SkipItem(reader);
-                return Asn1.ExtractItem(reader);
-            });
-            var yetAnotherEnclosingSequence = Asn1.ParseItem(anotherEnclosingSequence.Value);
-
-            return yetAnotherEnclosingSequence.Value.Open(reader => {
-                Asn1.ExtractItem(reader);
-
-                // There are occasional leading zeros that need to be stripped.
-                byte[] ReadInteger() => Asn1.ExtractItem(reader).Value.SkipWhile(i => i == 0).ToArray();
-
-                return new RSAParameters
-                {
-                    Modulus = ReadInteger(),
-                    Exponent = ReadInteger(),
-                    D = ReadInteger(),
-                    P = ReadInteger(),
-                    Q = ReadInteger(),
-                    DP = ReadInteger(),
-                    DQ = ReadInteger(),
-                    InverseQ = ReadInteger()
-                };
-            });
+            return Pem.ParsePrivateKeyPkcs8(pkcs8);
         }
 
         public static void ParseSecureNoteServer(string notes,
