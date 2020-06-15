@@ -14,38 +14,75 @@ namespace PasswordManagerAccess.RoboForm
     {
         public static Vault Parse(JObject json)
         {
-            var c = json["c"] as JArray;
-            if (c == null || c.Count < 2)
-                throw new InternalErrorException("Invalid format");
+            // The top-level item must be a folder
+            var topLevel = GetFolderContent(json);
+            if (topLevel == null)
+                throw new InternalErrorException("Invalid format: top level folder not found");
 
-            var root = c[1];
-            if (root == null)
-                throw new InternalErrorException("Invalid root node format");
+            // There's a root folder somewhere at the second level
+            var root = FindNamedItem(topLevel, "root");
+            if (root == null || !IsFolder(root))
+                throw new InternalErrorException("Invalid format: root folder not found");
 
-            var info = root["i"];
-            if (!info.BoolAt("F", false) || info.StringAt("n", "") != "root")
-                throw new InternalErrorException("Invalid root node format");
-
+            // Traverse the root folder recursively and parse all the accounts
             var accounts = new List<Account>();
-            TraverseParse(root["c"], "", accounts);
+            if (root["c"] is JArray c)
+                TraverseParse(c, "", accounts);
 
             return new Vault(accounts.ToArray());
         }
 
-        private static void TraverseParse(JToken nodes, string path, List<Account> accounts)
+        internal static bool IsFolder(JToken json)
         {
-            foreach (var node in nodes)
+            if (json["i"] is JObject i)
+                return i.BoolAt("F", false);
+
+            return false;
+        }
+
+        // Gets the folder content only if this token represents a valid folder
+        internal static JArray GetFolderContent(JToken json)
+        {
+            if (IsFolder(json) && json["c"] is JArray c)
+                return c;
+
+            return null;
+        }
+
+        internal static JObject FindNamedItem(JArray items, string name)
+        {
+            if (items.FirstOrDefault(x => x["i"].StringAt("n", "") == name) is JObject o)
+                return o;
+
+            return null;
+        }
+
+        internal static void TraverseParse(JArray items, string path, List<Account> accounts)
+        {
+            foreach (var item in items)
             {
-                var info = node["i"];
-                var name = info.StringAt("n", "");
-                if (info.BoolAt("F", false))
-                    TraverseParse(node["c"], path.Length == 0 ? name : path + "/" + name, accounts);
+                if (!(item["i"] is JObject info))
+                    throw new InternalErrorException("Invalid format: item info block not found");
+
+                if (IsFolder(item))
+                {
+                    if (item["c"] is JArray c)
+                    {
+                        var name = info.StringAt("n", "-");
+                        TraverseParse(c, path.Length == 0 ? name : path + "/" + name, accounts);
+                    }
+                }
                 else
-                    accounts.Add(ParseAccount(node.StringAt("b", "{}"), name, path));
+                {
+                    var account = ParseAccount(content: item.StringAt("b", "{}"),
+                                               name: info.StringAt("n", ""),
+                                               path: path);
+                    accounts.Add(account);
+                }
             }
         }
 
-        private static Account ParseAccount(string content, string name, string path)
+        internal static Account ParseAccount(string content, string name, string path)
         {
             var json = JObject.Parse(content);
             var url = json.StringAt("g", json.StringAt("m", ""));
@@ -56,7 +93,7 @@ namespace PasswordManagerAccess.RoboForm
             return new Account(name, path, url, fields, username, password);
         }
 
-        private static Account.Field[] ParseFields(JArray fields)
+        internal static Account.Field[] ParseFields(JArray fields)
         {
             var parsedFields = new List<Account.Field>();
             foreach (var field in fields)
@@ -95,7 +132,7 @@ namespace PasswordManagerAccess.RoboForm
             return parsedFields.ToArray();
         }
 
-        private static string GuessUsername(Account.Field[] fields)
+        internal static string GuessUsername(Account.Field[] fields)
         {
             // If there's only one text field with a special name then it's the username.
             var username = fields.Where(i => i.Kind == Account.FieldKind.Text &&
@@ -111,7 +148,7 @@ namespace PasswordManagerAccess.RoboForm
             return null;
         }
 
-        private static string GuessPassword(Account.Field[] fields)
+        internal static string GuessPassword(Account.Field[] fields)
         {
             // Search all fields first with the appropriate names
             var password = fields.Where(i => PasswordFields.Contains(i.Name.ToLower())).ToArray();
