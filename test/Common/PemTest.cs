@@ -1,33 +1,42 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
 {
-    public class PemTest
+    public class PemTest: TestBase
     {
+        [Fact]
+        public void ParsePrivateKeyPkcs8_parses_openssl_generated_key_pem_file()
+        {
+            var pem = GetFixture("openssl-private-key", "pem");
+            var rsa = Pem.ParsePrivateKeyPkcs8(pem);
+            VerifyRsaKey(rsa);
+        }
+
         [Fact]
         public void ParsePrivateKeyPkcs8_parses_openssl_generated_key()
         {
             var rsa = Pem.ParsePrivateKeyPkcs8(PrivateKeyPkcs8);
-
-            Assert.Equal(PrivateKeyModulus, rsa.Modulus);
-            Assert.Equal(PrivateKeyExponent, rsa.Exponent);
-            Assert.Equal(PrivateKeyD, rsa.D);
-            Assert.Equal(PrivateKeyP, rsa.P);
-            Assert.Equal(PrivateKeyQ, rsa.Q);
-            Assert.Equal(PrivateKeyDp, rsa.DP);
-            Assert.Equal(PrivateKeyDq, rsa.DQ);
-            Assert.Equal(PrivateKeyInverseQ, rsa.InverseQ);
+            VerifyRsaKey(rsa);
         }
 
         [Fact]
         public void ParsePrivateKeyPkcs1_parses_openssl_generated_key()
         {
             var rsa = Pem.ParseRsaPrivateKeyPkcs1(PrivateKeyPkcs1);
+            VerifyRsaKey(rsa);
+        }
 
+        //
+        // Helpers
+        //
+
+        private static void VerifyRsaKey(RSAParameters rsa)
+        {
             Assert.Equal(PrivateKeyModulus, rsa.Modulus);
             Assert.Equal(PrivateKeyExponent, rsa.Exponent);
             Assert.Equal(PrivateKeyD, rsa.D);
@@ -42,10 +51,8 @@ namespace PasswordManagerAccess.Test.Common
         // Data
         //
 
-        // Generated with
+        // The entire PKCS#8 PrivateKeyInfo. Generated with:
         // $ openssl genpkey -out rsakey.pem -algorithm RSA -pkeyopt rsa_keygen_bits:2048
-
-        // The entire PKCS#8 PrivateKeyInfo
         private const string PrivateKeyPkcs8Base64 =
             "MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDl3KLYUotetBFNuzuCSQkUKIC/S7U1F7zjy2EzhbqRSQPi6TsCpDz+" +
             "kal28hcXiPH1e3KlfeObmqoK8/OUdOtQzBqd5E8egoGBT3MKgKbJdFqQjI7hEAEX1E4S4WdM0wjLbaJ83PE1si1JeiEllBHrSnvV/Vgz" +
@@ -64,7 +71,8 @@ namespace PasswordManagerAccess.Test.Common
             "wNe6yb6B+Bl/iS7YtLl2Z4I8xWlkzCvClofMmzWNiOPCWehXf24iergVK4HUnelCVB0XQSDK4perAh8gIYR4hTuct+gYQhFtQCJvXcxe" +
             "ElHS7tElKYZq5QL1e5weTJ4wX+aOYqJA/V4lrmE+Nmo9sez/pKeLnCqra8Ew29paWg==";
 
-        // Just the RSAPrivateKey part of the PKCS#8 PrivateKeyInfo
+        // The same key as above but just the RSAPrivateKey part of the PKCS#8 PrivateKeyInfo. Could be generated with:
+        // $ openssl genrsa -f4 -out rsakey.pem 2048
         private const string PrivateKeyPkcs1Base64 =
             "MIIEpQIBAAKCAQEA5dyi2FKLXrQRTbs7gkkJFCiAv0u1NRe848thM4W6kUkD4uk7AqQ8/pGpdvIXF4jx9XtypX3jm5qqCvPzlHTrUMwa" +
             "neRPHoKBgU9zCoCmyXRakIyO4RABF9ROEuFnTNMIy22ifNzxNbItSXohJZQR60p71f1YM66sfo/c7YVJZsU6K4T49GT2s/NavmRaQaKh" +
