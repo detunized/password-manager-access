@@ -18,6 +18,14 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
+        public void ParseRsaPrivateKeyPkcs1_parses_openssl_generated_key_pem_file()
+        {
+            var pem = GetFixture("openssl-rsa-private-key", "pem");
+            var rsa = Pem.ParseRsaPrivateKeyPkcs1(pem);
+            VerifyRsaKey(rsa);
+        }
+
+        [Fact]
         public void ParsePrivateKeyPkcs8_parses_openssl_generated_key()
         {
             var rsa = Pem.ParsePrivateKeyPkcs8(PrivateKeyPkcs8);

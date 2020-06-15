@@ -12,23 +12,12 @@ namespace PasswordManagerAccess.Common
     {
         public static RSAParameters ParsePrivateKeyPkcs8(string text)
         {
-            var header = text.IndexOf(BeginPrivateKey, StringComparison.Ordinal);
-            if (header == -1)
-                throw new InternalErrorException("Invalid private key format: header is not found");
-            header += BeginPrivateKey.Length;
+            return ParsePrivateKeyPkcs8(ExtractPrivateKey(text, BeginPrivateKey, EndPrivateKey));
+        }
 
-            var footer = text.IndexOf(EndPrivateKey, header, StringComparison.Ordinal);
-            if (footer == -1)
-                throw new InternalErrorException("Invalid private key format: footer is not found");
-            footer--;
-
-            while (char.IsWhiteSpace(text[header]))
-                header++;
-
-            while (char.IsWhiteSpace(text[footer]))
-                footer--;
-
-            return ParsePrivateKeyPkcs8(text.Substring(header, footer - header + 1).Decode64());
+        public static RSAParameters ParseRsaPrivateKeyPkcs1(string text)
+        {
+            return ParseRsaPrivateKeyPkcs1(ExtractPrivateKey(text, BeginRsaPrivateKey, EndRsaPrivateKey));
         }
 
         public static RSAParameters ParsePrivateKeyPkcs8(byte[] asn1)
@@ -75,6 +64,27 @@ namespace PasswordManagerAccess.Common
         // Internal
         //
 
+        internal static byte[] ExtractPrivateKey(string text, string keyHeader, string keyFooter)
+        {
+            var header = text.IndexOf(keyHeader, StringComparison.Ordinal);
+            if (header == -1)
+                throw new InternalErrorException("Invalid private key format: header is not found");
+            header += keyHeader.Length;
+
+            var footer = text.IndexOf(keyFooter, header, StringComparison.Ordinal);
+            if (footer == -1)
+                throw new InternalErrorException("Invalid private key format: footer is not found");
+            footer--;
+
+            while (char.IsWhiteSpace(text[header]))
+                header++;
+
+            while (char.IsWhiteSpace(text[footer]))
+                footer--;
+
+            return text.Substring(header, footer - header + 1).Decode64();
+        }
+
         internal static byte[] ExtractAsn1Item(byte[] bytes, Asn1.Kind expectedKind)
         {
             return bytes.Open(reader => ExtractAsn1Item(reader, expectedKind));
@@ -95,5 +105,7 @@ namespace PasswordManagerAccess.Common
 
         private const string BeginPrivateKey = "-----BEGIN PRIVATE KEY-----";
         private const string EndPrivateKey = "-----END PRIVATE KEY-----";
+        private const string BeginRsaPrivateKey = "-----BEGIN RSA PRIVATE KEY-----";
+        private const string EndRsaPrivateKey = "-----END RSA PRIVATE KEY-----";
     }
 }
