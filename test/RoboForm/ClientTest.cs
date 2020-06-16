@@ -43,10 +43,10 @@ namespace PasswordManagerAccess.Test.RoboForm
             Exceptions.AssertThrowsInternalError(() => Client.Logout(TestData.Username, Session, rest), "404");
         }
 
-        [Fact(Skip = "RestFlow doesn't support binary responses yet")]
+        [Fact]
         public void GetBlob_returns_received_bytes()
         {
-            var expected = "Blah, blah, blah...";
+            var expected = "All your base are belong to us";
             var rest = new RestFlow()
                 .Get(expected);
 
