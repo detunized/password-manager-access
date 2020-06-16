@@ -211,7 +211,7 @@ namespace PasswordManagerAccess.RoboForm
             // WWW-Authenticate has the result of this step.
             var header = response.Headers.GetOrDefault("WWW-Authenticate", "");
             if (header.IsNullOrEmpty())
-                throw new InternalErrorException("WWW-Authenticate header wasn't found in the response");
+                throw new InternalErrorException("WWW-Authenticate header is not found in the response");
 
             return header;
         }

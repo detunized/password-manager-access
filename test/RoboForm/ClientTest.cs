@@ -12,6 +12,18 @@ namespace PasswordManagerAccess.Test.RoboForm
     public class ClientTest
     {
         [Fact]
+        public void Login_returns_session()
+        {
+            var rest = new RestFlow()
+                .Post("", HttpStatusCode.Unauthorized, headers: Step1Headers)
+                .Post("", cookies: Step2Cookies);
+
+            var session = Client.Login(TestData.Credentials, null, rest.ToRestClient(""));
+
+            Assert.Equal("B972fc9818e7", session.DeviceId);
+        }
+
+        [Fact]
         public void Logout_makes_POST_request_to_specific_url()
         {
             var rest = new RestFlow()
@@ -61,27 +73,38 @@ namespace PasswordManagerAccess.Test.RoboForm
             Exceptions.AssertThrowsInternalError(() => Client.GetBlob(TestData.Username, Session, rest), "404");
         }
 
-        [Fact(Skip = "RestFlow doesn't support response headers")]
+        [Fact]
         public void Step1_makes_POST_request_to_specific_url_with_headers()
         {
             var rest = new RestFlow()
-                .Post("", HttpStatusCode.Unauthorized)
+                .Post("", HttpStatusCode.Unauthorized, headers: Step1Headers)
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?login")
-                    .ExpectHeader("Authorization", "SibAuth realm=");
+                    .ExpectHeader("Authorization", "SibAuth realm=\"RoboForm Online Server\",data=\"biwsbj1sYXN0cGFzc" +
+                                                   "y5ydWJ5QGdtYWlsLmNvbSxyPS1EZUhSclpqQzhEWl8wZThSR3Npc2c=\"");
 
             Client.Step1(TestData.Credentials, new Client.OtpOptions(), rest.ToRestClient(""));
         }
 
-        [Fact(Skip = "RestFlow doesn't support response headers")]
+        [Fact]
         public void Step1_returns_WWW_Authenticate_header()
         {
-            // TODO: Implement
+            var rest = new RestFlow()
+                .Post("", HttpStatusCode.Unauthorized, headers: Step1Headers);
+
+            var header = Client.Step1(TestData.Credentials, new Client.OtpOptions(), rest);
+
+            Assert.Equal(Step1WwwAuthenticateHeader, header);
         }
 
-        [Fact(Skip = "RestFlow doesn't support response headers")]
+        [Fact]
         public void Step1_throws_on_missing_WWW_Authenticate_header()
         {
-            // TODO: Implement
+            var rest = new RestFlow()
+                .Post("", HttpStatusCode.Unauthorized, headers: RestClient.NoHeaders);
+
+            Exceptions.AssertThrowsInternalError(
+                () => Client.Step1(TestData.Credentials, new Client.OtpOptions(), rest),
+                "WWW-Authenticate header is not found in the response");
         }
 
         [Fact]
@@ -208,7 +231,16 @@ namespace PasswordManagerAccess.Test.RoboForm
         // Data
         //
 
-        private const string Step1Header = "WWW-Authenticate-step1";
+        private const string Step1WwwAuthenticateHeader =
+            "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"cj0tRGVIUnJaakM4RFpfM" +
+            "GU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ4VU02NzRPWk9PalVq" +
+            "WENkYnc9PSxpPTQwOTY=\"";
+
+        private static readonly Dictionary<string, string> Step1Headers = new Dictionary<string, string>
+        {
+            ["WWW-Authenticate"] = Step1WwwAuthenticateHeader,
+        };
+
         private static readonly Dictionary<string, string> Step2Cookies = new Dictionary<string, string>
         {
             ["sib-auth"] = "AQAUABAAdN_MjkCW",
