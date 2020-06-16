@@ -25,10 +25,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void Parse_returns_AuthInfo()
         {
-            var encoded = "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"cj0tRGVIUnJaakM4RFpfM" +
-                          "GU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ4VU02NzRPWk9PalVq" +
-                          "WENkYnc9PSxpPTQwOTY=\"";
-            var info = AuthInfo.Parse(encoded);
+            var info = AuthInfo.Parse(TestData.EncodedAuthInfoHeader);
 
             Assert.Equal(TestData.AuthInfo.Sid, info.Sid);
             Assert.Equal(TestData.AuthInfo.Data, info.Data);

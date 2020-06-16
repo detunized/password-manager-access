@@ -18,6 +18,10 @@ namespace PasswordManagerAccess.Test.RoboForm
                                                                                        DeviceId,
                                                                                        Nonce);
 
+        public const string EncodedAuthInfoHeader =
+            "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"cj0tRGVIUnJaakM4RFpfMGU4UkdzaXNn" +
+            "TTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ4VU02NzRPWk9PalVqWENkYnc9PSxpPTQwOTY=\"";
+
         public static readonly AuthInfo AuthInfo = new AuthInfo(
             sid: "6Ag93Y02vihucO9IQl1fbg",
             data : "r=-DeHRrZjC8DZ_0e8RGsisgM2-tjgf-60m--FBhLQ26tg,s=A+Ft8UM674OZOOjUjXCdbw==,i=4096",

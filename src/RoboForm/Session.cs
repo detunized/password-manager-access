@@ -16,10 +16,10 @@ namespace PasswordManagerAccess.RoboForm
             Token = token;
             DeviceId = deviceId;
 
-            Cookies = new Dictionary<string, string>()
+            Cookies = new Dictionary<string, string>(2)
             {
-                { "sib-auth", token },
-                { "sib-deviceid", deviceId },
+                ["sib-auth"] = token,
+                ["sib-deviceid"] = deviceId,
             };
         }
     }

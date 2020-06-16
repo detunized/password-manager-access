@@ -20,7 +20,8 @@ namespace PasswordManagerAccess.Test.RoboForm
 
             var session = Client.Login(TestData.Credentials, null, rest.ToRestClient(""));
 
-            Assert.Equal("B972fc9818e7", session.DeviceId);
+            Assert.Equal(SubAuth, session.Token);
+            Assert.Equal(SubDeviceId, session.DeviceId);
         }
 
         [Fact]
@@ -93,7 +94,7 @@ namespace PasswordManagerAccess.Test.RoboForm
 
             var header = Client.Step1(TestData.Credentials, new Client.OtpOptions(), rest);
 
-            Assert.Equal(Step1WwwAuthenticateHeader, header);
+            Assert.Equal(TestData.EncodedAuthInfoHeader, header);
         }
 
         [Fact]
@@ -231,22 +232,20 @@ namespace PasswordManagerAccess.Test.RoboForm
         // Data
         //
 
-        private const string Step1WwwAuthenticateHeader =
-            "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"cj0tRGVIUnJaakM4RFpfM" +
-            "GU4UkdzaXNnTTItdGpnZi02MG0tLUZCaExRMjZ0ZyxzPUErRnQ4VU02NzRPWk9PalVq" +
-            "WENkYnc9PSxpPTQwOTY=\"";
+        private const string SubAuth = "AQAUABAAdN_MjkCW";
+        private const string SubDeviceId = "B972fc9818e7";
+
+        private static readonly Session Session = new Session(SubAuth, SubDeviceId);
 
         private static readonly Dictionary<string, string> Step1Headers = new Dictionary<string, string>
         {
-            ["WWW-Authenticate"] = Step1WwwAuthenticateHeader,
+            ["WWW-Authenticate"] = TestData.EncodedAuthInfoHeader,
         };
 
         private static readonly Dictionary<string, string> Step2Cookies = new Dictionary<string, string>
         {
-            ["sib-auth"] = "AQAUABAAdN_MjkCW",
-            ["sib-deviceid"] = "B972fc9818e7",
+            ["sib-auth"] = SubAuth,
+            ["sib-deviceid"] = SubDeviceId,
         };
-
-        private static readonly Session Session = new Session("AQAUABAAdN_MjkCW", "B972fc9818e7");
     }
 }
