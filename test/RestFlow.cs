@@ -19,16 +19,22 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Get(string response,
                             HttpStatusCode status = HttpStatusCode.OK,
+                            Dictionary<string, string> headers = null,
                             Dictionary<string, string> cookies = null,
                             Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Get, response, status, cookies ?? NoCookies, error));
+            _responses.Add(new Response(method: HttpMethod.Get,
+                                        content: response,
+                                        status: status,
+                                        headers: headers ?? NoHeaders,
+                                        cookies: cookies ?? NoCookies,
+                                        error: error));
             return this;
         }
 
         public RestFlow Get(string response, Exception error)
         {
-            return Get(response, HttpStatusCode.OK, NoCookies, error);
+            return Get(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
         }
 
         public RestFlow Get(Exception error)
@@ -42,16 +48,22 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Post(string response,
                              HttpStatusCode status = HttpStatusCode.OK,
+                             Dictionary<string, string> headers = null,
                              Dictionary<string, string> cookies = null,
                              Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Post, response, status, cookies ?? NoCookies, error));
+            _responses.Add(new Response(method: HttpMethod.Post,
+                                        content: response,
+                                        status: status,
+                                        headers: headers ?? NoHeaders,
+                                        cookies: cookies ?? NoCookies,
+                                        error: error));
             return this;
         }
 
         public RestFlow Post(string response, Exception error)
         {
-            return Post(response, HttpStatusCode.OK, NoCookies, error);
+            return Post(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
         }
 
         public RestFlow Post(Exception error)
@@ -65,16 +77,22 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Put(string response,
                             HttpStatusCode status = HttpStatusCode.OK,
+                            Dictionary<string, string> headers = null,
                             Dictionary<string, string> cookies = null,
                             Exception error = null)
         {
-            _responses.Add(new Response(HttpMethod.Put, response, status, cookies ?? NoCookies, error));
+            _responses.Add(new Response(method: HttpMethod.Put,
+                                        content: response,
+                                        status: status,
+                                        headers: headers ?? NoHeaders,
+                                        cookies: cookies ?? NoCookies,
+                                        error: error));
             return this;
         }
 
         public RestFlow Put(string response, Exception error)
         {
-            return Put(response, HttpStatusCode.OK, NoCookies, error);
+            return Put(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
         }
 
         public RestFlow Put(Exception error)
@@ -170,6 +188,7 @@ namespace PasswordManagerAccess.Test
             // Returned to the caller
             public readonly string Content;
             public readonly HttpStatusCode Status;
+            public readonly Dictionary<string, string> Headers;
             public readonly Dictionary<string, string> Cookies;
             public readonly Exception Error;
 
@@ -179,11 +198,13 @@ namespace PasswordManagerAccess.Test
             public Response(HttpMethod method,
                             string content,
                             HttpStatusCode status,
+                            Dictionary<string, string> headers,
                             Dictionary<string, string> cookies,
                             Exception error)
             {
                 Content = content;
                 Status = status;
+                Headers = headers;
                 Cookies = cookies;
                 Error = error;
                 Expected = new Expected(method);
@@ -250,7 +271,7 @@ namespace PasswordManagerAccess.Test
 
             // Response
             allocatedResult.StatusCode = r.Status;
-            allocatedResult.Headers = new Dictionary<string, string>(); // TODO: Add support for response headers
+            allocatedResult.Headers = r.Headers;
             allocatedResult.Error = r.Error;
             allocatedResult.Cookies = r.Cookies;
             allocatedResult.RequestUri = uri;
