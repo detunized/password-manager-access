@@ -31,7 +31,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                 .Post("")
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?logout");
 
-            Client.Logout(TestData.Username, Session, rest.ToRestClient(BaseUrl));
+            Client.Logout(Session, rest.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -40,7 +40,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             var rest = new RestFlow()
                 .Post("", HttpStatusCode.NotFound);
 
-            Exceptions.AssertThrowsInternalError(() => Client.Logout(TestData.Username, Session, rest), "404");
+            Exceptions.AssertThrowsInternalError(() => Client.Logout(Session, rest), "404");
         }
 
         [Fact]
@@ -50,7 +50,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             var rest = new RestFlow()
                 .Get(expected);
 
-            var blob = Client.GetBlob(TestData.Username, Session, rest);
+            var blob = Client.GetBlob(Session, rest);
 
             Assert.Equal(expected.ToBytes(), blob);
         }
@@ -62,7 +62,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                 .Get("")
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}/user-data.rfo");
 
-            Client.GetBlob(TestData.Username, Session, rest.ToRestClient(BaseUrl));
+            Client.GetBlob(Session, rest.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             var rest = new RestFlow()
                             .Get("", HttpStatusCode.NotFound);
 
-            Exceptions.AssertThrowsInternalError(() => Client.GetBlob(TestData.Username, Session, rest), "404");
+            Exceptions.AssertThrowsInternalError(() => Client.GetBlob(Session, rest), "404");
         }
 
         [Fact]

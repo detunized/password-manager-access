@@ -16,13 +16,13 @@ namespace PasswordManagerAccess.RoboForm
             var session = Login(clientInfo, ui, rest);
             try
             {
-                var blob = GetBlob(clientInfo.Username, session, rest);
+                var blob = GetBlob(session, rest);
                 var json = OneFile.Parse(blob, clientInfo.Password);
                 return VaultParser.Parse(json);
             }
             finally
             {
-                Logout(clientInfo.Username, session, rest);
+                Logout(session, rest);
             }
         }
 
@@ -141,7 +141,7 @@ namespace PasswordManagerAccess.RoboForm
             return Step2(credentials, otp, authInfo, rest);
         }
 
-        internal static void Logout(string username, Session session, RestClient rest)
+        internal static void Logout(Session session, RestClient rest)
         {
             var response = rest.PostForm("?logout",
                                          new Dictionary<string, object>(),
@@ -156,7 +156,7 @@ namespace PasswordManagerAccess.RoboForm
                 throw MakeError(response);
         }
 
-        internal static byte[] GetBlob(string username, Session session, RestClient rest)
+        internal static byte[] GetBlob(Session session, RestClient rest)
         {
             // TODO: Make 1337 random? TBH not sure what it's for.
             var response = rest.GetBinary("user-data.rfo?_1337", cookies: session.Cookies);
