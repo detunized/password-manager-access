@@ -158,8 +158,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static byte[] GetBlob(Session session, RestClient rest)
         {
-            // TODO: Make 1337 random? TBH not sure what it's for.
-            var response = rest.GetBinary("user-data.rfo?_1337", cookies: session.Cookies);
+            var response = rest.GetBinary("user-data.rfo", cookies: session.Cookies);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
