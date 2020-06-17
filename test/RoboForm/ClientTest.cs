@@ -18,7 +18,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                 .Post("", HttpStatusCode.Unauthorized, headers: Step1Headers)
                 .Post("", cookies: Step2Cookies);
 
-            var session = Client.Login(TestData.Credentials, null, rest.ToRestClient(""));
+            var session = Client.Login(TestData.Credentials, null, rest);
 
             Assert.Equal(SubAuth, session.Token);
             Assert.Equal(SubDeviceId, session.DeviceId);
@@ -31,7 +31,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                 .Post("")
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?logout");
 
-            Client.Logout(TestData.Username, Session, rest.ToRestClient(""));
+            Client.Logout(TestData.Username, Session, rest.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -62,7 +62,7 @@ namespace PasswordManagerAccess.Test.RoboForm
                 .Get("")
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}/user-data.rfo");
 
-            Client.GetBlob(TestData.Username, Session, rest.ToRestClient(""));
+            Client.GetBlob(TestData.Username, Session, rest.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -80,10 +80,11 @@ namespace PasswordManagerAccess.Test.RoboForm
             var rest = new RestFlow()
                 .Post("", HttpStatusCode.Unauthorized, headers: Step1Headers)
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?login")
+                    // TODO: Add support for partial header match
                     .ExpectHeader("Authorization", "SibAuth realm=\"RoboForm Online Server\",data=\"biwsbj1sYXN0cGFzc" +
                                                    "y5ydWJ5QGdtYWlsLmNvbSxyPS1EZUhSclpqQzhEWl8wZThSR3Npc2c=\"");
 
-            Client.Step1(TestData.Credentials, new Client.OtpOptions(), rest.ToRestClient(""));
+            Client.Step1(TestData.Credentials, new Client.OtpOptions(), rest.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -114,9 +115,12 @@ namespace PasswordManagerAccess.Test.RoboForm
             var rest = new RestFlow()
                 .Post("", cookies: Step2Cookies)
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?login")
-                    /*.ExpectHeader("Authorization", "SibAuth sid=")*/;  // TODO: Add support for partial header match
+                    // TODO: Add support for partial header match
+                    .ExpectHeader("Authorization", "SibAuth sid=\"6Ag93Y02vihucO9IQl1fbg\",data=\"Yz1iaXdzLHI9LURlSFJ" +
+                                                   "yWmpDOERaXzBlOFJHc2lzZ00yLXRqZ2YtNjBtLS1GQmhMUTI2dGcscD1lWk5RUE9z" +
+                                                   "OHFIRi9nSGVSWXEyekhmZ0gxNmdJS05xdGFPak5rUjlrRTRrPQ==\"");
 
-            Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest.ToRestClient(""));
+            Client.Step2(TestData.Credentials, new Client.OtpOptions(), TestData.AuthInfo, rest.ToRestClient(BaseUrl));
         }
 
         [Fact]
@@ -232,6 +236,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         // Data
         //
 
+        private const string BaseUrl = "https://online.roboform.com/rf-api/" + TestData.Username;
         private const string SubAuth = "AQAUABAAdN_MjkCW";
         private const string SubDeviceId = "B972fc9818e7";
 

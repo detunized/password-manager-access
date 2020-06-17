@@ -12,8 +12,7 @@ namespace PasswordManagerAccess.RoboForm
     {
         public static Vault OpenVault(ClientInfo clientInfo, Ui ui, IRestTransport transport)
         {
-            // TODO: Use base URL
-            var rest = new RestClient(transport);
+            var rest = new RestClient(transport, ApiBaseUrl(clientInfo.Username));
             var session = Login(clientInfo, ui, rest);
             try
             {
@@ -144,7 +143,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static void Logout(string username, Session session, RestClient rest)
         {
-            var response = rest.PostForm(ApiUrl(username, "logout"),
+            var response = rest.PostForm("?logout",
                                          new Dictionary<string, object>(),
                                          cookies: session.Cookies);
             // TODO: Do we want to abort on the failed logout? If we got here it means we
@@ -160,10 +159,7 @@ namespace PasswordManagerAccess.RoboForm
         internal static byte[] GetBlob(string username, Session session, RestClient rest)
         {
             // TODO: Make 1337 random? TBH not sure what it's for.
-            var baseUrl = ApiBaseUrl(username);
-            var url = $"{baseUrl}/user-data.rfo?_1337";
-
-            var response = rest.GetBinary(url, cookies: session.Cookies);
+            var response = rest.GetBinary("user-data.rfo?_1337", cookies: session.Cookies);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -194,7 +190,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static string Step1(Credentials credentials, OtpOptions otp, RestClient rest)
         {
-            var response = rest.PostForm(LoginUrl(credentials.Username),
+            var response = rest.PostForm("?login",
                                          new Dictionary<string, object>(),
                                          ScramHeaders(Step1AuthorizationHeader(credentials), otp),
                                          ScramCookies(credentials.DeviceId));
@@ -218,7 +214,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static ScramResult Step2(Credentials credentials, OtpOptions otp, AuthInfo authInfo, RestClient rest)
         {
-            var response = rest.PostForm(LoginUrl(credentials.Username),
+            var response = rest.PostForm("?login",
                                          new Dictionary<string, object>(),
                                          ScramHeaders(Step2AuthorizationHeader(credentials, authInfo), otp),
                                          ScramCookies(credentials.DeviceId));
@@ -285,17 +281,6 @@ namespace PasswordManagerAccess.RoboForm
             var data = $"c=biws,r={authInfo.Nonce},p={proof}".ToBase64();
 
             return $"SibAuth sid=\"{authInfo.Sid}\",data=\"{data}\"";
-        }
-
-        internal static string LoginUrl(string username)
-        {
-            return ApiUrl(username, "login");
-        }
-
-        internal static string ApiUrl(string username, string endpoint)
-        {
-            var baseUrl = ApiBaseUrl(username);
-            return $"{baseUrl}?{endpoint}";
         }
 
         internal static string ApiBaseUrl(string username)
