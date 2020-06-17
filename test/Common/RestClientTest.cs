@@ -229,6 +229,20 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri(endpoint).AbsoluteUri);
         }
 
+        [Theory]
+        // There's one special case here: when joining 'http://domain.tld' and '?endpoint'
+        // there should be no slash inserted, but the Uri constructor inserts one anyway.
+        // So we account for this special behavior in the tests.
+        [InlineData("http://domiain.tld", "?endpoint", "http://domiain.tld/?endpoint")] // Slash inserted by Uri
+        [InlineData("http://domiain.tld/", "?endpoint", "http://domiain.tld/?endpoint")]
+        [InlineData("http://domiain.tld/with/path", "?endpoint", "http://domiain.tld/with/path?endpoint")]
+        [InlineData("http://domiain.tld/with/path/", "?endpoint", "http://domiain.tld/with/path/?endpoint")]
+        public void MakeAbsoluteUri_joins_url_with_question_mark(string baseUrl, string endpoint, string expected)
+        {
+            var rest = new RestClient(null, baseUrl);
+            Assert.Equal(expected, rest.MakeAbsoluteUri(endpoint).AbsoluteUri);
+        }
+
         [Fact]
         public void MakeAbsoluteUri_allows_empty_base()
         {

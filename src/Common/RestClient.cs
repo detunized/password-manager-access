@@ -320,7 +320,7 @@ namespace PasswordManagerAccess.Common
                           ReadOnlyHttpCookies defaultCookies = null)
         {
             Transport = transport;
-            BaseUrl = baseUrl.TrimEnd('/');
+            BaseUrl = baseUrl;
             Signer = signer ?? new UnitRequestSigner();
             DefaultHeaders = defaultHeaders ?? new ReadOnlyDictionary<string, string>(NoHeaders);
             DefaultCookies = defaultCookies ?? new ReadOnlyDictionary<string, string>(NoCookies);
@@ -465,8 +465,23 @@ namespace PasswordManagerAccess.Common
             if (endpoint.IsNullOrEmpty())
                 return new Uri(BaseUrl);
 
-            var maybeSlash = endpoint.StartsWith("/") ? "" : "/";
-            return new Uri($"{BaseUrl}{maybeSlash}{endpoint}");
+            // In general the strings are corrected to be joined with one slash in between them.
+            // One exception is the endpoints starting with a question mark.
+
+            // There's one special case here: when joining 'http://domain.tld' and '?endpoint'
+            // there should be no slash inserted, but the Uri constructor inserts one anyway.
+            // So we account for this special behavior in the tests.
+
+            var url = (BaseUrl.Last(), endpoint[0]) switch
+            {
+                ('/', '/') => BaseUrl + endpoint.Substring(1),
+                (_, '/') => BaseUrl + endpoint,
+                ('/', _) => BaseUrl + endpoint,
+                (_, '?') => BaseUrl + endpoint,
+                (_, _) => BaseUrl + '/' + endpoint,
+            };
+
+            return new Uri(url);
         }
 
         //
