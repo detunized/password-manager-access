@@ -9,7 +9,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    public class ClientTest
+    public class ClientTest: TestBase
     {
         [Fact]
         public void Login_returns_session()
@@ -72,6 +72,36 @@ namespace PasswordManagerAccess.Test.RoboForm
                             .Get("", HttpStatusCode.NotFound);
 
             Exceptions.AssertThrowsInternalError(() => Client.GetBlob(Session, rest), "404");
+        }
+
+        [Fact]
+        public void GetSharedFolderList_returns_shared_folder_list()
+        {
+            var rest = new RestFlow()
+                .Get(GetFixture("two-shared-folders"));
+
+            var folders = Client.GetSharedFolderList(Session, rest);
+
+            Assert.Equal(2, folders.Length);
+        }
+
+        [Fact]
+        public void GetSharedFolderList_makes_GET_request_to_specific_url()
+        {
+            var rest = new RestFlow()
+                .Get(GetFixture("two-shared-folders"))
+                    .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}?received");
+
+            Client.GetSharedFolderList(Session, rest.ToRestClient(BaseUrl));
+        }
+
+        [Fact]
+        public void GetSharedFolderList_throws_on_not_HTTP_OK()
+        {
+            var rest = new RestFlow()
+                            .Get("", HttpStatusCode.NotFound);
+
+            Exceptions.AssertThrowsInternalError(() => Client.GetSharedFolderList(Session, rest), "404");
         }
 
         [Fact]

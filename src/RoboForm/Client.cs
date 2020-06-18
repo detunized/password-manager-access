@@ -8,6 +8,8 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
 {
+    using R = Response;
+
     internal static class Client
     {
         public static Vault OpenVault(ClientInfo clientInfo, Ui ui, IRestTransport transport)
@@ -165,6 +167,15 @@ namespace PasswordManagerAccess.RoboForm
                 throw MakeError(response);
 
             return response.Content;
+        }
+
+        internal static R.SharedFolderInfo[] GetSharedFolderList(Session session, RestClient rest)
+        {
+            var response = rest.Get<R.ReceivedItems>("?received", cookies: session.Cookies);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data.SharedFolders;
         }
 
         internal static Dictionary<string, string> ScramHeaders(string authorization, OtpOptions otp)
