@@ -18,7 +18,9 @@ namespace PasswordManagerAccess.RoboForm
             {
                 var blob = GetBlob(session, rest);
                 var json = OneFile.Parse(blob, clientInfo.Password);
-                return VaultParser.Parse(json);
+                var (accounts, privateKey) = VaultParser.Parse(json);
+
+                return new Vault(accounts);
             }
             finally
             {

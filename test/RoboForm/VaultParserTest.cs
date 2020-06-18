@@ -12,10 +12,42 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Theory]
         [InlineData("blob")]
         [InlineData("blob-with-extra-root-siblings")]
-        public void Parse_returns_vault(string fixture)
+        public void Parse_returns_accounts_and_private_key(string fixture)
         {
-            var vault = VaultParser.Parse(JObject.Parse(GetFixture(fixture)));
-            Assert.True(vault.Accounts.Length > 1);
+            var (accounts, privateKey) = VaultParser.Parse(JObject.Parse(GetFixture(fixture)));
+
+            Assert.NotEmpty(accounts);
+            Assert.NotNull(privateKey);
+        }
+
+        [Theory]
+        // Root with no content
+        [InlineData(TopLevelPrefix + RootNoContent + TopLevelSuffix)]
+        // Root with empty content
+        [InlineData(RootPrefix + RootSuffix)]
+        // Root with a folder but no accounts
+        [InlineData(RootPrefix + "{'i': {'F': true, 'n': 'blah'}}" + RootSuffix)]
+        public void Parse_returns_empty_vault(string json)
+        {
+            var (accounts, _) = VaultParser.Parse(JObject.Parse(json));
+
+            Assert.Empty(accounts);
+        }
+
+        [Theory]
+        // No private key
+        [InlineData(TopLevelPrefix + RootNoContent + TopLevelSuffix)]
+        // Private key without data
+        [InlineData(TopLevelPrefix + "{'i': {'n': 'private-key.pem'}}, " + RootNoContent + TopLevelSuffix)]
+        // Private key with null data
+        [InlineData(TopLevelPrefix + "{'i': {'n': 'private-key.pem'}, 'b': null}, " + RootNoContent + TopLevelSuffix)]
+        // Private key with blank data
+        [InlineData(TopLevelPrefix + "{'i': {'n': 'private-key.pem'}, 'b': ''}, " + RootNoContent + TopLevelSuffix)]
+        public void Parse_returns_no_private_key(string json)
+        {
+            var (_, privateKey) = VaultParser.Parse(JObject.Parse(json));
+
+            Assert.Null(privateKey);
         }
 
         [Theory]
@@ -25,10 +57,12 @@ namespace PasswordManagerAccess.Test.RoboForm
         [InlineData(RootPrefix + RootSuffix)]
         // Root with a folder but no accounts
         [InlineData(RootPrefix + "{'i': {'F': true, 'n': 'blah'}}" + RootSuffix)]
-        public void Parse_returns_empty_vault(string json)
+        public void Parse_returns_empty_vault_and_no_private_key(string json)
         {
-            var vault = VaultParser.Parse(JObject.Parse(json));
-            Assert.Empty(vault.Accounts);
+            var (accounts, privateKey) = VaultParser.Parse(JObject.Parse(json));
+
+            Assert.Empty(accounts);
+            Assert.Null(privateKey);
         }
 
         [Theory]
@@ -130,7 +164,10 @@ namespace PasswordManagerAccess.Test.RoboForm
         // Data
         //
 
-        private const string RootPrefix = "{'i': {'F': true}, 'c': [{'i': {'F': true, 'n': 'root'}, 'c': [";
-        private const string RootSuffix = "]}]}";
+        private const string TopLevelPrefix = "{'i': {'F': true}, 'c': [";
+        private const string TopLevelSuffix = "]}";
+        private const string RootPrefix = TopLevelPrefix + "{'i': {'F': true, 'n': 'root'}, 'c': [";
+        private const string RootSuffix = "]}" + TopLevelSuffix;
+        private const string RootNoContent = "{'i': {'F': true, 'n': 'root'}}";
     }
 }

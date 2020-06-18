@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 
@@ -12,7 +13,7 @@ namespace PasswordManagerAccess.RoboForm
     // de-serialization. The input json is recursive with somewhat dynamic structure.
     internal static class VaultParser
     {
-        public static Vault Parse(JObject json)
+        public static (Account[] Accounts, RSAParameters? PrivateKey) Parse(JObject json)
         {
             // The top-level item must be a folder
             var topLevel = GetFolderContent(json);
@@ -29,7 +30,13 @@ namespace PasswordManagerAccess.RoboForm
             if (root["c"] is JArray c)
                 TraverseParse(c, "", accounts);
 
-            return new Vault(accounts.ToArray());
+            // Parse the private key
+            RSAParameters? rsa = null;
+            var privateKey = FindNamedItem(topLevel, "private-key.pem").StringAt("b", "");
+            if (!privateKey.IsNullOrEmpty())
+                rsa = Pem.ParseRsaPrivateKeyPkcs1(privateKey);
+
+            return (accounts.ToArray(), rsa);
         }
 
         internal static bool IsFolder(JToken json)
