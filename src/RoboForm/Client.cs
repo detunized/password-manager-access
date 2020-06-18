@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.RoboForm
@@ -309,11 +310,16 @@ namespace PasswordManagerAccess.RoboForm
         {
             var failedWith = $"Request to {response.RequestUri} failed with";
 
+            if (response.IsNetworkError)
+                return new NetworkErrorException($"{failedWith} a network error", response.Error);
+
+            if (response.Error is JsonException)
+                return new InternalErrorException($"{failedWith} JSON deserialization error", response.Error);
+
             if (response.IsHttpError)
                 return new InternalErrorException($"{failedWith} HTTP status {(int)response.StatusCode}");
 
-            var errorType = response.IsNetworkError ? "a network" : "an unknown";
-            return new NetworkErrorException($"{failedWith} {errorType} error", response.Error);
+            return new InternalErrorException($"{failedWith} an unknown error", response.Error);
         }
     }
 }

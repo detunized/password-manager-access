@@ -69,7 +69,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         public void GetBlob_throws_on_not_HTTP_OK()
         {
             var rest = new RestFlow()
-                            .Get("", HttpStatusCode.NotFound);
+                .Get("", HttpStatusCode.NotFound);
 
             Exceptions.AssertThrowsInternalError(() => Client.GetBlob(Session, rest), "404");
         }
@@ -99,9 +99,21 @@ namespace PasswordManagerAccess.Test.RoboForm
         public void GetSharedFolderList_throws_on_not_HTTP_OK()
         {
             var rest = new RestFlow()
-                            .Get("", HttpStatusCode.NotFound);
+                .Get("", HttpStatusCode.NotFound);
 
             Exceptions.AssertThrowsInternalError(() => Client.GetSharedFolderList(Session, rest), "404");
+        }
+
+        [Theory]
+        [InlineData("}{")] // Invalid JSON
+        [InlineData("{}")] // Missing properties
+        public void GetSharedFolderList_throws_on_invalid_json(string response)
+        {
+            var rest = new RestFlow()
+                .Get(response);
+
+            Exceptions.AssertThrowsInternalError(() => Client.GetSharedFolderList(Session, rest),
+                                                 "JSON deserialization error");
         }
 
         [Fact]
