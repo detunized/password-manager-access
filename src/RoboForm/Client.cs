@@ -28,6 +28,9 @@ namespace PasswordManagerAccess.RoboForm
                 {
                     foreach (var info in GetSharedFolderList(session, rest))
                     {
+                        if (!info.Accepted)
+                            continue;
+
                         var sharedFolderPassword = Crypto.DecryptRsaPkcs1(info.EncryptedKey.Decode64(),
                                                                           privateKey.Value).ToUtf8();
 

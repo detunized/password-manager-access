@@ -1,0 +1,68 @@
+{
+    "accounts": [
+        {
+            "accountId": "lastpass.ruby+13-june-2020++200613054227@gmail.com",
+            "name": "shared stuff",
+            "accepted": true,
+            "isManager": true,
+            "showPasswords": true,
+            "mp": "eEsDjFuJef8pWhNe7qp8T8P30hezUWodgV+axkJJ1O5JWdZfHOm\/ftm0Br37sDTMRIItIHjJICihU2khpaRyy\/Pfd2upocN0u0mRWVk1hcsIw6NrppKdvZq7o80M4Q+sNaQzjAFqxIhVkRQCHetLzDqTsXqdZV3do\/omFuJ\/Hr8=",
+            "sender": "lastpass.ruby+13-june-2020@gmail.com",
+            "senderEmail": "lastpass.ruby+13-june-2020@gmail.com",
+            "senderName": "LastPass Ruby",
+            "accountInfo": {
+                "name": "shared stuff",
+                "showPasswords": true,
+                "isAllowedIP": true
+            },
+            "ownPermissions": {
+                "readOnly": true,
+                "showPasswords": true,
+                "serverOnly": true
+            }
+        },
+        {
+            "accountId": "lastpass.ruby+13-june-2020++200618111400@gmail.com",
+            "name": "more shared stuff",
+            "accepted": true,
+            "isManager": true,
+            "showPasswords": true,
+            "mp": "KMMGLGyHBh5ON9ilGkfbwoR7tvh8AqYW1++47SYRpNfSIojXjTNVogn5WJqGpljbuD6YlIz83HhaDF6jcrz5G+LdtTym\/1z3ECvmuLEW+ENlP6kGCpewZMCp6VhvSjRXMMT1T3C3VCVkD1hkASeAOQGZ5cwLworvNVGqMVwhS08=",
+            "sender": "lastpass.ruby+13-june-2020@gmail.com",
+            "senderEmail": "lastpass.ruby+13-june-2020@gmail.com",
+            "senderName": "LastPass Ruby",
+            "accountInfo": {
+                "name": "more shared stuff",
+                "showPasswords": true,
+                "isAllowedIP": true
+            },
+            "ownPermissions": {
+                "readOnly": true,
+                "showPasswords": true,
+                "serverOnly": true
+            }
+        },
+        {
+            "accountId": "lastpass.ruby+19-june-2020++200619111951@gmail.com",
+            "name": "from 19-june-2020",
+            "readOnly": true,
+            "mp": "fJtpDoUgverVvW+LLblON3CoI82jfLtEKnpGJxVNKe0eVQRY2kTJMTL0LtsLEdUhcSvIsyYCuMMxd8sO47ZehRizNLcoCTLuTmdmku\/NIF71T8mAODxUJeHJhQDktuYpkKN2mHIuQSdi5hI6A\/3S5dE8viDDoulWZ604BdbrU+A=",
+            "sender": "lastpass.ruby+19-june-2020@gmail.com",
+            "senderEmail": "lastpass.ruby+19-june-2020@gmail.com",
+            "senderName": "LastPass Ruby",
+            "accountInfo": {
+                "name": "from 19-june-2020",
+                "showPasswords": true,
+                "isAllowedIP": true
+            },
+            "ownPermissions": {
+                "readOnly": true,
+                "showPasswords": true,
+                "serverOnly": true
+            }
+        }
+    ],
+    "receivedFiles": [],
+    "companyInvitations": [],
+    "emergencyAccess": []
+}

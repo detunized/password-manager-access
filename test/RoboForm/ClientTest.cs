@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.RoboForm;
@@ -80,15 +81,28 @@ namespace PasswordManagerAccess.Test.RoboForm
             Exceptions.AssertThrowsInternalError(() => Client.GetBlob(Session, rest), "404");
         }
 
-        [Fact]
-        public void GetSharedFolderList_returns_shared_folder_list()
+        [Theory]
+        [InlineData("two-shared-folders", 2)]
+        [InlineData("two-and-one-unaccepted-shared-folders", 3)]
+        public void GetSharedFolderList_returns_shared_folder_list(string fixture, int folderCount)
         {
             var rest = new RestFlow()
-                .Get(GetFixture("two-shared-folders"));
+                .Get(GetFixture(fixture));
 
             var folders = Client.GetSharedFolderList(Session, rest);
 
-            Assert.Equal(2, folders.Length);
+            Assert.Equal(folderCount, folders.Length);
+        }
+
+        [Fact]
+        public void GetSharedFolderList_parses_accepted_flag_list()
+        {
+            var rest = new RestFlow()
+                .Get(GetFixture("two-and-one-unaccepted-shared-folders"));
+
+            var folders = Client.GetSharedFolderList(Session, rest);
+
+            Assert.Equal(new[] {true, true, false}, folders.Select(x => x.Accepted));
         }
 
         [Fact]

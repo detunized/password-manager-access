@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.ComponentModel;
 using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.RoboForm.Response
@@ -21,5 +22,9 @@ namespace PasswordManagerAccess.RoboForm.Response
 
         [JsonProperty("mp")]
         public readonly string EncryptedKey;
+
+        [JsonProperty("accepted", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public readonly bool Accepted;
     }
 }
