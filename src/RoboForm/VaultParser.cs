@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.RoboForm
     // de-serialization. The input json is recursive with somewhat dynamic structure.
     internal static class VaultParser
     {
-        public static (Account[] Accounts, RSAParameters? PrivateKey) Parse(JObject json)
+        public static (List<Account> Accounts, RSAParameters? PrivateKey) Parse(JObject json)
         {
             // The top-level item must be a folder
             var topLevel = GetFolderContent(json);
@@ -36,7 +36,7 @@ namespace PasswordManagerAccess.RoboForm
             if (!privateKey.IsNullOrEmpty())
                 rsa = Pem.ParseRsaPrivateKeyPkcs1(privateKey);
 
-            return (accounts.ToArray(), rsa);
+            return (accounts, rsa);
         }
 
         internal static bool IsFolder(JToken json)

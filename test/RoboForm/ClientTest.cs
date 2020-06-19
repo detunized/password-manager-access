@@ -44,6 +44,12 @@ namespace PasswordManagerAccess.Test.RoboForm
         }
 
         [Fact]
+        public void OpenFolder_returns_accounts()
+        {
+            // TODO: Need proper binary response support in RestFlow
+        }
+
+        [Fact]
         public void GetBlob_returns_received_bytes()
         {
             var expected = "All your base are belong to us";

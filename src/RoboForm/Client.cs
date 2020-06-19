@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
@@ -19,11 +20,26 @@ namespace PasswordManagerAccess.RoboForm
             var session = Login(clientInfo, ui, rest);
             try
             {
-                var blob = GetBlob(session, rest);
-                var json = OneFile.Parse(blob, clientInfo.Password);
-                var (accounts, privateKey) = VaultParser.Parse(json);
+                // Open the main user's vault
+                var (accounts, privateKey) = OpenFolder(session, clientInfo.Password, rest);
 
-                return new Vault(accounts);
+                // Open all the folders shared with the user
+                if (privateKey != null)
+                {
+                    foreach (var info in GetSharedFolderList(session, rest))
+                    {
+                        var sharedFolderPassword = Crypto.DecryptRsaPkcs1(info.EncryptedKey.Decode64(),
+                                                                          privateKey.Value).ToUtf8();
+
+                        // Each shared folder is like an independent vault with its own password
+                        var (sharedFolderAccounts, _) = OpenFolder(session,
+                                                                  sharedFolderPassword,
+                                                                  new RestClient(transport, ApiBaseUrl(info.Id)));
+                        accounts.AddRange(sharedFolderAccounts);
+                    }
+                }
+
+                return new Vault(accounts.ToArray());
             }
             finally
             {
@@ -159,6 +175,15 @@ namespace PasswordManagerAccess.RoboForm
             //       might start blocking new sessions at some point.
             if (!response.IsSuccessful)
                 throw MakeError(response);
+        }
+
+        internal static (List<Account> Accounts, RSAParameters? PrivateKey) OpenFolder(Session session,
+                                                                                       string password,
+                                                                                       RestClient rest)
+        {
+            var blob = GetBlob(session, rest);
+            var json = OneFile.Parse(blob, password);
+            return VaultParser.Parse(json);
         }
 
         internal static byte[] GetBlob(Session session, RestClient rest)
