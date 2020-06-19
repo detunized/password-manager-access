@@ -27,19 +27,7 @@ namespace PasswordManagerAccess.RoboForm
                 if (privateKey != null)
                 {
                     foreach (var info in GetSharedFolderList(session, rest))
-                    {
-                        if (!info.Accepted)
-                            continue;
-
-                        var sharedFolderPassword = Crypto.DecryptRsaPkcs1(info.EncryptedKey.Decode64(),
-                                                                          privateKey.Value).ToUtf8();
-
-                        // Each shared folder is like an independent vault with its own password
-                        var (sharedFolderAccounts, _) = OpenFolder(session,
-                                                                  sharedFolderPassword,
-                                                                  new RestClient(transport, ApiBaseUrl(info.Id)));
-                        accounts.AddRange(sharedFolderAccounts);
-                    }
+                        accounts.AddRange(OpenSharedFolder(info, session, privateKey.Value, transport));
                 }
 
                 return new Vault(accounts.ToArray());
@@ -187,6 +175,26 @@ namespace PasswordManagerAccess.RoboForm
             var blob = GetBlob(session, rest);
             var json = OneFile.Parse(blob, password);
             return VaultParser.Parse(json);
+        }
+
+        internal static List<Account> OpenSharedFolder(R.SharedFolderInfo info,
+                                                       Session session,
+                                                       RSAParameters privateKey,
+                                                       IRestTransport transport)
+        {
+            if (!info.Accepted)
+                return new List<Account>(0);
+
+            var encryptedKey = info.EncryptedKey ?? "";
+            if (encryptedKey.IsNullOrEmpty())
+                return new List<Account>(0);
+
+            var password = Crypto.DecryptRsaPkcs1(encryptedKey.Decode64(), privateKey).ToUtf8();
+
+            // Each shared folder is like an independent vault with its own password
+            return OpenFolder(session,
+                              password,
+                              new RestClient(transport, ApiBaseUrl(info.Id))).Accounts;
         }
 
         internal static byte[] GetBlob(Session session, RestClient rest)
