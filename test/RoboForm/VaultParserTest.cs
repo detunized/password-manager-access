@@ -21,6 +21,18 @@ namespace PasswordManagerAccess.Test.RoboForm
         }
 
         [Theory]
+        [InlineData("blob")]
+        [InlineData("blob-with-extra-root-siblings")]
+        public void Parse_prepends_parent_path(string fixture)
+        {
+            var parentPath = "blah/blah-blah";
+            var (accounts, _) = VaultParser.Parse(JObject.Parse(GetFixture(fixture)), parentPath);
+
+            foreach (var account in accounts)
+                Assert.StartsWith(parentPath, account.Path);
+        }
+
+        [Theory]
         // Root with no content
         [InlineData(TopLevelPrefix + RootNoContent + TopLevelSuffix)]
         // Root with empty content

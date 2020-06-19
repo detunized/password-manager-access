@@ -21,7 +21,7 @@ namespace PasswordManagerAccess.RoboForm
             try
             {
                 // Open the main user's vault
-                var (accounts, privateKey) = OpenFolder(session, clientInfo.Password, rest);
+                var (accounts, privateKey) = OpenFolder(session, clientInfo.Password, "", rest);
 
                 // Open all the folders shared with the user
                 if (privateKey != null)
@@ -170,11 +170,12 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static (List<Account> Accounts, RSAParameters? PrivateKey) OpenFolder(Session session,
                                                                                        string password,
+                                                                                       string parentPath,
                                                                                        RestClient rest)
         {
             var blob = GetBlob(session, rest);
             var json = OneFile.Parse(blob, password);
-            return VaultParser.Parse(json);
+            return VaultParser.Parse(json, parentPath);
         }
 
         internal static List<Account> OpenSharedFolder(R.SharedFolderInfo info,
@@ -194,6 +195,7 @@ namespace PasswordManagerAccess.RoboForm
             // Each shared folder is like an independent vault with its own password
             return OpenFolder(session,
                               password,
+                              info.Name ?? "-",
                               new RestClient(transport, ApiBaseUrl(info.Id))).Accounts;
         }
 

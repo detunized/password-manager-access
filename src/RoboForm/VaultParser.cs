@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.RoboForm
     // de-serialization. The input json is recursive with somewhat dynamic structure.
     internal static class VaultParser
     {
-        public static (List<Account> Accounts, RSAParameters? PrivateKey) Parse(JObject json)
+        public static (List<Account> Accounts, RSAParameters? PrivateKey) Parse(JObject json, string parentPath = "")
         {
             // The top-level item must be a folder
             var topLevel = GetFolderContent(json);
@@ -28,7 +28,7 @@ namespace PasswordManagerAccess.RoboForm
             // Traverse the root folder recursively and parse all the accounts
             var accounts = new List<Account>();
             if (root["c"] is JArray c)
-                TraverseParse(c, "", accounts);
+                TraverseParse(c, parentPath, accounts);
 
             // Parse the private key
             RSAParameters? rsa = null;
