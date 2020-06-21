@@ -25,10 +25,8 @@ namespace PasswordManagerAccess.RoboForm
 
                 // Open all the folders shared with the user
                 if (privateKey != null)
-                {
                     foreach (var info in GetSharedFolderList(session, rest))
                         accounts.AddRange(OpenSharedFolder(info, session, privateKey.Value, transport));
-                }
 
                 return new Vault(accounts.ToArray());
             }
@@ -71,8 +69,8 @@ namespace PasswordManagerAccess.RoboForm
                 Nonce = nonce;
             }
 
-            public Credentials(ClientInfo clientInfo, string nonce)
-                : this(clientInfo.Username, clientInfo.Password, clientInfo.DeviceId, nonce)
+            public Credentials(ClientInfo clientInfo, string nonce):
+                this(clientInfo.Username, clientInfo.Password, clientInfo.DeviceId, nonce)
             {
             }
         }
@@ -81,13 +79,13 @@ namespace PasswordManagerAccess.RoboForm
         {
             public readonly string Channel;
             public readonly string Password;
-            public readonly bool ShouldRemember;
+            public readonly bool RememberMe;
 
-            public OtpOptions(string channel = null, string password = null, bool shouldRemember = false)
+            public OtpOptions(string channel = null, string password = null, bool rememberMe = false)
             {
                 Channel = channel;
                 Password = password;
-                ShouldRemember = shouldRemember;
+                RememberMe = rememberMe;
             }
         }
 
@@ -228,7 +226,7 @@ namespace PasswordManagerAccess.RoboForm
             if (otp.Password != null)
             {
                 headers["x-sib-auth-alt-otp"] = otp.Password;
-                headers["x-sib-auth-alt-memorize"] = otp.ShouldRemember ? "1" : "0";
+                headers["x-sib-auth-alt-memorize"] = otp.RememberMe ? "1" : "0";
             }
 
             return headers;
