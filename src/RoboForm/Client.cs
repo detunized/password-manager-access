@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.RoboForm
 
     internal static class Client
     {
-        public static Vault OpenVault(ClientInfo clientInfo, Ui ui, IRestTransport transport)
+        public static Account[] OpenVault(ClientInfo clientInfo, Ui ui, IRestTransport transport)
         {
             var rest = new RestClient(transport, ApiBaseUrl(clientInfo.Username));
             var session = Login(clientInfo, ui, rest);
@@ -28,7 +28,7 @@ namespace PasswordManagerAccess.RoboForm
                     foreach (var info in GetSharedFolderList(session, rest))
                         accounts.AddRange(OpenSharedFolder(info, session, privateKey.Value, transport));
 
-                return new Vault(accounts.ToArray());
+                return accounts.ToArray();
             }
             finally
             {

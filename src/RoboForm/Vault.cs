@@ -40,10 +40,14 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static Vault Open(ClientInfo clientInfo, Ui ui, IRestTransport transport)
         {
-            return Client.OpenVault(clientInfo, ui, transport);
+            return new Vault(Client.OpenVault(clientInfo, ui, transport));
         }
 
-        internal Vault(Account[] accounts)
+        //
+        // Private
+        //
+
+        private Vault(Account[] accounts)
         {
             Accounts = accounts;
         }

@@ -13,6 +13,25 @@ namespace PasswordManagerAccess.Test.RoboForm
     public class ClientTest: TestBase
     {
         [Fact]
+        public void OpenVault_returns_accounts()
+        {
+            var rest = new RestFlow()
+                .Post("", HttpStatusCode.Unauthorized, headers: Step1Headers)
+                .Post("", cookies: Step2Cookies)
+                .Get(GetBinaryFixture("main-folder-blob", "bin"))
+                .Get(GetFixture("two-and-one-unaccepted-shared-folders"))
+                .Get(GetBinaryFixture("shared-stuff-folder-blob", "bin"))
+                .Get(GetBinaryFixture("more-shared-stuff-folder-blob", "bin"))
+                .Post("");
+
+            var accounts = Client.OpenVault(new ClientInfo(TestData.Username, "Password123", TestData.DeviceId),
+                                            null,
+                                            rest);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
         public void Login_returns_session()
         {
             var rest = new RestFlow()
@@ -47,7 +66,12 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void OpenFolder_returns_accounts()
         {
-            // TODO: Need proper binary response support in RestFlow
+            var rest = new RestFlow()
+                .Get(GetBinaryFixture("blob", "bin"));
+
+            var (accounts, _) = Client.OpenFolder(Session, TestData.Password, "", rest);
+
+            Assert.NotEmpty(accounts);
         }
 
         [Fact]
