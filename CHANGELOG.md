@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.1.0
+  - RoboForm: added support for shared folders
+
 ## 4.0.1
   - RoboForm: fixed a crash on vaults with additional root folder siblings
     (this happens, for example, when the vault has had its master password
