@@ -53,20 +53,20 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void GetBlob_returns_received_bytes()
         {
-            var expected = "All your base are belong to us";
+            var expected = "All your base are belong to us".ToBytes();
             var rest = new RestFlow()
                 .Get(expected);
 
             var blob = Client.GetBlob(Session, rest);
 
-            Assert.Equal(expected.ToBytes(), blob);
+            Assert.Equal(expected, blob);
         }
 
         [Fact]
         public void GetBlob_makes_GET_request_to_specific_url()
         {
             var rest = new RestFlow()
-                .Get("")
+                .Get("".ToBytes())
                     .ExpectUrl($"https://online.roboform.com/rf-api/{TestData.Username}/user-data.rfo");
 
             Client.GetBlob(Session, rest.ToRestClient(BaseUrl));
@@ -76,7 +76,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         public void GetBlob_throws_on_not_HTTP_OK()
         {
             var rest = new RestFlow()
-                .Get("", HttpStatusCode.NotFound);
+                .Get("".ToBytes(), HttpStatusCode.NotFound);
 
             Exceptions.AssertThrowsInternalError(() => Client.GetBlob(Session, rest), "404");
         }

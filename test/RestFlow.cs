@@ -13,11 +13,35 @@ namespace PasswordManagerAccess.Test
 {
     internal class RestFlow: IRestTransport
     {
+        public class ResponseContent
+        {
+            public readonly bool IsBinary;
+            public readonly string Text;
+            public readonly byte[] Binary;
+
+            private ResponseContent(string text)
+            {
+                IsBinary = false;
+                Text = text;
+                Binary = null;
+            }
+
+            private ResponseContent(byte[] binary)
+            {
+                IsBinary = true;
+                Binary = binary;
+                Text = null;
+            }
+
+            public static implicit operator ResponseContent(string text) => new ResponseContent(text);
+            public static implicit operator ResponseContent(byte[] binary) => new ResponseContent(binary);
+        }
+
         //
         // GET
         //
 
-        public RestFlow Get(string response,
+        public RestFlow Get(ResponseContent response,
                             HttpStatusCode status = HttpStatusCode.OK,
                             Dictionary<string, string> headers = null,
                             Dictionary<string, string> cookies = null,
@@ -32,7 +56,7 @@ namespace PasswordManagerAccess.Test
             return this;
         }
 
-        public RestFlow Get(string response, Exception error)
+        public RestFlow Get(ResponseContent response, Exception error)
         {
             return Get(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
         }
@@ -46,7 +70,7 @@ namespace PasswordManagerAccess.Test
         // POST
         //
 
-        public RestFlow Post(string response,
+        public RestFlow Post(ResponseContent response,
                              HttpStatusCode status = HttpStatusCode.OK,
                              Dictionary<string, string> headers = null,
                              Dictionary<string, string> cookies = null,
@@ -61,7 +85,7 @@ namespace PasswordManagerAccess.Test
             return this;
         }
 
-        public RestFlow Post(string response, Exception error)
+        public RestFlow Post(ResponseContent response, Exception error)
         {
             return Post(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
         }
@@ -75,7 +99,7 @@ namespace PasswordManagerAccess.Test
         // PUT
         //
 
-        public RestFlow Put(string response,
+        public RestFlow Put(ResponseContent response,
                             HttpStatusCode status = HttpStatusCode.OK,
                             Dictionary<string, string> headers = null,
                             Dictionary<string, string> cookies = null,
@@ -90,7 +114,7 @@ namespace PasswordManagerAccess.Test
             return this;
         }
 
-        public RestFlow Put(string response, Exception error)
+        public RestFlow Put(ResponseContent response, Exception error)
         {
             return Put(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
         }
@@ -186,7 +210,7 @@ namespace PasswordManagerAccess.Test
         private class Response
         {
             // Returned to the caller
-            public readonly string Content;
+            public readonly ResponseContent Content;
             public readonly HttpStatusCode Status;
             public readonly Dictionary<string, string> Headers;
             public readonly Dictionary<string, string> Cookies;
@@ -196,7 +220,7 @@ namespace PasswordManagerAccess.Test
             public Expected Expected;
 
             public Response(HttpMethod method,
-                            string content,
+                            ResponseContent content,
                             HttpStatusCode status,
                             Dictionary<string, string> headers,
                             Dictionary<string, string> cookies,
@@ -214,7 +238,7 @@ namespace PasswordManagerAccess.Test
         private Response GetLastResponse()
         {
             if (_responses.Count == 0)
-                throw new InvalidOperationException("Expect should be following Get or Set");
+                throw new InvalidOperationException("Expect should be following a call to Get, Post or Put");
 
             return _responses.Last();
         }
@@ -237,9 +261,9 @@ namespace PasswordManagerAccess.Test
 
             var r = _responses[_currentIndex++];
             var e = r.Expected;
+            string ErrorMessage(string text) => $"{text} for request at index {_currentIndex - 1} to '{uri}'";
 
-            Assert.True(e.Method == method,
-                        $"Expected {e.Method}, got {method} for request at index {_currentIndex - 1}");
+            Assert.True(e.Method == method, ErrorMessage($"Expected {e.Method}, got {method}"));
 
             foreach (var u in e.UrlFragments)
                 Assert.Contains(u, uri.AbsoluteUri);
@@ -276,14 +300,15 @@ namespace PasswordManagerAccess.Test
             allocatedResult.Cookies = r.Cookies;
             allocatedResult.RequestUri = uri;
 
-            // TODO: Add proper support for binary responses
             switch (allocatedResult)
             {
             case RestResponse<string> text:
-                text.Content = r.Content;
+                Assert.False(r.Content.IsBinary, ErrorMessage("Expected a text request, got binary"));
+                text.Content = r.Content.Text;
                 break;
             case RestResponse<byte[]> text:
-                text.Content = r.Content.ToBytes();
+                Assert.True(r.Content.IsBinary, ErrorMessage("Expected a binary request, got text"));
+                text.Content = r.Content.Binary;
                 break;
             default:
                 throw new ArgumentException($"Unsupported content type {typeof(TContent)}");
@@ -299,6 +324,6 @@ namespace PasswordManagerAccess.Test
         private static readonly Dictionary<string, string> NoCookies = new Dictionary<string, string>();
 
         private int _currentIndex = 0;
-        private List<Response> _responses = new List<Response>();
+        private readonly List<Response> _responses = new List<Response>();
     }
 }

@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void GetObject_returns_bytes()
         {
-            var flow = new RestFlow().Get("bytes");
+            var flow = new RestFlow().Get("bytes".ToBytes());
             var result = S3.GetObject("bucket", "path", Credentials, Timestamp, flow);
 
             Assert.Equal("bytes", result.ToUtf8());

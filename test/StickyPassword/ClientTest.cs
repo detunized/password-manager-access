@@ -210,7 +210,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void FindLatestDbVersion_returns_version_from_s3()
         {
-            var flow = new RestFlow().Get(VersionInfo);
+            var flow = new RestFlow().Get(VersionInfo.ToBytes());
             var version = Client.FindLatestDbVersion(S3Token, flow);
 
             Assert.Equal(Version, version);
@@ -220,7 +220,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         public void FindLatestDbVersion_requests_file_from_s3()
         {
             var flow = new RestFlow()
-                .Get(VersionInfo)
+                .Get(VersionInfo.ToBytes())
                     .ExpectUrl(Bucket)
                     .ExpectUrl(ObjectPrefix)
                     .ExpectUrl("spc.info");
@@ -235,7 +235,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [InlineData("VERSION\nMILESTONE\n")]
         public void FindLatestDbVersion_throws_on_invalid_format(string response)
         {
-            var flow = new RestFlow().Get(response);
+            var flow = new RestFlow().Get(response.ToBytes());
 
             Exceptions.AssertThrowsInternalError(
                 () => Client.FindLatestDbVersion(S3Token, flow),
@@ -245,18 +245,17 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void DownloadDb_returns_content_from_s3()
         {
-            // TOOD: Need RestFlow binary support to implement this
-            var flow = new RestFlow().Get("");
+            var flow = new RestFlow().Get(CompressedDbContent);
             var db = Client.DownloadDb(Version, S3Token, flow);
 
-            Assert.Equal("".ToBytes(), db);
+            Assert.Equal(DbContent, db);
         }
 
         [Fact]
         public void DownloadDb_requests_file_from_s3()
         {
             var flow = new RestFlow()
-                .Get("")
+                .Get("".ToBytes())
                     .ExpectUrl(Bucket)
                     .ExpectUrl(ObjectPrefix)
                     .ExpectUrl(Version);
@@ -267,7 +266,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         [Fact]
         public void DownloadDb_throws_on_invalid_deflated_content()
         {
-            var flow = new RestFlow().Get("Not really deflated");
+            var flow = new RestFlow().Get("Not really deflated".ToBytes());
 
             Exceptions.AssertThrowsInternalError(() => Client.DownloadDb(Version, S3Token, flow),
                                                  "Failed to decompress the database");
@@ -437,7 +436,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
         internal const string Version = "123456789";
         internal const string VersionInfo = "VERSION 123456789\nMILESTONE 987654321";
 
-        internal const string DbContent = "All your base are belong to us";
+        internal static readonly byte[] DbContent = "All your base are belong to us".ToBytes();
         internal static readonly byte[] CompressedDbContent =
         {
             0x78, 0x9c, 0x73, 0xcc, 0xc9, 0x51, 0xa8, 0xcc,
