@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
@@ -19,7 +18,11 @@ namespace PasswordManagerAccess.Kaspersky
 
             // 2. Login
             Login(username, password, loginContext, rest);
+
+            // 3. Request user token
+            var token = RequestUserToken(loginContext, rest);
         }
+
 
         //
         // Internal
@@ -61,6 +64,23 @@ namespace PasswordManagerAccess.Kaspersky
             throw new InternalErrorException($"Unexpected response from {response.RequestUri}");
         }
 
+        internal static string RequestUserToken(string loginContext, RestClient rest)
+        {
+            var response = rest.PostJson<R.UserToken>(
+                "https://hq.uis.kaspersky.com/v3/logon/complete_active",
+                new Dictionary<string, object>
+                {
+                    ["logonContext"] = loginContext,
+                    ["TokenType"] = "SamlDeflate",
+                    ["RememberMe"] = false,
+                });
+
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data.Token;
+        }
+
         internal static BaseException MakeError(RestResponse<string> response)
         {
             // TODO: Make this more descriptive
@@ -80,6 +100,15 @@ namespace PasswordManagerAccess.Kaspersky
             {
                 [JsonProperty("LogonContext", Required = Required.Always)]
                 public readonly string Context;
+            }
+
+            internal class UserToken
+            {
+                [JsonProperty("UserToken", Required = Required.Always)]
+                public readonly string Token;
+
+                [JsonProperty("TokenType", Required = Required.Always)]
+                public readonly string Type;
             }
         }
     }
