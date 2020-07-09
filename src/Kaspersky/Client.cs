@@ -16,6 +16,9 @@ namespace PasswordManagerAccess.Kaspersky
 
             // 1. Request login context token
             var loginContext = RequestLoginContext(rest);
+
+            // 2. Login
+            Login(username, password, loginContext, rest);
         }
 
         //
@@ -34,6 +37,30 @@ namespace PasswordManagerAccess.Kaspersky
             throw MakeError(response);
         }
 
+        // TODO: Handle and test invalid username and password
+        internal static void Login(string username, string password, string loginContext, RestClient rest)
+        {
+            var response = rest.PostJson<R.Result>(
+                "https://hq.uis.kaspersky.com/v3/logon/proceed",
+                new Dictionary<string, object>
+                {
+                    ["login"] = username,
+                    ["password"] = password,
+                    ["logonContext"] = loginContext,
+                    ["locale"] = "en",
+                    ["captchaType"] = "invisible_recaptcha",
+                    ["captchaAnswer"] = "undefined",
+                });
+
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            if (response.Data.Status == "Success")
+                return;
+
+            throw new InternalErrorException($"Unexpected response from {response.RequestUri}");
+        }
+
         internal static BaseException MakeError(RestResponse<string> response)
         {
             // TODO: Make this more descriptive
@@ -43,11 +70,14 @@ namespace PasswordManagerAccess.Kaspersky
         // TODO: Move this out of here
         internal static class R
         {
-            internal class Start
+            internal class Result
             {
                 [JsonProperty("Status", Required = Required.Always)]
                 public readonly string Status;
+            }
 
+            internal class Start: Result
+            {
                 [JsonProperty("LogonContext", Required = Required.Always)]
                 public readonly string Context;
             }
