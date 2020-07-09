@@ -21,8 +21,10 @@ namespace PasswordManagerAccess.Kaspersky
 
             // 3. Request user token
             var token = RequestUserToken(loginContext, rest);
-        }
 
+            // 4. Finish login
+            var userId = FinishLogin(token, rest);
+        }
 
         //
         // Internal
@@ -81,6 +83,27 @@ namespace PasswordManagerAccess.Kaspersky
             return response.Data.Token;
         }
 
+        internal static string FinishLogin(string userToken, RestClient rest)
+        {
+            var response = rest.PostJson<R.UserId>(
+                "https://my.kaspersky.com/SignIn/CompleteRestLogon",
+                parameters: new Dictionary<string, object>
+                {
+                    ["samlDeflatedToken"] = userToken,
+                    ["rememberMe"] = false,
+                    ["resendActivationLink"] = false,
+                },
+                headers: new Dictionary<string, string>
+                {
+                    ["x-requested-with"] = "XMLHttpRequest"
+                });
+
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data.Id;
+        }
+
         internal static BaseException MakeError(RestResponse<string> response)
         {
             // TODO: Make this more descriptive
@@ -109,6 +132,12 @@ namespace PasswordManagerAccess.Kaspersky
 
                 [JsonProperty("TokenType", Required = Required.Always)]
                 public readonly string Type;
+            }
+
+            internal class UserId
+            {
+                [JsonProperty("UserId", Required = Required.Always)]
+                public readonly string Id;
             }
         }
     }
