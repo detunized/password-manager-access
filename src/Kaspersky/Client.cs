@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
@@ -23,7 +24,10 @@ namespace PasswordManagerAccess.Kaspersky
             var token = RequestUserToken(loginContext, rest);
 
             // 4. Finish login
-            var userId = FinishLogin(token, rest);
+            var authCookie = GetAuthCookie(token, rest);
+
+            // 5. Get XMPP info
+            var xmpp = GetXmppInfo(authCookie, rest);
         }
 
         //
@@ -83,9 +87,9 @@ namespace PasswordManagerAccess.Kaspersky
             return response.Data.Token;
         }
 
-        internal static string FinishLogin(string userToken, RestClient rest)
+        internal static string GetAuthCookie(string userToken, RestClient rest)
         {
-            var response = rest.PostJson<R.UserId>(
+            var response = rest.PostJson(
                 "https://my.kaspersky.com/SignIn/CompleteRestLogon",
                 parameters: new Dictionary<string, object>
                 {
@@ -101,13 +105,63 @@ namespace PasswordManagerAccess.Kaspersky
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            return response.Data.Id;
+            var cookie = response.Cookies.GetOrDefault(AuthCookieName, "");
+            if (cookie.IsNullOrEmpty())
+                throw MakeError("Auth cookie not found");
+
+            return cookie;
+        }
+
+        internal static R.XmppSettings GetXmppInfo(string authCookie, RestClient rest)
+        {
+            var response = rest.Get("https://my.kaspersky.com/MyPasswords",
+                                    cookies: new Dictionary<string, string>{[AuthCookieName] = authCookie});
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var json = ExtractXmppSettings(response.Content);
+            return ParseXmppSettings(json);
+        }
+
+        internal static string ExtractXmppSettings(string html)
+        {
+            const string xmppPrefix = "global.XmppSettings = _.extend(global.XmppSettings || {}, {";
+            const string xmppSuffix = "});";
+
+            var prefixIndex = html.IndexOf(xmppPrefix, StringComparison.Ordinal);
+            if (prefixIndex < 0)
+                throw new InternalErrorException("Failed to parse XMPP settings");
+
+            var xmppStart = prefixIndex + xmppPrefix.Length - 1; // -1 to include the opening curly brace
+
+            var suffixIndex = html.IndexOf(xmppSuffix, xmppStart, StringComparison.Ordinal);
+            if (suffixIndex < 0)
+                throw new InternalErrorException("Failed to parse XMPP settings");
+
+            return html.Substring(xmppStart, suffixIndex - xmppStart + 1);
+        }
+
+        internal static R.XmppSettings ParseXmppSettings(string json)
+        {
+            try
+            {
+                return JsonConvert.DeserializeObject<R.XmppSettings>(json);
+            }
+            catch (JsonException e)
+            {
+                throw MakeError("Failed to parse XMPP settings", e);
+            }
         }
 
         internal static BaseException MakeError(RestResponse<string> response)
         {
             // TODO: Make this more descriptive
-            return new InternalErrorException($"Request to '{response.RequestUri}' failed");
+            return MakeError($"Request to '{response.RequestUri}' failed");
+        }
+
+        internal static BaseException MakeError(string message, Exception inner = null)
+        {
+            return new InternalErrorException(message, inner);
         }
 
         // TODO: Move this out of here
@@ -134,11 +188,47 @@ namespace PasswordManagerAccess.Kaspersky
                 public readonly string Type;
             }
 
-            internal class UserId
+            internal class XmppSettings
             {
-                [JsonProperty("UserId", Required = Required.Always)]
-                public readonly string Id;
+                [JsonProperty("userId", Required = Required.Always)]
+                public readonly string UserId;
+
+                [JsonProperty("pushNotificationEkaUniqueId", Required = Required.Always)]
+                public readonly string PushNotificationEkaUniqueId;
+
+                [JsonProperty("pushNotificationKpmServiceHasChangesUniqueId", Required = Required.Always)]
+                public readonly string PushNotificationKpmServiceHasChangesUniqueId;
+
+                [JsonProperty("commandResponseTimeout", Required = Required.Always)]
+                public readonly int CommandResponseTimeout;
+
+                [JsonProperty("commandLifetime", Required = Required.Always)]
+                public readonly int CommandLifetime;
+
+                [JsonProperty("xmppLibraryUrls", Required = Required.Always)]
+                public readonly string[] XmppLibraryUrls;
+
+                [JsonProperty("xmppCredentials", Required = Required.Always)]
+                public readonly XmppCredentials XmppCredentials;
+            }
+
+            internal readonly struct XmppCredentials
+            {
+                [JsonProperty("userId", Required = Required.Always)]
+                public readonly string UserId;
+
+                [JsonProperty("password", Required = Required.Always)]
+                public readonly string Password;
+
+                [JsonProperty("dangerousPassword", Required = Required.Always)]
+                public readonly string DangerousPassword;
             }
         }
+
+        //
+        // Data
+        //
+
+        internal const string AuthCookieName = "MyKFedAuth";
     }
 }
