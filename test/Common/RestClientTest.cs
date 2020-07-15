@@ -154,6 +154,18 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(ResponseHeaders, response.Headers);
         }
 
+        [Fact]
+        public void PostRaw_sends_content_as_is()
+        {
+            var content = "blah-blah...";
+            InRequest(
+                rest => rest.PostRaw(Url, content),
+                request =>
+                {
+                    Assert.Equal(content, request.Content.ReadAsStringAsync().Result);
+                });
+        }
+
         //
         // PUT
         //

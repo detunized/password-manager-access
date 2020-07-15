@@ -424,6 +424,23 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // POST raw
+        //
+
+        public RestResponse<string> PostRaw(string endpoint,
+                                            string content,
+                                            HttpHeaders headers = null,
+                                            HttpCookies cookies = null)
+        {
+            return MakeRequest<string>(endpoint,
+                                       HttpMethod.Post,
+                                       new StringContent(content),
+                                       headers ?? NoHeaders,
+                                       cookies ?? NoCookies,
+                                       MaxRedirects);
+        }
+
+        //
         // PUT
         //
 
