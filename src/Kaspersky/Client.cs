@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Xml.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
@@ -28,6 +29,11 @@ namespace PasswordManagerAccess.Kaspersky
 
             // 5. Get XMPP info
             var xmpp = GetXmppInfo(authCookie, rest);
+
+            var bosh = new Bosh("https://bosh3.ucp-ntfy.kaspersky-labs.com/http-bind");
+            bosh.Connect("206a9e27-f96a-44d5-ac0d-84efe4f1835a#browser#5@39.ucp-ntfy.kaspersky-labs.com/portalsorucr8yj2l",
+                         xmpp.XmppCredentials.Password,
+                         transport);
         }
 
         //
