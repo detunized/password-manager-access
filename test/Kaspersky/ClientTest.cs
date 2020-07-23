@@ -16,12 +16,16 @@ namespace PasswordManagerAccess.Test.Kaspersky
             Assert.Equal("bosh4.ucp-ntfy.kaspersky-labs.com", host);
         }
 
-        [Fact]
-        public void GetNotifyServerIndex_returns_index()
+        [Theory]
+        [InlineData("", 0)]
+        [InlineData("1337", 98)]
+        [InlineData("blah-blah-blah", 5)]
+        [InlineData("206a9e27-f96a-44d5-ac0d-84efe4f1835a", 39)]
+        public void GetNotifyServerIndex_returns_index(string userId, int expected)
         {
-            var index = Client.GetNotifyServerIndex("206a9e27-f96a-44d5-ac0d-84efe4f1835a");
+            var index = Client.GetNotifyServerIndex(userId);
 
-            Assert.Equal("39", index);
+            Assert.Equal(expected, index);
         }
 
         [Fact]

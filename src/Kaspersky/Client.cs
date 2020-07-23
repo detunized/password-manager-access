@@ -209,10 +209,50 @@ namespace PasswordManagerAccess.Kaspersky
             return new Uri(url).Host;
         }
 
-        internal static string GetNotifyServerIndex(string username)
+        // TODO: Move this out of here
+        internal static uint Crc32(byte[] bytes)
         {
-            // TODO: Implement this!
-            return "39";
+            const uint poly = 0x04C1_1DB7;
+            uint crc = 0xFFFF_FFFF;
+
+            foreach (var c in bytes)
+            {
+                crc ^= (uint)ReverseBits(c) << 24;
+                for (var bit = 0; bit < 8; bit++)
+                {
+                    if ((crc & 0x8000_0000) != 0)
+                        crc = (crc << 1) ^ poly;
+                    else
+                        crc <<= 1;
+                }
+            }
+
+            return ReverseBits(~crc);
+        }
+
+        internal static byte ReverseBits(byte b)
+        {
+            return (byte)(((b & 0b0000_0001) << 7) |
+                          ((b & 0b0000_0010) << 5) |
+                          ((b & 0b0000_0100) << 3) |
+                          ((b & 0b0000_1000) << 1) |
+                          ((b & 0b0001_0000) >> 1) |
+                          ((b & 0b0010_0000) >> 3) |
+                          ((b & 0b0100_0000) >> 5) |
+                          ((b & 0b1000_0000) >> 7));
+        }
+
+        internal static uint ReverseBits(uint u)
+        {
+            return ((uint)ReverseBits((byte)(u & 0xFF)) << 24) |
+                   ((uint)ReverseBits((byte)((u >> 8) & 0xFF)) << 16) |
+                   ((uint)ReverseBits((byte)((u >> 16) & 0xFF)) << 8) |
+                   ReverseBits((byte)((u >> 24) & 0xFF));
+        }
+
+        internal static int GetNotifyServerIndex(string username)
+        {
+            return (int)(Crc32(username.ToBytes()) % 100);
         }
 
         internal static string GetParentHost(string host)
