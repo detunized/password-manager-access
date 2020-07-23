@@ -35,6 +35,33 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // CRC32
+        //
+
+        // This is a table-less implementation of CRC32 algorithm as described here
+        // https://github.com/Michaelangel007/crc32. On that page it's referred as
+        // "Formulaic "Normal" CRC32". This version seems to do more computation than
+        // a table version. This is intentional, since we don't do a lot of CRC32
+        // computation in this library and we rather save memory than a few cycles.
+        public static uint Crc32(byte[] bytes)
+        {
+            uint crc = 0xFFFF_FFFF;
+            foreach (var c in bytes)
+            {
+                crc ^= (uint)c.ReverseBits() << 24;
+                for (var bit = 0; bit < 8; bit++)
+                {
+                    if ((crc & 0x8000_0000) != 0)
+                        crc = (crc << 1) ^ 0x04C1_1DB7;
+                    else
+                        crc <<= 1;
+                }
+            }
+
+            return (~crc).ReverseBits();
+        }
+
+        //
         // MD5
         //
 

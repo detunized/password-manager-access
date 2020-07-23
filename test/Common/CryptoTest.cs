@@ -11,6 +11,21 @@ namespace PasswordManagerAccess.Test.Common
     public class CryptoTest
     {
         //
+        // CRC32
+        //
+
+        // Generated with Ruby: `Zlib::crc32(input).to_s(16)`
+        [Theory]
+        [InlineData("", 0)]
+        [InlineData("123456789", 0xCBF43926)]
+        [InlineData("All your base are belong to us", 0x536EC108)]
+        public void Crc32_returns_checksum(string input, uint expected)
+        {
+            var crc = Crypto.Crc32(input.ToBytes());
+            Assert.Equal(expected, crc);
+        }
+
+        //
         // MD5
         //
 

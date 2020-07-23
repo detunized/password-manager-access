@@ -209,30 +209,9 @@ namespace PasswordManagerAccess.Kaspersky
             return new Uri(url).Host;
         }
 
-        // TODO: Move this out of here
-        internal static uint Crc32(byte[] bytes)
-        {
-            const uint poly = 0x04C1_1DB7;
-            uint crc = 0xFFFF_FFFF;
-
-            foreach (var c in bytes)
-            {
-                crc ^= (uint)c.ReverseBits() << 24;
-                for (var bit = 0; bit < 8; bit++)
-                {
-                    if ((crc & 0x8000_0000) != 0)
-                        crc = (crc << 1) ^ poly;
-                    else
-                        crc <<= 1;
-                }
-            }
-
-            return (~crc).ReverseBits();
-        }
-
         internal static int GetNotifyServerIndex(string username)
         {
-            return (int)(Crc32(username.ToBytes()) % 100);
+            return (int)(Crypto.Crc32(username.ToBytes()) % 100);
         }
 
         internal static string GetParentHost(string host)
