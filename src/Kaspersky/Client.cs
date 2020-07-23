@@ -30,7 +30,10 @@ namespace PasswordManagerAccess.Kaspersky
             // 5. Get XMPP info
             var xmpp = GetXmppInfo(authCookie, rest);
 
-            var bosh = new Bosh("https://bosh3.ucp-ntfy.kaspersky-labs.com/http-bind");
+            // 6. Generate JID
+            var boshUrl = GetBoshUrl(xmpp, rest);
+
+            var bosh = new Bosh(boshUrl);
             bosh.Connect("206a9e27-f96a-44d5-ac0d-84efe4f1835a#browser#5@39.ucp-ntfy.kaspersky-labs.com/portalsorucr8yj2l",
                          xmpp.XmppCredentials.Password,
                          transport);
@@ -159,6 +162,54 @@ namespace PasswordManagerAccess.Kaspersky
             }
         }
 
+        internal static string GetBoshUrl(R.XmppSettings xmpp, RestClient rest)
+        {
+            if (xmpp.XmppLibraryUrls.Length == 0)
+                throw MakeError("The list of XMPP BOSH URLs returned by the server is empty");
+
+            var userId = xmpp.UserId;
+            var host = GetHost(xmpp.XmppLibraryUrls[0]);
+
+            var notifyIndex = GetNotifyServerIndex(userId);
+            var notifyServerGroup = GetNotifyServerGroup(host);
+            var notifyHost = $"{notifyIndex}.{notifyServerGroup}";
+
+            var jid = $"{userId}#browser#{ServiceId}@{notifyHost}/{JidResource}";
+            var escapedJid = Uri.EscapeDataString(jid);
+
+            var queryUrl = $"https://{host}/find_bosh_bind?uid={escapedJid}";
+
+            var response = rest.Get(queryUrl);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var boshUrl = response.Content;
+            if (boshUrl.IsNullOrEmpty())
+                throw MakeError("Failed to retrieve the BOSH bind URL");
+
+            return boshUrl;
+        }
+
+        internal static string GetHost(string url)
+        {
+            return new Uri(url).Host;
+        }
+
+        internal static string GetNotifyServerIndex(string username)
+        {
+            // TODO: Implement this!
+            return "39";
+        }
+
+        internal static string GetNotifyServerGroup(string host)
+        {
+            var dot = host.IndexOf('.');
+            if (dot < 0)
+                throw MakeError($"Expected '{host}' to have a subdomain");
+
+            return host.Substring(dot + 1);
+        }
+
         internal static BaseException MakeError(RestResponse<string> response)
         {
             // TODO: Make this more descriptive
@@ -236,5 +287,7 @@ namespace PasswordManagerAccess.Kaspersky
         //
 
         internal const string AuthCookieName = "MyKFedAuth";
+        internal const int ServiceId = 5;
+        internal const string JidResource = "portalsorucr8yj2l"; // TODO: Make this random
     }
 }
