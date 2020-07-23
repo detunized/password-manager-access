@@ -24,24 +24,24 @@ namespace PasswordManagerAccess.Kaspersky
             _url = url;
         }
 
-        public void Connect(string jid, string password, IRestTransport transport)
+        public void Connect(Jid jid, string password, IRestTransport transport)
         {
-            _jid = Jid.Parse(jid);
+            _jid = jid;
             _password = password;
             _requestId = new Random().Next(); // TODO: Remove randomness in tests
             _rest = new RestClient(transport);
 
             const string bosh = "urn:xmpp:xbosh";
             const string sasl = "urn:ietf:params:xml:ns:xmpp-sasl";
-            const string client = "jabber:client";
-            const string bind = "urn:ietf:params:xml:ns:xmpp-bind";
+            //const string client = "jabber:client";
+            //const string bind = "urn:ietf:params:xml:ns:xmpp-bind";
 
             //
             // 1
             //
 
             var body = BuildBody();
-            body.Add(new XAttribute("to", _jid.Domain));
+            body.Add(new XAttribute("to", _jid.Host));
             body.Add(new XAttribute("wait", 60));
             body.Add(new XAttribute("hold", 1));
             body.Add(new XAttribute("ver", "1.6"));
@@ -77,7 +77,7 @@ namespace PasswordManagerAccess.Kaspersky
             //
 
             body = BuildBody();
-            body.Add(new XAttribute("to", _jid.Domain));
+            body.Add(new XAttribute("to", _jid.Host));
             body.Add(new XAttribute(XNamespace.Xml + "lang", "en"));
             body.Add(new XAttribute(XNamespace.Xmlns + "xmpp", bosh));
             body.Add(new XAttribute(XNamespace.Get(bosh) + "restart", "true"));
@@ -98,7 +98,7 @@ namespace PasswordManagerAccess.Kaspersky
 
             response = Request(bt.ToString());
             var xJid = GetChild(response, "body/iq/bind/jid");
-            if (xJid == null || xJid.Value != _jid.Original)
+            if (xJid == null || xJid.Value != _jid.Full)
                 throw MakeError("Resource bind failed");
 
             //
@@ -121,7 +121,7 @@ namespace PasswordManagerAccess.Kaspersky
 
             bt = BuildBodyTemplate();
             bt.Replace("$", "<message xmlns='jabber:client' id='kpmgetdatabasecommand-browser-5-1595431464704' " +
-                            $"to='kpm-sync@{_jid.Domain}' from='{_jid.Bare}'>$</message>");
+                            $"to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'>$</message>");
             bt.Replace("$", "<body />" +
                             "<root unique_id='1830647823' productVersion='' protocolVersion='' " +
                             "projectVersion='9.2.0.1' deviceType='0' osType='0' />");
@@ -142,38 +142,6 @@ namespace PasswordManagerAccess.Kaspersky
         //
         // Internal
         //
-
-        // jid: user@domain/resource
-        internal readonly struct Jid
-        {
-            public readonly string Username;
-            public readonly string Domain;
-            public readonly string Resource;
-            public readonly string Original;
-
-            public string Bare => $"{Username}@{Domain}";
-
-            public static Jid Parse(string jid)
-            {
-                var at = jid.IndexOf('@');
-                var slash = jid.IndexOf('/');
-                if (at < 0 || slash < 0)
-                    throw new InternalErrorException($"Invalid JID '{jid}'");
-
-                return new Jid(username: jid.Substring(0, at),
-                               domain: jid.Substring(at + 1, slash - at - 1),
-                               resource: jid.Substring(slash + 1),
-                               original: jid);
-            }
-
-            internal Jid(string username, string domain, string resource, string original): this()
-            {
-                Username = username;
-                Domain = domain;
-                Resource = resource;
-                Original = original;
-            }
-        }
 
         internal readonly struct DbInfo
         {
@@ -223,7 +191,7 @@ namespace PasswordManagerAccess.Kaspersky
 
         internal static string GetPlainAuthString(Jid jid, string password)
         {
-            return $"{jid.Username}@{jid.Domain}\0{jid.Username}\0{password}".ToBase64();
+            return $"{jid.Bare}\0{jid.Node}\0{password}".ToBase64();
         }
 
         internal XDocument Request(XElement body)

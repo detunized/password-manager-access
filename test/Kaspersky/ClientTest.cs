@@ -25,9 +25,9 @@ namespace PasswordManagerAccess.Test.Kaspersky
         }
 
         [Fact]
-        public void GetNotifyServerGroup_returns_parent_domain()
+        public void GetParentHost_returns_parent_domain()
         {
-            var domain = Client.GetNotifyServerGroup("bosh4.ucp-ntfy.kaspersky-labs.com");
+            var domain = Client.GetParentHost("bosh4.ucp-ntfy.kaspersky-labs.com");
 
             Assert.Equal("ucp-ntfy.kaspersky-labs.com", domain);
         }

@@ -12,7 +12,10 @@ namespace PasswordManagerAccess.Test.Kaspersky
         [Fact]
         public void Connect_works()
         {
-            var jid = "206a9e27-f96a-44d5-ac0d-84efe4f1835a#browser#5@39.ucp-ntfy.kaspersky-labs.com/portalu3mh3hwy2kp";
+            var jid = new Jid("206a9e27-f96a-44d5-ac0d-84efe4f1835a",
+                              "39.ucp-ntfy.kaspersky-labs.com",
+                              "portalu3mh3hwy2kp");
+
             var response1 =
                 "<body wait='60' requests='2' hold='1' from='39.ucp-ntfy.kaspersky-labs.com' accept='deflate,gzip' sid='CR18KyExQ0zE36piRQsC6G954zV7URm0' xmpp:restartlogic='true' xmpp:version='1.0' xmlns='http://jabber.org/protocol/httpbind' xmlns:xmpp='urn:xmpp:xbosh' xmlns:stream='http://etherx.jabber.org/streams' inactivity='300' maxpause='120'>" +
                     "<stream:features>" +
@@ -36,7 +39,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
                 "<body sid='O3P2Miv004KukkdFOrOF4tDZMUekR4bt' xmlns='http://jabber.org/protocol/httpbind'>" +
                     "<iq id='_bind_auth_2' type='result'>" +
                         "<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>" +
-                            $"<jid>{jid}</jid>" +
+                            $"<jid>{jid.Full}</jid>" +
                         "</bind>" +
                     "</iq>" +
                 "</body>";
@@ -46,13 +49,25 @@ namespace PasswordManagerAccess.Test.Kaspersky
                         "<session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>" +
                     "</iq>" +
                 "</body>";
+            var response6 =
+                "<body sid='h8EoyOS6Tstt_ltFbLmWwVFitn1cXecC' xmlns='http://jabber.org/protocol/httpbind'>" +
+                    "<message from='kpm-sync@39.ucp-ntfy.kaspersky-labs.com' to='206a9e27-f96a-44d5-ac0d-84efe4f1835a#browser#5@39.ucp-ntfy.kaspersky-labs.com/portalwvb4dv0gz5e' id='kpmgetdatabasecommand-browser-5-1595505459433' ctime='2020-07-23T11:57:40Z' type='normal' discard_warn='false' cid='daec98e6-b71b-4de5-9815-72ec23cea5fd' no_offline='true'>" +
+                        "<root unique_id='23090566' productVersion='' protocolVersion='' deviceType='0' osType='0' projectVersion='' serverBlob='' MPAuthKeyValueInBase64='' moreChangesAvailable='0' xmlns=''>" +
+                            "<changes>" +
+                                "<item_0000 unique_id='1203265602' id='2408deddd3cc4519bad9aa33b7e50166' type='Database' dataInBase64='AgAAANwFAAA5tWNHwWyUw2VT/XSnzSyx' />" +
+                            "</changes>" +
+                        "</root>" +
+                        "<body />" +
+                    "</message>" +
+                "</body>";
 
             var flow = new RestFlow()
                 .Post(response1)
                 .Post(response2)
                 .Post(response3)
                 .Post(response4)
-                .Post(response5);
+                .Post(response5)
+                .Post(response6);
 
             new Bosh("http://bosh.test").Connect(jid, "password", flow);
         }

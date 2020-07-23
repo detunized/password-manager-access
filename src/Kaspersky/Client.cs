@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Xml.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
@@ -30,13 +29,20 @@ namespace PasswordManagerAccess.Kaspersky
             // 5. Get XMPP info
             var xmpp = GetXmppInfo(authCookie, rest);
 
-            // 6. Generate JID
-            var boshUrl = GetBoshUrl(xmpp, rest);
+            // 6. The server returns a bunch of alternative URLs with the XMPP BOSH Js library which
+            //    are located on different domains. We need to pick one and all the following request
+            //    are done using this domain and its sub and sibling domains.
+            var jsLibraryHost = ChooseJsLibraryHost(xmpp);
 
+            // 7. Generate JID
+            var jid = GenerateJid(xmpp.UserId, jsLibraryHost);
+
+            // 8. Get notify server BOSH url
+            var boshUrl = GetBoshUrl(jid, jsLibraryHost, rest);
+
+            // 9. Connect to the notify XMPP BOSH server
             var bosh = new Bosh(boshUrl);
-            bosh.Connect("206a9e27-f96a-44d5-ac0d-84efe4f1835a#browser#5@39.ucp-ntfy.kaspersky-labs.com/portalsorucr8yj2l",
-                         xmpp.XmppCredentials.Password,
-                         transport);
+            bosh.Connect(jid, xmpp.XmppCredentials.Password, transport);
         }
 
         //
@@ -162,22 +168,30 @@ namespace PasswordManagerAccess.Kaspersky
             }
         }
 
-        internal static string GetBoshUrl(R.XmppSettings xmpp, RestClient rest)
+        internal static string ChooseJsLibraryHost(R.XmppSettings xmpp)
         {
             if (xmpp.XmppLibraryUrls.Length == 0)
                 throw MakeError("The list of XMPP BOSH URLs returned by the server is empty");
 
-            var userId = xmpp.UserId;
-            var host = GetHost(xmpp.XmppLibraryUrls[0]);
+            // TODO: We simply pick the first one. Maybe it's better to pick a random one. In the
+            //       original Js they cycle through them until they find the one that doesn't fail.
+            //       We ignore this bit of extra complexity for now.
+            return GetHost(xmpp.XmppLibraryUrls[0]);
+        }
 
-            var notifyIndex = GetNotifyServerIndex(userId);
-            var notifyServerGroup = GetNotifyServerGroup(host);
-            var notifyHost = $"{notifyIndex}.{notifyServerGroup}";
+        private static Jid GenerateJid(string userId, string jsLibraryHost)
+        {
+            var index = GetNotifyServerIndex(userId);
+            var parentHost = GetParentHost(jsLibraryHost);
 
-            var jid = $"{userId}#browser#{ServiceId}@{notifyHost}/{JidResource}";
-            var escapedJid = Uri.EscapeDataString(jid);
+            // TODO: JID resource should be random
+            return new Jid(userId, $"{index}.{parentHost}", JidResource);
+        }
 
-            var queryUrl = $"https://{host}/find_bosh_bind?uid={escapedJid}";
+        internal static string GetBoshUrl(Jid jid, string jsLibraryHost, RestClient rest)
+        {
+            var escapedJid = Uri.EscapeDataString(jid.Full);
+            var queryUrl = $"https://{jsLibraryHost}/find_bosh_bind?uid={escapedJid}";
 
             var response = rest.Get(queryUrl);
             if (!response.IsSuccessful)
@@ -185,7 +199,7 @@ namespace PasswordManagerAccess.Kaspersky
 
             var boshUrl = response.Content;
             if (boshUrl.IsNullOrEmpty())
-                throw MakeError("Failed to retrieve the BOSH bind URL");
+                throw MakeError("Failed to retrieve the XMPP BOSH bind URL");
 
             return boshUrl;
         }
@@ -201,7 +215,7 @@ namespace PasswordManagerAccess.Kaspersky
             return "39";
         }
 
-        internal static string GetNotifyServerGroup(string host)
+        internal static string GetParentHost(string host)
         {
             var dot = host.IndexOf('.');
             if (dot < 0)
