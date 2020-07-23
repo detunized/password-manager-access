@@ -15,12 +15,40 @@ namespace PasswordManagerAccess.Common
     internal static class Extensions
     {
         //
+        // byte
+        //
+
+        internal static byte ReverseBits(this byte b)
+        {
+            return (byte)(((b & 0b0000_0001) << 7) |
+                          ((b & 0b0000_0010) << 5) |
+                          ((b & 0b0000_0100) << 3) |
+                          ((b & 0b0000_1000) << 1) |
+                          ((b & 0b0001_0000) >> 1) |
+                          ((b & 0b0010_0000) >> 3) |
+                          ((b & 0b0100_0000) >> 5) |
+                          ((b & 0b1000_0000) >> 7));
+        }
+
+        //
+        // uint
+        //
+
+        internal static uint ReverseBits(this uint u)
+        {
+            return ((uint)ReverseBits((byte)(u & 0xFF)) << 24) |
+                   ((uint)ReverseBits((byte)((u >> 8) & 0xFF)) << 16) |
+                   ((uint)ReverseBits((byte)((u >> 16) & 0xFF)) << 8) |
+                   ReverseBits((byte)((u >> 24) & 0xFF));
+        }
+
+        //
         // string
         //
 
         public static bool IsNullOrEmpty(this string s)
         {
-            return string.IsNullOrEmpty(s);
+            return String.IsNullOrEmpty(s);
         }
 
         public static byte[] ToBytes(this string s)
@@ -50,7 +78,7 @@ namespace PasswordManagerAccess.Common
                 for (var j = 0; j < 2; ++j)
                 {
                     b <<= 4;
-                    var c = char.ToLower(s[i * 2 + j]);
+                    var c = Char.ToLower(s[i * 2 + j]);
                     if (c >= '0' && c <= '9')
                         b |= c - '0';
                     else if (c >= 'a' && c <= 'f')
@@ -85,7 +113,7 @@ namespace PasswordManagerAccess.Common
 
             for (var i  = 0; i < length; i += 1)
             {
-                int c = char.ToLower(s[i]);
+                int c = Char.ToLower(s[i]);
                 if (c >= 'a' && c <= 'z')
                     c -= 'a';
                 else if (c >= '2' && c <= '7')
@@ -309,7 +337,7 @@ namespace PasswordManagerAccess.Common
 
         public static string JoinToString<T>(this IEnumerable<T> e, string separator)
         {
-            return string.Join(separator, e);
+            return String.Join(separator, e);
         }
 
         //

@@ -14,6 +14,43 @@ namespace PasswordManagerAccess.Test.Common
     public class ExtensionsTest
     {
         //
+        // byte
+        //
+
+        [Theory]
+        [InlineData(0b0000_0000, 0b0000_0000)]
+        [InlineData(0b0000_0001, 0b1000_0000)]
+        [InlineData(0b0101_0101, 0b1010_1010)]
+        [InlineData(0b1111_0000, 0b0000_1111)]
+        [InlineData(0b1111_1111, 0b1111_1111)]
+        public void Byte_ReverseBits_reverses_bits(byte original, byte reversed)
+        {
+            Assert.Equal(reversed, original.ReverseBits());
+            Assert.Equal(original, reversed.ReverseBits());
+            Assert.Equal(original, original.ReverseBits().ReverseBits());
+            Assert.Equal(reversed, reversed.ReverseBits().ReverseBits());
+        }
+
+        //
+        // uint
+        //
+
+        [Theory]
+        [InlineData(0x0000_0000, 0x0000_0000)]
+        [InlineData(0x0000_0001, 0x8000_0000)]
+        [InlineData(0x0101_0101, 0x8080_8080)]
+        [InlineData(0x0000_1234, 0x2C48_0000)]
+        [InlineData(0xDEAD_BEEF, 0xF77D_B57B)]
+        [InlineData(0xFFFF_FFFF, 0xFFFF_FFFF)]
+        public void Uint_ReverseBits_reverses_bits(uint original, uint reversed)
+        {
+            Assert.Equal(reversed, original.ReverseBits());
+            Assert.Equal(original, reversed.ReverseBits());
+            Assert.Equal(original, original.ReverseBits().ReverseBits());
+            Assert.Equal(reversed, reversed.ReverseBits().ReverseBits());
+        }
+
+        //
         // string
         //
 
