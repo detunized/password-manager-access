@@ -188,19 +188,16 @@ namespace PasswordManagerAccess.Kaspersky
 
         internal XDocument Request(string body)
         {
-            Console.WriteLine($">>>: {body}");
             var response = _rest.PostRaw(_url, body);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            Console.WriteLine($"<<<: {response.Content}");
-            var xml = XDocument.Parse(response.Content);
-
+            // TODO: Do we need this?
             // Remove all namespaces from all the elements. Otherwise it's a giant PITA to deal
             // with the namespaced names, XPath fails all the time and stuff like that.
             //RemoveNamespaces(xml.Root);
 
-            return xml;
+            return XDocument.Parse(response.Content);
         }
 
         internal static XElement GetChild(XContainer root, string path, XElement defaultValue = null)
