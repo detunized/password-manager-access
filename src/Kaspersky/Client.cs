@@ -45,8 +45,8 @@ namespace PasswordManagerAccess.Kaspersky
             var bosh = new Bosh(boshUrl);
             bosh.Connect(jid, xmpp.XmppCredentials.Password, transport);
 
-            // 10. Get DB info
-            var dbInfoBlob = bosh.GetChanges("kpmgetdatabasecommand", 1830647823)
+            // 10. Get DB info which mainly contains the encryption settings (key derivation info)
+            var dbInfoBlob = bosh.GetChanges(GetDatabaseInfoCommand, GetDatabaseInfoCommandId)
                 .Where(x => x.Type == "Database")
                 .Select(x => x.Data)
                 .FirstOrDefault()?
@@ -55,13 +55,15 @@ namespace PasswordManagerAccess.Kaspersky
             if (dbInfoBlob == null)
                 throw MakeError("Database info is not found in the response");
 
-            var dbInfo = Bosh.DbInfo.Parse(dbInfoBlob);
+            var dbInfo = DatabaseInfo.Parse(dbInfoBlob);
 
-            // 11. Get DB
+            var version = dbInfo.Version;
+            if (version < 2 || version > 3)
+                throw new UnsupportedFeatureException($"Database version {version} is not supported");
+
+            // 11. Get DB that contains all of the accounts
             // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests
-            var db = bosh.GetChanges("kpmgetserverchangecommand",
-                                     660529337,
-                                     "TODO: derive the auth key");
+            var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, "TODO: derive the auth key");
         }
 
         //
@@ -149,7 +151,7 @@ namespace PasswordManagerAccess.Kaspersky
         internal static R.XmppSettings GetXmppInfo(string authCookie, RestClient rest)
         {
             var response = rest.Get("https://my.kaspersky.com/MyPasswords",
-                                    cookies: new Dictionary<string, string>{[AuthCookieName] = authCookie});
+                                    cookies: new Dictionary<string, string> {[AuthCookieName] = authCookie});
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -322,5 +324,11 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string DeviceKind = "browser";
         internal const int ServiceId = 5;
         internal const string JidResource = "portalsorucr8yj2l"; // TODO: Make this random
+
+        // BOSH commands
+        internal const string GetDatabaseInfoCommand = "kpmgetdatabasecommand";
+        internal const string GetDatabaseInfoCommandId = "1830647823";
+        internal const string GetDatabaseCommand = "kpmgetserverchangecommand";
+        internal const string GetDatabaseCommandId = "660529337";
     }
 }

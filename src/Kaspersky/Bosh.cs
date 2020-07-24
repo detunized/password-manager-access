@@ -115,7 +115,7 @@ namespace PasswordManagerAccess.Kaspersky
                 throw MakeError("Session auth failed");
         }
 
-        public IEnumerable<Change> GetChanges(string command, int commandId, string authKey = "")
+        public IEnumerable<Change> GetChanges(string command, string commandId, string authKey = "")
         {
             var body = BuildBodyTemplate();
 
@@ -153,35 +153,6 @@ namespace PasswordManagerAccess.Kaspersky
             {
                 Type = type;
                 Data = data;
-            }
-        }
-
-        internal readonly struct DbInfo
-        {
-            public readonly int Version;
-            public readonly int Iterations;
-            public readonly byte[] Salt;
-
-            public static DbInfo Parse(byte[] blob)
-            {
-                if (blob.Length < 24)
-                    throw MakeError("DbInfo blob is too short");
-
-                return blob.Open(r =>
-                {
-                    var version = r.ReadInt32();
-                    var iterations = r.ReadInt32();
-                    var salt = r.ReadBytes(16);
-
-                    return new DbInfo(version, iterations, salt);
-                });
-            }
-
-            internal DbInfo(int version, int iterations, byte[] salt)
-            {
-                Version = version;
-                Iterations = iterations;
-                Salt = salt;
             }
         }
 
@@ -243,33 +214,6 @@ namespace PasswordManagerAccess.Kaspersky
             }
 
             return (XElement)current;
-        }
-
-        internal static void RemoveNamespaces(XElement e)
-        {
-            if (e == null)
-                return;
-
-            e.Name = XName.Get(e.Name.LocalName);
-
-            foreach (var child in e.Elements())
-                RemoveNamespaces(child);
-        }
-
-        internal static byte[] DeriveMasterPasswordAuthKey(string userId, string password, DbInfo dbInfo)
-        {
-            return Pbkdf2.GenerateSha256(password: DeriveEncryptionKey(password, dbInfo),
-                                         salt: Encoding.Unicode.GetBytes(userId),
-                                         iterationCount: 1500,
-                                         byteCount: 64);
-        }
-
-        internal static byte[] DeriveEncryptionKey(string password, DbInfo dbInfo)
-        {
-            return Crypto.Pbkdf2Sha256(password: password,
-                                       salt: dbInfo.Salt,
-                                       iterations: dbInfo.Iterations,
-                                       byteCount: 32);
         }
 
         private static BaseException MakeError(RestResponse<string> response)

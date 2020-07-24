@@ -75,31 +75,10 @@ namespace PasswordManagerAccess.Test.Kaspersky
                     "</message>" +
                 "</body>";
 
-            var items = new Bosh("http://bosh.test").GetChanges("blah", 1337);
-        }
+            var flow = new RestFlow()
+                .Post(response);
 
-        [Fact]
-        public void DeriveMasterPasswordAuthKey_returns_derived_key()
-        {
-            var key = Bosh.DeriveMasterPasswordAuthKey(
-                "206a9e27-f96a-44d5-ac0d-84efe4f1835a",
-                "Password123!",
-                new Bosh.DbInfo(2, 1500, "39b56347c16c94c36553fd74a7cd2cb1".DecodeHex()));
-
-            Assert.Equal(
-                "d6602e5364ffa30389d9bab817919919ed417aabce1723ebc554099a34375253fee450daa7b0d9959672398c79cde5736d020c73db661f12da6c2ede7c747e2c".DecodeHex(),
-                key);
-        }
-
-        [Fact]
-        public void DeriveEncryptionKey_returns_derived_key()
-        {
-            var key = Bosh.DeriveEncryptionKey(
-                "Password123!",
-                new Bosh.DbInfo(2, 1500, "39b56347c16c94c36553fd74a7cd2cb1".DecodeHex()));
-
-            Assert.Equal("d8f2bfe4980d90e3d402844e5332859ecbda531ab24962d2fdad4d39ad98d2f9".DecodeHex(),
-                         key);
+            var items = new Bosh("http://bosh.test").GetChanges("blah", "1337");
         }
     }
 }
