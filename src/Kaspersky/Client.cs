@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.Kaspersky.Response;
 
 namespace PasswordManagerAccess.Kaspersky
 {
@@ -256,64 +257,6 @@ namespace PasswordManagerAccess.Kaspersky
         internal static BaseException MakeError(string message, Exception inner = null)
         {
             return new InternalErrorException(message, inner);
-        }
-
-        // TODO: Move this out of here
-        internal static class R
-        {
-            internal class Result
-            {
-                [JsonProperty("Status", Required = Required.Always)]
-                public readonly string Status;
-            }
-
-            internal class Start: Result
-            {
-                [JsonProperty("LogonContext", Required = Required.Always)]
-                public readonly string Context;
-            }
-
-            internal class UserToken
-            {
-                [JsonProperty("UserToken", Required = Required.Always)]
-                public readonly string Token;
-
-                [JsonProperty("TokenType", Required = Required.Always)]
-                public readonly string Type;
-            }
-
-            internal class XmppSettings
-            {
-                [JsonProperty("userId", Required = Required.Always)]
-                public readonly string UserId;
-
-                [JsonProperty("pushNotificationEkaUniqueId", Required = Required.Always)]
-                public readonly string PushNotificationEkaUniqueId;
-
-                [JsonProperty("pushNotificationKpmServiceHasChangesUniqueId", Required = Required.Always)]
-                public readonly string PushNotificationKpmServiceHasChangesUniqueId;
-
-                [JsonProperty("commandResponseTimeout", Required = Required.Always)]
-                public readonly int CommandResponseTimeout;
-
-                [JsonProperty("commandLifetime", Required = Required.Always)]
-                public readonly int CommandLifetime;
-
-                [JsonProperty("xmppLibraryUrls", Required = Required.Always)]
-                public readonly string[] XmppLibraryUrls;
-
-                [JsonProperty("xmppCredentials", Required = Required.Always)]
-                public readonly XmppCredentials XmppCredentials;
-            }
-
-            internal readonly struct XmppCredentials
-            {
-                [JsonProperty("userId", Required = Required.Always)]
-                public readonly string UserId;
-
-                [JsonProperty("password", Required = Required.Always)]
-                public readonly string Password;
-            }
         }
 
         //
