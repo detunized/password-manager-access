@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
@@ -43,6 +44,24 @@ namespace PasswordManagerAccess.Kaspersky
             // 9. Connect to the notify XMPP BOSH server
             var bosh = new Bosh(boshUrl);
             bosh.Connect(jid, xmpp.XmppCredentials.Password, transport);
+
+            // 10. Get DB info
+            var dbInfoBlob = bosh.GetChanges("kpmgetdatabasecommand", 1830647823)
+                .Where(x => x.Type == "Database")
+                .Select(x => x.Data)
+                .FirstOrDefault()?
+                .Decode64();
+
+            if (dbInfoBlob == null)
+                throw MakeError("Database info is not found in the response");
+
+            var dbInfo = Bosh.DbInfo.Parse(dbInfoBlob);
+
+            // 11. Get DB
+            // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests
+            var db = bosh.GetChanges("kpmgetserverchangecommand",
+                                     660529337,
+                                     "TODO: derive the auth key");
         }
 
         //
@@ -225,6 +244,9 @@ namespace PasswordManagerAccess.Kaspersky
 
         internal static BaseException MakeError(RestResponse<string> response)
         {
+            // TODO: Support server reported error. One real example:
+            // {"ErrorDescription":"Too many requests.","TraceId":"509a0be4-6cca-4e0b-8571-63795d3ef826"}
+
             // TODO: Make this more descriptive
             return MakeError($"Request to '{response.RequestUri}' failed");
         }
@@ -289,9 +311,6 @@ namespace PasswordManagerAccess.Kaspersky
 
                 [JsonProperty("password", Required = Required.Always)]
                 public readonly string Password;
-
-                [JsonProperty("dangerousPassword", Required = Required.Always)]
-                public readonly string DangerousPassword;
             }
         }
 
@@ -300,6 +319,7 @@ namespace PasswordManagerAccess.Kaspersky
         //
 
         internal const string AuthCookieName = "MyKFedAuth";
+        internal const string DeviceKind = "browser";
         internal const int ServiceId = 5;
         internal const string JidResource = "portalsorucr8yj2l"; // TODO: Make this random
     }

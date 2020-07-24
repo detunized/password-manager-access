@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
@@ -112,36 +113,48 @@ namespace PasswordManagerAccess.Kaspersky
             response = Request(bt.ToString());
             if (GetChild(response, "body/iq/session") == null)
                 throw MakeError("Session auth failed");
+        }
 
-            // Auth finished
+        public IEnumerable<Change> GetChanges(string command, int commandId, string authKey = "")
+        {
+            var body = BuildBodyTemplate();
 
-            //
-            // Get DB
-            //
+            var timestamp = Os.UnixMilliseconds();
+            var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
+            body.Replace(
+                "$",
+                $"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'>" +
+                    $"<root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' MPAuthKeyValueInBase64='{authKey}'/>" +
+                    "<body />" +
+                "</message>");
 
-            bt = BuildBodyTemplate();
-            bt.Replace("$", "<message xmlns='jabber:client' id='kpmgetdatabasecommand-browser-5-1595431464704' " +
-                            $"to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'>$</message>");
-            bt.Replace("$", "<body />" +
-                            "<root unique_id='1830647823' productVersion='' protocolVersion='' " +
-                            "projectVersion='9.2.0.1' deviceType='0' osType='0' />");
-
-            response = Request(bt.ToString());
+            var response = Request(body.ToString());
             var changes = GetChild(response, "body/message/root/changes");
             if (changes == null)
-                throw MakeError("Failed to retrieve the database info");
+                throw MakeError($"Failed to retrieve changes via {command}");
 
-            var dbInfoItem = changes.Elements().FirstOrDefault(x => x.Attribute("type")?.Value == "Database");
-            if (dbInfoItem == null)
-                throw MakeError("Database info is not found in the response");
-
-            var dbInfoBlob = dbInfoItem.Attribute("dataInBase64")?.Value.Decode64();
-            var dbInfo = DbInfo.Parse(dbInfoBlob);
+            return
+                from e in changes.Elements()
+                let type = e.Attribute("type")?.Value
+                where type != null
+                select new Change(type, e.Attribute("dataInBase64")?.Value ?? "");
         }
 
         //
         // Internal
         //
+
+        internal readonly struct Change
+        {
+            public readonly string Type;
+            public readonly string Data;
+
+            public Change(string type, string data)
+            {
+                Type = type;
+                Data = data;
+            }
+        }
 
         internal readonly struct DbInfo
         {
@@ -151,6 +164,9 @@ namespace PasswordManagerAccess.Kaspersky
 
             public static DbInfo Parse(byte[] blob)
             {
+                if (blob.Length < 24)
+                    throw MakeError("DbInfo blob is too short");
+
                 return blob.Open(r =>
                 {
                     var version = r.ReadInt32();

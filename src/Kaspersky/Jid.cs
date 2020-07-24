@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.Kaspersky
             Host = host;
             Resource = resource;
 
-            Node = $"{UserId}#browser#{Client.ServiceId}";
+            Node = $"{UserId}#{Client.DeviceKind}#{Client.ServiceId}";
             Bare = $"{Node}@{Host}";
             Full = $"{Bare}/{Resource}";
         }

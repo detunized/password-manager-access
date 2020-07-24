@@ -49,7 +49,21 @@ namespace PasswordManagerAccess.Test.Kaspersky
                         "<session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>" +
                     "</iq>" +
                 "</body>";
-            var response6 =
+
+            var flow = new RestFlow()
+                .Post(response1)
+                .Post(response2)
+                .Post(response3)
+                .Post(response4)
+                .Post(response5);
+
+            new Bosh("http://bosh.test").Connect(jid, "password", flow);
+        }
+
+        [Fact(Skip = "Need to fake Connect")]
+        public void GetChanges_returns_items()
+        {
+            var response =
                 "<body sid='h8EoyOS6Tstt_ltFbLmWwVFitn1cXecC' xmlns='http://jabber.org/protocol/httpbind'>" +
                     "<message from='kpm-sync@39.ucp-ntfy.kaspersky-labs.com' to='206a9e27-f96a-44d5-ac0d-84efe4f1835a#browser#5@39.ucp-ntfy.kaspersky-labs.com/portalwvb4dv0gz5e' id='kpmgetdatabasecommand-browser-5-1595505459433' ctime='2020-07-23T11:57:40Z' type='normal' discard_warn='false' cid='daec98e6-b71b-4de5-9815-72ec23cea5fd' no_offline='true'>" +
                         "<root unique_id='23090566' productVersion='' protocolVersion='' deviceType='0' osType='0' projectVersion='' serverBlob='' MPAuthKeyValueInBase64='' moreChangesAvailable='0' xmlns=''>" +
@@ -61,15 +75,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
                     "</message>" +
                 "</body>";
 
-            var flow = new RestFlow()
-                .Post(response1)
-                .Post(response2)
-                .Post(response3)
-                .Post(response4)
-                .Post(response5)
-                .Post(response6);
-
-            new Bosh("http://bosh.test").Connect(jid, "password", flow);
+            var items = new Bosh("http://bosh.test").GetChanges("blah", 1337);
         }
 
         [Fact]
