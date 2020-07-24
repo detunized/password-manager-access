@@ -282,6 +282,7 @@ namespace PasswordManagerAccess.Common
         // DateTime
         //
 
+        // TOOD: Remove this in favour of Os.UnixSeconds
         public static uint UnixSeconds(this DateTime time)
         {
             const long secondsSinceEpoch = 62135596800;
