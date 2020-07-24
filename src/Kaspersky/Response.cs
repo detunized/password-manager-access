@@ -31,18 +31,6 @@ namespace PasswordManagerAccess.Kaspersky.Response
         [JsonProperty("userId", Required = Required.Always)]
         public readonly string UserId;
 
-        [JsonProperty("pushNotificationEkaUniqueId", Required = Required.Always)]
-        public readonly string PushNotificationEkaUniqueId;
-
-        [JsonProperty("pushNotificationKpmServiceHasChangesUniqueId", Required = Required.Always)]
-        public readonly string PushNotificationKpmServiceHasChangesUniqueId;
-
-        [JsonProperty("commandResponseTimeout", Required = Required.Always)]
-        public readonly int CommandResponseTimeout;
-
-        [JsonProperty("commandLifetime", Required = Required.Always)]
-        public readonly int CommandLifetime;
-
         [JsonProperty("xmppLibraryUrls", Required = Required.Always)]
         public readonly string[] XmppLibraryUrls;
 
