@@ -62,9 +62,13 @@ namespace PasswordManagerAccess.Kaspersky
             if (version < 2 || version > 3)
                 throw new UnsupportedFeatureException($"Database version {version} is not supported");
 
+            var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, password, dbInfo);
+
             // 11. Get DB that contains all of the accounts
             // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests
-            var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, "TODO: derive the auth key");
+            var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, authKey.ToBase64());
+
+            // TODO: Parse the db here
         }
 
         //
