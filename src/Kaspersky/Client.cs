@@ -3,8 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.Kaspersky.Response;
 
@@ -59,7 +62,7 @@ namespace PasswordManagerAccess.Kaspersky
             var dbInfo = DatabaseInfo.Parse(dbInfoBlob);
 
             var version = dbInfo.Version;
-            if (version < 2 || version > 3)
+            if (version != 2)
                 throw new UnsupportedFeatureException($"Database version {version} is not supported");
 
             var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, password, dbInfo);
@@ -249,6 +252,70 @@ namespace PasswordManagerAccess.Kaspersky
             return host.Substring(dot + 1);
         }
 
+        internal static object DecryptItem(Bosh.Change item)
+        {
+            var blob = item.Data.Decode64();
+            if (blob.Length < 4)
+                throw MakeError("Database is corrupted: encrypted item is too short");
+
+            var version = blob[0];
+            if (version == Version92)
+                return DecryptItemVersion92(blob);
+
+            throw new UnsupportedFeatureException($"Database item version {version} is not supported");
+        }
+
+        internal static object DecryptItemVersion92(byte[] blob)
+        {
+            using var inputStream = new MemoryStream(blob, false);
+
+            // Skip version (4 bytes) and Zlib header (2 bytes)
+            for (var i = 0; i < 6; i++)
+                inputStream.ReadByte();
+
+            using var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress);
+            var decompressed = deflateStream.ReadAll();
+
+            var json = JObject.Parse(decompressed.ToUtf8());
+
+            var fields = json["fields"];
+            var fieldProperties = json["attributes"]["propertiesMetadata"];
+
+            // Field types:
+            //
+            // 0: "Text"
+            // 1: "Number"
+            // 2: "Boolean"
+            // 3: "Blob"
+            // 4: "Real"
+            // 5: "Json"
+            //
+            // Text: 0
+            // Number: 1
+            // Boolean: 2
+            // Blob: 3
+            // Real: 4
+            // Json: 5
+
+            // Fields could be encrypted or not, this is defined by the field attributes.
+            // The stored type of the field is ignored by the parser and it uses a hardcoded
+            // table of known names and associated types.
+
+            // Encrypted blob has a header of 12 words (48 bytes)
+            // 16 bytes of IV
+            // 32 bytes of HMAC
+            // The rest of the blob contains the ciphertext encrypted with AES-256-CBC with PKCS#7 padding.
+
+            // For version 9.2 strings are stored in UTF-16. Otherwise it's UTF-8.
+
+            // Look for `function E(e, t, n) {` for more info.
+
+            // HMAC for versions 9+ are calculated on the encrypted data
+            // HMAC for version 8 is calculated on the decrypted string
+
+            return null;
+        }
+
         internal static BaseException MakeError(RestResponse<string> response)
         {
             // TODO: Support server reported error. One real example:
@@ -271,6 +338,10 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string DeviceKind = "browser";
         internal const int ServiceId = 5;
         internal const string JidResource = "portalsorucr8yj2l"; // TODO: Make this random
+
+        internal const int Version8 = 1;
+        internal const int Version9 = 2;
+        internal const int Version92 = 3;
 
         // BOSH commands
         internal const string GetDatabaseInfoCommand = "kpmgetdatabasecommand";

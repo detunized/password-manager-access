@@ -144,6 +144,7 @@ namespace PasswordManagerAccess.Kaspersky
         // Internal
         //
 
+        // TODO: Rename this to EncryptedItem
         internal readonly struct Change
         {
             public readonly string Type;
