@@ -12,7 +12,7 @@ namespace PasswordManagerAccess.Kaspersky
 {
     internal static class Client
     {
-        public static void OpenVault(string username, string password, IRestTransport transport)
+        public static Account[] OpenVault(string username, string password, IRestTransport transport)
         {
             var rest = new RestClient(transport);
 
@@ -69,7 +69,7 @@ namespace PasswordManagerAccess.Kaspersky
             var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, authKey.ToBase64());
 
             // TODO: Parse the db here
-            Parser.ParseVault(db);
+            return Parser.ParseVault(db).ToArray();
         }
 
         //

@@ -13,11 +13,12 @@ namespace PasswordManagerAccess.Kaspersky
 {
     internal static class Parser
     {
-        public static object[] ParseVault(IEnumerable<Bosh.Change> db)
+        public static IEnumerable<Account> ParseVault(IEnumerable<Bosh.Change> db)
         {
             var accounts = new List<Dictionary<string, string>>();
             var credentials = new List<Dictionary<string, string>>();
 
+            // Parse all the relevant items into temporary ad-hoc structures
             foreach (var item in db)
             {
                 switch (item.Type)
@@ -31,7 +32,31 @@ namespace PasswordManagerAccess.Kaspersky
                 }
             }
 
-            return null;
+            // Theoretically it's possible that some entries have their account ID missing. They will end
+            // end up grouped under the blank ("") key. We just ignore those, should they appear in the vault.
+            // They are basically orphans with no account to be attached to.
+            var credentialsByAccount = credentials.ToLookup(x => x.GetOrDefault(FieldAccountId, ""));
+
+            // Convert to the final objects by grouping the logins (Credentials)
+            // under the corresponding web accounts (Account).
+            return accounts.Select(account =>
+            {
+                var id = account.GetOrDefault(FieldId, "");
+
+
+                var accountCredentials = credentialsByAccount[id].Select(
+                    c => new Credentials(c.GetOrDefault(FieldId, ""),
+                                         c.GetOrDefault(FieldName, ""),
+                                         c.GetOrDefault(FieldUsername, ""),
+                                         c.GetOrDefault(FieldPassword, ""),
+                                         c.GetOrDefault(FieldNotes, "")));
+
+                return new Account(id,
+                                   account.GetOrDefault(FieldName, ""),
+                                   account.GetOrDefault(FieldUrl, ""),
+                                   account.GetOrDefault(FieldNotes, ""),
+                                   accountCredentials.ToArray());
+            });
         }
 
         internal static Dictionary<string, string> ParseWebAccount(Bosh.Change item)
@@ -39,7 +64,7 @@ namespace PasswordManagerAccess.Kaspersky
             var (version, blob) = DecodeItem(item);
             return version switch
             {
-                Version92 => ParseItemVersion92(blob, "m_guid", "m_name", "m_url", "m_comment"),
+                Version92 => ParseItemVersion92(blob, AccountFields),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
@@ -49,7 +74,7 @@ namespace PasswordManagerAccess.Kaspersky
             var (version, blob) = DecodeItem(item);
             return version switch
             {
-                Version92 => ParseItemVersion92(blob, "m_guid", "m_account", "m_name", "m_login", "m_password", "m_comment"),
+                Version92 => ParseItemVersion92(blob, LoginFields),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
@@ -191,5 +216,31 @@ namespace PasswordManagerAccess.Kaspersky
         public const int Version8 = 1;
         public const int Version9 = 2;
         public const int Version92 = 3;
+
+        internal const string FieldId = "m_guid";
+        internal const string FieldName = "m_name";
+        internal const string FieldUrl = "m_url";
+        internal const string FieldNotes = "m_comment";
+        internal const string FieldAccountId = "m_account";
+        internal const string FieldUsername = "m_login";
+        internal const string FieldPassword = "m_password";
+
+        internal static readonly string[] AccountFields =
+        {
+            FieldId,
+            FieldName,
+            FieldUrl,
+            FieldNotes,
+        };
+
+        internal static readonly string[] LoginFields =
+        {
+            FieldId,
+            FieldAccountId,
+            FieldName,
+            FieldUsername,
+            FieldPassword,
+            FieldNotes,
+        };
     }
 }

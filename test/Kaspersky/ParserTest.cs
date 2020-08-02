@@ -19,7 +19,9 @@ namespace PasswordManagerAccess.Test.Kaspersky
                 .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
                 .Select(x => new Bosh.Change(x.Attribute("type").Value, x.Attribute("dataInBase64").Value));
 
-            Parser.ParseVault(changes);
+            var accounts = Parser.ParseVault(changes).ToArray();
+
+            Assert.Equal(10, accounts.Length);
         }
 
         [Fact]
