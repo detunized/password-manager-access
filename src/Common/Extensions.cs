@@ -427,6 +427,26 @@ namespace PasswordManagerAccess.Common
             return At(j, name, JTokenType.Boolean, defaultValue);
         }
 
+        public static JArray ArrayAt(this JToken j, string name, JArray defaultValue)
+        {
+            return At(j, name, JTokenType.Array, defaultValue);
+        }
+
+        public static JArray ArrayAtOrEmpty(this JToken j, string name)
+        {
+            return ArrayAt(j, name, null) ?? new JArray();
+        }
+
+        public static JObject ObjectAt(this JToken j, string name, JObject defaultValue)
+        {
+            return At(j, name, JTokenType.Object, defaultValue);
+        }
+
+        public static JObject ObjectAtOrEmpty(this JToken j, string name)
+        {
+            return ObjectAt(j, name, null) ?? new JObject();
+        }
+
         private static T At<T>(JToken j, string name, JTokenType type, T defaultValue)
         {
             if (j?.Type == JTokenType.Object)

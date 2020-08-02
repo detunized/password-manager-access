@@ -671,6 +671,10 @@ namespace PasswordManagerAccess.Test.Common
         // JToken
         //
 
+        //
+        // JToken.StringAt
+        //
+
         [Fact]
         public void JToken_StringAt_returns_string()
         {
@@ -713,6 +717,10 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal("yo", (null as JToken).StringAt("key", "yo"));
         }
 
+        //
+        // JToken.IntAt
+        //
+
         [Fact]
         public void JToken_IntAt_returns_int()
         {
@@ -754,6 +762,10 @@ namespace PasswordManagerAccess.Test.Common
         {
             Assert.Equal(1337, (null as JToken).IntAt("key", 1337));
         }
+
+        //
+        // JToken.BoolAt
+        //
 
         [Fact]
         public void JToken_BoolAt_returns_bools()
@@ -800,6 +812,112 @@ namespace PasswordManagerAccess.Test.Common
             Assert.True((null as JToken).BoolAt("key", true));
         }
 
+        //
+        // JToken.ArrayAt
+        //
+
+        [Fact]
+        public void JToken_ArrayAt_returns_array()
+        {
+            var j = JToken.Parse("{'a': [1]}");
+
+            Assert.NotEmpty(j.ArrayAt("a", null));
+            Assert.NotEmpty(j.ArrayAtOrEmpty("a"));
+        }
+
+        [Theory]
+        [InlineData("null")]
+        [InlineData("true")]
+        [InlineData("10")]
+        [InlineData("10.0")]
+        [InlineData("'[]'")]
+        [InlineData("{}")]
+        public void JToken_ArrayAt_returns_default_value_on_non_arrays(string value)
+        {
+            var j = JObject.Parse($"{{'key': {value}}}");
+            var a = JArray.Parse("[1, 2, 3]");
+
+            Assert.Same(a, j.ArrayAt("key", a));
+            Assert.Null(j.ArrayAt("key", null));
+            Assert.Empty(j.ArrayAtOrEmpty("key"));
+        }
+
+        [Fact]
+        public void JToken_ArrayAt_returns_default_value_when_field_does_not_exist()
+        {
+            var j = JObject.Parse("{'key': []}");
+            var a = JArray.Parse("[1, 2, 3]");
+
+            Assert.Same(a, j.ArrayAt("not-a-key", a));
+            Assert.Null(j.ArrayAt("not-a-key", null));
+            Assert.Empty(j.ArrayAtOrEmpty("not-a-key"));
+        }
+
+        [Fact]
+        public void JToken_ArrayAt_returns_default_value_when_token_is_null()
+        {
+            var a = JArray.Parse("[1, 2, 3]");
+
+            Assert.Same(a, ((JToken)null).ArrayAt("key", a));
+            Assert.Null(((JToken)null).ArrayAt("key", null));
+            Assert.Empty(((JToken)null).ArrayAtOrEmpty("key"));
+        }
+
+        //
+        // JToken.ObjectAt
+        //
+
+        [Fact]
+        public void JToken_ObjectAt_returns_object()
+        {
+            var j = JToken.Parse("{'a': {'b': 1}}");
+
+            Assert.NotEmpty(j.ObjectAt("a", null));
+            Assert.NotEmpty(j.ObjectAtOrEmpty("a"));
+        }
+
+        [Theory]
+        [InlineData("null")]
+        [InlineData("true")]
+        [InlineData("10")]
+        [InlineData("10.0")]
+        [InlineData("[]")]
+        [InlineData("'{}'")]
+        public void JToken_ObjectAt_returns_default_value_on_non_objects(string value)
+        {
+            var j = JObject.Parse($"{{'key': {value}}}");
+            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
+
+            Assert.Same(o, j.ObjectAt("key", o));
+            Assert.Null(j.ObjectAt("key", null));
+            Assert.Empty(j.ObjectAtOrEmpty("key"));
+        }
+
+        [Fact]
+        public void JToken_ObjectAt_returns_default_value_when_field_does_not_exist()
+        {
+            var j = JObject.Parse("{'key': {}}");
+            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
+
+            Assert.Same(o, j.ObjectAt("not-a-key", o));
+            Assert.Null(j.ObjectAt("not-a-key", null));
+            Assert.Empty(j.ObjectAtOrEmpty("not-a-key"));
+        }
+
+        [Fact]
+        public void JToken_ObjectAt_returns_default_value_when_token_is_null()
+        {
+            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
+
+            Assert.Same(o, ((JToken)null).ObjectAt("key", o));
+            Assert.Null(((JToken)null).ObjectAt("key", null));
+            Assert.Empty(((JToken)null).ObjectAtOrEmpty("key"));
+        }
+
+        //
+        // JToken.*
+        //
+
         [Fact]
         public void JToken_At_functions_work_on_nested_objects()
         {
@@ -823,20 +941,24 @@ namespace PasswordManagerAccess.Test.Common
         public void JToken_At_functions_return_default_value_when_token_is_not_an_object(string json)
         {
             var j = JToken.Parse(json);
+            var a = JArray.Parse("[1, 2, 3]");
+            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
 
             Assert.Equal("yo", j.StringAt("key", "yo"));
             Assert.Equal(1337, j.IntAt("key", 1337));
             Assert.True(j.BoolAt("key", true));
+            Assert.Same(a, j.ArrayAt("key", a));
+            Assert.Empty(j.ArrayAtOrEmpty("key"));
+            Assert.Same(o, j.ObjectAt("key", o));
+            Assert.Empty(j.ObjectAtOrEmpty("key"));
         }
-
 
         //
         // Data
         //
 
         private const string TestString = "All your base are belong to us";
-        private const string TestHex = "416c6c20796f757220626173652061" +
-                                       "72652062656c6f6e6720746f207573";
+        private const string TestHex = "416c6c20796f75722062617365206172652062656c6f6e6720746f207573";
 
         private static readonly byte[] TestBytes =
         {
