@@ -20,37 +20,28 @@ namespace PasswordManagerAccess.Kaspersky
         private int _requestId;
         private string _sessionId;
 
-        public Bosh(string url, Jid jid, string password, IRestTransport transport)
+        public Bosh(string url, Jid jid, string password, IRestTransport transport):
+            this(url, jid, password, transport, new Random().Next())
         {
-            _url = url;
-            _jid = jid;
-            _password = password;
-            _rest = new RestClient(transport);
-            _requestId = new Random().Next(); // TODO: Remove randomness in tests
         }
 
         public void Connect()
         {
-            const string bosh = "urn:xmpp:xbosh";
-            const string sasl = "urn:ietf:params:xml:ns:xmpp-sasl";
-            //const string client = "jabber:client";
-            //const string bind = "urn:ietf:params:xml:ns:xmpp-bind";
-
             //
-            // 1
+            // 1. Initialize
             //
 
-            var body = BuildBody();
-            body.Add(new XAttribute("to", _jid.Host));
-            body.Add(new XAttribute("wait", 60));
-            body.Add(new XAttribute("hold", 1));
-            body.Add(new XAttribute("ver", "1.6"));
-            body.Add(new XAttribute("content", "text/xml; charset=utf-8"));
-            body.Add(new XAttribute(XNamespace.Xml + "lang", "en"));
-            body.Add(new XAttribute(XNamespace.Xmlns + "xmpp", bosh));
-            body.Add(new XAttribute(XNamespace.Get(bosh) + "version", "1.0"));
+            var rt = GenerateNextRequestTemplate();
+            rt.AddAttribute($"to='{_jid.Host}'");
+            rt.AddAttribute("wait='60'");
+            rt.AddAttribute("hold='1'");
+            rt.AddAttribute("ver='1.6'");
+            rt.AddAttribute("content='text/xml; charset=utf-8'");
+            rt.AddAttribute("xml:lang='en'");
+            rt.AddAttribute("xmpp:version='1.0'");
+            rt.AddAttribute("xmlns:xmpp='urn:xmpp:xbosh'");
 
-            var response = Request(body);
+            var response = Request(rt.Bake());
             if (response.Root.Attribute("sid") is { } sid)
                 _sessionId = sid.Value;
 
@@ -60,63 +51,62 @@ namespace PasswordManagerAccess.Kaspersky
                 throw MakeError("PLAIN auth method is not supported by the server");
 
             //
-            // 2
+            // 2. Authenticate
             //
 
-            body = BuildBody();
-            body.Add(new XElement(XNamespace.Get(sasl) + "auth",
-                                  new XAttribute("mechanism", "PLAIN"),
-                                  new XText(GetPlainAuthString(_jid, _password))));
+            var auth = GetPlainAuthString(_jid, _password);
+            rt = GenerateNextRequestTemplate();
+            rt.AddTag($"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>{auth}", "</auth>");
 
-            response = Request(body);
+            response = Request(rt.Bake());
             if (GetChild(response, "body/success") == null)
                 throw MakeError("Authentication failed");
 
             //
-            // 3
+            // 3. Restart
             //
 
-            body = BuildBody();
-            body.Add(new XAttribute("to", _jid.Host));
-            body.Add(new XAttribute(XNamespace.Xml + "lang", "en"));
-            body.Add(new XAttribute(XNamespace.Xmlns + "xmpp", bosh));
-            body.Add(new XAttribute(XNamespace.Get(bosh) + "restart", "true"));
+            rt = GenerateNextRequestTemplate();
+            rt.AddAttribute($"to='{_jid.Host}'");
+            rt.AddAttribute("xml:lang='en'");
+            rt.AddAttribute("xmpp:restart='true'");
+            rt.AddAttribute("xmlns:xmpp='urn:xmpp:xbosh'");
 
-            response = Request(body);
+            response = Request(rt.Bake());
             if (GetChild(response, "body/features/bind") == null ||
                 GetChild(response, "body/features/session") == null)
                 throw MakeError("Restart failed");
 
             //
-            // 4
+            // 4. Bind resource
             //
 
-            var bt = BuildBodyTemplate();
-            bt.Replace("$", "<iq type='set' id='_bind_auth_2' xmlns='jabber:client'>$</iq>");
-            bt.Replace("$", "<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>$</bind>");
-            bt.Replace("$", $"<resource>{_jid.Resource}</resource>");
+            rt = GenerateNextRequestTemplate();
+            rt.AddTag("<iq type='set' id='_bind_auth_2' xmlns='jabber:client'>", "</iq>");
+            rt.AddTag("<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>", "</bind>");
+            rt.AddTag($"<resource>{_jid.Resource}", "</resource>");
 
-            response = Request(bt.ToString());
+            response = Request(rt.Bake());
             var xJid = GetChild(response, "body/iq/bind/jid");
             if (xJid == null || xJid.Value != _jid.Full)
                 throw MakeError("Resource bind failed");
 
             //
-            // 5
+            // 5. Set session
             //
 
-            bt = BuildBodyTemplate();
-            bt.Replace("$", "<iq id='_session_auth_2' type='set' xmlns='jabber:client'>$</id>");
-            bt.Replace("$", "<session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>");
+            rt = GenerateNextRequestTemplate();
+            rt.AddTag("<iq type='set' id='_session_auth_2' xmlns='jabber:client'>", "</iq>");
+            rt.AddTag("<session xmlns='urn:ietf:params:xml:ns:xmpp-session'>", "</session>");
 
-            response = Request(bt.ToString());
+            response = Request(rt.Bake());
             if (GetChild(response, "body/iq/session") == null)
                 throw MakeError("Session auth failed");
         }
 
         public IEnumerable<Change> GetChanges(string command, string commandId, string authKey = "")
         {
-            var body = BuildBodyTemplate();
+            var body = GenerateNextBodyTemplate();
 
             var timestamp = Os.UnixMilliseconds();
             var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
@@ -143,6 +133,55 @@ namespace PasswordManagerAccess.Kaspersky
         // Internal
         //
 
+        internal class RequestTemplate
+        {
+            private StringBuilder _draft;
+            private string _baked = null;
+
+            private const string Ap = "$a$";
+            private const string Tp = "$t$";
+
+            public RequestTemplate(int requestId, string sessionId = null)
+            {
+                _draft = new StringBuilder(1024);
+
+                _draft.Append($"<body rid='{requestId}' xmlns='http://jabber.org/protocol/httpbind'");
+                if (sessionId != null)
+                    _draft.Append($" sid='{sessionId}'");
+                _draft.Append($"{Ap}>{Tp}</body>");
+            }
+
+            public void AddAttribute(string attribute)
+            {
+                VerifyStillRaw();
+                _draft.Replace(Ap, $" {attribute}{Ap}");
+            }
+
+            public void AddTag(string open, string close)
+            {
+                VerifyStillRaw();
+                _draft.Replace(Tp, $"{open}{Tp}{close}");
+            }
+
+            public string Bake()
+            {
+                if (_baked == null)
+                {
+                    _draft.Replace(Ap, "");
+                    _draft.Replace(Tp, "");
+                    _baked = _draft.ToString();
+                }
+
+                return _baked;
+            }
+
+            private void VerifyStillRaw()
+            {
+                if (_baked != null)
+                    throw new InternalErrorException("Cannot modify an already baked template");
+            }
+        }
+
         // TODO: Rename this to EncryptedItem
         internal readonly struct Change
         {
@@ -156,19 +195,24 @@ namespace PasswordManagerAccess.Kaspersky
             }
         }
 
-        internal XElement BuildBody()
+        // For testing only
+        internal Bosh(string url, Jid jid, string password, IRestTransport transport, int requestId)
         {
-            var xmlns = XNamespace.Get("http://jabber.org/protocol/httpbind");
-            var body = new XElement(xmlns + "body", new XAttribute("rid", _requestId++));
-            if (_sessionId != null)
-                body.Add(new XAttribute("sid", _sessionId));
-
-            return body;
+            _url = url;
+            _jid = jid;
+            _password = password;
+            _rest = new RestClient(transport);
+            _requestId = requestId;
         }
 
-        internal StringBuilder BuildBodyTemplate()
+        internal RequestTemplate GenerateNextRequestTemplate()
         {
-            var sb = new StringBuilder();
+            return new RequestTemplate(_requestId++, _sessionId);
+        }
+
+        internal StringBuilder GenerateNextBodyTemplate()
+        {
+            var sb = new StringBuilder(4096);
             sb.AppendFormat("<body rid='{0}' xmlns='http://jabber.org/protocol/httpbind'", _requestId++);
             if (_sessionId != null)
                 sb.AppendFormat(" sid='{0}'", _sessionId);
@@ -179,11 +223,6 @@ namespace PasswordManagerAccess.Kaspersky
         internal static string GetPlainAuthString(Jid jid, string password)
         {
             return $"{jid.Bare}\0{jid.Node}\0{password}".ToBase64();
-        }
-
-        internal XDocument Request(XElement body)
-        {
-            return Request(body.ToString());
         }
 
         internal XDocument Request(string body)

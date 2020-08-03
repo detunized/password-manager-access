@@ -48,12 +48,51 @@ namespace PasswordManagerAccess.Test.Kaspersky
 
             var flow = new RestFlow()
                 .Post(response1)
+                    .ExpectContent("<body ")
+                    .ExpectContent("rid='1337'")
+                    .ExpectContent("xmlns='http://jabber.org/protocol/httpbind'")
+                    .ExpectContent($"to='{UserJid.Host}'")
+                    .ExpectContent("xml:lang='en'")
+                    .ExpectContent("wait='60'")
+                    .ExpectContent("hold='1'")
+                    .ExpectContent("content='text/xml; charset=utf-8'")
+                    .ExpectContent("ver='1.6'")
+                    .ExpectContent("xmpp:version='1.0'")
+                    .ExpectContent("xmlns:xmpp='urn:xmpp:xbosh'")
+                    .ExpectContent("></body>")
                 .Post(response2)
+                    .ExpectContent("<body")
+                    .ExpectContent("rid='1338'")
+                    .ExpectContent("xmlns='http://jabber.org/protocol/httpbind'")
+                    .ExpectContent("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>")
+                    .ExpectContent("") // TODO: Check auth string is sent
+                    .ExpectContent("</auth></body>")
                 .Post(response3)
+                    .ExpectContent("<body ")
+                    .ExpectContent("rid='1339'")
+                    .ExpectContent("xmlns='http://jabber.org/protocol/httpbind'")
+                    .ExpectContent($"to='{UserJid.Host}'")
+                    .ExpectContent("xml:lang='en'")
+                    .ExpectContent("xmpp:restart='true'")
+                    .ExpectContent("xmlns:xmpp='urn:xmpp:xbosh'")
+                    .ExpectContent("></body>")
                 .Post(response4)
-                .Post(response5);
+                    .ExpectContent("<body ")
+                    .ExpectContent("rid='1340'")
+                    .ExpectContent("xmlns='http://jabber.org/protocol/httpbind'")
+                    .ExpectContent("<iq type='set' id='_bind_auth_2' xmlns='jabber:client'>")
+                    .ExpectContent("<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>")
+                    .ExpectContent($"<resource>{UserJid.Resource}</resource>")
+                    .ExpectContent("></bind></iq></body>")
+                .Post(response5)
+                    .ExpectContent("<body ")
+                    .ExpectContent("rid='1341'")
+                    .ExpectContent("xmlns='http://jabber.org/protocol/httpbind'")
+                    .ExpectContent("<iq type='set' id='_session_auth_2' xmlns='jabber:client'>")
+                    .ExpectContent("<session xmlns='urn:ietf:params:xml:ns:xmpp-session'></session>")
+                    .ExpectContent("></iq></body>");
 
-            new Bosh("http://bosh.test", UserJid, "password", flow).Connect();
+            new Bosh("http://bosh.test", UserJid, "password", flow, 1337).Connect();
         }
 
         [Fact]
