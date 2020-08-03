@@ -14,24 +14,23 @@ namespace PasswordManagerAccess.Kaspersky
     internal class Bosh
     {
         private readonly string _url;
-        private Jid _jid;
-        private string _password;
+        private readonly Jid _jid;
+        private readonly string _password;
+        private readonly RestClient _rest;
         private int _requestId;
-        private RestClient _rest;
         private string _sessionId;
 
-        public Bosh(string url)
+        public Bosh(string url, Jid jid, string password, IRestTransport transport)
         {
             _url = url;
-        }
-
-        public void Connect(Jid jid, string password, IRestTransport transport)
-        {
             _jid = jid;
             _password = password;
-            _requestId = new Random().Next(); // TODO: Remove randomness in tests
             _rest = new RestClient(transport);
+            _requestId = new Random().Next(); // TODO: Remove randomness in tests
+        }
 
+        public void Connect()
+        {
             const string bosh = "urn:xmpp:xbosh";
             const string sasl = "urn:ietf:params:xml:ns:xmpp-sasl";
             //const string client = "jabber:client";

@@ -43,8 +43,8 @@ namespace PasswordManagerAccess.Kaspersky
             var boshUrl = GetBoshUrl(jid, jsLibraryHost, rest);
 
             // 9. Connect to the notify XMPP BOSH server
-            var bosh = new Bosh(boshUrl);
-            bosh.Connect(jid, xmpp.XmppCredentials.Password, transport);
+            var bosh = new Bosh(boshUrl, jid, xmpp.XmppCredentials.Password, transport);
+            bosh.Connect();
 
             // 10. Get DB info which mainly contains the encryption settings (key derivation info)
             var dbInfoBlob = bosh.GetChanges(GetDatabaseInfoCommand, GetDatabaseInfoCommandId)
