@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.Kaspersky
 {
     internal static class Parser
     {
-        public static IEnumerable<Account> ParseVault(IEnumerable<Bosh.Change> db)
+        public static IEnumerable<Account> ParseVault(IEnumerable<Bosh.Change> db, byte[] encryptionKey)
         {
             var accounts = new List<Dictionary<string, string>>();
             var credentials = new List<Dictionary<string, string>>();
@@ -24,10 +24,10 @@ namespace PasswordManagerAccess.Kaspersky
                 switch (item.Type)
                 {
                 case "WebAccount":
-                    accounts.Add(ParseWebAccount(item));
+                    accounts.Add(ParseWebAccount(item, encryptionKey));
                     break;
                 case "Login":
-                    credentials.Add(ParseLogin(item));
+                    credentials.Add(ParseLogin(item, encryptionKey));
                     break;
                 }
             }
@@ -59,22 +59,22 @@ namespace PasswordManagerAccess.Kaspersky
             });
         }
 
-        internal static Dictionary<string, string> ParseWebAccount(Bosh.Change item)
+        internal static Dictionary<string, string> ParseWebAccount(Bosh.Change item, byte[] encryptionKey)
         {
             var (version, blob) = DecodeItem(item);
             return version switch
             {
-                Version92 => ParseItemVersion92(blob, AccountFields),
+                Version92 => ParseItemVersion92(blob, encryptionKey, AccountFields),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
 
-        internal static Dictionary<string, string> ParseLogin(Bosh.Change item)
+        internal static Dictionary<string, string> ParseLogin(Bosh.Change item, byte[] encryptionKey)
         {
             var (version, blob) = DecodeItem(item);
             return version switch
             {
-                Version92 => ParseItemVersion92(blob, LoginFields),
+                Version92 => ParseItemVersion92(blob, encryptionKey, LoginFields),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
@@ -88,7 +88,7 @@ namespace PasswordManagerAccess.Kaspersky
             return (blob[0], blob);
         }
 
-        internal static Dictionary<string, string> ParseItemVersion92(byte[] blob, params string[] names)
+        internal static Dictionary<string, string> ParseItemVersion92(byte[] blob, byte[] encryptionKey, string[] names)
         {
             if (blob.Length < 6)
                 throw CorruptedError("encrypted item is too short");
@@ -105,10 +105,10 @@ namespace PasswordManagerAccess.Kaspersky
             var decompressed = deflateStream.ReadAll();
             var json = decompressed.ToUtf8();
 
-            return ParseItemVersion92(json, names);
+            return ParseItemVersion92(json, encryptionKey, names);
         }
 
-        internal static Dictionary<string, string> ParseItemVersion92(string json, params string[] names)
+        internal static Dictionary<string, string> ParseItemVersion92(string json, byte[] encryptionKey, string[] names)
         {
             var item = JObject.Parse(json);
 
@@ -187,10 +187,7 @@ namespace PasswordManagerAccess.Kaspersky
                 // MAC for version 8 is calculated on the decrypted string
                 // Look for `function E(e, t, n) {` for more info.
 
-                // TODO: Pass this in
-                var key = "d8f2bfe4980d90e3d402844e5332859ecbda531ab24962d2fdad4d39ad98d2f9".DecodeHex();
-
-                var plaintext = Crypto.DecryptAes256Cbc(ciphertext, iv, key);
+                var plaintext = Crypto.DecryptAes256Cbc(ciphertext, iv, encryptionKey);
 
                 // For version 9.2 strings are stored in UTF-16. Otherwise it's UTF-8.
                 result[name] = Encoding.BigEndianUnicode.GetString(plaintext);

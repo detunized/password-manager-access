@@ -1,2 +1,3 @@
 username: account@example.com
-password: password123
+account-password: password123
+vault-password: password123

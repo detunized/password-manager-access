@@ -12,7 +12,10 @@ namespace PasswordManagerAccess.Kaspersky
 {
     internal static class Client
     {
-        public static Account[] OpenVault(string username, string password, IRestTransport transport)
+        public static Account[] OpenVault(string username,
+                                          string accountPassword,
+                                          string vaultPassword,
+                                          IRestTransport transport)
         {
             var rest = new RestClient(transport);
 
@@ -20,7 +23,7 @@ namespace PasswordManagerAccess.Kaspersky
             var loginContext = RequestLoginContext(rest);
 
             // 2. Login
-            Login(username, password, loginContext, rest);
+            Login(username, accountPassword, loginContext, rest);
 
             // 3. Request user token
             var token = RequestUserToken(loginContext, rest);
@@ -62,14 +65,14 @@ namespace PasswordManagerAccess.Kaspersky
             if (version != Parser.Version9)
                 throw new UnsupportedFeatureException($"Database version {version} is not supported");
 
-            var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, password, dbInfo);
+            var encryptionKey = Util.DeriveEncryptionKey(vaultPassword, dbInfo);
+            var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, vaultPassword, dbInfo);
 
             // 11. Get DB that contains all of the accounts
             // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests
             var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, authKey.ToBase64());
 
-            // TODO: Parse the db here
-            return Parser.ParseVault(db).ToArray();
+            return Parser.ParseVault(db, encryptionKey).ToArray();
         }
 
         //

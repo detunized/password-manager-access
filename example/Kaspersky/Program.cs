@@ -15,7 +15,7 @@ namespace PasswordManagerAccess.Example.Kaspersky
 
             try
             {
-                var vault = Vault.Open(config["username"], config["password"]);
+                var vault = Vault.Open(config["username"], config["account-password"], config["vault-password"]);
             }
             catch (BaseException e)
             {

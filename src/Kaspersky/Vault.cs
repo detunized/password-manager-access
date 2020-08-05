@@ -7,19 +7,22 @@ namespace PasswordManagerAccess.Kaspersky
 {
     public class Vault
     {
-        public static Vault Open(string username, string password)
+        public static Vault Open(string username, string accountPassword, string vaultPassword)
         {
             using var transport = new RestTransport();
-            return Open(username, password, transport);
+            return Open(username, accountPassword, vaultPassword, transport);
         }
 
         //
         // Internal
         //
 
-        internal static Vault Open(string username, string password, IRestTransport transport)
+        internal static Vault Open(string username,
+                                   string accountPassword,
+                                   string vaultPassword,
+                                   IRestTransport transport)
         {
-            Client.OpenVault(username, password, transport);
+            Client.OpenVault(username, accountPassword, vaultPassword, transport);
             return new Vault();
         }
     }

@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
                 .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
                 .Select(x => new Bosh.Change(x.Attribute("type").Value, x.Attribute("dataInBase64").Value));
 
-            var accounts = Parser.ParseVault(changes).ToArray();
+            var accounts = Parser.ParseVault(changes, EncryptionKey).ToArray();
 
             Assert.Equal(10, accounts.Length);
         }
@@ -42,7 +42,14 @@ namespace PasswordManagerAccess.Test.Kaspersky
                        "g1T9ACTTTliJc0GQsBKb3K292ju23zUG2ifL6fW0OwpsrpZOJrGok0yJP7EKcxLoOpRHm2UVZRF0ASsNLdm7c+HUNhB0X" +
                        "S4okkCccWNVSW93+ZWv6xwS781tOpIfB7qzZhZ5dfN5EO+OkpN/dR/ajdNhH4vu07HHfeGPw0+s9YS/";
 
-            Parser.ParseItemVersion92(blob.Decode64());
+            Parser.ParseItemVersion92(blob.Decode64(), EncryptionKey, new string[0]);
         }
+
+        //
+        // Data
+        //
+
+        internal static readonly byte[] EncryptionKey =
+            "d8f2bfe4980d90e3d402844e5332859ecbda531ab24962d2fdad4d39ad98d2f9".DecodeHex();
     }
 }
