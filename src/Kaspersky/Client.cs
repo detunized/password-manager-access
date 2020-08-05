@@ -66,7 +66,7 @@ namespace PasswordManagerAccess.Kaspersky
                 throw new UnsupportedFeatureException($"Database version {version} is not supported");
 
             var encryptionKey = Util.DeriveEncryptionKey(vaultPassword, dbInfo);
-            var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, vaultPassword, dbInfo);
+            var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, encryptionKey, dbInfo);
 
             // 11. Get DB that contains all of the accounts
             // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests

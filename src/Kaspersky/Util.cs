@@ -8,9 +8,11 @@ namespace PasswordManagerAccess.Kaspersky
 {
     internal class Util
     {
-        internal static byte[] DeriveMasterPasswordAuthKey(string userId, string password, DatabaseInfo databaseInfo)
+        internal static byte[] DeriveMasterPasswordAuthKey(string userId,
+                                                           byte[] encryptionKey,
+                                                           DatabaseInfo databaseInfo)
         {
-            return Pbkdf2.GenerateSha256(password: DeriveEncryptionKey(password, databaseInfo),
+            return Pbkdf2.GenerateSha256(password: encryptionKey,
                                          salt: Encoding.Unicode.GetBytes(userId),
                                          iterationCount: 1500,
                                          byteCount: 64);
