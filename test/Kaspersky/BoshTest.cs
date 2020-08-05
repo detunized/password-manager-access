@@ -111,10 +111,20 @@ namespace PasswordManagerAccess.Test.Kaspersky
                 "</body>";
 
             var flow = new RestFlow()
-                .Post(response);
+                .Post(response)
+                    .ExpectContent("<body ")
+                    .ExpectContent("rid='1337'")
+                    .ExpectContent("xmlns='http://jabber.org/protocol/httpbind'")
+                    .ExpectContent("<message ")
+                    .ExpectContent("xmlns='jabber:client'")
+                    .ExpectContent("id='command-name-browser-5-")
+                    .ExpectContent($"to='kpm-sync@{UserJid.Host}'")
+                    .ExpectContent($"from='{UserJid.Bare}'")
+                    .ExpectContent("<root unique_id='4213' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' />")
+                    .ExpectContent("><body /></message></body>");
 
-            var items = new Bosh("http://bosh.test", UserJid, "password", flow)
-                .GetChanges("blah", "1337")
+            var items = new Bosh("http://bosh.test", UserJid, "password", flow, 1337)
+                .GetChanges("command-name", "4213")
                 .ToArray();
 
             Assert.Single(items);

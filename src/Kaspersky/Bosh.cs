@@ -106,18 +106,20 @@ namespace PasswordManagerAccess.Kaspersky
 
         public IEnumerable<Change> GetChanges(string command, string commandId, string authKey = "")
         {
-            var body = GenerateNextBodyTemplate();
+            var rt = GenerateNextRequestTemplate();
 
             var timestamp = Os.UnixMilliseconds();
             var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
-            body.Replace(
-                "$",
-                $"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'>" +
-                    $"<root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' MPAuthKeyValueInBase64='{authKey}'/>" +
-                    "<body />" +
-                "</message>");
+            var auth = authKey.IsNullOrEmpty() ? "" : $"MPAuthKeyValueInBase64='{authKey}' ";
 
-            var response = Request(body.ToString());
+            rt.AddTag($"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'>",
+                      "</message>");
+            rt.AddTag($"<root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' " +
+                      $"deviceType='0' osType='0' {auth}/>",
+                      "");
+            rt.AddTag("<body />", "");
+
+            var response = Request(rt.Bake());
             var changes = GetChild(response, "body/message/root/changes");
             if (changes == null)
                 throw MakeError($"Failed to retrieve changes via {command}");
@@ -210,16 +212,6 @@ namespace PasswordManagerAccess.Kaspersky
             return new RequestTemplate(_requestId++, _sessionId);
         }
 
-        internal StringBuilder GenerateNextBodyTemplate()
-        {
-            var sb = new StringBuilder(4096);
-            sb.AppendFormat("<body rid='{0}' xmlns='http://jabber.org/protocol/httpbind'", _requestId++);
-            if (_sessionId != null)
-                sb.AppendFormat(" sid='{0}'", _sessionId);
-            sb.Append(">$</body>");
-            return sb;
-        }
-
         internal static string GetPlainAuthString(Jid jid, string password)
         {
             return $"{jid.Bare}\0{jid.Node}\0{password}".ToBase64();
@@ -230,11 +222,6 @@ namespace PasswordManagerAccess.Kaspersky
             var response = _rest.PostRaw(_url, body);
             if (!response.IsSuccessful)
                 throw MakeError(response);
-
-            // TODO: Do we need this?
-            // Remove all namespaces from all the elements. Otherwise it's a giant PITA to deal
-            // with the namespaced names, XPath fails all the time and stuff like that.
-            //RemoveNamespaces(xml.Root);
 
             return XDocument.Parse(response.Content);
         }
