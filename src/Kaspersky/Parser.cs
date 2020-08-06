@@ -148,12 +148,9 @@ namespace PasswordManagerAccess.Kaspersky
                     continue;
 
                 // It's also possible that its data is either null or blank.
-                var fieldData = field.ObjectAtOrEmpty("data").StringAt("blob", null);
-                if (fieldData == null)
-                    continue;
-
                 // When it's present but blank we're done. It cannot be encrypted.
-                if (fieldData.Length == 0)
+                var fieldData = field.ObjectAtOrEmpty("data").StringAt("blob", null);
+                if (fieldData.IsNullOrEmpty())
                 {
                     result[name] = "";
                     continue;
@@ -165,37 +162,36 @@ namespace PasswordManagerAccess.Kaspersky
                     .BoolAt("blob", false);
 
                 // If the field is not encrypted we use its data blob as is.
-                if (!isEncrypted)
-                {
-                    result[name] = fieldData;
-                    continue;
-                }
-
                 // Otherwise it should a base64 encoded binary encrypted blob.
-                var blob = fieldData.Decode64();
-
-                // Encrypted blob has a header of 12 words (48 bytes)
-                // 16 bytes of IV
-                // 32 bytes of tag/MAC
-                // The rest of the blob contains the ciphertext encrypted with AES-256-CBC with PKCS#7 padding.
-                var iv = blob.Sub(0, 16);
-                var storedTag = blob.Sub(16, 32);
-                var ciphertext = blob.Sub(48, int.MaxValue);
-
-                // MAC for versions 9+ is calculated on the encrypted data
-                // MAC for version 8 is calculated on the decrypted string
-                // Look for `function E(e, t, n) {` for more info.
-                var computedTag = Crypto.HmacSha256(ciphertext, encryptionKey);
-                if (!computedTag.SequenceEqual(storedTag))
-                    throw CorruptedError("tag doesn't match");
-
-                var plaintext = Crypto.DecryptAes256Cbc(ciphertext, iv, encryptionKey);
-
-                // For version 9.2 strings are stored in UTF-16. Otherwise it's UTF-8.
-                result[name] = Encoding.BigEndianUnicode.GetString(plaintext);
+                result[name] = isEncrypted
+                    ? DecryptBlobVersion92(fieldData.Decode64(), encryptionKey)
+                    : fieldData;
             }
 
             return result;
+        }
+
+        internal static string DecryptBlobVersion92(byte[] blob, byte[] encryptionKey)
+        {
+            // Encrypted blob has a header of 12 words (48 bytes)
+            // 16 bytes of IV
+            // 32 bytes of tag/MAC
+            // The rest of the blob contains the ciphertext encrypted with AES-256-CBC with PKCS#7 padding.
+            var iv = blob.Sub(0, 16);
+            var storedTag = blob.Sub(16, 32);
+            var ciphertext = blob.Sub(48, int.MaxValue);
+
+            // MAC for versions 9+ is calculated on the encrypted data
+            // MAC for version 8 is calculated on the decrypted string
+            // Look for `function E(e, t, n) {` for more info.
+            var computedTag = Crypto.HmacSha256(ciphertext, encryptionKey);
+            if (!computedTag.SequenceEqual(storedTag))
+                throw CorruptedError("tag doesn't match");
+
+            var plaintext = Crypto.DecryptAes256Cbc(ciphertext, iv, encryptionKey);
+
+            // For version 9.2 strings are stored in UTF-16. Otherwise it's UTF-8.
+            return Encoding.BigEndianUnicode.GetString(plaintext);
         }
 
         internal static JToken FindFieldByName(JArray fields, string name)
