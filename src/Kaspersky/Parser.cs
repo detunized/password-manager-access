@@ -179,13 +179,15 @@ namespace PasswordManagerAccess.Kaspersky
                 // 32 bytes of tag/MAC
                 // The rest of the blob contains the ciphertext encrypted with AES-256-CBC with PKCS#7 padding.
                 var iv = blob.Sub(0, 16);
-                var tag = blob.Sub(16, 32);
+                var storedTag = blob.Sub(16, 32);
                 var ciphertext = blob.Sub(48, int.MaxValue);
 
-                // TODO: Verify tag/MAC
                 // MAC for versions 9+ is calculated on the encrypted data
                 // MAC for version 8 is calculated on the decrypted string
                 // Look for `function E(e, t, n) {` for more info.
+                var computedTag = Crypto.HmacSha256(ciphertext, encryptionKey);
+                if (!computedTag.SequenceEqual(storedTag))
+                    throw CorruptedError("tag doesn't match");
 
                 var plaintext = Crypto.DecryptAes256Cbc(ciphertext, iv, encryptionKey);
 
