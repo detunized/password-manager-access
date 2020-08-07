@@ -282,6 +282,6 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string GetDatabaseCommand = "kpmgetserverchangecommand";
         internal const string GetDatabaseCommandId = "660529337";
 
-        internal static readonly int[] SupportedDbVersions = { Parser.Version8, Parser.Version92 };
+        internal static readonly int[] SupportedDbVersions = { Parser.Version8, Parser.Version9 };
     }
 }

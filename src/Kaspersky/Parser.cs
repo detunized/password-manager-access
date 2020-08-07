@@ -55,6 +55,7 @@ namespace PasswordManagerAccess.Kaspersky
             return version switch
             {
                 Version8 => ParseAccountVersion8(blob, encryptionKey),
+                Version9 => ParseAccountVersion9(blob, encryptionKey),
                 Version92 => ParseAccountVersion92(blob, encryptionKey),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
@@ -66,6 +67,7 @@ namespace PasswordManagerAccess.Kaspersky
             return version switch
             {
                 Version8 => ParseLoginVersion8(blob, encryptionKey),
+                Version9 => ParseLoginVersion9(blob, encryptionKey),
                 Version92 => ParseLoginVersion92(blob, encryptionKey),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
@@ -86,31 +88,41 @@ namespace PasswordManagerAccess.Kaspersky
 
         internal static Account ParseAccountVersion8(byte[] blob, byte[] encryptionKey)
         {
-            var json = DecryptBlobToJsonVersion8(blob, encryptionKey);
+            return ParseAccountVersion8(DecryptBlobVersion8(blob, encryptionKey));
+        }
 
-            return new Account(id: ConvertByteArrayToGuid(json.ArrayAtOrEmpty("guid")),
-                               name: json.StringAt("name", ""),
-                               url: json.StringAt("url", ""),
-                               notes: json.StringAt("comment", ""),
-                               new Credentials[0]);
+        internal static Account ParseAccountVersion8(string json)
+        {
+            var item = JObject.Parse(json);
+
+            return new Account(id: ConvertByteArrayToGuid(item.ArrayAtOrEmpty("guid")),
+                               name: item.StringAt("name", ""),
+                               url: item.StringAt("url", ""),
+                               notes: item.StringAt("comment", ""),
+                               null);
         }
 
         internal static (string[], Credentials) ParseLoginVersion8(byte[] blob, byte[] encryptionKey)
         {
-            var json = DecryptBlobToJsonVersion8(blob, encryptionKey);
+            return ParseLoginVersion8(DecryptBlobVersion8(blob, encryptionKey));
+        }
 
-            var accountIds = json.ArrayAtOrEmpty("accountlogins")
+        internal static (string[], Credentials) ParseLoginVersion8(string json)
+        {
+            var item = JObject.Parse(json);
+
+            var accountIds = item.ArrayAtOrEmpty("accountlogins")
                 .Select(x => ConvertByteArrayToGuid(x.ArrayAtOrEmpty("accountGuid")));
 
-            var accountId = json.StringAt("accountGuid", "");
+            var accountId = ConvertByteArrayToGuid(item.ArrayAtOrEmpty("accountGuid"));
             if (!accountId.IsNullOrEmpty())
                 accountIds = accountIds.Append(accountId);
 
-            return (accountIds.ToArray(), new Credentials(id: ConvertByteArrayToGuid(json.ArrayAtOrEmpty("guid")),
-                                                          name: json.StringAt("name", ""),
-                                                          username: json.StringAt("login", ""),
-                                                          password: json.StringAt("password", ""),
-                                                          notes: json.StringAt("comment", "")));
+            return (accountIds.ToArray(), new Credentials(id: ConvertByteArrayToGuid(item.ArrayAtOrEmpty("guid")),
+                                                          name: item.StringAt("name", ""),
+                                                          username: item.StringAt("login", ""),
+                                                          password: item.StringAt("password", ""),
+                                                          notes: item.StringAt("comment", "")));
         }
 
         internal static string ConvertByteArrayToGuid(JArray array)
@@ -147,6 +159,48 @@ namespace PasswordManagerAccess.Kaspersky
                 throw CorruptedError("tag doesn't match");
 
             return plaintext.ToUtf8();
+        }
+
+        //
+        // Version 9
+        //
+        // From our perspective the only difference between the version 8 and 9 is that
+        // in the version 9 the tag/MAC is calculated and verified differently. The rest
+        // of the parsing is exactly the same.
+        //
+
+        internal static Account ParseAccountVersion9(byte[] blob, byte[] encryptionKey)
+        {
+            return ParseAccountVersion8(DecryptBlobVersion9(blob, encryptionKey));
+        }
+
+        internal static (string[], Credentials) ParseLoginVersion9(byte[] blob, byte[] encryptionKey)
+        {
+            return ParseLoginVersion8(DecryptBlobVersion9(blob, encryptionKey));
+        }
+
+        internal static string DecryptBlobVersion9(byte[] blob, byte[] encryptionKey)
+        {
+            if (blob.Length < 52)
+                throw CorruptedError("encrypted item is too short");
+
+            // Encrypted blob has a header of 52 bytes:
+            // 4 bytes of version
+            // 16 bytes of IV
+            // 32 bytes of tag/MAC
+            // The rest of the blob contains the ciphertext encrypted with AES-256-CBC with PKCS#7 padding.
+            var iv = blob.Sub(4, 16);
+            var storedTag = blob.Sub(20, 32);
+            var ciphertext = blob.Sub(52, int.MaxValue);
+
+            // MAC for versions 9+ is calculated on the encrypted data
+            // MAC for version 8 is calculated on the decrypted string
+            // Look for `function E(e, t, n) {` for more info.
+            var computedTag = Crypto.HmacSha256(ciphertext, encryptionKey);
+            if (!computedTag.SequenceEqual(storedTag))
+                throw CorruptedError("tag doesn't match");
+
+            return Crypto.DecryptAes256Cbc(ciphertext, iv, encryptionKey).ToUtf8();
         }
 
         //

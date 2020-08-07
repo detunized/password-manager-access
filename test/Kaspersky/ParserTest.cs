@@ -16,24 +16,102 @@ namespace PasswordManagerAccess.Test.Kaspersky
         [Fact]
         public void ParseVault_returns_accounts_for_version_8()
         {
-            var changes = XDocument.Parse(GetFixture("vault-version8-response", "xml"))
-                .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
-                .Select(x => new Bosh.Change(x.Attribute("type").Value, x.Attribute("dataInBase64").Value));
+            var accounts = Parser.ParseVault(GetDbItemsFromFixture("vault-version8-response"),
+                                             EncryptionKeyVersion8).ToArray();
 
-            var accounts = Parser.ParseVault(changes, EncryptionKeyVersion8).ToArray();
-
+            // TODO: Verify account details
             Assert.Equal(5, accounts.Length);
         }
 
         [Fact]
+        public void ParseVault_returns_accounts_for_version_9()
+        {
+            var accounts = Parser.ParseVault(GetDbItemsFromFixture("vault-version9-response"),
+                                             EncryptionKeyVersion9).ToArray();
+
+            Assert.Equal(3, accounts.Length);
+
+            var a0 = accounts[0];
+            Assert.Equal("Web 1 login", a0.Name);
+            Assert.Equal("web1.com", a0.Url);
+            Assert.Equal("", a0.Notes);
+            Assert.Equal(1, a0.Credentials.Length);
+
+            var c00 = a0.Credentials[0];
+            Assert.Equal("Login1", c00.Name);
+            Assert.Equal("log", c00.Username);
+            Assert.Equal("pwd", c00.Password);
+            Assert.Equal("Blah", c00.Notes);
+
+            var a1 = accounts[1];
+            Assert.Equal("Web no login", a1.Name);
+            Assert.Equal("web0.com", a1.Url);
+            Assert.Equal("", a1.Notes);
+            Assert.Equal(0, a1.Credentials.Length);
+
+            var a2 = accounts[2];
+            Assert.Equal("Web multiple logins", a2.Name);
+            Assert.Equal("web2.com", a2.Url);
+            Assert.Equal("", a2.Notes);
+            Assert.Equal(2, a2.Credentials.Length);
+
+            var c20 = a2.Credentials[0];
+            Assert.Equal("Log12", c20.Name);
+            Assert.Equal("logg", c20.Username);
+            Assert.Equal("pwd", c20.Password);
+            Assert.Equal("Blah", c20.Notes);
+
+            var c21 = a2.Credentials[1];
+            Assert.Equal("Log22", c21.Name);
+            Assert.Equal("logh", c21.Username);
+            Assert.Equal("pwd", c21.Password);
+            Assert.Equal("Blah", c21.Notes);
+        }
+
+        //
+        // Version 8
+        //
+
+        // TODO: Add version 8 tests
+
+        //
+        // Version 9
+        //
+
+        [Fact]
+        public void DecryptBlobVersion9_returns_plaintext()
+        {
+            var plaintext = Parser.DecryptBlobVersion9(BlobVersion9, EncryptionKeyVersion9);
+
+            Assert.StartsWith("{\"unique_id\":", plaintext);
+        }
+
+        [Theory]
+        // The IV is not hashed, only the tag and the ciphertext
+        [InlineData(20)] // Tag
+        [InlineData(51)] // Tag
+        [InlineData(52)] // Ciphertext
+        [InlineData(100)] // Ciphertext
+        public void DecryptBlobVersion9_throws_on_mismatched_tag(int index)
+        {
+            // Copy and tamper
+            var blob = BlobVersion9.Sub(0, int.MaxValue);
+            blob[index] ^= 1;
+
+            Exceptions.AssertThrowsInternalError(() => Parser.DecryptBlobVersion9(blob, EncryptionKeyVersion9),
+                                                 "tag doesn't match");
+        }
+
+        //
+        // Version 9.2
+        //
+
+        [Fact]
         public void ParseVault_returns_accounts_for_version_92()
         {
-            var changes = XDocument.Parse(GetFixture("vault-response", "xml"))
-                .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
-                .Select(x => new Bosh.Change(x.Attribute("type").Value, x.Attribute("dataInBase64").Value));
-
-            var accounts = Parser.ParseVault(changes, EncryptionKey).ToArray();
-
+            var accounts = Parser.ParseVault(GetDbItemsFromFixture("vault-response"),
+                                             EncryptionKeyVersion92).ToArray();
+            // TODO: Verify account details
             Assert.Equal(10, accounts.Length);
         }
 
@@ -56,7 +134,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
                        "S4okkCccWNVSW93+ZWv6xwS781tOpIfB7qzZhZ5dfN5EO+OkpN/dR/ajdNhH4vu07HHfeGPw0+s9YS/";
 
             var fields = Parser.ParseItemVersion92(blob.Decode64(),
-                                                   EncryptionKey,
+                                                   EncryptionKeyVersion92,
                                                    new[] {"m_url", "m_name", "m_guid", "m_comment", "not valid"});
 
             Assert.Equal(new Dictionary<string, string>
@@ -73,7 +151,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
         public void DecryptBlobVersion92_decrypts_blob()
         {
             var blob = BlobIv.Concat(BlobTag).Concat(BlobCiphertext).ToArray();
-            var plaintext = Parser.DecryptBlobVersion92(blob, EncryptionKey);
+            var plaintext = Parser.DecryptBlobVersion92(blob, EncryptionKeyVersion92);
 
             Assert.Equal(BlobPlaintext, plaintext);
         }
@@ -90,19 +168,33 @@ namespace PasswordManagerAccess.Test.Kaspersky
             var blob = BlobIv.Concat(BlobTag).Concat(BlobCiphertext).ToArray();
             blob[index] ^= 1;
 
-            Exceptions.AssertThrowsInternalError(() => Parser.DecryptBlobVersion92(blob, EncryptionKey),
+            Exceptions.AssertThrowsInternalError(() => Parser.DecryptBlobVersion92(blob, EncryptionKeyVersion92),
                                                  "tag doesn't match");
+        }
+
+        //
+        // Helpers
+        //
+
+        internal IEnumerable<Bosh.Change> GetDbItemsFromFixture(string name)
+        {
+            return XDocument.Parse(GetFixture(name, "xml"))
+                .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
+                .Select(x => new Bosh.Change(x.Attribute("type").Value, x.Attribute("dataInBase64").Value));
         }
 
         //
         // Data
         //
 
-        internal static readonly byte[] EncryptionKey =
-            "d8f2bfe4980d90e3d402844e5332859ecbda531ab24962d2fdad4d39ad98d2f9".DecodeHex();
-
         internal static readonly byte[] EncryptionKeyVersion8 =
             "0741524aefb42058143123852073ad326c4e9e0eba2afcd850b04e34a553ae90".DecodeHex();
+
+        internal static readonly byte[] EncryptionKeyVersion9 =
+            "8469d3c56a1b0a85ea047186376356469aea716eb55b5866aca55c0f98a310ad".DecodeHex();
+
+        internal static readonly byte[] EncryptionKeyVersion92 =
+            "d8f2bfe4980d90e3d402844e5332859ecbda531ab24962d2fdad4d39ad98d2f9".DecodeHex();
 
         internal static readonly byte[] BlobIv = "3b9628d05aa246eaa47e32cc96e915ed".DecodeHex();
 
@@ -113,5 +205,14 @@ namespace PasswordManagerAccess.Test.Kaspersky
             "f18e5dbf9b82cfa0558b0de402837f9700d108219e32763a1dc6f375c87557b4".DecodeHex();
 
         internal const string BlobPlaintext = "bing.com";
+
+        internal const string BlobVersion9Base64 =
+            "AgAAAHM6i/oLFfNORsx1WOxBXiyGFFAtScvAX30J7GQVCKsG4qiQtMdimyHfiIPgmbrEJymydKP6Urmt6DjQJEUfe6MifbqO/W3V+9v8" +
+            "0dj5t6iEEcnDXwnmIOIanRvrFWIg24/mdO1MP4xXjD8kTvEkD3frd40Ms/Z9tXhad9veE8j4/QnPpM4JR5P2T2T4HDkRVub8E4WERmL4" +
+            "hB29vquuH3u7GGUJk3bDQF9RaqwCE6/OeNZsPOZrQPCeLbn28mNWeUeaGElvcW3QVpTUTSLAV63D2oaF+Xzq5NTzsA4BWTlzuAyJftws" +
+            "gQ29s6jqPub4QoN3TsQZJ/qZbgFyvUhLhWWq1V+GJBVpnjEYmuzLprdmKEMqJRnSoC8xxCuh8FDWdGUxm+LD8EgeHSikOKffontdbmpi" +
+            "KBFujxtd0pcRlV6U9aq+aP13qjuYfVoQjP5sso2tVc5SFIO8SniqvdQDYnY=";
+
+        internal static readonly byte[] BlobVersion9 = BlobVersion9Base64.Decode64();
     }
 }
