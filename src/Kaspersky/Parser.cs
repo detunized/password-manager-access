@@ -113,37 +113,6 @@ namespace PasswordManagerAccess.Kaspersky
                                                           notes: json.StringAt("comment", "")));
         }
 
-        internal static Dictionary<string, string> ParseItemVersion8(byte[] blob,
-                                                                     byte[] encryptionKey,
-                                                                     Dictionary<string, FieldInfoVersion8> fields)
-        {
-            var json = DecryptBlobVersion8(blob, encryptionKey);
-            return ParseItemVersion8(json, fields);
-        }
-
-        internal static Dictionary<string, string> ParseItemVersion8(string json,
-                                                                     Dictionary<string, FieldInfoVersion8> fields)
-        {
-            var item = JObject.Parse(json);
-            var result = new Dictionary<string, string>(fields.Count);
-
-            foreach (var field in fields)
-            {
-                var (name, info) = (field.Key, field.Value);
-                if (item.ContainsKey(info.Name))
-                {
-                    result[name] = info.Type switch
-                    {
-                        FieldTypeVersion8.String => item.StringAt(info.Name, ""),
-                        FieldTypeVersion8.Guid => ConvertByteArrayToGuid(item.ArrayAtOrEmpty(info.Name)),
-                        _ => throw new InternalErrorException($"Unsupported field type {info.Type}"),
-                    };
-                }
-            }
-
-            return result;
-        }
-
         internal static string ConvertByteArrayToGuid(JArray array)
         {
             return array.ToObject<byte[]>().ToHex();
@@ -326,46 +295,6 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string FieldAccountId = "m_account";
         internal const string FieldUsername = "m_login";
         internal const string FieldPassword = "m_password";
-
-        internal enum FieldTypeVersion8
-        {
-            Guid,
-            String,
-        }
-
-        internal struct FieldInfoVersion8
-        {
-            public readonly FieldTypeVersion8 Type;
-            public readonly string Name;
-
-            public FieldInfoVersion8(FieldTypeVersion8 type, string name)
-            {
-                Type = type;
-                Name = name;
-            }
-        }
-
-        // Maps version 8 fields to version 9.2
-        internal static readonly Dictionary<string, FieldInfoVersion8> AccountFieldsVersion8 =
-            new Dictionary<string, FieldInfoVersion8>
-            {
-                [FieldId] = new FieldInfoVersion8(FieldTypeVersion8.Guid, "guid"),
-                [FieldName] = new FieldInfoVersion8(FieldTypeVersion8.String, "name"),
-                [FieldUrl] = new FieldInfoVersion8(FieldTypeVersion8.String, "url"),
-                [FieldNotes] = new FieldInfoVersion8(FieldTypeVersion8.String, "comment"),
-            };
-
-        // Maps version 8 fields to version 9.2
-        internal static readonly Dictionary<string, FieldInfoVersion8> LoginFieldsVersion8 =
-            new Dictionary<string, FieldInfoVersion8>
-            {
-                [FieldId] = new FieldInfoVersion8(FieldTypeVersion8.Guid, "guid"),
-                [FieldAccountId] = new FieldInfoVersion8(FieldTypeVersion8.Guid, "accountGuid"),
-                [FieldName] = new FieldInfoVersion8(FieldTypeVersion8.String, "name"),
-                [FieldUsername] = new FieldInfoVersion8(FieldTypeVersion8.String, "login"),
-                [FieldPassword] = new FieldInfoVersion8(FieldTypeVersion8.String, "password"),
-                [FieldNotes] = new FieldInfoVersion8(FieldTypeVersion8.String, "comment"),
-            };
 
         internal static readonly string[] AccountFieldsVersion92 =
         {
