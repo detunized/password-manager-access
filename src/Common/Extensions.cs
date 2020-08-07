@@ -303,6 +303,19 @@ namespace PasswordManagerAccess.Common
             return dictionary.TryGetValue(key, out var v) ? v : defaultValue;
         }
 
+        public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary,
+                                                    TKey key,
+                                                    Func<TValue> valueProvider)
+        {
+            if (dictionary.TryGetValue(key, out var v))
+                return v;
+
+            var newV = valueProvider();
+            dictionary[key] = newV;
+
+            return newV;
+        }
+
         // Always returns a copy
         public static Dictionary<TKey, TValue> MergeCopy<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> self,
                                                                        IReadOnlyDictionary<TKey, TValue> other)

@@ -449,13 +449,35 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void Dictionary_GetOrDefault_returns_default_value_when_not_present_present()
+        public void Dictionary_GetOrDefault_returns_default_value_when_not_present()
         {
             var emptyDictionary = new Dictionary<string, string>();
             var dictionary = new Dictionary<string, string> { { "one", "1" }, { "two", "2" } };
 
             Assert.Equal("13", emptyDictionary.GetOrDefault("three", "13"));
             Assert.Equal("13", dictionary.GetOrDefault("three", "13"));
+        }
+
+        [Fact]
+        public void Dictionary_GetOrAdd_value_when_present()
+        {
+            var dictionary = new Dictionary<string, string> { { "one", "1" }, { "two", "2" } };
+
+            Assert.Equal("1", dictionary.GetOrAdd("one", () => "13"));
+            Assert.Equal("2", dictionary.GetOrAdd("two", () => "13"));
+        }
+
+        [Fact]
+        public void Dictionary_GetOrAdd_inserts_new_value_when_not_present()
+        {
+            var emptyDictionary = new Dictionary<string, string>();
+            var dictionary = new Dictionary<string, string> { { "one", "1" }, { "two", "2" } };
+
+            Assert.Equal("13", emptyDictionary.GetOrAdd("three", () => "13"));
+            Assert.Equal("13", emptyDictionary["three"]);
+
+            Assert.Equal("13", dictionary.GetOrAdd("three", () => "13"));
+            Assert.Equal("13", dictionary["three"]);
         }
 
         [Fact]
