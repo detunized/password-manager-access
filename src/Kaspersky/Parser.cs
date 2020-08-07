@@ -15,66 +15,58 @@ namespace PasswordManagerAccess.Kaspersky
     {
         public static IEnumerable<Account> ParseVault(IEnumerable<Bosh.Change> db, byte[] encryptionKey)
         {
-            var accounts = new List<Dictionary<string, string>>();
-            var credentials = new List<Dictionary<string, string>>();
+            var accounts = new List<Account>();
+            var credentialsToParse = new List<Bosh.Change>();
 
-            // Parse all the relevant items into temporary ad-hoc structures
+            // Parse only the accounts first
             foreach (var item in db)
             {
                 switch (item.Type)
                 {
+                case "Account":
                 case "WebAccount":
-                    accounts.Add(ParseWebAccount(item, encryptionKey));
+                    accounts.Add(ParseAccount(item, encryptionKey));
                     break;
                 case "Login":
-                    credentials.Add(ParseLogin(item, encryptionKey));
+                    credentialsToParse.Add(item);
                     break;
                 }
             }
 
-            // Theoretically it's possible that some entries have their account ID missing. They will end
-            // end up grouped under the blank ("") key. We just ignore those, should they appear in the vault.
-            // They are basically orphans with no account to be attached to.
-            var credentialsByAccount = credentials.ToLookup(x => x.GetOrDefault(FieldAccountId, ""));
-
-            // Convert to the final objects by grouping the logins (Credentials)
-            // under the corresponding web accounts (Account).
-            return accounts.Select(account =>
+            // Parse the credentials and assign them to the account IDs
+            var accountCredentials = new Dictionary<string, List<Credentials>>();
+            foreach (var item in credentialsToParse)
             {
-                var id = account.GetOrDefault(FieldId, "");
+                var (ids, c) = ParseLogin(item, encryptionKey);
+                foreach (var id in ids)
+                    accountCredentials.GetOrAdd(id, () => new List<Credentials>()).Add(c);
+            }
 
+            // Assign credentials to the accounts
+            foreach (var a in accounts)
+                a.Credentials = accountCredentials.GetOrDefault(a.Id, null)?.ToArray() ?? new Credentials[0];
 
-                var accountCredentials = credentialsByAccount[id].Select(
-                    c => new Credentials(c.GetOrDefault(FieldId, ""),
-                                         c.GetOrDefault(FieldName, ""),
-                                         c.GetOrDefault(FieldUsername, ""),
-                                         c.GetOrDefault(FieldPassword, ""),
-                                         c.GetOrDefault(FieldNotes, "")));
-
-                return new Account(id,
-                                   account.GetOrDefault(FieldName, ""),
-                                   account.GetOrDefault(FieldUrl, ""),
-                                   account.GetOrDefault(FieldNotes, ""),
-                                   accountCredentials.ToArray());
-            });
+            return accounts;
         }
 
-        internal static Dictionary<string, string> ParseWebAccount(Bosh.Change item, byte[] encryptionKey)
+        internal static Account ParseAccount(Bosh.Change item, byte[] encryptionKey)
         {
             var (version, blob) = DecodeItem(item);
             return version switch
             {
-                Version92 => ParseItemVersion92(blob, encryptionKey, AccountFields),
+                Version8 => ParseAccountVersion8(blob, encryptionKey),
+                Version92 => ParseAccountVersion92(blob, encryptionKey),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
 
-        internal static Dictionary<string, string> ParseLogin(Bosh.Change item, byte[] encryptionKey)
+        internal static (string[], Credentials) ParseLogin(Bosh.Change item, byte[] encryptionKey)
         {
             var (version, blob) = DecodeItem(item);
             return version switch
             {
-                Version92 => ParseItemVersion92(blob, encryptionKey, LoginFields),
+                Version8 => ParseLoginVersion8(blob, encryptionKey),
+                Version92 => ParseLoginVersion92(blob, encryptionKey),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
@@ -86,6 +78,134 @@ namespace PasswordManagerAccess.Kaspersky
                 throw CorruptedError("encrypted item is too short");
 
             return (blob[0], blob);
+        }
+
+        //
+        // Version 8
+        //
+
+        internal static Account ParseAccountVersion8(byte[] blob, byte[] encryptionKey)
+        {
+            var json = DecryptBlobToJsonVersion8(blob, encryptionKey);
+
+            return new Account(id: ConvertByteArrayToGuid(json.ArrayAtOrEmpty("guid")),
+                               name: json.StringAt("name", ""),
+                               url: json.StringAt("url", ""),
+                               notes: json.StringAt("comment", ""),
+                               new Credentials[0]);
+        }
+
+        internal static (string[], Credentials) ParseLoginVersion8(byte[] blob, byte[] encryptionKey)
+        {
+            var json = DecryptBlobToJsonVersion8(blob, encryptionKey);
+
+            var accountIds = json.ArrayAtOrEmpty("accountlogins")
+                .Select(x => ConvertByteArrayToGuid(x.ArrayAtOrEmpty("accountGuid")));
+
+            var accountId = json.StringAt("accountGuid", "");
+            if (!accountId.IsNullOrEmpty())
+                accountIds = accountIds.Append(accountId);
+
+            return (accountIds.ToArray(), new Credentials(id: ConvertByteArrayToGuid(json.ArrayAtOrEmpty("guid")),
+                                                          name: json.StringAt("name", ""),
+                                                          username: json.StringAt("login", ""),
+                                                          password: json.StringAt("password", ""),
+                                                          notes: json.StringAt("comment", "")));
+        }
+
+        internal static Dictionary<string, string> ParseItemVersion8(byte[] blob,
+                                                                     byte[] encryptionKey,
+                                                                     Dictionary<string, FieldInfoVersion8> fields)
+        {
+            var json = DecryptBlobVersion8(blob, encryptionKey);
+            return ParseItemVersion8(json, fields);
+        }
+
+        internal static Dictionary<string, string> ParseItemVersion8(string json,
+                                                                     Dictionary<string, FieldInfoVersion8> fields)
+        {
+            var item = JObject.Parse(json);
+            var result = new Dictionary<string, string>(fields.Count);
+
+            foreach (var field in fields)
+            {
+                var (name, info) = (field.Key, field.Value);
+                if (item.ContainsKey(info.Name))
+                {
+                    result[name] = info.Type switch
+                    {
+                        FieldTypeVersion8.String => item.StringAt(info.Name, ""),
+                        FieldTypeVersion8.Guid => ConvertByteArrayToGuid(item.ArrayAtOrEmpty(info.Name)),
+                        _ => throw new InternalErrorException($"Unsupported field type {info.Type}"),
+                    };
+                }
+            }
+
+            return result;
+        }
+
+        internal static string ConvertByteArrayToGuid(JArray array)
+        {
+            return array.ToObject<byte[]>().ToHex();
+        }
+
+        internal static JObject DecryptBlobToJsonVersion8(byte[] blob, byte[] encryptionKey)
+        {
+            return JObject.Parse(DecryptBlobVersion8(blob, encryptionKey));
+        }
+
+        internal static string DecryptBlobVersion8(byte[] blob, byte[] encryptionKey)
+        {
+            if (blob.Length < 52)
+                throw CorruptedError("encrypted item is too short");
+
+            // Encrypted blob has a header of 52 bytes:
+            // 4 bytes of version
+            // 16 bytes of IV
+            // 32 bytes of tag/MAC
+            // The rest of the blob contains the ciphertext encrypted with AES-256-CBC with PKCS#7 padding.
+            var iv = blob.Sub(4, 16);
+            var storedTag = blob.Sub(20, 32);
+            var ciphertext = blob.Sub(52, int.MaxValue);
+
+            var plaintext = Crypto.DecryptAes256Cbc(ciphertext, iv, encryptionKey);
+
+            // MAC for versions 9+ is calculated on the encrypted data
+            // MAC for version 8 is calculated on the decrypted string
+            // Look for `function E(e, t, n) {` for more info.
+            var computedTag = Crypto.HmacSha256(plaintext, encryptionKey);
+            if (!computedTag.SequenceEqual(storedTag))
+                throw CorruptedError("tag doesn't match");
+
+            return plaintext.ToUtf8();
+        }
+
+        //
+        // Version 9.2
+        //
+
+        internal static Account ParseAccountVersion92(byte[] blob, byte[] encryptionKey)
+        {
+            var fields = ParseItemVersion92(blob, encryptionKey, AccountFieldsVersion92);
+
+            return new Account(id: fields.GetOrDefault(FieldId, ""),
+                               name: fields.GetOrDefault(FieldName, ""),
+                               url: fields.GetOrDefault(FieldUrl, ""),
+                               notes: fields.GetOrDefault(FieldNotes, ""),
+                               credentials: new Credentials[0]);
+        }
+
+        internal static (string[], Credentials) ParseLoginVersion92(byte[] blob, byte[] encryptionKey)
+        {
+            var fields = ParseItemVersion92(blob, encryptionKey, LoginFieldsVersion92);
+            var accountId = fields.GetOrDefault(FieldAccountId, "");
+            var accountIds = accountId.IsNullOrEmpty() ? new string[0] : new[] {accountId};
+
+            return (accountIds, new Credentials(id: fields.GetOrDefault(FieldId, ""),
+                                                name: fields.GetOrDefault(FieldName, ""),
+                                                username: fields.GetOrDefault(FieldUsername, ""),
+                                                password: fields.GetOrDefault(FieldPassword, ""),
+                                                notes: fields.GetOrDefault(FieldNotes, "")));
         }
 
         internal static Dictionary<string, string> ParseItemVersion92(byte[] blob, byte[] encryptionKey, string[] names)
@@ -111,22 +231,6 @@ namespace PasswordManagerAccess.Kaspersky
         internal static Dictionary<string, string> ParseItemVersion92(string json, byte[] encryptionKey, string[] names)
         {
             var item = JObject.Parse(json);
-
-            // Field types:
-            //
-            // 0: "Text"
-            // 1: "Number"
-            // 2: "Boolean"
-            // 3: "Blob"
-            // 4: "Real"
-            // 5: "Json"
-            //
-            // Text: 0
-            // Number: 1
-            // Boolean: 2
-            // Blob: 3
-            // Real: 4
-            // Json: 5
 
             // Fields could be encrypted or not, this is defined by the field attributes.
             // The stored type of the field is ignored by the parser and it uses a hardcoded
@@ -173,7 +277,10 @@ namespace PasswordManagerAccess.Kaspersky
 
         internal static string DecryptBlobVersion92(byte[] blob, byte[] encryptionKey)
         {
-            // Encrypted blob has a header of 12 words (48 bytes)
+            if (blob.Length < 48)
+                throw CorruptedError("encrypted item is too short");
+
+            // Encrypted blob has a header of 48 bytes:
             // 16 bytes of IV
             // 32 bytes of tag/MAC
             // The rest of the blob contains the ciphertext encrypted with AES-256-CBC with PKCS#7 padding.
@@ -220,7 +327,47 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string FieldUsername = "m_login";
         internal const string FieldPassword = "m_password";
 
-        internal static readonly string[] AccountFields =
+        internal enum FieldTypeVersion8
+        {
+            Guid,
+            String,
+        }
+
+        internal struct FieldInfoVersion8
+        {
+            public readonly FieldTypeVersion8 Type;
+            public readonly string Name;
+
+            public FieldInfoVersion8(FieldTypeVersion8 type, string name)
+            {
+                Type = type;
+                Name = name;
+            }
+        }
+
+        // Maps version 8 fields to version 9.2
+        internal static readonly Dictionary<string, FieldInfoVersion8> AccountFieldsVersion8 =
+            new Dictionary<string, FieldInfoVersion8>
+            {
+                [FieldId] = new FieldInfoVersion8(FieldTypeVersion8.Guid, "guid"),
+                [FieldName] = new FieldInfoVersion8(FieldTypeVersion8.String, "name"),
+                [FieldUrl] = new FieldInfoVersion8(FieldTypeVersion8.String, "url"),
+                [FieldNotes] = new FieldInfoVersion8(FieldTypeVersion8.String, "comment"),
+            };
+
+        // Maps version 8 fields to version 9.2
+        internal static readonly Dictionary<string, FieldInfoVersion8> LoginFieldsVersion8 =
+            new Dictionary<string, FieldInfoVersion8>
+            {
+                [FieldId] = new FieldInfoVersion8(FieldTypeVersion8.Guid, "guid"),
+                [FieldAccountId] = new FieldInfoVersion8(FieldTypeVersion8.Guid, "accountGuid"),
+                [FieldName] = new FieldInfoVersion8(FieldTypeVersion8.String, "name"),
+                [FieldUsername] = new FieldInfoVersion8(FieldTypeVersion8.String, "login"),
+                [FieldPassword] = new FieldInfoVersion8(FieldTypeVersion8.String, "password"),
+                [FieldNotes] = new FieldInfoVersion8(FieldTypeVersion8.String, "comment"),
+            };
+
+        internal static readonly string[] AccountFieldsVersion92 =
         {
             FieldId,
             FieldName,
@@ -228,7 +375,7 @@ namespace PasswordManagerAccess.Kaspersky
             FieldNotes,
         };
 
-        internal static readonly string[] LoginFields =
+        internal static readonly string[] LoginFieldsVersion92 =
         {
             FieldId,
             FieldAccountId,
@@ -237,5 +384,6 @@ namespace PasswordManagerAccess.Kaspersky
             FieldPassword,
             FieldNotes,
         };
+
     }
 }

@@ -9,7 +9,7 @@ namespace PasswordManagerAccess.Kaspersky
         public readonly string Name;
         public readonly string Url;
         public readonly string Notes;
-        public readonly Credentials[] Credentials;
+        public Credentials[] Credentials { get; internal set; }
 
         public Account(string id, string name, string url, string notes, Credentials[] credentials)
         {

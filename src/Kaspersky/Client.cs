@@ -62,7 +62,7 @@ namespace PasswordManagerAccess.Kaspersky
             var dbInfo = DatabaseInfo.Parse(dbInfoBlob);
 
             var version = dbInfo.Version;
-            if (version != Parser.Version9)
+            if (!SupportedDbVersions.Contains(version))
                 throw new UnsupportedFeatureException($"Database version {version} is not supported");
 
             var encryptionKey = Util.DeriveEncryptionKey(vaultPassword, dbInfo);
@@ -281,5 +281,7 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string GetDatabaseInfoCommandId = "1830647823";
         internal const string GetDatabaseCommand = "kpmgetserverchangecommand";
         internal const string GetDatabaseCommandId = "660529337";
+
+        internal static readonly int[] SupportedDbVersions = { Parser.Version8, Parser.Version92 };
     }
 }

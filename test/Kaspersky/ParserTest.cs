@@ -14,7 +14,19 @@ namespace PasswordManagerAccess.Test.Kaspersky
     public class ParserTest: TestBase
     {
         [Fact]
-        public void ParseVault_returns_accounts()
+        public void ParseVault_returns_accounts_for_version_8()
+        {
+            var changes = XDocument.Parse(GetFixture("vault-version8-response", "xml"))
+                .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
+                .Select(x => new Bosh.Change(x.Attribute("type").Value, x.Attribute("dataInBase64").Value));
+
+            var accounts = Parser.ParseVault(changes, EncryptionKeyVersion8).ToArray();
+
+            Assert.Equal(5, accounts.Length);
+        }
+
+        [Fact]
+        public void ParseVault_returns_accounts_for_version_92()
         {
             var changes = XDocument.Parse(GetFixture("vault-response", "xml"))
                 .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
@@ -88,6 +100,9 @@ namespace PasswordManagerAccess.Test.Kaspersky
 
         internal static readonly byte[] EncryptionKey =
             "d8f2bfe4980d90e3d402844e5332859ecbda531ab24962d2fdad4d39ad98d2f9".DecodeHex();
+
+        internal static readonly byte[] EncryptionKeyVersion8 =
+            "0741524aefb42058143123852073ad326c4e9e0eba2afcd850b04e34a553ae90".DecodeHex();
 
         internal static readonly byte[] BlobIv = "3b9628d05aa246eaa47e32cc96e915ed".DecodeHex();
 
