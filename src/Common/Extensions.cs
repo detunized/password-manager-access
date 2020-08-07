@@ -305,15 +305,15 @@ namespace PasswordManagerAccess.Common
 
         public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary,
                                                     TKey key,
-                                                    Func<TValue> valueProvider)
+                                                    Func<TValue> lazyValue)
         {
-            if (dictionary.TryGetValue(key, out var v))
-                return v;
+            if (!dictionary.TryGetValue(key, out var v))
+            {
+                v = lazyValue();
+                dictionary[key] = v;
+            }
 
-            var newV = valueProvider();
-            dictionary[key] = newV;
-
-            return newV;
+            return v;
         }
 
         // Always returns a copy
