@@ -26,53 +26,60 @@ namespace PasswordManagerAccess.Kaspersky
             Login(username, accountPassword, loginContext, rest);
 
             // 3. Request user token
-            var token = RequestUserToken(loginContext, rest);
+            var (token, sessionCookie) = RequestUserTokenAndSessionCookie(loginContext, rest);
 
             // 4. Finish login
             var authCookie = GetAuthCookie(token, rest);
 
-            // 5. Get XMPP info
-            var xmpp = GetXmppInfo(authCookie, rest);
+            try
+            {
+                // 5. Get XMPP info
+                var xmpp = GetXmppInfo(authCookie, rest);
 
-            // 6. The server returns a bunch of alternative URLs with the XMPP BOSH Js library which
-            //    are located on different domains. We need to pick one and all the following request
-            //    are done using this domain and its sub and sibling domains.
-            var jsLibraryHost = ChooseJsLibraryHost(xmpp);
+                // 6. The server returns a bunch of alternative URLs with the XMPP BOSH Js library which
+                //    are located on different domains. We need to pick one and all the following request
+                //    are done using this domain and its sub and sibling domains.
+                var jsLibraryHost = ChooseJsLibraryHost(xmpp);
 
-            // 7. Generate JID
-            var jid = GenerateJid(xmpp.UserId, jsLibraryHost);
+                // 7. Generate JID
+                var jid = GenerateJid(xmpp.UserId, jsLibraryHost);
 
-            // 8. Get notify server BOSH url
-            var boshUrl = GetBoshUrl(jid, jsLibraryHost, rest);
+                // 8. Get notify server BOSH url
+                var boshUrl = GetBoshUrl(jid, jsLibraryHost, rest);
 
-            // 9. Connect to the notify XMPP BOSH server
-            var bosh = new Bosh(boshUrl, jid, xmpp.XmppCredentials.Password, transport);
-            bosh.Connect();
+                // 9. Connect to the notify XMPP BOSH server
+                var bosh = new Bosh(boshUrl, jid, xmpp.XmppCredentials.Password, transport);
+                bosh.Connect();
 
-            // 10. Get DB info which mainly contains the encryption settings (key derivation info)
-            var dbInfoBlob = bosh.GetChanges(GetDatabaseInfoCommand, GetDatabaseInfoCommandId)
-                .Where(x => x.Type == "Database")
-                .Select(x => x.Data)
-                .FirstOrDefault()?
-                .Decode64();
+                // 10. Get DB info which mainly contains the encryption settings (key derivation info)
+                var dbInfoBlob = bosh.GetChanges(GetDatabaseInfoCommand, GetDatabaseInfoCommandId)
+                    .Where(x => x.Type == "Database")
+                    .Select(x => x.Data)
+                    .FirstOrDefault()?
+                    .Decode64();
 
-            if (dbInfoBlob == null)
-                throw MakeError("Database info is not found in the response");
+                if (dbInfoBlob == null)
+                    throw MakeError("Database info is not found in the response");
 
-            var dbInfo = DatabaseInfo.Parse(dbInfoBlob);
+                var dbInfo = DatabaseInfo.Parse(dbInfoBlob);
 
-            var version = dbInfo.Version;
-            if (!SupportedDbVersions.Contains(version))
-                throw new UnsupportedFeatureException($"Database version {version} is not supported");
+                var version = dbInfo.Version;
+                if (!SupportedDbVersions.Contains(version))
+                    throw new UnsupportedFeatureException($"Database version {version} is not supported");
 
-            var encryptionKey = Util.DeriveEncryptionKey(vaultPassword, dbInfo);
-            var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, encryptionKey, dbInfo);
+                var encryptionKey = Util.DeriveEncryptionKey(vaultPassword, dbInfo);
+                var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, encryptionKey, dbInfo);
 
-            // 11. Get DB that contains all of the accounts
-            // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests
-            var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, authKey.ToBase64());
+                // 11. Get DB that contains all of the accounts
+                // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests
+                var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, authKey.ToBase64());
 
-            return Parser.ParseVault(db, encryptionKey).ToArray();
+                return Parser.ParseVault(db, encryptionKey).ToArray();
+            }
+            finally
+            {
+                Logout(authCookie, sessionCookie, rest);
+            }
         }
 
         //
@@ -115,7 +122,7 @@ namespace PasswordManagerAccess.Kaspersky
             throw new InternalErrorException($"Unexpected response from {response.RequestUri}");
         }
 
-        internal static string RequestUserToken(string loginContext, RestClient rest)
+        internal static (string Token, string Cookie) RequestUserTokenAndSessionCookie(string loginContext, RestClient rest)
         {
             var response = rest.PostJson<R.UserToken>(
                 "https://hq.uis.kaspersky.com/v3/logon/complete_active",
@@ -129,7 +136,11 @@ namespace PasswordManagerAccess.Kaspersky
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            return response.Data.Token;
+            var cookie = response.Cookies.GetOrDefault(SessionCookieName, "");
+            if (cookie.IsNullOrEmpty())
+                throw MakeError("Auth session cookie not found");
+
+            return (response.Data.Token, cookie);
         }
 
         internal static string GetAuthCookie(string userToken, RestClient rest)
@@ -155,6 +166,44 @@ namespace PasswordManagerAccess.Kaspersky
                 throw MakeError("Auth cookie not found");
 
             return cookie;
+        }
+
+        // TODO: It's not 100% clear that Logout actually succeeds. It needs to be verified
+        // against to server to see if it's
+        internal static void Logout(string authCookie, string sessionCookie, RestClient rest)
+        {
+            // We do our best at logging out. It's done a bit messily on the web page.
+            // Normally it's done via a bunch of chained redirects controlled by the server.
+            // We disable the redirects and make a couple of requests manually. The HTTP
+            // errors are ignored deliberately not to fail the whole vault fetching process.
+
+            var response1 = rest.PostForm("https://my.kaspersky.com/SignIn/SignOutTo",
+                                          RestClient.NoParameters,
+                                          headers: new Dictionary<string, string>()
+                                          {
+                                              ["Accept"] = "*/*",
+                                              ["Host"] = "my.kaspersky.com",
+                                          },
+                                          cookies: new Dictionary<string, string>
+                                          {
+                                              [AuthCookieName] = authCookie,
+                                          });
+            if (response1.IsNetworkError)
+                throw MakeError(response1);
+
+            var response2 = rest.Get("https://hq.uis.kaspersky.com/v3/authenticate?wa=wsignout1.0",
+                                     headers: new Dictionary<string, string>()
+                                     {
+                                         ["Accept"] = "*/*",
+                                         ["Host"] = "hq.uis.kaspersky.com",
+                                     },
+                                     cookies: new Dictionary<string, string>
+                                     {
+                                         [SessionCookieName] = sessionCookie,
+                                     },
+                                     maxRedirects: 0);
+            if (response2.IsNetworkError)
+                throw MakeError(response2);
         }
 
         internal static R.XmppSettings GetXmppInfo(string authCookie, RestClient rest)
@@ -272,6 +321,7 @@ namespace PasswordManagerAccess.Kaspersky
         //
 
         internal const string AuthCookieName = "MyKFedAuth";
+        internal const string SessionCookieName = "AuthSession";
         internal const string DeviceKind = "browser";
         internal const int ServiceId = 5;
         internal const string JidResource = "portalsorucr8yj2l"; // TODO: Make this random
