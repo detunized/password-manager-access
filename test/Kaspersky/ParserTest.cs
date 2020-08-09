@@ -35,7 +35,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
             Assert.Equal("Web 1 login", a0.Name);
             Assert.Equal("web1.com", a0.Url);
             Assert.Equal("", a0.Notes);
-            Assert.Equal(1, a0.Credentials.Length);
+            Assert.Single(a0.Credentials);
 
             var c00 = a0.Credentials[0];
             Assert.Equal("Login1", c00.Name);
@@ -47,7 +47,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
             Assert.Equal("Web no login", a1.Name);
             Assert.Equal("web0.com", a1.Url);
             Assert.Equal("", a1.Notes);
-            Assert.Equal(0, a1.Credentials.Length);
+            Assert.Empty(a1.Credentials);
 
             var a2 = accounts[2];
             Assert.Equal("Web multiple logins", a2.Name);
