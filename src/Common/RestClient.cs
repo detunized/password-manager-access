@@ -330,34 +330,43 @@ namespace PasswordManagerAccess.Common
         // GET
         //
 
-        public RestResponse<string> Get(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse<string> Get(string endpoint,
+                                        HttpHeaders headers = null,
+                                        HttpCookies cookies = null,
+                                        int maxRedirects = MaxRedirects)
         {
             return MakeRequest<string>(endpoint,
                                        HttpMethod.Get,
                                        null,
                                        headers ?? NoHeaders,
                                        cookies ?? NoCookies,
-                                       MaxRedirects);
+                                       maxRedirects);
         }
 
-        public RestResponse<byte[]> GetBinary(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse<byte[]> GetBinary(string endpoint,
+                                              HttpHeaders headers = null,
+                                              HttpCookies cookies = null,
+                                              int maxRedirects = MaxRedirects)
         {
             return MakeRequest<byte[]>(endpoint,
                                        HttpMethod.Get,
                                        null,
                                        headers ?? NoHeaders,
                                        cookies ?? NoCookies,
-                                       MaxRedirects);
+                                       maxRedirects);
         }
 
-        public RestResponse<string, T> Get<T>(string endpoint, HttpHeaders headers = null, HttpCookies cookies = null)
+        public RestResponse<string, T> Get<T>(string endpoint,
+                                              HttpHeaders headers = null,
+                                              HttpCookies cookies = null,
+                                              int maxRedirects = MaxRedirects)
         {
             return MakeRequest<string, T>(endpoint,
                                           HttpMethod.Get,
                                           null,
                                           headers ?? NoHeaders,
                                           cookies ?? NoCookies,
-                                          MaxRedirects,
+                                          maxRedirects,
                                           JsonConvert.DeserializeObject<T>);
         }
 
@@ -510,14 +519,14 @@ namespace PasswordManagerAccess.Common
                                                              HttpContent content,
                                                              HttpHeaders headers,
                                                              HttpCookies cookies,
-                                                             int maxRedirectCount)
+                                                             int maxRedirects)
         {
             return MakeRequest<RestResponse<TContent>, TContent>(endpoint,
                                                                  method,
                                                                  content,
                                                                  headers,
                                                                  cookies,
-                                                                 maxRedirectCount,
+                                                                 maxRedirects,
                                                                  new RestResponse<TContent>());
         }
 
@@ -526,7 +535,7 @@ namespace PasswordManagerAccess.Common
                                                                            HttpContent content,
                                                                            HttpHeaders headers,
                                                                            HttpCookies cookies,
-                                                                           int maxRedirectCount,
+                                                                           int maxRedirects,
                                                                            Func<TContent, TData> deserialize)
         {
             var response = MakeRequest<RestResponse<TContent, TData>, TContent>(endpoint,
@@ -534,7 +543,7 @@ namespace PasswordManagerAccess.Common
                                                                                 content,
                                                                                 headers,
                                                                                 cookies,
-                                                                                maxRedirectCount,
+                                                                                maxRedirects,
                                                                                 new RestResponse<TContent, TData>());
             if (response.HasError)
                 return response;
@@ -557,7 +566,7 @@ namespace PasswordManagerAccess.Common
                                                            HttpContent content,
                                                            HttpHeaders headers,
                                                            HttpCookies cookies,
-                                                           int maxRedirectCount,
+                                                           int maxRedirects,
                                                            TResponse allocatedResult)
             where TResponse : RestResponse<TContent>
         {
@@ -567,7 +576,7 @@ namespace PasswordManagerAccess.Common
                                   content,
                                   Signer.Sign(uri, method, DefaultHeaders.Merge(headers)),
                                   DefaultCookies.Merge(cookies),
-                                  maxRedirectCount,
+                                  maxRedirects,
                                   allocatedResult);
 
             return allocatedResult;
