@@ -328,8 +328,6 @@ namespace PasswordManagerAccess.Kaspersky
             if (response.IsNetworkError)
                 return MakeError("Network error has occurred", response.Error);
 
-
-
             // TODO: Support server reported error. One real example:
             // {"ErrorDescription":"Too many requests.","TraceId":"509a0be4-6cca-4e0b-8571-63795d3ef826"}
 
