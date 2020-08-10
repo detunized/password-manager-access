@@ -19,39 +19,30 @@ namespace PasswordManagerAccess.Kaspersky
         {
             var rest = new RestClient(transport);
 
-            // 1. Request login context token
-            var loginContext = RequestLoginContext(rest);
-
-            // 2. Login
-            Login(username, accountPassword, loginContext, rest);
-
-            // 3. Request user token
-            var (token, sessionCookie) = RequestUserTokenAndSessionCookie(loginContext, rest);
-
-            // 4. Finish login
-            var authCookie = GetAuthCookie(token, rest);
+            // 1. Login
+            var (sessionCookie, authCookie) = Login(username, accountPassword, rest);
 
             try
             {
-                // 5. Get XMPP info
+                // 2. Get XMPP info
                 var xmpp = GetXmppInfo(authCookie, rest);
 
-                // 6. The server returns a bunch of alternative URLs with the XMPP BOSH Js library which
+                // 3. The server returns a bunch of alternative URLs with the XMPP BOSH Js library which
                 //    are located on different domains. We need to pick one and all the following request
                 //    are done using this domain and its sub and sibling domains.
                 var jsLibraryHost = ChooseJsLibraryHost(xmpp);
 
-                // 7. Generate JID
+                // 4. Generate JID
                 var jid = GenerateJid(xmpp.UserId, jsLibraryHost);
 
-                // 8. Get notify server BOSH url
+                // 5. Get notify server BOSH url
                 var boshUrl = GetBoshUrl(jid, jsLibraryHost, rest);
 
-                // 9. Connect to the notify XMPP BOSH server
+                // 6. Connect to the notify XMPP BOSH server
                 var bosh = new Bosh(boshUrl, jid, xmpp.XmppCredentials.Password, transport);
                 bosh.Connect();
 
-                // 10. Get DB info which mainly contains the encryption settings (key derivation info)
+                // 7. Get DB info which mainly contains the encryption settings (key derivation info)
                 var dbInfoBlob = bosh.GetChanges(GetDatabaseInfoCommand, GetDatabaseInfoCommandId)
                     .Where(x => x.Type == "Database")
                     .Select(x => x.Data)
@@ -70,14 +61,16 @@ namespace PasswordManagerAccess.Kaspersky
                 var encryptionKey = Util.DeriveEncryptionKey(vaultPassword, dbInfo);
                 var authKey = Util.DeriveMasterPasswordAuthKey(jid.UserId, encryptionKey, dbInfo);
 
-                // 11. Get DB that contains all of the accounts
-                // TODO: Test on a huge vault to see if the accounts come in batches and we need to make multiple requests
+                // 8. Get DB that contains all of the accounts
+                // TODO: Test on a huge vault to see if the accounts come in batches and
+                //       we need to make multiple requests
                 var db = bosh.GetChanges(GetDatabaseCommand, GetDatabaseCommandId, authKey.ToBase64());
 
                 return Parser.ParseVault(db, encryptionKey).ToArray();
             }
             finally
             {
+                // 9. Logout
                 Logout(authCookie, sessionCookie, rest);
             }
         }
@@ -85,6 +78,25 @@ namespace PasswordManagerAccess.Kaspersky
         //
         // Internal
         //
+
+        internal static (string SessionCookie, string AuthCookie) Login(string username,
+                                                                        string password,
+                                                                        RestClient rest)
+        {
+            // 1. Request login context token
+            var context = RequestLoginContext(rest);
+
+            // 2. Submit the username and the password
+            SubmitCredentials(username, password, context, rest);
+
+            // 3. Request user token
+            var (token, sessionCookie) = RequestUserTokenAndSessionCookie(context, rest);
+
+            // 4. Finish login
+            var authCookie = GetAuthCookie(token, rest);
+
+            return (sessionCookie, authCookie);
+        }
 
         internal static string RequestLoginContext(RestClient rest)
         {
@@ -99,7 +111,7 @@ namespace PasswordManagerAccess.Kaspersky
         }
 
         // TODO: Handle and test invalid username and password
-        internal static void Login(string username, string password, string loginContext, RestClient rest)
+        internal static void SubmitCredentials(string username, string password, string loginContext, RestClient rest)
         {
             var response = rest.PostJson<R.Result>(
                 "https://hq.uis.kaspersky.com/v3/logon/proceed",
@@ -119,10 +131,11 @@ namespace PasswordManagerAccess.Kaspersky
             if (response.Data.Status == "Success")
                 return;
 
-            throw new InternalErrorException($"Unexpected response from {response.RequestUri}");
+            throw MakeError($"Unexpected response from {response.RequestUri}");
         }
 
-        internal static (string Token, string Cookie) RequestUserTokenAndSessionCookie(string loginContext, RestClient rest)
+        internal static (string Token, string Cookie) RequestUserTokenAndSessionCookie(string loginContext,
+                                                                                       RestClient rest)
         {
             var response = rest.PostJson<R.UserToken>(
                 "https://hq.uis.kaspersky.com/v3/logon/complete_active",
