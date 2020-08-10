@@ -110,7 +110,6 @@ namespace PasswordManagerAccess.Kaspersky
             throw MakeError(response);
         }
 
-        // TODO: Handle and test invalid username and password
         internal static void SubmitCredentials(string username, string password, string loginContext, RestClient rest)
         {
             var response = rest.PostJson<R.Result>(
@@ -125,13 +124,22 @@ namespace PasswordManagerAccess.Kaspersky
                     ["captchaAnswer"] = "undefined",
                 });
 
-            if (!response.IsSuccessful)
-                throw MakeError(response);
+            switch (response.Data.Status)
+            {
+            case "Success":
+                if (response.IsSuccessful)
+                    return;
+                break;
 
-            if (response.Data.Status == "Success")
-                return;
+            case "InvalidRegistrationData":
+                if (response.IsHttpError)
+                    throw new BadCredentialsException("The username or password is incorrect");
+                break;
+            }
 
-            throw MakeError($"Unexpected response from {response.RequestUri}");
+            throw response.IsSuccessful
+                ? MakeError($"Unexpected response from {response.RequestUri}")
+                : MakeError(response);
         }
 
         internal static (string Token, string Cookie) RequestUserTokenAndSessionCookie(string loginContext,
@@ -317,6 +325,11 @@ namespace PasswordManagerAccess.Kaspersky
 
         internal static BaseException MakeError(RestResponse<string> response)
         {
+            if (response.IsNetworkError)
+                return MakeError("Network error has occurred", response.Error);
+
+
+
             // TODO: Support server reported error. One real example:
             // {"ErrorDescription":"Too many requests.","TraceId":"509a0be4-6cca-4e0b-8571-63795d3ef826"}
 

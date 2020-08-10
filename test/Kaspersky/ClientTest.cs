@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Net;
 using PasswordManagerAccess.Kaspersky;
 using Xunit;
 
@@ -8,6 +9,17 @@ namespace PasswordManagerAccess.Test.Kaspersky
 {
     public class ClientTest
     {
+        [Fact]
+        public void Login_throws_on_invalid_credentials()
+        {
+            var flow = new RestFlow()
+                .Post("{'Status':'', 'LogonContext': 'blah'}")
+                .Post("{'Status': 'InvalidRegistrationData'}", HttpStatusCode.Unauthorized);
+
+            Exceptions.AssertThrowsBadCredentials(() => Client.Login("username", "password", flow),
+                                                  "username or password is incorrect");
+        }
+
         [Fact]
         public void GetHost_returns_domain()
         {
