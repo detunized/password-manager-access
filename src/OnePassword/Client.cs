@@ -100,31 +100,14 @@ namespace PasswordManagerAccess.OnePassword
                                               ILogger logger,
                                               IRestTransport transport)
         {
-            var rest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
-
             // Step 1: Login is multi-step process in itself, which might iterate for a few times internally.
-            var login = Login(clientInfo, ui, storage, rest);
+            var loginRest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
+            var (sessionKey, sessionRest) = Login(clientInfo, ui, storage, loginRest);
 
             try
             {
-                // Step 2: Get account info. It contains users, keys, groups, vault info and other stuff.
-                //         Not the actual vault data though. That is requested separately.
-                var accountInfo = GetAccountInfo(login.SessionKey, login.Rest);
-
-                // Step 6: Get all the keysets in one place. The original code is quite hairy around this
-                //         topic, so it's not very clear if these keysets should be merged with anything else
-                //         or it's enough to just use these keys. For now we gonna ignore other keys and
-                //         see if it's enough.
-                var keysets = GetKeysets(login.SessionKey, login.Rest);
-
-                // Step 3: Derive and decrypt keys
-                var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
-
-                // Step 4: Get and decrypt vaults
-                var vaults = GetVaults(accountInfo, login.SessionKey, keychain, login.Rest, logger);
-
-                // Done
-                return vaults;
+                // Step 2: Get and decrypt all the keys and open all the vaults
+                return OpenAllVaults(clientInfo, sessionKey, sessionRest, logger);
             }
             finally
             {
@@ -133,21 +116,31 @@ namespace PasswordManagerAccess.OnePassword
                 //       original problem and thus will make it harder to diagnose
                 //       the issue.
 
-                // Last step: Make sure to sign out in any case
-                SignOut(login.Rest);
+                // Step 3: Make sure to sign out in any case
+                SignOut(sessionRest);
             }
         }
 
-        internal struct LoginResult
+        internal static Vault[] OpenAllVaults(ClientInfo clientInfo, AesKey sessionKey, RestClient rest, ILogger logger)
         {
-            public readonly AesKey SessionKey;
-            public readonly RestClient Rest;
+            // Step 1: Get account info. It contains users, keys, groups, vault info and other stuff.
+            //         Not the actual vault data though. That is requested separately.
+            var accountInfo = GetAccountInfo(sessionKey, rest);
 
-            public LoginResult(AesKey sessionKey, RestClient rest)
-            {
-                SessionKey = sessionKey;
-                Rest = rest;
-            }
+            // Step 2: Get all the keysets in one place. The original code is quite hairy around this
+            //         topic, so it's not very clear if these keysets should be merged with anything else
+            //         or it's enough to just use these keys. For now we gonna ignore other keys and
+            //         see if it's enough.
+            var keysets = GetKeysets(sessionKey, rest);
+
+            // Step 3: Derive and decrypt keys
+            var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
+
+            // Step 4: Get and decrypt vaults
+            var vaults = GetVaults(accountInfo, sessionKey, keychain, rest, logger);
+
+            // Done
+            return vaults;
         }
 
         // This is exception is used internally to trigger re-login from the depth of the call stack.
@@ -156,7 +149,10 @@ namespace PasswordManagerAccess.OnePassword
         {
         }
 
-        internal static LoginResult Login(ClientInfo clientInfo, IUi ui, ISecureStorage storage, RestClient rest)
+        internal static (AesKey, RestClient) Login(ClientInfo clientInfo,
+                                                   IUi ui,
+                                                   ISecureStorage storage,
+                                                   RestClient rest)
         {
             while (true)
             {
@@ -170,7 +166,10 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        private static LoginResult LoginAttempt(ClientInfo clientInfo, IUi ui, ISecureStorage storage, RestClient rest)
+        private static (AesKey, RestClient) LoginAttempt(ClientInfo clientInfo,
+                                                         IUi ui,
+                                                         ISecureStorage storage,
+                                                         RestClient rest)
         {
             // Step 1: Request to initiate a new session
             var session = StartNewSession(clientInfo, rest);
@@ -193,7 +192,7 @@ namespace PasswordManagerAccess.OnePassword
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
                 PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, rest);
 
-            return new LoginResult(sessionKey, rest);
+            return (sessionKey, rest);
         }
 
         internal static string GetApiUrl(string domain)
