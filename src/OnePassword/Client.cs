@@ -858,7 +858,7 @@ namespace PasswordManagerAccess.OnePassword
                                               AesKey sessionKey,
                                               RestClient rest)
         {
-            return Decrypt<T>(Get<R.Encrypted>(rest, endpoint), sessionKey);
+            return DecryptResponse<T>(Get<R.Encrypted>(rest, endpoint), sessionKey);
         }
 
         internal static T PostEncryptedJson<T>(string endpoint,
@@ -870,17 +870,17 @@ namespace PasswordManagerAccess.OnePassword
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
             var response = Post<R.Encrypted>(rest, endpoint, encryptedPayload.ToDictionary());
 
-            return Decrypt<T>(response, sessionKey);
+            return DecryptResponse<T>(response, sessionKey);
         }
 
-        internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
+        internal static T DecryptResponse<T>(R.Encrypted encrypted, IDecryptor decryptor)
         {
-            string plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
+            var plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
 
             // First check for server errors. It's possible to deserialize the returned error object
             // into one of the target types by mistake when the type has no mandatory fields.
             // `Response.Mfa` would be one of those.
-            if (ParseServerError(plaintext) is var serverError && serverError != null)
+            if (ParseServerError(plaintext) is {} serverError)
                 throw serverError;
 
             try
@@ -890,6 +890,19 @@ namespace PasswordManagerAccess.OnePassword
             catch (JsonException e)
             {
                 throw new InternalErrorException("Failed to parse JSON in response from the server", e);
+            }
+        }
+
+        internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
+        {
+            var plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(plaintext);
+            }
+            catch (JsonException e)
+            {
+                throw new InternalErrorException("Failed to parse JSON", e);
             }
         }
 
