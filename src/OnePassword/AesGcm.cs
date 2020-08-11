@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
@@ -74,11 +73,6 @@ namespace PasswordManagerAccess.OnePassword
 
             if (iv.Length != 12)
                 throw new InternalErrorException("The iv must be 12 bytes long");
-
-            Debug.Assert(input.Length >= length);
-            Debug.Assert(output.Length >= length);
-            Debug.Assert(hashKey.Length == 16);
-            Debug.Assert(hashSalt.Length == 16);
 
             using var aes = new AesManaged { Mode = CipherMode.ECB, Key = key };
             using var encryptor = aes.CreateEncryptor();
