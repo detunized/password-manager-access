@@ -858,7 +858,11 @@ namespace PasswordManagerAccess.OnePassword
                                               AesKey sessionKey,
                                               RestClient rest)
         {
-            return DecryptResponse<T>(Get<R.Encrypted>(rest, endpoint), sessionKey);
+            var response = rest.Get<R.Encrypted>(endpoint);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return DecryptResponse<T>(response.Data, sessionKey);
         }
 
         internal static T PostEncryptedJson<T>(string endpoint,
@@ -868,9 +872,12 @@ namespace PasswordManagerAccess.OnePassword
         {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
-            var response = Post<R.Encrypted>(rest, endpoint, encryptedPayload.ToDictionary());
 
-            return DecryptResponse<T>(response, sessionKey);
+            var response = rest.PostJson<R.Encrypted>(endpoint, encryptedPayload.ToDictionary());
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return DecryptResponse<T>(response.Data, sessionKey);
         }
 
         internal static T DecryptResponse<T>(R.Encrypted encrypted, IDecryptor decryptor)
@@ -914,28 +921,6 @@ namespace PasswordManagerAccess.OnePassword
         internal static string AbbreviateIds(IEnumerable<string> ids)
         {
             return string.Join(", ", ids.OrderBy(x => x).Select(x => $"'{AbbreviateId(x)}'"));
-        }
-
-        //
-        // Migration helpers
-        //
-
-        private static T Get<T>(RestClient rest, string endpoint)
-        {
-            var response = rest.Get<T>(endpoint);
-            if (!response.IsSuccessful)
-                throw MakeError(response);
-
-            return response.Data;
-        }
-
-        private static T Post<T>(RestClient rest, string endpoint, Dictionary<string, object> parameters)
-        {
-            var response = rest.PostJson<T>(endpoint, parameters);
-            if (!response.IsSuccessful)
-                throw MakeError(response);
-
-            return response.Data;
         }
 
         //
