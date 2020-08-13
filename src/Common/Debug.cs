@@ -1,11 +1,11 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+//#define PROFILE_ENABLED
+
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-
-//#define PROFILE_ENABLED
 
 namespace PasswordManagerAccess.Common
 {
