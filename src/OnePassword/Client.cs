@@ -562,12 +562,16 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static string[] BuildListOfAccessibleVaults(R.AccountInfo accountInfo)
         {
-            const int haveReadAccess = 32;
-
             return accountInfo.Me.VaultAccess
-                .Where(i => (i.Acl & haveReadAccess) != 0)
+                .Where(i => IsReadAccessible(i.Acl))
                 .Select(i => i.Id)
                 .ToArray();
+        }
+
+        internal static bool IsReadAccessible(int acl)
+        {
+            const int haveReadAccess = 32;
+            return (acl & haveReadAccess) != 0;
         }
 
         internal static Vault GetVault(R.VaultInfo vault,
@@ -774,10 +778,11 @@ namespace PasswordManagerAccess.OnePassword
                 DecryptKeyset(i, keychain);
         }
 
-        internal static void DecryptVaultKeys(R.VaultAccessInfo[] vaults, Keychain keychain)
+        internal static void DecryptVaultKeys(R.VaultAccessInfo[] accessInfo, Keychain keychain)
         {
-            foreach (var i in vaults)
-                DecryptAesKey(i.EncryptedKey, keychain);
+            foreach (var access in accessInfo)
+                if (IsReadAccessible(access.Acl))
+                    DecryptAesKey(access.EncryptedKey, keychain);
         }
 
         internal static void DecryptKeyset(R.KeysetInfo keyset, Keychain keychain)
