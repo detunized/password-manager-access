@@ -564,7 +564,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             const int haveReadAccess = 32;
 
-            return accountInfo.Me.VaultAceess
+            return accountInfo.Me.VaultAccess
                 .Where(i => (i.Acl & haveReadAccess) != 0)
                 .Select(i => i.Id)
                 .ToArray();
@@ -748,7 +748,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             var keychain = new Keychain();
             DecryptKeysets(keysets.Keysets, clientInfo, keychain);
-            DecryptVaultKeys(accountInfo.Me.VaultAceess, keychain);
+            DecryptVaultKeys(accountInfo.Me.VaultAccess, keychain);
 
             return keychain;
         }
