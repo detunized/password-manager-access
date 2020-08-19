@@ -33,8 +33,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             var (sessionId, srpInfo) = Client.StartNewSession(TestData.ClientInfo, flow);
 
             Assert.Equal(TestData.SessionId, sessionId);
-            Assert.Equal(TestData.SrpInfo.KeyFormat, srpInfo.KeyFormat);
-            Assert.Equal(TestData.SrpInfo.KeyUuid, srpInfo.KeyUuid);
             Assert.Equal(TestData.SrpInfo.SrpMethod, srpInfo.SrpMethod);
             Assert.Equal(TestData.SrpInfo.KeyMethod, srpInfo.KeyMethod);
             Assert.Equal(TestData.SrpInfo.Iterations, srpInfo.Iterations);

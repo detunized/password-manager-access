@@ -22,9 +22,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
 
-        public static readonly SrpInfo SrpInfo = new SrpInfo(keyFormat: "A3",
-                                                             keyUuid: "RTN9SA",
-                                                             srpMethod: "SRPg-4096",
+        public static readonly SrpInfo SrpInfo = new SrpInfo(srpMethod: "SRPg-4096",
                                                              keyMethod: "PBES2g-HS256",
                                                              iterations: 100000,
                                                              salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64Loose());

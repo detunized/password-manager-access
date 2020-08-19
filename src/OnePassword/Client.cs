@@ -235,15 +235,13 @@ namespace PasswordManagerAccess.OnePassword
             switch (status)
             {
             case "ok":
-                var srpInfo = new SrpInfo(keyFormat: info.KeyFormat,
-                                          keyUuid: info.KeyUuid,
-                                          srpMethod: info.Auth.Method,
+                if (info.KeyFormat != clientInfo.AccountKey.Format || info.KeyUuid != clientInfo.AccountKey.Uuid)
+                    throw new BadCredentialsException("The account key is incorrect");
+
+                var srpInfo = new SrpInfo(srpMethod: info.Auth.Method,
                                           keyMethod: info.Auth.Algorithm,
                                           iterations: info.Auth.Iterations,
                                           salt: info.Auth.Salt.Decode64Loose());
-
-                if (srpInfo.KeyUuid != clientInfo.AccountKey.Uuid)
-                    throw new BadCredentialsException("The account key is incorrect");
 
                 return (info.SessionId, srpInfo);
             case "device-not-registered":

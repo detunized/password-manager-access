@@ -12,17 +12,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void SrpInfo_properties_are_set()
         {
-            var keyFormat = "key-format";
-            var keyUuid = "key-uuid";
             var srpMethod = "srp-method";
             var keyMethod = "key-method";
             var iterations = 1337;
             var salt = "salt".ToBytes();
 
-            var session = new SrpInfo(keyFormat, keyUuid, srpMethod, keyMethod, iterations, salt);
+            var session = new SrpInfo(srpMethod, keyMethod, iterations, salt);
 
-            Assert.Equal(keyFormat, session.KeyFormat);
-            Assert.Equal(keyUuid, session.KeyUuid);
             Assert.Equal(srpMethod, session.SrpMethod);
             Assert.Equal(keyMethod, session.KeyMethod);
             Assert.Equal(iterations, session.Iterations);
