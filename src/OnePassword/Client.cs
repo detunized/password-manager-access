@@ -220,7 +220,7 @@ namespace PasswordManagerAccess.OnePassword
             return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
         }
 
-        internal static (string SessionId, AuthSession SrpInfo) StartNewSession(ClientInfo clientInfo, RestClient rest)
+        internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(ClientInfo clientInfo, RestClient rest)
         {
             var response = rest.Get<R.NewSession>(string.Format("v2/auth/{0}/{1}/{2}/{3}",
                                                                 clientInfo.Username,
@@ -235,17 +235,17 @@ namespace PasswordManagerAccess.OnePassword
             switch (status)
             {
             case "ok":
-                var session = new AuthSession(keyFormat: info.KeyFormat,
-                                              keyUuid: info.KeyUuid,
-                                              srpMethod: info.Auth.Method,
-                                              keyMethod: info.Auth.Algorithm,
-                                              iterations: info.Auth.Iterations,
-                                              salt: info.Auth.Salt.Decode64Loose());
+                var srpInfo = new SrpInfo(keyFormat: info.KeyFormat,
+                                          keyUuid: info.KeyUuid,
+                                          srpMethod: info.Auth.Method,
+                                          keyMethod: info.Auth.Algorithm,
+                                          iterations: info.Auth.Iterations,
+                                          salt: info.Auth.Salt.Decode64Loose());
 
-                if (session.KeyUuid != clientInfo.AccountKey.Uuid)
+                if (srpInfo.KeyUuid != clientInfo.AccountKey.Uuid)
                     throw new BadCredentialsException("The account key is incorrect");
 
-                return (info.SessionId, session);
+                return (info.SessionId, srpInfo);
             case "device-not-registered":
                 RegisterDevice(clientInfo, MakeRestClient(rest, sessionId: info.SessionId));
                 break;

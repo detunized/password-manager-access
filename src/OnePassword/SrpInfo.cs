@@ -3,7 +3,7 @@
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class AuthSession
+    internal class SrpInfo
     {
         public readonly string KeyFormat;
         public readonly string KeyUuid;
@@ -12,12 +12,12 @@ namespace PasswordManagerAccess.OnePassword
         public readonly int Iterations;
         public readonly byte[] Salt;
 
-        public AuthSession(string keyFormat,
-                           string keyUuid,
-                           string srpMethod,
-                           string keyMethod,
-                           int iterations,
-                           byte[] salt)
+        public SrpInfo(string keyFormat,
+                       string keyUuid,
+                       string srpMethod,
+                       string keyMethod,
+                       int iterations,
+                       byte[] salt)
         {
             KeyFormat = keyFormat;
             KeyUuid = keyUuid;

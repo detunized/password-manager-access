@@ -129,7 +129,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                                      sharedA,
                                      sharedB,
                                      TestData.ClientInfo,
-                                     TestData.AuthSession,
+                                     TestData.SrpInfo,
                                      TestData.SessionId);
 
             Assert.Equal("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64Loose(), key);
@@ -140,7 +140,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
-            var x = Srp.ComputeX(TestData.ClientInfo, TestData.AuthSession);
+            var x = Srp.ComputeX(TestData.ClientInfo, TestData.SrpInfo);
 
             Assert.Equal(expected, x.ToString());
         }
