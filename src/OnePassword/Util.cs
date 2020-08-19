@@ -57,11 +57,6 @@ namespace PasswordManagerAccess.OnePassword
             return Crypto.HmacSha256(SessionHmacSecret, sessionKey.Key);
         }
 
-        public static string CalculateClientHash(AuthSession authSession)
-        {
-            return CalculateClientHash(authSession.KeyUuid, authSession.Id);
-        }
-
         public static string CalculateClientHash(string accountKeyUuid, string sessionId)
         {
             var a = Crypto.Sha256(accountKeyUuid);

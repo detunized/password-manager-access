@@ -50,12 +50,6 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void CalculateClientHash_convenience_returns_hash()
-        {
-            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Util.CalculateClientHash(TestData.AuthSession));
-        }
-
-        [Fact]
         public void CalculateClientHash_returns_hash()
         {
             Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA",

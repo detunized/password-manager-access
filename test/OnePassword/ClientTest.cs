@@ -141,7 +141,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void VerifySessionKey_returns_success()
         {
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response"));
-            var result = Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow);
+            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow);
 
             Assert.Equal(Client.VerifyStatus.Success, result.Status);
         }
@@ -154,14 +154,14 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v2/auth/verify")
                 .ToRestClient(ApiUrl);
 
-            Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow);
+            Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow);
         }
 
         [Fact]
         public void VerifySessionKey_returns_factors()
         {
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
-            var result = Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow);
+            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow);
 
             Assert.Equal(3, result.Factors.Length);
         }
@@ -172,7 +172,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow),
+                () => Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow),
                 "Username, password or account key");
         }
 

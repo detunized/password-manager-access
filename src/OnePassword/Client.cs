@@ -187,7 +187,7 @@ namespace PasswordManagerAccess.OnePassword
             var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), session.Id);
 
             // Step 3: Verify the key with the server
-            var verifiedOrMfa = VerifySessionKey(session, sessionKey, macRest);
+            var verifiedOrMfa = VerifySessionKey(clientInfo, sessionKey, macRest);
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
@@ -329,14 +329,14 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static VerifyResult VerifySessionKey(AuthSession authSession, AesKey sessionKey, RestClient rest)
+        internal static VerifyResult VerifySessionKey(ClientInfo clientInfo, AesKey sessionKey, RestClient rest)
         {
             var response = PostEncryptedJson<R.VerifyKey>(
                 "v2/auth/verify",
                 new Dictionary<string, object>
                 {
-                    ["sessionID"] = authSession.Id,
-                    ["clientVerifyHash"] = Util.CalculateClientHash(authSession),
+                    ["sessionID"] = sessionKey.Id,
+                    ["clientVerifyHash"] = Util.CalculateClientHash(clientInfo.AccountKey.Uuid, sessionKey.Id),
                     ["client"] = ClientId,
                 },
                 sessionKey,
