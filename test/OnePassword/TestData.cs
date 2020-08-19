@@ -21,22 +21,22 @@ namespace PasswordManagerAccess.Test.OnePassword
                                                                       domain: Domain);
 
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
-        public static readonly Session Session = MakeSession();
+        public static readonly AuthSession AuthSession = MakeAuthSession();
 
         public static readonly byte[] SessionKeyBytes =
             "1c45a129b9e96b2f2eae330e8fd3c2dbb9dbe71b696d19823f3fa031b3218aad".DecodeHex();
 
         public static readonly AesKey SessionKey = new AesKey(SessionId, SessionKeyBytes);
 
-        public static Session MakeSession(string id = SessionId)
+        public static AuthSession MakeAuthSession(string id = SessionId)
         {
-            return new Session(id: id,
-                               keyFormat: "A3",
-                               keyUuid : "RTN9SA",
-                               srpMethod: "SRPg-4096",
-                               keyMethod: "PBES2g-HS256",
-                               iterations: 100000,
-                               salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64Loose());
+            return new AuthSession(id: id,
+                                   keyFormat: "A3",
+                                   keyUuid: "RTN9SA",
+                                   srpMethod: "SRPg-4096",
+                                   keyMethod: "PBES2g-HS256",
+                                   iterations: 100000,
+                                   salt: "-JLqTVQLjQg08LWZ0gyuUA".Decode64Loose());
         }
     }
 }

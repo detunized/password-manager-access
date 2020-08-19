@@ -11,14 +11,14 @@ namespace PasswordManagerAccess.OnePassword
 {
     internal class MacRequestSigner: IRequestSigner
     {
-        public MacRequestSigner(Session session, AesKey sessionKey)
-            : this(session, sessionKey, Crypto.RandomUInt32())
+        public MacRequestSigner(AuthSession authSession, AesKey sessionKey)
+            : this(authSession, sessionKey, Crypto.RandomUInt32())
         {
         }
 
-        public MacRequestSigner(Session session, AesKey sessionKey, uint seed)
+        public MacRequestSigner(AuthSession authSession, AesKey sessionKey, uint seed)
         {
-            _sessionId = session.Id;
+            _sessionId = authSession.Id;
             _salt = Util.CalculateSessionHmacSalt(sessionKey);
             _requestId = seed;
         }

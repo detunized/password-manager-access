@@ -32,13 +32,13 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Get(GetFixture("start-new-session-response"));
             var session = Client.StartNewSession(TestData.ClientInfo, flow);
 
-            Assert.Equal(TestData.Session.Id, session.Id);
-            Assert.Equal(TestData.Session.KeyFormat, session.KeyFormat);
-            Assert.Equal(TestData.Session.KeyUuid, session.KeyUuid);
-            Assert.Equal(TestData.Session.SrpMethod, session.SrpMethod);
-            Assert.Equal(TestData.Session.KeyMethod, session.KeyMethod);
-            Assert.Equal(TestData.Session.Iterations, session.Iterations);
-            Assert.Equal(TestData.Session.Salt, session.Salt);
+            Assert.Equal(TestData.AuthSession.Id, session.Id);
+            Assert.Equal(TestData.AuthSession.KeyFormat, session.KeyFormat);
+            Assert.Equal(TestData.AuthSession.KeyUuid, session.KeyUuid);
+            Assert.Equal(TestData.AuthSession.SrpMethod, session.SrpMethod);
+            Assert.Equal(TestData.AuthSession.KeyMethod, session.KeyMethod);
+            Assert.Equal(TestData.AuthSession.Iterations, session.Iterations);
+            Assert.Equal(TestData.AuthSession.Salt, session.Salt);
         }
 
         [Fact]
@@ -141,7 +141,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void VerifySessionKey_returns_success()
         {
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response"));
-            var result = Client.VerifySessionKey(TestData.Session, TestData.SessionKey, flow);
+            var result = Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow);
 
             Assert.Equal(Client.VerifyStatus.Success, result.Status);
         }
@@ -154,14 +154,14 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v2/auth/verify")
                 .ToRestClient(ApiUrl);
 
-            Client.VerifySessionKey(TestData.Session, TestData.SessionKey, flow);
+            Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow);
         }
 
         [Fact]
         public void VerifySessionKey_returns_factors()
         {
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
-            var result = Client.VerifySessionKey(TestData.Session, TestData.SessionKey, flow);
+            var result = Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow);
 
             Assert.Equal(3, result.Factors.Length);
         }
@@ -172,7 +172,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.VerifySessionKey(TestData.Session, TestData.SessionKey, flow),
+                () => Client.VerifySessionKey(TestData.AuthSession, TestData.SessionKey, flow),
                 "Username, password or account key");
         }
 
@@ -232,7 +232,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsCanceledMultiFactor(
                 () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors,
-                                                               TestData.Session,
+                                                               TestData.AuthSession,
                                                                TestData.SessionKey,
                                                                new CancelingUi(),
                                                                null,
@@ -276,7 +276,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
             var token = Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                                       "123456",
-                                                      TestData.Session,
+                                                      TestData.AuthSession,
                                                       TestData.SessionKey,
                                                       flow);
 
@@ -293,7 +293,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                           "123456",
-                                          TestData.Session,
+                                          TestData.AuthSession,
                                           TestData.SessionKey,
                                           flow);
         }
@@ -306,7 +306,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             Exceptions.AssertThrowsBadMultiFactor(
                 () => Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                                     "123456",
-                                                    TestData.Session,
+                                                    TestData.AuthSession,
                                                     TestData.SessionKey,
                                                     flow),
                 "Incorrect second factor code");

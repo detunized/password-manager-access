@@ -58,7 +58,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ExpectUrl("1password.com/api/v1/auth")
                 .ToRestClient(ApiUrl);
 
-            Srp.ExchangeAForB(0, TestData.MakeSession(), rest);
+            Srp.ExchangeAForB(0, TestData.MakeAuthSession(), rest);
         }
 
         [Fact]
@@ -129,7 +129,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                                      sharedA,
                                      sharedB,
                                      TestData.ClientInfo,
-                                     TestData.Session);
+                                     TestData.AuthSession);
 
             Assert.Equal("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64Loose(), key);
         }
@@ -139,7 +139,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
-            var x = Srp.ComputeX(TestData.ClientInfo, TestData.Session);
+            var x = Srp.ComputeX(TestData.ClientInfo, TestData.AuthSession);
 
             Assert.Equal(expected, x.ToString());
         }
@@ -155,7 +155,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .Post(GetFixture(fixtureName))
                 .ToRestClient(ApiUrl);
 
-            return Srp.ExchangeAForB(0, TestData.MakeSession(sessionId), rest);
+            return Srp.ExchangeAForB(0, TestData.MakeAuthSession(sessionId), rest);
         }
 
         //

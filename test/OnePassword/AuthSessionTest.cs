@@ -7,10 +7,10 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class SessionTest
+    public class AuthSessionTest
     {
         [Fact]
-        public void Session_properties_are_set()
+        public void AuthSession_properties_are_set()
         {
             var id = "id";
             var keyFormat = "key-format";
@@ -20,7 +20,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var iterations = 1337;
             var salt = "salt".ToBytes();
 
-            var session = new Session(id, keyFormat, keyUuid, srpMethod, keyMethod, iterations, salt);
+            var session = new AuthSession(id, keyFormat, keyUuid, srpMethod, keyMethod, iterations, salt);
 
             Assert.Equal(id, session.Id);
             Assert.Equal(keyFormat, session.KeyFormat);

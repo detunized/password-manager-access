@@ -52,7 +52,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void CalculateClientHash_convenience_returns_hash()
         {
-            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Util.CalculateClientHash(TestData.Session));
+            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Util.CalculateClientHash(TestData.AuthSession));
         }
 
         [Fact]
@@ -65,7 +65,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void HashRememberMeToken_convenience_returns_hash()
         {
-            Assert.Equal("XPvm9ASr", Util.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", TestData.Session));
+            Assert.Equal("XPvm9ASr", Util.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", TestData.AuthSession));
         }
 
         [Fact]

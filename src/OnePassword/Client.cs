@@ -220,7 +220,7 @@ namespace PasswordManagerAccess.OnePassword
             return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
         }
 
-        internal static Session StartNewSession(ClientInfo clientInfo, RestClient rest)
+        internal static AuthSession StartNewSession(ClientInfo clientInfo, RestClient rest)
         {
             var response = rest.Get<R.NewSession>(string.Format("v2/auth/{0}/{1}/{2}/{3}",
                                                                 clientInfo.Username,
@@ -235,16 +235,17 @@ namespace PasswordManagerAccess.OnePassword
             switch (status)
             {
             case "ok":
-                var session = new Session(id: info.SessionId,
-                                          keyFormat: info.KeyFormat,
-                                          keyUuid: info.KeyUuid,
-                                          srpMethod: info.Auth.Method,
-                                          keyMethod: info.Auth.Algorithm,
-                                          iterations: info.Auth.Iterations,
-                                          salt: info.Auth.Salt.Decode64Loose());
+                var session = new AuthSession(id: info.SessionId,
+                                              keyFormat: info.KeyFormat,
+                                              keyUuid: info.KeyUuid,
+                                              srpMethod: info.Auth.Method,
+                                              keyMethod: info.Auth.Algorithm,
+                                              iterations: info.Auth.Iterations,
+                                              salt: info.Auth.Salt.Decode64Loose());
 
                 if (session.KeyUuid != clientInfo.AccountKey.Uuid)
                     throw new BadCredentialsException("The account key is incorrect");
+
                 return session;
             case "device-not-registered":
                 RegisterDevice(clientInfo, MakeRestClient(rest, sessionId: info.SessionId));
@@ -328,14 +329,14 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static VerifyResult VerifySessionKey(Session session, AesKey sessionKey, RestClient rest)
+        internal static VerifyResult VerifySessionKey(AuthSession authSession, AesKey sessionKey, RestClient rest)
         {
             var response = PostEncryptedJson<R.VerifyKey>(
                 "v2/auth/verify",
                 new Dictionary<string, object>
                 {
-                    ["sessionID"] = session.Id,
-                    ["clientVerifyHash"] = Util.CalculateClientHash(session),
+                    ["sessionID"] = authSession.Id,
+                    ["clientVerifyHash"] = Util.CalculateClientHash(authSession),
                     ["client"] = ClientId,
                 },
                 sessionKey,
@@ -371,7 +372,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static void PerformSecondFactorAuthentication(SecondFactor[] factors,
-                                                               Session session,
+                                                               AuthSession authSession,
                                                                AesKey sessionKey,
                                                                IUi ui,
                                                                ISecureStorage storage,
@@ -379,7 +380,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             // Try "remember me" first. It's possible the server didn't allow it or
             // we don't have a valid token stored from one of the previous sessions.
-            if (TrySubmitRememberMeToken(factors, session, sessionKey, storage, rest))
+            if (TrySubmitRememberMeToken(factors, authSession, sessionKey, storage, rest))
                 return;
 
             // TODO: Allow to choose 2FA method via UI like in Bitwarden
@@ -389,7 +390,7 @@ namespace PasswordManagerAccess.OnePassword
             if (passcode == Passcode.Cancel)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
-            var token = SubmitSecondFactorCode(factor.Kind, passcode.Code, session, sessionKey, rest);
+            var token = SubmitSecondFactorCode(factor.Kind, passcode.Code, authSession, sessionKey, rest);
 
             // Store the token with the application. Next time we're not gonna need to enter any passcodes.
             if (passcode.RememberMe)
@@ -397,7 +398,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static bool TrySubmitRememberMeToken(SecondFactor[] factors,
-                                                      Session session,
+                                                      AuthSession authSession,
                                                       AesKey sessionKey,
                                                       ISecureStorage storage,
                                                       RestClient rest)
@@ -411,7 +412,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                SubmitSecondFactorCode(SecondFactorKind.RememberMeToken, token, session, sessionKey, rest);
+                SubmitSecondFactorCode(SecondFactorKind.RememberMeToken, token, authSession, sessionKey, rest);
             }
             catch (BadMultiFactorException)
             {
@@ -476,7 +477,7 @@ namespace PasswordManagerAccess.OnePassword
         // Returns "remember me" token when successful
         internal static string SubmitSecondFactorCode(SecondFactorKind factor,
                                                       string code,
-                                                      Session session,
+                                                      AuthSession authSession,
                                                       AesKey sessionKey,
                                                       RestClient rest)
         {
@@ -491,7 +492,7 @@ namespace PasswordManagerAccess.OnePassword
                 break;
             case SecondFactorKind.RememberMeToken:
                 key = "dsecret";
-                data = new Dictionary<string, string> {["dshmac"] = Util.HashRememberMeToken(code, session)};
+                data = new Dictionary<string, string> {["dshmac"] = Util.HashRememberMeToken(code, authSession)};
                 break;
             case SecondFactorKind.Duo:
                 key = "duo";
@@ -506,7 +507,7 @@ namespace PasswordManagerAccess.OnePassword
                 var response = PostEncryptedJson<R.Mfa>("v1/auth/mfa",
                                                         new Dictionary<string, object>
                                                         {
-                                                            ["sessionID"] = session.Id,
+                                                            ["sessionID"] = authSession.Id,
                                                             ["client"] = ClientId,
                                                             [key] = data,
                                                         },

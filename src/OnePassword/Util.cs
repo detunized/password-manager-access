@@ -57,9 +57,9 @@ namespace PasswordManagerAccess.OnePassword
             return Crypto.HmacSha256(SessionHmacSecret, sessionKey.Key);
         }
 
-        public static string CalculateClientHash(Session session)
+        public static string CalculateClientHash(AuthSession authSession)
         {
-            return CalculateClientHash(session.KeyUuid, session.Id);
+            return CalculateClientHash(authSession.KeyUuid, authSession.Id);
         }
 
         public static string CalculateClientHash(string accountKeyUuid, string sessionId)
@@ -69,9 +69,9 @@ namespace PasswordManagerAccess.OnePassword
             return Crypto.Sha256(a.Concat(b).ToArray()).ToUrlSafeBase64NoPadding();
         }
 
-        public static string HashRememberMeToken(string token, Session session)
+        public static string HashRememberMeToken(string token, AuthSession authSession)
         {
-            return HashRememberMeToken(token, session.Id);
+            return HashRememberMeToken(token, authSession.Id);
         }
 
         public static string HashRememberMeToken(string token, string sessionId)
