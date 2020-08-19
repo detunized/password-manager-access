@@ -30,15 +30,15 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void StartNewSession_returns_session_on_ok()
         {
             var flow = new RestFlow().Get(GetFixture("start-new-session-response"));
-            var session = Client.StartNewSession(TestData.ClientInfo, flow);
+            var (sessionId, srpInfo) = Client.StartNewSession(TestData.ClientInfo, flow);
 
-            Assert.Equal(TestData.AuthSession.Id, session.Id);
-            Assert.Equal(TestData.AuthSession.KeyFormat, session.KeyFormat);
-            Assert.Equal(TestData.AuthSession.KeyUuid, session.KeyUuid);
-            Assert.Equal(TestData.AuthSession.SrpMethod, session.SrpMethod);
-            Assert.Equal(TestData.AuthSession.KeyMethod, session.KeyMethod);
-            Assert.Equal(TestData.AuthSession.Iterations, session.Iterations);
-            Assert.Equal(TestData.AuthSession.Salt, session.Salt);
+            Assert.Equal(TestData.SessionId, sessionId);
+            Assert.Equal(TestData.AuthSession.KeyFormat, srpInfo.KeyFormat);
+            Assert.Equal(TestData.AuthSession.KeyUuid, srpInfo.KeyUuid);
+            Assert.Equal(TestData.AuthSession.SrpMethod, srpInfo.SrpMethod);
+            Assert.Equal(TestData.AuthSession.KeyMethod, srpInfo.KeyMethod);
+            Assert.Equal(TestData.AuthSession.Iterations, srpInfo.Iterations);
+            Assert.Equal(TestData.AuthSession.Salt, srpInfo.Salt);
         }
 
         [Fact]

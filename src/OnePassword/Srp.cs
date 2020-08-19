@@ -15,10 +15,10 @@ namespace PasswordManagerAccess.OnePassword
     internal static class Srp
     {
         // Returns the session encryption key
-        public static AesKey Perform(ClientInfo clientInfo, AuthSession authSession, RestClient rest)
+        public static AesKey Perform(ClientInfo clientInfo, AuthSession authSession, string sessionId, RestClient rest)
         {
-            var key = Perform(GenerateSecretA(), clientInfo, authSession, rest);
-            return new AesKey(authSession.Id, key);
+            var key = Perform(GenerateSecretA(), clientInfo, authSession, sessionId, rest);
+            return new AesKey(sessionId, key);
         }
 
         //
@@ -28,12 +28,13 @@ namespace PasswordManagerAccess.OnePassword
         internal static byte[] Perform(BigInteger secretA,
                                        ClientInfo clientInfo,
                                        AuthSession authSession,
+                                       string sessionId,
                                        RestClient rest)
         {
             var sharedA = ComputeSharedA(secretA);
-            var sharedB = ExchangeAForB(sharedA, authSession, rest);
+            var sharedB = ExchangeAForB(sharedA, sessionId, rest);
             ValidateB(sharedB);
-            return ComputeKey(secretA, sharedA, sharedB, clientInfo, authSession);
+            return ComputeKey(secretA, sharedA, sharedB, clientInfo, authSession, sessionId);
         }
 
         internal static BigInteger GenerateSecretA()
@@ -46,19 +47,19 @@ namespace PasswordManagerAccess.OnePassword
             return SirpG.ModExp(secretA, SirpN);
         }
 
-        internal static BigInteger ExchangeAForB(BigInteger sharedA, AuthSession authSession, RestClient rest)
+        internal static BigInteger ExchangeAForB(BigInteger sharedA, string sessionId, RestClient rest)
         {
             var response = rest.PostJson<R.AForB>("v1/auth", new Dictionary<string, object>
             {
-                {"sessionID", authSession.Id},
-                {"userA", sharedA.ToHex()}
+                ["sessionID"] = sessionId,
+                ["userA"] = sharedA.ToHex(),
             });
 
             // TODO: Do we need better error handling here?
             if (!response.IsSuccessful)
                 throw new InternalErrorException($"Request to {response.RequestUri} failed");
 
-            if (response.Data.SessionId != authSession.Id)
+            if (response.Data.SessionId != sessionId)
                 throw new InternalErrorException("Session ID doesn't match");
 
             return response.Data.B.ToBigInt();
@@ -74,12 +75,13 @@ namespace PasswordManagerAccess.OnePassword
                                           BigInteger sharedA,
                                           BigInteger sharedB,
                                           ClientInfo clientInfo,
-                                          AuthSession authSession)
+                                          AuthSession authSession,
+                                          string sessionId)
         {
             // Some arbitrary crypto computation, variable names don't have a lot of meaning
             var ab = sharedA.ToHex() + sharedB.ToHex();
             var hashAb = Crypto.Sha256(ab).ToBigInt();
-            var s = authSession.Id.ToBytes().ToBigInt();
+            var s = sessionId.ToBytes().ToBigInt();
             var x = ComputeX(clientInfo, authSession);
             var y = sharedB - SirpG.ModExp(x, SirpN) * s;
             var z = y.ModExp(secretA + hashAb * x, SirpN);

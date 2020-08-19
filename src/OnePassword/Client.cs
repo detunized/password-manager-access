@@ -173,18 +173,18 @@ namespace PasswordManagerAccess.OnePassword
                                                          RestClient rest)
         {
             // Step 1: Request to initiate a new session
-            var session = StartNewSession(clientInfo, rest);
+            var (sessionId, srpInfo) = StartNewSession(clientInfo, rest);
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
-            var sessionRest = MakeRestClient(rest, sessionId: session.Id);
+            var sessionRest = MakeRestClient(rest, sessionId: sessionId);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(clientInfo, session, sessionRest);
+            var sessionKey = Srp.Perform(clientInfo, srpInfo, sessionId, sessionRest);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
-            var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), session.Id);
+            var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), sessionId);
 
             // Step 3: Verify the key with the server
             var verifiedOrMfa = VerifySessionKey(clientInfo, sessionKey, macRest);
@@ -220,7 +220,7 @@ namespace PasswordManagerAccess.OnePassword
             return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
         }
 
-        internal static AuthSession StartNewSession(ClientInfo clientInfo, RestClient rest)
+        internal static (string SessionId, AuthSession SrpInfo) StartNewSession(ClientInfo clientInfo, RestClient rest)
         {
             var response = rest.Get<R.NewSession>(string.Format("v2/auth/{0}/{1}/{2}/{3}",
                                                                 clientInfo.Username,
@@ -235,8 +235,7 @@ namespace PasswordManagerAccess.OnePassword
             switch (status)
             {
             case "ok":
-                var session = new AuthSession(id: info.SessionId,
-                                              keyFormat: info.KeyFormat,
+                var session = new AuthSession(keyFormat: info.KeyFormat,
                                               keyUuid: info.KeyUuid,
                                               srpMethod: info.Auth.Method,
                                               keyMethod: info.Auth.Algorithm,
@@ -246,7 +245,7 @@ namespace PasswordManagerAccess.OnePassword
                 if (session.KeyUuid != clientInfo.AccountKey.Uuid)
                     throw new BadCredentialsException("The account key is incorrect");
 
-                return session;
+                return (info.SessionId, session);
             case "device-not-registered":
                 RegisterDevice(clientInfo, MakeRestClient(rest, sessionId: info.SessionId));
                 break;

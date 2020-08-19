@@ -12,7 +12,6 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void AuthSession_properties_are_set()
         {
-            var id = "id";
             var keyFormat = "key-format";
             var keyUuid = "key-uuid";
             var srpMethod = "srp-method";
@@ -20,9 +19,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             var iterations = 1337;
             var salt = "salt".ToBytes();
 
-            var session = new AuthSession(id, keyFormat, keyUuid, srpMethod, keyMethod, iterations, salt);
+            var session = new AuthSession(keyFormat, keyUuid, srpMethod, keyMethod, iterations, salt);
 
-            Assert.Equal(id, session.Id);
             Assert.Equal(keyFormat, session.KeyFormat);
             Assert.Equal(keyUuid, session.KeyUuid);
             Assert.Equal(srpMethod, session.SrpMethod);

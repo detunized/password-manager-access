@@ -30,8 +30,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         public static AuthSession MakeAuthSession(string id = SessionId)
         {
-            return new AuthSession(id: id,
-                                   keyFormat: "A3",
+            return new AuthSession(keyFormat: "A3",
                                    keyUuid: "RTN9SA",
                                    srpMethod: "SRPg-4096",
                                    keyMethod: "PBES2g-HS256",

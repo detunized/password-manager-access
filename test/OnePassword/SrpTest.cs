@@ -53,12 +53,12 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void ExchangeAForB_makes_POST_request_to_specific_url()
         {
-            var rest = new RestFlow()
+            var flow = new RestFlow()
                 .Post(GetFixture("exchange-a-for-b-response"))
-                .ExpectUrl("1password.com/api/v1/auth")
+                    .ExpectUrl("1password.com/api/v1/auth")
                 .ToRestClient(ApiUrl);
 
-            Srp.ExchangeAForB(0, TestData.MakeAuthSession(), rest);
+            Srp.ExchangeAForB(0, TestData.SessionId, flow);
         }
 
         [Fact]
@@ -129,7 +129,8 @@ namespace PasswordManagerAccess.Test.OnePassword
                                      sharedA,
                                      sharedB,
                                      TestData.ClientInfo,
-                                     TestData.AuthSession);
+                                     TestData.AuthSession,
+                                     TestData.SessionId);
 
             Assert.Equal("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64Loose(), key);
         }
@@ -148,14 +149,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         // Helpers
         //
 
-        private BigInteger PerformExchange(string fixtureName,
-                                           string sessionId = TestData.SessionId)
+        private BigInteger PerformExchange(string fixtureName, string sessionId = TestData.SessionId)
         {
-            var rest = new RestFlow()
+            var flow = new RestFlow()
                 .Post(GetFixture(fixtureName))
                 .ToRestClient(ApiUrl);
 
-            return Srp.ExchangeAForB(0, TestData.MakeAuthSession(sessionId), rest);
+            return Srp.ExchangeAForB(0, sessionId, flow);
         }
 
         //
