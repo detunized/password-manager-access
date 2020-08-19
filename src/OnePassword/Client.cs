@@ -25,46 +25,77 @@ namespace PasswordManagerAccess.OnePassword
             Canada
         }
 
-        // Public entry point to the library.
+        // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
-        // Valid domains are: my.1password.com, my.1password.eu, my.1password.ca
-        // The logger is optional, could be null
-        public static Vault[] OpenAllVaults(string username,
-                                            string password,
-                                            string accountKey,
-                                            string uuid,
-                                            string domain,
-                                            IUi ui,
-                                            ISecureStorage storage,
-                                            ILogger logger = null)
+        public static LoginSession LogIn(string username,
+                                         string password,
+                                         string accountKey,
+                                         string uuid,
+                                         Region region,
+                                         IUi ui,
+                                         ISecureStorage storage)
         {
-            using var transport = new RestTransport();
-            return OpenAllVaults(new ClientInfo(username, password, accountKey, uuid, domain),
-                                 ui,
-                                 storage,
-                                 logger,
-                                 transport);
+            return LogIn(username, password, accountKey, uuid, GetDomain(region), ui, storage);
         }
 
-        // Alternative entry point with a predefined region
-        public static Vault[] OpenAllVaults(string username,
-                                            string password,
-                                            string accountKey,
-                                            string uuid,
-                                            Region region,
-                                            IUi ui,
-                                            ISecureStorage storage,
-                                            ILogger logger = null)
+        // Valid domains are: my.1password.com, my.1password.eu, my.1password.ca
+        public static LoginSession LogIn(string username,
+                                         string password,
+                                         string accountKey,
+                                         string uuid,
+                                         string domain,
+                                         IUi ui,
+                                         ISecureStorage storage)
         {
-            return OpenAllVaults(username,
-                                 password,
-                                 accountKey,
-                                 uuid,
-                                 GetDomain(region),
-                                 ui,
-                                 storage,
-                                 logger);
+            var transport = new RestTransport();
+            try
+            {
+                return LogIn(new ClientInfo(username, password, accountKey, uuid, domain), ui, storage, transport);
+            }
+            catch (Exception)
+            {
+                transport.Dispose();
+                throw;
+            }
+        }
+
+        public static void LogOut(LoginSession session)
+        {
+            try
+            {
+                LogOut(session.Rest);
+            }
+            finally
+            {
+                session.Transport.Dispose();
+            }
+        }
+
+        public static VaultInfo[] ListAllVaults(LoginSession session)
+        {
+            return ListAllVaults(session.ClientInfo, session.Keychain, session.Key, session.Rest);
+        }
+
+        public static Vault OpenVault(VaultInfo info, LoginSession session)
+        {
+            // Make sure the vault key is in the keychain not to check on every account. They key decryption
+            // is negligibly quick compared to the account retrieval, so we could do that upfront.
+            info.DecryptKeyIntoKeychain();
+
+            var accounts = GetVaultAccounts(info.Id, session.Keychain, session.Key, session.Rest);
+            return new Vault(info, accounts);
+        }
+
+        public static string GetDomain(Region region)
+        {
+            return region switch
+            {
+                Region.Global => "my.1password.com",
+                Region.Europe => "my.1password.eu",
+                Region.Canada => "my.1password.ca",
+                _ => throw new InternalErrorException("The region is not valid")
+            };
         }
 
         // Use this function to generate a unique random identifier for each new client.
@@ -73,55 +104,25 @@ namespace PasswordManagerAccess.OnePassword
             return Util.RandomUuid();
         }
 
-        public static string GetDomain(Region region)
-        {
-            switch (region)
-            {
-            case Region.Global:
-                return "my.1password.com";
-            case Region.Europe:
-                return "my.1password.eu";
-            case Region.Canada:
-                return "my.1password.ca";
-            }
-
-            throw new InternalErrorException("The region is not valid");
-        }
-
         //
         // Internal
         //
 
-        // TODO: Should we make the logger a global service or a member variable not to pass it around?
-
-        internal static Vault[] OpenAllVaults(ClientInfo clientInfo,
-                                              IUi ui,
-                                              ISecureStorage storage,
-                                              ILogger logger,
-                                              IRestTransport transport)
+        internal static LoginSession LogIn(ClientInfo clientInfo,
+                                           IUi ui,
+                                           ISecureStorage storage,
+                                           IRestTransport transport)
         {
-            // Step 1: Login is multi-step process in itself, which might iterate for a few times internally.
-            var loginRest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
-            var (sessionKey, sessionRest) = Login(clientInfo, ui, storage, loginRest);
+            var rest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
+            var (sessionKey, sessionRest) = LogIn(clientInfo, ui, storage, rest);
 
-            try
-            {
-                // Step 2: Get and decrypt all the keys and open all the vaults
-                return OpenAllVaults(clientInfo, sessionKey, sessionRest, logger);
-            }
-            finally
-            {
-                // TODO: If SignOut throws an exception it will hide the exception
-                //       thrown in the try block above (if any). This will hide the
-                //       original problem and thus will make it harder to diagnose
-                //       the issue.
-
-                // Step 3: Make sure to sign out in any case
-                SignOut(sessionRest);
-            }
+            return new LoginSession(clientInfo, new Keychain(), sessionKey, sessionRest, transport);
         }
 
-        internal static Vault[] OpenAllVaults(ClientInfo clientInfo, AesKey sessionKey, RestClient rest, ILogger logger)
+        internal static VaultInfo[] ListAllVaults(ClientInfo clientInfo,
+                                                  Keychain keychain,
+                                                  AesKey sessionKey,
+                                                  RestClient rest)
         {
             // Step 1: Get account info. It contains users, keys, groups, vault info and other stuff.
             //         Not the actual vault data though. That is requested separately.
@@ -133,14 +134,14 @@ namespace PasswordManagerAccess.OnePassword
             //         see if it's enough.
             var keysets = GetKeysets(sessionKey, rest);
 
-            // Step 3: Derive and decrypt keys
-            var keychain = DecryptAllKeys(accountInfo, keysets, clientInfo);
+            // Step 3: Derive and decrypt the keys
+            DecryptKeysets(keysets.Keysets, clientInfo, keychain);
 
-            // Step 4: Get and decrypt vaults
-            var vaults = GetVaults(accountInfo, sessionKey, keychain, rest, logger);
+            // Step 4: Get all the vaults the user has access to
+            var vaults = GetAccessibleVaults(accountInfo, keychain);
 
             // Done
-            return vaults;
+            return vaults.ToArray();
         }
 
         // This is exception is used internally to trigger re-login from the depth of the call stack.
@@ -149,7 +150,7 @@ namespace PasswordManagerAccess.OnePassword
         {
         }
 
-        internal static (AesKey, RestClient) Login(ClientInfo clientInfo,
+        internal static (AesKey, RestClient) LogIn(ClientInfo clientInfo,
                                                    IUi ui,
                                                    ISecureStorage storage,
                                                    RestClient rest)
@@ -176,23 +177,23 @@ namespace PasswordManagerAccess.OnePassword
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
-            rest = MakeRestClient(rest, sessionId: session.Id);
+            var sessionRest = MakeRestClient(rest, sessionId: session.Id);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(clientInfo, session, rest);
+            var sessionKey = Srp.Perform(clientInfo, session, sessionRest);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
-            rest = MakeRestClient(rest, new MacRequestSigner(session, sessionKey), session.Id);
+            var macRest = MakeRestClient(sessionRest, new MacRequestSigner(session, sessionKey), session.Id);
 
             // Step 3: Verify the key with the server
-            var verifiedOrMfa = VerifySessionKey(session, sessionKey, rest);
+            var verifiedOrMfa = VerifySessionKey(session, sessionKey, macRest);
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, rest);
+                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, macRest);
 
-            return (sessionKey, rest);
+            return (sessionKey, macRest);
         }
 
         internal static string GetApiUrl(string domain)
@@ -205,7 +206,7 @@ namespace PasswordManagerAccess.OnePassword
                                                   IRequestSigner signer = null,
                                                   string sessionId = null)
         {
-            var headers = new Dictionary<string, string>(2) { { "X-AgileBits-Client", ClientId } };
+            var headers = new Dictionary<string, string>(2) {["X-AgileBits-Client"] = ClientId};
             if (!sessionId.IsNullOrEmpty())
                 headers["X-AgileBits-Session-ID"] = sessionId;
 
@@ -263,9 +264,9 @@ namespace PasswordManagerAccess.OnePassword
         {
             var response = rest.PostJson<R.SuccessStatus>("v1/device", new Dictionary<string, object>
             {
-                {"uuid", clientInfo.Uuid},
-                {"clientName", ClientName},
-                {"clientVersion", ClientVersion},
+                ["uuid"] = clientInfo.Uuid,
+                ["clientName"] = ClientName,
+                ["clientVersion"] = ClientVersion,
             });
 
             if (!response.IsSuccessful)
@@ -333,9 +334,9 @@ namespace PasswordManagerAccess.OnePassword
                 "v2/auth/verify",
                 new Dictionary<string, object>
                 {
-                    {"sessionID", session.Id},
-                    {"clientVerifyHash", Util.CalculateClientHash(session)},
-                    {"client", ClientId},
+                    ["sessionID"] = session.Id,
+                    ["clientVerifyHash"] = Util.CalculateClientHash(session),
+                    ["client"] = ClientId,
                 },
                 sessionKey,
                 rest);
@@ -401,7 +402,7 @@ namespace PasswordManagerAccess.OnePassword
                                                       ISecureStorage storage,
                                                       RestClient rest)
         {
-            if (!factors.Any(x => x.Kind == SecondFactorKind.RememberMeToken))
+            if (factors.All(x => x.Kind != SecondFactorKind.RememberMeToken))
                 return false;
 
             var token = storage.LoadString(RememberMeTokenKey);
@@ -534,38 +535,27 @@ namespace PasswordManagerAccess.OnePassword
             return GetEncryptedJson<R.KeysetsInfo>("v1/account/keysets", sessionKey, rest);
         }
 
-        internal static Vault[] GetVaults(R.AccountInfo accountInfo,
-                                          AesKey sessionKey,
-                                          Keychain keychain,
-                                          RestClient rest,
-                                          ILogger logger)
+        internal static IEnumerable<VaultInfo> GetAccessibleVaults(R.AccountInfo accountInfo, Keychain keychain)
         {
-            var accessibleVaults = new HashSet<string>(BuildListOfAccessibleVaults(accountInfo));
-            var allVaults = accountInfo.Vaults;
-
-            if (logger != null)
-            {
-                var access = AbbreviateIds(accessibleVaults);
-                logger.Log(DateTime.Now, $"accessible vaults: {access}");
-
-                var noAccess = AbbreviateIds(allVaults
-                    .Select(x => x.Id)
-                    .Except(accessibleVaults));
-                logger.Log(DateTime.Now, $"inaccessible vaults: {noAccess}");
-            }
-
-            return allVaults
-                .Where(x => accessibleVaults.Contains(x.Id))
-                .Select(x => GetVault(x, sessionKey, keychain, rest, logger))
-                .ToArray();
+            return from vault in accountInfo.Vaults
+                let key = FindWorkingKey(vault.Access, keychain)
+                where key != null
+                select new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), key, keychain);
         }
 
-        internal static string[] BuildListOfAccessibleVaults(R.AccountInfo accountInfo)
+        internal static Encrypted FindWorkingKey(R.VaultAccessInfo[] accessList, Keychain keychain)
         {
-            return accountInfo.Me.VaultAccess
-                .Where(i => IsReadAccessible(i.Acl))
-                .Select(i => i.Id)
-                .ToArray();
+            foreach (var access in accessList)
+            {
+                if (IsReadAccessible(access.Acl))
+                {
+                    var key = Encrypted.Parse(access.EncryptedKey);
+                    if (keychain.CanDecrypt(key))
+                        return key;
+                }
+            }
+
+            return null;
         }
 
         internal static bool IsReadAccessible(int acl)
@@ -574,56 +564,18 @@ namespace PasswordManagerAccess.OnePassword
             return (acl & haveReadAccess) != 0;
         }
 
-        internal static Vault GetVault(R.VaultInfo vault,
-                                       AesKey sessionKey,
-                                       Keychain keychain,
-                                       RestClient rest,
-                                       ILogger logger)
-        {
-            var id = vault.Id;
-            var attributes = Decrypt<R.VaultAttributes>(vault.Attributes, keychain);
-
-            return new Vault(id: id,
-                             name: attributes.Name,
-                             description: attributes.Description,
-                             accounts: GetVaultAccounts(id, sessionKey, keychain, rest, logger));
-        }
-
         internal static Account[] GetVaultAccounts(string id,
-                                                   AesKey sessionKey,
                                                    Keychain keychain,
-                                                   RestClient rest,
-                                                   ILogger logger)
+                                                   AesKey sessionKey,
+                                                   RestClient rest)
         {
-            // Convert to array right away not iterate over the same expensive enumerator again.
-            var items = EnumerateAccountsItemsInVault(id, sessionKey, rest).ToArray();
-
-            // TODO: Do we still need this? The code could be simplified when this is no longer
-            // needed.
-            if (logger != null)
-            {
-                var stats = new Dictionary<string, int>();
-                foreach (var i in items)
-                {
-                    var key = i.TemplateId;
-                    if (stats.ContainsKey(key))
-                        stats[key]++;
-                    else
-                        stats.Add(key, 1);
-                }
-
-                var safeId = AbbreviateId(id);
-                var text = string.Join(", ", stats.OrderBy(x => x.Key).Select(x => $"{x.Key}: {x.Value}"));
-
-                logger.Log(DateTime.Now, $"item template count in '{safeId}': {text}");
-            }
-
-            return items
+            return EnumerateAccountsItemsInVault(id, sessionKey, rest)
                 .Where(ShouldKeepAccount)
-                .Select(x => ParseAccount(x, keychain))
+                .Select(itemInfo => new Account(itemInfo, keychain))
                 .ToArray();
         }
 
+        // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
         // Don't enumerate more than once. It's very slow since it makes network requests.
         internal static IEnumerable<R.VaultItem> EnumerateAccountsItemsInVault(string id,
                                                                                AesKey sessionKey,
@@ -649,7 +601,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static bool ShouldKeepAccount(R.VaultItem account)
         {
             // Reject everything but accounts/logins
-            if (!SupportedTemplateIds.Contains(account.TemplateId))
+            if (!Account.SupportedTemplateIds.Contains(account.TemplateId))
                 return false;
 
             // Reject deleted accounts (be conservative, throw only explicitly marked as "Y")
@@ -659,83 +611,7 @@ namespace PasswordManagerAccess.OnePassword
             return true;
         }
 
-        // TODO: It's really difficult to write tests for this structure: everything
-        //       is encrypted and it's very annoying to create fixtures. They also look
-        //       completely opaque, no clue what's going on inside. See how this could be fixed.
-        internal static Account ParseAccount(R.VaultItem account, Keychain keychain)
-        {
-            var overview = Decrypt<R.VaultItemOverview>(account.Overview, keychain);
-            var details = Decrypt<R.VaultItemDetails>(account.Details, keychain);
-
-            return account.TemplateId switch
-            {
-                LoginTemplateId => ParseLogin(account.Id, overview, details),
-                ServerTemplateId => ParseServer(account.Id, overview, details),
-
-                // This should never happen since we're checking for supported types before.
-                // Just the make the compiler happy.
-                _ => throw new InternalErrorException($"Unsupported vault item type '{account.TemplateId}'"),
-            };
-        }
-
-        internal static Account ParseLogin(string id, R.VaultItemOverview overview, R.VaultItemDetails details)
-        {
-            var fields = details.Fields ?? NoFields;
-            return new Account(id: id,
-                               name: overview.Title,
-                               username: FindAccountField(fields, "username"),
-                               password: FindAccountField(fields, "password"),
-                               mainUrl: overview.Url,
-                               note: details.Note,
-                               urls: ExtractUrls(overview),
-                               fields: ExtractFields(details));
-        }
-
-        internal static Account ParseServer(string id, R.VaultItemOverview overview, R.VaultItemDetails details)
-        {
-            var fields = details.Sections.SelectMany(x => x.Fields ?? NoSectionFields).ToArray();
-            return new Account(id: id,
-                               name: overview.Title,
-                               username: FindAccountField(fields, "username"),
-                               password: FindAccountField(fields, "password"),
-                               mainUrl: FindAccountField(fields, "URL"),
-                               note: details.Note,
-                               urls: new Account.Url[0],
-                               fields: ExtractFields(details));
-        }
-
-        internal static string FindAccountField(R.VaultItemField[] fields, string name)
-        {
-            return Array.Find(fields, x => x.Designation == name)?.Value ?? "";
-        }
-
-        internal static string FindAccountField(R.VaultItemSectionField[] fields, string name)
-        {
-            return Array.Find(fields, x => x.Name == name)?.Value ?? "";
-        }
-
-        internal static Account.Url[] ExtractUrls(R.VaultItemOverview overview)
-        {
-            return (overview.Urls ?? NoUrls)
-                .Select(x => new Account.Url(name: x.Name, value: x.Url))
-                .ToArray();
-        }
-
-        internal static Account.Field[] ExtractFields(R.VaultItemDetails details)
-        {
-            return (details.Sections ?? NoSections)
-                .SelectMany(ExtractSectionFields)
-                .ToArray();
-        }
-
-        internal static IEnumerable<Account.Field> ExtractSectionFields(R.VaultItemSection section)
-        {
-            var name = section.Name;
-            return (section.Fields ?? NoSectionFields)
-                .Select(x => new Account.Field(name: x.Name, value: x.Value, section: name));
-        }
-
-        internal static void SignOut(RestClient rest)
+        internal static void LogOut(RestClient rest)
         {
             var response = rest.Put<R.SuccessStatus>("v1/session/signout");
 
@@ -743,18 +619,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw MakeError(response);
 
             if (response.Data.Success != 1)
-                throw new InternalErrorException("Failed to sign out");
-        }
-
-        internal static Keychain DecryptAllKeys(R.AccountInfo accountInfo,
-                                                R.KeysetsInfo keysets,
-                                                ClientInfo clientInfo)
-        {
-            var keychain = new Keychain();
-            DecryptKeysets(keysets.Keysets, clientInfo, keychain);
-            DecryptVaultKeys(accountInfo.Me.VaultAccess, keychain);
-
-            return keychain;
+                throw new InternalErrorException("Failed to logout");
         }
 
         internal static void DecryptKeysets(R.KeysetInfo[] keysets, ClientInfo clientInfo, Keychain keychain)
@@ -778,27 +643,10 @@ namespace PasswordManagerAccess.OnePassword
                 DecryptKeyset(i, keychain);
         }
 
-        internal static void DecryptVaultKeys(R.VaultAccessInfo[] accessInfo, Keychain keychain)
-        {
-            foreach (var access in accessInfo)
-                if (IsReadAccessible(access.Acl))
-                    DecryptAesKey(access.EncryptedKey, keychain);
-        }
-
         internal static void DecryptKeyset(R.KeysetInfo keyset, Keychain keychain)
         {
-            DecryptAesKey(keyset.KeyOrMasterKey, keychain);
-            DecryptRsaKey(keyset.PrivateKey, keychain);
-        }
-
-        internal static void DecryptAesKey(R.Encrypted encrypted, Keychain keychain)
-        {
-            keychain.Add(AesKey.Parse(Decrypt<R.AesKey>(encrypted, keychain)));
-        }
-
-        internal static void DecryptRsaKey(R.Encrypted encrypted, Keychain keychain)
-        {
-            keychain.Add(RsaKey.Parse(Decrypt<R.RsaKey>(encrypted, keychain)));
+            Util.DecryptAesKey(keyset.KeyOrMasterKey, keychain);
+            Util.DecryptRsaKey(keyset.PrivateKey, keychain);
         }
 
         internal static AesKey DeriveMasterKey(string algorithm,
@@ -904,29 +752,6 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
-        {
-            var plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
-            try
-            {
-                return JsonConvert.DeserializeObject<T>(plaintext);
-            }
-            catch (JsonException e)
-            {
-                throw new InternalErrorException("Failed to parse JSON", e);
-            }
-        }
-
-        internal static string AbbreviateId(string id)
-        {
-            return id.Length > 4 ? id.Substring(0, 4) + "..." : id;
-        }
-
-        internal static string AbbreviateIds(IEnumerable<string> ids)
-        {
-            return string.Join(", ", ids.OrderBy(x => x).Select(x => $"'{AbbreviateId(x)}'"));
-        }
-
         //
         // Private
         //
@@ -934,23 +759,10 @@ namespace PasswordManagerAccess.OnePassword
         private const string MasterKeyId = "mp";
         private const string RememberMeTokenKey = "remember-me-token";
 
-        private const string LoginTemplateId = "001";
-        private const string ServerTemplateId = "110";
-
-        private static readonly HashSet<string> SupportedTemplateIds = new HashSet<string>
+        private static readonly SecondFactorKind[] SecondFactorPriority =
         {
-            LoginTemplateId,
-            ServerTemplateId
-        };
-
-        private static readonly SecondFactorKind[] SecondFactorPriority = {
             SecondFactorKind.Duo,
             SecondFactorKind.GoogleAuthenticator,
         };
-
-        private static readonly R.VaultItemField[] NoFields = new R.VaultItemField[0];
-        private static readonly R.VaultItemUrl[] NoUrls = new R.VaultItemUrl[0];
-        private static readonly R.VaultItemSection[] NoSections = new R.VaultItemSection[0];
-        private static readonly R.VaultItemSectionField[] NoSectionFields = new R.VaultItemSectionField[0];
     }
 }

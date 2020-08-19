@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using PasswordManagerAccess.OnePassword;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword
@@ -9,28 +8,11 @@ namespace PasswordManagerAccess.Test.OnePassword
     public class AccountTest
     {
         [Fact]
-        public void Account_properties_are_set()
+        public void Account_needs_some_tests()
         {
-            var id = "id";
-            var name = "name";
-            var username = "username";
-            var password = "password";
-            var mainUrl = "main-url";
-            var note = "note";
-            var urls = new Account.Url[] { new Account.Url("url1", "http://url1"),
-                                           new Account.Url("url2", "http://url2") };
-            var fields = new Account.Field[] { new Account.Field("f1", "n1", "s1"),
-                                               new Account.Field("f2", "n2", "s2") };
-            var account = new Account(id, name, username, password, mainUrl, note, urls, fields);
-
-            Assert.Equal(id, account.Id);
-            Assert.Equal(name, account.Name);
-            Assert.Equal(username, account.Username);
-            Assert.Equal(password, account.Password);
-            Assert.Equal(mainUrl, account.MainUrl);
-            Assert.Equal(note, account.Note);
-            Assert.Equal(urls, account.Urls);
-            Assert.Equal(fields, account.Fields);
+            // TODO: It's quite difficult to make a test for these things as they rely on some encrypted
+            //       blobs wrapped in json multiple times and are completely opaque. Figure out a better
+            //       way to test it. This stuff is tested inside Client higher level tests.
         }
     }
 }

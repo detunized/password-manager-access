@@ -22,14 +22,6 @@ namespace Example
             }
         }
 
-        private class ConsoleLogger: ILogger
-        {
-            public void Log(DateTime timestamp, string text)
-            {
-                Util.WriteLine($"{timestamp}: {text}", ConsoleColor.Green);
-            }
-        }
-
         public static void Main()
         {
             // Read 1Password credentials from a file
@@ -62,36 +54,49 @@ namespace Example
                                           string uuid,
                                           string domain)
         {
-            var vaults = Client.OpenAllVaults(username,
-                                              password,
-                                              accountKey,
-                                              uuid,
-                                              domain,
-                                              new TextUi(),
-                                              new PlainStorage(),
-                                              new ConsoleLogger());
+            var session = Client.LogIn(username,
+                                       password,
+                                       accountKey,
+                                       uuid,
+                                       domain,
+                                       new TextUi(),
+                                       new PlainStorage());
 
-            foreach (var vault in vaults)
+            try
             {
-                Console.WriteLine("{0}: '{1}', '{2}':", vault.Id, vault.Name, vault.Description);
-                for (int i = 0; i < vault.Accounts.Length; ++i)
-                {
-                    var account = vault.Accounts[i];
-                    Console.WriteLine("  {0}:\n" +
-                                      "          id: {1}\n" +
-                                      "        name: {2}\n" +
-                                      "    username: {3}\n" +
-                                      "    password: {4}\n" +
-                                      "         url: {5}\n" +
-                                      "        note: {6}\n",
-                                      i + 1,
-                                      account.Id,
-                                      account.Name,
-                                      account.Username,
-                                      account.Password,
-                                      account.MainUrl,
-                                      account.Note);
-                }
+                var vaults = Client.ListAllVaults(session);
+
+                for (var i = 0; i < vaults.Length; i++)
+                    DumpVault(i, vaults[i], session);
+            }
+            finally
+            {
+                Client.LogOut(session);
+            }
+        }
+
+        private static void DumpVault(int index, VaultInfo vaultInfo, LoginSession session)
+        {
+            Console.WriteLine("{0}: '{1}', '{2}':", index + 1, vaultInfo.Id, vaultInfo.Name);
+
+            var vault = Client.OpenVault(vaultInfo, session);
+            for (var i = 0; i < vault.Accounts.Length; ++i)
+            {
+                var account = vault.Accounts[i];
+                Console.WriteLine("  {0}:\n" +
+                                  "          id: {1}\n" +
+                                  "        name: {2}\n" +
+                                  "    username: {3}\n" +
+                                  "    password: {4}\n" +
+                                  "         url: {5}\n" +
+                                  "        note: {6}\n",
+                                  i + 1,
+                                  account.Id,
+                                  account.Name,
+                                  account.Username,
+                                  account.Password,
+                                  account.MainUrl,
+                                  account.Note);
             }
         }
     }

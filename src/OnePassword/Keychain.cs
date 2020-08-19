@@ -34,6 +34,11 @@ namespace PasswordManagerAccess.OnePassword
             return _rsa[id];
         }
 
+        public bool CanDecrypt(Encrypted encrypted)
+        {
+            return CanDecrypt(encrypted.Scheme, encrypted.KeyId);
+        }
+
         public byte[] Decrypt(Encrypted encrypted)
         {
             switch (encrypted.Scheme)
@@ -45,6 +50,20 @@ namespace PasswordManagerAccess.OnePassword
             }
 
             throw new UnsupportedFeatureException($"Encryption scheme '{encrypted.Scheme}' is not supported");
+        }
+
+        //
+        // Private
+        //
+
+        private bool CanDecrypt(string scheme, string keyId)
+        {
+            return scheme switch
+            {
+                AesKey.EncryptionScheme => _aes.ContainsKey(keyId),
+                RsaKey.EncryptionScheme => _rsa.ContainsKey(keyId),
+                _ => throw new UnsupportedFeatureException($"Encryption scheme '{scheme}' is not supported")
+            };
         }
 
         private readonly Dictionary<string, AesKey> _aes = new Dictionary<string, AesKey>();
