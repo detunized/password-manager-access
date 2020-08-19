@@ -60,11 +60,11 @@ namespace PasswordManagerAccess.Test.OnePassword
         private static MacRequestSigner MakeSigner()
         {
             // The test data is generated with the actual web page JS.
-            var session = TestData.MakeAuthSession("PBXONDZUWVCJFAV25C7XR7IYDQ");
-            var key = new AesKey(session.Id, "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
+            var key = new AesKey("PBXONDZUWVCJFAV25C7XR7IYDQ",
+                                 "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
             var seed = 842346063u;
 
-            return new MacRequestSigner(session, key, seed);
+            return new MacRequestSigner(key, seed);
         }
 
         private static string Sign(string url, HttpMethod method, MacRequestSigner signer = null)

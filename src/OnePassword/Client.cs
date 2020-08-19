@@ -184,7 +184,7 @@ namespace PasswordManagerAccess.OnePassword
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
-            var macRest = MakeRestClient(sessionRest, new MacRequestSigner(session, sessionKey), session.Id);
+            var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), session.Id);
 
             // Step 3: Verify the key with the server
             var verifiedOrMfa = VerifySessionKey(session, sessionKey, macRest);
