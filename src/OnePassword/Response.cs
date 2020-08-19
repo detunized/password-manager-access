@@ -76,7 +76,7 @@ namespace PasswordManagerAccess.OnePassword.Response
     internal class MeInfo
     {
         [JsonProperty("vaultAccess", Required = Required.Always)]
-        public readonly VaultAccessInfo[] VaultAceess;
+        public readonly VaultAccessInfo[] VaultAccess;
     }
 
     internal class VaultAccessInfo
@@ -98,6 +98,9 @@ namespace PasswordManagerAccess.OnePassword.Response
 
         [JsonProperty("encAttrs", Required = Required.Always)]
         public readonly Encrypted Attributes;
+
+        [JsonProperty("access", Required = Required.Always)]
+        public readonly VaultAccessInfo[] Access;
     }
 
     internal class VaultAttributes
