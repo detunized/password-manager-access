@@ -75,7 +75,7 @@ namespace Example
             }
         }
 
-        private static void DumpVault(int index, VaultInfo vaultInfo, LoginSession session)
+        private static void DumpVault(int index, VaultInfo vaultInfo, Session session)
         {
             Console.WriteLine("{0}: '{1}', '{2}':", index + 1, vaultInfo.Id, vaultInfo.Name);
 

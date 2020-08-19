@@ -28,25 +28,25 @@ namespace PasswordManagerAccess.OnePassword
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
-        public static LoginSession LogIn(string username,
-                                         string password,
-                                         string accountKey,
-                                         string uuid,
-                                         Region region,
-                                         IUi ui,
-                                         ISecureStorage storage)
+        public static Session LogIn(string username,
+                                    string password,
+                                    string accountKey,
+                                    string uuid,
+                                    Region region,
+                                    IUi ui,
+                                    ISecureStorage storage)
         {
             return LogIn(username, password, accountKey, uuid, GetDomain(region), ui, storage);
         }
 
         // Valid domains are: my.1password.com, my.1password.eu, my.1password.ca
-        public static LoginSession LogIn(string username,
-                                         string password,
-                                         string accountKey,
-                                         string uuid,
-                                         string domain,
-                                         IUi ui,
-                                         ISecureStorage storage)
+        public static Session LogIn(string username,
+                                    string password,
+                                    string accountKey,
+                                    string uuid,
+                                    string domain,
+                                    IUi ui,
+                                    ISecureStorage storage)
         {
             var transport = new RestTransport();
             try
@@ -60,7 +60,7 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        public static void LogOut(LoginSession session)
+        public static void LogOut(Session session)
         {
             try
             {
@@ -72,12 +72,12 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        public static VaultInfo[] ListAllVaults(LoginSession session)
+        public static VaultInfo[] ListAllVaults(Session session)
         {
             return ListAllVaults(session.ClientInfo, session.Keychain, session.Key, session.Rest);
         }
 
-        public static Vault OpenVault(VaultInfo info, LoginSession session)
+        public static Vault OpenVault(VaultInfo info, Session session)
         {
             // Make sure the vault key is in the keychain not to check on every account. They key decryption
             // is negligibly quick compared to the account retrieval, so we could do that upfront.
@@ -108,15 +108,15 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
-        internal static LoginSession LogIn(ClientInfo clientInfo,
-                                           IUi ui,
-                                           ISecureStorage storage,
-                                           IRestTransport transport)
+        internal static Session LogIn(ClientInfo clientInfo,
+                                      IUi ui,
+                                      ISecureStorage storage,
+                                      IRestTransport transport)
         {
             var rest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
             var (sessionKey, sessionRest) = LogIn(clientInfo, ui, storage, rest);
 
-            return new LoginSession(clientInfo, new Keychain(), sessionKey, sessionRest, transport);
+            return new Session(clientInfo, new Keychain(), sessionKey, sessionRest, transport);
         }
 
         internal static VaultInfo[] ListAllVaults(ClientInfo clientInfo,

@@ -5,10 +5,9 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    // TODO: Rename to Session
-    /// The session object is opaque to the user. It hold all the state needed by Client to perform
+    /// The session object is opaque to the user. It holds all the state needed by Client to perform
     /// various operations like opening vaults or logging out.
-    public class LoginSession
+    public class Session
     {
         internal readonly ClientInfo ClientInfo;
         internal readonly Keychain Keychain;
@@ -16,11 +15,11 @@ namespace PasswordManagerAccess.OnePassword
         internal readonly RestClient Rest;
         internal readonly IRestTransport Transport;
 
-        internal LoginSession(ClientInfo clientInfo,
-                              Keychain keychain,
-                              AesKey key,
-                              RestClient rest,
-                              IRestTransport transport)
+        internal Session(ClientInfo clientInfo,
+                         Keychain keychain,
+                         AesKey key,
+                         RestClient rest,
+                         IRestTransport transport)
         {
             ClientInfo = clientInfo;
             Keychain = keychain;
