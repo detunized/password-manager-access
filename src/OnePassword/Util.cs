@@ -69,11 +69,6 @@ namespace PasswordManagerAccess.OnePassword
             return Crypto.Sha256(a.Concat(b).ToArray()).ToUrlSafeBase64NoPadding();
         }
 
-        public static string HashRememberMeToken(string token, AuthSession authSession)
-        {
-            return HashRememberMeToken(token, authSession.Id);
-        }
-
         public static string HashRememberMeToken(string token, string sessionId)
         {
             return Crypto.HmacSha256(sessionId.Decode32(), token.Decode64Loose())

@@ -232,7 +232,6 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsCanceledMultiFactor(
                 () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors,
-                                                               TestData.AuthSession,
                                                                TestData.SessionKey,
                                                                new CancelingUi(),
                                                                null,
@@ -276,7 +275,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
             var token = Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                                       "123456",
-                                                      TestData.AuthSession,
                                                       TestData.SessionKey,
                                                       flow);
 
@@ -293,7 +291,6 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                           "123456",
-                                          TestData.AuthSession,
                                           TestData.SessionKey,
                                           flow);
         }
@@ -306,7 +303,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             Exceptions.AssertThrowsBadMultiFactor(
                 () => Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
                                                     "123456",
-                                                    TestData.AuthSession,
                                                     TestData.SessionKey,
                                                     flow),
                 "Incorrect second factor code");

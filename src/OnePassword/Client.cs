@@ -191,7 +191,7 @@ namespace PasswordManagerAccess.OnePassword
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, session, sessionKey, ui, storage, macRest);
+                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, sessionKey, ui, storage, macRest);
 
             return (sessionKey, macRest);
         }
@@ -372,7 +372,6 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static void PerformSecondFactorAuthentication(SecondFactor[] factors,
-                                                               AuthSession authSession,
                                                                AesKey sessionKey,
                                                                IUi ui,
                                                                ISecureStorage storage,
@@ -380,7 +379,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             // Try "remember me" first. It's possible the server didn't allow it or
             // we don't have a valid token stored from one of the previous sessions.
-            if (TrySubmitRememberMeToken(factors, authSession, sessionKey, storage, rest))
+            if (TrySubmitRememberMeToken(factors, sessionKey, storage, rest))
                 return;
 
             // TODO: Allow to choose 2FA method via UI like in Bitwarden
@@ -390,7 +389,7 @@ namespace PasswordManagerAccess.OnePassword
             if (passcode == Passcode.Cancel)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
-            var token = SubmitSecondFactorCode(factor.Kind, passcode.Code, authSession, sessionKey, rest);
+            var token = SubmitSecondFactorCode(factor.Kind, passcode.Code, sessionKey, rest);
 
             // Store the token with the application. Next time we're not gonna need to enter any passcodes.
             if (passcode.RememberMe)
@@ -398,7 +397,6 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static bool TrySubmitRememberMeToken(SecondFactor[] factors,
-                                                      AuthSession authSession,
                                                       AesKey sessionKey,
                                                       ISecureStorage storage,
                                                       RestClient rest)
@@ -412,7 +410,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                SubmitSecondFactorCode(SecondFactorKind.RememberMeToken, token, authSession, sessionKey, rest);
+                SubmitSecondFactorCode(SecondFactorKind.RememberMeToken, token, sessionKey, rest);
             }
             catch (BadMultiFactorException)
             {
@@ -477,7 +475,6 @@ namespace PasswordManagerAccess.OnePassword
         // Returns "remember me" token when successful
         internal static string SubmitSecondFactorCode(SecondFactorKind factor,
                                                       string code,
-                                                      AuthSession authSession,
                                                       AesKey sessionKey,
                                                       RestClient rest)
         {
@@ -492,7 +489,7 @@ namespace PasswordManagerAccess.OnePassword
                 break;
             case SecondFactorKind.RememberMeToken:
                 key = "dsecret";
-                data = new Dictionary<string, string> {["dshmac"] = Util.HashRememberMeToken(code, authSession)};
+                data = new Dictionary<string, string> {["dshmac"] = Util.HashRememberMeToken(code, sessionKey.Id)};
                 break;
             case SecondFactorKind.Duo:
                 key = "duo";
@@ -507,7 +504,7 @@ namespace PasswordManagerAccess.OnePassword
                 var response = PostEncryptedJson<R.Mfa>("v1/auth/mfa",
                                                         new Dictionary<string, object>
                                                         {
-                                                            ["sessionID"] = authSession.Id,
+                                                            ["sessionID"] = sessionKey.Id,
                                                             ["client"] = ClientId,
                                                             [key] = data,
                                                         },

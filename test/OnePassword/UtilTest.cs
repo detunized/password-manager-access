@@ -63,12 +63,6 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void HashRememberMeToken_convenience_returns_hash()
-        {
-            Assert.Equal("XPvm9ASr", Util.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", TestData.AuthSession));
-        }
-
-        [Fact]
         public void HashRememberMeToken_returns_hash()
         {
             Assert.Equal("oNk_XW_e",
