@@ -14,8 +14,8 @@ namespace PasswordManagerAccess.OnePassword
     public static class Client
     {
         public const string DefaultDomain = "my.1password.com";
-        public const string ClientName = "1Password Extension";
-        public const string ClientVersion = "20088"; // TODO: This needs to be updated every now and then.
+        public const string ClientName = "1Password for Web";
+        public const string ClientVersion = "855"; // TODO: This needs to be updated every now and then.
         public const string ClientId = ClientName + "/" + ClientVersion;
 
         public enum Region
