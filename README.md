@@ -4,24 +4,50 @@
 [![Build Status](https://detunized.visualstudio.com/password-manager-access/_apis/build/status/detunized.password-manager-access?branchName=master)](https://detunized.visualstudio.com/password-manager-access/_build/latest?definitionId=1&branchName=master)
 [![NuGet Badge](https://buildstats.info/nuget/PasswordManagerAccess)](https://www.nuget.org/packages/PasswordManagerAccess/)
 
-Provides access API to various online password managers. This repo is an
-attempt to join and unify all the libraries I've written in the past (see
-detunized/lastpass-sharp, detunized/1password-sharp and many more).
+Password Manager Access provides read only access API to various online
+password managers. This unified library is a successor to a bunch of
+independent libraries written in the past, such as
+[lastpass-sharp](https://github.com/detunized/lastpass-sharp),
+[1password-sharp](https://github.com/detunized/1password-sharp) and
+[dashlane-sharp](https://github.com/detunized/dashlane-sharp)
 
-**This is work in progress and will be for a while.**
+The following services are supported by this library:
 
-## Keeper
+  - [1Password](https://1password.com)
+  - [Bitwarden](https://bitwarden.com)
+  - [Dashlane](https://dashlane.com)
+  - [Kaspersky Password Manager](https://www.kaspersky.com/password-manager)
+  - [LastPass](https://lastpass.com)
+  - [RoboForm](https://roboform.com)
+  - [Sticky Password](https://www.stickypassword.com)
+  - [True Key](https://www.truekey.com)
+  - [Zoho Vault](https://www.zoho.com/vault)
 
-Example:
+Additionally the library provides support for parsing and decryption of the
+offline [OpVault vault format](https://support.1password.com/opvault-design/).
+
+All services support basic log in, retrieve, decrypt, log out sequence. Though
+the modules providing support for different services are quite similar, they
+do not provide a unified interface. That is mainly due to the differences in
+the API and the data provided by the services themselves.
+
+A typical work flow with simple password authentication looks like this:
 
 ```c#
-var accounts = Keeper.Vault.Open(username, password, ui, storage);
-foreach (var i in accounts)
-    Console.WriteLine($"{i.Name} {i.Username} {i.Password} {i.Url} {i.Notes} {i.Folder}");
+var vault = Vault.Open("username",
+                       "password",
+                       new ClientInfo(Platform.Desktop,
+                                      "device-id",
+                                      "client-description"),
+                       null);
+
+foreach (var a in vault.Accounts)
+    Console.WriteLine($"{a.Name}: {a.Username} {a.Password} {a.Url}");
 ```
 
-To see what the `ui` and `storage` are for and for more details please see
-example/Keeper project.
+This code snippet downloads and decrypts a LastPass vault and prints all the
+accounts to the standard output. For the fully working example please refer to
+the [examples](examples) folder in this repo.
 
 ## License
 
