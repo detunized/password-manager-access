@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.0.1
+  - 1Password: Fixed a crash when the "require modern app" option is enabled
+
 ## 5.0.0
   - Kaspersky: Kaspersky Password Manager support added
 
