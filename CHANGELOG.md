@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.0.0-preview
+## 5.0.0
   - Kaspersky: Kaspersky Password Manager support added
 
 ## 4.1.0
