@@ -1,6 +1,6 @@
 # Changelog
 
-## 6.0.0-preview
+## 6.0.0
   - 1Password: Changed the API to allow selective vault retrieval and on
     demand decryption. All the Vault and Account properties are now lazily
     decrypted and cached.
