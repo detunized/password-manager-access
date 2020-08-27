@@ -1,0 +1,23 @@
+{
+    "passwordauth": {
+        "modes": {
+            "totp": {},
+            "yubikey": {
+                "yub-name": "yk"
+            },
+            "allowed_modes": [
+                "totp",
+                "yubikey",
+                "recoverycode"
+            ]
+        },
+        "trust_mfa_days": 180,
+        "href": "https://accounts.zoho.com/signin/v2/primary/691361765/password",
+        "restrict_trust_mfa": false,
+        "token": "368385fa1577b9edf2a4307383c6f012a91d731f0e3359f57cf7be0ee66b78804aa0ac3c3ae66fe9c3f4b45e340c34da41bfa446bbcf9e1eca7bb77d9ccafd5b814256b5395cf8a4691306f5862c3d37ad37cf100e8c887c91c4b27a498317434522667c16fcd1953ca975da1f5827613a60143d794876ba3f207a12051eb22fb728edee417dabcae5cdc4efde54c93ba7ab15181e9a46d998a7a21ec3670024"
+    },
+    "status_code": 201,
+    "code": "MFA302",
+    "resource_name": "passwordauth",
+    "message": "SignIn success with MFA verification redirection"
+}

@@ -1,12 +1,12 @@
 {
     "status_code": 600,
-    "resource_name": "lookup",
+    "resource_name": "passwordauth",
     "message": "Unknown error",
     "errors": [
         {
-            "code": "U403",
+            "code": "E600",
             "message": "Unknown error"
         }
     ],
-    "localized_message": "Unknown error"
+    "localized_message": "Unknown error. Please don't try again."
 }

@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 
+using System;
 using System.ComponentModel;
 using Newtonsoft.Json;
 
@@ -96,20 +97,34 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly string Password;
     }
 
-    internal class Lookup
+    internal class Status
     {
         [JsonProperty("status_code", Required = Required.Always)]
         public readonly int StatusCode;
 
-        [JsonProperty("message", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue("")]
+        [JsonProperty("code")]
+        public readonly string Code;
+
+        [JsonProperty("message")]
         public readonly string Message;
 
+        [JsonProperty("errors")]
+        public readonly StatusError[] Errors;
+    }
+
+    internal readonly struct StatusError
+    {
+        [JsonProperty("code", Required = Required.Always)]
+        public readonly string Code;
+
+        [JsonProperty("message")]
+        public readonly string Message;
+    }
+
+    internal class Lookup: Status
+    {
         [JsonProperty("lookup")]
         public readonly LookupResult Result;
-
-        [JsonProperty("errors")]
-        public readonly LookupError[] Errors;
 
         [JsonProperty("data")]
         public readonly LookupRedirect Redirect;
@@ -120,14 +135,14 @@ namespace PasswordManagerAccess.ZohoVault.Response
         [JsonProperty("loginid", Required = Required.Always)]
         public readonly string Username;
 
+        [JsonProperty("identifier", Required = Required.Always)]
+        public readonly string UserId;
+
+        [JsonProperty("digest", Required = Required.Always)]
+        public readonly string Digest;
+
         [JsonProperty("dc", Required = Required.Always)]
         public readonly string DataCenter;
-    }
-
-    internal class LookupError
-    {
-        [JsonProperty("code", Required = Required.Always)]
-        public readonly string Code;
     }
 
     internal class LookupRedirect
@@ -139,5 +154,45 @@ namespace PasswordManagerAccess.ZohoVault.Response
         [JsonProperty("dc", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue("")]
         public readonly string DataCenter;
+    }
+
+    internal class LogIn: Status
+    {
+        [JsonProperty("passwordauth")]
+        public readonly LogInResult Result;
+    }
+
+    internal class LogInResult
+    {
+        [JsonProperty("code")]
+        public readonly string Code;
+
+        [JsonProperty("token")]
+        public readonly string MfaToken;
+
+        [JsonProperty("modes")]
+        public readonly MfaMethods MfaMethods;
+    }
+
+    internal class MfaMethods
+    {
+        [JsonProperty("allowed_modes", Required = Required.Always)]
+        public readonly string[] AllowedMethods;
+
+        [JsonProperty("totp")]
+        public readonly MfaTotp Totp;
+
+        [JsonProperty("yubikey")]
+        public readonly MfaYubikey Yubikey;
+    }
+
+    internal class MfaTotp
+    {
+    }
+
+    internal class MfaYubikey
+    {
+        [JsonProperty("yub-name")]
+        public readonly string Name;
     }
 }

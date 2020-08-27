@@ -1,0 +1,12 @@
+{
+    "status_code": 400,
+    "resource_name": "lookup",
+    "message": "User does not exists",
+    "errors": [
+        {
+            "code": "U401",
+            "message": "User does not exists"
+        }
+    ],
+    "localized_message": "This account cannot be found. Please use a different account or <a href=\"https://accounts.zoho.com/accounts/register?servicename=ZohoVault&serviceurl=null\">sign up<\/a> for a new account."
+}

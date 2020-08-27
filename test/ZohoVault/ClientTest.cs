@@ -18,8 +18,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow()
                 .Get("", cookies: OAuthCookies)
-                .Post(GetFixture("user-exists-response"))
-                .Post("showsuccess('blah',)", cookies: LoginCookies)
+                .Post(GetFixture("lookup-success-response"))
+                .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                 .Get(GetFixture("auth-info-response"))
                 .Get(GetFixture("vault-response"))
                 .Get(""); // Logout
@@ -49,8 +49,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow()
                 .Get("", cookies: OAuthCookies)
-                .Post(GetFixture("user-exists-response"))
-                .Post("showsuccess('blah',)", cookies: LoginCookies)
+                .Post(GetFixture("lookup-success-response"))
+                .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                 .Get(GetFixture("auth-info-with-shared-items-response"))
                 .Get(GetFixture("vault-with-shared-items-response"))
                 .Get(""); // Logout
@@ -85,54 +85,59 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow().Get("");
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.RequestToken(flow),
-                "cookie is not set by the server");
+            Exceptions.AssertThrowsInternalError(() => Client.RequestToken(flow),
+                                                 "cookie is not set by the server");
         }
 
         [Fact]
-        public void GetRegionTld_makes_POST_request_and_returns_tld()
+        public void RequestUserInfo_makes_POST_request_and_returns_user_info()
         {
             var flow = new RestFlow()
-                .Post(GetFixture("user-exists-response"))
-                    .ExpectUrl("signin/v2/lookup");
+                .Post(GetFixture("lookup-success-response"))
+                    .ExpectUrl($"https://accounts.zoho.xyz/signin/v2/lookup/{Username}");
 
-            var tld = Client.GetRegionTld(Username, OAuthCookieValue, flow);
+            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "xyz", flow);
 
-            Assert.Equal("com", tld);
+            Assert.Equal("633590133", user.Id);
+            Assert.StartsWith("5edfa5597c0acd2b", user.Digest);
+            Assert.Equal("com", user.Tld);
         }
 
         [Fact]
-        public void GetRegionTld_returns_another_tld()
+        public void RequestUserInfo_makes_POST_requests_and_returns_user_info_from_another_DC()
         {
             var flow = new RestFlow()
-                .Post(GetFixture("user-exists-in-another-dc-response"));
+                .Post(GetFixture("lookup-another-dc-response"))
+                    .ExpectUrl($"https://accounts.zoho.eu/signin/v2/lookup/{Username}")
+                .Post(GetFixture("lookup-success-response"))
+                    .ExpectUrl($"https://accounts.zoho.com/signin/v2/lookup/{Username}");
 
-            var tld = Client.GetRegionTld(Username, OAuthCookieValue, flow);
+            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "eu", flow);
 
-            Assert.Equal("eu", tld);
+            Assert.Equal("633590133", user.Id);
+            Assert.StartsWith("5edfa5597c0acd2b", user.Digest);
+            Assert.Equal("com", user.Tld);
         }
 
         [Fact]
-        public void GetRegionTld_throws_on_unknown_user()
+        public void RequestUserInfo_throws_on_unknown_user()
         {
             var flow = new RestFlow()
-                .Post(GetFixture("user-does-not-exist-response"));
+                .Post(GetFixture("lookup-no-user-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.GetRegionTld("unknown", OAuthCookieValue, flow),
+                () => Client.RequestUserInfo("unknown", OAuthCookieValue, "com", flow),
                 "The username is invalid");
         }
 
         [Fact]
-        public void GetRegionTld_throws_on_unknown_error_code()
+        public void RequestUserInfo_throws_on_unknown_error()
         {
             var flow = new RestFlow()
                 .Post(GetFixture("lookup-unknown-error-response"));
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.GetRegionTld(Username, OAuthCookieValue, flow),
-                "Unexpected response");
+            Exceptions.AssertThrowsInternalError(() => Client.RequestUserInfo(Username, OAuthCookieValue, "com", flow),
+                                                 "Unexpected response: 'Unknown error' (600, ");
         }
 
         [Theory]
@@ -148,83 +153,95 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [Fact]
         public void DataCenterToTld_throws_on_unknown_data_center()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(
-                () => Client.DataCenterToTld("zx"),
-                "Unsupported data center");
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.DataCenterToTld("zx"),
+                                                      "Unsupported data center");
         }
 
         [Fact]
-        public void Login_makes_requests_and_returns_server_cookies()
+        public void LogIn_makes_POST_request_and_returns_server_cookies()
         {
             var flow = new RestFlow()
-                .Post("showsuccess('blah',)", cookies: LoginCookies)
-                    .ExpectUrl("https://accounts.zoho.com/signin/auth")
-                    .ExpectContent($"LOGIN_ID={Username}", $"PASSWORD={Password}", $"iamcsrcoo={OAuthCookieValue}")
+                .Post(GetFixture("login-success-response"), cookies: LoginCookies)
+                    .ExpectUrl($"https://accounts.zoho.com/signin/v2/primary/{UserInfo.Id}/password")
+                    .ExpectContent($"{{\"passwordauth\":{{\"password\":\"{Password}\"}}}}")
                     .ExpectCookie("iamcsr", OAuthCookieValue);
 
-            var cookies = Client.Login(Username, Password, OAuthCookieValue, "com", null, GetSecureStorage(), flow);
+            var cookies = Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
 
         [Fact]
-        public void Login_makes_requests_to_specified_tld()
+        public void LogIn_makes_requests_to_specified_tld()
         {
             var flow = new RestFlow()
-                .Post("showsuccess('blah',)", cookies: LoginCookies)
-                    .ExpectUrl("https://accounts.zoho.eu/signin/auth");
+                .Post(GetFixture("login-success-response"), cookies: LoginCookies)
+                    .ExpectUrl("https://accounts.zoho.eu/signin/");
 
-            Client.Login(Username, Password, OAuthCookieValue, "eu", null, GetSecureStorage(), flow);
-        }
-
-        [Theory]
-        [InlineData("switch-to-mfa-response")]
-        [InlineData("switch-to-tfa-response")]
-        public void Login_recognizes_MFA_redirect(string fixture)
-        {
-            var flow = new RestFlow()
-                .Post(GetFixture(fixture, "txt"), cookies: LoginCookies)
-                .Get("<html>Google Authenticator</html>");
-
-            Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.Login(Username,
-                                   Password,
-                                   OAuthCookieValue,
-                                   "eu",
-                                   GetCancellingUi(),
-                                   GetSecureStorage(),
-                                   flow),
-                "canceled by the user");
+            Client.LogIn(Username,
+                         Password,
+                         OAuthCookieValue,
+                         new Client.UserInfo("id", "digest", "eu"),
+                         null,
+                         GetSecureStorage(),
+                         flow);
         }
 
         [Fact]
-        public void Login_throws_on_response_with_failure()
+        public void LogIn_throws_in_incorrect_password()
         {
             var flow = new RestFlow()
-                .Post("showerror('It failed')");
+                .Post(GetFixture("login-incorrect-password-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.Login(Username, Password, OAuthCookieValue, "com", null, GetSecureStorage(), flow),
-                "most likely the credentials are invalid");
+                () => Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow),
+                "The password is incorrect");
+        }
+
+        [Fact(Skip = "MFA is not implemented yet")]
+        public void LogIn_continues_to_MFA_step()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("login-mfa-required-response"));
+
+            Exceptions.AssertThrowsCanceledMultiFactor(() => Client.LogIn(Username,
+                                                                          Password,
+                                                                          OAuthCookieValue,
+                                                                          UserInfo,
+                                                                          GetCancellingUi(),
+                                                                          GetSecureStorage(),
+                                                                          flow),
+                                                       "Cancelled");
         }
 
         [Fact]
-        public void Login_sends_remember_me_token_in_cookies()
+        public void LogIn_throws_on_unknown_error()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("login-unknown-error-response"));
+
+            Exceptions.AssertThrowsInternalError(
+                () => Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow),
+                "Unexpected response: 'Unknown error' (600, ");
+        }
+
+        [Fact(Skip = "MFA is not implemented yet")]
+        public void LogIn_sends_remember_me_token_in_cookies()
         {
             var flow = new RestFlow()
                 .Post("showsuccess('blah',)")
                     .ExpectCookie(RememberMeCookieName, RememberMeCookieValue);
 
-            Client.Login(Username, Password, OAuthCookieValue, "com", null, GetSecureStorage(), flow);
+            Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow);
         }
 
-        [Fact]
-        public void Login_works_when_remember_me_token_is_not_available()
+        [Fact(Skip = "MFA is not implemented yet")]
+        public void LogIn_works_when_remember_me_token_is_not_available()
         {
             var flow = new RestFlow()
                 .Post("showsuccess('blah',)");
 
-            Client.Login(Username, Password, OAuthCookieValue, "com", null, GetEmptySecureStorage(), flow);
+            Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetEmptySecureStorage(), flow);
         }
 
         [Fact]
@@ -357,9 +374,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
         // Data
         //
 
-        private const string Username = "lebowski";
+        private const string Username = "dude@lebowski.com";
         private const string Password = "logjammin";
 
+        // TODO: Rename to CSR
         private const string OAuthCookieName = "iamcsr";
         private const string OAuthCookieValue = "iamcsr-blah";
 
@@ -368,6 +386,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
         private const string RememberMeCookieName = "remember-me-cookie-name";
         private const string RememberMeCookieValue = "remember-me-cookie-value";
+
+        private Client.UserInfo UserInfo => new Client.UserInfo("id", "digest", "com");
 
         private static readonly Dictionary<string, string> OAuthCookies =
             new Dictionary<string, string> { { OAuthCookieName, OAuthCookieValue } };

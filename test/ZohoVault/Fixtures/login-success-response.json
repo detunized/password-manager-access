@@ -1,0 +1,11 @@
+{
+    "passwordauth": {
+        "code": "SIGIN_SUCCESS",
+        "redirect_uri": "https://vault.zoho.com/online/main",
+        "href": "https://accounts.zoho.com/signin/v2/primary/633590133/password"
+    },
+    "status_code": 201,
+    "code": "SI200",
+    "resource_name": "passwordauth",
+    "message": "Sign in success"
+}
