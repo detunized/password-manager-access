@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.0.0
+  - ZohoVault: new log in protocol supported
+  - ZohoVault: Zoho removed support for original YubiKey, removed support for
+    it. FIDO U2F is not supported yet.
+  - ZohoVault: `Ui` class refactored to `Ui.IUi` interface
+
 ## 6.0.0
   - 1Password: Changed the API to allow selective vault retrieval and on
     demand decryption. All the Vault and Account properties are now lazily
