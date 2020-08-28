@@ -50,7 +50,7 @@ namespace PasswordManagerAccess.ZohoVault
             }
             finally
             {
-                Logout(cookies, userInfo.Tld, rest);
+                LogOut(cookies, userInfo.Tld, rest);
             }
         }
 
@@ -233,18 +233,16 @@ namespace PasswordManagerAccess.ZohoVault
 
             Ui.Passcode code;
 
-            /*if (methods.Contains("yubikey"))
-            {
-                code = ui.ProvideYubiKeyPasscode(0);
-                url = "TODO";
-                parameters = null;
-            }
-            else*/
             if (methods.Contains("totp"))
             {
                 code = ui.ProvideGoogleAuthPasscode(0);
                 CheckCancel(code);
                 SubmitTotp(userInfo, code, token, logInResult.MfaToken, rest);
+            }
+            else if (methods.Contains("yubikey"))
+            {
+                throw new UnsupportedFeatureException(
+                    $"Zoho removed support for the classic YubiKey. FIDO U2F is not supported yet.");
             }
             else
             {
@@ -326,7 +324,7 @@ namespace PasswordManagerAccess.ZohoVault
             throw MakeInvalidResponseError(status);
         }
 
-        internal static void Logout(HttpCookies cookies, string tld, RestClient rest)
+        internal static void LogOut(HttpCookies cookies, string tld, RestClient rest)
         {
             var response = rest.Get(LogoutUrl(tld), Headers, cookies);
             if (!response.IsSuccessful)

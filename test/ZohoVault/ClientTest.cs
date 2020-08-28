@@ -262,14 +262,14 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Fact]
-        public void Logout_makes_request_with_token_to_specific_url()
+        public void LogOut_makes_request_with_token_to_specific_url()
         {
             var flow = new RestFlow()
                 .Get("RESULT=TRUE")
                     .ExpectUrl("https://accounts.zoho.com/logout?")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            Client.Logout(LoginCookies, "com", flow);
+            Client.LogOut(LoginCookies, "com", flow);
         }
 
         [Fact]
