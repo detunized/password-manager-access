@@ -195,4 +195,31 @@ namespace PasswordManagerAccess.ZohoVault.Response
         [JsonProperty("yub-name")]
         public readonly string Name;
     }
+
+    internal class Totp: Status
+    {
+        [JsonProperty("totpsecauth")]
+        public readonly TotpResult Result;
+    }
+
+    internal class TotpResult
+    {
+        [JsonProperty("status")]
+        public readonly string Status;
+    }
+
+    internal class TrustMfa: Status
+    {
+        [JsonProperty("trustmfa")]
+        public readonly TrustMfaResult Result;
+    }
+
+    internal class TrustMfaResult
+    {
+        [JsonProperty("code")]
+        public readonly string Code;
+
+        [JsonProperty("redirect_uri")]
+        public readonly string RedirectUrl;
+    }
 }

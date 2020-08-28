@@ -1,0 +1,11 @@
+{
+    "trustmfa": {
+        "code": "POST_ANNOUCEMENT_REDIRECTION",
+        "redirect_uri": "https://accounts.zoho.eu/accounts/announcement/oneauth-banner?servicename=ZohoVault&serviceurl=https%3A%2F%2Fvault.zoho.eu%2Fonline%2Fmain",
+        "href": "https://accounts.zoho.eu/signin/v2/secondary/20069106347/trust"
+    },
+    "status_code": 201,
+    "code": "SI302",
+    "resource_name": "trustmfa",
+    "message": "SignIn success with post announcement redirection"
+}

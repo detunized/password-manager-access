@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using Moq;
 using PasswordManagerAccess.Common;
@@ -66,6 +67,23 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("zuckerberg", accounts[0].Password);
             Assert.Equal("https://www.facebook.com", accounts[0].Url);
             Assert.Equal("Yo, bitches!", accounts[0].Note);
+        }
+
+        [Theory]
+        [InlineData("us", "com")]
+        [InlineData("eu", "eu")]
+        [InlineData("in", "in")]
+        [InlineData("au", "com.au")]
+        public void DataCenterToTld_returns_tld(string dc, string tld)
+        {
+            Assert.Equal(tld, Client.DataCenterToTld(dc));
+        }
+
+        [Fact]
+        public void DataCenterToTld_throws_on_unknown_data_center()
+        {
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.DataCenterToTld("zx"),
+                                                      "Unsupported data center");
         }
 
         [Fact]
@@ -137,24 +155,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("lookup-unknown-error-response"));
 
             Exceptions.AssertThrowsInternalError(() => Client.RequestUserInfo(Username, OAuthCookieValue, "com", flow),
-                                                 "Unexpected response: 'Unknown error' (600, ");
-        }
-
-        [Theory]
-        [InlineData("us", "com")]
-        [InlineData("eu", "eu")]
-        [InlineData("in", "in")]
-        [InlineData("au", "com.au")]
-        public void DataCenterToTld_returns_tld(string dc, string tld)
-        {
-            Assert.Equal(tld, Client.DataCenterToTld(dc));
-        }
-
-        [Fact]
-        public void DataCenterToTld_throws_on_unknown_data_center()
-        {
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.DataCenterToTld("zx"),
-                                                      "Unsupported data center");
+                                                 "Unexpected response: message: 'Unknown error', status code: '600/");
         }
 
         [Fact]
@@ -166,7 +167,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectContent($"{{\"passwordauth\":{{\"password\":\"{Password}\"}}}}")
                     .ExpectCookie("iamcsr", OAuthCookieValue);
 
-            var cookies = Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow);
+            var cookies = Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
@@ -178,13 +179,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                     .ExpectUrl("https://accounts.zoho.eu/signin/");
 
-            Client.LogIn(Username,
+            Client.LogIn(new Client.UserInfo("id", "digest", "eu"),
                          Password,
                          OAuthCookieValue,
-                         new Client.UserInfo("id", "digest", "eu"),
-                         null,
-                         GetSecureStorage(),
-                         flow);
+                         null, GetSecureStorage(), flow);
         }
 
         [Fact]
@@ -194,24 +192,23 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-incorrect-password-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow),
+                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow),
                 "The password is incorrect");
         }
 
-        [Fact(Skip = "MFA is not implemented yet")]
+        [Fact]
         public void LogIn_continues_to_MFA_step()
         {
             var flow = new RestFlow()
                 .Post(GetFixture("login-mfa-required-response"));
 
-            Exceptions.AssertThrowsCanceledMultiFactor(() => Client.LogIn(Username,
+            Exceptions.AssertThrowsCanceledMultiFactor(() => Client.LogIn(UserInfo,
                                                                           Password,
                                                                           OAuthCookieValue,
-                                                                          UserInfo,
-                                                                          GetCancellingUi(),
+                                                                          new CancellingUi(),
                                                                           GetSecureStorage(),
                                                                           flow),
-                                                       "Cancelled");
+                                                       "is canceled by the user");
         }
 
         [Fact]
@@ -221,8 +218,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-unknown-error-response"));
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow),
-                "Unexpected response: 'Unknown error' (600, ");
+                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow),
+                "Unexpected response: message: 'Unknown error', status code: '600/");
         }
 
         [Fact(Skip = "MFA is not implemented yet")]
@@ -232,7 +229,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post("showsuccess('blah',)")
                     .ExpectCookie(RememberMeCookieName, RememberMeCookieValue);
 
-            Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetSecureStorage(), flow);
+            Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow);
         }
 
         [Fact(Skip = "MFA is not implemented yet")]
@@ -241,7 +238,27 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Post("showsuccess('blah',)");
 
-            Client.LogIn(Username, Password, OAuthCookieValue, UserInfo, null, GetEmptySecureStorage(), flow);
+            Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetEmptySecureStorage(), flow);
+        }
+
+        [Fact]
+        public void LogIn_submits_otp_and_trust_and_returns_cookies()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("login-mfa-required-response"))
+                .Post(GetFixture("mfa-success-response"))
+                    .ExpectContent("{\"code\":\"1337\"}")
+                .Post(GetFixture("trust-success-response"), cookies: LoginCookies)
+                    .ExpectContent("{\"trust\":true}");
+;
+            var cookies = Client.LogIn(UserInfo,
+                                       Password,
+                                       OAuthCookieValue,
+                                       new OtpProvidingUi(),
+                                       GetSecureStorage(),
+                                       flow);
+
+            Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
 
         [Fact]
@@ -325,17 +342,6 @@ namespace PasswordManagerAccess.Test.ZohoVault
                          info.EncryptionCheck);
         }
 
-        [Fact]
-        public void ExtractSwitchToUrl_decodes_url()
-        {
-            var encoded = "switchto('https\\x3A\\x2F\\x2Faccounts.zoho.com\\x2Ftfa\\x2Fauth" +
-                          "\\x3Fserviceurl\\x3Dhttps\\x253A\\x252F\\x252Fvault.zoho.com');";
-
-            var url = Client.ExtractSwitchToUrl(encoded);
-
-            Assert.Equal("https://accounts.zoho.com/tfa/auth?serviceurl=https%3A%2F%2Fvault.zoho.com", url);
-        }
-
         //
         // Helpers
         //
@@ -362,12 +368,30 @@ namespace PasswordManagerAccess.Test.ZohoVault
             return mock.Object;
         }
 
-        private static Ui GetCancellingUi()
+        private class CancellingUi: Ui
         {
-            var mock = new Mock<Ui>();
-            mock.Setup(x => x.ProvideGoogleAuthPasscode(0)).Returns(Ui.Passcode.Cancel);
+            public override Passcode ProvideGoogleAuthPasscode(int attempt)
+            {
+                return Passcode.Cancel;
+            }
 
-            return mock.Object;
+            public override Passcode ProvideYubiKeyPasscode(int attempt)
+            {
+                return Passcode.Cancel;
+            }
+        }
+
+        private class OtpProvidingUi: Ui
+        {
+            public override Passcode ProvideGoogleAuthPasscode(int attempt)
+            {
+                return new Passcode("1337", true);
+            }
+
+            public override Passcode ProvideYubiKeyPasscode(int attempt)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         //

@@ -1,0 +1,9 @@
+{
+    "status_code": 201,
+    "totpsecauth": {
+        "href": "https://accounts.zoho.com/signin/v2/secondary/691361765/totp",
+        "status": "success"
+    },
+    "resource_name": "totpsecauth",
+    "message": "Success"
+}

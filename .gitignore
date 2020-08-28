@@ -5,6 +5,7 @@
 /example/*/obj/
 /example/*/config.yaml
 /example/*/storage.yaml
+/scripts/
 /src/bin/
 /src/obj/
 /test/bin/

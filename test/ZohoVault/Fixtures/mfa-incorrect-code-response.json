@@ -1,0 +1,12 @@
+{
+    "status_code": 500,
+    "resource_name": "totpsecauth",
+    "message": "Invalid Verification Code",
+    "errors": [
+        {
+            "code": "IN105",
+            "message": "Invalid Verification Code"
+        }
+    ],
+    "localized_message": "Incorrect OTP. Please try again."
+}

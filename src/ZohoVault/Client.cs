@@ -5,15 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.ZohoVault.Response;
 
 namespace PasswordManagerAccess.ZohoVault
 {
     using HttpCookies = Dictionary<string, string>;
-    using R = Response;
 
     internal static class Client
     {
@@ -39,7 +38,7 @@ namespace PasswordManagerAccess.ZohoVault
             // TODO: It would be ideal to figure out which cookies are needed for general
             // cleanliness. It was too many of them and so they are now passed altogether a bundle
             // between the requests.
-            var cookies = LogIn(username, password, token, userInfo, ui, storage, rest);
+            var cookies = LogIn(userInfo, password, token, ui, storage, rest);
 
             try
             {
@@ -58,6 +57,24 @@ namespace PasswordManagerAccess.ZohoVault
         //
         // Internal
         //
+
+        internal static string DataCenterToTld(string dataCenter)
+        {
+            // From here: https://accounts.zoho.eu/oauth/serverinfo
+            switch (dataCenter)
+            {
+            case "us":
+                return "com";
+            case "eu":
+                return "eu";
+            case "in":
+                return "in";
+            case "au":
+                return "com.au";
+            }
+
+            throw new UnsupportedFeatureException($"Unsupported data center '{dataCenter}'");
+        }
 
         internal static string RequestToken(RestClient rest)
         {
@@ -93,7 +110,7 @@ namespace PasswordManagerAccess.ZohoVault
                 new Dictionary<string, object>
                 {
                     ["mode"] = "primary",
-                    ["cli_time"] = DateTimeOffset.Now.ToUnixTimeMilliseconds(),
+                    ["cli_time"] = Os.UnixMilliseconds(),
                     ["servicename"] = ServiceName,
                 },
                 headers: new Dictionary<string, string> {["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}"},
@@ -102,57 +119,41 @@ namespace PasswordManagerAccess.ZohoVault
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
 
-            var result = response.Data;
-            switch (result.StatusCode)
+            var status = response.Data;
+
+            // Success (200..299)
+            if (status.StatusCode / 100 == 2)
             {
-            // Success
-            case 201 when result.Code == "U200":
-                var lookUpResult = result.Result;
-                if (lookUpResult == null)
+                var result = status.Result;
+                if (result == null)
                     throw MakeInvalidResponseError("lookup result not found");
 
-                return new UserInfo(id: lookUpResult.UserId,
-                                    digest: lookUpResult.Digest,
-                                    tld: DataCenterToTld(lookUpResult.DataCenter));
+                return new UserInfo(id: result.UserId,
+                                    digest: result.Digest,
+                                    tld: DataCenterToTld(result.DataCenter));
+            }
 
+            var error = GetError(status);
+            switch (error.Code)
+            {
             // User exists in another data center
-            case 500 when result.Errors?.Any(x => x.Code == "U400") == true:
-                var redirect = result.Redirect;
+            case "U400":
+                var redirect = status.Redirect;
                 if (redirect == null)
                     throw MakeInvalidResponseError("redirect info not found");
 
                 return RequestUserInfo(username, token, DataCenterToTld(redirect.DataCenter), rest);
-
             // User doesn't exist
-            case 400 when result.Errors?.Any(x => x.Code == "U401") == true:
+            case "U401":
                 throw new BadCredentialsException("The username is invalid");
             }
 
-            throw MakeInvalidResponseError($"'{result.Message}' ({result.StatusCode}, {result.Code})");
+            throw MakeInvalidResponseError(status);
         }
 
-        internal static string DataCenterToTld(string dataCenter)
-        {
-            // From here: https://accounts.zoho.eu/oauth/serverinfo
-            switch (dataCenter)
-            {
-            case "us":
-                return "com";
-            case "eu":
-                return "eu";
-            case "in":
-                return "in";
-            case "au":
-                return "com.au";
-            }
-
-            throw new UnsupportedFeatureException($"Unsupported data center '{dataCenter}'");
-        }
-
-        internal static HttpCookies LogIn(string username,
+        internal static HttpCookies LogIn(UserInfo userInfo,
                                           string password,
                                           string token,
-                                          UserInfo userInfo,
                                           Ui ui,
                                           ISecureStorage storage,
                                           RestClient rest)
@@ -166,7 +167,7 @@ namespace PasswordManagerAccess.ZohoVault
             if (haveRememberMe)
                 cookies[rememberMeKey] = rememberMeValue;
 
-            var response = rest.PostJson<R.LogIn>(LogInUrl(userInfo, DateTimeOffset.Now.ToUnixTimeMilliseconds()),
+            var response = rest.PostJson<R.LogIn>(LogInUrl(userInfo, Os.UnixMilliseconds()),
                                                   parameters: new Dictionary<string, object>
                                                   {
                                                       ["passwordauth"] = new Dictionary<string, string>
@@ -183,35 +184,146 @@ namespace PasswordManagerAccess.ZohoVault
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
 
-            var result = response.Data;
-
-            switch (result.StatusCode)
+            var status = response.Data;
+            if (status.StatusCode / 100 == 2)
             {
-            // Successfully logged in
-            case 201 when result.Code == "SI200" && result.Result?.Code == "SIGIN_SUCCESS":
-                return response.Cookies;
+                // Successfully logged in
+                if (SuccessErrorCodes.Contains(status.Code))
+                    return response.Cookies;
 
-            // MFA required
-            case 201 when result.Code == "MFA302":
-                return LogInMfa(result.Result, userInfo, ui, storage, rest);
+                // MFA required
+                if (status.Code == "MFA302")
+                    return LogInMfa(userInfo, status.Result, token, ui, storage, rest);
 
+                throw MakeInvalidResponseError(status);
+            }
+
+            var error = GetError(status);
+            switch (error.Code)
+            {
             // Bad password
-            case 500 when result.Errors?.Any(x => x.Code == "IN102") == true:
+            case "IN102":
                 throw new BadCredentialsException("The password is incorrect");
+            // Captcha
+            case "IN107":
+            case "IN108":
+                throw new UnsupportedFeatureException("Captcha is not supported");
             }
 
             // Some other error
-            // TODO: Make a function
-            throw MakeInvalidResponseError($"'{result.Message}' ({result.StatusCode}, {result.Code})");
+            throw MakeInvalidResponseError(status);
         }
 
-        internal static HttpCookies LogInMfa(R.LogInResult logInResult,
-                                             UserInfo userInfo,
+        internal static HttpCookies LogInMfa(UserInfo userInfo,
+                                             R.LogInResult logInResult,
+                                             string token,
                                              Ui ui,
                                              ISecureStorage storage,
                                              RestClient rest)
         {
-            throw new NotImplementedException();
+            void CheckCancel(Ui.Passcode passcode)
+            {
+                if (passcode == Ui.Passcode.Cancel)
+                    throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+            }
+
+            var methods = logInResult.MfaMethods?.AllowedMethods;
+            if (methods == null)
+                throw MakeInvalidResponseError("allowed MFA methods not found");
+
+            Ui.Passcode code;
+
+            /*if (methods.Contains("yubikey"))
+            {
+                code = ui.ProvideYubiKeyPasscode(0);
+                url = "TODO";
+                parameters = null;
+            }
+            else*/
+            if (methods.Contains("totp"))
+            {
+                code = ui.ProvideGoogleAuthPasscode(0);
+                CheckCancel(code);
+                SubmitTotp(userInfo, code, token, logInResult.MfaToken, rest);
+            }
+            else
+            {
+                var unsupportedMethods = methods.JoinToString(", ");
+                throw new UnsupportedFeatureException($"MFA methods '{unsupportedMethods}' are not supported");
+            }
+
+            // Has to be done regardless of the "remember me" setting
+            return MarkDeviceTrusted(userInfo, code.RememberMe, token, logInResult.MfaToken, rest);
+        }
+
+        internal static void SubmitTotp(UserInfo userInfo, Ui.Passcode passcode, string token, string mfaToken, RestClient rest)
+        {
+            var response = rest.PostJson<R.Totp>(TotpUrl(userInfo, Os.UnixMilliseconds()),
+                                                 parameters: new Dictionary<string, object>
+                                                 {
+                                                     ["totpsecauth"] = new Dictionary<string, string>
+                                                     {
+                                                         ["code"] = passcode.Code,
+                                                     },
+                                                 },
+                                                 headers: new Dictionary<string, string>
+                                                 {
+                                                     ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}",
+                                                     ["Z-Authorization"] = $"Zoho-ticket {mfaToken}",
+                                                 },
+                                                 cookies: new Dictionary<string, string>
+                                                 {
+                                                     ["iamcsr"] = token
+                                                 });
+
+            if (!response.IsSuccessful)
+                throw MakeErrorOnFailedRequest(response);
+
+            var status = response.Data;
+
+            // Success (200..299)
+            if (status.StatusCode / 100 == 2 && status.Result.Status == "success")
+                return;
+
+            var error = GetError(status);
+            if (error.Code == "IN105")
+                throw new BadMultiFactorException("MFA code is incorrect");
+
+            throw MakeInvalidResponseError(status);
+        }
+
+        internal static HttpCookies MarkDeviceTrusted(UserInfo userInfo,
+                                                      bool trust,
+                                                      string token,
+                                                      string mfaToken,
+                                                      RestClient rest)
+        {
+            var response = rest.PostJson<R.TrustMfa>(TrustUrl(userInfo),
+                                                     new Dictionary<string, object>
+                                                     {
+                                                         ["trustmfa"] = new Dictionary<string, object>
+                                                         {
+                                                             ["trust"] = trust
+                                                         },
+                                                     },
+                                                     headers: new Dictionary<string, string>
+                                                     {
+                                                         ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}",
+                                                         ["Z-Authorization"] = $"Zoho-ticket {mfaToken}",
+                                                     },
+                                                     cookies: new Dictionary<string, string>
+                                                     {
+                                                         ["iamcsr"] = token
+                                                     });
+
+            if (!response.IsSuccessful)
+                throw MakeErrorOnFailedRequest(response);
+
+            var status = response.Data;
+            if (status.StatusCode / 100 == 2 && SuccessErrorCodes.Contains(status.Code))
+                return response.Cookies;
+
+            throw MakeInvalidResponseError(status);
         }
 
         internal static void Logout(HttpCookies cookies, string tld, RestClient rest)
@@ -254,6 +366,30 @@ namespace PasswordManagerAccess.ZohoVault
                 throw new BadCredentialsException("Passphrase is incorrect");
 
             return key;
+        }
+
+        internal readonly struct AuthInfo
+        {
+            public readonly int IterationCount;
+            public readonly byte[] Salt;
+            public readonly byte[] EncryptionCheck;
+
+            public AuthInfo(int iterationCount, byte[] salt, byte[] encryptionCheck)
+            {
+                IterationCount = iterationCount;
+                Salt = salt;
+                EncryptionCheck = encryptionCheck;
+            }
+        }
+
+        internal static AuthInfo GetAuthInfo(HttpCookies cookies, string tld, RestClient rest)
+        {
+            var info = GetWrapped<R.AuthInfo>(AuthInfoUrl(tld), cookies, rest);
+
+            if (info.KdfMethod != "PBKDF2_AES")
+                throw new UnsupportedFeatureException($"KDF method '{info.KdfMethod}' is not supported");
+
+            return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
         }
 
         internal static R.Vault DownloadVault(HttpCookies cookies, string tld, RestClient rest)
@@ -315,162 +451,6 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        internal static RestResponse<string> LoginMfa(RestResponse<string> loginResponse,
-                                                      string tld,
-                                                      Ui ui,
-                                                      ISecureStorage storage,
-                                                      RestClient rest)
-        {
-            var url = ExtractSwitchToUrl(loginResponse.Content);
-
-            // First get the MFA page. We need use all the cookies
-            // from the login to get the page and submit the code.
-            var page = rest.Get(endpoint: url, headers: Headers, cookies: loginResponse.Cookies);
-            if (!page.IsSuccessful)
-                throw MakeErrorOnFailedRequest(page);
-
-            // Ask the user to enter the code
-            var code = RequestMfaCode(page, ui);
-
-            // TODO: See which cookies are needed
-            var cookies = new Dictionary<string, string>();
-            foreach (var name in "_iamtt iamcsr JSESSIONID stk tfa_ac".Split(' '))
-                cookies[name] = loginResponse.Cookies[name];
-
-            // Now submit the form with the MFA code
-            var verifyResponse = rest.PostForm(
-                endpoint: VerifyUrl(tld),
-                parameters: new Dictionary<string, object>
-                {
-                    { "remembertfa", code.RememberMe ? "true" : "false" },
-                    { "code", code.Code },
-                    { "iamcsrcoo", cookies["iamcsr"] },
-                    { "servicename", ServiceName },
-                    { "serviceurl", ServiceUrl(tld) },
-                },
-                headers: Headers,
-                cookies: cookies);
-
-            // Specific error: means the MFA code wasn't correct
-            if (verifyResponse.Content == "invalid_code")
-                throw new BadMultiFactorException("Invalid second factor code");
-
-            // Generic error
-            if (!verifyResponse.IsSuccessful)
-                throw MakeErrorOnFailedRequest(verifyResponse);
-
-            if (!verifyResponse.Content.StartsWith("showsuccess("))
-                throw MakeInvalidResponseError("Verify MFA failed");
-
-            // Store remember me token for the next sessions
-            if (code.RememberMe)
-            {
-                var key = verifyResponse.Cookies.Keys.Where(x => x.StartsWith("IAMTFATICKET_")).FirstOrDefault();
-                if (!key.IsNullOrEmpty())
-                    SaveRememberMeToken(storage, key, verifyResponse.Cookies[key]);
-            }
-
-            return verifyResponse;
-        }
-
-        internal static Ui.Passcode RequestMfaCode(RestResponse<string> mfaPage, Ui ui)
-        {
-            Ui.Passcode code = null;
-            var html = mfaPage.Content;
-
-            if (html.Contains("Google Authenticator"))
-                code = ui.ProvideGoogleAuthPasscode(0);
-            else if (html.Contains("Yubikey"))
-                code = ui.ProvideYubiKeyPasscode(0);
-            else
-                throw new UnsupportedFeatureException("MFA method is not supported");
-
-            if (code == Ui.Passcode.Cancel)
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
-
-            return code;
-        }
-
-        internal static string ExtractSwitchToUrl(string response)
-        {
-            // Decode "switchto('https\\x3A\\x2F\\x2Faccounts.zoho.com\\x2Ftfa\\x2Fauth\\x3Fserviceurl\\x3Dhttps\\x253A\\x252F\\x252Fvault.zoho.com');"
-            // to "https://accounts.zoho.com/tfa/auth?serviceurl=https%3A%2F%2Fvault.zoho.com"
-            var findString = Regex.Match(response, "switchto\\('(.*)'\\)");
-            if (!findString.Success)
-                throw MakeInvalidResponseError("Unexpected 'switchto' format");
-
-            return UnescapeJsUrl(findString.Groups[1].Value);
-        }
-
-        internal static string ExtractShowSuccessUrl(string response)
-        {
-            // Decode "TODO: "
-            // to "TODO: "
-            var findString = Regex.Match(response, "showsuccess\\('(.*?)',");
-            if (!findString.Success)
-                throw MakeInvalidResponseError("Unexpected 'showsuccess' format");
-
-            return UnescapeJsUrl(findString.Groups[1].Value);
-        }
-
-        internal static string UnescapeJsUrl(string escaped)
-        {
-            return Regex.Replace(escaped, "\\\\x(..)", m => m.Groups[1].Value.DecodeHex().ToUtf8());
-        }
-
-        // TODO: Is this even used?
-        // TODO: OAuth is currently not working with the Zoho server, so this method should not be called.
-        //       It requires some additional info that should be provided by the app.
-        internal static RestResponse<string> Approve(RestResponse loginResponse, string tld, RestClient rest)
-        {
-            var response = rest.PostForm(
-                endpoint: ApproveUrl(tld),
-                parameters: new Dictionary<string, object>
-                {
-                    {"response_type", "code"},
-                    {"client_id", "TODO: ClientId"},
-                    {"scope", OAuthScope},
-                    {"redirect_uri", "TODO: RedirectUrl"},
-                    {"prompt", "consent"},
-                    {"approvedScope", OAuthScope},
-                    {"iamcsrcoo", loginResponse.Cookies["iamcsr"]},
-                    {"is_ajax", "true"},
-                    {"approvedOrgs", ""},
-                    {"implicitGranted", "false"},
-                },
-                headers: Headers,
-                cookies: loginResponse.Cookies); // TODO: See if need all the cookies
-
-            if (!response.IsSuccessful)
-                throw MakeErrorOnFailedRequest(response);
-
-            return response;
-        }
-
-        internal struct AuthInfo
-        {
-            public AuthInfo(int iterationCount, byte[] salt, byte[] encryptionCheck)
-            {
-                IterationCount = iterationCount;
-                Salt = salt;
-                EncryptionCheck = encryptionCheck;
-            }
-
-            public int IterationCount { get; }
-            public byte[] Salt;
-            public byte[] EncryptionCheck;
-        }
-
-        internal static AuthInfo GetAuthInfo(HttpCookies cookies, string tld, RestClient rest)
-        {
-            var info = GetWrapped<R.AuthInfo>(AuthInfoUrl(tld), cookies, rest);
-
-            if (info.KdfMethod != "PBKDF2_AES")
-                throw new UnsupportedFeatureException($"KDF method '{info.KdfMethod}' is not supported");
-
-            return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
-        }
-
         internal static T GetWrapped<T>(string url, HttpCookies cookies, RestClient rest)
         {
             // GET
@@ -484,6 +464,15 @@ namespace PasswordManagerAccess.ZohoVault
                 throw MakeInvalidResponseError("operation failed");
 
             return envelope.Payload;
+        }
+
+        internal static R.StatusError GetError(R.Status status)
+        {
+            if (status.Errors == null || status.Errors.Length == 0)
+                throw MakeInvalidResponseError($"request failed with code '{status.StatusCode}/{status.Code}' " +
+                                               $"and message '{status.Message}' but error wasn't provided");
+
+            return status.Errors[0];
         }
 
         //
@@ -503,6 +492,18 @@ namespace PasswordManagerAccess.ZohoVault
         private static InternalErrorException MakeInvalidResponseError(string message, Exception original = null)
         {
             return new InternalErrorException($"Unexpected response: {message}", original);
+        }
+
+        private static InternalErrorException MakeInvalidResponseError(R.Status status)
+        {
+            var message = $"message: '{status.Message}', status code: '{status.StatusCode}/{status.Code}'";
+            if (status.Errors?.Length > 0)
+            {
+                var error = GetError(status);
+                message += $", error code: '{error.Code}'error message: '{error.Message}'";
+            }
+
+            return MakeInvalidResponseError(message);
         }
 
         private static (string key, string value) LoadRememberMeToken(ISecureStorage storage)
@@ -530,8 +531,6 @@ namespace PasswordManagerAccess.ZohoVault
         private const string ServiceName = "ZohoVault";
         private const string OAuthScope = "ZohoVault.secrets.READ";
 
-        private static string ServiceUrl(string tld) => $"https://vault.zoho.{tld}";
-
         private static readonly string LoginPageUrl =
             $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
 
@@ -541,12 +540,14 @@ namespace PasswordManagerAccess.ZohoVault
         private static string LogInUrl(UserInfo user, long timestamp) =>
             $"https://accounts.zoho.{user.Tld}/signin/v2/primary/{user.Id}/password?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
 
+        private static string TotpUrl(UserInfo user, long timestamp) =>
+            $"https://accounts.zoho.{user.Tld}/signin/v2/secondary/{user.Id}/totp?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
+
+        private static string TrustUrl(UserInfo user) =>
+            $"https://accounts.zoho.{user.Tld}/signin/v2/secondary/{user.Id}/trust";
+
         private static string AuthInfoUrl(string tld) =>
             $"https://vault.zoho.{tld}/api/json/login?OPERATION_NAME=GET_LOGIN";
-
-        private static string VerifyUrl(string tld) => $"https://accounts.zoho.{tld}/tfa/verify";
-
-        private static string ApproveUrl(string tld) => $"https://accounts.zoho.{tld}/oauth/v2/approve";
 
         private static string VaultUrl(string tld) =>
             $"https://vault.zoho.{tld}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
@@ -555,6 +556,8 @@ namespace PasswordManagerAccess.ZohoVault
 
         private const string UserAgent =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
+
+        private static readonly string[] SuccessErrorCodes = {"SI200", "SI300", "SI301", "SI302", "SI303", "SI304"};
 
         // Important! Most of the requests fail without a valid User-Agent header
         private static readonly Dictionary<string, string> Headers =
