@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.ZohoVault.Ui;
 using R = PasswordManagerAccess.ZohoVault.Response;
 
 namespace PasswordManagerAccess.ZohoVault
@@ -19,7 +20,7 @@ namespace PasswordManagerAccess.ZohoVault
         public static Account[] OpenVault(string username,
                                           string password,
                                           string passphrase,
-                                          Ui ui,
+                                          IUi ui,
                                           ISecureStorage storage,
                                           IRestTransport transport)
         {
@@ -154,7 +155,7 @@ namespace PasswordManagerAccess.ZohoVault
         internal static HttpCookies LogIn(UserInfo userInfo,
                                           string password,
                                           string token,
-                                          Ui ui,
+                                          IUi ui,
                                           ISecureStorage storage,
                                           RestClient rest)
         {
@@ -217,7 +218,7 @@ namespace PasswordManagerAccess.ZohoVault
         internal static HttpCookies LogInMfa(UserInfo userInfo,
                                              R.LogInResult logInResult,
                                              string token,
-                                             Ui ui,
+                                             IUi ui,
                                              ISecureStorage storage,
                                              RestClient rest)
         {
@@ -235,7 +236,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             if (methods.Contains("totp"))
             {
-                code = ui.ProvideGoogleAuthPasscode(0);
+                code = ui.ProvideGoogleAuthPasscode();
                 CheckCancel(code);
                 SubmitTotp(userInfo, code, token, logInResult.MfaToken, rest);
             }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault;
+using PasswordManagerAccess.ZohoVault.Ui;
 using Xunit;
 using R = PasswordManagerAccess.ZohoVault.Response;
 
@@ -368,29 +369,19 @@ namespace PasswordManagerAccess.Test.ZohoVault
             return mock.Object;
         }
 
-        private class CancellingUi: Ui
+        private class CancellingUi: IUi
         {
-            public override Passcode ProvideGoogleAuthPasscode(int attempt)
-            {
-                return Passcode.Cancel;
-            }
-
-            public override Passcode ProvideYubiKeyPasscode(int attempt)
+            public Passcode ProvideGoogleAuthPasscode()
             {
                 return Passcode.Cancel;
             }
         }
 
-        private class OtpProvidingUi: Ui
+        private class OtpProvidingUi: IUi
         {
-            public override Passcode ProvideGoogleAuthPasscode(int attempt)
+            public Passcode ProvideGoogleAuthPasscode()
             {
                 return new Passcode("1337", true);
-            }
-
-            public override Passcode ProvideYubiKeyPasscode(int attempt)
-            {
-                throw new NotImplementedException();
             }
         }
 

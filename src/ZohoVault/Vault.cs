@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.ZohoVault.Ui;
 
 namespace PasswordManagerAccess.ZohoVault
 {
@@ -9,7 +10,7 @@ namespace PasswordManagerAccess.ZohoVault
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, string passphrase, Ui ui, ISecureStorage storage)
+        public static Vault Open(string username, string password, string passphrase, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
             return Open(username, password, passphrase, ui, storage, transport);
@@ -22,7 +23,7 @@ namespace PasswordManagerAccess.ZohoVault
         internal static Vault Open(string username,
                                    string password,
                                    string passphrase,
-                                   Ui ui,
+                                   IUi ui,
                                    ISecureStorage storage,
                                    IRestTransport transport)
         {

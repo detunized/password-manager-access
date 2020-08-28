@@ -5,66 +5,27 @@ using System;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.ZohoVault;
+using PasswordManagerAccess.ZohoVault.Ui;
 
 namespace PasswordManagerAccess.Example.ZohoVault
 {
     // TODO: Remove copy-paste
-    class TextUi: Ui
+    class TextUi: BaseUi, IUi
     {
-        public override Passcode ProvideGoogleAuthPasscode(int attempt)
+        public Passcode ProvideGoogleAuthPasscode()
         {
-            if (attempt > 0)
-                Bad("Google Authenticator code is invalid, try again");
-
-            return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
-        }
-
-        public override Passcode ProvideYubiKeyPasscode(int attempt)
-        {
-            if (attempt > 0)
-                Bad("YubiKey code is invalid, try again");
-
-            return GetPasscode($"Please enter YubiKey code {ToCancel}");
+            return ProvideOtpPasscode("Google Authenticator");
         }
 
         //
         // Private
         //
 
-        private static Passcode GetPasscode(string prompt)
+        private static Passcode ProvideOtpPasscode(string method)
         {
-            var passcode = GetAnswer(prompt);
-            return passcode == "" ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+            var answer = GetAnswer($"Please enter {method} code {PressEnterToCancel}");
+            return answer == "" ? Passcode.Cancel : new Passcode(answer, GetRememberMe());
         }
-
-        private static string GetAnswer(string prompt)
-        {
-            Console.WriteLine(prompt);
-            Console.Write("> ");
-            var input = Console.ReadLine();
-
-            return input == null ? "" : input.Trim();
-        }
-
-        private static bool GetRememberMe()
-        {
-            var remember = GetAnswer("Remember this device?").ToLower();
-            return remember == "y" || remember == "yes";
-        }
-
-        private static void Bad(string text)
-        {
-            WriteLine(ConsoleColor.Red, text);
-        }
-
-        private static void WriteLine(ConsoleColor color, string text)
-        {
-            Console.ForegroundColor = color;
-            Console.WriteLine(text);
-            Console.ResetColor();
-        }
-
-        private const string ToCancel = "or just press ENTER to cancel";
     }
 
     static class Program
