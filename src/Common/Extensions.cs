@@ -192,6 +192,11 @@ namespace PasswordManagerAccess.Common
         // byte[]
         //
 
+        internal static ReadOnlySpan<byte> AsRoSpan(this byte[] x)
+        {
+            return new ReadOnlySpan<byte>(x);
+        }
+
         public static bool IsNullOrEmpty(this byte[] x)
         {
             return x == null || x.Length == 0;
@@ -204,19 +209,7 @@ namespace PasswordManagerAccess.Common
 
         public static string ToHex(this byte[] x)
         {
-            var hex = new char[x.Length * 2];
-            for (int i = 0, c = 0; i < x.Length; i += 1)
-            {
-                int hi = x[i] >> 4;
-                hex[c] = (char)(hi < 10 ? '0' + hi : 'a' + hi - 10);
-                c += 1;
-
-                int lo = x[i] & 15;
-                hex[c] = (char)(lo < 10 ? '0' + lo : 'a' + lo - 10);
-                c += 1;
-            }
-
-            return new string(hex);
+            return x.AsRoSpan().ToHex();
         }
 
         // Regular/standard Base64
@@ -276,6 +269,41 @@ namespace PasswordManagerAccess.Common
                 Array.Copy(array, start, sub, 0, actualLength);
 
             return sub;
+        }
+
+        //
+        // ReadOnlySpan<byte>
+        //
+
+        public static string ToUtf8(this ReadOnlySpan<byte> x)
+        {
+            // TODO: This is inefficient as we're creating a temporary array here.
+            //       There doesn't seem to be a way to get a string directly from a byte span.
+            return x.ToArray().ToUtf8();
+        }
+
+        public static string ToHex(this ReadOnlySpan<byte> x)
+        {
+            // TODO: Temp alloc, can we get rid of it?
+            var hex = new char[x.Length * 2];
+
+            for (int i = 0, c = 0; i < x.Length; i += 1)
+            {
+                int hi = x[i] >> 4;
+                hex[c] = (char)(hi < 10 ? '0' + hi : 'a' + hi - 10);
+                c += 1;
+
+                int lo = x[i] & 15;
+                hex[c] = (char)(lo < 10 ? '0' + lo : 'a' + lo - 10);
+                c += 1;
+            }
+
+            return new string(hex);
+        }
+
+        public static SpanStream ToStream(this ReadOnlySpan<byte> span)
+        {
+            return new SpanStream(span);
         }
 
         //
