@@ -35,11 +35,45 @@ namespace PasswordManagerAccess.Kdbx
             if (header.MajorVersion != Version4)
                 throw MakeUnsupportedError($"Version {header.MajorVersion}.{header.MinorVersion}");
 
-            ReadFields(io);
+            var info = ReadEncryptionInfo(io);
         }
 
-        internal static void ReadFields(SpanStream io)
+        internal readonly struct EncryptionInfo
         {
+            public readonly bool Compressed;
+            public readonly Cipher Cipher;
+            public readonly byte[] Seed;
+            public readonly byte[] Iv;
+            public readonly Dictionary<string, object> Kdf;
+
+            public EncryptionInfo(bool compressed,
+                                  Cipher cipher,
+                                  byte[] seed,
+                                  byte[] iv,
+                                  Dictionary<string, object> kdf)
+            {
+                Compressed = compressed;
+                Cipher = cipher;
+                Seed = seed;
+                Iv = iv;
+                Kdf = kdf;
+            }
+        }
+
+        internal static EncryptionInfo ReadEncryptionInfo(SpanStream io)
+        {
+            bool? compressed = null;
+            Cipher? cipher = null;
+            byte[] seed = null;
+            byte[] iv = null;
+            Dictionary<string, object> kdf = null;
+
+            static void CheckField(object f, string name)
+            {
+                if (f == null)
+                    throw MakeInvalidFormatError($"{name} not found in the header");
+            }
+
             for (;;)
             {
                 var header = io.Read<FieldHeader>();
@@ -49,7 +83,13 @@ namespace PasswordManagerAccess.Kdbx
                 {
                 // Done (payload ignored)
                 case 0:
-                    return;
+                    CheckField(compressed, "compressed flag");
+                    CheckField(cipher, "cipher");
+                    CheckField(seed, "master seed");
+                    CheckField(iv, "master IV");
+                    CheckField(kdf, "KDF parameters");
+
+                    return new EncryptionInfo(compressed.Value, cipher.Value, seed, iv, kdf);
 
                 // Cipher
                 case 2:
@@ -57,11 +97,11 @@ namespace PasswordManagerAccess.Kdbx
                         throw MakeInvalidFormatError($"cipher field has incorrect size ({payload.Length})");
 
                     if (payload.SequenceEqual(AesCipherId))
-                        Console.WriteLine("Cipher: AES");
+                        cipher = Cipher.Aes;
                     else if (payload.SequenceEqual(ChaCha20CipherId))
-                        Console.WriteLine("Cipher: ChaCha20");
+                        cipher = Cipher.ChaCha20;
                     else if (payload.SequenceEqual(TwoFishCipherId))
-                        Console.WriteLine("Cipher: TwoFish");
+                        cipher = Cipher.TwoFish;
                     else
                         throw MakeUnsupportedError($"Cipher '{payload.ToHex()}'");
 
@@ -75,12 +115,17 @@ namespace PasswordManagerAccess.Kdbx
                     var compression = new SpanStream(payload).ReadUInt32();
                     switch (compression)
                     {
+                    // None
                     case 0:
-                        Console.WriteLine("Not compressed");
+                        compressed = false;
                         break;
+
+                    // GZip
                     case 1:
-                        Console.WriteLine("GZip compressed");
+                        compressed = true;
                         break;
+
+                    // Unknown
                     default:
                         throw MakeUnsupportedError($"Compression method {compression}");
                     }
@@ -88,26 +133,17 @@ namespace PasswordManagerAccess.Kdbx
 
                 // Master seed
                 case 4:
-                    Console.WriteLine($"Master seed: {payload.ToHex()}");
+                    seed = payload.ToArray();
                     break;
 
                 // Master IV
                 case 7:
-                    Console.WriteLine($"Master IV: {payload.ToHex()}");
+                    iv = payload.ToArray();
                     break;
 
                 // KDF parameters
                 case 11:
-                    var kdf = ReadVariantDictionary(payload);
-                    foreach (var i in kdf)
-                    {
-                        var value = i.Value.ToString();
-                        if (i.Value is byte[] bytes)
-                            value = bytes.ToHex();
-
-                        Console.WriteLine($"  - {i.Key}: {value}");
-                    }
-
+                    kdf = ReadVariantDictionary(payload);
                     break;
 
                 // Other fields are ignored
@@ -194,6 +230,13 @@ namespace PasswordManagerAccess.Kdbx
         {
             public readonly byte Id;
             public readonly int Size;
+        }
+
+        internal enum Cipher
+        {
+            Aes,
+            ChaCha20,
+            TwoFish,
         }
 
         //
