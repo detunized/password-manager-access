@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -22,77 +23,56 @@ namespace PasswordManagerAccess.Kdbx
 
         internal static void Parse(byte[] blob, string password)
         {
-            blob.Open(io =>
-            {
-                var magic1 = io.ReadUInt32();
-                if (magic1 != Magic1)
-                    throw MakeInvalidFormatError($"primary file signature is invalid: {magic1:x8}");
+            var io = blob.AsRoSpan().ToStream();
+            var header = io.Read<Header>();
 
-                var magic2 = io.ReadUInt32();
-                if (!Magic2.Contains(magic2))
-                    throw MakeInvalidFormatError($"secondary file signature is invalid: {magic2:x8}");
+            if (header.Signature1 != Magic1)
+                throw MakeInvalidFormatError($"primary file signature is invalid: {header.Signature1:x8}");
 
-                var version = io.ReadUInt32();
-                if (version != Version4)
-                    throw MakeUnsupportedError($"Version {version:x8}");
+            if (!Magic2.Contains(header.Signature2))
+                throw MakeInvalidFormatError($"secondary file signature is invalid: {header.Signature2:x8}");
 
-                ReadHeader(io);
+            if (header.MajorVersion != Version4)
+                throw MakeUnsupportedError($"Version {header.MajorVersion}.{header.MinorVersion}");
 
-                var headerSize = io.BaseStream.Position;
-                io.BaseStream.Seek(0, SeekOrigin.Begin);
-                var headerBytes = io.ReadBytes((int)headerSize);
-                var computedHeaderHash = Crypto.Sha256(headerBytes);
-                var storedHeaderHash = io.ReadBytes(32);
-                if (!computedHeaderHash.SequenceEqual(storedHeaderHash))
-                    throw MakeInvalidFormatError("header hash doesn't match, the file is corrupted");
-            });
+            ReadFields(io);
         }
 
-        internal static void ReadHeader(BinaryReader io)
+        internal static void ReadFields(SpanStream io)
         {
             for (;;)
             {
-                var id = io.ReadByte();
+                var header = io.Read<FieldHeader>();
+                var payload = io.ReadBytes(header.Size);
 
-                var size = io.ReadInt32();
-                if (size < 0)
-                    throw MakeInvalidFormatError($"header field {id} has negative size ({size})");
-
-                switch (id)
+                switch (header.Id)
                 {
-                // End (payload ignored)
+                // Done (payload ignored)
                 case 0:
-                    io.ReadBytes(size);
                     return;
-
-                // Comment (payload ignored)
-                case 1:
-                    io.ReadBytes(size);
-                    break;
 
                 // Cipher
                 case 2:
-                    if (size != 16)
-                        throw MakeInvalidFormatError($"cipher field has incorrect size ({size})");
+                    if (payload.Length != 16)
+                        throw MakeInvalidFormatError($"cipher field has incorrect size ({payload.Length})");
 
-                    var cipherId = io.ReadBytes(size);
-                    if (cipherId.SequenceEqual(AesCipherId))
+                    if (payload.SequenceEqual(AesCipherId))
                         Console.WriteLine("Cipher: AES");
-                    else if (cipherId.SequenceEqual(ChaCha20CipherId))
+                    else if (payload.SequenceEqual(ChaCha20CipherId))
                         Console.WriteLine("Cipher: ChaCha20");
-                    else if (cipherId.SequenceEqual(TwoFishCipherId))
+                    else if (payload.SequenceEqual(TwoFishCipherId))
                         Console.WriteLine("Cipher: TwoFish");
                     else
-                        throw MakeUnsupportedError($"Cipher '{cipherId.ToHex()}'");
+                        throw MakeUnsupportedError($"Cipher '{payload.ToHex()}'");
 
                     break;
 
                 // Compression method
                 case 3:
-                    if (size != 4)
-                        throw MakeInvalidFormatError($"compression method field has incorrect size ({size})");
+                    if (payload.Length != 4)
+                        throw MakeInvalidFormatError($"compression method field has incorrect size ({payload.Length})");
 
-                    var compression = io.ReadInt32();
+                    var compression = new SpanStream(payload).ReadUInt32();
                     switch (compression)
                     {
                     case 0:
@@ -108,23 +88,17 @@ namespace PasswordManagerAccess.Kdbx
 
                 // Master seed
                 case 4:
-                    var masterSeed = io.ReadBytes(size);
-                    Console.WriteLine($"Master seed: {masterSeed.ToHex()}");
+                    Console.WriteLine($"Master seed: {payload.ToHex()}");
                     break;
 
                 // Master IV
                 case 7:
-                    var masterIv = io.ReadBytes(size);
-                    Console.WriteLine($"Master IV: {masterIv.ToHex()}");
+                    Console.WriteLine($"Master IV: {payload.ToHex()}");
                     break;
 
                 // KDF parameters
                 case 11:
-                    Console.WriteLine($"KDF size: {size}");
-                    var before = io.BaseStream.Position;
-                    var kdf = ReadVariantDictionary(io);
-                    var after = io.BaseStream.Position;
-                    Console.WriteLine($"KDF parameters ({after - before})");
+                    var kdf = ReadVariantDictionary(payload);
                     foreach (var i in kdf)
                     {
                         var value = i.Value.ToString();
@@ -136,17 +110,19 @@ namespace PasswordManagerAccess.Kdbx
 
                     break;
 
-                default:
-                    var payload = io.ReadBytes(size);
-                    Console.WriteLine($"Header field id: {id}, size: {size}, payload: {payload.ToHex()}");
-                    break;
+                // Other fields are ignored
                 }
             }
         }
 
-        private static Dictionary<string, object> ReadVariantDictionary(BinaryReader io)
+        private static Dictionary<string, object> ReadVariantDictionary(ReadOnlySpan<byte> span)
         {
-            var version = io.ReadInt16();
+            return ReadVariantDictionary(span.ToStream());
+        }
+
+        private static Dictionary<string, object> ReadVariantDictionary(SpanStream io)
+        {
+            var version = io.ReadUInt16();
             if (version != 0x0100)
                 throw MakeUnsupportedError($"Variant dictionary version {version}");
 
@@ -161,9 +137,7 @@ namespace PasswordManagerAccess.Kdbx
                 var keySize = io.ReadInt32();
                 var key = io.ReadBytes(keySize).ToUtf8();
                 var valueSize = io.ReadInt32();
-                Console.WriteLine($"key: {key} at {io.BaseStream.Position + valueSize:x}");
 
-                // TODO: Verify sizes
                 result[key] = type switch
                 {
                     // UInt32
@@ -185,7 +159,7 @@ namespace PasswordManagerAccess.Kdbx
                     24 => io.ReadBytes(valueSize).ToUtf8(),
 
                     // byte[]
-                    66 => io.ReadBytes(valueSize),
+                    66 => io.ReadBytes(valueSize).ToArray(),
 
                     _ => throw MakeInvalidFormatError($"item type {type} is invalid"),
                 };
@@ -203,12 +177,32 @@ namespace PasswordManagerAccess.Kdbx
         }
 
         //
+        // Models
+        //
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        internal readonly struct Header
+        {
+            public readonly uint Signature1;
+            public readonly uint Signature2;
+            public readonly ushort MinorVersion;
+            public readonly ushort MajorVersion;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        internal readonly struct FieldHeader
+        {
+            public readonly byte Id;
+            public readonly int Size;
+        }
+
+        //
         // Data
         //
 
         internal const uint Magic1 = 0x9aa2d903u;
         internal static readonly uint[] Magic2 = {0xb54bfb66u, 0xb54bfb67u};
-        internal const uint Version4 = 0x00040000u;
+        internal const ushort Version4 = 4;
 
         internal static readonly byte[] AesCipherId =
         {
