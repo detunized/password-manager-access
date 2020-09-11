@@ -77,7 +77,7 @@ namespace PasswordManagerAccess.Common
         }
 
         //
-        // SHA
+        // SHA-1
         //
 
         public static byte[] Sha1(string message)
@@ -87,9 +87,18 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Sha1(byte[] message)
         {
-            using var sha = SHA1.Create();
-            return sha.ComputeHash(message);
+            return Sha1(message, 0, message.Length);
         }
+
+        public static byte[] Sha1(byte[] message, int start, int size)
+        {
+            using var sha = SHA1.Create();
+            return sha.ComputeHash(message, start, size);
+        }
+
+        //
+        // SHA-256
+        //
 
         public static byte[] Sha256(string message)
         {
@@ -98,9 +107,18 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Sha256(byte[] message)
         {
-            using var sha = SHA256.Create();
-            return sha.ComputeHash(message);
+            return Sha256(message, 0, message.Length);
         }
+
+        public static byte[] Sha256(byte[] message, int start, int size)
+        {
+            using var sha = SHA256.Create();
+            return sha.ComputeHash(message, start, size);
+        }
+
+        //
+        // SHA-512
+        //
 
         public static byte[] Sha512(string message)
         {
@@ -109,8 +127,13 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Sha512(byte[] message)
         {
+            return Sha512(message, 0, message.Length);
+        }
+
+        public static byte[] Sha512(byte[] message, int start, int size)
+        {
             using var sha = SHA512.Create();
-            return sha.ComputeHash(message);
+            return sha.ComputeHash(message, start, size);
         }
 
         //

@@ -69,6 +69,14 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal("b5ua881ui4pzws3O03/p9ZIm4n0=".Decode64(), sha);
         }
 
+        [Fact]
+        public void Sha1_with_byte_range_returns_hashed_message()
+        {
+            var sha = Crypto.Sha1("blah-message-blah".ToBytes(), 5, 7);
+
+            Assert.Equal("b5ua881ui4pzws3O03/p9ZIm4n0=".Decode64(), sha);
+        }
+
         //
         // SHA-256
         //
@@ -85,6 +93,14 @@ namespace PasswordManagerAccess.Test.Common
         public void Sha256_bytes_returns_hashed_message()
         {
             var sha = Crypto.Sha256("message".ToBytes());
+
+            Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), sha);
+        }
+
+        [Fact]
+        public void Sha256_with_byte_range_returns_hashed_message()
+        {
+            var sha = Crypto.Sha256("blah-message-blah".ToBytes(), 5, 7);
 
             Assert.Equal("q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64(), sha);
         }
@@ -107,6 +123,16 @@ namespace PasswordManagerAccess.Test.Common
         public void Sha512_bytes_returns_hashed_message()
         {
             var sha = Crypto.Sha512("message".ToBytes());
+
+            Assert.Equal(
+                "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==".Decode64(),
+                sha);
+        }
+
+        [Fact]
+        public void Sha512_with_byte_range_returns_hashed_message()
+        {
+            var sha = Crypto.Sha512("blah-message-blah".ToBytes(), 5, 7);
 
             Assert.Equal(
                 "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==".Decode64(),
