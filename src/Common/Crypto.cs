@@ -334,5 +334,43 @@ namespace PasswordManagerAccess.Common
                 throw new CryptoException("RSA decryption failed", e);
             }
         }
+
+        //
+        // Misc
+        //
+
+        // TODO: Benchmark this against simple indexed version and enable unsafe if it's worth it
+        public static bool AreEqual(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
+        {
+            if (a.Length != b.Length)
+                return false;
+
+            if (a.Length == 0)
+                return true;
+
+            var s = 0;
+#if HAVE_UNSAFE
+            unsafe
+            {
+                fixed (byte* ap = a)
+                fixed (byte* bp = b)
+                {
+                    var ai = ap;
+                    var bi = bp;
+                    for (var i = 0; i < a.Length; i++)
+                    {
+                        s |= *ai ^ *bi;
+                        ai += 1;
+                        bi += 1;
+                    }
+                }
+            }
+#else
+            for (var i = 0; i < a.Length; i++)
+                s |= a[i] ^ b[i];
+#endif
+
+            return s == 0;
+        }
     }
 }

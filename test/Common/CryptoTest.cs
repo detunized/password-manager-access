@@ -311,6 +311,32 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
+        // Misc
+        //
+
+        [Fact]
+        public void AreEqual_returns_true_for_empty_arrays()
+        {
+            Assert.True(Crypto.AreEqual("".ToBytes(), "".ToBytes()));
+        }
+
+        [Fact]
+        public void AreEqual_returns_true_for_equal_arrays()
+        {
+            Assert.True(Crypto.AreEqual("Blah-blah".ToBytes(), "Blah-blah".ToBytes()));
+        }
+
+
+        [Theory]
+        [InlineData("", "Blah-blah")]
+        [InlineData("Blah-blah", "")]
+        [InlineData("Blah-blah", "Blah-blah-blah")]
+        public void AreEqual_returns_false_for_different_arrays(string a, string b)
+        {
+            Assert.False(Crypto.AreEqual(a.ToBytes(), b.ToBytes()));
+        }
+
+        //
         // Data
         //
 
