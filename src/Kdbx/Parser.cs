@@ -35,7 +35,13 @@ namespace PasswordManagerAccess.Kdbx
             if (header.MajorVersion != Version4)
                 throw MakeUnsupportedError($"Version {header.MajorVersion}.{header.MinorVersion}");
 
-            var info = ReadEncryptionInfo(io);
+            var info = ReadEncryptionInfo(ref io);
+
+            var computedHash = Crypto.Sha256(blob, 0, io.Position);
+            var storedHash = io.ReadBytes(32);
+
+            if (!Crypto.AreEqual(storedHash, computedHash))
+                throw MakeInvalidFormatError("Header hash doesn't match");
         }
 
         internal readonly struct EncryptionInfo
@@ -60,7 +66,7 @@ namespace PasswordManagerAccess.Kdbx
             }
         }
 
-        internal static EncryptionInfo ReadEncryptionInfo(SpanStream io)
+        internal static EncryptionInfo ReadEncryptionInfo(ref SpanStream io)
         {
             bool? compressed = null;
             Cipher? cipher = null;

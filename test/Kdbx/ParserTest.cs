@@ -25,7 +25,7 @@ namespace PasswordManagerAccess.Test.Kdbx
             var blob = GetBinaryFixture(fixture, "kdbx");
             var io = blob.AsRoSpan().ToStream();
             io.Skip(12); // Skip header
-            var info = Parser.ReadEncryptionInfo(io);
+            var info = Parser.ReadEncryptionInfo(ref io);
 
             Assert.True(info.Compressed);
             Assert.Equal(cipher, info.Cipher);
