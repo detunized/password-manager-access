@@ -26,7 +26,7 @@ namespace PasswordManagerAccess.Bitwarden
         // See https://tools.ietf.org/html/rfc5869
         public static byte[] HkdfExpand(byte[] prk, byte[] info)
         {
-            return Crypto.HmacSha256(info.Concat(new byte[] { 1 }).ToArray(), prk);
+            return Crypto.HmacSha256(prk, info.Concat(new byte[] {1}).ToArray());
         }
 
         public static byte[] ExpandKey(byte[] key)

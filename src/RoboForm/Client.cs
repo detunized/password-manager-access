@@ -325,7 +325,7 @@ namespace PasswordManagerAccess.RoboForm
                                                 authInfo.Data,
                                                 authInfo.Nonce);
 
-            var hashed = Crypto.HmacSha256(hashingMaterial.ToBytes(), clientHash);
+            var hashed = Crypto.HmacSha256(clientHash, hashingMaterial.ToBytes());
             var proof = clientKey.Zip(hashed, (a, b) => (byte)(a ^ b)).ToArray().ToBase64();
             var data = $"c=biws,r={authInfo.Nonce},p={proof}".ToBase64();
 

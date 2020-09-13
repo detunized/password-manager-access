@@ -43,7 +43,7 @@ namespace PasswordManagerAccess.OpVault
             io.BaseStream.Seek(0, SeekOrigin.Begin);
             var hashedContent = io.ReadBytes(32 + padding + length);
 
-            var computedTag = Crypto.HmacSha256(hashedContent, key.MacKey);
+            var computedTag = Crypto.HmacSha256(key.MacKey, hashedContent);
             if (!computedTag.SequenceEqual(storedTag))
                 throw CorruptedError("tag doesn't match");
 

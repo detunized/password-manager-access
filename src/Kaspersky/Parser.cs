@@ -154,7 +154,7 @@ namespace PasswordManagerAccess.Kaspersky
             // MAC for versions 9+ is calculated on the encrypted data
             // MAC for version 8 is calculated on the decrypted string
             // Look for `function E(e, t, n) {` for more info.
-            var computedTag = Crypto.HmacSha256(plaintext, encryptionKey);
+            var computedTag = Crypto.HmacSha256(encryptionKey, plaintext);
             if (!computedTag.SequenceEqual(storedTag))
                 throw CorruptedError("tag doesn't match");
 
@@ -196,7 +196,7 @@ namespace PasswordManagerAccess.Kaspersky
             // MAC for versions 9+ is calculated on the encrypted data
             // MAC for version 8 is calculated on the decrypted string
             // Look for `function E(e, t, n) {` for more info.
-            var computedTag = Crypto.HmacSha256(ciphertext, encryptionKey);
+            var computedTag = Crypto.HmacSha256(encryptionKey, ciphertext);
             if (!computedTag.SequenceEqual(storedTag))
                 throw CorruptedError("tag doesn't match");
 
@@ -314,7 +314,7 @@ namespace PasswordManagerAccess.Kaspersky
             // MAC for versions 9+ is calculated on the encrypted data
             // MAC for version 8 is calculated on the decrypted string
             // Look for `function E(e, t, n) {` for more info.
-            var computedTag = Crypto.HmacSha256(ciphertext, encryptionKey);
+            var computedTag = Crypto.HmacSha256(encryptionKey, ciphertext);
             if (!computedTag.SequenceEqual(storedTag))
                 throw CorruptedError("tag doesn't match");
 

@@ -467,7 +467,7 @@ namespace PasswordManagerAccess.Dashlane
             case CryptoConfig.SignatureModeType.None:
                 return true;
             case CryptoConfig.SignatureModeType.HmacSha256:
-                var hash = Crypto.HmacSha256(iv.Concat(blob.Ciphertext).ToArray(), hmacKey);
+                var hash = Crypto.HmacSha256(hmacKey, iv.Concat(blob.Ciphertext).ToArray());
                 return hash.SequenceEqual(blob.Hash);
             }
 

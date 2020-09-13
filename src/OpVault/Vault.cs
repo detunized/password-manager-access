@@ -229,7 +229,7 @@ namespace PasswordManagerAccess.OpVault
             io.BaseStream.Seek(0, SeekOrigin.Begin);
             var hashedContent = io.ReadBytes(80);
 
-            var computedTag = Crypto.HmacSha256(hashedContent, masterKey.MacKey);
+            var computedTag = Crypto.HmacSha256(masterKey.MacKey, hashedContent);
             if (!computedTag.SequenceEqual(storedTag))
                 throw CorruptedError("key tag doesn't match");
 

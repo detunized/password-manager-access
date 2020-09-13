@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] CalculateSessionHmacSalt(AesKey sessionKey)
         {
-            return Crypto.HmacSha256(SessionHmacSecret, sessionKey.Key);
+            return Crypto.HmacSha256(sessionKey.Key, SessionHmacSecret);
         }
 
         public static string CalculateClientHash(string accountKeyUuid, string sessionId)
@@ -66,7 +66,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static string HashRememberMeToken(string token, string sessionId)
         {
-            return Crypto.HmacSha256(sessionId.Decode32(), token.Decode64Loose())
+            return Crypto.HmacSha256(token.Decode64Loose(), sessionId.Decode32())
                 .ToUrlSafeBase64NoPadding()
                 .Substring(0, 8);
         }

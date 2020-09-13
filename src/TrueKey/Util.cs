@@ -218,7 +218,7 @@ namespace PasswordManagerAccess.TrueKey
                 Array.Reverse(t);
             s.Write(t, 0, t.Length);
 
-            return Crypto.HmacSha256(s.ToArray(), otp.HmacSeed);
+            return Crypto.HmacSha256(otp.HmacSeed, s.ToArray());
         }
     }
 }

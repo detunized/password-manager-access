@@ -9,7 +9,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -100,8 +99,7 @@ namespace PasswordManagerAccess.Kdbx
             var hmacKey = Crypto.Sha512(k2.Append((byte)1).ToArray());
 
             var blockHmacKey = Util.ComputeBlockHmacKey(hmacKey, ulong.MaxValue);
-            var computedHeaderMac = Crypto.HmacSha256(blob.Slice(0, headerEnd).ToArray(), // TODO: Remove .ToArray
-                                                      blockHmacKey);
+            var computedHeaderMac = Crypto.HmacSha256(blockHmacKey, blob.Slice(0, headerEnd).ToArray()); // TODO: Remove .ToArray
 
             if (!Crypto.AreEqual(storedHeaderMac, computedHeaderMac))
                 throw MakeInvalidFormatError("Header MAC doesn't match");

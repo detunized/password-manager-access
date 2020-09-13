@@ -169,12 +169,12 @@ namespace PasswordManagerAccess.Common
         // HMAC
         //
 
-        public static byte[] HmacSha256(string message, byte[] key)
+        public static byte[] HmacSha256(byte[] key, string message)
         {
-            return HmacSha256(message.ToBytes(), key);
+            return HmacSha256(key, message.ToBytes());
         }
 
-        public static byte[] HmacSha256(byte[] message, byte[] key)
+        public static byte[] HmacSha256(byte[] key, byte[] message)
         {
             using var hmac = new HMACSHA256() { Key = key };
             return hmac.ComputeHash(message);

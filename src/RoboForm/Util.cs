@@ -16,7 +16,7 @@ namespace PasswordManagerAccess.RoboForm
 
         public static byte[] ComputeClientKey(string password, AuthInfo authInfo)
         {
-            return Crypto.HmacSha256("Client Key".ToBytes(), HashPassword(password, authInfo));
+            return Crypto.HmacSha256(HashPassword(password, authInfo), "Client Key".ToBytes());
         }
 
         //

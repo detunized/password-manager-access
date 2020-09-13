@@ -77,7 +77,7 @@ namespace PasswordManagerAccess.Common
             var canonicalRequest = MakeCanonicalRequestString(rootPath, headers);
             var stringToSign = MakeStringToSign(scope, timestampIso8601, canonicalRequest);
             var key = MakeSigningKey(scope, credentials);
-            var signature = Crypto.HmacSha256(stringToSign, key).ToHex();
+            var signature = Crypto.HmacSha256(key, stringToSign).ToHex();
 
             // This header is not signed
             headers["Authorization"] = MakeAuthorizationHeader(scope, signature, credentials);
@@ -124,7 +124,7 @@ namespace PasswordManagerAccess.Common
         {
             var key = $"AWS4{credentials.SecretAccessKey}".ToBytes();
             foreach (var step in scope.Split('/'))
-                key = Crypto.HmacSha256(step, key);
+                key = Crypto.HmacSha256(key, step);
 
             return key;
         }

@@ -55,7 +55,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal string CalculateAuthSignature(string authMessage, uint requestId)
         {
-            var hash = Crypto.HmacSha256(authMessage, _salt);
+            var hash = Crypto.HmacSha256(_salt, authMessage);
             var hash12 = hash.Take(12).ToArray().ToUrlSafeBase64NoPadding();
             return $"v1|{requestId}|{hash12}";
         }
