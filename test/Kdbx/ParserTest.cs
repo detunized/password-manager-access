@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.Test.Kdbx
         public void Parse_works()
         {
             var blob = GetBinaryFixture("kdbx4-aes-aes", "kdbx");
-            Parser.Parse(blob, "password");
+            Parser.ParseHeader(blob, "password");
         }
 
         [Theory]

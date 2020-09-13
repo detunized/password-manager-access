@@ -2,10 +2,14 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -14,16 +18,41 @@ namespace PasswordManagerAccess.Kdbx
     {
         public static void Parse(string filename, string password)
         {
-            Parse(File.ReadAllBytes(filename), password);
+            using var io = File.OpenRead(filename);
+            Parse(io, password);
         }
 
         //
         // Internal
         //
 
-        internal static void Parse(byte[] blob, string password)
+        internal static void Parse(Stream input, string password)
         {
-            var io = blob.AsRoSpan().ToStream();
+            var info = ParseHeader(input, password);
+            input.Seek(info.HeaderSize, SeekOrigin.Begin);
+            ParseBody(input, info);
+        }
+
+        internal static DatabaseInfo ParseHeader(Stream input, string password)
+        {
+            // There's no way to say how long the header is until it's parsed fully.
+            // We just assume that the header should fit in 64k.
+            const int size = 65536;
+            var headerBytes = ArrayPool<byte>.Shared.Rent(size);
+            try
+            {
+                var read = input.Read(headerBytes, 0, size);
+                return ParseHeader(headerBytes.AsRoSpan().Slice(0, read), password);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(headerBytes);
+            }
+        }
+
+        internal static DatabaseInfo ParseHeader(ReadOnlySpan<byte> blob, string password)
+        {
+            var io = blob.ToStream();
             var header = io.Read<Header>();
 
             if (header.Signature1 != Magic1)
@@ -36,34 +65,184 @@ namespace PasswordManagerAccess.Kdbx
                 throw MakeUnsupportedError($"Version {header.MajorVersion}.{header.MinorVersion}");
 
             var info = ReadEncryptionInfo(ref io);
+            var headerEnd = io.Position;
 
-            var computedHash = Crypto.Sha256(blob, 0, io.Position);
+            var computedHash = Crypto.Sha256(blob.Slice(0, headerEnd));
             var storedHash = io.ReadBytes(32);
 
             if (!Crypto.AreEqual(storedHash, computedHash))
                 throw MakeInvalidFormatError("Header hash doesn't match");
+
+            var storedHeaderMac = io.ReadBytes(32);
+            var passwordHash = Crypto.Sha256(password);
+            var compositeRawKey = Crypto.Sha256(passwordHash);
+
+            using var aes = Aes.Create();
+            aes.KeySize = 256;
+            aes.Key = (byte[])info.Kdf["S"];
+            aes.Mode = CipherMode.ECB;
+            aes.IV = new byte[16];
+            aes.Padding = PaddingMode.PKCS7;
+
+            using var encryptor = aes.CreateEncryptor();
+            var derivedKey = compositeRawKey.Sub(0, 32);
+
+            // Derive
+            for (ulong i = 0; i < (ulong)info.Kdf["R"]; i++)
+            {
+                encryptor.TransformBlock(derivedKey, 0, 16, derivedKey, 0);
+                encryptor.TransformBlock(derivedKey, 16, 16, derivedKey, 16);
+            }
+
+            derivedKey = Crypto.Sha256(derivedKey);
+            var k2 = info.Seed.Concat(derivedKey).ToArray();
+            var encryptionKey = Crypto.Sha256(k2);
+            var hmacKey = Crypto.Sha512(k2.Append((byte)1).ToArray());
+
+            var blockHmacKey = ComputeBlockHmacKey(hmacKey, ulong.MaxValue);
+            var computedHeaderMac = Crypto.HmacSha256(blob.Slice(0, headerEnd).ToArray(), // TODO: Remove .ToArray
+                                                      blockHmacKey);
+
+            if (!Crypto.AreEqual(storedHeaderMac, computedHeaderMac))
+                throw MakeInvalidFormatError("Header MAC doesn't match");
+
+            return new DatabaseInfo(headerSize: io.Position,
+                                    isCompressed: info.Compressed,
+                                    encryptionKey: encryptionKey,
+                                    iv: info.Iv,
+                                    hmacKey: hmacKey);
         }
 
-        internal readonly struct EncryptionInfo
+        internal static void ParseBody(Stream input, in DatabaseInfo info)
         {
-            public readonly bool Compressed;
-            public readonly Cipher Cipher;
-            public readonly byte[] Seed;
-            public readonly byte[] Iv;
-            public readonly Dictionary<string, object> Kdf;
+            using var bs = new BlockStream(input, info.HmacKey);
 
-            public EncryptionInfo(bool compressed,
-                                  Cipher cipher,
-                                  byte[] seed,
-                                  byte[] iv,
-                                  Dictionary<string, object> kdf)
+            using var aes = Aes.Create();
+            aes.KeySize = 256;
+            aes.Key = info.EncryptionKey;
+            aes.Mode = CipherMode.CBC;
+            aes.IV = info.Iv;
+            aes.Padding = PaddingMode.PKCS7;
+
+            using var decryptor = aes.CreateDecryptor();
+            using var cryptoStream = new CryptoStream(bs, decryptor, CryptoStreamMode.Read);
+
+            var plaintext = new GZipStream(cryptoStream, CompressionMode.Decompress).ReadAll();
+            // TODO: Skip the binary header. Then comes the XML
+        }
+
+        class BlockStream: Stream
+        {
+            private readonly Stream _baseStream;
+            private readonly byte[] _hmacKey;
+
+            private ulong _blockIndex = 0;
+            private byte[] _blockMac = null;
+            private int _blockSize = 0;
+            private int _blockReadPointer = 0;
+            private byte[] _buffer = new byte[4096]; // TODO: Rent this buffer
+            private int _bufferActualSize = 0;
+            private int _bufferReadPointer = 0;
+
+            public BlockStream(Stream baseStream, byte[] hmacKey)
             {
-                Compressed = compressed;
-                Cipher = cipher;
-                Seed = seed;
-                Iv = iv;
-                Kdf = kdf;
+                _baseStream = baseStream;
+                _hmacKey = hmacKey;
             }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                // Start new block
+                if (_blockMac == null)
+                {
+                    _blockMac = ReadExact(32);
+                    _blockSize = BitConverter.ToInt32(ReadExact(4), 0);
+                    _blockReadPointer = 0;
+                    _bufferActualSize = 0;
+                    _bufferReadPointer = 0;
+
+                    // End of stream
+                    if (_blockSize == 0)
+                        return 0;
+                }
+
+                // Read next piece into the buffer
+                if (_bufferReadPointer >= _bufferActualSize)
+                {
+                    var toRead = Math.Min(_buffer.Length, _blockSize - _blockReadPointer);
+                    _bufferActualSize = _baseStream.Read(_buffer, 0, toRead);
+                    _bufferReadPointer = 0;
+                }
+
+                var toCopy = Math.Min(count, _bufferActualSize - _bufferReadPointer);
+                Array.Copy(_buffer, _bufferReadPointer, buffer, offset, toCopy);
+                _bufferReadPointer += toCopy;
+                _blockReadPointer += toCopy;
+
+                // End of block
+                if (_blockReadPointer >= _blockSize)
+                {
+                    var blockHmacKey = ComputeBlockHmacKey(_hmacKey, _blockIndex);
+
+                    // using var sha = new HMACSHA256(hmacKey);
+                    //
+                    // sha.TransformBlock(BitConverter.GetBytes(blockIndex), 0, 8, null, 0);
+                    // sha.TransformBlock(BitConverter.GetBytes(size), 0, 4, null, 0);
+                    // sha.TransformBlock(ciphertext, 0, ciphertext.Length, null, 0);
+                    // sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+                    _blockIndex++;
+                    _blockMac = null;
+                }
+
+                return toCopy;
+            }
+
+            public override void Flush() => throw new NotImplementedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
+            public override void SetLength(long value) => throw new NotImplementedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotImplementedException();
+
+            public override long Position
+            {
+                get => throw new NotImplementedException();
+                set => throw new NotImplementedException();
+            }
+
+            private byte[] ReadExact(int size)
+            {
+                var bytes = new byte[size];
+                var read = 0;
+
+                for (;;)
+                {
+                    var last = _baseStream.Read(bytes, read, size - read);
+                    read += last;
+
+                    if (read == size)
+                        return bytes;
+
+                    if (last <= 0)
+                        throw new InternalErrorException($"Failed to read {size} bytes from the stream");
+                }
+            }
+        }
+
+        internal static byte[] ComputeBlockHmacKey(byte[] hmacKey, ulong blockIndex)
+        {
+            if (hmacKey.Length != 64)
+                throw new InternalErrorException("HMAC key must be 64 bytes long");
+
+            var io = new OutputSpanStream(stackalloc byte[8 + 64]);
+            io.WriteUInt64(blockIndex);
+            io.WriteBytes(hmacKey);
+
+            return Crypto.Sha512(io.Span);
         }
 
         internal static EncryptionInfo ReadEncryptionInfo(ref SpanStream io)
@@ -219,6 +398,57 @@ namespace PasswordManagerAccess.Kdbx
         }
 
         //
+        // Local data types
+        //
+
+        internal readonly struct DatabaseInfo
+        {
+            public readonly int HeaderSize;
+            public readonly bool IsCompressed;
+            public readonly byte[] EncryptionKey;
+            public readonly byte[] Iv;
+            public readonly byte[] HmacKey;
+
+            public DatabaseInfo(int headerSize, bool isCompressed, byte[] encryptionKey, byte[] iv, byte[] hmacKey)
+            {
+                HeaderSize = headerSize;
+                IsCompressed = isCompressed;
+                EncryptionKey = encryptionKey;
+                Iv = iv;
+                HmacKey = hmacKey;
+            }
+        }
+
+        internal enum Cipher
+        {
+            Aes,
+            ChaCha20,
+            TwoFish,
+        }
+
+        internal readonly struct EncryptionInfo
+        {
+            public readonly bool Compressed;
+            public readonly Cipher Cipher;
+            public readonly byte[] Seed;
+            public readonly byte[] Iv;
+            public readonly Dictionary<string, object> Kdf;
+
+            public EncryptionInfo(bool compressed,
+                                  Cipher cipher,
+                                  byte[] seed,
+                                  byte[] iv,
+                                  Dictionary<string, object> kdf)
+            {
+                Compressed = compressed;
+                Cipher = cipher;
+                Seed = seed;
+                Iv = iv;
+                Kdf = kdf;
+            }
+        }
+
+        //
         // Models
         //
 
@@ -236,13 +466,6 @@ namespace PasswordManagerAccess.Kdbx
         {
             public readonly byte Id;
             public readonly int Size;
-        }
-
-        internal enum Cipher
-        {
-            Aes,
-            ChaCha20,
-            TwoFish,
         }
 
         //
