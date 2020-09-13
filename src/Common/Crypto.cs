@@ -72,8 +72,19 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] Md5(byte[] message)
         {
+            return Md5(message, 0, message.Length);
+        }
+
+        public static byte[] Md5(byte[] message, int start, int size)
+        {
             using var md5 = MD5.Create();
-            return md5.ComputeHash(message);
+            return md5.ComputeHash(message, start, size);
+        }
+
+        public static byte[] Md5(ReadOnlySpan<byte> message)
+        {
+            // TODO: On modern frameworks it's possible to use Span based Crypto API
+            return Md5(message.ToArray());
         }
 
         //
@@ -96,6 +107,12 @@ namespace PasswordManagerAccess.Common
             return sha.ComputeHash(message, start, size);
         }
 
+        public static byte[] Sha1(ReadOnlySpan<byte> message)
+        {
+            // TODO: On modern frameworks it's possible to use Span based Crypto API
+            return Sha1(message.ToArray());
+        }
+
         //
         // SHA-256
         //
@@ -116,6 +133,12 @@ namespace PasswordManagerAccess.Common
             return sha.ComputeHash(message, start, size);
         }
 
+        public static byte[] Sha256(ReadOnlySpan<byte> message)
+        {
+            // TODO: On modern frameworks it's possible to use Span based Crypto API
+            return Sha256(message.ToArray());
+        }
+
         //
         // SHA-512
         //
@@ -134,6 +157,12 @@ namespace PasswordManagerAccess.Common
         {
             using var sha = SHA512.Create();
             return sha.ComputeHash(message, start, size);
+        }
+
+        public static byte[] Sha512(ReadOnlySpan<byte> message)
+        {
+            // TODO: On modern frameworks it's possible to use Span based Crypto API
+            return Sha512(message.ToArray());
         }
 
         //
