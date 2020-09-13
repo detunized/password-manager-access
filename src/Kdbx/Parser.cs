@@ -51,7 +51,11 @@ namespace PasswordManagerAccess.Kdbx
 
         internal static DatabaseInfo ParseHeader(ReadOnlySpan<byte> blob, string password)
         {
-            var io = blob.ToStream();
+            return ParseHeader(blob.ToStream(), password);
+        }
+
+        internal static DatabaseInfo ParseHeader(SpanStream io, string password)
+        {
             var header = io.Read<Header>();
 
             if (header.Signature1 != Magic1)
@@ -64,9 +68,12 @@ namespace PasswordManagerAccess.Kdbx
                 throw MakeUnsupportedError($"Version {header.MajorVersion}.{header.MinorVersion}");
 
             var info = ReadEncryptionInfo(ref io);
-            var headerEnd = io.Position;
 
-            var computedHash = Crypto.Sha256(blob.Slice(0, headerEnd));
+            var headerSize = io.Position;
+            io.Rewind();
+            var headerBytes = io.ReadBytes(headerSize);
+
+            var computedHash = Crypto.Sha256(headerBytes);
             var storedHash = io.ReadBytes(32);
 
             if (!Crypto.AreEqual(storedHash, computedHash))
@@ -99,7 +106,7 @@ namespace PasswordManagerAccess.Kdbx
             var hmacKey = Crypto.Sha512(k2.Append((byte)1).ToArray());
 
             var blockHmacKey = Util.ComputeBlockHmacKey(hmacKey, ulong.MaxValue);
-            var computedHeaderMac = Crypto.HmacSha256(blockHmacKey, blob.Slice(0, headerEnd).ToArray()); // TODO: Remove .ToArray
+            var computedHeaderMac = Crypto.HmacSha256(blockHmacKey, headerBytes);
 
             if (!Crypto.AreEqual(storedHeaderMac, computedHeaderMac))
                 throw MakeInvalidFormatError("Header MAC doesn't match");
