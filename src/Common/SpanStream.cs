@@ -40,8 +40,7 @@ namespace PasswordManagerAccess.Common
 
         public ushort ReadUInt16()
         {
-            var offset = CheckAdvance(2);
-            return (ushort)(_span[offset] | (_span[offset + 1] << 8));
+            return Unsafe.ReadUnaligned<ushort>(ref CheckAdvanceRef(sizeof(ushort)));
         }
 
         public int ReadInt32()
@@ -51,11 +50,7 @@ namespace PasswordManagerAccess.Common
 
         public uint ReadUInt32()
         {
-            var offset = CheckAdvance(4);
-            return _span[offset] |
-                   ((uint)_span[offset + 1] << 8) |
-                   ((uint)_span[offset + 2] << 16) |
-                   ((uint)_span[offset + 3] << 24);
+            return Unsafe.ReadUnaligned<uint>(ref CheckAdvanceRef(sizeof(uint)));
         }
 
         public long ReadInt64()
@@ -65,15 +60,7 @@ namespace PasswordManagerAccess.Common
 
         public ulong ReadUInt64()
         {
-            var offset = CheckAdvance(8);
-            return _span[offset] |
-                   ((ulong)_span[offset + 1] << 8) |
-                   ((ulong)_span[offset + 2] << 16) |
-                   ((ulong)_span[offset + 3] << 24) |
-                   ((ulong)_span[offset + 4] << 32) |
-                   ((ulong)_span[offset + 5] << 40) |
-                   ((ulong)_span[offset + 6] << 48) |
-                   ((ulong)_span[offset + 7] << 56);
+            return Unsafe.ReadUnaligned<ulong>(ref CheckAdvanceRef(sizeof(ulong)));
         }
 
         public ReadOnlySpan<byte> ReadBytes(int size)
@@ -91,6 +78,11 @@ namespace PasswordManagerAccess.Common
         //
         // Private
         //
+
+        private ref byte CheckAdvanceRef(int size)
+        {
+            return ref Unsafe.Add(ref MemoryMarshal.GetReference(_span), CheckAdvance(size));
+        }
 
         private int CheckAdvance(int size)
         {
