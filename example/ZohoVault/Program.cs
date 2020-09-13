@@ -9,7 +9,6 @@ using PasswordManagerAccess.ZohoVault.Ui;
 
 namespace PasswordManagerAccess.Example.ZohoVault
 {
-    // TODO: Remove copy-paste
     class TextUi: BaseUi, IUi
     {
         public Passcode ProvideGoogleAuthPasscode()
