@@ -263,7 +263,7 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
-        // Helper
+        // Helpers
         //
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
