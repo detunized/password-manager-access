@@ -23,6 +23,11 @@ namespace PasswordManagerAccess.Common
             _offset = 0;
         }
 
+        public void Rewind()
+        {
+            _offset = 0;
+        }
+
         public void Skip(int size)
         {
             CheckAdvance(size);

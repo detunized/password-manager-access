@@ -42,6 +42,16 @@ namespace PasswordManagerAccess.Test.Common
             Assert.True(s.IsEof);
         }
 
+        [Fact]
+        public void Rewind_resets_position_to_zero()
+        {
+            var s = DeadBeef();
+            s.Skip(3);
+            Assert.Equal(3, s.Position);
+            s.Rewind();
+            Assert.Equal(0, s.Position);
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(1)]
