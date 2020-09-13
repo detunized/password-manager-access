@@ -143,17 +143,26 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void HmacSha256_string_returns_mac()
         {
-            var mac = Crypto.HmacSha256("key".ToBytes(), Message);
-
-            Assert.Equal("6e9ef29b75fffc5b7abae527d58fdadb2fe42e7219011976917343065f58ed4a".DecodeHex(), mac);
+            Assert.Equal(MessageHmacSha256, Crypto.HmacSha256("key".ToBytes(), Message));
         }
 
         [Fact]
         public void HmacSha256_bytes_returns_mac()
         {
-            var mac = Crypto.HmacSha256("key".ToBytes(), MessageBytes);
+            Assert.Equal(MessageHmacSha256, Crypto.HmacSha256("key".ToBytes(), MessageBytes));
+        }
 
-            Assert.Equal("6e9ef29b75fffc5b7abae527d58fdadb2fe42e7219011976917343065f58ed4a".DecodeHex(), mac);
+        [Fact]
+        public void HmacSha256_byte_range_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha256,
+                         Crypto.HmacSha256("key".ToBytes(), MessageBlahBytes, MessageStart, MessageLength));
+        }
+
+        [Fact]
+        public void HmacSha256_span_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha256, Crypto.HmacSha256("key".ToBytes(), MessageBytes.AsRoSpan()));
         }
 
         //
@@ -355,6 +364,9 @@ namespace PasswordManagerAccess.Test.Common
 
         // $ echo -n message | openssl dgst -sha512 -binary | openssl base64 -A
         private static readonly byte[] MessageSha512 = "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==".Decode64();
+
+        // $ echo -n message | openssl dgst -sha256 -hmac "key" -binary | openssl base64 -A
+        private static readonly byte[] MessageHmacSha256 = "bp7ym3X//Ft6uuUn1Y/a2y/kLnIZARl2kXNDBl9Y7Uo=".Decode64();
 
         private static readonly byte[] MessageBlahBytes = $"blah-{Message}-blah".ToBytes();
         private const int MessageStart = 5;

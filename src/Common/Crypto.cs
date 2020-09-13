@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Security.Cryptography;
+using PasswordManagerAccess.Kaspersky.Response;
 
 namespace PasswordManagerAccess.Common
 {
@@ -176,8 +177,19 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] HmacSha256(byte[] key, byte[] message)
         {
-            using var hmac = new HMACSHA256() { Key = key };
-            return hmac.ComputeHash(message);
+            return HmacSha256(key, message, 0, message.Length);
+        }
+
+        public static byte[] HmacSha256(byte[] key, byte[] message, int start, int size)
+        {
+            using var hmac = new HMACSHA256(key);
+            return hmac.ComputeHash(message, start, size);
+        }
+
+        public static byte[] HmacSha256(byte[] key, ReadOnlySpan<byte> message)
+        {
+            // TODO: On modern frameworks it's possible to use Span based Crypto API
+            return HmacSha256(key, message.ToArray());
         }
 
         //
