@@ -80,30 +80,11 @@ namespace PasswordManagerAccess.Kdbx
                 throw MakeInvalidFormatError("Header hash doesn't match");
 
             var storedHeaderMac = io.ReadBytes(32);
-            var passwordHash = Crypto.Sha256(password);
-            var compositeRawKey = Crypto.Sha256(passwordHash);
+            var compositeRawKey = Util.ComposeMasterKey(password);
 
-            using var aes = Aes.Create();
-            aes.KeySize = 256;
-            aes.Key = (byte[])info.Kdf["S"];
-            aes.Mode = CipherMode.ECB;
-            aes.IV = new byte[16];
-            aes.Padding = PaddingMode.PKCS7;
-
-            using var encryptor = aes.CreateEncryptor();
-            var derivedKey = compositeRawKey.Sub(0, 32);
-
-            // Derive
-            for (ulong i = 0; i < (ulong)info.Kdf["R"]; i++)
-            {
-                encryptor.TransformBlock(derivedKey, 0, 16, derivedKey, 0);
-                encryptor.TransformBlock(derivedKey, 16, 16, derivedKey, 16);
-            }
-
-            derivedKey = Crypto.Sha256(derivedKey);
-            var k2 = info.Seed.Concat(derivedKey).ToArray();
-            var encryptionKey = Crypto.Sha256(k2);
-            var hmacKey = Crypto.Sha512(k2.Append((byte)1).ToArray());
+            // TODO: Support other KDFs
+            var derivedKey = Util.DeriveMasterKeyAes(compositeRawKey, info.Kdf);
+            var (encryptionKey, hmacKey) = Util.DeriveDatabaseKeys(derivedKey, info.Seed);
 
             var blockHmacKey = Util.ComputeBlockHmacKey(hmacKey, ulong.MaxValue);
             var computedHeaderMac = Crypto.HmacSha256(blockHmacKey, headerBytes);
