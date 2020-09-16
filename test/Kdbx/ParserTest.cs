@@ -9,10 +9,14 @@ namespace PasswordManagerAccess.Test.Kdbx
 {
     public class ParserTest: TestBase
     {
-        [Fact]
-        public void Parse_works()
+        [Theory]
+        [InlineData("kdbx4-aes-aes")]
+        [InlineData("kdbx4-argon2-aes")]
+        [InlineData("kdbx4-aes-chacha20")]
+        [InlineData("kdbx4-aes-twofish")]
+        public void ParseHeader_works(string fixture)
         {
-            var blob = GetBinaryFixture("kdbx4-aes-aes", "kdbx");
+            var blob = GetBinaryFixture(fixture, "kdbx");
             Parser.ParseHeader(blob, "password");
         }
 

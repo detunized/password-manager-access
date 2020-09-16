@@ -80,10 +80,9 @@ namespace PasswordManagerAccess.Kdbx
                 throw MakeInvalidFormatError("Header hash doesn't match");
 
             var storedHeaderMac = io.ReadBytes(32);
-            var compositeRawKey = Util.ComposeMasterKey(password);
+            var compositeKey = Util.ComposeMasterKey(password);
 
-            // TODO: Support other KDFs
-            var derivedKey = Util.DeriveMasterKeyAes(compositeRawKey, info.Kdf);
+            var derivedKey = DeriveMasterKey(compositeKey, info.Kdf);
             var (encryptionKey, hmacKey) = Util.DeriveDatabaseKeys(derivedKey, info.Seed);
 
             var blockHmacKey = Util.ComputeBlockHmacKey(hmacKey, ulong.MaxValue);
@@ -97,6 +96,20 @@ namespace PasswordManagerAccess.Kdbx
                                     encryptionKey: encryptionKey,
                                     iv: info.Iv,
                                     hmacKey: hmacKey);
+        }
+
+        internal static byte[] DeriveMasterKey(byte[] compositeKey, Dictionary<string, object> kdf)
+        {
+            if (!(kdf.GetOrDefault("$UUID", null) is byte[] id))
+                throw MakeInvalidFormatError("Failed to identify the KDF method");
+
+            if (id.SequenceEqual(Aes3KdfId) || id.SequenceEqual(Aes4KdfId))
+                return Util.DeriveMasterKeyAes(compositeKey, kdf);
+
+            if (id.SequenceEqual(Argon2KdfId))
+                return Util.DeriveMasterKeyArgon2(compositeKey, kdf);
+
+            throw MakeUnsupportedError($"KDF method {id.ToHex()}");
         }
 
         internal static void ParseBody(Stream input, in DatabaseInfo info)
@@ -350,20 +363,38 @@ namespace PasswordManagerAccess.Kdbx
 
         internal static readonly byte[] AesCipherId =
         {
-            0x31, 0xc1, 0xf2, 0xe6, 0xbf, 0x71, 0x43, 0x50,
-            0xbe, 0x58, 0x05, 0x21, 0x6a, 0xfc, 0x5a, 0xff,
+            0x31, 0xC1, 0xF2, 0xE6, 0xBF, 0x71, 0x43, 0x50,
+            0xBE, 0x58, 0x05, 0x21, 0x6A, 0xFC, 0x5A, 0xFF,
         };
 
         internal static readonly byte[] ChaCha20CipherId =
         {
-            0xD6, 0x03, 0x8a, 0x2b, 0x8b, 0x6f, 0x4c, 0xB5,
-            0xa5, 0x24, 0x33, 0x9a, 0x31, 0xdb, 0xb5, 0x9a,
+            0xD6, 0x03, 0x8A, 0x2B, 0x8B, 0x6F, 0x4C, 0xB5,
+            0xA5, 0x24, 0x33, 0x9A, 0x31, 0xDB, 0xB5, 0x9A,
         };
 
         internal static readonly byte[] TwoFishCipherId =
         {
-            0xad, 0x68, 0xf2, 0x9f, 0x57, 0x6f, 0x4b, 0xb9,
-            0xa3, 0x6a, 0xd4, 0x7a, 0xf9, 0x65, 0x34, 0x6c,
+            0xAD, 0x68, 0xF2, 0x9F, 0x57, 0x6F, 0x4B, 0xB9,
+            0xA3, 0x6A, 0xD4, 0x7A, 0xF9, 0x65, 0x34, 0x6C,
+        };
+
+        internal static readonly byte[] Aes3KdfId =
+        {
+            0xC9, 0xD9, 0xF3, 0x9A, 0x62, 0x8A, 0x44, 0x60,
+            0xBF, 0x74, 0x0D, 0x08, 0xC1, 0x8A, 0x4F, 0xEA,
+        };
+
+        internal static readonly byte[] Aes4KdfId =
+        {
+            0x7C, 0x02, 0xBB, 0x82, 0x79, 0xA7, 0x4A, 0xC0,
+            0x92, 0x7D, 0x11, 0x4A, 0x00, 0x64, 0x82, 0x38,
+        };
+
+        internal static readonly byte[] Argon2KdfId =
+        {
+            0xEF, 0x63, 0x6D, 0xDF, 0x8C, 0x29, 0x44, 0x4B,
+            0x91, 0xF7, 0xA9, 0xA4, 0x03, 0xE3, 0x0A, 0x0C,
         };
     }
 }

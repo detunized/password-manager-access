@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using Konscious.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -46,6 +47,36 @@ namespace PasswordManagerAccess.Kdbx
             }
 
             return Crypto.Sha256(derivedKey);
+        }
+
+        internal static byte[] DeriveMasterKeyArgon2(byte[] compositeMasterKey, Dictionary<string, object> parameters)
+        {
+            InternalErrorException MakeError(string name) =>
+                new InternalErrorException($"Argon2 KDF parameter '{name}' not found or it is of incorrect type");
+
+            if (!(parameters.GetOrDefault("S", null) is byte[] salt))
+                throw MakeError("S");
+
+            if (!(parameters.GetOrDefault("I", null) is ulong iterations))
+                throw MakeError("I");
+
+            if (!(parameters.GetOrDefault("M", null) is ulong memoryCost))
+                throw MakeError("M");
+
+            if (!(parameters.GetOrDefault("P", null) is uint parallelism))
+                throw MakeError("P");
+
+            // TODO: Do we need to support "K" and "A"?
+
+            using var argon2d = new Argon2d(compositeMasterKey)
+            {
+                Salt = salt,
+                MemorySize = (int)(memoryCost / 1024),
+                Iterations = (int)iterations,
+                DegreeOfParallelism = (int)parallelism,
+            };
+
+            return argon2d.GetBytes(32);
         }
 
         internal static (byte[] EncryptionKey, byte[] HmacKey) DeriveDatabaseKeys(byte[] masterKey, byte[] masterSeed)
