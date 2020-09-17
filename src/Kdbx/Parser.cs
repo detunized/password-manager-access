@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -29,7 +30,7 @@ namespace PasswordManagerAccess.Kdbx
         {
             var info = ParseHeader(input, password);
             input.Seek(info.HeaderSize, SeekOrigin.Begin);
-            ParseBody(input, info);
+            var xml = ParseBody(input, info);
         }
 
         internal static DatabaseInfo ParseHeader(Stream input, string password)
@@ -41,7 +42,7 @@ namespace PasswordManagerAccess.Kdbx
             try
             {
                 var read = input.Read(headerBytes, 0, size);
-                return ParseHeader(headerBytes.AsRoSpan().Slice(0, read), password);
+                return ParseHeader(headerBytes.AsRoSpan(0, read), password);
             }
             finally
             {
@@ -112,7 +113,7 @@ namespace PasswordManagerAccess.Kdbx
             throw MakeUnsupportedError($"KDF method {id.ToHex()}");
         }
 
-        internal static void ParseBody(Stream input, in DatabaseInfo info)
+        internal static XDocument ParseBody(Stream input, in DatabaseInfo info)
         {
             using var bs = new BlockStream(input, info.HmacKey);
 
@@ -126,8 +127,64 @@ namespace PasswordManagerAccess.Kdbx
             using var decryptor = aes.CreateDecryptor();
             using var cryptoStream = new CryptoStream(bs, decryptor, CryptoStreamMode.Read);
 
-            var plaintext = new GZipStream(cryptoStream, CompressionMode.Decompress).ReadAll();
-            // TODO: Skip the binary header. Then comes the XML
+            using var bodyStream = info.IsCompressed
+                ? (Stream)new GZipStream(cryptoStream, CompressionMode.Decompress)
+                : cryptoStream;
+
+            SkipInnerHeader(bodyStream);
+
+            return XDocument.Load(bodyStream);
+        }
+
+        internal static void SkipInnerHeader(Stream input)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(4096);
+            try
+            {
+                SkipInnerHeader(input, buffer);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        internal static void SkipInnerHeader(Stream input, byte[] buffer)
+        {
+            BaseException MakeError(string info) => MakeInvalidFormatError($"inner header is corrupted: {info}");
+
+            for (;;)
+            {
+                // Each item starts with a byte ID and a 32 bit size
+                if (!input.TryReadExact(buffer, 0, 5))
+                    throw MakeError("failed to read item header");
+
+                var itemHeader = new SpanStream(buffer, 0, 5);
+                var id = itemHeader.ReadByte();
+                var size = itemHeader.ReadInt32();
+
+                // Only IDs 0, 1, 2 and 3 are valid
+                if (id > 3)
+                    throw MakeError($"invalid item ID {id}");
+
+                // Size has only 31 valid bits
+                if (size < 0)
+                    throw MakeError($"size of item with ID {id} is invalid ({size})");
+
+                // ID 0 marks the end of the inner header
+                if (id == 0)
+                {
+                    // ID 0 must contain no payload
+                    if (size == 0)
+                        return;
+
+                    throw MakeError("ID 0 must contain no payload");
+                }
+
+                // Skip the payload
+                if (!input.TrySkip(size, buffer))
+                    throw MakeError($"failed to skip item with ID {id}");
+            }
         }
 
         internal static EncryptionInfo ReadEncryptionInfo(ref SpanStream io)
