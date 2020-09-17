@@ -663,6 +663,90 @@ namespace PasswordManagerAccess.Test.Common
                                                  "Buffer size must be positive");
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(7)]
+        [InlineData(13)]
+        [InlineData(42)]
+        [InlineData(1337)]
+        public void Stream_ReadExact_reads_exact_size(int size)
+        {
+            var s = new TrickleStream(13);
+            var b = s.ReadExact(size);
+
+            Assert.Equal(size, b.Length);
+        }
+
+        [Fact]
+        public void Stream_ReadExact_throws_when_too_little_data_available()
+        {
+            var s = new MemoryStream(new byte[10], writable: false);
+            Exceptions.AssertThrowsInternalError(() => s.ReadExact(13), "Failed to read 13 bytes from the stream");
+        }
+
+        [Theory]
+        [InlineData(0, 0, "---")]
+        [InlineData(0, 1, "*--")]
+        [InlineData(0, 2, "**-")]
+        [InlineData(0, 3, "***")]
+        [InlineData(1, 0, "---")]
+        [InlineData(1, 1, "-*-")]
+        [InlineData(1, 2, "-**")]
+        [InlineData(2, 0, "---")]
+        [InlineData(2, 1, "--*")]
+        public void Stream_ReadExact_with_range_reads_bytes(int start, int size, string expected)
+        {
+            var s = new MemoryStream("*".Repeat(10).ToBytes(), writable: false);
+            var b = "-".Repeat(3).ToBytes();
+            s.ReadExact(b, start, size);
+
+            Assert.Equal(expected.ToBytes(), b);
+        }
+
+        [Theory]
+        [InlineData(0, 6)]
+        [InlineData(1, 5)]
+        [InlineData(2, 4)]
+        [InlineData(3, 3)]
+        [InlineData(4, 2)]
+        [InlineData(5, 1)]
+        [InlineData(6, 0)]
+        public void Stream_ReadExact_with_range_throws_on_too_short_buffer(int start, int size)
+        {
+            var s = new MemoryStream(new byte[10], writable: false);
+            var b = new byte[5];
+
+            Exceptions.AssertThrowsInternalError(() => s.ReadExact(b, start, size), "The buffer is too small");
+        }
+
+        [Fact]
+        public void Stream_TrySkip_skips_seekable_stream()
+        {
+            var s = new SeekOnlyStream();
+
+            Assert.True(s.TrySkip(100));
+            Assert.Equal(100, s.Position);
+        }
+
+        [Fact]
+        public void Stream_TrySkip_skips_non_seekable_stream()
+        {
+            var s = new TrickleStream(13);
+
+            Assert.True(s.TrySkip(100));
+            Assert.Equal(100, s.Position);
+        }
+
+        [Fact]
+        public void Stream_TrySkip_returns_false_on_short_stream()
+        {
+            var s = new TrickleStream(13, 100);
+            Assert.False(s.TrySkip(101));
+        }
+
         //
         // BinaryReader
         //
@@ -973,6 +1057,67 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Empty(j.ArrayAtOrEmpty("key"));
             Assert.Same(o, j.ObjectAt("key", o));
             Assert.Empty(j.ObjectAtOrEmpty("key"));
+        }
+
+        //
+        // Helpers
+        //
+
+        private class TrickleStream: Stream
+        {
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Position { get; set; }
+
+            public TrickleStream(int portion, int length = Int32.MaxValue)
+            {
+                _portion = portion;
+                _length = length;
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                var size = Math.Min(Math.Min(_portion, count), _length - (int)Position);
+                for (var i = 0; i < size; i++)
+                    buffer[offset + i] = 0xCC;
+                Position += size;
+
+                return size;
+            }
+
+            public override void Flush() => throw new NotImplementedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
+            public override void SetLength(long value) => throw new NotImplementedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+            public override long Length => throw new NotImplementedException();
+
+            private int _portion;
+            private int _length;
+        }
+
+        private class SeekOnlyStream: Stream
+        {
+            public override bool CanRead => false;
+            public override bool CanSeek => true;
+            public override bool CanWrite => false;
+            public override long Position { get; set; }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                if (origin != SeekOrigin.Current)
+                    throw new NotImplementedException();
+
+                Position += offset;
+                return Position;
+            }
+
+            public override void Flush() => throw new NotImplementedException();
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+            public override void SetLength(long value) => throw new NotImplementedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+
+            public override long Length => throw new NotImplementedException();
         }
 
         //

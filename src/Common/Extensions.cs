@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -195,6 +196,11 @@ namespace PasswordManagerAccess.Common
         internal static ReadOnlySpan<byte> AsRoSpan(this byte[] x)
         {
             return new ReadOnlySpan<byte>(x);
+        }
+
+        internal static ReadOnlySpan<byte> AsRoSpan(this byte[] x, int start, int size)
+        {
+            return new ReadOnlySpan<byte>(x, start, size);
         }
 
         public static bool IsNullOrEmpty(this byte[] x)
@@ -420,6 +426,79 @@ namespace PasswordManagerAccess.Common
             stream.CopyTo(outputStream, bufferSize);
 
             return outputStream.ToArray();
+        }
+
+        public static byte[] ReadExact(this Stream input, int size)
+        {
+            var bytes = new byte[size];
+            input.ReadExact(bytes, 0, size);
+            return bytes;
+        }
+
+        public static void ReadExact(this Stream input, byte[] buffer, int start, int size)
+        {
+            if (input.TryReadExact(buffer, start, size))
+                return;
+
+            throw new InternalErrorException($"Failed to read {size} bytes from the stream");
+        }
+
+        public static bool TryReadExact(this Stream input, byte[] buffer, int start, int size)
+        {
+            if (buffer.Length - start < size)
+                throw new InternalErrorException("The buffer is too small");
+
+            var read = 0;
+            for (;;)
+            {
+                var last = input.Read(buffer, start + read, size - read);
+                read += last;
+
+                if (read == size)
+                    return true;
+
+                if (last <= 0)
+                    return false;
+            }
+        }
+
+        public static bool TrySkip(this Stream input, int size, int bufferSize = 4096)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+            try
+            {
+                return input.TrySkip(size, buffer);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        public static bool TrySkip(this Stream input, int size, byte[] buffer)
+        {
+            if (input.CanSeek)
+            {
+                var pos = input.Position;
+                var newPos = input.Seek(size, SeekOrigin.Current);
+                if (newPos != pos + size)
+                    return false;
+            }
+            else
+            {
+                var readTotal = 0;
+                while (readTotal < size)
+                {
+                    var bytesToRead = Math.Min(size - readTotal, buffer.Length);
+                    var bytesRead = input.Read(buffer, 0, bytesToRead);
+                    if (bytesRead == 0)
+                        return false;
+
+                    readTotal += bytesRead;
+                }
+            }
+
+            return true;
         }
 
         //

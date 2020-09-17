@@ -17,6 +17,10 @@ namespace PasswordManagerAccess.Common
         {
         }
 
+        public SpanStream(byte[] bytes, int start, int size): this(bytes.AsRoSpan(start, size))
+        {
+        }
+
         public SpanStream(ReadOnlySpan<byte> span)
         {
             _span = span;
