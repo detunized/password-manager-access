@@ -9,17 +9,16 @@ namespace PasswordManagerAccess.Kdbx
 
         public static Vault Open(string filename, string password)
         {
-            Parser.Parse(filename, password);
-            return new Vault();
+            return new Vault(Parser.Parse(filename, password));
         }
 
         //
         // Internal
         //
 
-        internal Vault()
+        internal Vault(Account[] accounts)
         {
-            Accounts = new Account[0];
+            Accounts = accounts;
         }
     }
 }

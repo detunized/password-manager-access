@@ -28,7 +28,7 @@ namespace PasswordManagerAccess.Example.Kdbx
                                       account.Password,
                                       account.Url,
                                       account.Note,
-                                      account.Folder);
+                                      account.Path);
 
                 }
             }

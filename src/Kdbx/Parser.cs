@@ -10,27 +10,29 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Xml.Linq;
+using System.Xml.XPath;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
 {
     internal static class Parser
     {
-        public static void Parse(string filename, string password)
+        public static Account[] Parse(string filename, string password)
         {
             using var io = File.OpenRead(filename);
-            Parse(io, password);
+            return Parse(io, password);
         }
 
         //
         // Internal
         //
 
-        internal static void Parse(Stream input, string password)
+        internal static Account[] Parse(Stream input, string password)
         {
             var info = ParseHeader(input, password);
             input.Seek(info.HeaderSize, SeekOrigin.Begin);
             var xml = ParseBody(input, info);
+            return ParseAccounts(xml);
         }
 
         internal static DatabaseInfo ParseHeader(Stream input, string password)
@@ -97,94 +99,6 @@ namespace PasswordManagerAccess.Kdbx
                                     encryptionKey: encryptionKey,
                                     iv: info.Iv,
                                     hmacKey: hmacKey);
-        }
-
-        internal static byte[] DeriveMasterKey(byte[] compositeKey, Dictionary<string, object> kdf)
-        {
-            if (!(kdf.GetOrDefault("$UUID", null) is byte[] id))
-                throw MakeInvalidFormatError("Failed to identify the KDF method");
-
-            if (id.SequenceEqual(Aes3KdfId) || id.SequenceEqual(Aes4KdfId))
-                return Util.DeriveMasterKeyAes(compositeKey, kdf);
-
-            if (id.SequenceEqual(Argon2KdfId))
-                return Util.DeriveMasterKeyArgon2(compositeKey, kdf);
-
-            throw MakeUnsupportedError($"KDF method {id.ToHex()}");
-        }
-
-        internal static XDocument ParseBody(Stream input, in DatabaseInfo info)
-        {
-            using var bs = new BlockStream(input, info.HmacKey);
-
-            using var aes = Aes.Create();
-            aes.KeySize = 256;
-            aes.Key = info.EncryptionKey;
-            aes.Mode = CipherMode.CBC;
-            aes.IV = info.Iv;
-            aes.Padding = PaddingMode.PKCS7;
-
-            using var decryptor = aes.CreateDecryptor();
-            using var cryptoStream = new CryptoStream(bs, decryptor, CryptoStreamMode.Read);
-
-            using var bodyStream = info.IsCompressed
-                ? (Stream)new GZipStream(cryptoStream, CompressionMode.Decompress)
-                : cryptoStream;
-
-            SkipInnerHeader(bodyStream);
-
-            return XDocument.Load(bodyStream);
-        }
-
-        internal static void SkipInnerHeader(Stream input)
-        {
-            var buffer = ArrayPool<byte>.Shared.Rent(4096);
-            try
-            {
-                SkipInnerHeader(input, buffer);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
-        }
-
-        internal static void SkipInnerHeader(Stream input, byte[] buffer)
-        {
-            BaseException MakeError(string info) => MakeInvalidFormatError($"inner header is corrupted: {info}");
-
-            for (;;)
-            {
-                // Each item starts with a byte ID and a 32 bit size
-                if (!input.TryReadExact(buffer, 0, 5))
-                    throw MakeError("failed to read item header");
-
-                var itemHeader = new SpanStream(buffer, 0, 5);
-                var id = itemHeader.ReadByte();
-                var size = itemHeader.ReadInt32();
-
-                // Only IDs 0, 1, 2 and 3 are valid
-                if (id > 3)
-                    throw MakeError($"invalid item ID {id}");
-
-                // Size has only 31 valid bits
-                if (size < 0)
-                    throw MakeError($"size of item with ID {id} is invalid ({size})");
-
-                // ID 0 marks the end of the inner header
-                if (id == 0)
-                {
-                    // ID 0 must contain no payload
-                    if (size == 0)
-                        return;
-
-                    throw MakeError("ID 0 must contain no payload");
-                }
-
-                // Skip the payload
-                if (!input.TrySkip(size, buffer))
-                    throw MakeError($"failed to skip item with ID {id}");
-            }
         }
 
         internal static EncryptionInfo ReadEncryptionInfo(ref SpanStream io)
@@ -327,6 +241,165 @@ namespace PasswordManagerAccess.Kdbx
                     _ => throw MakeInvalidFormatError($"item type {type} is invalid"),
                 };
             }
+        }
+
+        internal static byte[] DeriveMasterKey(byte[] compositeKey, Dictionary<string, object> kdf)
+        {
+            if (!(kdf.GetOrDefault("$UUID", null) is byte[] id))
+                throw MakeInvalidFormatError("Failed to identify the KDF method");
+
+            if (id.SequenceEqual(Aes3KdfId) || id.SequenceEqual(Aes4KdfId))
+                return Util.DeriveMasterKeyAes(compositeKey, kdf);
+
+            if (id.SequenceEqual(Argon2KdfId))
+                return Util.DeriveMasterKeyArgon2(compositeKey, kdf);
+
+            throw MakeUnsupportedError($"KDF method {id.ToHex()}");
+        }
+
+        internal static XDocument ParseBody(Stream input, in DatabaseInfo info)
+        {
+            using var bs = new BlockStream(input, info.HmacKey);
+
+            using var aes = Aes.Create();
+            aes.KeySize = 256;
+            aes.Key = info.EncryptionKey;
+            aes.Mode = CipherMode.CBC;
+            aes.IV = info.Iv;
+            aes.Padding = PaddingMode.PKCS7;
+
+            using var decryptor = aes.CreateDecryptor();
+            using var cryptoStream = new CryptoStream(bs, decryptor, CryptoStreamMode.Read);
+
+            using var bodyStream = info.IsCompressed
+                ? (Stream)new GZipStream(cryptoStream, CompressionMode.Decompress)
+                : cryptoStream;
+
+            SkipInnerHeader(bodyStream);
+
+            return XDocument.Load(bodyStream);
+        }
+
+        internal static void SkipInnerHeader(Stream input)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(4096);
+            try
+            {
+                SkipInnerHeader(input, buffer);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        internal static void SkipInnerHeader(Stream input, byte[] buffer)
+        {
+            BaseException MakeError(string info) => MakeInvalidFormatError($"inner header is corrupted: {info}");
+
+            for (;;)
+            {
+                // Each item starts with a byte ID and a 32 bit size
+                if (!input.TryReadExact(buffer, 0, 5))
+                    throw MakeError("failed to read item header");
+
+                var itemHeader = new SpanStream(buffer, 0, 5);
+                var id = itemHeader.ReadByte();
+                var size = itemHeader.ReadInt32();
+
+                // Only IDs 0, 1, 2 and 3 are valid
+                if (id > 3)
+                    throw MakeError($"invalid item ID {id}");
+
+                // Size has only 31 valid bits
+                if (size < 0)
+                    throw MakeError($"size of item with ID {id} is invalid ({size})");
+
+                // ID 0 marks the end of the inner header
+                if (id == 0)
+                {
+                    // ID 0 must contain no payload
+                    if (size == 0)
+                        return;
+
+                    throw MakeError("ID 0 must contain no payload");
+                }
+
+                // Skip the payload
+                if (!input.TrySkip(size, buffer))
+                    throw MakeError($"failed to skip item with ID {id}");
+            }
+        }
+
+        internal static Account[] ParseAccounts(XDocument xml)
+        {
+            var accounts = new List<Account>();
+
+            // TODO: Decrypt passwords
+            var pv = xml.XPathSelectElements("//Value[@Protected='True']");
+
+            var root = xml.XPathSelectElement("//Root/Group");
+            ParseAccounts(root, "", accounts);
+
+            return accounts.ToArray();
+        }
+
+        private static void ParseAccounts(XElement folder, string path, List<Account> accounts)
+        {
+            foreach (var i in folder.Elements())
+            {
+                switch (i.Name.LocalName)
+                {
+                case "Group":
+                    var name = i.Element("Name")?.Value ?? "-";
+                    ParseAccounts(i, path.IsNullOrEmpty() ? name : $"{path}/{name}", accounts);
+                    break;
+                case "Entry":
+                    accounts.Add(ParseAccount(i, path));
+                    break;
+                }
+            }
+        }
+
+        internal static Account ParseAccount(XElement xml, string path)
+        {
+            var id = xml.Element("UUID")?.Value.Decode64().ToHex() ?? "";
+            var name = "";
+            var username = "";
+            var password = "";
+            var url = "";
+            var note = "";
+
+            foreach (var s in xml.Elements("String"))
+            {
+                var value = s.Element("Value")?.Value ?? "";
+                switch (s.Element("Key")?.Value)
+                {
+                case "Title":
+                    name = value;
+                    break;
+                case "UserName":
+                    username = value;
+                    break;
+                case "Password":
+                    password = value;
+                    break;
+                case "URL":
+                    url = value;
+                    break;
+                case "Notes":
+                    note = value;
+                    break;
+                }
+            }
+
+            return new Account(id: id,
+                               name: name,
+                               username: username,
+                               password: password,
+                               url: url,
+                               note: note,
+                               path: path);
         }
 
         internal static BaseException MakeInvalidFormatError(string message)

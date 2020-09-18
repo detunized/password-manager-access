@@ -11,6 +11,17 @@ namespace PasswordManagerAccess.Kdbx
         public readonly string Password;
         public readonly string Url;
         public readonly string Note;
-        public readonly string Folder;
+        public readonly string Path;
+
+        public Account(string id, string name, string username, string password, string url, string note, string path)
+        {
+            Id = id;
+            Name = name;
+            Username = username;
+            Password = password;
+            Url = url;
+            Note = note;
+            Path = path;
+        }
     }
 }
