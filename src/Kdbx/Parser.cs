@@ -32,8 +32,8 @@ namespace PasswordManagerAccess.Kdbx
         {
             var info = ParseHeader(input, password);
             input.Seek(info.HeaderSize, SeekOrigin.Begin);
-            var xml = ParseBody(input, info);
-            return ParseAccounts(xml);
+            var body = ParseBody(input, info);
+            return ParseAccounts(body);
         }
 
         internal static DatabaseInfo ParseHeader(Stream input, string password)
@@ -259,7 +259,7 @@ namespace PasswordManagerAccess.Kdbx
             throw MakeUnsupportedError($"KDF method {id.ToHex()}");
         }
 
-        internal static XDocument ParseBody(Stream input, in DatabaseInfo info)
+        internal static Body ParseBody(Stream input, in DatabaseInfo info)
         {
             using var bs = new BlockStream(input, info.HmacKey);
 
@@ -285,9 +285,10 @@ namespace PasswordManagerAccess.Kdbx
                 ? (Stream)new GZipStream(cryptoStream, CompressionMode.Decompress, leaveOpen: true)
                 : cryptoStream;
 
-            SkipInnerHeader(bodyStream);
+            var randomStream = ParseInnerHeader(bodyStream);
+            var xml = XDocument.Load(bodyStream);
 
-            return XDocument.Load(bodyStream);
+            return new Body(randomStream, xml);
         }
 
         internal static Aes CreateAes(in DatabaseInfo info)
@@ -316,12 +317,12 @@ namespace PasswordManagerAccess.Kdbx
             };
         }
 
-        internal static void SkipInnerHeader(Stream input)
+        internal static RandomStream ParseInnerHeader(Stream input)
         {
             var buffer = ArrayPool<byte>.Shared.Rent(4096);
             try
             {
-                SkipInnerHeader(input, buffer);
+                return ParseInnerHeader(input, buffer);
             }
             finally
             {
@@ -329,9 +330,12 @@ namespace PasswordManagerAccess.Kdbx
             }
         }
 
-        internal static void SkipInnerHeader(Stream input, byte[] buffer)
+        internal static RandomStream ParseInnerHeader(Stream input, byte[] buffer)
         {
             BaseException MakeError(string info) => MakeInvalidFormatError($"inner header is corrupted: {info}");
+
+            int? randomStreamId = null;
+            byte[] randomStreamKey = null;
 
             for (;;)
             {
@@ -343,44 +347,93 @@ namespace PasswordManagerAccess.Kdbx
                 var id = itemHeader.ReadByte();
                 var size = itemHeader.ReadInt32();
 
-                // Only IDs 0, 1, 2 and 3 are valid
-                if (id > 3)
-                    throw MakeError($"invalid item ID {id}");
-
-                // Size has only 31 valid bits
-                if (size < 0)
-                    throw MakeError($"size of item with ID {id} is invalid ({size})");
-
-                // ID 0 marks the end of the inner header
-                if (id == 0)
+                switch (id)
                 {
-                    // ID 0 must contain no payload
-                    if (size == 0)
-                        return;
+                // ID 0 marks the end of the inner header
+                case 0:
+                    if (size != 0)
+                        throw MakeError("ID 0 must contain no payload");
 
-                    throw MakeError("ID 0 must contain no payload");
+                    if (randomStreamId == null)
+                        throw MakeError("random stream ID not found");
+
+                    if (randomStreamKey == null)
+                        throw MakeError("random stream key not found");
+
+                    return new RandomStream(randomStreamId.Value, randomStreamKey);
+
+                // Random stream ID
+                case 1:
+                    if (size != 4)
+                        throw MakeError($"random stream ID must 4 bytes long, got {size}");
+
+                    if (!input.TryReadExact(buffer, 0, size))
+                        throw MakeError("failed to read random stream ID");
+
+                    randomStreamId = new SpanStream(buffer, 0, size).ReadInt32();
+                    break;
+
+                // Random stream key
+                case 2:
+                    if (size != 64)
+                        throw MakeError($"random stream key must 64 bytes long, got {size}");
+
+                    if (!input.TryReadExact(buffer, 0, size))
+                        throw MakeError("failed to read random stream key");
+
+                    randomStreamKey = buffer.Sub(0, size);
+                    break;
+
+                // Binary attachment, just skip them
+                case 3:
+                    // Size has only 31 valid bits
+                    if (size < 0)
+                        throw MakeError($"size of binary attachment is invalid ({size})");
+
+                    // Skip the payload
+                    if (!input.TrySkip(size, buffer))
+                        throw MakeError($"failed to skip item with ID {id}");
+
+                    break;
+
+                default:
+                    throw MakeError($"invalid item ID {id}");
                 }
-
-                // Skip the payload
-                if (!input.TrySkip(size, buffer))
-                    throw MakeError($"failed to skip item with ID {id}");
             }
         }
 
-        internal static Account[] ParseAccounts(XDocument xml)
+        internal static Account[] ParseAccounts(in Body body)
         {
+            DecryptProtectedValues(body);
+
             var accounts = new List<Account>();
-
-            // TODO: Decrypt passwords
-            var pv = xml.XPathSelectElements("//Value[@Protected='True']");
-
-            var root = xml.XPathSelectElement("//Root/Group");
+            var root = body.Xml.XPathSelectElement("//Root/Group");
             ParseAccounts(root, "", accounts);
 
             return accounts.ToArray();
         }
 
-        private static void ParseAccounts(XElement folder, string path, List<Account> accounts)
+        internal static void DecryptProtectedValues(in Body body)
+        {
+            var xml = body.Xml.ToString();
+
+            var id = body.RandomStream.Id;
+            if (id != 3)
+                throw MakeUnsupportedError($"Random stream ID {id}");
+
+            // TODO: ChaCha20 doesn't really work as a stream cipher.
+            //       It resets the state between calls to DecryptBytes and starts a new block every time.
+            var keyIv = Crypto.Sha512(body.RandomStream.Key);
+            using var cipher = new ChaCha20(key: keyIv.Sub(0, 32),
+                                            nonce: keyIv.Sub(32, 12),
+                                            counter: 0);
+
+            var values = body.Xml.XPathSelectElements("//Value[@Protected='True']").ToArray();
+            foreach (var v in values)
+                v.Value = cipher.DecryptBytes(v.Value.Decode64()).ToUtf8();
+        }
+
+        internal static void ParseAccounts(XElement folder, string path, List<Account> accounts)
         {
             foreach (var i in folder.Elements())
             {
@@ -503,6 +556,30 @@ namespace PasswordManagerAccess.Kdbx
                 Seed = seed;
                 Iv = iv;
                 Kdf = kdf;
+            }
+        }
+
+        internal readonly struct RandomStream
+        {
+            public readonly int Id;
+            public readonly byte[] Key;
+
+            public RandomStream(int id, byte[] key)
+            {
+                Id = id;
+                Key = key;
+            }
+        }
+
+        internal readonly struct Body
+        {
+            public readonly RandomStream RandomStream;
+            public readonly XDocument Xml;
+
+            public Body(RandomStream randomStream, XDocument xml)
+            {
+                RandomStream = randomStream;
+                Xml = xml;
             }
         }
 
