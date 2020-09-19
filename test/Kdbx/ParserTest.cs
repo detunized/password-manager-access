@@ -31,7 +31,7 @@ namespace PasswordManagerAccess.Test.Kdbx
             io.Skip(12); // Skip header
             var info = Parser.ReadEncryptionInfo(ref io);
 
-            Assert.True(info.Compressed);
+            Assert.True(info.IsCompressed);
             Assert.Equal(cipher, info.Cipher);
         }
     }

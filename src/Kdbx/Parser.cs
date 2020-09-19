@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using System.Xml.XPath;
+using CSChaCha20;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -95,7 +96,8 @@ namespace PasswordManagerAccess.Kdbx
                 throw MakeInvalidFormatError("Header MAC doesn't match");
 
             return new DatabaseInfo(headerSize: io.Position,
-                                    isCompressed: info.Compressed,
+                                    isCompressed: info.IsCompressed,
+                                    cipher: info.Cipher,
                                     encryptionKey: encryptionKey,
                                     iv: info.Iv,
                                     hmacKey: hmacKey);
@@ -261,23 +263,46 @@ namespace PasswordManagerAccess.Kdbx
         {
             using var bs = new BlockStream(input, info.HmacKey);
 
-            using var aes = Aes.Create();
+            using IDisposable engine = info.Cipher switch
+            {
+                Cipher.Aes => CreateAes(info),
+                Cipher.ChaCha20 => CreateChaCha20(info),
+                _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
+            };
+
+            using ICryptoTransform decryptor = info.Cipher switch
+            {
+                Cipher.Aes => ((Aes)engine).CreateDecryptor(),
+                Cipher.ChaCha20 => ChaCha20CryptoTransform.CreateDecryptor((ChaCha20)engine),
+                _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
+            };
+
+            using var cryptoStream = new CryptoStream(bs, decryptor, CryptoStreamMode.Read);
+
+            using var bodyStream = info.IsCompressed
+                ? (Stream)new GZipStream(cryptoStream, CompressionMode.Decompress, leaveOpen: true)
+                : cryptoStream;
+
+            SkipInnerHeader(bodyStream);
+
+            return XDocument.Load(bodyStream);
+        }
+
+        internal static Aes CreateAes(in DatabaseInfo info)
+        {
+            var aes = Aes.Create();
             aes.KeySize = 256;
             aes.Key = info.EncryptionKey;
             aes.Mode = CipherMode.CBC;
             aes.IV = info.Iv;
             aes.Padding = PaddingMode.PKCS7;
 
-            using var decryptor = aes.CreateDecryptor();
-            using var cryptoStream = new CryptoStream(bs, decryptor, CryptoStreamMode.Read);
+            return aes;
+        }
 
-            using var bodyStream = info.IsCompressed
-                ? (Stream)new GZipStream(cryptoStream, CompressionMode.Decompress)
-                : cryptoStream;
-
-            SkipInnerHeader(bodyStream);
-
-            return XDocument.Load(bodyStream);
+        internal static ChaCha20 CreateChaCha20(in DatabaseInfo info)
+        {
+            return new ChaCha20(info.EncryptionKey, info.Iv, 0);
         }
 
         internal static void SkipInnerHeader(Stream input)
@@ -420,17 +445,24 @@ namespace PasswordManagerAccess.Kdbx
         {
             public readonly int HeaderSize;
             public readonly bool IsCompressed;
+            public readonly Cipher Cipher;
             public readonly byte[] EncryptionKey;
             public readonly byte[] Iv;
             public readonly byte[] HmacKey;
 
-            public DatabaseInfo(int headerSize, bool isCompressed, byte[] encryptionKey, byte[] iv, byte[] hmacKey)
+            public DatabaseInfo(int headerSize,
+                                bool isCompressed,
+                                Cipher cipher,
+                                byte[] encryptionKey,
+                                byte[] iv,
+                                byte[] hmacKey)
             {
                 HeaderSize = headerSize;
                 IsCompressed = isCompressed;
                 EncryptionKey = encryptionKey;
                 Iv = iv;
                 HmacKey = hmacKey;
+                Cipher = cipher;
             }
         }
 
@@ -443,19 +475,19 @@ namespace PasswordManagerAccess.Kdbx
 
         internal readonly struct EncryptionInfo
         {
-            public readonly bool Compressed;
+            public readonly bool IsCompressed;
             public readonly Cipher Cipher;
             public readonly byte[] Seed;
             public readonly byte[] Iv;
             public readonly Dictionary<string, object> Kdf;
 
-            public EncryptionInfo(bool compressed,
+            public EncryptionInfo(bool isCompressed,
                                   Cipher cipher,
                                   byte[] seed,
                                   byte[] iv,
                                   Dictionary<string, object> kdf)
             {
-                Compressed = compressed;
+                IsCompressed = isCompressed;
                 Cipher = cipher;
                 Seed = seed;
                 Iv = iv;
