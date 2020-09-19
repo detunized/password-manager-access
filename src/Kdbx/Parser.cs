@@ -143,8 +143,8 @@ namespace PasswordManagerAccess.Kdbx
                         cipher = Cipher.Aes;
                     else if (payload.SequenceEqual(ChaCha20CipherId))
                         cipher = Cipher.ChaCha20;
-                    else if (payload.SequenceEqual(TwoFishCipherId))
-                        cipher = Cipher.TwoFish;
+                    else if (payload.SequenceEqual(TwofishCipherId))
+                        cipher = Cipher.Twofish;
                     else
                         throw MakeUnsupportedError($"Cipher '{payload.ToHex()}'");
 
@@ -267,6 +267,7 @@ namespace PasswordManagerAccess.Kdbx
             {
                 Cipher.Aes => CreateAes(info),
                 Cipher.ChaCha20 => CreateChaCha20(info),
+                Cipher.Twofish => CreateTwofish(info),
                 _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
             };
 
@@ -274,6 +275,7 @@ namespace PasswordManagerAccess.Kdbx
             {
                 Cipher.Aes => ((Aes)engine).CreateDecryptor(),
                 Cipher.ChaCha20 => ChaCha20CryptoTransform.CreateDecryptor((ChaCha20)engine),
+                Cipher.Twofish => ((Twofish)engine).CreateDecryptor(),
                 _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
             };
 
@@ -303,6 +305,15 @@ namespace PasswordManagerAccess.Kdbx
         internal static ChaCha20 CreateChaCha20(in DatabaseInfo info)
         {
             return new ChaCha20(info.EncryptionKey, info.Iv, 0);
+        }
+
+        internal static Twofish CreateTwofish(in DatabaseInfo info)
+        {
+            return new Twofish
+            {
+                Key = info.EncryptionKey,
+                IV = info.Iv
+            };
         }
 
         internal static void SkipInnerHeader(Stream input)
@@ -470,7 +481,7 @@ namespace PasswordManagerAccess.Kdbx
         {
             Aes,
             ChaCha20,
-            TwoFish,
+            Twofish,
         }
 
         internal readonly struct EncryptionInfo
@@ -535,7 +546,7 @@ namespace PasswordManagerAccess.Kdbx
             0xA5, 0x24, 0x33, 0x9A, 0x31, 0xDB, 0xB5, 0x9A,
         };
 
-        internal static readonly byte[] TwoFishCipherId =
+        internal static readonly byte[] TwofishCipherId =
         {
             0xAD, 0x68, 0xF2, 0x9F, 0x57, 0x6F, 0x4B, 0xB9,
             0xA3, 0x6A, 0xD4, 0x7A, 0xF9, 0x65, 0x34, 0x6C,
