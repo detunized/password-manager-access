@@ -8,6 +8,7 @@ using CSChaCha20;
 
 namespace PasswordManagerAccess.Kdbx
 {
+    // TODO: Remove LibChaCha20 and replace it with our own home grown version
     internal class ChaCha20CryptoTransform: ICryptoTransform
     {
         public int InputBlockSize => 1;
