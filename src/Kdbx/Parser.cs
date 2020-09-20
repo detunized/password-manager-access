@@ -421,16 +421,18 @@ namespace PasswordManagerAccess.Kdbx
             if (id != 3)
                 throw MakeUnsupportedError($"Random stream ID {id}");
 
-            // TODO: ChaCha20 doesn't really work as a stream cipher.
-            //       It resets the state between calls to DecryptBytes and starts a new block every time.
             var keyIv = Crypto.Sha512(body.RandomStream.Key);
-            using var cipher = new ChaCha20(key: keyIv.Sub(0, 32),
-                                            nonce: keyIv.Sub(32, 12),
-                                            counter: 0);
+            var cipher = new ChaCha20Engine(keyIv.Sub(0, 32), keyIv.Sub(32, 12));
 
             var values = body.Xml.XPathSelectElements("//Value[@Protected='True']").ToArray();
             foreach (var v in values)
-                v.Value = cipher.DecryptBytes(v.Value.Decode64()).ToUtf8();
+            {
+                // TODO: Remove temporaries. Can we do in-place decryption?
+                var raw = v.Value.Decode64();
+                var dec = new byte[raw.Length];
+                cipher.ProcessBytes(raw, 0, raw.Length, dec, 0);
+                v.Value = dec.ToUtf8();
+            }
         }
 
         internal static void ParseAccounts(XElement folder, string path, List<Account> accounts)
