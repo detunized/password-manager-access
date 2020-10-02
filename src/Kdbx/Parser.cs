@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -40,16 +39,11 @@ namespace PasswordManagerAccess.Kdbx
             // There's no way to say how long the header is until it's parsed fully.
             // We just assume that the header should fit in 64k.
             const int size = 65536;
-            var headerBytes = ArrayPool<byte>.Shared.Rent(size);
-            try
+            return Rental.With(size, headerBytes =>
             {
                 var read = input.Read(headerBytes, 0, size);
                 return ParseHeader(headerBytes.AsRoSpan(0, read), password);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(headerBytes);
-            }
+            });
         }
 
         internal static DatabaseInfo ParseHeader(ReadOnlySpan<byte> blob, string password)
@@ -318,15 +312,7 @@ namespace PasswordManagerAccess.Kdbx
 
         internal static RandomStream ParseInnerHeader(Stream input)
         {
-            var buffer = ArrayPool<byte>.Shared.Rent(4096);
-            try
-            {
-                return ParseInnerHeader(input, buffer);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
+            return Rental.With(4096, buffer => ParseInnerHeader(input, buffer));
         }
 
         internal static RandomStream ParseInnerHeader(Stream input, byte[] buffer)
