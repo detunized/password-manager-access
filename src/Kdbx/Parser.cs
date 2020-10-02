@@ -11,7 +11,6 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using System.Xml.XPath;
-using CSChaCha20;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -266,7 +265,7 @@ namespace PasswordManagerAccess.Kdbx
             using IDisposable engine = info.Cipher switch
             {
                 Cipher.Aes => CreateAes(info),
-                Cipher.ChaCha20 => CreateChaCha20(info),
+                Cipher.ChaCha20 => new Indisposable<ChaCha20Engine>(CreateChaCha20(info)),
                 Cipher.Twofish => CreateTwofish(info),
                 _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
             };
@@ -274,7 +273,7 @@ namespace PasswordManagerAccess.Kdbx
             using ICryptoTransform decryptor = info.Cipher switch
             {
                 Cipher.Aes => ((Aes)engine).CreateDecryptor(),
-                Cipher.ChaCha20 => ChaCha20CryptoTransform.CreateDecryptor((ChaCha20)engine),
+                Cipher.ChaCha20 => ChaCha20CryptoTransform.CreateDecryptor((Indisposable<ChaCha20Engine>)engine),
                 Cipher.Twofish => ((Twofish)engine).CreateDecryptor(),
                 _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
             };
@@ -303,9 +302,9 @@ namespace PasswordManagerAccess.Kdbx
             return aes;
         }
 
-        internal static ChaCha20 CreateChaCha20(in DatabaseInfo info)
+        internal static ChaCha20Engine CreateChaCha20(in DatabaseInfo info)
         {
-            return new ChaCha20(info.EncryptionKey, info.Iv, 0);
+            return new ChaCha20Engine(info.EncryptionKey, info.Iv);
         }
 
         internal static Twofish CreateTwofish(in DatabaseInfo info)

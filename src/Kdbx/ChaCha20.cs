@@ -46,17 +46,21 @@ namespace PasswordManagerAccess.Kdbx
             LE_To_UInt32(nonce, 0, _engineState, 13, 3);
         }
 
-        public void ProcessBytes(byte[] inBytes, int inOff, int len, byte[] outBytes, int outOff)
+        public void ProcessBytes(byte[] inputBuffer,
+                                 int inputOffset,
+                                 int inputCount,
+                                 byte[] outputBuffer,
+                                 int outputOffset)
         {
-            if (len > inBytes.Length - inOff)
+            if (inputCount > inputBuffer.Length - inputOffset)
                 throw new InternalErrorException("Input buffer is too short");
 
-            if (len > outBytes.Length - outOff)
+            if (inputCount > outputBuffer.Length - outputOffset)
                 throw new InternalErrorException("Output buffer is too short");
 
             // TODO: This should be rather slow to loop like this over each byte
             //       Profile this and see if there are some easy speed gains.
-            for (var i = 0; i < len; i++)
+            for (var i = 0; i < inputCount; i++)
             {
                 if (_index == 0)
                 {
@@ -64,7 +68,7 @@ namespace PasswordManagerAccess.Kdbx
                     AdvanceCounter();
                 }
 
-                outBytes[i + outOff] = (byte)(_keyStream[_index] ^ inBytes[i + inOff]);
+                outputBuffer[i + outputOffset] = (byte)(_keyStream[_index] ^ inputBuffer[i + inputOffset]);
                 _index = (_index + 1) & 63;
             }
         }

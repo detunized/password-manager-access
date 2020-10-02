@@ -2,13 +2,10 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Buffers;
 using System.Security.Cryptography;
-using CSChaCha20;
 
 namespace PasswordManagerAccess.Kdbx
 {
-    // TODO: Remove LibChaCha20 and replace it with our own home grown version
     internal class ChaCha20CryptoTransform: ICryptoTransform
     {
         public int InputBlockSize => 1;
@@ -16,10 +13,17 @@ namespace PasswordManagerAccess.Kdbx
         public bool CanTransformMultipleBlocks => true;
         public bool CanReuseTransform => true;
 
-        public static ChaCha20CryptoTransform CreateEncryptor(ChaCha20 engine) => new ChaCha20CryptoTransform(engine);
-        public static ChaCha20CryptoTransform CreateDecryptor(ChaCha20 engine) => new ChaCha20CryptoTransform(engine);
+        public static ChaCha20CryptoTransform CreateEncryptor(ChaCha20Engine engine)
+        {
+            return new ChaCha20CryptoTransform(engine);
+        }
 
-        private ChaCha20CryptoTransform(ChaCha20 engine)
+        public static ChaCha20CryptoTransform CreateDecryptor(ChaCha20Engine engine)
+        {
+            return new ChaCha20CryptoTransform(engine);
+        }
+
+        private ChaCha20CryptoTransform(ChaCha20Engine engine)
         {
             _engine = engine;
         }
@@ -30,22 +34,8 @@ namespace PasswordManagerAccess.Kdbx
                                   byte[] outputBuffer,
                                   int outputOffset)
         {
-            // TODO: Get rid of the copies. At the moment ChaCha20 does not support byte range on both input
-            //       and output buffer, that why we need to make copies to a temp buffer and back.
-            var tempInputBuffer = ArrayPool<byte>.Shared.Rent(inputCount);
-            var tempOutputBuffer = ArrayPool<byte>.Shared.Rent(inputCount);
-            try
-            {
-                Buffer.BlockCopy(inputBuffer, inputOffset, tempInputBuffer, 0, inputCount);
-                _engine.DecryptBytes(tempOutputBuffer, tempInputBuffer, inputCount);
-                Buffer.BlockCopy(tempOutputBuffer, 0, outputBuffer, outputOffset, inputCount);
-                return inputCount;
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(tempInputBuffer);
-                ArrayPool<byte>.Shared.Return(tempOutputBuffer);
-            }
+            _engine.ProcessBytes(inputBuffer, inputOffset, inputCount, outputBuffer, inputOffset);
+            return inputCount;
         }
 
         public byte[] TransformFinalBlock(byte[] inputBuffer, int inputOffset, int inputCount)
@@ -53,16 +43,9 @@ namespace PasswordManagerAccess.Kdbx
             if (inputCount == 0)
                 return Array.Empty<byte>();
 
-            var tempInputBuffer = ArrayPool<byte>.Shared.Rent(inputCount);
-            try
-            {
-                Buffer.BlockCopy(inputBuffer, inputOffset, tempInputBuffer, 0, inputCount);
-                return _engine.DecryptBytes(tempInputBuffer);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(tempInputBuffer);
-            }
+            var output = new byte[inputCount];
+            _engine.ProcessBytes(inputBuffer, inputOffset, inputCount, output, 0);
+            return output;
         }
 
         public void Dispose()
@@ -70,6 +53,6 @@ namespace PasswordManagerAccess.Kdbx
             // Nothing to dispose of
         }
 
-        private readonly ChaCha20 _engine;
+        private readonly ChaCha20Engine _engine;
     }
 }
