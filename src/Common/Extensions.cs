@@ -464,15 +464,7 @@ namespace PasswordManagerAccess.Common
 
         public static bool TrySkip(this Stream input, int size, int bufferSize = 4096)
         {
-            var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
-            try
-            {
-                return input.TrySkip(size, buffer);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
+            return Rental.With(bufferSize, buffer => input.TrySkip(size, buffer));
         }
 
         public static bool TrySkip(this Stream input, int size, byte[] buffer)
