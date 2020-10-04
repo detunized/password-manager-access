@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
@@ -14,6 +15,7 @@ namespace PasswordManagerAccess.Kdbx
             _baseStream = baseStream;
             _hmacKey = hmacKey;
             _buffer = new byte[bufferSize];
+            _hmac = new HMACSHA256(hmacKey);
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -21,8 +23,11 @@ namespace PasswordManagerAccess.Kdbx
             // Start new block
             if (_blockMac == null)
             {
-                _blockMac = ReadExact(32);
-                _blockSize = BitConverter.ToInt32(ReadExact(4), 0);
+                _blockMac = _baseStream.ReadExact(32);
+
+                // To avoid allocations we read into the cache buffer since it's unused at this point and parse from it
+                _baseStream.ReadExact(_buffer, 0, 4);
+                _blockSize = BitConverter.ToInt32(_buffer, 0);
 
                 // End of stream
                 if (_blockSize == 0)
@@ -31,6 +36,15 @@ namespace PasswordManagerAccess.Kdbx
                 _blockReadPointer = 0;
                 _bufferActualSize = 0;
                 _bufferReadPointer = 0;
+
+                // Start the MAC calculation for the new block
+                _hmac = new HMACSHA256(Util.ComputeBlockHmacKey(_hmacKey, _blockIndex));
+
+                // To avoid allocation we write into the cache buffer and then use it for hashing
+                var forHashing = new OutputSpanStream(_buffer);
+                forHashing.WriteUInt64(_blockIndex);
+                forHashing.WriteInt32(_blockSize);
+                _hmac.TransformBlock(_buffer, 0, forHashing.Position, null, 0);
             }
 
             // Read next piece into the buffer
@@ -39,6 +53,9 @@ namespace PasswordManagerAccess.Kdbx
                 var toRead = Math.Min(_buffer.Length, _blockSize - _blockReadPointer);
                 _bufferActualSize = _baseStream.Read(_buffer, 0, toRead);
                 _bufferReadPointer = 0;
+
+                // Hash the read portion
+                _hmac.TransformBlock(_buffer, 0, _bufferActualSize, null, 0);
             }
 
             var toCopy = Math.Min(count, _bufferActualSize - _bufferReadPointer);
@@ -49,23 +66,28 @@ namespace PasswordManagerAccess.Kdbx
             // End of block
             if (_blockReadPointer >= _blockSize)
             {
-                var blockHmacKey = Util.ComputeBlockHmacKey(_hmacKey, _blockIndex);
+                // Finalize MAC
+                _hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
 
-                // using var sha = new HMACSHA256(hmacKey);
-                //
-                // sha.TransformBlock(BitConverter.GetBytes(blockIndex), 0, 8, null, 0);
-                // sha.TransformBlock(BitConverter.GetBytes(size), 0, 4, null, 0);
-                // sha.TransformBlock(ciphertext, 0, ciphertext.Length, null, 0);
-                // sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                var storedMac = _blockMac;
+                var computedMac = _hmac.Hash;
 
                 _blockIndex++;
                 _blockMac = null;
+                _hmac.Dispose();
+                _hmac = null;
+
+                if (!Crypto.AreEqual(storedMac, computedMac))
+                    throw new InternalErrorException("Corrupted, block MAC doesn't match");
             }
 
             return toCopy;
         }
 
-        public override void Flush() => throw new NotImplementedException();
+        public override void Flush()
+        {
+        }
+
         public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
         public override void SetLength(long value) => throw new NotImplementedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotImplementedException();
@@ -82,26 +104,8 @@ namespace PasswordManagerAccess.Kdbx
         }
 
         //
+        // Private
         //
-        //
-
-        internal byte[] ReadExact(int size)
-        {
-            var bytes = new byte[size];
-            var read = 0;
-
-            for (;;)
-            {
-                var last = _baseStream.Read(bytes, read, size - read);
-                read += last;
-
-                if (read == size)
-                    return bytes;
-
-                if (last <= 0)
-                    throw new InternalErrorException($"Failed to read {size} bytes from the stream");
-            }
-        }
 
         private readonly Stream _baseStream;
         private readonly byte[] _hmacKey;
@@ -113,5 +117,10 @@ namespace PasswordManagerAccess.Kdbx
         private int _blockReadPointer;
         private int _bufferActualSize;
         private int _bufferReadPointer;
+
+        // TODO: This is only disposed during normal operation at end of each block.
+        //       In case the sequence is terminated early with or without an error the
+        //       object stays non-disposed.
+        private HMACSHA256 _hmac;
     }
 }

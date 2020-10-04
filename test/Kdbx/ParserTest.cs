@@ -14,6 +14,7 @@ namespace PasswordManagerAccess.Test.Kdbx
         [InlineData("kdbx4-aes-aes")]
         [InlineData("kdbx4-aes-chacha20")]
         [InlineData("kdbx4-aes-twofish")]
+        [InlineData("kdbx4-argon2-aes-1k-block")]
         public void Parse_returns_accounts(string fixture)
         {
             using var s = new MemoryStream(GetBinaryFixture(fixture, "kdbx"), writable: false);
