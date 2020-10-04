@@ -52,6 +52,24 @@ namespace PasswordManagerAccess.Test.Common
 
         [Theory]
         [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(13)]
+        public void WriteInt32_writes_int(int pad)
+        {
+            var s = Stream(4, pad);
+            s.WriteInt32(unchecked((int)0xDEADBEEF));
+
+            Assert.True(s.IsEof);
+            Assert.Equal(0xEF, s.Span[pad + 0]);
+            Assert.Equal(0xBE, s.Span[pad + 1]);
+            Assert.Equal(0xAD, s.Span[pad + 2]);
+            Assert.Equal(0xDE, s.Span[pad + 3]);
+        }
+
+        [Theory]
+        [InlineData(0)]
         [InlineData(13)]
         public void WriteBytes_writes_bytes(int pad)
         {

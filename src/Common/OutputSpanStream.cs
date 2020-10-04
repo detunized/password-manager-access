@@ -28,6 +28,11 @@ namespace PasswordManagerAccess.Common
             _span[CheckAdvance(1)] = value;
         }
 
+        public void WriteInt32(int value)
+        {
+            Unsafe.WriteUnaligned(ref _span[CheckAdvance(4)], value);
+        }
+
         public void WriteUInt64(ulong value)
         {
             Unsafe.WriteUnaligned(ref _span[CheckAdvance(8)], value);
