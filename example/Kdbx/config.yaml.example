@@ -1,2 +1,3 @@
-path: path/to/kdbx/
+path: path/to/kdbx
 password: passw0rd!
+keyfile: path/to/optional/keyfile

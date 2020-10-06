@@ -16,7 +16,8 @@ namespace PasswordManagerAccess.Example.Kdbx
 
             try
             {
-                var accounts = Vault.Open(config["path"], config["password"]).Accounts;
+                var keyfile = config.ContainsKey("keyfile") ? config["keyfile"] : null;
+                var accounts = Vault.Open(config["path"], config["password"], keyfile).Accounts;
                 for (var i = 0; i < accounts.Length; ++i)
                 {
                     var account = accounts[i];

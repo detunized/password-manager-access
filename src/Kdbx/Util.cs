@@ -10,9 +10,24 @@ namespace PasswordManagerAccess.Kdbx
 {
     internal static class Util
     {
-        internal static byte[] ComposeMasterKey(string password)
+        internal static byte[] ComposeMasterKey(string password, byte[] keyfile)
         {
-            return Crypto.Sha256(Crypto.Sha256(password));
+            var forHashing = new OutputSpanStream(stackalloc byte[64]);
+
+            // Add the password, if any
+            if (password.Length > 0)
+                forHashing.WriteBytes(Crypto.Sha256(password));
+
+            // Add the key file, if any
+            if (keyfile.Length > 0)
+            {
+                if (keyfile.Length != 32)
+                    throw new InternalErrorException("Key file must be 32 bytes long");
+
+                forHashing.WriteBytes(keyfile);
+            }
+
+            return Crypto.Sha256(forHashing.Span.Slice(0, forHashing.Position));
         }
 
         internal static byte[] DeriveMasterKeyAes(byte[] compositeMasterKey, Dictionary<string, object> parameters)

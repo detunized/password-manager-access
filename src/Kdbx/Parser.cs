@@ -16,25 +16,34 @@ namespace PasswordManagerAccess.Kdbx
 {
     internal static class Parser
     {
-        public static Account[] Parse(string filename, string password)
+        public static Account[] Parse(string filename, string password, string keyfile)
         {
             using var io = File.OpenRead(filename);
-            return Parse(io, password);
+            return Parse(io,
+                         password,
+                         keyfile.IsNullOrEmpty() ? Array.Empty<byte>() : ReadKeyfile(keyfile));
         }
 
         //
         // Internal
         //
 
-        internal static Account[] Parse(Stream input, string password)
+        internal static byte[] ReadKeyfile(string filename)
         {
-            var info = ParseHeader(input, password);
+            // TODO: Support other forms of keyfiles
+            var bytes = File.ReadAllBytes(filename);
+            return Crypto.Sha256(bytes);
+        }
+
+        internal static Account[] Parse(Stream input, string password, byte[] keyfile)
+        {
+            var info = ParseHeader(input, Util.ComposeMasterKey(password, keyfile));
             input.Seek(info.HeaderSize, SeekOrigin.Begin);
             var body = ParseBody(input, info);
             return ParseAccounts(body);
         }
 
-        internal static DatabaseInfo ParseHeader(Stream input, string password)
+        internal static DatabaseInfo ParseHeader(Stream input, byte[] compositeKey)
         {
             // There's no way to say how long the header is until it's parsed fully.
             // We just assume that the header should fit in 64k.
@@ -42,16 +51,16 @@ namespace PasswordManagerAccess.Kdbx
             return Rental.With(size, headerBytes =>
             {
                 var read = input.Read(headerBytes, 0, size);
-                return ParseHeader(headerBytes.AsRoSpan(0, read), password);
+                return ParseHeader(headerBytes.AsRoSpan(0, read), compositeKey);
             });
         }
 
-        internal static DatabaseInfo ParseHeader(ReadOnlySpan<byte> blob, string password)
+        internal static DatabaseInfo ParseHeader(ReadOnlySpan<byte> blob, byte[] compositeKey)
         {
-            return ParseHeader(blob.ToStream(), password);
+            return ParseHeader(blob.ToStream(), compositeKey);
         }
 
-        internal static DatabaseInfo ParseHeader(SpanStream io, string password)
+        internal static DatabaseInfo ParseHeader(SpanStream io, byte[] compositeKey)
         {
             var header = io.Read<Header>();
 
@@ -77,7 +86,6 @@ namespace PasswordManagerAccess.Kdbx
                 throw MakeInvalidFormatError("Header hash doesn't match");
 
             var storedHeaderMac = io.ReadBytes(32);
-            var compositeKey = Util.ComposeMasterKey(password);
 
             var derivedKey = DeriveMasterKey(compositeKey, info.Kdf);
             var (encryptionKey, hmacKey) = Util.DeriveDatabaseKeys(derivedKey, info.Seed);

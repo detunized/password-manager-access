@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.IO;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Kdbx;
@@ -18,7 +19,7 @@ namespace PasswordManagerAccess.Test.Kdbx
         public void Parse_returns_accounts(string fixture)
         {
             using var s = new MemoryStream(GetBinaryFixture(fixture, "kdbx"), writable: false);
-            var accounts = Parser.Parse(s, "password");
+            var accounts = Parser.Parse(s, "password", Array.Empty<byte>());
 
             Assert.NotEmpty(accounts);
         }
@@ -31,7 +32,7 @@ namespace PasswordManagerAccess.Test.Kdbx
         public void ParseHeader_works(string fixture)
         {
             var blob = GetBinaryFixture(fixture, "kdbx");
-            Parser.ParseHeader(blob, "password");
+            Parser.ParseHeader(blob, Util.ComposeMasterKey("password", Array.Empty<byte>()));
         }
 
         [Theory]

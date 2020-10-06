@@ -7,9 +7,9 @@ namespace PasswordManagerAccess.Kdbx
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string filename, string password)
+        public static Vault Open(string filename, string password, string keyfile)
         {
-            return new Vault(Parser.Parse(filename, password));
+            return new Vault(Parser.Parse(filename, password, keyfile));
         }
 
         //
