@@ -8,6 +8,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using PasswordManagerAccess.Common;
@@ -18,21 +19,31 @@ namespace PasswordManagerAccess.Kdbx
     {
         public static Account[] Parse(string filename, string password, string keyfile)
         {
-            using var io = File.OpenRead(filename);
-            return Parse(io,
-                         password,
-                         keyfile.IsNullOrEmpty() ? Array.Empty<byte>() : ReadKeyfile(keyfile));
+            // It's difficult to test functions with files, so we delegate everything to the overloads
+            // and do minimal work in this function outside of opening files for reading.
+            using var input = File.OpenRead(filename);
+
+            // No keyfile
+            if (keyfile.IsNullOrEmpty())
+                return Parse(input, password);
+
+            // With a keyfile
+            using var keyfileStream = File.OpenRead(keyfile);
+            return Parse(input, password, keyfileStream);
         }
 
         //
         // Internal
         //
 
-        internal static byte[] ReadKeyfile(string filename)
+        internal static Account[] Parse(Stream input, string password)
         {
-            // TODO: Support other forms of keyfiles
-            var bytes = File.ReadAllBytes(filename);
-            return Crypto.Sha256(bytes);
+            return Parse(input, password, Array.Empty<byte>());
+        }
+
+        internal static Account[] Parse(Stream input, string password, Stream keyfile)
+        {
+            return Parse(input, password, ReadKeyfile(keyfile));
         }
 
         internal static Account[] Parse(Stream input, string password, byte[] keyfile)
@@ -41,6 +52,62 @@ namespace PasswordManagerAccess.Kdbx
             input.Seek(info.HeaderSize, SeekOrigin.Begin);
             var body = ParseBody(input, info);
             return ParseAccounts(body);
+        }
+
+        internal static byte[] ReadKeyfile(Stream stream)
+        {
+            var bytes = stream.ReadAll();
+
+            // If the file parses as XML and has the valid structure, then it's an XML keyfile.
+            if (ReadXmlKeyfile(bytes) is {} xmlKeyfile)
+                return xmlKeyfile;
+
+            // Legacy binary precomputed hash key file
+            if (bytes.Length == 32)
+                return bytes;
+
+            // Legacy hexadecimal precomputed hash key file
+            if (bytes.Length == 64)
+            {
+                var text = bytes.ToUtf8();
+                if (text.IsHex())
+                    return text.DecodeHex();
+            }
+
+            // Otherwise it's a generic binary key file which needs to be hashed
+            return Crypto.Sha256(bytes);
+        }
+
+        internal static byte[] ReadXmlKeyfile(byte[] bytes)
+        {
+            // We expect a very rigid format with a 32-byte key
+            // Example:
+            // <?xml version="1.0" encoding="utf-8"?>
+            // <KeyFile>
+            // 	<Meta>
+            // 		<Version>1.00</Version>
+            // 	</Meta>
+            // 	<Key>
+            // 		<Data>Id8ZmY3yOAMpIGxfUpjSCnxYx3IcWsp3Ah73r9DFFj4=</Data>
+            // 	</Key>
+            // </KeyFile>
+            try
+            {
+                var key = XDocument
+                    .Parse(bytes.ToUtf8())
+                    .XPathSelectElement("/KeyFile/Key/Data")?
+                    .Value
+                    .Decode64();
+
+                if (key?.Length == 32)
+                    return key;
+            }
+            catch (XmlException)
+            {
+                // Ignore and fallthrough
+            }
+
+            return null;
         }
 
         internal static DatabaseInfo ParseHeader(Stream input, byte[] compositeKey)
