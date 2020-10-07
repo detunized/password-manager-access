@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.0.0
+  - Kdbx: added support for KeePass KDBX 4 file format
+
 ## 7.0.0
   - ZohoVault: new log in protocol supported
   - ZohoVault: Zoho removed support for original YubiKey, removed support for
@@ -7,13 +10,13 @@
   - ZohoVault: `Ui` class refactored to `Ui.IUi` interface
 
 ## 6.0.0
-  - 1Password: Changed the API to allow selective vault retrieval and on
+  - 1Password: changed the API to allow selective vault retrieval and on
     demand decryption. All the Vault and Account properties are now lazily
     decrypted and cached.
   - 1Password: ILogger interface removed
 
 ## 5.0.1
-  - 1Password: Fixed a crash when the "require modern app" option is enabled
+  - 1Password: fixed a crash when the "require modern app" option is enabled
 
 ## 5.0.0
   - Kaspersky: Kaspersky Password Manager support added
