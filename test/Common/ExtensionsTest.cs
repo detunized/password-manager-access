@@ -91,6 +91,17 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Theory]
+        [InlineData("", true)]
+        [InlineData("deadbeef", true)]
+        [InlineData("0", false)]         // odd length
+        [InlineData("badc0ffee", false)] // odd length
+        [InlineData("not hex!", false)]  // invalid characters
+        public void String_IsHex_returns_correct_result(string hex, bool expected)
+        {
+            Assert.Equal(expected, hex.IsHex());
+        }
+
+        [Theory]
         [InlineData("", new byte[] { })]
         [InlineData("00", new byte[] { 0 })]
         [InlineData("00ff", new byte[] { 0, 255 })]

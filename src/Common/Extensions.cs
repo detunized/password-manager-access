@@ -67,6 +67,18 @@ namespace PasswordManagerAccess.Common
             return Uri.EscapeUriString(s);
         }
 
+        public static bool IsHex(this string s)
+        {
+            if (s.Length % 2 != 0)
+                return false;
+
+            foreach (var c in s)
+                if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')))
+                    return false;
+
+            return true;
+        }
+
         public static byte[] DecodeHex(this string s)
         {
             if (s.Length % 2 != 0)
