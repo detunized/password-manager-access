@@ -27,7 +27,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         public void RecoveryWordsToMasterKey_returns_key()
         {
             var key = Util.RecoveryWordsToMasterKey(RecoveryWords);
-            Assert.Equal("5aff62570a3a60754f72a563bdd5a35e".DecodeHex(), key);
+            Assert.Equal(MasterKey, key);
         }
 
         [Theory]
@@ -48,6 +48,13 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                                                  "Recovery word 'blah-blah' is invalid");
         }
 
+        [Fact]
+        public void CalculateChecksum_returns_checksum()
+        {
+            var checksum = Util.CalculateChecksum(MasterKey);
+            Assert.Equal(1, checksum);
+        }
+
         //
         // Data
         //
@@ -57,5 +64,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
             "foot", "wild", "noise", "behave", "plastic", "deny",
             "differ", "feed", "glove", "upgrade", "hand", "rotate",
         };
+
+        internal static readonly byte[] MasterKey = "5aff62570a3a60754f72a563bdd5a35e".DecodeHex();
     }
 }

@@ -16,6 +16,9 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             var key = new byte[16];
 
+            // The code here packs indices of words in the word list together into a bit stream.
+            // The index of each word is 11 bits long (2048 entries). 11 bits times 12 words is
+            // 132 bits. That makes 16.5 bytes. The key is 16 bytes and 4 bits for a checksum.
             var accumulator = 0;
             var bitsStored = 0;
             var byteIndex = 0;
@@ -44,7 +47,17 @@ namespace PasswordManagerAccess.DropboxPasswords
                 }
             }
 
+            // The checksum is the last 4 bits left in the accumulator
+            if (CalculateChecksum(key) != (accumulator & 15))
+                throw new InternalErrorException("Recovery words");
+
             return key;
+        }
+
+        internal static int CalculateChecksum(byte[] key)
+        {
+            // The checksum is just the top 4 bits of the first byte
+            return Crypto.Sha256(key)[0] >> 4;
         }
 
         //
