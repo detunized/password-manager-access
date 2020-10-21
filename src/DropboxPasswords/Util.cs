@@ -14,14 +14,14 @@ namespace PasswordManagerAccess.DropboxPasswords
             if (recoveryWords.Length != 12)
                 throw new InternalErrorException("Exactly 12 recovery words must be provided");
 
-            var key = new byte[16];
-
             // The code here packs indices of words in the word list together into a bit stream.
             // The index of each word is 11 bits long (2048 entries). 11 bits times 12 words is
-            // 132 bits. That makes 16.5 bytes. The key is 16 bytes and 4 bits for a checksum.
+            // 132 bits. That makes 16.5 bytes. The key is 16 bytes and 4 bits for the checksum.
+            var key = new byte[16];
             var accumulator = 0;
             var bitsStored = 0;
             var byteIndex = 0;
+
             foreach (var word in recoveryWords)
             {
                 var index = Array.BinarySearch(WordListEn, word);
