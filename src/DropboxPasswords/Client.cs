@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using PasswordManagerAccess.Common;

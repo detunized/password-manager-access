@@ -1,6 +1,9 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
+using System;
 using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.DropboxPasswords
@@ -17,6 +20,13 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("disabled", Required = Required.Always)]
             public readonly bool Disabled;
+
+            // Mutes the uninitialized non-nullable field warnings
+            private AccountInfo()
+            {
+                AccountId = "";
+                Email = "";
+            }
         }
 
         public class Features
@@ -44,6 +54,13 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("has_more", Required = Required.Always)]
             public readonly bool HasMore;
+
+            // Mutes the uninitialized non-nullable field warnings
+            private RootFolder()
+            {
+                Entries = Array.Empty<FolderEntry>();
+                Cursor = "";
+            }
         }
 
         public readonly struct FolderEntry
