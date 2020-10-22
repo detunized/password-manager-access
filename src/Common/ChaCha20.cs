@@ -12,9 +12,6 @@ using System.Runtime.CompilerServices;
 
 namespace PasswordManagerAccess.Common
 {
-    // TODO: Add some tests. It's clear that is works because the content is decrypted and it's correct.
-    //       Even if one byte was off, the checksums wouldn't match.
-    //       It's good to have some smoke tests anyway for some possible refactoring in the future.
     internal class ChaCha20
     {
         private const int KeySize = 32;
@@ -51,10 +48,10 @@ namespace PasswordManagerAccess.Common
                                  byte[] outputBuffer,
                                  int outputOffset)
         {
-            if (inputCount > inputBuffer.Length - inputOffset)
+            if ((uint)inputCount > inputBuffer.Length - (uint)inputOffset)
                 throw new InternalErrorException("Input buffer is too short");
 
-            if (inputCount > outputBuffer.Length - outputOffset)
+            if ((uint)inputCount > outputBuffer.Length - (uint)outputOffset)
                 throw new InternalErrorException("Output buffer is too short");
 
             // TODO: This should be rather slow to loop like this over each byte
