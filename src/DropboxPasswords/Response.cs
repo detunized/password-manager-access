@@ -74,5 +74,36 @@ namespace PasswordManagerAccess.DropboxPasswords
             [JsonProperty("is_downloadable", Required = Required.Always)]
             public readonly bool IsDownloadable;
         }
+
+        public class EncryptedEntry
+        {
+            [JsonProperty("identifier", Required = Required.Always)]
+            public readonly string Id;
+
+            [JsonProperty("type", Required = Required.Always)]
+            public readonly string Type;
+
+            [JsonProperty("version", Required = Required.Always)]
+            public readonly int Version;
+
+            [JsonProperty("encryptedBundle", Required = Required.Always)]
+            public readonly EncryptedBundle EncryptedBundle;
+
+            // Mutes the uninitialized non-nullable field warnings
+            private EncryptedEntry()
+            {
+                Id = "";
+                Type = "";
+            }
+        }
+
+        internal readonly struct EncryptedBundle
+        {
+            [JsonProperty("base64EncryptedData", Required = Required.Always)]
+            public readonly string CiphertextBase64;
+
+            [JsonProperty("base64Nonce", Required = Required.Always)]
+            public readonly string NonceBase64;
+        }
     }
 }
