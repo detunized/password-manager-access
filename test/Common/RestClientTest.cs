@@ -106,6 +106,27 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
+        public void PostJson_with_NoParameters_sends_empty_object()
+        {
+            InRequest(rest => rest.PostJson(Url, RestClient.NoParameters),
+                      request => Assert.Equal("{}", request.Content.ReadAsStringAsync().Result));
+        }
+
+        [Fact]
+        public void PostJson_with_JsonBlank_sends_blank()
+        {
+            InRequest(rest => rest.PostJson(Url, RestClient.JsonBlank),
+                      request => Assert.Equal("", request.Content.ReadAsStringAsync().Result));
+        }
+
+        [Fact]
+        public void PostJson_with_JsonNull_sends_null()
+        {
+            InRequest(rest => rest.PostJson(Url, RestClient.JsonNull),
+                      request => Assert.Equal("null", request.Content.ReadAsStringAsync().Result));
+        }
+
+        [Fact]
         public void PostForm_sends_form_headers()
         {
             InRequest(rest => rest.PostForm(Url, NoParameters),
