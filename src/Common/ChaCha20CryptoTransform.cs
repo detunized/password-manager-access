@@ -4,7 +4,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace PasswordManagerAccess.Kdbx
+namespace PasswordManagerAccess.Common
 {
     internal class ChaCha20CryptoTransform: ICryptoTransform
     {
@@ -13,17 +13,17 @@ namespace PasswordManagerAccess.Kdbx
         public bool CanTransformMultipleBlocks => true;
         public bool CanReuseTransform => true;
 
-        public static ChaCha20CryptoTransform CreateEncryptor(ChaCha20Engine engine)
+        public static ChaCha20CryptoTransform CreateEncryptor(ChaCha20 engine)
         {
             return new ChaCha20CryptoTransform(engine);
         }
 
-        public static ChaCha20CryptoTransform CreateDecryptor(ChaCha20Engine engine)
+        public static ChaCha20CryptoTransform CreateDecryptor(ChaCha20 engine)
         {
             return new ChaCha20CryptoTransform(engine);
         }
 
-        private ChaCha20CryptoTransform(ChaCha20Engine engine)
+        private ChaCha20CryptoTransform(ChaCha20 engine)
         {
             _engine = engine;
         }
@@ -53,6 +53,6 @@ namespace PasswordManagerAccess.Kdbx
             // Nothing to dispose of
         }
 
-        private readonly ChaCha20Engine _engine;
+        private readonly ChaCha20 _engine;
     }
 }

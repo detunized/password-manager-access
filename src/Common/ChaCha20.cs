@@ -9,14 +9,13 @@
 // https://github.com/bcgit/bc-csharp/blob/master/crypto/src/crypto/engines/ChaCha7539Engine.cs
 
 using System.Runtime.CompilerServices;
-using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Kdbx
+namespace PasswordManagerAccess.Common
 {
     // TODO: Add some tests. It's clear that is works because the content is decrypted and it's correct.
     //       Even if one byte was off, the checksums wouldn't match.
     //       It's good to have some smoke tests anyway for some possible refactoring in the future.
-    internal class ChaCha20Engine
+    internal class ChaCha20
     {
         private const int KeySize = 32;
         private const int NonceSize = 12;
@@ -28,7 +27,7 @@ namespace PasswordManagerAccess.Kdbx
         private readonly byte[] _keyStream = new byte[StateSize * 4];
         private int _index = 0;
 
-        public ChaCha20Engine(byte[] key, byte[] nonce)
+        public ChaCha20(byte[] key, byte[] nonce)
         {
             if (key.Length != KeySize)
                 throw new InternalErrorException($"Key must be {KeySize} bytes, got {key.Length}");

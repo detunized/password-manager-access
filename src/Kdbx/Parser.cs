@@ -334,7 +334,7 @@ namespace PasswordManagerAccess.Kdbx
             using IDisposable engine = info.Cipher switch
             {
                 Cipher.Aes => CreateAes(info),
-                Cipher.ChaCha20 => new Indisposable<ChaCha20Engine>(CreateChaCha20(info)),
+                Cipher.ChaCha20 => new Indisposable<ChaCha20>(CreateChaCha20(info)),
                 Cipher.Twofish => CreateTwofish(info),
                 _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
             };
@@ -342,7 +342,7 @@ namespace PasswordManagerAccess.Kdbx
             using ICryptoTransform decryptor = info.Cipher switch
             {
                 Cipher.Aes => ((Aes)engine).CreateDecryptor(),
-                Cipher.ChaCha20 => ChaCha20CryptoTransform.CreateDecryptor((Indisposable<ChaCha20Engine>)engine),
+                Cipher.ChaCha20 => ChaCha20CryptoTransform.CreateDecryptor((Indisposable<ChaCha20>)engine),
                 Cipher.Twofish => ((Twofish)engine).CreateDecryptor(),
                 _ => throw MakeUnsupportedError($"Cipher {info.Cipher}"),
             };
@@ -371,9 +371,9 @@ namespace PasswordManagerAccess.Kdbx
             return aes;
         }
 
-        internal static ChaCha20Engine CreateChaCha20(in DatabaseInfo info)
+        internal static ChaCha20 CreateChaCha20(in DatabaseInfo info)
         {
-            return new ChaCha20Engine(info.EncryptionKey, info.Iv);
+            return new ChaCha20(info.EncryptionKey, info.Iv);
         }
 
         internal static Twofish CreateTwofish(in DatabaseInfo info)
@@ -482,7 +482,7 @@ namespace PasswordManagerAccess.Kdbx
                 throw MakeUnsupportedError($"Random stream ID {id}");
 
             var keyIv = Crypto.Sha512(body.RandomStream.Key);
-            var cipher = new ChaCha20Engine(keyIv.Sub(0, 32), keyIv.Sub(32, 12));
+            var cipher = new ChaCha20(keyIv.Sub(0, 32), keyIv.Sub(32, 12));
 
             var values = body.Xml.XPathSelectElements("//Value[@Protected='True']").ToArray();
             foreach (var v in values)
