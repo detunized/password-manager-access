@@ -343,6 +343,32 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // XChaCha20Poly1305
+        //
+
+        internal static byte[] DecryptXChaCha20Poly1305(byte[] ciphertext, byte[] nonce, byte[] key)
+        {
+            if (ciphertext.Length < 16)
+                throw new InternalErrorException($"Ciphertext must be at least 16 bytes long, got {ciphertext.Length}");
+
+            var xChaCha20 = new XChaCha20(key, nonce);
+
+            // Skip 64 bytes advancing the counter to 1.
+            // TODO: We're relying on the internal implementation details here. Not so good.
+            //       Introduce a [X]ChaCha20.SetCounter method to set it explicitly.
+            var polyKey = new byte[32];
+            xChaCha20.ProcessBytes(polyKey, 0, 32, polyKey, 0);
+            xChaCha20.ProcessBytes(polyKey, 0, 32, polyKey, 0);
+
+            // TODO: Verify the Poly1305 tag!
+
+            var plaintext = new byte[ciphertext.Length - 16];
+            xChaCha20.ProcessBytes(ciphertext, 0, plaintext.Length, plaintext, 0);
+
+            return plaintext;
+        }
+
+        //
         // RSA
         //
 
