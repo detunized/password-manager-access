@@ -4,14 +4,25 @@
 #nullable enable
 
 using System;
+using Konscious.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.DropboxPasswords
 {
     internal static class Util
     {
+        public static byte[] DeriveMasterKeyFromRecoveryWords(string[] recoveryWords)
+        {
+            using var blake = new HMACBlake2B(Array.Empty<byte>(), 256);
+            return blake.ComputeHash(ConvertRecoveryWordsToRecoveryKey(recoveryWords));
+        }
+
+        //
+        // Internal
+        //
+
         // TODO: Only English recovery words are supported
-        public static byte[] RecoveryWordsToMasterKey(string[] recoveryWords)
+        internal static byte[] ConvertRecoveryWordsToRecoveryKey(string[] recoveryWords)
         {
             if (recoveryWords.Length != 12)
                 throw new InternalErrorException("Exactly 12 recovery words must be provided");
