@@ -8,6 +8,295 @@ namespace PasswordManagerAccess.Test.Common
     public static class CryptoTestVectors
     {
         //
+        // Poly1305
+        //
+
+        public struct Poly1305TestVector
+        {
+            public byte[] Key => KeyHex.DecodeHex();
+            public byte[] Tag => TagHex.DecodeHex();
+            public byte[] Input => InputHex.DecodeHex();
+
+            internal string KeyHex;
+            internal string TagHex;
+            internal string InputHex;
+        }
+
+        public static readonly Poly1305TestVector[] Poly1305TestVectors =
+        {
+            // edge cases
+            new Poly1305TestVector
+            {
+                // see https://go-review.googlesource.com/#/c/30101/
+                KeyHex = "3b3a29e93b213a5c5c3b3b053a3a8c0d00000000000000000000000000000000",
+                TagHex = "6dc18b8c344cd79927118bbe84b7f314",
+                InputHex = "81d8b2e46a25213b58fee4213a2a28e921c12a9632516d3b73272727becf2129",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "04000000000000000000000000000000", // (2^130-1) % (2^130-5)
+                InputHex = "ffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000" +
+                           "0000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "faffffffffffffffffffffffffffffff", // (2^130-6) % (2^130-5)
+                InputHex = "faffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000" +
+                           "0000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "00000000000000000000000000000000", // (2^130-5) % (2^130-5)
+                InputHex = "fbffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000" +
+                           "0000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "f9ffffffffffffffffffffffffffffff", // (2*(2^130-6)) % (2^130-5)
+                InputHex = "fafffffffffffffffffffffffffffffffaffffffffffffffffffffffffffffff0000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "00000000000000000000000000000000", // (2*(2^130-5)) % (2^130-5)
+                InputHex = "fbfffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffff0000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "f8ffffffffffffffffffffffffffffff", // (3*(2^130-6)) % (2^130-5)
+                InputHex = "fafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffff" +
+                           "fffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "000000000000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "00000000000000000000000000000000", // (3*(2^130-5)) % (2^130-5)
+                InputHex = "fbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffff" +
+                           "fffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "000000000000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "f7ffffffffffffffffffffffffffffff", // (4*(2^130-6)) % (2^130-5)
+                InputHex = "fafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffff" +
+                           "ffffffffaffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "0000000000000000000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "00000000000000000000000000000000", // (4*(2^130-5)) % (2^130-5)
+                InputHex = "fbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffff" +
+                           "ffffffffbffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "0000000000000000000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "f3ffffffffffffffffffffffffffffff", // (8*(2^130-6)) % (2^130-5)
+                InputHex = "fafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffff" +
+                           "ffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffaffffffffffffffff" +
+                           "fffffffffffffffafffffffffffffffffffffffffffffffaffffffffffffffffffffffffffffff00000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "00000000000000000000000000000000", // (8*(2^130-5)) % (2^130-5)
+                InputHex = "fbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffff" +
+                           "ffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbffffffffffffffff" +
+                           "fffffffffffffffbfffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffff00000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "ebffffffffffffffffffffffffffffff", // (16*(2^130-6)) % (2^130-5)
+                InputHex = "fafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffff" +
+                           "ffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffaffffffffffffffff" +
+                           "fffffffffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffafffffffff" +
+                           "ffffffffffffffffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffaff" +
+                           "fffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffafffffffffffffffffffffffffff" +
+                           "ffffafffffffffffffffffffffffffffffffaffffffffffffffffffffffffffffff0000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "0100000000000000000000000000000000000000000000000000000000000000",
+                TagHex = "00000000000000000000000000000000", // (16*(2^130-5)) % (2^130-5)
+                InputHex = "fbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffff" +
+                           "ffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbffffffffffffffff" +
+                           "fffffffffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbfffffffff" +
+                           "ffffffffffffffffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbff" +
+                           "fffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffbfffffffffffffffffffffffffff" +
+                           "ffffbfffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffff0000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+                           "00000000000000000000000",
+            },
+
+            // randomly generated
+            new Poly1305TestVector
+            {
+                KeyHex = "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
+                TagHex = "9566c74d10037c4d7bbb0407d1e2c649",
+                InputHex = "",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "81855ad8681d0d86d1e91e00167939cb6694d2c422acd208a0072939487f6999",
+                TagHex = "eaa270caaa12faa39b797374a4b8a420",
+                InputHex = "eb",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "9d18a44784045d87f3c67cf22746e995af5a25367951baa2ff6cd471c483f15f",
+                TagHex = "dbea66e1da48a8f822887c6162c2acf1",
+                InputHex = "b90b",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "adb37c5821b6d95526a41a9504680b4e7c8b763a1b1d49d4955c848621632525",
+                TagHex = "6ac09aaa88c32ee95a7198376f16abdb",
+                InputHex = "3fec73",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "8dd7a9e28bf921119c160f0702448615bbda08313f6a8eb668d20bf505987592",
+                TagHex = "b1443487f97fe340b04a74719ed4de68",
+                InputHex = "1e668a5b",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "df2c7fc4844592d2572bcd0668d2d6c52f5054e2d0836bf84c7174cb7476364c",
+                TagHex = "7463be0f9d99a5348039e4afcbf4019c",
+                InputHex = "c3dbd968b0",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "f7172ed85794bb358b0c3b525da1786f9fff094279db1944ebd7a19d0f7bbacb",
+                TagHex = "2edaee3bcf303fd05609e131716f8157",
+                InputHex = "e0255aa5b7d4",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "4bec40f84c892b9bffd43629b0223beea5f4f74391f445d15afd4294040374f6",
+                TagHex = "965f18767420c1d94a4ef657e8d15e1e",
+                InputHex = "924b98cbf8713f",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "8d962d7c8d019192c24224e2cafccae3a61fb586b14323a6bc8f9e7df1d92933",
+                TagHex = "2bf4a33287dd6d87e1ed4282f7342b6a",
+                InputHex = "3ff993933bea6f5b",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "3af6de0374366c4719e43a1b067d89bc7f01f1f573981659a44ff17a4c7215a3",
+                TagHex = "c5e987b60373a48893c5af30acf2471f",
+                InputHex = "b539eb1e5849c6077d",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "bb5722f5717a289a266f97647981998ebea89c0b4b373970115e82ed6f4125c8",
+                TagHex = "19f0f640b309d168ea1b480e6a4faee5",
+                InputHex = "fa7311e4d7defa922daa",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "e7786667f7e936cd4f24abf7df866baa56038367ad6145de1ee8f4a8b0993ebd",
+                TagHex = "de75e5565d97834b9fa84ad568d31359",
+                InputHex = "f8883a0ad8be9c3978b048",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "83e56a156a8de563afa467d49dec6a40e9a1d007f033c2823061bdd0eaa59f8e",
+                TagHex = "de184a5a9b826aa203c5c017986d6690",
+                InputHex = "4da6430105220d0b29688b73",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "4b8ea0f3ca9936e8461f10d77c96ea80a7a665f606f6a63b7f3dfd2567c18979",
+                TagHex = "7478f18d9684905aa5d1a34ee67e4c84",
+                InputHex = "e4d60f26686d9bf2fb26c901ff",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "354cde1607ee294b39f32b7c7822ba64f84ab43ca0c6e6b91c1fd3be89904341",
+                TagHex = "3b2008a9c52b5308f5538b789ab5506f",
+                InputHex = "79d3af4491a369012db92d184fc3",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "9d1734ff5716428953bb6865fcf92b0c3a17c9028be9914eb7649c6c93478009",
+                TagHex = "71c8e76a67a505b7370b562ba15ba032",
+                InputHex = "79d1830356f2a54c3deab2a4b4475d",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "63afbe8fb56987c77f5818526f1814be823350eab13935f31d84484517e924ae",
+                TagHex = "1dc895f74f866bdb3edf6c4430829c1c",
+                InputHex = "f78ae151c00755925836b7075885650c",
+            },
+            new Poly1305TestVector
+            {
+                KeyHex = "30ec29a3703934bf50a28da102975deda77e758579ea3dfe4136abf752b3b827",
+                TagHex = "afca2b3ba7b0e1a928001966883e9b16",
+                InputHex = "1d03e944b3c9db366b75045f8efd69d22ae5411947cb553d7694267aef4ebcea406b32d6108bd68584f57e37c" +
+                           "aac6e33feaa3263a399437024ba9c9b14678a274f01a910ae295f6efbfe5f5abf44ccde263b5606633e2bf000" +
+                           "6f28295d7d39069f01a239c4365854c3af7f6b41d631f92b9a8d12f41257325fff332f7576b0620556304a3e3" +
+                           "eae14c28d0cea39d2901a52720da85ca1e4b38eaf3f",
+            },
+        };
+
+        //
         // XChaCha20Poly1305
         //
 
@@ -43,15 +332,19 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "",
                 KeyHex = "b7bbfe61b8041658ddc95d5cbdc01bbe7626d24f3a043b70ddee87541234cff7",
                 NonceHex = "e293239d4c0a07840c5f83cb515be7fd59c333933027e99c",
-                CiphertextHex = "7a51f271bd2e547943c7be3316c05519a5d16803712289aa2369950b1504dd8267222e47b13280077ecada7b8795d535",
+                CiphertextHex = "7a51f271bd2e547943c7be3316c05519a5d16803712289aa2369950b1504dd8267222e47b13280077eca" +
+                                "da7b8795d535",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "7afc5f3f24155002e17dc176a8f1f3a097ff5a991b02ff4640f70b90db0c15c328b696d6998ea7988edfe3b960e47824e4ae002fbe589be57896a9b7bf5578599c6ba0153c7c",
+                PlaintextHex = "7afc5f3f24155002e17dc176a8f1f3a097ff5a991b02ff4640f70b90db0c15c328b696d6998ea7988edfe" +
+                               "3b960e47824e4ae002fbe589be57896a9b7bf5578599c6ba0153c7c",
                 AssociatedDataHex = "d499bb9758debe59a93783c61974b7",
                 KeyHex = "4ea8fab44a07f7ffc0329b2c2f8f994efdb6d505aec32113ae324def5d929ba1",
                 NonceHex = "404d5086271c58bf27b0352a205d21ce4367d7b6a7628961",
-                CiphertextHex = "26d2b46ad58b6988e2dcf1d09ba8ab6f532dc7e0847cdbc0ed00284225c02bbdb278ee8381ebd127a06926107d1b731cfb1521b267168926492e8f77219ad922257a5be2c5e52e6183ca4dfd0ad3912d7bd1ec968065",
+                CiphertextHex = "26d2b46ad58b6988e2dcf1d09ba8ab6f532dc7e0847cdbc0ed00284225c02bbdb278ee8381ebd127a069" +
+                                "26107d1b731cfb1521b267168926492e8f77219ad922257a5be2c5e52e6183ca4dfd0ad3912d7bd1ec96" +
+                                "8065",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -107,7 +400,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "",
                 KeyHex = "e31a1d3af650e8e2848bd78432d89ecd1fdece9842dc2792e7bda080f537b17b",
                 NonceHex = "f3f09905e9a871e757348834f483ed71be9c0f437c8d74b0",
-                CiphertextHex = "f5c69528963e17db725a28885d30a45194f12848b8b7644c7bded47a2ee83e6d4ef34006305cfdf82effdced461d",
+                CiphertextHex = "f5c69528963e17db725a28885d30a45194f12848b8b7644c7bded47a2ee83e6d4ef34006305cfdf82eff" +
+                                "dced461d",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -115,7 +409,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "",
                 KeyHex = "1031bc920d4fcb4434553b1bf2d25ab375200643bf523ff037bf8914297e8dca",
                 NonceHex = "4cc77e2ef5445e07b5f44de2dc5bf62d35b8c6f69502d2bf",
-                CiphertextHex = "7aa8669e1bfe8b0688899cdddbb8cee31265928c66a69a5090478da7397573b1cc0f64121e7d8bff8db0ddd3c17460d7f29a12",
+                CiphertextHex = "7aa8669e1bfe8b0688899cdddbb8cee31265928c66a69a5090478da7397573b1cc0f64121e7d8bff8db0" +
+                                "ddd3c17460d7f29a12",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -123,39 +418,48 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "",
                 KeyHex = "ac8648b7c94328419c668ce1c57c71893adf73abbb98892a4fc8da17400e3a5e",
                 NonceHex = "4ad637facf97af5fc03207ae56219da9972858b7430b3611",
-                CiphertextHex = "49e093fcd074fb67a755669119b8bd430d98d9232ca988882deeb3508bde7c00160c35cea89092db864dcb6d440aefa5aacb8aa7b9c04cf0",
+                CiphertextHex = "49e093fcd074fb67a755669119b8bd430d98d9232ca988882deeb3508bde7c00160c35cea89092db864d" +
+                                "cb6d440aefa5aacb8aa7b9c04cf0",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "b877bfa192ea7e4c7569b9ee973f89924d45f9d8ed03c7098ad0cad6e7880906befedcaf6417bb43efabca7a2f",
+                PlaintextHex = "b877bfa192ea7e4c7569b9ee973f89924d45f9d8ed03c7098ad0cad6e7880906befedcaf6417bb43efabc" +
+                               "a7a2f",
                 AssociatedDataHex = "",
                 KeyHex = "125e331d5da423ecabc8adf693cdbc2fc3d3589740d40a3894f914db86c02492",
                 NonceHex = "913f8b2f08006e6260de41ec3ee01d938a3e68fb12dc44c4",
-                CiphertextHex = "1be334253423c90fc8ea885ee5cd3a54268c035ba8a2119e5bd4f7822cd7bf9cb4cec568d5b6d6292606d32979e044df3504e6eb8c0b2fc7e2a0e17d62",
+                CiphertextHex = "1be334253423c90fc8ea885ee5cd3a54268c035ba8a2119e5bd4f7822cd7bf9cb4cec568d5b6d6292606" +
+                                "d32979e044df3504e6eb8c0b2fc7e2a0e17d62",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "d946484a1df5f85ff72c92ff9e192660cde5074bd0ddd5de900c35eb10ed991113b1b19884631bc8ceb386bcd83908061ce9",
+                PlaintextHex = "d946484a1df5f85ff72c92ff9e192660cde5074bd0ddd5de900c35eb10ed991113b1b19884631bc8ceb38" +
+                               "6bcd83908061ce9",
                 AssociatedDataHex = "",
                 KeyHex = "b7e83276373dcf8929b6a6ea80314c9de871f5f241c9144189ee4caf62726332",
                 NonceHex = "f59f9d6e3e6c00720dc20dc21586e8330431ebf42cf9180e",
-                CiphertextHex = "a38a662b18c2d15e1b7b14443cc23267a10bee23556b084b6254226389c414069b694159a4d0b5abbe34de381a0e2c88b947b4cfaaebf50c7a1ad6c656e386280ad7",
+                CiphertextHex = "a38a662b18c2d15e1b7b14443cc23267a10bee23556b084b6254226389c414069b694159a4d0b5abbe34" +
+                                "de381a0e2c88b947b4cfaaebf50c7a1ad6c656e386280ad7",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "d266927ca40b2261d5a4722f3b4da0dd5bec74e103fab431702309fd0d0f1a259c767b956aa7348ca923d64c04f0a2e898b0670988b15e",
+                PlaintextHex = "d266927ca40b2261d5a4722f3b4da0dd5bec74e103fab431702309fd0d0f1a259c767b956aa7348ca923d" +
+                               "64c04f0a2e898b0670988b15e",
                 AssociatedDataHex = "",
                 KeyHex = "a60e09cd0bea16f26e54b62b2908687aa89722c298e69a3a22cf6cf1c46b7f8a",
                 NonceHex = "92da9d67854c53597fc099b68d955be32df2f0d9efe93614",
-                CiphertextHex = "9dd6d05832f6b4d7f555a5a83930d6aed5423461d85f363efb6c474b6c4c8261b680dea393e24c2a3c8d1cc9db6df517423085833aa21f9ab5b42445b914f2313bcd205d179430",
+                CiphertextHex = "9dd6d05832f6b4d7f555a5a83930d6aed5423461d85f363efb6c474b6c4c8261b680dea393e24c2a3c8d" +
+                                "1cc9db6df517423085833aa21f9ab5b42445b914f2313bcd205d179430",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "f7e11b4d372ed7cb0c0e157f2f9488d8efea0f9bbe089a345f51bdc77e30d1392813c5d22ca7e2c7dfc2e2d0da67efb2a559058d4de7a11bd2a2915e",
+                PlaintextHex = "f7e11b4d372ed7cb0c0e157f2f9488d8efea0f9bbe089a345f51bdc77e30d1392813c5d22ca7e2c7dfc2e" +
+                               "2d0da67efb2a559058d4de7a11bd2a2915e",
                 AssociatedDataHex = "",
                 KeyHex = "194b1190fa31d483c222ec475d2d6117710dd1ac19a6f1a1e8e894885b7fa631",
                 NonceHex = "6b07ea26bb1f2d92e04207b447f2fd1dd2086b442a7b6852",
-                CiphertextHex = "25ae14585790d71d39a6e88632228a70b1f6a041839dc89a74701c06bfa7c4de3288b7772cb2919818d95777ab58fe5480d6e49958f5d2481431014a8f88dab8f7e08d2a9aebbe691430011d",
+                CiphertextHex = "25ae14585790d71d39a6e88632228a70b1f6a041839dc89a74701c06bfa7c4de3288b7772cb2919818d9" +
+                                "5777ab58fe5480d6e49958f5d2481431014a8f88dab8f7e08d2a9aebbe691430011d",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -211,7 +515,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "a8750275",
                 KeyHex = "39592eb276877fca9dd11e2181c0b23127328407e3cc11e315e5d748f43529cc",
                 NonceHex = "1084bebd756f193d9eea608b3a0193a5028f8ced19684821",
-                CiphertextHex = "eaee1f49ac8468154c601a5dd8b84d597602e5a73534b5fad5664f97d0f017dd114752be969679cf610340c6a312",
+                CiphertextHex = "eaee1f49ac8468154c601a5dd8b84d597602e5a73534b5fad5664f97d0f017dd114752be969679cf6103" +
+                                "40c6a312",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -219,7 +524,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "a1e96da0",
                 KeyHex = "b8386123b87e50d9d046242cf1bf141fce7f65aff0fba76861a2bc72582d6ff0",
                 NonceHex = "0fbe2a13a89bea031de96d78f9f11358ba7b6a5e724b4392",
-                CiphertextHex = "705ec3f910ec85c6005baa99641de6ca43332ff52b5466df6af4ffbe4ef2a376a8f871d1eae503b5896601fee005cdc1f4c1c6",
+                CiphertextHex = "705ec3f910ec85c6005baa99641de6ca43332ff52b5466df6af4ffbe4ef2a376a8f871d1eae503b58966" +
+                                "01fee005cdc1f4c1c6",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -227,39 +533,48 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "87663c5a",
                 KeyHex = "d519d82ba8a3f0c3af9efe36682b62e285167be101a526c1d73000f169c2a486",
                 NonceHex = "ad651aac536978e2bc1a54816345ac5e9a9b43b3d9cc0bfc",
-                CiphertextHex = "07051b5e72da9c4811beb07ff9f95aece67eae18420eb3f0e8bb8a5e26d4b483fa40eb063a2354842d0c8a41d981cc2b77c530b496db01c8",
+                CiphertextHex = "07051b5e72da9c4811beb07ff9f95aece67eae18420eb3f0e8bb8a5e26d4b483fa40eb063a2354842d0c" +
+                                "8a41d981cc2b77c530b496db01c8",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "1f6b24f2f0d9eb460d726bed953d66fcc4ecc29da6ed2fd711358eac3b2609d74ba3e21885156cde3cbe6d9b6f",
+                PlaintextHex = "1f6b24f2f0d9eb460d726bed953d66fcc4ecc29da6ed2fd711358eac3b2609d74ba3e21885156cde3cbe6" +
+                               "d9b6f",
                 AssociatedDataHex = "f5efbc4e",
                 KeyHex = "86068a00544f749ad4ad15bb8e427ae78577ae22f4ca9778efff828ba10f6b20",
                 NonceHex = "c8420412c9626dcd34ece14593730f6aa2d01ec51cacd59f",
-                CiphertextHex = "a99f6c88eac35bb34439e34b292fe9db8192446dcdc81e2192060ec36d98b47de2bee12bf0f67cb24fb0949c07733a6781cd9455cdc61123f506886b04",
+                CiphertextHex = "a99f6c88eac35bb34439e34b292fe9db8192446dcdc81e2192060ec36d98b47de2bee12bf0f67cb24fb0" +
+                                "949c07733a6781cd9455cdc61123f506886b04",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "d69389d83362be8c0ddb738659a6cc4bd65d88cb5b525232f4d59a7d4751a7203c254923ecb6873e803220aab19664789a63",
+                PlaintextHex = "d69389d83362be8c0ddb738659a6cc4bd65d88cb5b525232f4d59a7d4751a7203c254923ecb6873e80322" +
+                               "0aab19664789a63",
                 AssociatedDataHex = "bc35fb1c",
                 KeyHex = "835855b326a98682b3075b4d7f1b89059c3cdfc547d4296c80ce7a77ba6434e3",
                 NonceHex = "c27cb75fc319ba431cbaeb120341d0c4745d883eb47e92bc",
-                CiphertextHex = "db6dc3f9a0f4f1a6df2495a88910550c2c6205478bfc1e81282e34b5b36d984c72c0509c522c987c61d2e640ced69402a6d33aa10d3d0b81e680b3c19bc142e81923",
+                CiphertextHex = "db6dc3f9a0f4f1a6df2495a88910550c2c6205478bfc1e81282e34b5b36d984c72c0509c522c987c61d2" +
+                                "e640ced69402a6d33aa10d3d0b81e680b3c19bc142e81923",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "a66a7f089115ed9e2d5bb5d33d7282a7afe401269b00f2a233a59c04b794a42901d862140b61d18d7c7f0ad5da040613e557f8abc74219",
+                PlaintextHex = "a66a7f089115ed9e2d5bb5d33d7282a7afe401269b00f2a233a59c04b794a42901d862140b61d18d7c7f0" +
+                               "ad5da040613e557f8abc74219",
                 AssociatedDataHex = "2c060aaf",
                 KeyHex = "99758aa7714fd707931f71803eefe04a06955041308a0b2a1104313b270ccf34",
                 NonceHex = "63f690d8926408c7a34fe8ddd505a8dc58769dc74e8d5da6",
-                CiphertextHex = "92b21ee85afcd8996ac28f3aed1047ad814d6e4ffbca3159af16f26eded83e4abda9e4275eb3ff0ad90dffe09f2d443b628f824f680b46527ce0128e8de1920f7c44350ebe7913",
+                CiphertextHex = "92b21ee85afcd8996ac28f3aed1047ad814d6e4ffbca3159af16f26eded83e4abda9e4275eb3ff0ad90d" +
+                                "ffe09f2d443b628f824f680b46527ce0128e8de1920f7c44350ebe7913",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "f955183b1f762d4536d3f6885ea7f5ac27414caf46c2e24a2fd3bd56b91c53d840fb657224565e0a6f686f8ba320e04a401057399d9a3d995ab17c13",
+                PlaintextHex = "f955183b1f762d4536d3f6885ea7f5ac27414caf46c2e24a2fd3bd56b91c53d840fb657224565e0a6f686" +
+                               "f8ba320e04a401057399d9a3d995ab17c13",
                 AssociatedDataHex = "c372ddc5",
                 KeyHex = "a188be3795b2ca2e69b6aa263244f0963c492d694cf6c9b705a1d7045f3f2a26",
                 NonceHex = "51bb484ea094ee140474681e1c838e4442fd148de2cc345a",
-                CiphertextHex = "48759a5ddfdd829d11de8e0c538ce4a9c475faab6912039b568ad92d737d172fc1eb0c00c3793de6dddbfacfdbbc7f44aeba33684e18005aa982b6fc6c556e63bb90ff7a1dde8153a63eabe0",
+                CiphertextHex = "48759a5ddfdd829d11de8e0c538ce4a9c475faab6912039b568ad92d737d172fc1eb0c00c3793de6dddb" +
+                                "facfdbbc7f44aeba33684e18005aa982b6fc6c556e63bb90ff7a1dde8153a63eabe0",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -315,7 +630,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "fd3881e505c8b12d",
                 KeyHex = "36e42b1ef1ee8d068f09b5fad3ee43d98d34aa3e3f994f2055aee139da71de9d",
                 NonceHex = "24124da36473d01bdca30297c9eef4fe61955525a453da17",
-                CiphertextHex = "a8b28139524c98c1f8776f442eac4c22766fe6aac83224641c58bf021fc9cb709ec4706f49c2d0c1828acf2bfe8d",
+                CiphertextHex = "a8b28139524c98c1f8776f442eac4c22766fe6aac83224641c58bf021fc9cb709ec4706f49c2d0c1828a" +
+                                "cf2bfe8d",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -323,7 +639,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "193206c8fcc5b19b",
                 KeyHex = "6e47c40c9d7b757c2efca4d73890e4c73f3c859aab4fdc64b564b8480dd84e72",
                 NonceHex = "ca31340ae20d30fe488be355cb36652c5db7c9d6265a3e95",
-                CiphertextHex = "a121efc5e1843deade4b8adbfef1808de4eda222f176630ad34fb476fca19e0299e4a13668e53cf13882035ba4f04f47c8b4e3",
+                CiphertextHex = "a121efc5e1843deade4b8adbfef1808de4eda222f176630ad34fb476fca19e0299e4a13668e53cf13882" +
+                                "035ba4f04f47c8b4e3",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -331,39 +648,48 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "62338d02fff78a00",
                 KeyHex = "2c5c79c92d91fb40ef7d0a77e8033f7b265e3bab998b8116d17b2e62bb4f8a09",
                 NonceHex = "024736adb1d5c01006dffd8158b57936d158d5b42054336d",
-                CiphertextHex = "46d0905473a995d38c7cdbb8ef3da96ecc82a22c5b3c6c9d1c4a61ae7a17db53cb88c5f7eccf2da1d0c417c300f989b4273470e36f03542f",
+                CiphertextHex = "46d0905473a995d38c7cdbb8ef3da96ecc82a22c5b3c6c9d1c4a61ae7a17db53cb88c5f7eccf2da1d0c4" +
+                                "17c300f989b4273470e36f03542f",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "252e966c680329eb687bff813b78fea3bfd3505333f106c6f9f45ba69896723c41bb763793d9b266e897d05557",
+                PlaintextHex = "252e966c680329eb687bff813b78fea3bfd3505333f106c6f9f45ba69896723c41bb763793d9b266e897d" +
+                               "05557",
                 AssociatedDataHex = "1e93e0cfe6523380",
                 KeyHex = "9ec6fd1baa13ee16aec3fac16718a2baccf18a403cec467c25b7448e9b321110",
                 NonceHex = "e7120b1018ab363a36e61102eedbcbe9847a6cbacaa9c328",
-                CiphertextHex = "2934f034587d4144bb11182679cd2cd1c99c8088d18e233379e9bc9c41107a1f57a2723ecc7b9ba4e6ee198adf0fd766738e828827dc73136fc5b996e9",
+                CiphertextHex = "2934f034587d4144bb11182679cd2cd1c99c8088d18e233379e9bc9c41107a1f57a2723ecc7b9ba4e6ee" +
+                                "198adf0fd766738e828827dc73136fc5b996e9",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "6744aefcb318f12bc6eeb59d4d62f7eb95f347cea14bd5158415f07f84e4e3baa3de07512d9b76095ac1312cfcb1bb77f499",
+                PlaintextHex = "6744aefcb318f12bc6eeb59d4d62f7eb95f347cea14bd5158415f07f84e4e3baa3de07512d9b76095ac13" +
+                               "12cfcb1bb77f499",
                 AssociatedDataHex = "608d2a33ce5d0b04",
                 KeyHex = "0f665cbdaaa40f4f5a00c53d951b0a98aac2342be259a52670f650a783be7aab",
                 NonceHex = "378bdb57e957b8c2e1500c9513052a3b02ff5b7edbd4a3a7",
-                CiphertextHex = "341c60fcb374b394f1b01a4a80aedef49ab0b67ec963675e6eec43ef106f7003be87dbf4a8976709583dccc55abc7f979c4721837e8664a69804ea31736aa2af615a",
+                CiphertextHex = "341c60fcb374b394f1b01a4a80aedef49ab0b67ec963675e6eec43ef106f7003be87dbf4a8976709583d" +
+                                "ccc55abc7f979c4721837e8664a69804ea31736aa2af615a",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "bcf1004f988220b7ce063ef2ec4e276ffd074f0a90aa807de1532679d2a1505568eaa4192d9a6ea52cc500322343ce9f8e68cc2c606d83",
+                PlaintextHex = "bcf1004f988220b7ce063ef2ec4e276ffd074f0a90aa807de1532679d2a1505568eaa4192d9a6ea52cc50" +
+                               "0322343ce9f8e68cc2c606d83",
                 AssociatedDataHex = "e64bd00126c8792c",
                 KeyHex = "58e65150d6a15dcefbc14a171998987ad0d709fb06a17d68d6a778759681c308",
                 NonceHex = "106d2bd120b06e4eb10bc674fe55c77a3742225268319303",
-                CiphertextHex = "a28052a6686a1e9435fee8702f7da563a7b3d7b5d3e9e27f11abf73db309cd1f39a34756258c1c5c7f2fb12cf15eb20175c2a08fc93dd19c5e482ef3fbef3d8404a3cfd54a7baf",
+                CiphertextHex = "a28052a6686a1e9435fee8702f7da563a7b3d7b5d3e9e27f11abf73db309cd1f39a34756258c1c5c7f2f" +
+                                "b12cf15eb20175c2a08fc93dd19c5e482ef3fbef3d8404a3cfd54a7baf",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "acd08d4938a224b4cb2d723bf75420f3ea27b698fadd815bb7db9548a05651398644354334e69f8e4e5503bf1a6f92b38e860044a7edca6874038ce1",
+                PlaintextHex = "acd08d4938a224b4cb2d723bf75420f3ea27b698fadd815bb7db9548a05651398644354334e69f8e4e550" +
+                               "3bf1a6f92b38e860044a7edca6874038ce1",
                 AssociatedDataHex = "28a137808d0225b8",
                 KeyHex = "a031203b963a395b08be55844d81af39d19b23b7cc24b21afa31edc1eea6edd6",
                 NonceHex = "e8b31c52b6690f10f4ae62ba9d50ba39fb5edcfb78400e35",
-                CiphertextHex = "35cf39ba31da95ac9b661cdbd5e9c9655d13b8ff065c4ec10c810833a47a87d8057dd1948a7801bfe6904b49fed0aabfb3cd755a1a262d372786908ddcf64cae9f71cb9ed199c3ddacc50116",
+                CiphertextHex = "35cf39ba31da95ac9b661cdbd5e9c9655d13b8ff065c4ec10c810833a47a87d8057dd1948a7801bfe690" +
+                                "4b49fed0aabfb3cd755a1a262d372786908ddcf64cae9f71cb9ed199c3ddacc50116",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -419,7 +745,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "11e09447d40b22dc98070eec",
                 KeyHex = "da5ee1ec02eab13220fcb94f16efec848a8dd57c0f4d67955423f5d17fde5aa3",
                 NonceHex = "8f13e61d773a250810f75d46bf163a3f9205be5751f6049a",
-                CiphertextHex = "92a103b03764c1ad1f88500d22eeae5c0fe1044c872987c0b97affc5e8c3d783f8cc28a11dc91990ea22dd1bad74",
+                CiphertextHex = "92a103b03764c1ad1f88500d22eeae5c0fe1044c872987c0b97affc5e8c3d783f8cc28a11dc91990ea22" +
+                                "dd1bad74",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -427,7 +754,8 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "aa73d8d4aaa0cfd9d80a9ae8",
                 KeyHex = "08028833d617c28ba75b48f177cb5da87189189abb68dcb8974eca9230c25945",
                 NonceHex = "f7b6f34a910fd11588f567de8555932291f7df05f6e2b193",
-                CiphertextHex = "99cfc4cca193998bae153b744e6c94a82a2867780aa0f43acddb7c433fcb297311313ec2199f00d7ca7da0646b40113c60e935",
+                CiphertextHex = "99cfc4cca193998bae153b744e6c94a82a2867780aa0f43acddb7c433fcb297311313ec2199f00d7ca7d" +
+                                "a0646b40113c60e935",
             },
             new XChaCha20Poly1305TestVector
             {
@@ -435,39 +763,48 @@ namespace PasswordManagerAccess.Test.Common
                 AssociatedDataHex = "128c017a985052f8cdbc6b28",
                 KeyHex = "4683d5caff613187a9b16af897253848e9c54fc0ec319de62452a86961d3cbb2",
                 NonceHex = "5612a13c2da003b91188921cbac3fa093eba99d8cbbb51ff",
-                CiphertextHex = "91a98b93b2174257175f7c882b45cc252e0db8667612bd270c1c12fe28b6bf209760bf8f370318f92ae3f88a5d4773b05714132cc28dddb8",
+                CiphertextHex = "91a98b93b2174257175f7c882b45cc252e0db8667612bd270c1c12fe28b6bf209760bf8f370318f92ae3" +
+                                "f88a5d4773b05714132cc28dddb8",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "22ccf680d2995ef6563de281cff76882a036a59ad73f250e710b3040590d69bccde8a8411abe8b0d3cb728ca82",
+                PlaintextHex = "22ccf680d2995ef6563de281cff76882a036a59ad73f250e710b3040590d69bccde8a8411abe8b0d3cb72" +
+                               "8ca82",
                 AssociatedDataHex = "13a97d0a167a61aa21e531ec",
                 KeyHex = "9e140762eed274948b66de25e6e8f36ab65dc730b0cb096ef15aaba900a5588c",
                 NonceHex = "d0e9594cfd42ab72553bf34062a263f588bb8f1fc86a19f5",
-                CiphertextHex = "f194fc866dfba30e42c4508b7d90b3fa3f8983831ede713334563e36aa861f2f885b40be1dbe20ba2d10958a12823588d4bbbefb81a87d87315204f5e3",
+                CiphertextHex = "f194fc866dfba30e42c4508b7d90b3fa3f8983831ede713334563e36aa861f2f885b40be1dbe20ba2d10" +
+                                "958a12823588d4bbbefb81a87d87315204f5e3",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "a65f5d10c482b3381af296e631eb605eba6a11ccec6ceab021460d0bd35feb676ec6dbba5d4ad6c9f4d683ea541035bc80fa",
+                PlaintextHex = "a65f5d10c482b3381af296e631eb605eba6a11ccec6ceab021460d0bd35feb676ec6dbba5d4ad6c9f4d68" +
+                               "3ea541035bc80fa",
                 AssociatedDataHex = "f15ae71ffed50a8fcc4996b0",
                 KeyHex = "f535d60e8b75ac7e526041eed86eb4d65ae7e315eff15dba6c0133acc2a6a4bf",
                 NonceHex = "01ba61691ebb3c66d2f94c1b1c597ecd7b5ff7d2a30be405",
-                CiphertextHex = "d79e7c3893df5a5879c2f0a3f7ca619f08e4540f3ac7db35790b4211b9d47ae735adadf35fd47252a4763e3fd2b2cd8157f6ea7986108a53437962670a97d68ee281",
+                CiphertextHex = "d79e7c3893df5a5879c2f0a3f7ca619f08e4540f3ac7db35790b4211b9d47ae735adadf35fd47252a476" +
+                                "3e3fd2b2cd8157f6ea7986108a53437962670a97d68ee281",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "8c014655b97f6da76b0b168b565fd62de874c164fd7e227346a0ec22c908bed1e2a0b429620e6f3a68dd518f13a2c0250608a1cb08a7c3",
+                PlaintextHex = "8c014655b97f6da76b0b168b565fd62de874c164fd7e227346a0ec22c908bed1e2a0b429620e6f3a68dd5" +
+                               "18f13a2c0250608a1cb08a7c3",
                 AssociatedDataHex = "10a7eff999029c5040c1b3bd",
                 KeyHex = "bf11af23e88c350a443493f6fa0eb34f234f4daa2676e26f0701bce5642d13f4",
                 NonceHex = "f14c97392afd2e32e2c625910ca029f9b6e81676c79cc42f",
-                CiphertextHex = "78d5226f372d5d60681dbfc749d12df74249f196b0cbf14fa65a3a59dc65ae458455ec39baa1df3397afe752bb06f6f13bf03c99abda7a95c1d0b73fd92d5f888a5f6f889a9aea",
+                CiphertextHex = "78d5226f372d5d60681dbfc749d12df74249f196b0cbf14fa65a3a59dc65ae458455ec39baa1df3397af" +
+                                "e752bb06f6f13bf03c99abda7a95c1d0b73fd92d5f888a5f6f889a9aea",
             },
             new XChaCha20Poly1305TestVector
             {
-                PlaintextHex = "66234d7a5b71eef134d60eccf7d5096ee879a33983d6f7a575e3a5e3a4022edccffe7865dde20b5b0a37252e31cb9a3650c63e35b057a1bc200a5b5b",
+                PlaintextHex = "66234d7a5b71eef134d60eccf7d5096ee879a33983d6f7a575e3a5e3a4022edccffe7865dde20b5b0a372" +
+                               "52e31cb9a3650c63e35b057a1bc200a5b5b",
                 AssociatedDataHex = "ccc2406f997bcae737ddd0f5",
                 KeyHex = "d009eeb5b9b029577b14d200b7687b655eedb7d74add488f092681787999d66d",
                 NonceHex = "99319712626b400f9458dbb7a9abc9f5810f25b47fc90b39",
-                CiphertextHex = "543a2bbf52fd999027ae7c297353f3ce986f810bc2382583d0a81fda5939e4c87b6e8d262790cd614d6f753d8035b32adf43acc7f6d4c2c44289538928564b6587c2fcb99de1d8e34ffff323",
+                CiphertextHex = "543a2bbf52fd999027ae7c297353f3ce986f810bc2382583d0a81fda5939e4c87b6e8d262790cd614d6f" +
+                                "753d8035b32adf43acc7f6d4c2c44289538928564b6587c2fcb99de1d8e34ffff323",
             },
         };
     }
