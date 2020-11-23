@@ -3,7 +3,10 @@
 
 #nullable enable
 
-using System;
+// In this module everything is initialized via Reflection and the code analysis tools get confused
+#pragma warning disable 8618
+
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.DropboxPasswords
@@ -20,13 +23,6 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("disabled", Required = Required.Always)]
             public readonly bool Disabled;
-
-            // Mutes the uninitialized non-nullable field warnings
-            private AccountInfo()
-            {
-                AccountId = "";
-                Email = "";
-            }
         }
 
         public class Features
@@ -54,13 +50,6 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("has_more", Required = Required.Always)]
             public readonly bool HasMore;
-
-            // Mutes the uninitialized non-nullable field warnings
-            private RootFolder()
-            {
-                Entries = Array.Empty<FolderEntry>();
-                Cursor = "";
-            }
         }
 
         public readonly struct FolderEntry
@@ -88,13 +77,6 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("encryptedBundle", Required = Required.Always)]
             public readonly EncryptedBundle EncryptedBundle;
-
-            // Mutes the uninitialized non-nullable field warnings
-            private EncryptedEntry()
-            {
-                Id = "";
-                Type = "";
-            }
         }
 
         internal readonly struct EncryptedBundle
@@ -104,6 +86,27 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("base64Nonce", Required = Required.Always)]
             public readonly string NonceBase64;
+        }
+
+        internal class Keyset
+        {
+            [JsonProperty("mainFolderIdentifier", Required = Required.Always)]
+            public readonly string MainFolderId;
+
+            [JsonProperty("version", Required = Required.Always)]
+            public readonly int Version;
+
+            [JsonProperty("keyMap", Required = Required.Always)]
+            public readonly Dictionary<string, Key> Keys;
+        }
+
+        internal readonly struct Key
+        {
+            [JsonProperty("base64SecretKey", Required = Required.Always)]
+            public readonly string KeyBase64;
+
+            [JsonProperty("deleted", Required = Required.Always)]
+            public readonly bool Deleted;
         }
     }
 }
