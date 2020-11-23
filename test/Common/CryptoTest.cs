@@ -306,9 +306,39 @@ namespace PasswordManagerAccess.Test.Common
         [MemberData(nameof(XChaCha20Poly1305TestCases))]
         public void DecryptXChaCha20Poly1305_decrypts_ciphertext(CryptoTestVectors.XChaCha20Poly1305TestVector v)
         {
+            // TODO: Associated data is not supported yet
+            if (v.AssociatedData.Length > 0)
+                return;
+
             var plaintext = Crypto.DecryptXChaCha20Poly1305(v.Ciphertext, v.Nonce, v.Key);
 
             Assert.Equal(v.Plaintext, plaintext);
+        }
+
+        [Theory]
+        [MemberData(nameof(XChaCha20Poly1305TestCases))]
+        public void DecryptXChaCha20Poly1305_throws_on_corrupt_data(CryptoTestVectors.XChaCha20Poly1305TestVector v)
+        {
+            // TODO: Associated data is not supported yet
+            if (v.AssociatedData.Length > 0)
+                return;
+
+            static void Check(byte[] ciphertext, byte[] nonce, byte[] key)
+            {
+                Exceptions.AssertThrowsCrypto(() => Crypto.DecryptXChaCha20Poly1305(ciphertext, nonce, key),
+                                              "Tag doesn't match, the data is corrupted or the key is incorrect");
+            }
+
+            static byte[] Corrupt(byte[] original)
+            {
+                var corrupted = original.Sub(0, int.MaxValue);
+                corrupted[corrupted.Length / 2]++;
+                return corrupted;
+            }
+
+            Check(Corrupt(v.Ciphertext), v.Nonce, v.Key);
+            Check(v.Ciphertext, Corrupt(v.Nonce), v.Key);
+            Check(v.Ciphertext, v.Nonce, Corrupt(v.Key));
         }
 
         //

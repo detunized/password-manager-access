@@ -3,8 +3,8 @@
 
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using PasswordManagerAccess.Kaspersky.Response;
 
 namespace PasswordManagerAccess.Common
 {
@@ -356,14 +356,43 @@ namespace PasswordManagerAccess.Common
             // Skip 64 bytes advancing the counter to 1.
             // TODO: We're relying on the internal implementation details here. Not so good.
             //       Introduce a [X]ChaCha20.SetCounter method to set it explicitly.
-            var polyKey = new byte[32];
+            var polyKey = new byte[32]; // TODO: Temp alloc, replace with stackalloc
             xChaCha20.ProcessBytes(polyKey, 0, 32, polyKey, 0);
-            xChaCha20.ProcessBytes(polyKey, 0, 32, polyKey, 0);
+            var discard = new byte[32]; // TODO: Temp alloc, replace with stackalloc
+            xChaCha20.ProcessBytes(discard, 0, 32, discard, 0);
 
-            // TODO: Verify the Poly1305 tag!
+            // Verify the Poly1305 tag.
+            var length = ciphertext.Length - 16;
+            var blockLength = length / Poly1305.BlockSize * Poly1305.BlockSize;
+            Span<byte> block = stackalloc byte[Poly1305.BlockSize];
 
-            var plaintext = new byte[ciphertext.Length - 16];
-            xChaCha20.ProcessBytes(ciphertext, 0, plaintext.Length, plaintext, 0);
+            var poly = new Poly1305(polyKey);
+
+            // TODO: Update the tag with associated data.
+
+            // Ciphertext
+            poly.Update(ciphertext.AsSpan().Slice(0, blockLength));
+
+            // Pad the last block with zeroes
+            if (length > blockLength)
+            {
+                block.Fill(0);
+                ciphertext.AsSpan().Slice(blockLength, length - blockLength).CopyTo(block);
+                poly.Update(block);
+            }
+
+            // Write lengths
+            Unsafe.WriteUnaligned(ref block[0], 0UL);
+            Unsafe.WriteUnaligned(ref block[8], (ulong)length);
+            poly.Update(block);
+
+            poly.Finish(block);
+
+            if (!AreEqual(block, ciphertext.AsRoSpan().Slice(length, 16)))
+                throw new CryptoException("Tag doesn't match, the data is corrupted or the key is incorrect");
+
+            var plaintext = new byte[length];
+            xChaCha20.ProcessBytes(ciphertext, 0, length, plaintext, 0);
 
             return plaintext;
         }
