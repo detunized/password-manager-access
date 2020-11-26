@@ -12,14 +12,13 @@ using R = PasswordManagerAccess.DropboxPasswords.Response;
 
 namespace PasswordManagerAccess.DropboxPasswords
 {
-    public static class Client
+    internal static class Client
     {
-        public static void OpenVault(string oauthToken, string[] recoveryWords)
+        public static Account[] OpenVault(string oauthToken, string[] recoveryWords, IRestTransport transport)
         {
             // We do this first to fail early in case the recovery words are incorrect.
             var masterKey = Util.DeriveMasterKeyFromRecoveryWords(recoveryWords);
 
-            using var transport = new RestTransport();
             var rest = new RestClient(transport,
                                       "https://api.dropboxapi.com/2",
                                       defaultHeaders: new Dictionary<string, string>
@@ -59,9 +58,10 @@ namespace PasswordManagerAccess.DropboxPasswords
             // Try to find all keysets that decrypt (normally there's only one).
             var keysets = FindAndDecryptAllKeysets(entries, masterKey);
 
+            // TODO: Parse the accounts
             var vault = entries.Where(e => e.Type == "password");
 
-            throw new NotImplementedException();
+            return new Account[0];
         }
 
         //
