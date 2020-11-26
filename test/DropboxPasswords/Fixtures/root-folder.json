@@ -1,0 +1,68 @@
+{
+    "entries": [
+        {
+            ".tag": "file",
+            "name": "4F6989CF-DE29-4E4E-BA9D-1497C2DEDEA1.json",
+            "path_lower": "/4f6989cf-de29-4e4e-ba9d-1497c2dedea1.json",
+            "path_display": "/4F6989CF-DE29-4E4E-BA9D-1497C2DEDEA1.json",
+            "parent_shared_folder_id": "8233664752",
+            "id": "id:f3jgRA79jL4AAAAAAAAAEQ",
+            "client_modified": "2020-08-29T17:36:45Z",
+            "server_modified": "2020-08-29T17:36:45Z",
+            "rev": "015ae079d037fdd00000001eac3c0f0",
+            "size": 539,
+            "sharing_info": {
+                "read_only": false,
+                "parent_shared_folder_id": "8233664752",
+                "modified_by": "dbid:AAD6aMTP1kLKKxwZLtCEM9JGnZXtH956UB4",
+                "is_parent_shared_folder_read_only": false,
+                "last_modifier": {
+                    "account_id": "dbid:AAD6aMTP1kLKKxwZLtCEM9JGnZXtH956UB4",
+                    "user_id": "3473601408",
+                    "display_name": "LastPass Ruby",
+                    "email": "lastpass.ruby@gmail.com",
+                    "email_verified": true
+                }
+            },
+            "is_downloadable": true,
+            "content_hash": "09e6e97489944d03e7b83cbbc1f6b6549aa75ca4e938b132fbfc6d79f56887d7",
+            "size_display": "539 bytes",
+            "icon": "page_white_code",
+            "mime_type": "application/octet-stream",
+            "is_in_vault_folder": false
+        },
+        {
+            ".tag": "file",
+            "name": "9d22a71d-c525-42dc-b9f2-5cc147a10303.json",
+            "path_lower": "/9d22a71d-c525-42dc-b9f2-5cc147a10303.json",
+            "path_display": "/9d22a71d-c525-42dc-b9f2-5cc147a10303.json",
+            "parent_shared_folder_id": "8233664752",
+            "id": "id:f3jgRA79jL4AAAAAAAAAEA",
+            "client_modified": "2020-10-15T11:20:30Z",
+            "server_modified": "2020-10-15T11:20:30Z",
+            "rev": "015b1b3d5f30f7d00000001eac3c0f0",
+            "size": 1109,
+            "sharing_info": {
+                "read_only": false,
+                "parent_shared_folder_id": "8233664752",
+                "modified_by": "dbid:AAD6aMTP1kLKKxwZLtCEM9JGnZXtH956UB4",
+                "is_parent_shared_folder_read_only": false,
+                "last_modifier": {
+                    "account_id": "dbid:AAD6aMTP1kLKKxwZLtCEM9JGnZXtH956UB4",
+                    "user_id": "3473601408",
+                    "display_name": "LastPass Ruby",
+                    "email": "lastpass.ruby@gmail.com",
+                    "email_verified": true
+                }
+            },
+            "is_downloadable": true,
+            "content_hash": "55721d2924f3c15c172045c3cfb25ddf9916a3605c566bf53f9159f9e6a7dd67",
+            "size_display": "1.1 KB",
+            "icon": "page_white_code",
+            "mime_type": "application/octet-stream",
+            "is_in_vault_folder": false
+        }
+    ],
+    "cursor": "AAESZNC78zDGbWTEgoi6ua2frroBUuSL-5QTlb0I1fKU-5Z4xTwocKLiDnBFstKXR1wte6dd6aBqGnKyGo7lqi3bNnfwAgjE6Y6JOBbaEDSDggHhrpkMr6jzU0nbbnzu7U93NySSzAgCiz49kho08sdi0dDPfoXBJw5bS1zlRYsNRVCn-UTokyfzPDuXd4qf6tw",
+    "has_more": false
+}

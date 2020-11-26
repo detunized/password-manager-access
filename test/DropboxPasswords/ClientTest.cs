@@ -12,6 +12,21 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
     public class ClientTest: TestBase
     {
         [Fact]
+        public void OpenVault_returns_accounts()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("account-info"))
+                .Post(GetFixture("features"))
+                .Post(GetFixture("root-folder"))
+                .Post(GetFixture("entry-keyset"))
+                .Post(GetFixture("entry-vault"));
+
+            var accounts = Client.OpenVault("token", UtilTest.RecoveryWords, flow);
+
+            Assert.Empty(accounts);
+        }
+
+        [Fact]
         public void FindAndDecryptAllKeysets_returns_only_keysets()
         {
             var entries = JsonConvert.DeserializeObject<R.EncryptedEntry[]>(GetFixture("entries"));

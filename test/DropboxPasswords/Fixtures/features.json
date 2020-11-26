@@ -1,0 +1,15 @@
+{
+    "analytics_id": "083af38d-afeb-44be-9cea-bfd531b3220e",
+    "eligibility": {
+        ".tag": "enabled",
+        "passwords_path_root": "8233664752"
+    },
+    "quota_info": {
+        "device_limit": {
+            ".tag": "unlimited"
+        },
+        "password_limit": {
+            ".tag": "unlimited"
+        }
+    }
+}

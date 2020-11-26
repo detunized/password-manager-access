@@ -1,0 +1,53 @@
+{
+    "account_id": "dbid:AAD6aMTP1kLKKxwZLtCEM9JGnZXtH956UB4",
+    "account_type": {
+        ".tag": "pro"
+    },
+    "country": "NL",
+    "disabled": false,
+    "email": "lastpass.ruby@gmail.com",
+    "email_verified": true,
+    "has_ever_linked_desktop": false,
+    "has_user_added_files": true,
+    "is_business_domain": false,
+    "is_deferred_password": false,
+    "is_deferred_password_set": false,
+    "is_family_user": false,
+    "is_paid": true,
+    "is_paired": false,
+    "locale": "en-GB",
+    "name": {
+        "abbreviated_name": "LR",
+        "display_name": "LastPass Ruby",
+        "familiar_name": "LastPass",
+        "given_name": "LastPass",
+        "surname": "Ruby"
+    },
+    "pending_forced_migration": false,
+    "quota_info": {
+        "normal": 20806622,
+        "quota": 2201170739200,
+        "shared": 0
+    },
+    "referral_bonus_info": {
+        "bonus_space": 1073741824,
+        "max_num_bonus": 32
+    },
+    "referral_link": "https://www.dropbox.com/referrals/AAA-16N9p42SH1kF7bCyUr74MUDxbEvlvuE?src=app9-7314512",
+    "role": "personal",
+    "root_info": {
+        ".tag": "user",
+        "home_namespace_id": "8235042176",
+        "root_namespace_id": "8235042176"
+    },
+    "teams_member": false,
+    "uid": 3473601408,
+    "user_name": "LastPass Ruby",
+    "uses_apple_relay_email": false,
+    "video_uploads_enabled_default": false,
+    "visibility_quota_info": {
+        "normal": 0,
+        "quota": 0,
+        "shared": 0
+    }
+}
