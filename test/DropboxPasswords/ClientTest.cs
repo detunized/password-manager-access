@@ -23,7 +23,25 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
 
             var accounts = Client.OpenVault("token", UtilTest.RecoveryWords, flow);
 
-            Assert.Empty(accounts);
+            Assert.Equal(2, accounts.Length);
+
+            var a0 = accounts[0];
+            Assert.Equal("7793c55f-6a21-40f5-bb1c-fd175e2515f0", a0.Id);
+            Assert.Equal("Facebook", a0.Name);
+            Assert.Equal("mark", a0.Username);
+            Assert.Equal("yo-yo-yo-yo", a0.Password);
+            Assert.Equal("https://facebook.com", a0.Url);
+            Assert.Equal("Hey-ya!", a0.Note);
+            Assert.Equal("My passwords", a0.Folder);
+
+            var a1 = accounts[1];
+            Assert.Equal("df1a3eb0-522a-4acb-a0e6-071fcf295f79", a1.Id);
+            Assert.Equal("Google", a1.Name);
+            Assert.Equal("blah@gmail.com", a1.Username);
+            Assert.Equal("123", a1.Password);
+            Assert.Equal("https://https://accounts.google.com/ServiceLogin", a1.Url);
+            Assert.Equal("", a1.Note);
+            Assert.Equal("My passwords", a1.Folder);
         }
 
         [Fact]

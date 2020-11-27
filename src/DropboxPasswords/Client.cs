@@ -58,10 +58,11 @@ namespace PasswordManagerAccess.DropboxPasswords
             // Try to find all keysets that decrypt (normally there's only one).
             var keysets = FindAndDecryptAllKeysets(entries, masterKey);
 
-            // TODO: Parse the accounts
-            var vault = entries.Where(e => e.Type == "password");
+            // Try to decrypt all account entries and see what decrypts.
+            var accounts = FindAndDecryptAllAccounts(entries, keysets);
 
-            return new Account[0];
+            // Done, phew!
+            return accounts;
         }
 
         //
@@ -85,6 +86,41 @@ namespace PasswordManagerAccess.DropboxPasswords
                 .Where(e => e.Type == "keyset")
                 .Select(e => DecryptKeyset(e, masterKey))
                 .ToArray();
+        }
+
+        internal static Account[] FindAndDecryptAllAccounts(R.EncryptedEntry[] entries, R.Keyset[] keysets)
+        {
+            var keys = ExtractAllKeys(keysets);
+            return entries
+                .Where(e => e.Type == "password")
+                .SelectMany(e => DecryptAccounts(e, keys))
+                .ToArray();
+        }
+
+        internal static IEnumerable<Account> DecryptAccounts(R.EncryptedEntry entry, Dictionary<string, byte[]> keys)
+        {
+            // Important: key lookup must be case insensitive! There's a case mismatch in the parsed JSON.
+            if (!keys.TryGetValue(entry.Id.ToLower(), out var key))
+                return Array.Empty<Account>();
+
+            var folder = DecryptVaultFolder(entry, key);
+            return folder.Items
+                .Where(x => !x.IsDeleted)
+                .Select(x => new Account(id: x.Id ?? "",
+                                         name: x.Name ?? "",
+                                         username: x.Username ?? "",
+                                         password: x.Password ?? "",
+                                         url: x.Url ?? "",
+                                         note: x.Note ?? "",
+                                         folder: folder.Name ?? ""));
+        }
+
+        internal static Dictionary<string, byte[]> ExtractAllKeys(R.Keyset[] keysets)
+        {
+            // Important: the keys must be lowercased! There's a case mismatch in the parsed JSON.
+            return keysets
+                .SelectMany(ks => ks.Keys.Select(k => (k.Key, k.Value.KeyBase64)))
+                .ToDictionary(x => x.Key.ToLower(), x => x.KeyBase64.Decode64());
         }
 
         //
@@ -134,6 +170,11 @@ namespace PasswordManagerAccess.DropboxPasswords
         internal static R.Keyset DecryptKeyset(R.EncryptedEntry entry, byte[] key)
         {
             return Deserialize<R.Keyset>(Decrypt(entry.EncryptedBundle, key));
+        }
+
+        internal static R.VaultFolder DecryptVaultFolder(R.EncryptedEntry entry, byte[] key)
+        {
+            return Deserialize<R.VaultFolder>(Decrypt(entry.EncryptedBundle, key));
         }
 
         internal static byte[] Decrypt(R.EncryptedBundle encrypted, byte[] key)

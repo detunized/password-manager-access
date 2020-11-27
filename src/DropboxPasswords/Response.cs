@@ -108,5 +108,41 @@ namespace PasswordManagerAccess.DropboxPasswords
             [JsonProperty("deleted", Required = Required.Always)]
             public readonly bool Deleted;
         }
+
+        internal class VaultFolder
+        {
+            [JsonProperty("identifier", Required = Required.Always)]
+            public readonly string Id;
+
+            [JsonProperty("name", Required = Required.Always)]
+            public readonly string Name;
+
+            [JsonProperty("items", Required = Required.Always)]
+            public readonly VaultFolderItem[] Items;
+        }
+
+        internal readonly struct VaultFolderItem
+        {
+            [JsonProperty("deleted", Required = Required.Always)]
+            public readonly bool IsDeleted;
+
+            [JsonProperty("identifier")]
+            public readonly string Id;
+
+            [JsonProperty("title")]
+            public readonly string Name;
+
+            [JsonProperty("username")]
+            public readonly string Username;
+
+            [JsonProperty("password")]
+            public readonly string Password;
+
+            [JsonProperty("site")]
+            public readonly string Url;
+
+            [JsonProperty("notes")]
+            public readonly string Note;
+        }
     }
 }
