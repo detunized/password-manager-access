@@ -520,11 +520,13 @@ namespace PasswordManagerAccess.Kdbx
             var password = "";
             var url = "";
             var note = "";
+            Dictionary<string, string> custom = null;
 
             foreach (var s in xml.Elements("String"))
             {
+                var key = s.Element("Key")?.Value ?? "";
                 var value = s.Element("Value")?.Value ?? "";
-                switch (s.Element("Key")?.Value)
+                switch (key)
                 {
                 case "Title":
                     name = value;
@@ -541,6 +543,13 @@ namespace PasswordManagerAccess.Kdbx
                 case "Notes":
                     note = value;
                     break;
+                case "":
+                    // Ignore blank
+                    break;
+                default:
+                    custom ??= new Dictionary<string, string>();
+                    custom[key] = value;
+                    break;
                 }
             }
 
@@ -550,7 +559,8 @@ namespace PasswordManagerAccess.Kdbx
                                password: password,
                                url: url,
                                note: note,
-                               path: path);
+                               path: path,
+                               fields: custom ?? Account.NoFields);
         }
 
         internal static BaseException MakeInvalidFormatError(string message)

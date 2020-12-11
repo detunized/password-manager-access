@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Kdbx;
 using Xunit;
@@ -36,6 +37,32 @@ namespace PasswordManagerAccess.Test.Kdbx
             var accounts = Parser.Parse(db, "password", keyfile);
 
             Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void Parse_returns_accounts_with_fields()
+        {
+            using var db = GetBinaryFixtureStream("kdbx4-with-fields", "kdbx");
+            var accounts = Parser.Parse(db, "password");
+
+            var sorted = accounts.OrderBy(x => x.Name).ToArray();
+            Assert.Equal(4, sorted.Length);
+
+            void AssertAccountWithFields(int accountIndex, string accountName, int fieldCount, string fieldValues)
+            {
+                var account = sorted[accountIndex];
+                Assert.Equal(accountName, account.Name);
+                Assert.Equal(fieldCount, account.Fields.Count);
+                Assert.Equal(fieldValues, account.Fields.Select(x => $"{x.Key}={x.Value}").JoinToString(","));
+            }
+
+            AssertAccountWithFields(0, "00 - With 0 fields", 0, "");
+            AssertAccountWithFields(1, "01 - With 3 fields", 3, "key1=value1,key2=value2,key3=value3");
+            AssertAccountWithFields(2, "02 - With 3 protected fields", 3, "key1=value1,key2=value2,key3=value3");
+            AssertAccountWithFields(3,
+                                    "03 - With 3 regular and 3 protected fields",
+                                    6,
+                                    "key1=value1,key2=value2,key3=value3,key4=value4,key5=value5,key6=value6");
         }
 
         [Theory]
