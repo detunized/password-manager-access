@@ -1,5 +1,10 @@
 # Changelog
 
+## 8.1.0
+  - Kdbx: added support for additional account fields (see Account.Fields
+    property)
+  - Kdbx: the account path is now built starting from the root folder
+
 ## 8.0.0
   - Kdbx: added support for KeePass KDBX 4 file format
 
