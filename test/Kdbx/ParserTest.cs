@@ -65,6 +65,28 @@ namespace PasswordManagerAccess.Test.Kdbx
                                     "key1=value1,key2=value2,key3=value3,key4=value4,key5=value5,key6=value6");
         }
 
+        [Fact]
+        public void Parse_returns_accounts_with_nested_folders()
+        {
+            using var db = GetBinaryFixtureStream("kdbx4-with-nested-folders", "kdbx");
+            var accounts = Parser.Parse(db, "password");
+
+            var sorted = accounts.OrderBy(x => x.Name).ToArray();
+            Assert.Equal(4, sorted.Length);
+
+            void AssertAccountWithFields(int accountIndex, string accountName, string path)
+            {
+                var account = sorted[accountIndex];
+                Assert.Equal(accountName, account.Name);
+                Assert.Equal(path, account.Path);
+            }
+
+            AssertAccountWithFields(0, "entry0", "level0");
+            AssertAccountWithFields(1, "entry1", "level0/level1");
+            AssertAccountWithFields(2, "entry2", "level0/level1/level2");
+            AssertAccountWithFields(3, "entry3", "level0/level1/level2/level3");
+        }
+
         [Theory]
         [InlineData("keyfile-generic", "bin")]
         [InlineData("keyfile-xml", "xml")]

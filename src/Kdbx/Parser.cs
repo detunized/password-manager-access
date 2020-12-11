@@ -466,8 +466,11 @@ namespace PasswordManagerAccess.Kdbx
         {
             DecryptProtectedValues(body);
 
+            var root = body.Xml.XPathSelectElement("//Root");
+            if (root == null)
+                throw MakeInvalidFormatError("root folder not found");
+
             var accounts = new List<Account>();
-            var root = body.Xml.XPathSelectElement("//Root/Group");
             ParseAccounts(root, "", accounts);
 
             return accounts.ToArray();
