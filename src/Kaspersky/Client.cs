@@ -10,6 +10,7 @@ using R = PasswordManagerAccess.Kaspersky.Response;
 
 namespace PasswordManagerAccess.Kaspersky
 {
+    // TODO: The protocol is very poorly tested. Write more tests!
     internal static class Client
     {
         public static Account[] OpenVault(string username,
@@ -20,12 +21,12 @@ namespace PasswordManagerAccess.Kaspersky
             var rest = new RestClient(transport);
 
             // 1. Login
-            var (sessionCookie, authCookie) = Login(username, accountPassword, rest);
+            var (sessionCookie, authCookies) = Login(username, accountPassword, rest);
 
             try
             {
                 // 2. Get XMPP info
-                var xmpp = GetXmppInfo(authCookie, rest);
+                var xmpp = GetXmppInfo(authCookies, rest);
 
                 // 3. The server returns a bunch of alternative URLs with the XMPP BOSH Js library which
                 //    are located on different domains. We need to pick one and all the following request
@@ -71,7 +72,7 @@ namespace PasswordManagerAccess.Kaspersky
             finally
             {
                 // 9. Logout
-                Logout(authCookie, sessionCookie, rest);
+                Logout(sessionCookie, authCookies, rest);
             }
         }
 
@@ -79,9 +80,9 @@ namespace PasswordManagerAccess.Kaspersky
         // Internal
         //
 
-        internal static (string SessionCookie, string AuthCookie) Login(string username,
-                                                                        string password,
-                                                                        RestClient rest)
+        internal static (string SessionCookie, Dictionary<string, string> AuthCookiess) Login(string username,
+                                                                                              string password,
+                                                                                              RestClient rest)
         {
             // 1. Request login context token
             var context = RequestLoginContext(rest);
@@ -93,9 +94,9 @@ namespace PasswordManagerAccess.Kaspersky
             var (token, sessionCookie) = RequestUserTokenAndSessionCookie(context, rest);
 
             // 4. Finish login
-            var authCookie = GetAuthCookie(token, rest);
+            var authCookies = GetAuthCookies(token, rest);
 
-            return (sessionCookie, authCookie);
+            return (sessionCookie, authCookies);
         }
 
         internal static string RequestLoginContext(RestClient rest)
@@ -164,7 +165,7 @@ namespace PasswordManagerAccess.Kaspersky
             return (response.Data.Token, cookie);
         }
 
-        internal static string GetAuthCookie(string userToken, RestClient rest)
+        internal static Dictionary<string, string> GetAuthCookies(string userToken, RestClient rest)
         {
             var response = rest.PostJson(
                 "https://my.kaspersky.com/SignIn/CompleteRestLogon",
@@ -182,16 +183,22 @@ namespace PasswordManagerAccess.Kaspersky
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            var cookie = response.Cookies.GetOrDefault(AuthCookieName, "");
-            if (cookie.IsNullOrEmpty())
-                throw MakeError("Auth cookie not found");
+            var authCookies = new Dictionary<string, string>(AuthCookieNames.Length);
+            foreach (var name in AuthCookieNames)
+            {
+                var cookie = response.Cookies.GetOrDefault(name, "");
+                if (cookie.IsNullOrEmpty())
+                    throw MakeError($"Auth cookie '{name}' not found");
 
-            return cookie;
+                authCookies[name] = cookie;
+            }
+
+            return authCookies;
         }
 
         // TODO: It's not 100% clear that Logout actually succeeds. It needs to be verified
         // against to server to see if it's
-        internal static void Logout(string authCookie, string sessionCookie, RestClient rest)
+        internal static void Logout(string sessionCookie, Dictionary<string, string> authCookies, RestClient rest)
         {
             // We do our best at logging out. It's done a bit messily on the web page.
             // Normally it's done via a bunch of chained redirects controlled by the server.
@@ -205,10 +212,7 @@ namespace PasswordManagerAccess.Kaspersky
                                               ["Accept"] = "*/*",
                                               ["Host"] = "my.kaspersky.com",
                                           },
-                                          cookies: new Dictionary<string, string>
-                                          {
-                                              [AuthCookieName] = authCookie,
-                                          });
+                                          cookies: authCookies);
             if (response1.IsNetworkError)
                 throw MakeError(response1);
 
@@ -227,10 +231,9 @@ namespace PasswordManagerAccess.Kaspersky
                 throw MakeError(response2);
         }
 
-        internal static R.XmppSettings GetXmppInfo(string authCookie, RestClient rest)
+        internal static R.XmppSettings GetXmppInfo(Dictionary<string, string> authCookies, RestClient rest)
         {
-            var response = rest.Get("https://my.kaspersky.com/MyPasswords",
-                                    cookies: new Dictionary<string, string> {[AuthCookieName] = authCookie});
+            var response = rest.Get("https://my.kaspersky.com/MyPasswords", cookies: authCookies);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -344,8 +347,9 @@ namespace PasswordManagerAccess.Kaspersky
         // Data
         //
 
-        internal const string AuthCookieName = "MyKFedAuth";
         internal const string SessionCookieName = "AuthSession";
+        internal static readonly string[] AuthCookieNames = {"MyKFedAuth", "myk_sid", "myk_auth"};
+
         internal const string DeviceKind = "browser";
         internal const int ServiceId = 5;
         internal const string JidResource = "portalsorucr8yj2l"; // TODO: Make this random
@@ -356,6 +360,6 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string GetDatabaseCommand = "kpmgetserverchangecommand";
         internal const string GetDatabaseCommandId = "660529337";
 
-        internal static readonly int[] SupportedDbVersions = { Parser.Version8, Parser.Version9 };
+        internal static readonly int[] SupportedDbVersions = {Parser.Version8, Parser.Version9};
     }
 }
