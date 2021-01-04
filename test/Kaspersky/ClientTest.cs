@@ -21,6 +21,14 @@ namespace PasswordManagerAccess.Test.Kaspersky
         }
 
         [Fact]
+        public void ConvertHttpsBoshUrlToWss_returns_wss_url()
+        {
+            var wss = Client.ConvertHttpsBoshUrlToWss("https://bosh5.ucp-ntfy.kaspersky-labs.com/http-bind");
+
+            Assert.Equal("wss://bosh5.ucp-ntfy.kaspersky-labs.com/ws", wss);
+        }
+
+        [Fact]
         public void GetHost_returns_domain()
         {
             var host = Client.GetHost("https://bosh4.ucp-ntfy.kaspersky-labs.com/find_bosh_bind");

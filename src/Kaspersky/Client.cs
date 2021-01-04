@@ -13,6 +13,7 @@ namespace PasswordManagerAccess.Kaspersky
     // TODO: The protocol is very poorly tested. Write more tests!
     internal static class Client
     {
+        // TODO: Pass in IBoshTransport to make this testable
         public static Account[] OpenVault(string username,
                                           string accountPassword,
                                           string vaultPassword,
@@ -37,11 +38,15 @@ namespace PasswordManagerAccess.Kaspersky
                 var jid = GenerateJid(xmpp.UserId, jsLibraryHost);
 
                 // 5. Get notify server BOSH url
-                var boshUrl = GetBoshUrl(jid, jsLibraryHost, rest);
+                var httpsBoshUrl = GetBoshUrl(jid, jsLibraryHost, rest);
+
+                // 6. "find_bosh_bind" call returns a https:// link which doesn't work with the web sockets.
+                //    It need to be converted to the wss:// before it could be used.
+                var wssBoshUrl = ConvertHttpsBoshUrlToWss(httpsBoshUrl);
 
                 // 6. Connect to the notify XMPP BOSH server
-                var bosh = new Bosh(boshUrl, jid, xmpp.XmppCredentials.Password, transport);
-                bosh.Connect();
+                using var boshTransport = new WebSocketBoshTransport();
+                var bosh = new Bosh(wssBoshUrl, jid, xmpp.XmppCredentials.Password, boshTransport);
 
                 // 7. Get DB info which mainly contains the encryption settings (key derivation info)
                 var dbInfoBlob = bosh.GetChanges(GetDatabaseInfoCommand, GetDatabaseInfoCommandId)
@@ -305,6 +310,12 @@ namespace PasswordManagerAccess.Kaspersky
                 throw MakeError("Failed to retrieve the XMPP BOSH bind URL");
 
             return boshUrl;
+        }
+
+        internal static string ConvertHttpsBoshUrlToWss(string httpsUrl)
+        {
+            var host = GetHost(httpsUrl);
+            return $"wss://{host}/ws";
         }
 
         internal static string GetHost(string url)

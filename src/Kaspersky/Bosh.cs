@@ -4,123 +4,41 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Xml.Linq;
-using System.Xml.XPath;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kaspersky
 {
     internal class Bosh
     {
-        private readonly string _url;
-        private readonly Jid _jid;
-        private readonly string _password;
-        private readonly RestClient _rest;
-        private int _requestId;
-        private string _sessionId;
-
-        public Bosh(string url, Jid jid, string password, IRestTransport transport):
-            this(url, jid, password, transport, new Random().Next())
+        public Bosh(string url, Jid jid, string password, IBoshTransport transport)
         {
+            _url = url;
+            _jid = jid;
+            _password = password;
+            _transport = transport;
+
+            Connect();
         }
 
-        public void Connect()
+        // TODO: Rename this to EncryptedItem
+        public readonly struct Change
         {
-            //
-            // 1. Initialize
-            //
+            public readonly string Type;
+            public readonly string Data;
 
-            var rt = GenerateNextRequestTemplate();
-            rt.AddAttribute($"to='{_jid.Host}'");
-            rt.AddAttribute("wait='60'");
-            rt.AddAttribute("hold='1'");
-            rt.AddAttribute("ver='1.6'");
-            rt.AddAttribute("content='text/xml; charset=utf-8'");
-            rt.AddAttribute("xml:lang='en'");
-            rt.AddAttribute("xmpp:version='1.0'");
-            rt.AddAttribute("xmlns:xmpp='urn:xmpp:xbosh'");
-
-            var response = Request(rt.Bake());
-            if (response.Root.Attribute("sid") is { } sid)
-                _sessionId = sid.Value;
-
-            var hasPlain = response.XPathSelectElements("//*[local-name() = 'mechanism']")
-                .Any(x => x.Value == "PLAIN");
-            if (!hasPlain)
-                throw MakeError("PLAIN auth method is not supported by the server");
-
-            //
-            // 2. Authenticate
-            //
-
-            var auth = GetPlainAuthString(_jid, _password);
-            rt = GenerateNextRequestTemplate();
-            rt.AddTag($"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>{auth}", "</auth>");
-
-            response = Request(rt.Bake());
-            if (GetChild(response, "body/success") == null)
-                throw MakeError("Authentication failed");
-
-            //
-            // 3. Restart
-            //
-
-            rt = GenerateNextRequestTemplate();
-            rt.AddAttribute($"to='{_jid.Host}'");
-            rt.AddAttribute("xml:lang='en'");
-            rt.AddAttribute("xmpp:restart='true'");
-            rt.AddAttribute("xmlns:xmpp='urn:xmpp:xbosh'");
-
-            response = Request(rt.Bake());
-            if (GetChild(response, "body/features/bind") == null ||
-                GetChild(response, "body/features/session") == null)
-                throw MakeError("Restart failed");
-
-            //
-            // 4. Bind resource
-            //
-
-            rt = GenerateNextRequestTemplate();
-            rt.AddTag("<iq type='set' id='_bind_auth_2' xmlns='jabber:client'>", "</iq>");
-            rt.AddTag("<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>", "</bind>");
-            rt.AddTag($"<resource>{_jid.Resource}", "</resource>");
-
-            response = Request(rt.Bake());
-            var xJid = GetChild(response, "body/iq/bind/jid");
-            if (xJid == null || xJid.Value != _jid.Full)
-                throw MakeError("Resource bind failed");
-
-            //
-            // 5. Set session
-            //
-
-            rt = GenerateNextRequestTemplate();
-            rt.AddTag("<iq type='set' id='_session_auth_2' xmlns='jabber:client'>", "</iq>");
-            rt.AddTag("<session xmlns='urn:ietf:params:xml:ns:xmpp-session'>", "</session>");
-
-            response = Request(rt.Bake());
-            if (GetChild(response, "body/iq/session") == null)
-                throw MakeError("Session auth failed");
+            public Change(string type, string data)
+            {
+                Type = type;
+                Data = data;
+            }
         }
 
         public IEnumerable<Change> GetChanges(string command, string commandId, string authKey = "")
         {
-            var rt = GenerateNextRequestTemplate();
+            var xml = SendCommand(command, commandId, authKey);
 
-            var timestamp = Os.UnixMilliseconds();
-            var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
-            var auth = authKey.IsNullOrEmpty() ? "" : $"MPAuthKeyValueInBase64='{authKey}' ";
-
-            rt.AddTag($"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'>",
-                      "</message>");
-            rt.AddTag($"<root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' " +
-                      $"deviceType='0' osType='0' {auth}/>",
-                      "");
-            rt.AddTag("<body />", "");
-
-            var response = Request(rt.Bake());
-            var changes = GetChild(response, "body/message/root/changes");
+            var changes = GetChild(xml, "message/root/changes");
             if (changes == null)
                 throw MakeError($"Failed to retrieve changes via {command}");
 
@@ -135,81 +53,65 @@ namespace PasswordManagerAccess.Kaspersky
         // Internal
         //
 
-        internal class RequestTemplate
+        internal XDocument SendCommand(string command, string commandId, string authKey = "")
         {
-            private StringBuilder _draft;
-            private string _baked = null;
+            var timestamp = Os.UnixMilliseconds();
+            var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
+            var auth = authKey.IsNullOrEmpty() ? "" : $"MPAuthKeyValueInBase64='{authKey}' ";
 
-            private const string Ap = "$a$";
-            private const string Tp = "$t$";
-
-            public RequestTemplate(int requestId, string sessionId = null)
-            {
-                _draft = new StringBuilder(1024);
-
-                _draft.Append($"<body rid='{requestId}' xmlns='http://jabber.org/protocol/httpbind'");
-                if (sessionId != null)
-                    _draft.Append($" sid='{sessionId}'");
-                _draft.Append($"{Ap}>{Tp}</body>");
-            }
-
-            public void AddAttribute(string attribute)
-            {
-                VerifyStillRaw();
-                _draft.Replace(Ap, $" {attribute}{Ap}");
-            }
-
-            public void AddTag(string open, string close)
-            {
-                VerifyStillRaw();
-                _draft.Replace(Tp, $"{open}{Tp}{close}");
-            }
-
-            public string Bake()
-            {
-                if (_baked == null)
-                {
-                    _draft.Replace(Ap, "");
-                    _draft.Replace(Tp, "");
-                    _baked = _draft.ToString();
-                }
-
-                return _baked;
-            }
-
-            private void VerifyStillRaw()
-            {
-                if (_baked != null)
-                    throw new InternalErrorException("Cannot modify an already baked template");
-            }
+            return RequestXml($"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'><body/><root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' {auth}/></message>");
         }
 
-        // TODO: Rename this to EncryptedItem
-        internal readonly struct Change
+        internal void Connect()
         {
-            public readonly string Type;
-            public readonly string Data;
+            //
+            // 1. Connect
+            //
 
-            public Change(string type, string data)
-            {
-                Type = type;
-                Data = data;
-            }
-        }
+            if (_transport.Connect(_url) is { } error)
+                throw MakeError($"Failed to connect to '{_url}'", error);
 
-        // For testing only
-        internal Bosh(string url, Jid jid, string password, IRestTransport transport, int requestId)
-        {
-            _url = url;
-            _jid = jid;
-            _password = password;
-            _rest = new RestClient(transport);
-            _requestId = requestId;
-        }
+            //
+            // 2. Initialize
+            //
 
-        internal RequestTemplate GenerateNextRequestTemplate()
-        {
-            return new RequestTemplate(_requestId++, _sessionId);
+            var response = Request($"<stream:stream to='{_jid.Host}' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>", 2);
+            if (!response.Contains("<mechanism>PLAIN</mechanism>"))
+                throw MakeError("PLAIN auth method is not supported by the server");
+
+            //
+            // 3. Authenticate
+            //
+
+            var auth = GetPlainAuthString(_jid, _password);
+            response = Request($"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>{auth}</auth>", 1);
+            if (!response.StartsWith("<success xmlns='"))
+                throw MakeError("Authentication failed");
+
+            //
+            // 4. Restart
+            //
+
+            response = Request($"<stream:stream to='{_jid.Host}' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>", 2);
+            if (!response.Contains("<bind xmlns='") || !response.Contains("<session xmlns='"))
+                throw MakeError("Restart failed");
+
+            //
+            // 5. Bind resource
+            //
+
+            var xml = RequestXml($"<iq type='set' id='_bind_auth_2' xmlns='jabber:client'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>{_jid.Resource}</resource></bind></iq>");
+            var xJid = GetChild(xml, "iq/bind/jid");
+            if (xJid == null || xJid.Value != _jid.Full)
+                throw MakeError("Resource bind failed");
+
+            //
+            // 6. Set session
+            //
+
+            xml = RequestXml("<iq type='set' id='_session_auth_2' xmlns='jabber:client'><session xmlns='urn:ietf:params:xml:ns:xmpp-session'/></iq>");
+            if (GetChild(xml, "iq/session") == null)
+                throw MakeError("Session auth failed");
         }
 
         internal static string GetPlainAuthString(Jid jid, string password)
@@ -217,13 +119,19 @@ namespace PasswordManagerAccess.Kaspersky
             return $"{jid.Bare}\0{jid.Node}\0{password}".ToBase64();
         }
 
-        internal XDocument Request(string body)
+        internal string Request(string body, int expectedMessageCount)
         {
-            var response = _rest.PostRaw(_url, body);
-            if (!response.IsSuccessful)
-                throw MakeError(response);
+            var response = _transport.Request(body, expectedMessageCount);
+            if (response.IsError)
+                throw new InternalErrorException($"Request to {_url} failed", response.Error);
 
-            return XDocument.Parse(response.Content);
+            return response.Value;
+        }
+
+        internal XDocument RequestXml(string body)
+        {
+            var xml = Request(body, 1);
+            return XDocument.Parse(xml);
         }
 
         internal static XElement GetChild(XContainer root, string path, XElement defaultValue = null)
@@ -239,14 +147,14 @@ namespace PasswordManagerAccess.Kaspersky
             return (XElement)current;
         }
 
-        private static BaseException MakeError(RestResponse<string> response)
+        internal static BaseException MakeError(string message, Exception inner = null)
         {
-            throw new InternalErrorException($"Request to {response.RequestUri} failed");
+            throw new InternalErrorException(message, inner);
         }
 
-        private static BaseException MakeError(string message)
-        {
-            throw new InternalErrorException(message);
-        }
+        private readonly string _url;
+        private readonly Jid _jid;
+        private readonly string _password;
+        private readonly IBoshTransport _transport;
     }
 }

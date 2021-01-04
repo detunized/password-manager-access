@@ -31,6 +31,7 @@ namespace PasswordManagerAccess.Kaspersky
         {
             try
             {
+                // TODO: Use timeouts not to freeze!
                 _webSocket.ConnectAsync(new Uri(url), CancellationToken.None).GetAwaiter().GetResult();
                 return null;
             }
@@ -40,8 +41,9 @@ namespace PasswordManagerAccess.Kaspersky
             }
         }
 
-        public Try<string> Request(string body)
+        public Try<string> Request(string body, int expectedMessageCount)
         {
+            // TODO: Use timeouts not to freeze!
             try
             {
                 _webSocket.SendAsync(new ArraySegment<byte>(body.ToBytes()),
@@ -49,27 +51,27 @@ namespace PasswordManagerAccess.Kaspersky
                                      true,
                                      CancellationToken.None);
 
-                for (var i = 0; i < 3; i++)
+                _message.SetLength(0);
+                for (var i = 0; i < expectedMessageCount; ++i)
                 {
-                    _message.Position = 0;
-                    while (true)
+                    // Drain one message
+                    WebSocketReceiveResult part;
+                    do
                     {
-                        var part = _webSocket.ReceiveAsync(_buffer, CancellationToken.None).GetAwaiter().GetResult();
+                        part = _webSocket.ReceiveAsync(_buffer, CancellationToken.None).GetAwaiter().GetResult();
                         _message.Write(_buffer.Array!, 0, part.Count);
-                        if (part.EndOfMessage)
-                            break;
 
                         if (_message.Position > 1024 * 1024)
                             return Try<string>.FromError("Message is too long");
-                    }
+                    } while (!part.EndOfMessage);
                 }
-
-                return Try.FromValue(_message.ToArray().ToUtf8());
             }
             catch (Exception e)
             {
                 return Try.FromError<string>(e);
             }
+
+            return Try.FromValue(_message.ToArray().ToUtf8());
         }
 
         //

@@ -11,6 +11,6 @@ namespace PasswordManagerAccess.Kaspersky
     internal interface IBoshTransport: IDisposable
     {
         Exception? Connect(string url);
-        Try<string> Request(string body);
+        Try<string> Request(string body, int expectedMessageCount);
     }
 }
