@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.2.1
+  - Kaspersky: fixed occasional crashes in logout
+
 ## 8.2.0
   - Kaspersky: added support for folders
 
