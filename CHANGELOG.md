@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.2.0
+  - Kaspersky: added support for folders
+
 ## 8.1.1
   - Kaspersky: the now defunct HTTP BOSH protocol is replaced with a new web
     socket XMPP protocol implementation
