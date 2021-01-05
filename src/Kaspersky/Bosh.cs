@@ -21,7 +21,6 @@ namespace PasswordManagerAccess.Kaspersky
             Connect();
         }
 
-        // TODO: Rename this to EncryptedItem
         public readonly struct Change
         {
             public readonly string Type;
