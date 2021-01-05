@@ -13,13 +13,13 @@ namespace PasswordManagerAccess.Kaspersky
     // TODO: The protocol is very poorly tested. Write more tests!
     internal static class Client
     {
-        // TODO: Pass in IBoshTransport to make this testable
         public static Account[] OpenVault(string username,
                                           string accountPassword,
                                           string vaultPassword,
-                                          IRestTransport transport)
+                                          IRestTransport restTransport,
+                                          IBoshTransport boshTransport)
         {
-            var rest = new RestClient(transport);
+            var rest = new RestClient(restTransport);
 
             // 1. Login
             var (sessionCookie, authCookies) = Login(username, accountPassword, rest);
@@ -45,7 +45,6 @@ namespace PasswordManagerAccess.Kaspersky
                 var wssBoshUrl = ConvertHttpsBoshUrlToWss(httpsBoshUrl);
 
                 // 6. Connect to the notify XMPP BOSH server
-                using var boshTransport = new WebSocketBoshTransport();
                 var bosh = new Bosh(wssBoshUrl, jid, xmpp.XmppCredentials.Password, boshTransport);
 
                 // 7. Get DB info which mainly contains the encryption settings (key derivation info)

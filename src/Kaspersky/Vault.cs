@@ -11,8 +11,9 @@ namespace PasswordManagerAccess.Kaspersky
 
         public static Vault Open(string username, string accountPassword, string vaultPassword)
         {
-            using var transport = new RestTransport();
-            return Open(username, accountPassword, vaultPassword, transport);
+            using var restTransport = new RestTransport();
+            using var boshTransport = new WebSocketBoshTransport();
+            return Open(username, accountPassword, vaultPassword, restTransport, boshTransport);
         }
 
         //
@@ -22,9 +23,10 @@ namespace PasswordManagerAccess.Kaspersky
         internal static Vault Open(string username,
                                    string accountPassword,
                                    string vaultPassword,
-                                   IRestTransport transport)
+                                   IRestTransport restTransport,
+                                   IBoshTransport boshTransport)
         {
-            return new Vault(Client.OpenVault(username, accountPassword, vaultPassword, transport));
+            return new Vault(Client.OpenVault(username, accountPassword, vaultPassword, restTransport, boshTransport));
         }
 
         //
