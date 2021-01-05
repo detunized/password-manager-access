@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.1.1
+  - Kaspersky: the now defunct HTTP BOSH protocol is replaced with a new web
+    socket XMPP protocol implementation
+
 ## 8.1.0
   - Kdbx: added support for additional account fields (see Account.Fields
     property)
