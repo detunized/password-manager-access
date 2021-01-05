@@ -26,46 +26,74 @@ namespace PasswordManagerAccess.Test.Kaspersky
         [Fact]
         public void ParseVault_returns_accounts_for_version_9()
         {
-            var accounts = Parser.ParseVault(GetDbItemsFromFixture("vault-version9-response"),
-                                             EncryptionKeyVersion9).ToArray();
+            var accounts = Parser.ParseVault(GetDbItemsFromFixture("vault-version9-response"), EncryptionKeyVersion9)
+                .OrderBy(x => x.Name)
+                .ToArray();
 
-            Assert.Equal(3, accounts.Length);
+            Assert.Equal(4, accounts.Length);
+
+            //
+            //  0
+            //
 
             var a0 = accounts[0];
-            Assert.Equal("Web 1 login", a0.Name);
-            Assert.Equal("web1.com", a0.Url);
+            Assert.Equal("Nested", a0.Name);
+            Assert.Equal("nested.com", a0.Url);
             Assert.Equal("", a0.Notes);
-            Assert.Single(a0.Credentials);
+            Assert.Equal("Top Level 2", a0.Folder);
+            Assert.Empty(a0.Credentials);
 
-            var c00 = a0.Credentials[0];
-            Assert.Equal("Login1", c00.Name);
-            Assert.Equal("log", c00.Username);
-            Assert.Equal("pwd", c00.Password);
-            Assert.Equal("Blah", c00.Notes);
+            //
+            // 1
+            //
 
             var a1 = accounts[1];
-            Assert.Equal("Web no login", a1.Name);
-            Assert.Equal("web0.com", a1.Url);
+            Assert.Equal("Web 1 login", a1.Name);
+            Assert.Equal("web1.com", a1.Url);
             Assert.Equal("", a1.Notes);
-            Assert.Empty(a1.Credentials);
+            Assert.Equal("Top Level 1", a1.Folder);
+            Assert.Single(a1.Credentials);
+
+            var c10 = a1.Credentials[0];
+            Assert.Equal("Login1", c10.Name);
+            Assert.Equal("log", c10.Username);
+            Assert.Equal("pwd", c10.Password);
+            Assert.Equal("Blah", c10.Notes);
+
+            //
+            // 2
+            //
 
             var a2 = accounts[2];
             Assert.Equal("Web multiple logins", a2.Name);
             Assert.Equal("web2.com", a2.Url);
             Assert.Equal("", a2.Notes);
+            Assert.Equal("", a2.Folder);
             Assert.Equal(2, a2.Credentials.Length);
 
-            var c20 = a2.Credentials[0];
+            var c2 = a2.Credentials.OrderBy(x => x.Name).ToArray();
+            var c20 = c2[0];
             Assert.Equal("Log12", c20.Name);
             Assert.Equal("logg", c20.Username);
             Assert.Equal("pwd", c20.Password);
             Assert.Equal("Blah", c20.Notes);
 
-            var c21 = a2.Credentials[1];
+            var c21 = c2[1];
             Assert.Equal("Log22", c21.Name);
             Assert.Equal("logh", c21.Username);
             Assert.Equal("pwd", c21.Password);
             Assert.Equal("Blah", c21.Notes);
+
+            //
+            // 3
+            //
+
+            var a3 = accounts[3];
+            Assert.Equal("Web no login", a3.Name);
+            Assert.Equal("web0.com", a3.Url);
+            Assert.Equal("", a3.Notes);
+            Assert.Equal("", a3.Folder);
+            Assert.Empty(a3.Credentials);
         }
 
         //

@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -15,23 +16,33 @@ namespace PasswordManagerAccess.Kaspersky
     {
         public static IEnumerable<Account> ParseVault(IEnumerable<Bosh.Change> db, byte[] encryptionKey)
         {
-            var accounts = new List<Account>();
+            var accountsToParse = new List<Bosh.Change>();
             var credentialsToParse = new List<Bosh.Change>();
+            var folders = new Dictionary<string, string>();
 
-            // Parse only the accounts first
+            // Parse only the folders, sort the rest for later
             foreach (var item in db)
             {
                 switch (item.Type)
                 {
                 case "Account":
                 case "WebAccount":
-                    accounts.Add(ParseAccount(item, encryptionKey));
+                    accountsToParse.Add(item);
                     break;
                 case "Login":
                     credentialsToParse.Add(item);
                     break;
+                case "Group":
+                    var (folderId, folderName) = ParseGroup(item, encryptionKey);
+                    folders[folderId] = folderName;
+                    break;
                 }
             }
+
+            // Parse all accounts
+            var accounts = accountsToParse
+                .Select(x => ParseAccount(x, encryptionKey, folders))
+                .ToArray();
 
             // Parse the credentials and assign them to the account IDs
             var accountCredentials = new Dictionary<string, List<Credentials>>();
@@ -49,14 +60,16 @@ namespace PasswordManagerAccess.Kaspersky
             return accounts;
         }
 
-        internal static Account ParseAccount(Bosh.Change item, byte[] encryptionKey)
+        internal static Account ParseAccount(Bosh.Change item,
+                                             byte[] encryptionKey,
+                                             IReadOnlyDictionary<string, string> folders)
         {
             var (version, blob) = DecodeItem(item);
             return version switch
             {
-                Version8 => ParseAccountVersion8(blob, encryptionKey),
-                Version9 => ParseAccountVersion9(blob, encryptionKey),
-                Version92 => ParseAccountVersion92(blob, encryptionKey),
+                Version8 => ParseAccountVersion8(blob, encryptionKey, folders),
+                Version9 => ParseAccountVersion9(blob, encryptionKey, folders),
+                Version92 => ParseAccountVersion92(blob, encryptionKey, folders),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
@@ -69,6 +82,18 @@ namespace PasswordManagerAccess.Kaspersky
                 Version8 => ParseLoginVersion8(blob, encryptionKey),
                 Version9 => ParseLoginVersion9(blob, encryptionKey),
                 Version92 => ParseLoginVersion92(blob, encryptionKey),
+                _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
+            };
+        }
+
+        internal static (string Id, string Name) ParseGroup(Bosh.Change item, byte[] encryptionKey)
+        {
+            var (version, blob) = DecodeItem(item);
+            return version switch
+            {
+                Version8 => ParseGroupVersion8(blob, encryptionKey),
+                Version9 => ParseGroupVersion9(blob, encryptionKey),
+                Version92 => ParseGroupVersion92(blob, encryptionKey),
                 _ => throw new UnsupportedFeatureException($"Database item version {version} is not supported")
             };
         }
@@ -86,19 +111,24 @@ namespace PasswordManagerAccess.Kaspersky
         // Version 8
         //
 
-        internal static Account ParseAccountVersion8(byte[] blob, byte[] encryptionKey)
+        internal static Account ParseAccountVersion8(byte[] blob,
+                                                     byte[] encryptionKey,
+                                                     IReadOnlyDictionary<string, string> folders)
         {
-            return ParseAccountVersion8(DecryptBlobVersion8(blob, encryptionKey));
+            return ParseAccountVersion8(DecryptBlobVersion8(blob, encryptionKey), folders);
         }
 
-        internal static Account ParseAccountVersion8(string json)
+        internal static Account ParseAccountVersion8(string json, IReadOnlyDictionary<string, string> folders)
         {
             var item = JObject.Parse(json);
+            var id = ConvertByteArrayToGuid(item.ArrayAtOrEmpty("guid"));
+            var folderId = ConvertByteArrayToGuid(item.ArrayAtOrEmpty("parentGroupGuid"));
 
-            return new Account(id: ConvertByteArrayToGuid(item.ArrayAtOrEmpty("guid")),
+            return new Account(id: id,
                                name: item.StringAt("name", ""),
                                url: item.StringAt("url", ""),
                                notes: item.StringAt("comment", ""),
+                               folder: folders.GetOrDefault(folderId, ""),
                                null);
         }
 
@@ -123,6 +153,17 @@ namespace PasswordManagerAccess.Kaspersky
                                                           username: item.StringAt("login", ""),
                                                           password: item.StringAt("password", ""),
                                                           notes: item.StringAt("comment", "")));
+        }
+
+        internal static (string Id, string Name) ParseGroupVersion8(byte[] blob, byte[] encryptionKey)
+        {
+            return ParseGroupVersion8(DecryptBlobVersion8(blob, encryptionKey));
+        }
+
+        internal static (string Id, string Name) ParseGroupVersion8(string json)
+        {
+            var item = JObject.Parse(json);
+            return (ConvertByteArrayToGuid(item.ArrayAtOrEmpty("guid")), item.StringAt("name", ""));
         }
 
         internal static string ConvertByteArrayToGuid(JArray array)
@@ -169,14 +210,21 @@ namespace PasswordManagerAccess.Kaspersky
         // of the parsing is exactly the same.
         //
 
-        internal static Account ParseAccountVersion9(byte[] blob, byte[] encryptionKey)
+        internal static Account ParseAccountVersion9(byte[] blob,
+                                                     byte[] encryptionKey,
+                                                     IReadOnlyDictionary<string, string> folders)
         {
-            return ParseAccountVersion8(DecryptBlobVersion9(blob, encryptionKey));
+            return ParseAccountVersion8(DecryptBlobVersion9(blob, encryptionKey), folders);
         }
 
         internal static (string[], Credentials) ParseLoginVersion9(byte[] blob, byte[] encryptionKey)
         {
             return ParseLoginVersion8(DecryptBlobVersion9(blob, encryptionKey));
+        }
+
+        internal static (string Id, string Name) ParseGroupVersion9(byte[] blob, byte[] encryptionKey)
+        {
+            return ParseGroupVersion8(DecryptBlobVersion9(blob, encryptionKey));
         }
 
         internal static string DecryptBlobVersion9(byte[] blob, byte[] encryptionKey)
@@ -207,7 +255,9 @@ namespace PasswordManagerAccess.Kaspersky
         // Version 9.2
         //
 
-        internal static Account ParseAccountVersion92(byte[] blob, byte[] encryptionKey)
+        internal static Account ParseAccountVersion92(byte[] blob,
+                                                      byte[] encryptionKey,
+                                                      IReadOnlyDictionary<string, string> folders)
         {
             var fields = ParseItemVersion92(blob, encryptionKey, AccountFieldsVersion92);
 
@@ -215,6 +265,7 @@ namespace PasswordManagerAccess.Kaspersky
                                name: fields.GetOrDefault(FieldName, ""),
                                url: fields.GetOrDefault(FieldUrl, ""),
                                notes: fields.GetOrDefault(FieldNotes, ""),
+                               folder: folders.GetOrDefault(fields.GetOrDefault(FieldFolder, ""), ""),
                                credentials: new Credentials[0]);
         }
 
@@ -222,13 +273,19 @@ namespace PasswordManagerAccess.Kaspersky
         {
             var fields = ParseItemVersion92(blob, encryptionKey, LoginFieldsVersion92);
             var accountId = fields.GetOrDefault(FieldAccountId, "");
-            var accountIds = accountId.IsNullOrEmpty() ? new string[0] : new[] {accountId};
+            var accountIds = accountId.IsNullOrEmpty() ? Array.Empty<string>() : new[] {accountId};
 
             return (accountIds, new Credentials(id: fields.GetOrDefault(FieldId, ""),
                                                 name: fields.GetOrDefault(FieldName, ""),
                                                 username: fields.GetOrDefault(FieldUsername, ""),
                                                 password: fields.GetOrDefault(FieldPassword, ""),
                                                 notes: fields.GetOrDefault(FieldNotes, "")));
+        }
+
+        internal static (string Id, string Name) ParseGroupVersion92(byte[] blob, byte[] encryptionKey)
+        {
+            var fields = ParseItemVersion92(blob, encryptionKey, GroupFieldsVersion92);
+            return (fields.GetOrDefault(FieldId, ""), fields.GetOrDefault(FieldName, ""));
         }
 
         internal static Dictionary<string, string> ParseItemVersion92(byte[] blob, byte[] encryptionKey, string[] names)
@@ -349,6 +406,7 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string FieldAccountId = "m_account";
         internal const string FieldUsername = "m_login";
         internal const string FieldPassword = "m_password";
+        internal const string FieldFolder = "m_parentGroupGuid";
 
         internal static readonly string[] AccountFieldsVersion92 =
         {
@@ -356,6 +414,7 @@ namespace PasswordManagerAccess.Kaspersky
             FieldName,
             FieldUrl,
             FieldNotes,
+            FieldFolder,
         };
 
         internal static readonly string[] LoginFieldsVersion92 =
@@ -368,5 +427,10 @@ namespace PasswordManagerAccess.Kaspersky
             FieldNotes,
         };
 
+        internal static readonly string[] GroupFieldsVersion92 =
+        {
+            FieldId,
+            FieldName,
+        };
     }
 }

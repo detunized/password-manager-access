@@ -15,6 +15,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
             var name = "name";
             var url = "url";
             var notes = "notes";
+            var folder = "folder";
             var credentials = new[]
             {
                 new Credentials("id1", "name1", "username1", "password1", "notes1"),
@@ -22,12 +23,13 @@ namespace PasswordManagerAccess.Test.Kaspersky
                 new Credentials("id3", "name3", "username3", "password3", "notes3"),
             };
 
-            var account = new Account(id, name, url, notes, credentials);
+            var account = new Account(id, name, url, notes, folder, credentials);
 
             Assert.Equal(id, account.Id);
             Assert.Equal(name, account.Name);
             Assert.Equal(url, account.Url);
             Assert.Equal(notes, account.Notes);
+            Assert.Equal(folder, account.Folder);
             Assert.Equal(credentials, account.Credentials);
         }
 
