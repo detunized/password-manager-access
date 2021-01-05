@@ -209,30 +209,26 @@ namespace PasswordManagerAccess.Kaspersky
             // We disable the redirects and make a couple of requests manually. The HTTP
             // errors are ignored deliberately not to fail the whole vault fetching process.
 
-            var response1 = rest.PostForm("https://my.kaspersky.com/SignIn/SignOutTo",
-                                          RestClient.NoParameters,
-                                          headers: new Dictionary<string, string>()
-                                          {
-                                              ["Accept"] = "*/*",
-                                              ["Host"] = "my.kaspersky.com",
-                                          },
-                                          cookies: authCookies);
-            if (response1.IsNetworkError)
-                throw MakeError(response1);
+            rest.PostForm("https://my.kaspersky.com/SignIn/SignOutTo",
+                          RestClient.NoParameters,
+                          headers: new Dictionary<string, string>()
+                          {
+                              ["Accept"] = "*/*",
+                              ["Host"] = "my.kaspersky.com",
+                          },
+                          cookies: authCookies);
 
-            var response2 = rest.Get("https://hq.uis.kaspersky.com/v3/authenticate?wa=wsignout1.0",
-                                     headers: new Dictionary<string, string>()
-                                     {
-                                         ["Accept"] = "*/*",
-                                         ["Host"] = "hq.uis.kaspersky.com",
-                                     },
-                                     cookies: new Dictionary<string, string>
-                                     {
-                                         [SessionCookieName] = sessionCookie,
-                                     },
-                                     maxRedirects: 0);
-            if (response2.IsNetworkError)
-                throw MakeError(response2);
+            rest.Get("https://hq.uis.kaspersky.com/v3/authenticate?wa=wsignout1.0",
+                     headers: new Dictionary<string, string>()
+                     {
+                         ["Accept"] = "*/*",
+                         ["Host"] = "hq.uis.kaspersky.com",
+                     },
+                     cookies: new Dictionary<string, string>
+                     {
+                         [SessionCookieName] = sessionCookie,
+                     },
+                     maxRedirects: 0);
         }
 
         internal static R.XmppSettings GetXmppInfo(Dictionary<string, string> authCookies, RestClient rest)
