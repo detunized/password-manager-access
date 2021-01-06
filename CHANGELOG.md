@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.2.2
+  - Kaspersky: web socket connection timeout increased to 30 seconds to help
+    with the slow networks
+
 ## 8.2.1
   - Kaspersky: fixed occasional crashes in logout
 
