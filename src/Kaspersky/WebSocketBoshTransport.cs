@@ -90,7 +90,7 @@ namespace PasswordManagerAccess.Kaspersky
         // Data
         //
 
-        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
         private readonly ClientWebSocket _webSocket = new ClientWebSocket();
         private readonly MemoryStream _message = new MemoryStream(1024);
