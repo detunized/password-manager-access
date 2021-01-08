@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.2.3
+  - 1Password: authentication protocol upgraded to the current version v3
+
 ## 8.2.2
   - Kaspersky: web socket connection timeout increased to 30 seconds to help
     with the slow networks
