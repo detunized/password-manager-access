@@ -29,7 +29,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_returns_session_on_ok()
         {
-            var flow = new RestFlow().Get(GetFixture("start-new-session-response"));
+            var flow = new RestFlow().Post(GetFixture("start-new-session-response"));
             var (sessionId, srpInfo) = Client.StartNewSession(TestData.ClientInfo, flow);
 
             Assert.Equal(TestData.SessionId, sessionId);
@@ -43,8 +43,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void StartNewSession_makes_GET_request_to_specific_url()
         {
             var flow = new RestFlow()
-                .Get(GetFixture("start-new-session-response"))
-                    .ExpectUrl("1password.com/api/v2/auth")
+                .Post(GetFixture("start-new-session-response"))
+                    .ExpectUrl("1password.com/api/v3/auth")
                 .ToRestClient(ApiUrl);
 
             Client.StartNewSession(TestData.ClientInfo, flow);
@@ -53,7 +53,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_throws_on_unknown_status()
         {
-            var flow = new RestFlow().Get("{'status': 'unknown', 'sessionID': 'blah'}");
+            var flow = new RestFlow().Post("{'status': 'unknown', 'sessionID': 'blah'}");
 
             Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, flow),
                                                  "Failed to start a new session, unsupported response status");
@@ -63,7 +63,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void StartNewSession_throws_on_network_error()
         {
             var error = new HttpRequestException("Network error");
-            var flow = new RestFlow().Get(error);
+            var flow = new RestFlow().Post(error);
 
             var e = Exceptions.AssertThrowsNetworkError(() => Client.StartNewSession(TestData.ClientInfo, flow),
                                                         "Network error");
@@ -73,7 +73,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_throws_on_invalid_json()
         {
-            var flow = new RestFlow().Get("} invalid json {");
+            var flow = new RestFlow().Post("} invalid json {");
 
             Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, flow),
                                                  "Invalid or unexpected response");

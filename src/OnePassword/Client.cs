@@ -222,11 +222,16 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(ClientInfo clientInfo, RestClient rest)
         {
-            var response = rest.Get<R.NewSession>(string.Format("v2/auth/{0}/{1}/{2}/{3}",
-                                                                clientInfo.Username,
-                                                                clientInfo.AccountKey.Format,
-                                                                clientInfo.AccountKey.Uuid,
-                                                                clientInfo.Uuid));
+            var response = rest.PostJson<R.NewSession>("v3/auth/start",
+                                                       new Dictionary<string, object>
+                                                       {
+                                                           ["deviceUuid"] = clientInfo.Uuid,
+                                                           ["email"] = clientInfo.Username,
+                                                           ["skFormat"] = clientInfo.AccountKey.Format,
+                                                           ["skid"] = clientInfo.AccountKey.Uuid,
+                                                           ["userUuid"] = "", // TODO: Where do we get this?
+                                                       });
+
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
