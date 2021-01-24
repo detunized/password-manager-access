@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.2.4
+  - ZohoVault: 200 vault item limit removed
+
 ## 8.2.3
   - 1Password: authentication protocol upgraded to the current version v3
 
