@@ -549,7 +549,7 @@ namespace PasswordManagerAccess.ZohoVault
             $"https://vault.zoho.{tld}/api/json/login?OPERATION_NAME=GET_LOGIN";
 
         private static string VaultUrl(string tld) =>
-            $"https://vault.zoho.{tld}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=200";
+            $"https://vault.zoho.{tld}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1";
 
         private static string LogoutUrl(string tld) => $"https://accounts.zoho.{tld}/logout?servicename=ZohoVault";
 
