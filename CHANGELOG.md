@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.2.5
+  - Kaspersky: fixed downloading of large vaults with lots of items or edits
+
 ## 8.2.4
   - ZohoVault: 200 vault item limit removed
 
