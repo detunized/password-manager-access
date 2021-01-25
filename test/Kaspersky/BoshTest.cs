@@ -11,7 +11,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.Kaspersky
 {
-    public class BoshTest
+    public class BoshTest: TestBase
     {
         [Fact]
         public void Connect_and_GetChanges_connect_to_server_and_return_items()
@@ -95,6 +95,45 @@ namespace PasswordManagerAccess.Test.Kaspersky
             Assert.Single(items);
             Assert.Equal("Database", items[0].Type);
             Assert.Equal("AgAAANwFAAA5tWNHwWyUw2VT/XSnzSyx", items[0].Data);
+        }
+
+        [Fact]
+        public void GetChanges_return_all_changes_from_multiple_requests()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("large-vault-response-1", "xml"))
+                .Post(GetFixture("large-vault-response-2", "xml"));
+
+            // No Connect call here. Skipped as it's irrelevant in testing.
+            var items = new Bosh("http://bosh.test", UserJid, "password", new RestBoshTransport(flow))
+                .GetChanges("command-name", "4213")
+                .ToArray();
+
+            Assert.Equal(72, items.Length);
+        }
+
+        [Theory]
+        [InlineData("1203265602", Bosh.Operation.Changed)]
+        [InlineData("3122616881", Bosh.Operation.Removed)]
+        [InlineData("1570712235", Bosh.Operation.Inactive)]
+        [InlineData("33200760", Bosh.Operation.Deprecated)]
+        [InlineData(null, null)]
+        [InlineData("", null)]
+        [InlineData("blah", null)]
+        [InlineData("1337", null)]
+        internal void ParseOperation_returns_operation(string operation, Bosh.Operation? expected)
+        {
+            Assert.Equal(expected, Bosh.ParseOperation(operation));
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("blah")]
+        [InlineData("1337")]
+        internal void ParseOperation_returns_null(string operation)
+        {
+            Assert.Null(Bosh.ParseOperation(operation));
         }
 
         //

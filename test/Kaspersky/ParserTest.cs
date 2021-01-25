@@ -14,6 +14,21 @@ namespace PasswordManagerAccess.Test.Kaspersky
     public class ParserTest: TestBase
     {
         [Fact]
+        public void ParseVault_parses_large_vault()
+        {
+            var items = Enumerable.Range(1, 2)
+                .SelectMany(i => GetDbItemsFromFixture($"large-vault-response-{i}"))
+                .ToArray();
+
+            Assert.Equal(72, items.Length);
+
+            var accounts = Parser.ParseVault(items, EncryptionKeyLargeVault).ToArray();
+
+            // TODO: Verify account details
+            Assert.Equal(13, accounts.Length);
+        }
+
+        [Fact]
         public void ParseVault_returns_accounts_for_version_8()
         {
             var accounts = Parser.ParseVault(GetDbItemsFromFixture("vault-version8-response"),
@@ -208,15 +223,18 @@ namespace PasswordManagerAccess.Test.Kaspersky
         {
             return XDocument.Parse(GetFixture(name, "xml"))
                 .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
-                .Select(x => new Bosh.Change(x.Attribute("id")?.Value,
+                .Select(x => new Bosh.Change(x.Attribute("id").Value,
                                              Bosh.ParseOperation(x.Attribute("unique_id").Value).Value,
-                                             x.Attribute("type").Value,
-                                             x.Attribute("dataInBase64").Value));
+                                             x.Attribute("type")?.Value ?? "",
+                                             x.Attribute("dataInBase64")?.Value ?? ""));
         }
 
         //
         // Data
         //
+
+        internal static readonly byte[] EncryptionKeyLargeVault =
+            "b7ae681b5946f23c33f14cefef0b4361dc348ad5a0f40ea9503adfba0d2bbe34".DecodeHex();
 
         internal static readonly byte[] EncryptionKeyVersion8 =
             "0741524aefb42058143123852073ad326c4e9e0eba2afcd850b04e34a553ae90".DecodeHex();

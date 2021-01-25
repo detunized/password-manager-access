@@ -16,12 +16,14 @@ namespace PasswordManagerAccess.Kaspersky
     {
         public static IEnumerable<Account> ParseVault(IEnumerable<Bosh.Change> db, byte[] encryptionKey)
         {
+            var items = MergeItems(db);
+
             var accountsToParse = new List<Bosh.Change>();
             var credentialsToParse = new List<Bosh.Change>();
             var folders = new Dictionary<string, string>();
 
             // Parse only the folders, sort the rest for later
-            foreach (var item in db)
+            foreach (var item in items)
             {
                 switch (item.Type)
                 {
@@ -58,6 +60,42 @@ namespace PasswordManagerAccess.Kaspersky
                 a.Credentials = accountCredentials.GetOrDefault(a.Id, null)?.ToArray() ?? new Credentials[0];
 
             return accounts;
+        }
+
+        internal static IEnumerable<Bosh.Change> MergeItems(IEnumerable<Bosh.Change> items)
+        {
+            var merged = new Dictionary<string, Bosh.Change>();
+
+            foreach (var item in items)
+            {
+                var id = item.Id;
+                switch (item.Operation)
+                {
+                case Bosh.Operation.Changed:
+                    if (merged.TryGetValue(id, out var old))
+                        merged[id] = MergeItems(old, item);
+                    else
+                        merged[id] = item;
+
+                    break;
+                case Bosh.Operation.Removed:
+                case Bosh.Operation.Inactive:
+                case Bosh.Operation.Deprecated:
+                    merged.Remove(id);
+                    break;
+
+                default:
+                    throw new InternalErrorException($"Invalid operation value: {item.Operation}");
+                }
+            }
+
+            return merged.Values;
+        }
+
+        internal static Bosh.Change MergeItems(Bosh.Change oldItem, Bosh.Change newItem)
+        {
+            // TODO: Merge two records! This is really tricky, so we just take the new one run with it.
+            return newItem;
         }
 
         internal static Account ParseAccount(Bosh.Change item,
