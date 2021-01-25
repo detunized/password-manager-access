@@ -208,7 +208,10 @@ namespace PasswordManagerAccess.Test.Kaspersky
         {
             return XDocument.Parse(GetFixture(name, "xml"))
                 .XPathSelectElements("//*[starts-with(local-name(), 'item_')]")
-                .Select(x => new Bosh.Change(x.Attribute("type").Value, x.Attribute("dataInBase64").Value));
+                .Select(x => new Bosh.Change(x.Attribute("id")?.Value,
+                                             Bosh.ParseOperation(x.Attribute("unique_id").Value).Value,
+                                             x.Attribute("type").Value,
+                                             x.Attribute("dataInBase64").Value));
         }
 
         //

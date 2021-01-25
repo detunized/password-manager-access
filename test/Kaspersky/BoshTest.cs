@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
     public class BoshTest
     {
         [Fact]
-        public void Ctor_and_GetChanges_connect_to_server_and_return_items()
+        public void Connect_and_GetChanges_connect_to_server_and_return_items()
         {
             var response1 =
                 "<?xml version='1.0'?>" +
@@ -84,12 +84,13 @@ namespace PasswordManagerAccess.Test.Kaspersky
                     .ExpectContent("id='command-name-browser-5-")
                     .ExpectContent($"to='kpm-sync@{UserJid.Host}'")
                     .ExpectContent($"from='{UserJid.Bare}'")
-                    .ExpectContent("<root unique_id='4213' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' />")
+                    .ExpectContent("<root unique_id='1203265602' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0'")
                     .ExpectContent("></message>");
 
-            var items = new Bosh("http://bosh.test", UserJid, "password", new RestBoshTransport(flow))
-                .GetChanges("command-name", "4213")
-                .ToArray();
+            var bosh = new Bosh("http://bosh.test", UserJid, "password", new RestBoshTransport(flow));
+            bosh.Connect();
+
+            var items = bosh.GetChanges("command-name", "1203265602").ToArray();
 
             Assert.Single(items);
             Assert.Equal("Database", items[0].Type);
@@ -143,6 +144,6 @@ namespace PasswordManagerAccess.Test.Kaspersky
         }
 
         private readonly RestClient _rest;
-        private string _url = "";
+        private string _url = "http://default.value";
     }
 }

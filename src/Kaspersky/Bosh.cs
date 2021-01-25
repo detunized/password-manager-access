@@ -17,51 +17,9 @@ namespace PasswordManagerAccess.Kaspersky
             _jid = jid;
             _password = password;
             _transport = transport;
-
-            Connect();
         }
 
-        public readonly struct Change
-        {
-            public readonly string Type;
-            public readonly string Data;
-
-            public Change(string type, string data)
-            {
-                Type = type;
-                Data = data;
-            }
-        }
-
-        public IEnumerable<Change> GetChanges(string command, string commandId, string authKey = "")
-        {
-            var xml = SendCommand(command, commandId, authKey);
-
-            var changes = GetChild(xml, "message/root/changes");
-            if (changes == null)
-                throw MakeError($"Failed to retrieve changes via {command}");
-
-            return
-                from e in changes.Elements()
-                let type = e.Attribute("type")?.Value
-                where type != null
-                select new Change(type, e.Attribute("dataInBase64")?.Value ?? "");
-        }
-
-        //
-        // Internal
-        //
-
-        internal XDocument SendCommand(string command, string commandId, string authKey = "")
-        {
-            var timestamp = Os.UnixMilliseconds();
-            var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
-            var auth = authKey.IsNullOrEmpty() ? "" : $"MPAuthKeyValueInBase64='{authKey}' ";
-
-            return RequestXml($"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'><body/><root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' {auth}/></message>");
-        }
-
-        internal void Connect()
+        public void Connect()
         {
             //
             // 1. Connect
@@ -113,6 +71,89 @@ namespace PasswordManagerAccess.Kaspersky
                 throw MakeError("Session auth failed");
         }
 
+        public enum Operation
+        {
+            Changed,
+            Removed,
+            Inactive,
+            Deprecated,
+        }
+
+        public readonly struct Change
+        {
+            public readonly string Id;
+            public readonly Operation Operation;
+            public readonly string Type;
+            public readonly string Data;
+
+            public Change(string id, Operation operation, string type, string data)
+            {
+                Id = id;
+                Operation = operation;
+                Type = type;
+                Data = data;
+            }
+        }
+
+        public IEnumerable<Change> GetChanges(string command, string commandId, string authKey = "")
+        {
+            Exception InvalidResponse(string reason) =>
+                MakeError($"Invalid response for XMPP command '{command}': {reason}");
+
+            IEnumerable<Change> allChanges = Array.Empty<Change>();
+            var serverBlob = "";
+
+            while (true)
+            {
+                var xml = SendCommand(command: command,
+                                      commandId: commandId,
+                                      serverBlob: serverBlob,
+                                      authKey: authKey);
+
+                var root = GetChild(xml, "message/root");
+                if (root == null)
+                    throw InvalidResponse("root not found");
+
+                var changes = GetChild(xml, "message/root/changes");
+                if (changes == null)
+                    throw InvalidResponse("changes not found");
+
+                var batch = from e in changes.Elements()
+                    let id = e.Attribute("id")?.Value
+                    where id != null
+                    let operation = ParseOperation(e.Attribute("unique_id")?.Value)
+                    where operation != null
+                    select new Change(id,
+                                      operation.Value,
+                                      e.Attribute("type")?.Value ?? "",
+                                      e.Attribute("dataInBase64")?.Value ?? "");
+
+                allChanges = allChanges.Concat(batch);
+
+                if (root.Attribute("moreChangesAvailable")?.Value != "1")
+                    break;
+
+                serverBlob = root.Attribute("serverBlob")?.Value;
+                if (serverBlob.IsNullOrEmpty())
+                    throw InvalidResponse("expected non-empty serverBlob attribute");
+            }
+
+            return allChanges;
+        }
+
+        //
+        // Internal
+        //
+
+        internal XDocument SendCommand(string command, string commandId, string serverBlob, string authKey = "")
+        {
+            var timestamp = Os.UnixMilliseconds();
+            var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
+            var auth = authKey.IsNullOrEmpty() ? "" : $"MPAuthKeyValueInBase64='{authKey}' ";
+
+            return RequestXml($"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'><body/><root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' serverBlob='{serverBlob}' {auth}/></message>");
+        }
+
         internal static string GetPlainAuthString(Jid jid, string password)
         {
             return $"{jid.Bare}\0{jid.Node}\0{password}".ToBase64();
@@ -145,6 +186,15 @@ namespace PasswordManagerAccess.Kaspersky
 
             return (XElement)current;
         }
+
+        internal static Operation? ParseOperation(string operation) => operation switch
+        {
+            "1203265602" => Operation.Changed,
+            "3122616881" => Operation.Removed,
+            "1570712235" => Operation.Inactive,
+            "33200760" => Operation.Deprecated,
+            _ => null
+        };
 
         internal static BaseException MakeError(string message, Exception inner = null)
         {
