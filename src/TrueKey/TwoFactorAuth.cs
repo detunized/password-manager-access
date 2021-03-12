@@ -66,25 +66,11 @@ namespace PasswordManagerAccess.TrueKey
 
         private abstract class State
         {
-            public virtual bool IsDone
-            {
-                get { return false; }
-            }
+            public virtual bool IsDone => false;
+            public virtual bool IsSuccess => false;
+            public virtual string Result => throw new NotImplementedException();
 
-            public virtual bool IsSuccess
-            {
-                get { return false; }
-            }
-
-            public virtual string Result
-            {
-                get { throw new InternalErrorException("Unreachable code"); }
-            }
-
-            public virtual State Advance(TwoFactorAuth owner)
-            {
-                throw new InternalErrorException("Unreachable code");
-            }
+            public abstract State Advance(TwoFactorAuth owner);
 
             // TODO: Shared code for most states. It's not really good that it's in the base class.
             protected State Check(TwoFactorAuth owner)
@@ -92,8 +78,6 @@ namespace PasswordManagerAccess.TrueKey
                 var result = Client.AuthCheck(owner._clientInfo,
                                               owner._settings.TransactionId,
                                               owner._rest);
-                if (result == null)
-                    return new Failure("Failed");
                 return new Done(result);
             }
         }
@@ -105,37 +89,13 @@ namespace PasswordManagerAccess.TrueKey
                 _oAuthToken = oAuthToken;
             }
 
-            public override bool IsDone
-            {
-                get { return true; }
-            }
+            public override bool IsDone => true;
+            public override bool IsSuccess => true;
+            public override string Result => _oAuthToken;
 
-            public override bool IsSuccess
-            {
-                get { return true; }
-            }
-
-            public override string Result
-            {
-                get { return _oAuthToken; }
-            }
+            public override State Advance(TwoFactorAuth owner) => throw new NotImplementedException();
 
             private readonly string _oAuthToken;
-        }
-
-        private class Failure: State
-        {
-            public Failure(string reason)
-            {
-                _reason = reason;
-            }
-
-            public override string Result
-            {
-                get { return _reason; }
-            }
-
-            private readonly string _reason;
         }
 
         private class SendEmail: State

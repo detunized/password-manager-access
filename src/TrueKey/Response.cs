@@ -130,7 +130,7 @@ namespace PasswordManagerAccess.TrueKey.Response
         [JsonProperty("nextStep", Required = Required.Always)]
         public readonly int NextStep;
 
-        [JsonProperty("idToken", Required = Required.Always)]
+        [JsonProperty("idToken")]
         public string OAuthToken;
     }
 }

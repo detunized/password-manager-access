@@ -178,6 +178,7 @@ namespace PasswordManagerAccess.TrueKey
                     {"devicePlatformType", "macos"},
                     {"otpData", RandomOtpChallngeAsDictionary(clientInfo.OtpInfo)},
                 }},
+                {"policyVersion", 1},
             };
 
             var response = Post<R.AuthStep2>("https://id-api.truekey.com/mp/auth", parameters, rest);
@@ -204,16 +205,20 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Check if the second factor has been completed by the user.
-        // On success returns an OAuth token.
+        // On success returns a valid OAuth token.
         internal static string AuthCheck(ClientInfo clientInfo, string transactionId, RestClient rest)
         {
             var response = Post<R.AuthCheck>("https://id-api.truekey.com/sp/profile/v1/gls",
                                              MakeCommonRequest(clientInfo, "code", transactionId),
                                              rest);
-            if (response.NextStep == 10)
-                return response.OAuthToken;
+            if (response.NextStep != 10)
+                throw MakeError("Invalid response in AuthCheck, expected an OAuth token");
 
-            throw MakeError("Invalid response in AuthCheck, expected an OAuth token");
+            var token = response.OAuthToken;
+            if (token.IsNullOrEmpty())
+                throw MakeError("Invalid response in AuthCheck, expected a valid OAuth token");
+
+            return token;
         }
 
         // Send a verification email as a second factor action.
@@ -365,6 +370,7 @@ namespace PasswordManagerAccess.TrueKey
                     {"ysvcData", new Dictionary<string, object> {
                         {"deviceId", clientInfo.DeviceInfo.Id},
                     }},
+                    {"policyVersion", 1},
                 }},
             };
         }
