@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.2.6
+  - TrueKey: fixed a problem that happened for some accounts during the login
+    sequence
+
 ## 8.2.5
   - Kaspersky: fixed downloading of large vaults with lots of items or edits
 
