@@ -9,4 +9,4 @@ if [[ -z $API_KEY ]]; then
 fi
 
 env
-dotnet nuget push --source nuget.org --api-key $API_KEY src/bin/Release/*.nupkg
+dotnet nuget push --source nuget.org --api-key $API_KEY --skip-duplicate src/bin/Release/*.nupkg
