@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.2.7
+  - Kaspersky: fixed a problem during login
+
 ## 8.2.6
   - TrueKey: fixed a problem that happened for some accounts during the login
     sequence
