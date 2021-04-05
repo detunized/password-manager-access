@@ -462,6 +462,8 @@ namespace PasswordManagerAccess.Bitwarden
                                password: DecryptToStringOrBlank(item.Login.Password, key),
                                url: DecryptToStringOrBlank(item.Login.Uri, key),
                                note: DecryptToStringOrBlank(item.Notes, key),
+                               totp: DecryptToStringOrBlank(item.Login.Totp, key),
+                               deleteddate: item.DeletedDate,
                                folder: folder);
         }
 
