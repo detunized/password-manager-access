@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.3.0
+  - Bitwarden: added support for TOTP and DeletedDate fields
+
 ## 8.2.7
   - Kaspersky: fixed a problem during login
 
