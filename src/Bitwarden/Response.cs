@@ -116,6 +116,7 @@ namespace PasswordManagerAccess.Bitwarden.Response
         public string Notes;
         public string FolderId;
         public string OrganizationId;
+        public string DeletedDate;
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public LoginInfo Login;
@@ -126,5 +127,6 @@ namespace PasswordManagerAccess.Bitwarden.Response
         public string Username;
         public string Password;
         public string Uri;
+        public string Totp;
     }
 }

@@ -11,6 +11,8 @@ namespace PasswordManagerAccess.Bitwarden
         public readonly string Password;
         public readonly string Url;
         public readonly string Note;
+        public readonly string Totp;
+        public readonly string DeletedDate;
         public readonly string Folder;
 
         public Account(string id,
@@ -19,6 +21,8 @@ namespace PasswordManagerAccess.Bitwarden
                        string password,
                        string url,
                        string note,
+                       string totp,
+                       string deletedDate,
                        string folder)
         {
             Id = id;
@@ -27,6 +31,8 @@ namespace PasswordManagerAccess.Bitwarden
             Password = password;
             Url = url;
             Note = note;
+            Totp = totp;
+            DeletedDate = deletedDate;
             Folder = folder;
         }
     }
