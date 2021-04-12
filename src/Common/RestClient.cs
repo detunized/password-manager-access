@@ -479,6 +479,20 @@ namespace PasswordManagerAccess.Common
                                           JsonConvert.DeserializeObject<T>);
         }
 
+        public async Task<RestResponse<string, T>> PostFormAsync<T>(string endpoint,
+                                                                    PostParameters parameters,
+                                                                    HttpHeaders headers = null,
+                                                                    HttpCookies cookies = null)
+        {
+            return await MakeRequestAsync<string, T>(endpoint,
+                                                     HttpMethod.Post,
+                                                     ToFormContent(parameters),
+                                                     headers ?? NoHeaders,
+                                                     cookies ?? NoCookies,
+                                                     MaxRedirects,
+                                                     JsonConvert.DeserializeObject<T>);
+        }
+
         //
         // POST raw
         //
@@ -601,13 +615,28 @@ namespace PasswordManagerAccess.Common
                                                                            int maxRedirects,
                                                                            Func<TContent, TData> deserialize)
         {
-            var response = MakeRequest<RestResponse<TContent, TData>, TContent>(endpoint,
-                                                                                method,
-                                                                                content,
-                                                                                headers,
-                                                                                cookies,
-                                                                                maxRedirects,
-                                                                                new RestResponse<TContent, TData>());
+            return MakeRequestAsync(endpoint, method, content, headers, cookies, maxRedirects, deserialize)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        private async Task<RestResponse<TContent, TData>> MakeRequestAsync<TContent, TData>(
+            string endpoint,
+            HttpMethod method,
+            HttpContent content,
+            HttpHeaders headers,
+            HttpCookies cookies,
+            int maxRedirects,
+            Func<TContent, TData> deserialize)
+        {
+            var response = await MakeRequestAsync<RestResponse<TContent, TData>, TContent>(
+                endpoint,
+                method,
+                content,
+                headers,
+                cookies,
+                maxRedirects,
+                new RestResponse<TContent, TData>());
             if (response.HasError)
                 return response;
 

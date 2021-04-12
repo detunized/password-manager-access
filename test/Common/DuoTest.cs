@@ -28,20 +28,20 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
-        public void DownloadFrame_returns_html_document()
+        public async void DownloadFrame_returns_html_document()
         {
             var flow = new RestFlow().Post("<html></html>");
-            var html = Duo.DownloadFrame("tx", flow);
+            var html = await Duo.DownloadFrame("tx", flow);
 
             Assert.Equal("<html></html>", html.DocumentNode.InnerHtml);
         }
 
         [Fact]
-        public void DownloadFrame_throws_on_network_error()
+        public async void DownloadFrame_throws_on_network_error()
         {
             var flow = new RestFlow().Post("", HttpStatusCode.BadRequest);
 
-            Exceptions.AssertThrowsInternalError(() => Duo.DownloadFrame("tx", flow));
+            await Exceptions.AssertThrowsInternalErrorAsync(() => Duo.DownloadFrame("tx", flow));
         }
 
         //

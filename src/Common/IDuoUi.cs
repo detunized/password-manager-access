@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Threading.Tasks;
+
 namespace PasswordManagerAccess.Common
 {
     // Adds Duo functionality to the module-specific Ui class.
@@ -14,6 +16,18 @@ namespace PasswordManagerAccess.Common
 
         // This updates the UI with the messages from the server.
         void UpdateDuoStatus(DuoStatus status, string text);
+    }
+
+    public interface IDuoUiAsync
+    {
+        // To cancel return null
+        Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices);
+
+        // To cancel return null or blank
+        Task<string> ProvideDuoPasscode(DuoDevice device);
+
+        // This updates the UI with the messages from the server.
+        Task UpdateDuoStatus(DuoStatus status, string text);
     }
 
     public enum DuoFactor

@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.Example.LastPass
     {
         // Very simple text based user interface that demonstrates how to respond to
         // to Vault UI requests.
-        private class TextUi: DuoUi, IUi
+        private class TextUi: DuoUiAsync, IUi
         {
             public async Task<OtpResult> ProvideGoogleAuthPasscode()
             {

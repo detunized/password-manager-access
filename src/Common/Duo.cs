@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
 
@@ -25,16 +26,21 @@ namespace PasswordManagerAccess.Common
         // Returns the second factor token from Duo or null when canceled by the user.
         public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport)
         {
+            return AuthenticateAsync(host, signature, new SyncUiToAsyncUi(ui), transport).GetAwaiter().GetResult();
+        }
+
+        public static async Task<Result> AuthenticateAsync(string host, string signature, IDuoUiAsync ui, IRestTransport transport)
+        {
             var rest = new RestClient(transport, $"https://{host}");
 
             var (tx, app) = ParseSignature(signature);
-            var html = DownloadFrame(tx, rest);
+            var html = await DownloadFrame(tx, rest);
             var (sid, devices) = ParseFrame(html);
 
             while (true)
             {
                 // Ask the user to choose what to do
-                var choice = ui.ChooseDuoFactor(devices);
+                var choice = await ui.ChooseDuoFactor(devices);
                 if (choice == null)
                     return null; // Canceled by user
 
@@ -42,7 +48,7 @@ namespace PasswordManagerAccess.Common
                 // a new batch of passcodes to the phone via SMS.
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
-                    SubmitFactor(sid, choice, "", rest);
+                    await SubmitFactor(sid, choice, "", rest);
                     choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -50,12 +56,12 @@ namespace PasswordManagerAccess.Common
                 var passcode = "";
                 if (choice.Factor == DuoFactor.Passcode)
                 {
-                    passcode = ui.ProvideDuoPasscode(choice.Device);
+                    passcode = await ui.ProvideDuoPasscode(choice.Device);
                     if (passcode.IsNullOrEmpty())
                         return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest);
+                var token = await SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
@@ -64,6 +70,33 @@ namespace PasswordManagerAccess.Common
                 // All good
                 return new Result($"{token}:{app}", choice.RememberMe);
             }
+        }
+
+        // TODO: Remove this when done with the migration to async
+        internal class SyncUiToAsyncUi: IDuoUiAsync
+        {
+            public SyncUiToAsyncUi(IDuoUi ui)
+            {
+                _ui = ui;
+            }
+
+            public Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices) =>
+                Task.FromResult(_ui.ChooseDuoFactor(devices));
+
+            public Task<string> ProvideDuoPasscode(DuoDevice device) =>
+                Task.FromResult(_ui.ProvideDuoPasscode(device));
+
+            public Task UpdateDuoStatus(DuoStatus status, string text)
+            {
+                _ui.UpdateDuoStatus(status, text);
+                return Task.CompletedTask;
+            }
+
+            //
+            // Private
+            //
+
+            private readonly IDuoUi _ui;
         }
 
         // Duo signature looks like this: TX|ZGV...Dgx|5a8...cd4:APP|ZGV...zgx|f8d...24f
@@ -76,23 +109,24 @@ namespace PasswordManagerAccess.Common
             return (parts[0], parts[1]);
         }
 
-        internal static HtmlDocument DownloadFrame(string tx, RestClient rest)
+        internal static async Task<HtmlDocument> DownloadFrame(string tx, RestClient rest)
         {
             const string parent = "https%3A%2F%2Fvault.bitwarden.com%2F%23%2F2fa";
             const string version = "2.6";
 
-            return Parse(Post($"frame/web/v1/auth?tx={tx}&parent={parent}&v={version}", rest));
+            return Parse(await Post($"frame/web/v1/auth?tx={tx}&parent={parent}&v={version}", rest));
         }
 
-        internal static string Post(string url, RestClient rest)
+        internal static async Task<string> Post(string url, RestClient rest)
         {
-            var response = rest.PostForm(url, new Dictionary<string, object>());
+            var response = await rest.PostFormAsync(url, RestClient.NoParameters);
             if (response.IsSuccessful)
                 return response.Content;
 
             throw MakeSpecializedError(response);
         }
 
+        // TODO: Should this be async?
         internal static HtmlDocument Parse(string html)
         {
             var doc = new HtmlDocument();
@@ -127,7 +161,7 @@ namespace PasswordManagerAccess.Common
         }
 
         // Returns the transaction id
-        internal static string SubmitFactor(string sid, DuoChoice choice, string passcode, RestClient rest)
+        internal static async Task<string> SubmitFactor(string sid, DuoChoice choice, string passcode, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -139,7 +173,7 @@ namespace PasswordManagerAccess.Common
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = PostForm<R.SubmitFactor>("frame/prompt", parameters, rest);
+            var response = await PostForm<R.SubmitFactor>("frame/prompt", parameters, rest);
 
             var id = response.TransactionId;
             if (id.IsNullOrEmpty())
@@ -150,24 +184,24 @@ namespace PasswordManagerAccess.Common
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string SubmitFactorAndWaitForToken(string sid,
-                                                           DuoChoice choice,
-                                                           string passcode,
-                                                           IDuoUi ui,
-                                                           RestClient rest)
+        internal static async Task<string> SubmitFactorAndWaitForToken(string sid,
+                                                                       DuoChoice choice,
+                                                                       string passcode,
+                                                                       IDuoUiAsync ui,
+                                                                       RestClient rest)
         {
-            var txid = SubmitFactor(sid, choice, passcode, rest);
+            var txid = await SubmitFactor(sid, choice, passcode, rest);
 
-            var url = PollForResultUrl(sid, txid, ui, rest);
+            var url = await PollForResultUrl(sid, txid, ui, rest);
             if (url.IsNullOrEmpty())
                 return null;
 
-            return FetchToken(sid, url, ui, rest);
+            return await FetchToken(sid, url, ui, rest);
         }
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
+        internal static async Task<string> PollForResultUrl(string sid, string txid, IDuoUiAsync ui, RestClient rest)
         {
             const int maxPollAttempts = 100;
 
@@ -175,37 +209,38 @@ namespace PasswordManagerAccess.Common
             // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
-                var response = PostForm<R.Poll>("frame/status",
-                                                new Dictionary<string, object> {["sid"] = sid, ["txid"] = txid},
-                                                rest);
+                var response = await PostForm<R.Poll>("frame/status",
+                                                      new Dictionary<string, object> {["sid"] = sid, ["txid"] = txid},
+                                                      rest);
 
                 var (status, text) = GetResponseStatus(response);
-                UpdateUi(status, text, ui);
+                await UpdateUi(status, text, ui);
 
                 switch (status)
                 {
-                case DuoStatus.Success:
-                    var url = response.Url;
-                    if (url.IsNullOrEmpty())
-                        throw MakeInvalidResponseError("Duo: result URL (result_url) was expected but wasn't found");
+                    case DuoStatus.Success:
+                        var url = response.Url;
+                        if (url.IsNullOrEmpty())
+                            throw MakeInvalidResponseError(
+                                "Duo: result URL (result_url) was expected but wasn't found");
 
-                    // Done
-                    return url;
-                case DuoStatus.Error:
-                    return null; // TODO: Use something better than null
+                        // Done
+                        return url;
+                    case DuoStatus.Error:
+                        return null; // TODO: Use something better than null
                 }
             }
 
             throw MakeInvalidResponseError("Duo: expected to receive a valid result or error, got none of it");
         }
 
-        internal static string FetchToken(string sid, string url, IDuoUi ui, RestClient rest)
+        internal static async Task<string> FetchToken(string sid, string url, IDuoUiAsync ui, RestClient rest)
         {
-            var response = PostForm<R.FetchToken>(url,
-                                                  new Dictionary<string, object> {["sid"] = sid},
-                                                  rest);
+            var response = await PostForm<R.FetchToken>(url,
+                                                        new Dictionary<string, object> {["sid"] = sid},
+                                                        rest);
 
-            UpdateUi(response, ui);
+            await UpdateUi(response, ui);
 
             var token = response.Cookie;
             if (token.IsNullOrEmpty())
@@ -214,9 +249,9 @@ namespace PasswordManagerAccess.Common
             return token;
         }
 
-        internal static T PostForm<T>(string endpoint, Dictionary<string, object> parameters, RestClient rest)
+        internal static async Task<T> PostForm<T>(string endpoint, Dictionary<string, object> parameters, RestClient rest)
         {
-            var response = rest.PostForm<R.Envelope<T>>(endpoint, parameters);
+            var response = await rest.PostFormAsync<R.Envelope<T>>(endpoint, parameters);
 
             // All good
             if (response.IsSuccessful && response.Data.Status == "OK" && response.Data.Payload != null)
@@ -225,18 +260,18 @@ namespace PasswordManagerAccess.Common
             throw MakeSpecializedError(response);
         }
 
-        internal static void UpdateUi(R.Status response, IDuoUi ui)
+        internal static async Task UpdateUi(R.Status response, IDuoUiAsync ui)
         {
             var (status, text) = GetResponseStatus(response);
-            UpdateUi(status, text, ui);
+            await UpdateUi(status, text, ui);
         }
 
-        internal static void UpdateUi(DuoStatus status, string text, IDuoUi ui)
+        internal static async Task UpdateUi(DuoStatus status, string text, IDuoUiAsync ui)
         {
             if (text.IsNullOrEmpty())
                 return;
 
-            ui.UpdateDuoStatus(status, text);
+            await ui.UpdateDuoStatus(status, text);
         }
 
         internal static (DuoStatus Status, string Text) GetResponseStatus(R.Status response)

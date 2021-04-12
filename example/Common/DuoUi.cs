@@ -2,13 +2,32 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Example.Common
 {
     public class DuoUi: BaseUi, IDuoUi
     {
-        public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
+        public DuoChoice ChooseDuoFactor(DuoDevice[] devices) =>
+            _ui.ChooseDuoFactor(devices).GetAwaiter().GetResult();
+
+        public string ProvideDuoPasscode(DuoDevice device) =>
+            _ui.ProvideDuoPasscode(device).GetAwaiter().GetResult();
+
+        public void UpdateDuoStatus(DuoStatus status, string text) =>
+            _ui.UpdateDuoStatus(status, text).GetAwaiter().GetResult();
+
+        //
+        // Private
+        //
+
+        private DuoUiAsync _ui = new DuoUiAsync();
+    }
+
+    public class DuoUiAsync: BaseUi, IDuoUiAsync
+    {
+        public async Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices)
         {
             var prompt = $"Choose a factor you want to use {PressEnterToCancel}:\n\n";
             var index = 1;
@@ -24,7 +43,7 @@ namespace PasswordManagerAccess.Example.Common
 
             while (true)
             {
-                var answer = GetAnswer(prompt);
+                var answer = await GetAnswerAsync(prompt);
 
                 // Blank means canceled by the user
                 if (string.IsNullOrWhiteSpace(answer))
@@ -35,20 +54,21 @@ namespace PasswordManagerAccess.Example.Common
                     foreach (var d in devices)
                     foreach (var f in d.Factors)
                         if (--choice == 0)
-                            return new DuoChoice(d, f, GetRememberMe());
+                            return new DuoChoice(d, f, await GetRememberMeAsync());
 
                 Console.WriteLine("Wrong input, try again");
             }
         }
 
-        public string ProvideDuoPasscode(DuoDevice device)
+        public async Task<string> ProvideDuoPasscode(DuoDevice device)
         {
-            return GetAnswer($"Enter the passcode for {device.Name} {PressEnterToCancel}");
+            return await GetAnswerAsync($"Enter the passcode for {device.Name} {PressEnterToCancel}");
         }
 
-        public void UpdateDuoStatus(DuoStatus status, string text)
+        public Task UpdateDuoStatus(DuoStatus status, string text)
         {
             WriteLine($"Duo {status}: {text}", StatusToColor(status));
+            return Task.CompletedTask;
         }
 
         private static ConsoleColor StatusToColor(DuoStatus status)

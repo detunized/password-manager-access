@@ -787,21 +787,13 @@ namespace PasswordManagerAccess.Test.LastPass
             public Task<OobResult> ApproveLastPassAuth() => Task.FromResult(_oob);
             public Task<OobResult> ApproveDuo() => Task.FromResult(_oob);
 
-            public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
-            {
-                return new DuoChoice(new DuoDevice("id", "name", new[] {DuoFactor.Push}),
-                                     DuoFactor.Push,
-                                     false);
-            }
+            public Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices) =>
+                Task.FromResult(new DuoChoice(new DuoDevice("id", "name", new[] {DuoFactor.Push}),
+                                              DuoFactor.Push,
+                                              false));
 
-            public string ProvideDuoPasscode(DuoDevice device)
-            {
-                return "passcode";
-            }
-
-            public void UpdateDuoStatus(DuoStatus status, string text)
-            {
-            }
+            public Task<string> ProvideDuoPasscode(DuoDevice device) => Task.FromResult("passcode");
+            public Task UpdateDuoStatus(DuoStatus status, string text) => Task.CompletedTask;
 
             private readonly OtpResult _otp;
             private readonly OobResult _oob;

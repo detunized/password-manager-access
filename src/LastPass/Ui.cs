@@ -6,7 +6,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass.Ui
 {
-    public interface IUi: IDuoUi
+    public interface IUi: IDuoUiAsync
     {
         // To cancel return OtpResult.Cancel, otherwise only valid data is expected.
         Task<OtpResult> ProvideGoogleAuthPasscode();
