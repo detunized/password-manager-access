@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.LastPass;
@@ -67,17 +68,22 @@ namespace PasswordManagerAccess.Example.LastPass
 
         public static void Main(string[] args)
         {
+            Task.Run(() => MainAsync(args)).GetAwaiter().GetResult();
+        }
+
+        public static async Task MainAsync(string[] args)
+        {
             var config = Util.ReadConfig();
 
             try
             {
                 // Fetch and create the vault from LastPass
-                var vault = Vault.Open(config["username"],
-                                       config["password"],
-                                       new ClientInfo(Platform.Desktop,
-                                                      config["device-id"],
-                                                      config["client-description"]),
-                                       new TextUi());
+                var vault = await Vault.Open(config["username"],
+                                             config["password"],
+                                             new ClientInfo(Platform.Desktop,
+                                                            config["device-id"],
+                                                            config["client-description"]),
+                                             new TextUi());
 
                 // Dump all the accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)

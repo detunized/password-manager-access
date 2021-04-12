@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -15,17 +16,17 @@ namespace PasswordManagerAccess.LastPass
 {
     internal static class Client
     {
-        public static Account[] OpenVault(string username,
-                                          string password,
-                                          ClientInfo clientInfo,
-                                          IUi ui,
-                                          IRestTransport transport)
+        public static async Task<Account[]> OpenVault(string username,
+                                                      string password,
+                                                      ClientInfo clientInfo,
+                                                      IUi ui,
+                                                      IRestTransport transport)
         {
             var rest = new RestClient(transport, "https://lastpass.com");
-            var session = Login(username, password, clientInfo, ui, rest);
+            var session = await Login(username, password, clientInfo, ui, rest);
             try
             {
-                var blob = DownloadVault(session, rest);
+                var blob = await DownloadVault(session, rest);
                 var key = Util.DeriveKey(username, password, session.KeyIterationCount);
 
                 var privateKey = new RSAParameters();
@@ -36,7 +37,7 @@ namespace PasswordManagerAccess.LastPass
             }
             finally
             {
-                Logout(session, rest);
+                await Logout(session, rest);
             }
         }
 
@@ -44,19 +45,23 @@ namespace PasswordManagerAccess.LastPass
         // Internal
         //
 
-        internal static Session Login(string username, string password, ClientInfo clientInfo,IUi ui, RestClient rest)
+        internal static async Task<Session> Login(string username,
+                                                  string password,
+                                                  ClientInfo clientInfo,
+                                                  IUi ui,
+                                                  RestClient rest)
         {
             // 1. First we need to request PBKDF2 key iteration count.
-            var keyIterationCount = RequestIterationCount(username, rest);
+            var keyIterationCount = await RequestIterationCount(username, rest);
 
             // 2. Knowing the iterations count we can hash the password and log in.
             //    One the first attempt simply with the username and password.
-            var response = PerformSingleLoginRequest(username,
-                                                     password,
-                                                     keyIterationCount,
-                                                     new Dictionary<string, object>(),
-                                                     clientInfo,
-                                                     rest);
+            var response = await PerformSingleLoginRequest(username,
+                                                           password,
+                                                           keyIterationCount,
+                                                           new Dictionary<string, object>(),
+                                                           clientInfo,
+                                                           rest);
             var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
             if (session != null)
                 return session;
@@ -69,24 +74,24 @@ namespace PasswordManagerAccess.LastPass
 
             // 3.1. One-time-password is required
             if (KnownOtpMethods.TryGetValue(cause, out var otpMethod))
-                session = LoginWithOtp(username,
-                                       password,
-                                       keyIterationCount,
-                                       otpMethod,
-                                       clientInfo,
-                                       ui,
-                                       rest);
+                session = await LoginWithOtp(username,
+                                             password,
+                                             keyIterationCount,
+                                             otpMethod,
+                                             clientInfo,
+                                             ui,
+                                             rest);
 
             // 3.2. Some out-of-bound authentication is enabled. This does not require any
             //      additional input from the user.
             else if (cause == "outofbandrequired")
-                session = LoginWithOob(username,
-                                       password,
-                                       keyIterationCount,
-                                       GetAllErrorAttributes(response),
-                                       clientInfo,
-                                       ui,
-                                       rest);
+                session = await LoginWithOob(username,
+                                             password,
+                                             keyIterationCount,
+                                             GetAllErrorAttributes(response),
+                                             clientInfo,
+                                             ui,
+                                             rest);
 
             // Nothing worked
             if (session == null)
@@ -95,9 +100,9 @@ namespace PasswordManagerAccess.LastPass
             return session;
         }
 
-        internal static int RequestIterationCount(string username, RestClient rest)
+        internal static async Task<int> RequestIterationCount(string username, RestClient rest)
         {
-            var response = rest.PostForm("iterations.php", new Dictionary<string, object> {["email"] = username});
+            var response = await rest.PostFormAsync("iterations.php", new Dictionary<string, object> {["email"] = username});
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -108,12 +113,12 @@ namespace PasswordManagerAccess.LastPass
             throw new InternalErrorException("Request iteration count failed: unexpected response");
         }
 
-        internal static XDocument PerformSingleLoginRequest(string username,
-                                                            string password,
-                                                            int keyIterationCount,
-                                                            Dictionary<string, object> extraParameters,
-                                                            ClientInfo clientInfo,
-                                                            RestClient rest)
+        internal static async Task<XDocument> PerformSingleLoginRequest(string username,
+                                                                        string password,
+                                                                        int keyIterationCount,
+                                                                        Dictionary<string, object> extraParameters,
+                                                                        ClientInfo clientInfo,
+                                                                        RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -131,7 +136,7 @@ namespace PasswordManagerAccess.LastPass
             foreach (var kv in extraParameters)
                 parameters[kv.Key] = kv.Value;
 
-            var response = rest.PostForm("login.php", parameters);
+            var response = await rest.PostFormAsync("login.php", parameters);
             if (response.IsSuccessful)
                 return ParseXml(response);
 
@@ -146,13 +151,13 @@ namespace PasswordManagerAccess.LastPass
         }
 
         // Returns a valid session or throws
-        internal static Session LoginWithOtp(string username,
-                                             string password,
-                                             int keyIterationCount,
-                                             OtpMethod method,
-                                             ClientInfo clientInfo,
-                                             IUi ui,
-                                             RestClient rest)
+        internal static async Task<Session> LoginWithOtp(string username,
+                                                         string password,
+                                                         int keyIterationCount,
+                                                         OtpMethod method,
+                                                         ClientInfo clientInfo,
+                                                         IUi ui,
+                                                         RestClient rest)
         {
             var passcode = method switch
             {
@@ -165,33 +170,33 @@ namespace PasswordManagerAccess.LastPass
             if (passcode == OtpResult.Cancel)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
-            var response = PerformSingleLoginRequest(username,
-                                                     password,
-                                                     keyIterationCount,
-                                                     new Dictionary<string, object> {["otp"] = passcode.Passcode},
-                                                     clientInfo,
-                                                     rest);
+            var response = await PerformSingleLoginRequest(username,
+                                                           password,
+                                                           keyIterationCount,
+                                                           new Dictionary<string, object> {["otp"] = passcode.Passcode},
+                                                           clientInfo,
+                                                           rest);
 
             var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
             if (session == null)
                 throw MakeLoginError(response);
 
             if (passcode.RememberMe)
-                MarkDeviceAsTrusted(session, clientInfo, rest);
+                await MarkDeviceAsTrusted(session, clientInfo, rest);
 
             return session;
         }
 
         // Returns a valid session or throws
-        internal static Session LoginWithOob(string username,
-                                             string password,
-                                             int keyIterationCount,
-                                             Dictionary<string, string> parameters,
-                                             ClientInfo clientInfo,
-                                             IUi ui,
-                                             RestClient rest)
+        internal static async Task<Session> LoginWithOob(string username,
+                                                         string password,
+                                                         int keyIterationCount,
+                                                         Dictionary<string, string> parameters,
+                                                         ClientInfo clientInfo,
+                                                         IUi ui,
+                                                         RestClient rest)
         {
-            var answer = ApproveOob(username, parameters, ui, rest);
+            var answer = await ApproveOob(username, parameters, ui, rest);
 
             if (answer == OobResult.Cancel)
                 throw new CanceledMultiFactorException("Out of band step is canceled by the user");
@@ -207,12 +212,12 @@ namespace PasswordManagerAccess.LastPass
             {
                 // In case of the OOB auth the server doesn't respond instantly. This works more like a long poll.
                 // The server times out in about 10 seconds so there's no need to back off.
-                var response = PerformSingleLoginRequest(username,
-                                                         password,
-                                                         keyIterationCount,
-                                                         extraParameters,
-                                                         clientInfo,
-                                                         rest);
+                var response = await PerformSingleLoginRequest(username,
+                                                               password,
+                                                               keyIterationCount,
+                                                               extraParameters,
+                                                               clientInfo,
+                                                               rest);
 
                 session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
                 if (session != null)
@@ -227,15 +232,15 @@ namespace PasswordManagerAccess.LastPass
             }
 
             if (answer.RememberMe)
-                MarkDeviceAsTrusted(session, clientInfo, rest);
+                await MarkDeviceAsTrusted(session, clientInfo, rest);
 
             return session;
         }
 
-        internal static OobResult ApproveOob(string username,
-                                             Dictionary<string, string> parameters,
-                                             IUi ui,
-                                             RestClient rest)
+        internal static async Task<OobResult> ApproveOob(string username,
+                                                         Dictionary<string, string> parameters,
+                                                         IUi ui,
+                                                         RestClient rest)
         {
             if (!parameters.TryGetValue("outofbandtype", out var method))
                 throw new InternalErrorException("Out of band method is not specified");
@@ -243,25 +248,25 @@ namespace PasswordManagerAccess.LastPass
             return method switch
             {
                 "lastpassauth" => ui.ApproveLastPassAuth(),
-                "duo" => ApproveDuo(username, parameters, ui, rest),
+                "duo" => await ApproveDuo(username, parameters, ui, rest),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported")
             };
         }
 
-        internal static OobResult ApproveDuo(string username,
-                                             Dictionary<string, string> parameters,
-                                             IUi ui,
-                                             RestClient rest)
+        internal static async Task<OobResult> ApproveDuo(string username,
+                                                         Dictionary<string, string> parameters,
+                                                         IUi ui,
+                                                         RestClient rest)
         {
             return parameters.GetOrDefault("preferduowebsdk", "") == "1"
-                ? ApproveDuoWebSdk(username, parameters, ui, rest)
+                ? await ApproveDuoWebSdk(username, parameters, ui, rest)
                 : ui.ApproveDuo();
         }
 
-        internal static OobResult ApproveDuoWebSdk(string username,
-                                                   Dictionary<string, string> parameters,
-                                                   IUi ui,
-                                                   RestClient rest)
+        internal static async Task<OobResult> ApproveDuoWebSdk(string username,
+                                                               Dictionary<string, string> parameters,
+                                                               IUi ui,
+                                                               RestClient rest)
         {
             string GetParam(string name)
             {
@@ -280,17 +285,17 @@ namespace PasswordManagerAccess.LastPass
             if (result == null)
                 return OobResult.Cancel;
 
-            var passcode = ExchangeDuoSignatureForPasscode(username: username,
-                                                           signature: result.Passcode,
-                                                           salt: salt,
-                                                           rest: rest);
+            var passcode = await ExchangeDuoSignatureForPasscode(username: username,
+                                                                 signature: result.Passcode,
+                                                                 salt: salt,
+                                                                 rest: rest);
             return OobResult.ContinueWithPasscode(passcode, result.RememberMe);
         }
 
-        internal static string ExchangeDuoSignatureForPasscode(string username,
-                                                               string signature,
-                                                               string salt,
-                                                               RestClient rest)
+        internal static async Task<string> ExchangeDuoSignatureForPasscode(string username,
+                                                                           string signature,
+                                                                           string salt,
+                                                                           RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -304,7 +309,7 @@ namespace PasswordManagerAccess.LastPass
                 ["sig_response"] = signature,
             };
 
-            var response = rest.PostForm("duo.php", parameters);
+            var response = await rest.PostFormAsync("duo.php", parameters);
             if (response.IsSuccessful)
                 return "checkduo" + ExtractDuoPasscodeFromDuoResponse(ParseXml(response));
 
@@ -320,31 +325,31 @@ namespace PasswordManagerAccess.LastPass
             return code;
         }
 
-        internal static void MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest)
+        internal static async Task MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest)
         {
-            var response = rest.PostForm("trust.php",
-                                         new Dictionary<string, object>
-                                         {
-                                             ["uuid"] = clientInfo.Id,
-                                             ["trustlabel"] = clientInfo.Description,
-                                             ["token"] = session.Token,
-                                         },
-                                         cookies: GetSessionCookies(session));
+            var response = await rest.PostFormAsync("trust.php",
+                                                    new Dictionary<string, object>
+                                                    {
+                                                        ["uuid"] = clientInfo.Id,
+                                                        ["trustlabel"] = clientInfo.Description,
+                                                        ["token"] = session.Token,
+                                                    },
+                                                    cookies: GetSessionCookies(session));
             if (response.IsSuccessful)
                 return;
 
             throw MakeError(response);
         }
 
-        internal static void Logout(Session session, RestClient rest)
+        internal static async Task Logout(Session session, RestClient rest)
         {
-            var response = rest.PostForm("logout.php",
-                                         new Dictionary<string, object>
-                                         {
-                                             ["method"] = PlatformToUserAgent[session.Platform],
-                                             ["noredirect"] = 1,
-                                         },
-                                         cookies: GetSessionCookies(session));
+            var response = await rest.PostFormAsync("logout.php",
+                                                    new Dictionary<string, object>
+                                                    {
+                                                        ["method"] = PlatformToUserAgent[session.Platform],
+                                                        ["noredirect"] = 1,
+                                                    },
+                                                    cookies: GetSessionCookies(session));
 
             if (response.IsSuccessful)
                 return;
@@ -352,9 +357,9 @@ namespace PasswordManagerAccess.LastPass
             throw MakeError(response);
         }
 
-        internal static byte[] DownloadVault(Session session, RestClient rest)
+        internal static async Task<byte[]> DownloadVault(Session session, RestClient rest)
         {
-            var response = rest.Get(GetVaultEndpoint(session.Platform), cookies: GetSessionCookies(session));
+            var response = await rest.GetAsync(GetVaultEndpoint(session.Platform), cookies: GetSessionCookies(session));
             if (response.IsSuccessful)
                 return response.Content.Decode64();
 

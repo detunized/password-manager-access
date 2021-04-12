@@ -18,7 +18,7 @@ namespace PasswordManagerAccess.Test.LastPass
         // This ensures that if/when the implementation changes we still get the same behavior.
 
         [Fact]
-        public void OpenVault_returns_accounts()
+        public async void OpenVault_returns_accounts()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
@@ -31,13 +31,13 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow);
+            var accounts = await Client.OpenVault(Username, Password, ClientInfo, null, flow);
 
             Assert.NotEmpty(accounts);
         }
 
         [Fact]
-        public void OpenVault_returns_accounts_with_otp()
+        public async void OpenVault_returns_accounts_with_otp()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
@@ -53,13 +53,13 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow);
+            var accounts = await Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
             Assert.NotEmpty(accounts);
         }
 
         [Fact]
-        public void OpenVault_returns_accounts_with_otp_and_rememeber_me()
+        public async void OpenVault_returns_accounts_with_otp_and_remember_me()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
@@ -77,13 +77,13 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, OtpProvidingWithRememberMeUi, flow);
+            var accounts = await Client.OpenVault(Username, Password, ClientInfo, OtpProvidingWithRememberMeUi, flow);
 
             Assert.NotEmpty(accounts);
         }
 
         [Fact]
-        public void OpenVault_returns_accounts_with_oob()
+        public async void OpenVault_returns_accounts_with_oob()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
@@ -104,13 +104,13 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow);
+            var accounts = await Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
             Assert.NotEmpty(accounts);
         }
 
         [Fact]
-        public void OpenVault_returns_accounts_with_oob_and_rememeber_me()
+        public async void OpenVault_returns_accounts_with_oob_and_remember_me()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
@@ -133,7 +133,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, WaitingForOobWithRememberMeUi, flow);
+            var accounts = await Client.OpenVault(Username, Password, ClientInfo, WaitingForOobWithRememberMeUi, flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -146,7 +146,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='unknownemail' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                async () => await Client.OpenVault(Username, Password, ClientInfo, null, flow),
                 "Invalid username");
         }
 
@@ -158,7 +158,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='unknownpassword' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                async () => await Client.OpenVault(Username, Password, ClientInfo, null, flow),
                 "Invalid password");
         }
 
@@ -170,7 +170,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OtpRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
+                async () => await Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
                 "Second factor step is canceled by the user");
         }
 
@@ -183,7 +183,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='googleauthfailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow),
+                async () => await Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow),
                 "Second factor code is incorrect");
         }
 
@@ -195,7 +195,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OobRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
+                async () => await Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
                 "Out of band step is canceled by the user");
         }
 
@@ -208,7 +208,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='multifactorresponsefailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow),
+                async () => await Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow),
                 "Out of band authentication failed");
         }
 
@@ -224,24 +224,24 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(response);
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                async () => await Client.OpenVault(Username, Password, ClientInfo, null, flow),
                 expected);
         }
 
         [Fact]
-        public void Login_returns_session()
+        public async void Login_returns_session()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post(OkResponse);
 
-            var session = Client.Login(Username, Password, ClientInfo, null, flow);
+            var session = await Client.Login(Username, Password, ClientInfo, null, flow);
 
             AssertSessionWithPrivateKey(session);
         }
 
         [Fact]
-        public void Login_returns_session_with_otp()
+        public async void Login_returns_session_with_otp()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString()) // 1. iterations
@@ -249,13 +249,13 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. login with otp
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
+            var session = await Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
             AssertSessionWithPrivateKey(session);
         }
 
         [Fact]
-        public void Login_returns_session_with_oob()
+        public async void Login_returns_session_with_oob()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString()) // 1. iterations
@@ -263,7 +263,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)                   // 3. check oob
                 .Post("");                          // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
+            var session = await Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -273,10 +273,10 @@ namespace PasswordManagerAccess.Test.LastPass
         [InlineData("0", 0)]
         [InlineData("1337", 1337)]
         [InlineData("100100", 100100)]
-        public void RequestIterationCount_returns_iteration_count(string response, int expected)
+        public async void RequestIterationCount_returns_iteration_count(string response, int expected)
         {
             var flow = new RestFlow().Post(response);
-            var count = Client.RequestIterationCount(Username, flow);
+            var count = await Client.RequestIterationCount(Username, flow);
 
             Assert.Equal(expected, count);
         }
@@ -290,37 +290,37 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post(response);
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.RequestIterationCount(Username, flow),
+                async () => await Client.RequestIterationCount(Username, flow),
                 "Request iteration count failed: unexpected response");
         }
 
         [Fact]
-        public void RequestIterationCount_makes_POST_request_to_specific_url_with_parameters()
+        public async void RequestIterationCount_makes_POST_request_to_specific_url_with_parameters()
         {
             var flow = new RestFlow()
                 .Post("0")
                     .ExpectUrl("https://lastpass.com/iterations.php")
                     .ExpectContent($"email={Username}");
 
-            Client.RequestIterationCount(Username, flow.ToRestClient(BaseUrl));
+            await Client.RequestIterationCount(Username, flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
-        public void PerformSingleLoginRequest_returns_parsed_xml()
+        public async void PerformSingleLoginRequest_returns_parsed_xml()
         {
             var flow = new RestFlow().Post("<ok />");
-            var xml = Client.PerformSingleLoginRequest(Username,
-                                                       Password,
-                                                       1,
-                                                       new Dictionary<string, object>(),
-                                                       ClientInfo,
-                                                       flow);
+            var xml = await Client.PerformSingleLoginRequest(Username,
+                                                             Password,
+                                                             1,
+                                                             new Dictionary<string, object>(),
+                                                             ClientInfo,
+                                                             flow);
 
             Assert.NotNull(xml);
         }
 
         [Fact]
-        public void PerformSingleLoginRequest_makes_POST_request_to_specific_url_with_parameters()
+        public async void PerformSingleLoginRequest_makes_POST_request_to_specific_url_with_parameters()
         {
             var flow = new RestFlow()
                 .Post("<ok />")
@@ -331,47 +331,47 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectContent("hash=5e966139c28deab2c5955fcfa66ae6bebb55548a5f79d1d639abf7b0ce78d891")
                     .ExpectContent($"trustlabel={ClientInfo.Description}");
 
-            Client.PerformSingleLoginRequest(Username,
-                                             Password,
-                                             KeyIterationCount,
-                                             new Dictionary<string, object>(),
-                                             ClientInfo,
-                                             flow.ToRestClient(BaseUrl));
+            await Client.PerformSingleLoginRequest(Username,
+                                                   Password,
+                                                   KeyIterationCount,
+                                                   new Dictionary<string, object>(),
+                                                   ClientInfo,
+                                                   flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
-        public void LoginWithOtp_returns_session()
+        public async void LoginWithOtp_returns_session()
         {
             var flow = new RestFlow().Post(OkResponse);
-            var session = Client.LoginWithOtp(Username,
-                                              Password,
-                                              KeyIterationCount,
-                                              Client.OtpMethod.GoogleAuth,
-                                              ClientInfo,
-                                              OtpProvidingUi,
-                                              flow);
+            var session = await Client.LoginWithOtp(Username,
+                                                    Password,
+                                                    KeyIterationCount,
+                                                    Client.OtpMethod.GoogleAuth,
+                                                    ClientInfo,
+                                                    OtpProvidingUi,
+                                                    flow);
 
             AssertSessionWithPrivateKey(session);
         }
 
         [Fact]
-        public void LoginWithOtp_passes_otp_in_POST_parameters()
+        public async void LoginWithOtp_passes_otp_in_POST_parameters()
         {
             var flow = new RestFlow()
                 .Post(OkResponse)
                     .ExpectContent($"otp={Otp}");
 
-            Client.LoginWithOtp(Username,
-                                Password,
-                                KeyIterationCount,
-                                Client.OtpMethod.GoogleAuth,
-                                ClientInfo,
-                                OtpProvidingUi,
-                                flow);
+            await Client.LoginWithOtp(Username,
+                                      Password,
+                                      KeyIterationCount,
+                                      Client.OtpMethod.GoogleAuth,
+                                      ClientInfo,
+                                      OtpProvidingUi,
+                                      flow);
         }
 
         [Fact]
-        public void LoginWithOtp_with_remember_me_marks_device_as_trusted()
+        public async void LoginWithOtp_with_remember_me_marks_device_as_trusted()
         {
             var flow = new RestFlow()
                 .Post(OkResponse)
@@ -379,32 +379,32 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("")
                     .ExpectUrl("/trust.php");
 
-            Client.LoginWithOtp(Username,
-                                Password,
-                                KeyIterationCount,
-                                Client.OtpMethod.GoogleAuth,
-                                ClientInfo,
-                                OtpProvidingWithRememberMeUi,
-                                flow);
+            await Client.LoginWithOtp(Username,
+                                      Password,
+                                      KeyIterationCount,
+                                      Client.OtpMethod.GoogleAuth,
+                                      ClientInfo,
+                                      OtpProvidingWithRememberMeUi,
+                                      flow);
         }
 
         [Fact]
-        public void LoginWithOob_returns_session()
+        public async void LoginWithOob_returns_session()
         {
             var flow = new RestFlow().Post(OkResponse);
-            var session = Client.LoginWithOob(Username,
-                                              Password,
-                                              KeyIterationCount,
-                                              LastPassAuthOobParameters,
-                                              ClientInfo,
-                                              WaitingForOobUi,
-                                              flow);
+            var session = await Client.LoginWithOob(Username,
+                                                    Password,
+                                                    KeyIterationCount,
+                                                    LastPassAuthOobParameters,
+                                                    ClientInfo,
+                                                    WaitingForOobUi,
+                                                    flow);
 
             AssertSessionWithPrivateKey(session);
         }
 
         [Fact]
-        public void LoginWithOob_retries_after_unsuccessful_attempt()
+        public async void LoginWithOob_retries_after_unsuccessful_attempt()
         {
             var flow = new RestFlow()
                 .Post(OobRetryResponse)
@@ -412,37 +412,37 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectContent("outofbandretry=1")
                     .ExpectContent("outofbandretryid=retry-id");
 
-            var session = Client.LoginWithOob(Username,
-                                              Password,
-                                              KeyIterationCount,
-                                              LastPassAuthOobParameters,
-                                              ClientInfo,
-                                              WaitingForOobUi,
-                                              flow);
+            var session = await Client.LoginWithOob(Username,
+                                                    Password,
+                                                    KeyIterationCount,
+                                                    LastPassAuthOobParameters,
+                                                    ClientInfo,
+                                                    WaitingForOobUi,
+                                                    flow);
 
             AssertSessionWithPrivateKey(session);
         }
 
         [Fact]
-        public void LoginWithOob_sends_otp_in_POST_parameters()
+        public async void LoginWithOob_sends_otp_in_POST_parameters()
         {
             var flow = new RestFlow()
                 .Post(OkResponse)
                     .ExpectContent($"otp={Otp}");
 
-            var session = Client.LoginWithOob(Username,
-                                              Password,
-                                              KeyIterationCount,
-                                              LastPassAuthOobParameters,
-                                              ClientInfo,
-                                              PasscodeProvidingOobUi,
-                                              flow);
+            var session = await Client.LoginWithOob(Username,
+                                                    Password,
+                                                    KeyIterationCount,
+                                                    LastPassAuthOobParameters,
+                                                    ClientInfo,
+                                                    PasscodeProvidingOobUi,
+                                                    flow);
 
             AssertSessionWithPrivateKey(session);
         }
 
         [Fact]
-        public void LoginWithOob_with_remember_me_marks_device_as_trusted()
+        public async void LoginWithOob_with_remember_me_marks_device_as_trusted()
         {
             var flow = new RestFlow()
                 .Post(OkResponse)
@@ -450,33 +450,33 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("")
                     .ExpectUrl("/trust.php");
 
-            Client.LoginWithOob(Username,
-                                Password,
-                                KeyIterationCount,
-                                LastPassAuthOobParameters,
-                                ClientInfo,
-                                WaitingForOobWithRememberMeUi,
-                                flow);
+            await Client.LoginWithOob(Username,
+                                      Password,
+                                      KeyIterationCount,
+                                      LastPassAuthOobParameters,
+                                      ClientInfo,
+                                      WaitingForOobWithRememberMeUi,
+                                      flow);
         }
 
         [Fact]
-        public void ApproveOob_calls_Ui_ApproveLastPassAuth()
+        public async void ApproveOob_calls_Ui_ApproveLastPassAuth()
         {
             var ui = new Mock<IUi>();
             ui.Setup(x => x.ApproveLastPassAuth()).Returns(OobResult.Cancel);
 
-            Client.ApproveOob(Username, LastPassAuthOobParameters, ui.Object, null);
+            await Client.ApproveOob(Username, LastPassAuthOobParameters, ui.Object, null);
 
             ui.VerifyAll();
         }
 
         [Fact]
-        public void ApproveOob_calls_Ui_ApproveDuo()
+        public async void ApproveOob_calls_Ui_ApproveDuo()
         {
             var ui = new Mock<IUi>();
             ui.Setup(x => x.ApproveDuo()).Returns(OobResult.Cancel);
 
-            Client.ApproveOob(Username, DuoOobParameters, ui.Object, null);
+            await Client.ApproveOob(Username, DuoOobParameters, ui.Object, null);
 
             ui.VerifyAll();
         }
@@ -491,7 +491,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ApproveOob_throws_on_missing_method()
         {
             Exceptions.AssertThrowsInternalError(
-                () => Client.ApproveOob(Username, new Dictionary<string, string>(), null, null),
+                async () => await Client.ApproveOob(Username, new Dictionary<string, string>(), null, null),
                 "Out of band method is not specified");
         }
 
@@ -499,7 +499,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ApproveOob_throws_on_unknown_method()
         {
             Exceptions.AssertThrowsUnsupportedFeature(
-                () => Client.ApproveOob(Username, new Dictionary<string, string> {["outofbandtype"] = "blah"}, null, null),
+                async () => await Client.ApproveOob(Username, new Dictionary<string, string> {["outofbandtype"] = "blah"}, null, null),
                 "Out of band method 'blah' is not supported");
         }
 
@@ -519,21 +519,22 @@ namespace PasswordManagerAccess.Test.LastPass
             };
             parameters.Remove(name);
 
-            Exceptions.AssertThrowsInternalError(() => Client.ApproveOob(Username, parameters, null, null),
-                                                 $"Invalid response: '{name}' parameter not found");
+            Exceptions.AssertThrowsInternalError(
+                async () => await Client.ApproveOob(Username, parameters, null, null),
+                $"Invalid response: '{name}' parameter not found");
         }
 
         [Fact]
-        public void ExchangeDuoSignatureForPasscode_returns_checkduo_code()
+        public async void ExchangeDuoSignatureForPasscode_returns_checkduo_code()
         {
             var flow = new RestFlow().Post("<ok code='blah' />");
-            var passcode = Client.ExchangeDuoSignatureForPasscode("", "", "", flow);
+            var passcode = await Client.ExchangeDuoSignatureForPasscode("", "", "", flow);
 
             Assert.Equal("checkduoblah", passcode);
         }
 
         [Fact]
-        public void ExchangeDuoSignatureForPasscode_makes_POST_request_to_specific_url_with_parameters()
+        public async void ExchangeDuoSignatureForPasscode_makes_POST_request_to_specific_url_with_parameters()
         {
             var salt = "salt-salt";
             var signature = "signature-signature";
@@ -545,10 +546,10 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectContent($"akey={salt}")
                     .ExpectContent($"sig_response={signature}");
 
-            Client.ExchangeDuoSignatureForPasscode(username: Username,
-                                                   signature: signature,
-                                                   salt: salt,
-                                                   rest: flow.ToRestClient(BaseUrl));
+            await Client.ExchangeDuoSignatureForPasscode(username: Username,
+                                                         signature: signature,
+                                                         salt: salt,
+                                                         rest: flow.ToRestClient(BaseUrl));
         }
 
         [Theory]
@@ -580,7 +581,7 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void MarkDeviceAsTrusted_makes_POST_request_to_specific_url_with_parameters_and_cookies()
+        public async void MarkDeviceAsTrusted_makes_POST_request_to_specific_url_with_parameters_and_cookies()
         {
             var flow = new RestFlow()
                 .Post("")
@@ -590,11 +591,11 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectContent($"token={Session.Token}")
                     .ExpectCookie("PHPSESSID", Session.Id);
 
-            Client.MarkDeviceAsTrusted(Session, ClientInfo, flow.ToRestClient(BaseUrl));
+            await Client.MarkDeviceAsTrusted(Session, ClientInfo, flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
-        public void Logout_makes_POST_request_to_specific_url_with_parameters_and_cookies()
+        public async void Logout_makes_POST_request_to_specific_url_with_parameters_and_cookies()
         {
             var flow = new RestFlow()
                 .Post("")
@@ -603,21 +604,21 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectContent("noredirect=1")
                     .ExpectCookie("PHPSESSID", Session.Id);
 
-            Client.Logout(Session, flow.ToRestClient(BaseUrl));
+            await Client.Logout(Session, flow.ToRestClient(BaseUrl));
         }
 
         [Fact]
-        public void DownloadVault_returns_blob()
+        public async void DownloadVault_returns_blob()
         {
             var expected = "blah-blah".ToBytes();
             var flow = new RestFlow().Get(expected.ToBase64());
-            var blob = Client.DownloadVault(Session, flow);
+            var blob = await Client.DownloadVault(Session, flow);
 
             Assert.Equal(expected, blob);
         }
 
         [Fact]
-        public void DownloadVault_makes_GET_request_to_specific_url_with_cookies()
+        public async void DownloadVault_makes_GET_request_to_specific_url_with_cookies()
         {
             var flow = new RestFlow()
                 .Get("blah-blah".ToBase64())
@@ -625,7 +626,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("requestsrc=cli")
                     .ExpectCookie("PHPSESSID", Session.Id);
 
-            Client.DownloadVault(Session, flow.ToRestClient(BaseUrl));
+            await Client.DownloadVault(Session, flow.ToRestClient(BaseUrl));
         }
 
         [Theory]

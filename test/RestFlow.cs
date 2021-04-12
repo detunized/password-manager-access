@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using Xunit;
 
@@ -248,13 +249,26 @@ namespace PasswordManagerAccess.Test
             return GetLastResponse().Expected;
         }
 
-        void IRestTransport.MakeRequest<TContent>(Uri uri,
-                                                  HttpMethod method,
-                                                  HttpContent content,
-                                                  IReadOnlyDictionary<string, string> headers,
-                                                  IReadOnlyDictionary<string, string> cookies,
-                                                  int maxRedirectCount,
-                                                  RestResponse<TContent> allocatedResult)
+        public void MakeRequest<TContent>(Uri uri,
+                                          HttpMethod method,
+                                          HttpContent content,
+                                          IReadOnlyDictionary<string, string> headers,
+                                          IReadOnlyDictionary<string, string> cookies,
+                                          int maxRedirectCount,
+                                          RestResponse<TContent> allocatedResult)
+        {
+            MakeRequestAsync(uri, method, content, headers, cookies, maxRedirectCount, allocatedResult)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        public async Task MakeRequestAsync<TContent>(Uri uri,
+                                                     HttpMethod method,
+                                                     HttpContent content,
+                                                     IReadOnlyDictionary<string, string> headers,
+                                                     IReadOnlyDictionary<string, string> cookies,
+                                                     int maxRedirectCount,
+                                                     RestResponse<TContent> allocatedResult)
         {
             if (_currentIndex >= _responses.Count)
                 Assert.True(false, $"Too many requests, there's no response available for {method} to '{uri}'");
@@ -271,7 +285,7 @@ namespace PasswordManagerAccess.Test
             // Not all requests have content (GET has none, for example)
             if (content != null)
             {
-                var contentStr = content.ReadAsStringAsync().Result;
+                var contentStr = await content.ReadAsStringAsync();
                 foreach (var c in e.ContentFragments)
                     Assert.Contains(c, contentStr);
 

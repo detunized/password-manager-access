@@ -96,6 +96,14 @@ namespace PasswordManagerAccess.Common
                                    ReadOnlyHttpCookies cookies,
                                    int maxRedirectCount,
                                    RestResponse<TContent> allocatedResult);
+
+        Task MakeRequestAsync<TContent>(Uri uri,
+                                        HttpMethod method,
+                                        HttpContent content,
+                                        ReadOnlyHttpHeaders headers,
+                                        ReadOnlyHttpCookies cookies,
+                                        int maxRedirectCount,
+                                        RestResponse<TContent> allocatedResult);
     }
 
     //
@@ -120,6 +128,19 @@ namespace PasswordManagerAccess.Common
                                           int maxRedirectCount,
                                           RestResponse<TContent> allocatedResult)
         {
+            MakeRequestAsync(uri, method, content, headers, cookies, maxRedirectCount, allocatedResult)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        public async Task MakeRequestAsync<TContent>(Uri uri,
+                                                     HttpMethod method,
+                                                     HttpContent content,
+                                                     ReadOnlyHttpHeaders headers,
+                                                     ReadOnlyHttpCookies cookies,
+                                                     int maxRedirectCount,
+                                                     RestResponse<TContent> allocatedResult)
+        {
             allocatedResult.RequestUri = uri;
 
             try
@@ -139,7 +160,7 @@ namespace PasswordManagerAccess.Common
                 // It produces a nicer call stack and no AggregateException nonsense
                 // https://stackoverflow.com/a/36427080/362938
                 // TODO: Dispose this?
-                var response = _http.SendAsync(request).GetAwaiter().GetResult();
+                var response = await _http.SendAsync(request);
 
                 var responseCookies = ParseResponseCookies(response, uri);
                 var allCookies = cookies.MergeCopy(responseCookies);
@@ -170,10 +191,10 @@ namespace PasswordManagerAccess.Common
                 switch (allocatedResult)
                 {
                 case RestResponse<string> text:
-                    text.Content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    text.Content = await response.Content.ReadAsStringAsync();
                     break;
                 case RestResponse<byte[]> binary:
-                    binary.Content = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                    binary.Content = await response.Content.ReadAsByteArrayAsync();
                     break;
                 default:
                     throw new InternalErrorException($"Unsupported content type {typeof(TContent)}");
@@ -343,6 +364,19 @@ namespace PasswordManagerAccess.Common
                                        maxRedirects);
         }
 
+        public async Task<RestResponse<string>> GetAsync(string endpoint,
+                                                         HttpHeaders headers = null,
+                                                         HttpCookies cookies = null,
+                                                         int maxRedirects = MaxRedirects)
+        {
+            return await MakeRequestAsync<string>(endpoint,
+                                                  HttpMethod.Get,
+                                                  null,
+                                                  headers ?? NoHeaders,
+                                                  cookies ?? NoCookies,
+                                                  maxRedirects);
+        }
+
         public RestResponse<byte[]> GetBinary(string endpoint,
                                               HttpHeaders headers = null,
                                               HttpCookies cookies = null,
@@ -416,6 +450,19 @@ namespace PasswordManagerAccess.Common
                                        headers ?? NoHeaders,
                                        cookies ?? NoCookies,
                                        MaxRedirects);
+        }
+
+        public async Task<RestResponse<string>> PostFormAsync(string endpoint,
+                                                              PostParameters parameters,
+                                                              HttpHeaders headers = null,
+                                                              HttpCookies cookies = null)
+        {
+            return await MakeRequestAsync<string>(endpoint,
+                                                  HttpMethod.Post,
+                                                  ToFormContent(parameters),
+                                                  headers ?? NoHeaders,
+                                                  cookies ?? NoCookies,
+                                                  MaxRedirects);
         }
 
         public RestResponse<string, T> PostForm<T>(string endpoint,
@@ -530,6 +577,22 @@ namespace PasswordManagerAccess.Common
                                                                  new RestResponse<TContent>());
         }
 
+        private async Task<RestResponse<TContent>> MakeRequestAsync<TContent>(string endpoint,
+                                                                              HttpMethod method,
+                                                                              HttpContent content,
+                                                                              HttpHeaders headers,
+                                                                              HttpCookies cookies,
+                                                                              int maxRedirects)
+        {
+            return await MakeRequestAsync<RestResponse<TContent>, TContent>(endpoint,
+                                                                            method,
+                                                                            content,
+                                                                            headers,
+                                                                            cookies,
+                                                                            maxRedirects,
+                                                                            new RestResponse<TContent>());
+        }
+
         private RestResponse<TContent, TData> MakeRequest<TContent, TData>(string endpoint,
                                                                            HttpMethod method,
                                                                            HttpContent content,
@@ -578,6 +641,27 @@ namespace PasswordManagerAccess.Common
                                   DefaultCookies.Merge(cookies),
                                   maxRedirects,
                                   allocatedResult);
+
+            return allocatedResult;
+        }
+
+        private async Task<TResponse> MakeRequestAsync<TResponse, TContent>(string endpoint,
+                                                                            HttpMethod method,
+                                                                            HttpContent content,
+                                                                            HttpHeaders headers,
+                                                                            HttpCookies cookies,
+                                                                            int maxRedirects,
+                                                                            TResponse allocatedResult)
+            where TResponse : RestResponse<TContent>
+        {
+            var uri = MakeAbsoluteUri(endpoint);
+            await Transport.MakeRequestAsync(uri,
+                                             method,
+                                             content,
+                                             Signer.Sign(uri, method, DefaultHeaders.Merge(headers)),
+                                             DefaultCookies.Merge(cookies),
+                                             maxRedirects,
+                                             allocatedResult);
 
             return allocatedResult;
         }
