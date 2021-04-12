@@ -161,9 +161,9 @@ namespace PasswordManagerAccess.LastPass
         {
             var passcode = method switch
             {
-                OtpMethod.GoogleAuth => ui.ProvideGoogleAuthPasscode(),
-                OtpMethod.MicrosoftAuth => ui.ProvideMicrosoftAuthPasscode(),
-                OtpMethod.Yubikey => ui.ProvideYubikeyPasscode(),
+                OtpMethod.GoogleAuth => await ui.ProvideGoogleAuthPasscode(),
+                OtpMethod.MicrosoftAuth => await ui.ProvideMicrosoftAuthPasscode(),
+                OtpMethod.Yubikey => await ui.ProvideYubikeyPasscode(),
                 _ => throw new InternalErrorException("Invalid OTP method")
             };
 
@@ -247,7 +247,7 @@ namespace PasswordManagerAccess.LastPass
 
             return method switch
             {
-                "lastpassauth" => ui.ApproveLastPassAuth(),
+                "lastpassauth" => await ui.ApproveLastPassAuth(),
                 "duo" => await ApproveDuo(username, parameters, ui, rest),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported")
             };
@@ -260,7 +260,7 @@ namespace PasswordManagerAccess.LastPass
         {
             return parameters.GetOrDefault("preferduowebsdk", "") == "1"
                 ? await ApproveDuoWebSdk(username, parameters, ui, rest)
-                : ui.ApproveDuo();
+                : await ui.ApproveDuo();
         }
 
         internal static async Task<OobResult> ApproveDuoWebSdk(string username,

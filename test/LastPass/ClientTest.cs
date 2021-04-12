@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Moq;
 using PasswordManagerAccess.Common;
@@ -139,76 +140,76 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void OpenVault_throws_on_invalid_username()
+        public async void OpenVault_throws_on_invalid_username()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post("<response><error cause='unknownemail' /></response>");
 
-            Exceptions.AssertThrowsBadCredentials(
-                async () => await Client.OpenVault(Username, Password, ClientInfo, null, flow),
+            await Exceptions.AssertThrowsBadCredentialsAsync(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
                 "Invalid username");
         }
 
         [Fact]
-        public void OpenVault_throws_on_invalid_password()
+        public async void OpenVault_throws_on_invalid_password()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post("<response><error cause='unknownpassword' /></response>");
 
-            Exceptions.AssertThrowsBadCredentials(
-                async () => await Client.OpenVault(Username, Password, ClientInfo, null, flow),
+            await Exceptions.AssertThrowsBadCredentialsAsync(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
                 "Invalid password");
         }
 
         [Fact]
-        public void OpenVault_throws_on_canceled_otp()
+        public async void OpenVault_throws_on_canceled_otp()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post(OtpRequiredResponse);
 
-            Exceptions.AssertThrowsCanceledMultiFactor(
-                async () => await Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
+            await Exceptions.AssertThrowsCanceledMultiFactorAsync(
+                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
                 "Second factor step is canceled by the user");
         }
 
         [Fact]
-        public void OpenVault_throws_on_failed_otp()
+        public async void OpenVault_throws_on_failed_otp()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post(OtpRequiredResponse)
                 .Post("<response><error cause='googleauthfailed' /></response>");
 
-            Exceptions.AssertThrowsBadMultiFactor(
-                async () => await Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow),
+            await Exceptions.AssertThrowsBadMultiFactorAsync(
+                () => Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow),
                 "Second factor code is incorrect");
         }
 
         [Fact]
-        public void OpenVault_throws_on_canceled_oob()
+        public async void OpenVault_throws_on_canceled_oob()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post(OobRequiredResponse);
 
-            Exceptions.AssertThrowsCanceledMultiFactor(
-                async () => await Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
+            await Exceptions.AssertThrowsCanceledMultiFactorAsync(
+                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
                 "Out of band step is canceled by the user");
         }
 
         [Fact]
-        public void OpenVault_throws_on_failed_oob()
+        public async void OpenVault_throws_on_failed_oob()
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post(OobRequiredResponse)
                 .Post("<response><error cause='multifactorresponsefailed' /></response>");
 
-            Exceptions.AssertThrowsBadMultiFactor(
-                async () => await Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow),
+            await Exceptions.AssertThrowsBadMultiFactorAsync(
+                () => Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow),
                 "Out of band authentication failed");
         }
 
@@ -217,14 +218,14 @@ namespace PasswordManagerAccess.Test.LastPass
         [InlineData("<response><error cause='Pfff' message='Blah' /></response>", "Blah")]
         [InlineData("<response><error message='Blah' /></response>", "Blah")]
         [InlineData("<response><error /></response>", "Unknown error")]
-        public void OpenVault_throws_on_other_errors(string response, string expected)
+        public async void OpenVault_throws_on_other_errors(string response, string expected)
         {
             var flow = new RestFlow()
                 .Post(KeyIterationCount.ToString())
                 .Post(response);
 
-            Exceptions.AssertThrowsInternalError(
-                async () => await Client.OpenVault(Username, Password, ClientInfo, null, flow),
+            await Exceptions.AssertThrowsInternalErrorAsync(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
                 expected);
         }
 
@@ -285,13 +286,12 @@ namespace PasswordManagerAccess.Test.LastPass
         [InlineData("")]
         [InlineData("abc")]
         [InlineData("12345678901234567890")]
-        public void RequestIterationCount_throws_on_invalid_response(string response)
+        public async void RequestIterationCount_throws_on_invalid_response(string response)
         {
             var flow = new RestFlow().Post(response);
 
-            Exceptions.AssertThrowsInternalError(
-                async () => await Client.RequestIterationCount(Username, flow),
-                "Request iteration count failed: unexpected response");
+            await Exceptions.AssertThrowsInternalErrorAsync(() => Client.RequestIterationCount(Username, flow),
+                                                            "Request iteration count failed: unexpected response");
         }
 
         [Fact]
@@ -463,7 +463,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public async void ApproveOob_calls_Ui_ApproveLastPassAuth()
         {
             var ui = new Mock<IUi>();
-            ui.Setup(x => x.ApproveLastPassAuth()).Returns(OobResult.Cancel);
+            ui.Setup(x => x.ApproveLastPassAuth()).Returns(Task.FromResult(OobResult.Cancel));
 
             await Client.ApproveOob(Username, LastPassAuthOobParameters, ui.Object, null);
 
@@ -474,7 +474,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public async void ApproveOob_calls_Ui_ApproveDuo()
         {
             var ui = new Mock<IUi>();
-            ui.Setup(x => x.ApproveDuo()).Returns(OobResult.Cancel);
+            ui.Setup(x => x.ApproveDuo()).Returns(Task.FromResult(OobResult.Cancel));
 
             await Client.ApproveOob(Username, DuoOobParameters, ui.Object, null);
 
@@ -488,18 +488,19 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void ApproveOob_throws_on_missing_method()
+        public async void ApproveOob_throws_on_missing_method()
         {
-            Exceptions.AssertThrowsInternalError(
-                async () => await Client.ApproveOob(Username, new Dictionary<string, string>(), null, null),
+            await Exceptions.AssertThrowsInternalErrorAsync(
+                () => Client.ApproveOob(Username, new Dictionary<string, string>(), null, null),
                 "Out of band method is not specified");
         }
 
         [Fact]
-        public void ApproveOob_throws_on_unknown_method()
+        public async void ApproveOob_throws_on_unknown_method()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(
-                async () => await Client.ApproveOob(Username, new Dictionary<string, string> {["outofbandtype"] = "blah"}, null, null),
+            await Exceptions.AssertThrowsUnsupportedFeatureAsync(
+                () => Client.ApproveOob(Username,
+                                        new Dictionary<string, string> {["outofbandtype"] = "blah"}, null, null),
                 "Out of band method 'blah' is not supported");
         }
 
@@ -507,7 +508,7 @@ namespace PasswordManagerAccess.Test.LastPass
         [InlineData("duo_host")]
         [InlineData("duo_signature")]
         [InlineData("duo_bytes")]
-        public void ApproveOob_throws_on_missing_duo_parameters(string name)
+        public async void ApproveOob_throws_on_missing_duo_parameters(string name)
         {
             var parameters = new Dictionary<string, string>
             {
@@ -519,9 +520,8 @@ namespace PasswordManagerAccess.Test.LastPass
             };
             parameters.Remove(name);
 
-            Exceptions.AssertThrowsInternalError(
-                async () => await Client.ApproveOob(Username, parameters, null, null),
-                $"Invalid response: '{name}' parameter not found");
+            await Exceptions.AssertThrowsInternalErrorAsync(() => Client.ApproveOob(Username, parameters, null, null),
+                                                            $"Invalid response: '{name}' parameter not found");
         }
 
         [Fact]
@@ -665,9 +665,8 @@ namespace PasswordManagerAccess.Test.LastPass
                 RequestUri = new Uri("https://int.er.net")
             };
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.ParseXml(response),
-                "Failed to parse XML in response from https://int.er.net");
+            Exceptions.AssertThrowsInternalError(() => Client.ParseXml(response),
+                                                 "Failed to parse XML in response from https://int.er.net");
         }
 
         [Fact]
@@ -706,9 +705,8 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var xml = XDocument.Parse("<response><error blah='blah-blah' /></response>");
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.GetErrorAttribute(xml, "poof"),
-                "Unknown response schema: attribute 'poof' is missing");
+            Exceptions.AssertThrowsInternalError(() => Client.GetErrorAttribute(xml, "poof"),
+                                                 "Unknown response schema: attribute 'poof' is missing");
         }
 
         [Fact]
@@ -783,11 +781,11 @@ namespace PasswordManagerAccess.Test.LastPass
                 _oob = oob;
             }
 
-            public OtpResult ProvideGoogleAuthPasscode() => _otp;
-            public OtpResult ProvideMicrosoftAuthPasscode() => _otp;
-            public OtpResult ProvideYubikeyPasscode() => _otp;
-            public OobResult ApproveLastPassAuth() => _oob;
-            public OobResult ApproveDuo() => _oob;
+            public Task<OtpResult> ProvideGoogleAuthPasscode() => Task.FromResult(_otp);
+            public Task<OtpResult> ProvideMicrosoftAuthPasscode() => Task.FromResult(_otp);
+            public Task<OtpResult> ProvideYubikeyPasscode() => Task.FromResult(_otp);
+            public Task<OobResult> ApproveLastPassAuth() => Task.FromResult(_oob);
+            public Task<OobResult> ApproveDuo() => Task.FromResult(_oob);
 
             public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
             {

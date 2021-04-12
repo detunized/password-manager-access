@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.LastPass.Ui
@@ -8,9 +9,9 @@ namespace PasswordManagerAccess.LastPass.Ui
     public interface IUi: IDuoUi
     {
         // To cancel return OtpResult.Cancel, otherwise only valid data is expected.
-        OtpResult ProvideGoogleAuthPasscode();
-        OtpResult ProvideMicrosoftAuthPasscode();
-        OtpResult ProvideYubikeyPasscode();
+        Task<OtpResult> ProvideGoogleAuthPasscode();
+        Task<OtpResult> ProvideMicrosoftAuthPasscode();
+        Task<OtpResult> ProvideYubikeyPasscode();
 
         // The UI implementations should provide the following possibilities for the user:
         //
@@ -25,8 +26,8 @@ namespace PasswordManagerAccess.LastPass.Ui
         // 3. Allow the user to provide the passcode manually. All supported OOB methods allow to enter the
         //    passcode instead of performing an action in the app. In this case the UI should return
         //    OobResult.ContinueWithPasscode(passcode, rememberMe).
-        OobResult ApproveLastPassAuth();
-        OobResult ApproveDuo();
+        Task<OobResult> ApproveLastPassAuth();
+        Task<OobResult> ApproveDuo();
     }
 
     public class OtpResult

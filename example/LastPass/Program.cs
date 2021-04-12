@@ -16,50 +16,50 @@ namespace PasswordManagerAccess.Example.LastPass
         // to Vault UI requests.
         private class TextUi: DuoUi, IUi
         {
-            public OtpResult ProvideGoogleAuthPasscode()
+            public async Task<OtpResult> ProvideGoogleAuthPasscode()
             {
-                return ProvideOtpPasscode("Google Authenticator");
+                return await ProvideOtpPasscode("Google Authenticator");
             }
 
-            public OtpResult ProvideMicrosoftAuthPasscode()
+            public async Task<OtpResult> ProvideMicrosoftAuthPasscode()
             {
-                return ProvideOtpPasscode("Microsoft Authenticator");
+                return await ProvideOtpPasscode("Microsoft Authenticator");
             }
 
-            public OtpResult ProvideYubikeyPasscode()
+            public async Task<OtpResult> ProvideYubikeyPasscode()
             {
-                return ProvideOtpPasscode("Yubikey");
+                return await ProvideOtpPasscode("Yubikey");
             }
 
-            public OobResult ApproveLastPassAuth()
+            public async Task<OobResult> ApproveLastPassAuth()
             {
-                return ApproveOutOfBand("LastPass Authenticator");
+                return await ApproveOutOfBand("LastPass Authenticator");
             }
 
-            public OobResult ApproveDuo()
+            public async Task<OobResult> ApproveDuo()
             {
-                return ApproveOutOfBand("Duo Security");
+                return await ApproveOutOfBand("Duo Security");
             }
 
             //
             // Private
             //
 
-            private static OtpResult ProvideOtpPasscode(string method)
+            private static async Task<OtpResult> ProvideOtpPasscode(string method)
             {
-                var answer = GetAnswer($"Please enter {method} code {PressEnterToCancel}");
-                return answer == "" ? OtpResult.Cancel : new OtpResult(answer, GetRememberMe());
+                var answer = await GetAnswerAsync($"Please enter {method} code {PressEnterToCancel}");
+                return answer == "" ? OtpResult.Cancel : new OtpResult(answer, await GetRememberMeAsync());
             }
 
-            private static OobResult ApproveOutOfBand(string method)
+            private static async Task<OobResult> ApproveOutOfBand(string method)
             {
                 Console.WriteLine($"> Please approve out-of-band via {method} and press ENTER");
-                var answer = GetAnswer($"Or enter the {method} passcode from the app or 'c' to cancel");
+                var answer = await GetAnswerAsync($"Or enter the {method} passcode from the app or 'c' to cancel");
 
                 if (answer.ToLower() == "c")
                     return OobResult.Cancel;
 
-                var rememberMe = GetRememberMe();
+                var rememberMe = await GetRememberMeAsync();
                 return answer.Length == 0
                     ? OobResult.WaitForApproval(rememberMe)
                     : OobResult.ContinueWithPasscode(answer, rememberMe);
