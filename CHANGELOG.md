@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.4.0
+  - Kdbx: added overloads to the API that take streams and byte arrays as input
+
 ## 8.3.0
   - Bitwarden: added support for TOTP and DeletedDate fields
 
