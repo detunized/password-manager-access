@@ -17,47 +17,45 @@ namespace PasswordManagerAccess.Kdbx
 {
     internal static class Parser
     {
-        public static Account[] Parse(string filename, string password, string keyfile)
+        public static Account[] Parse(string filename, string password, string keyfile = null)
         {
             // It's difficult to test functions with files, so we delegate everything to the overloads
             // and do minimal work in this function outside of opening files for reading.
             using var input = File.OpenRead(filename);
-
-            // No keyfile
-            if (keyfile.IsNullOrEmpty())
-                return Parse(input, password);
-
-            // With a keyfile
-            using var keyfileStream = File.OpenRead(keyfile);
+            using var keyfileStream = keyfile.IsNullOrEmpty() ? null : File.OpenRead(keyfile);
             return Parse(input, password, keyfileStream);
+        }
+
+        public static Account[] Parse(byte[] input, string password, byte[] keyfile = null)
+        {
+            using var inputStream = new MemoryStream(input, writable: false);
+            return Parse(inputStream, password, keyfile == null ? Array.Empty<byte>() : ReadKeyfile(keyfile));
+        }
+
+        public static Account[] Parse(Stream input, string password, Stream keyfile = null)
+        {
+            if (!input.CanSeek)
+                throw new InternalErrorException("Input stream must be seekable");
+
+            return Parse(input, password, keyfile == null ? Array.Empty<byte>() : ReadKeyfile(keyfile));
         }
 
         //
         // Internal
         //
 
-        internal static Account[] Parse(Stream input, string password)
+        internal static Account[] Parse(Stream input, string password, byte[] parsedKeyfile)
         {
-            return Parse(input, password, Array.Empty<byte>());
-        }
-
-        internal static Account[] Parse(Stream input, string password, Stream keyfile)
-        {
-            return Parse(input, password, ReadKeyfile(keyfile));
-        }
-
-        internal static Account[] Parse(Stream input, string password, byte[] keyfile)
-        {
-            var info = ParseHeader(input, Util.ComposeMasterKey(password, keyfile));
+            var info = ParseHeader(input, Util.ComposeMasterKey(password, parsedKeyfile));
             input.Seek(info.HeaderSize, SeekOrigin.Begin);
             var body = ParseBody(input, info);
             return ParseAccounts(body);
         }
 
-        internal static byte[] ReadKeyfile(Stream stream)
-        {
-            var bytes = stream.ReadAll();
+        internal static byte[] ReadKeyfile(Stream stream) => ReadKeyfile(stream.ReadAll());
 
+        internal static byte[] ReadKeyfile(byte[] bytes)
+        {
             // If the file parses as XML and has the valid structure, then it's an XML keyfile.
             if (ReadXmlKeyfile(bytes) is {} xmlKeyfile)
                 return xmlKeyfile;
