@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.4.1
+  - Kdbx: added public facing API that was forgotten in 8.4.0
+
 ## 8.4.0
   - Kdbx: added overloads to the API that take streams and byte arrays as input
 
