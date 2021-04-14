@@ -11,15 +11,20 @@ namespace LastPassGui
     {
         public Vault Vault { get; private set; }
 
+        private string _deviceId;
+        private string _description;
+
         public Form2()
         {
             InitializeComponent();
         }
 
-        public void SetDefaults(string username, string password)
+        public void SetDefaults(string username, string password, string deviceId, string description)
         {
             usernameInput.Text = username;
             passwordInput.Text = password;
+            _deviceId = deviceId;
+            _description = description;
         }
 
         private async Task Login(string username, string password)
@@ -29,9 +34,7 @@ namespace LastPassGui
             {
                 var vault = await Vault.Open(usernameInput.Text,
                                              passwordInput.Text,
-                                             new ClientInfo(Platform.Desktop,
-                                                            "385e2742aefd399bd182c1ea4c1aac4b",
-                                                            "Example for lastpass-sharp"),
+                                             new ClientInfo(Platform.Desktop, _deviceId, _description),
                                              this);
 
                 messageLabel.Text = $"Open the vault with {vault.Accounts.Length} accounts";

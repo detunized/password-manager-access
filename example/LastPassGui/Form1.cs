@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
+using PasswordManagerAccess.Example.Common;
 
 namespace LastPassGui
 {
@@ -8,6 +10,8 @@ namespace LastPassGui
         public Form1()
         {
             InitializeComponent();
+
+            _config = Util.ReadConfig();
 
             listView1.Columns.Add("Name");
             listView1.Columns.Add("Username");
@@ -21,11 +25,11 @@ namespace LastPassGui
 
             if (!_loggedIn)
             {
-                var loginUi = new Form2();
-                loginUi.SetDefaults("username", "pazzword");
-                loginUi.ShowDialog(this);
-
                 _loggedIn = true;
+
+                var loginUi = new Form2();
+                loginUi.SetDefaults(_config["username"], _config["password"], _config["device-id"], _config["client-description"]);
+                loginUi.ShowDialog(this);
 
                 var v = loginUi.Vault;
                 if (v != null)
@@ -50,5 +54,6 @@ namespace LastPassGui
         //
 
         private bool _loggedIn = false;
+        private Dictionary<string, string> _config;
     }
 }
