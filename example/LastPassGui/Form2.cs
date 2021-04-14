@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using PasswordManagerAccess.Common;
@@ -17,6 +19,8 @@ namespace LastPassGui
         public Form2()
         {
             InitializeComponent();
+
+            duoDevicePanel.Visible = false;
         }
 
         public void SetDefaults(string username, string password, string deviceId, string description)
@@ -70,9 +74,53 @@ namespace LastPassGui
             throw new NotImplementedException();
         }
 
-        public Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices)
+        public async Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices)
         {
-            throw new NotImplementedException();
+            var semaphore = new SemaphoreSlim(0, 1);
+
+            duoDevicePick.Items.Clear();
+            duoDevicePick.Items.AddRange(devices.Select(x => x.Name).ToArray());
+            duoContinue.Enabled = false;
+
+            var selectedDevice = devices[0];
+            var selectedFactor = selectedDevice.Factors[0];
+
+            EventHandler deviceHandler = (s, e) =>
+            {
+                selectedDevice = devices[duoDevicePick.SelectedIndex];
+
+                duoFactorPick.Items.Clear();
+                duoFactorPick.Items.AddRange(selectedDevice.Factors.Select(x => x.ToString()).ToArray());
+                duoFactorPick.SelectedIndex = -1;
+                duoFactorPick.ResetText();
+                duoContinue.Enabled = false;
+            };
+
+            EventHandler factorHandler = (s, e) =>
+            {
+                selectedFactor = selectedDevice.Factors[duoFactorPick.SelectedIndex];
+                duoContinue.Enabled = true;
+            };
+
+
+            EventHandler continueHandler = (s, e) =>
+            {
+                semaphore.Release();
+            };
+
+            duoDevicePick.SelectedIndexChanged += deviceHandler;
+            duoFactorPick.SelectedIndexChanged += factorHandler;
+            duoContinue.Click += continueHandler;
+            duoDevicePanel.Visible = true;
+
+            await semaphore.WaitAsync();
+
+            duoDevicePanel.Visible = false;
+            duoDevicePick.SelectedIndexChanged -= deviceHandler;
+            duoFactorPick.SelectedIndexChanged -= factorHandler;
+            duoContinue.Click -= continueHandler;
+
+            return new DuoChoice(selectedDevice, selectedFactor, duoRememberMeCheck.Checked);
         }
 
         public Task<string> ProvideDuoPasscode(DuoDevice device)
@@ -97,7 +145,8 @@ namespace LastPassGui
 
         public Task UpdateDuoStatus(DuoStatus status, string text)
         {
-            throw new NotImplementedException();
+            messageLabel.Text = text;
+            return Task.CompletedTask;
         }
 
         //
