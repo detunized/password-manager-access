@@ -21,10 +21,27 @@ namespace LastPassGui
 
             if (!_loggedIn)
             {
-                MessageBox.Show(this, "Please login");
+                var loginUi = new Form2();
+                loginUi.SetDefaults("username", "pazzword");
+                loginUi.ShowDialog(this);
+
                 _loggedIn = true;
 
-                listView1.Items.Add("test");
+                var v = loginUi.Vault;
+                if (v != null)
+                {
+                    foreach (var a in v.Accounts)
+                    {
+                        listView1.Items.Add(new ListViewItem(new[]
+                        {
+                            a.Name,
+                            a.Username,
+                            a.Password,
+                            a.Url,
+                        }));
+                    }
+                }
+
             }
         }
 

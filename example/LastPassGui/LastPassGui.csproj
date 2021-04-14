@@ -6,4 +6,8 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PasswordManagerAccess.csproj" />
+  </ItemGroup>
+
 </Project>
