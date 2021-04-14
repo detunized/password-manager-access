@@ -174,13 +174,13 @@ namespace PasswordManagerAccess.Common
                     var newUri = new Uri(uri, response.Headers.Location);
 
                     // Redirect always does a GET with no content
-                    MakeRequest(newUri,
-                                HttpMethod.Get,
-                                null,
-                                headers,
-                                allCookies,
-                                maxRedirectCount - 1,
-                                allocatedResult);
+                    await MakeRequestAsync(newUri,
+                                           HttpMethod.Get,
+                                           null,
+                                           headers,
+                                           allCookies,
+                                           maxRedirectCount - 1,
+                                           allocatedResult);
                     return;
                 }
 
