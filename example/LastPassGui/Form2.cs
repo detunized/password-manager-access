@@ -21,6 +21,7 @@ namespace LastPassGui
             InitializeComponent();
 
             duoDevicePanel.Visible = false;
+            lastPassAuthPanel.Visible = false;
         }
 
         public void SetDefaults(string username, string password, string deviceId, string description)
@@ -69,19 +70,46 @@ namespace LastPassGui
             throw new NotImplementedException();
         }
 
-        public Task<OobResult> ApproveLastPassAuth()
+        public async Task<OobResult> ApproveLastPassAuth()
         {
-            throw new NotImplementedException();
+            using var cancelSemaphore = new SemaphoreSlim(0, 1);
+            using var continueSemaphore = new SemaphoreSlim(0, 1);
+
+            void cancelHandler(object s, EventArgs e) => cancelSemaphore.Release();
+            void continueHandler(object s, EventArgs e) => continueSemaphore.Release();
+
+            lastPassAuthCancel.Click += cancelHandler;
+            lastPassAuthContinue.Click += continueHandler;
+            lastPassAuthPanel.Visible = true;
+
+            var cancelTask = cancelSemaphore.WaitAsync();
+            var continueTask = continueSemaphore.WaitAsync();
+
+            var completedTask = await Task.WhenAny(new[] { cancelTask, continueTask });
+
+            lastPassAuthPanel.Visible = false;
+            lastPassAuthCancel.Click -= cancelHandler;
+            lastPassAuthContinue.Click -= continueHandler;
+
+            if (completedTask == cancelTask)
+            {
+                return OobResult.Cancel;
+            }
+
+            if (completedTask == continueTask)
+                return OobResult.ContinueWithPasscode(lastPassAuthPasscodeInput.Text, lastPassAuthRememberMeCheck.Checked);
+
+            throw new InvalidOperationException("Invalid task?!");
         }
 
         public async Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices)
         {
-            var semaphore = new SemaphoreSlim(0, 1);
+            using var semaphore = new SemaphoreSlim(0, 1);
 
             duoDevicePick.Items.Clear();
             duoDevicePick.Items.AddRange(devices.Select(x => x.Name).ToArray());
             duoContinue.Enabled = false;
-
+            
             var selectedDevice = devices[0];
             var selectedFactor = selectedDevice.Factors[0];
 

@@ -40,7 +40,14 @@ namespace LastPassGui
             this.duoRememberMeCheck = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.duoFactorPick = new System.Windows.Forms.ComboBox();
+            this.lastPassAuthPanel = new System.Windows.Forms.Panel();
+            this.lastPassAuthRememberMeCheck = new System.Windows.Forms.CheckBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.lastPassAuthPasscodeInput = new System.Windows.Forms.TextBox();
+            this.lastPassAuthCancel = new System.Windows.Forms.Button();
+            this.lastPassAuthContinue = new System.Windows.Forms.Button();
             this.duoDevicePanel.SuspendLayout();
+            this.lastPassAuthPanel.SuspendLayout();
             this.SuspendLayout();
             // 
             // usernameInput
@@ -59,7 +66,7 @@ namespace LastPassGui
             // 
             // loginButton
             // 
-            this.loginButton.Location = new System.Drawing.Point(435, 222);
+            this.loginButton.Location = new System.Drawing.Point(436, 352);
             this.loginButton.Name = "loginButton";
             this.loginButton.Size = new System.Drawing.Size(75, 23);
             this.loginButton.TabIndex = 2;
@@ -142,11 +149,68 @@ namespace LastPassGui
             this.duoFactorPick.Size = new System.Drawing.Size(191, 23);
             this.duoFactorPick.TabIndex = 5;
             // 
+            // lastPassAuthPanel
+            // 
+            this.lastPassAuthPanel.Controls.Add(this.lastPassAuthRememberMeCheck);
+            this.lastPassAuthPanel.Controls.Add(this.label3);
+            this.lastPassAuthPanel.Controls.Add(this.lastPassAuthPasscodeInput);
+            this.lastPassAuthPanel.Controls.Add(this.lastPassAuthCancel);
+            this.lastPassAuthPanel.Controls.Add(this.lastPassAuthContinue);
+            this.lastPassAuthPanel.Location = new System.Drawing.Point(13, 222);
+            this.lastPassAuthPanel.Name = "lastPassAuthPanel";
+            this.lastPassAuthPanel.Size = new System.Drawing.Size(498, 124);
+            this.lastPassAuthPanel.TabIndex = 8;
+            // 
+            // lastPassAuthRememberMeCheck
+            // 
+            this.lastPassAuthRememberMeCheck.AutoSize = true;
+            this.lastPassAuthRememberMeCheck.Location = new System.Drawing.Point(75, 50);
+            this.lastPassAuthRememberMeCheck.Name = "lastPassAuthRememberMeCheck";
+            this.lastPassAuthRememberMeCheck.Size = new System.Drawing.Size(104, 19);
+            this.lastPassAuthRememberMeCheck.TabIndex = 7;
+            this.lastPassAuthRememberMeCheck.Text = "Remember me";
+            this.lastPassAuthRememberMeCheck.UseVisualStyleBackColor = true;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(3, 23);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(182, 15);
+            this.label3.TabIndex = 1;
+            this.label3.Text = "LastPass Authenticator passcode:";
+            // 
+            // lastPassAuthPasscodeInput
+            // 
+            this.lastPassAuthPasscodeInput.Location = new System.Drawing.Point(191, 20);
+            this.lastPassAuthPasscodeInput.Name = "lastPassAuthPasscodeInput";
+            this.lastPassAuthPasscodeInput.Size = new System.Drawing.Size(100, 23);
+            this.lastPassAuthPasscodeInput.TabIndex = 0;
+            // 
+            // lastPassAuthCancel
+            // 
+            this.lastPassAuthCancel.Location = new System.Drawing.Point(191, 79);
+            this.lastPassAuthCancel.Name = "lastPassAuthCancel";
+            this.lastPassAuthCancel.Size = new System.Drawing.Size(75, 23);
+            this.lastPassAuthCancel.TabIndex = 6;
+            this.lastPassAuthCancel.Text = "Cancel";
+            this.lastPassAuthCancel.UseVisualStyleBackColor = true;
+            // 
+            // lastPassAuthContinue
+            // 
+            this.lastPassAuthContinue.Location = new System.Drawing.Point(191, 50);
+            this.lastPassAuthContinue.Name = "lastPassAuthContinue";
+            this.lastPassAuthContinue.Size = new System.Drawing.Size(75, 23);
+            this.lastPassAuthContinue.TabIndex = 6;
+            this.lastPassAuthContinue.Text = "Continue";
+            this.lastPassAuthContinue.UseVisualStyleBackColor = true;
+            // 
             // Form2
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(522, 254);
+            this.ClientSize = new System.Drawing.Size(522, 386);
+            this.Controls.Add(this.lastPassAuthPanel);
             this.Controls.Add(this.duoDevicePanel);
             this.Controls.Add(this.messageLabel);
             this.Controls.Add(this.loginButton);
@@ -156,6 +220,8 @@ namespace LastPassGui
             this.Text = "Login";
             this.duoDevicePanel.ResumeLayout(false);
             this.duoDevicePanel.PerformLayout();
+            this.lastPassAuthPanel.ResumeLayout(false);
+            this.lastPassAuthPanel.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -172,8 +238,13 @@ namespace LastPassGui
         private System.Windows.Forms.Button duoContinue;
         private System.Windows.Forms.Panel duoDevicePanel;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.ComboBox duoFactorPick;
         private System.Windows.Forms.CheckBox duoRememberMeCheck;
+        private System.Windows.Forms.Panel lastPassAuthPanel;
+        private System.Windows.Forms.CheckBox lastPassAuthRememberMeCheck;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox lastPassAuthPasscodeInput;
+        private System.Windows.Forms.Button lastPassAuthContinue;
+        private System.Windows.Forms.Button lastPassAuthCancel;
     }
 }
