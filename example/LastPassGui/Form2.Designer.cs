@@ -41,11 +41,13 @@ namespace LastPassGui
             this.label2 = new System.Windows.Forms.Label();
             this.duoFactorPick = new System.Windows.Forms.ComboBox();
             this.lastPassAuthPanel = new System.Windows.Forms.Panel();
+            this.label4 = new System.Windows.Forms.Label();
             this.lastPassAuthRememberMeCheck = new System.Windows.Forms.CheckBox();
             this.label3 = new System.Windows.Forms.Label();
             this.lastPassAuthPasscodeInput = new System.Windows.Forms.TextBox();
             this.lastPassAuthCancel = new System.Windows.Forms.Button();
             this.lastPassAuthContinue = new System.Windows.Forms.Button();
+            this.lastPassAuthAtempt = new System.Windows.Forms.Label();
             this.duoDevicePanel.SuspendLayout();
             this.lastPassAuthPanel.SuspendLayout();
             this.SuspendLayout();
@@ -151,6 +153,8 @@ namespace LastPassGui
             // 
             // lastPassAuthPanel
             // 
+            this.lastPassAuthPanel.Controls.Add(this.lastPassAuthAtempt);
+            this.lastPassAuthPanel.Controls.Add(this.label4);
             this.lastPassAuthPanel.Controls.Add(this.lastPassAuthRememberMeCheck);
             this.lastPassAuthPanel.Controls.Add(this.label3);
             this.lastPassAuthPanel.Controls.Add(this.lastPassAuthPasscodeInput);
@@ -161,10 +165,19 @@ namespace LastPassGui
             this.lastPassAuthPanel.Size = new System.Drawing.Size(498, 124);
             this.lastPassAuthPanel.TabIndex = 8;
             // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(3, 11);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(304, 15);
+            this.label4.TabIndex = 8;
+            this.label4.Text = "Approve in LastPass Authenticator or enter the passocde";
+            // 
             // lastPassAuthRememberMeCheck
             // 
             this.lastPassAuthRememberMeCheck.AutoSize = true;
-            this.lastPassAuthRememberMeCheck.Location = new System.Drawing.Point(75, 50);
+            this.lastPassAuthRememberMeCheck.Location = new System.Drawing.Point(75, 63);
             this.lastPassAuthRememberMeCheck.Name = "lastPassAuthRememberMeCheck";
             this.lastPassAuthRememberMeCheck.Size = new System.Drawing.Size(104, 19);
             this.lastPassAuthRememberMeCheck.TabIndex = 7;
@@ -174,7 +187,7 @@ namespace LastPassGui
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(3, 23);
+            this.label3.Location = new System.Drawing.Point(3, 36);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(182, 15);
             this.label3.TabIndex = 1;
@@ -182,14 +195,14 @@ namespace LastPassGui
             // 
             // lastPassAuthPasscodeInput
             // 
-            this.lastPassAuthPasscodeInput.Location = new System.Drawing.Point(191, 20);
+            this.lastPassAuthPasscodeInput.Location = new System.Drawing.Point(191, 33);
             this.lastPassAuthPasscodeInput.Name = "lastPassAuthPasscodeInput";
             this.lastPassAuthPasscodeInput.Size = new System.Drawing.Size(100, 23);
             this.lastPassAuthPasscodeInput.TabIndex = 0;
             // 
             // lastPassAuthCancel
             // 
-            this.lastPassAuthCancel.Location = new System.Drawing.Point(191, 79);
+            this.lastPassAuthCancel.Location = new System.Drawing.Point(191, 92);
             this.lastPassAuthCancel.Name = "lastPassAuthCancel";
             this.lastPassAuthCancel.Size = new System.Drawing.Size(75, 23);
             this.lastPassAuthCancel.TabIndex = 6;
@@ -198,12 +211,21 @@ namespace LastPassGui
             // 
             // lastPassAuthContinue
             // 
-            this.lastPassAuthContinue.Location = new System.Drawing.Point(191, 50);
+            this.lastPassAuthContinue.Location = new System.Drawing.Point(191, 63);
             this.lastPassAuthContinue.Name = "lastPassAuthContinue";
             this.lastPassAuthContinue.Size = new System.Drawing.Size(75, 23);
             this.lastPassAuthContinue.TabIndex = 6;
             this.lastPassAuthContinue.Text = "Continue";
             this.lastPassAuthContinue.UseVisualStyleBackColor = true;
+            // 
+            // lastPassAuthAtempt
+            // 
+            this.lastPassAuthAtempt.AutoSize = true;
+            this.lastPassAuthAtempt.Location = new System.Drawing.Point(336, 11);
+            this.lastPassAuthAtempt.Name = "lastPassAuthAtempt";
+            this.lastPassAuthAtempt.Size = new System.Drawing.Size(16, 15);
+            this.lastPassAuthAtempt.TabIndex = 9;
+            this.lastPassAuthAtempt.Text = "...";
             // 
             // Form2
             // 
@@ -246,5 +268,7 @@ namespace LastPassGui
         private System.Windows.Forms.TextBox lastPassAuthPasscodeInput;
         private System.Windows.Forms.Button lastPassAuthContinue;
         private System.Windows.Forms.Button lastPassAuthCancel;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Label lastPassAuthAtempt;
     }
 }

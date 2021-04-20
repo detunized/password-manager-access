@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Moq;
@@ -462,8 +463,9 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public async void ApproveOob_calls_Ui_ApproveLastPassAuth()
         {
+            using var done = new SemaphoreSlim(0, 1);
             var ui = new Mock<IUi>();
-            ui.Setup(x => x.ApproveLastPassAuth()).Returns(Task.FromResult(OobResult.Cancel));
+            ui.Setup(x => x.ApproveLastPassAuth(0, done)).Returns(Task.FromResult(OobResult.Cancel));
 
             await Client.ApproveOob(Username, LastPassAuthOobParameters, ui.Object, null);
 
@@ -784,7 +786,7 @@ namespace PasswordManagerAccess.Test.LastPass
             public Task<OtpResult> ProvideGoogleAuthPasscode() => Task.FromResult(_otp);
             public Task<OtpResult> ProvideMicrosoftAuthPasscode() => Task.FromResult(_otp);
             public Task<OtpResult> ProvideYubikeyPasscode() => Task.FromResult(_otp);
-            public Task<OobResult> ApproveLastPassAuth() => Task.FromResult(_oob);
+            public Task<OobResult> ApproveLastPassAuth(int attempt, SemaphoreSlim done) => Task.FromResult(_oob);
             public Task<OobResult> ApproveDuo() => Task.FromResult(_oob);
 
             public Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices) =>

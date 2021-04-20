@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 
@@ -26,7 +27,7 @@ namespace PasswordManagerAccess.LastPass.Ui
         // 3. Allow the user to provide the passcode manually. All supported OOB methods allow to enter the
         //    passcode instead of performing an action in the app. In this case the UI should return
         //    OobResult.ContinueWithPasscode(passcode, rememberMe).
-        Task<OobResult> ApproveLastPassAuth();
+        Task<OobResult> ApproveLastPassAuth(int attempt, SemaphoreSlim done);
         Task<OobResult> ApproveDuo();
     }
 

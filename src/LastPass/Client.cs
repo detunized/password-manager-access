@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -187,6 +188,12 @@ namespace PasswordManagerAccess.LastPass
             return session;
         }
 
+        internal enum OobState
+        {
+            PollOob,
+            Otp
+        }
+
         // Returns a valid session or throws
         internal static async Task<Session> LoginWithOob(string username,
                                                          string password,
@@ -196,45 +203,178 @@ namespace PasswordManagerAccess.LastPass
                                                          IUi ui,
                                                          RestClient rest)
         {
-            var answer = await ApproveOob(username, parameters, ui, rest);
+            if (!parameters.TryGetValue("outofbandtype", out var method))
+                throw new InternalErrorException("Out of band method is not specified");
 
-            if (answer == OobResult.Cancel)
-                throw new CanceledMultiFactorException("Out of band step is canceled by the user");
-
-            var extraParameters = new Dictionary<string, object>(1);
-            if (answer.WaitForOutOfBand)
-                extraParameters["outofbandrequest"] = 1;
-            else
-                extraParameters["otp"] = answer.Passcode;
-
-            Session session;
-            for (;;)
+            return method switch
             {
-                // In case of the OOB auth the server doesn't respond instantly. This works more like a long poll.
-                // The server times out in about 10 seconds so there's no need to back off.
-                var response = await PerformSingleLoginRequest(username,
-                                                               password,
-                                                               keyIterationCount,
-                                                               extraParameters,
-                                                               clientInfo,
-                                                               rest);
+                "lastpassauth" => await LoginWithOob_LastPassAuth(username, password, keyIterationCount, clientInfo, ui, rest),
+                "duo" => await LoginWithOob_DuoWebSdk(username, password, keyIterationCount, parameters, clientInfo, ui, rest),
+                _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported")
+            };
+        }
 
-                session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
-                if (session != null)
+        // Returns a valid session or throws
+        internal static async Task<Session> LoginWithOob_LastPassAuth(string username,
+                                                                      string password,
+                                                                      int keyIterationCount,
+                                                                      ClientInfo clientInfo,
+                                                                      IUi ui,
+                                                                      RestClient rest)
+        {
+            // The default behavior is to poll the server for OOB approval until
+            // the user says they'd rather enter the passcode.
+            var state = OobState.PollOob;
+            var otpAttempt = 0;
+            var passcode = "";
+            var rememberMe = false;
+
+            Session session = null;
+            while (session == null)
+            {
+                switch (state)
+                {
+                case OobState.PollOob:
+                    {
+                        using var doneSignal = new SemaphoreSlim(0, 1);
+                        var approveTask = ui.ApproveLastPassAuth(otpAttempt, doneSignal);
+
+                        var extraParameters = new Dictionary<string, object> { ["outofbandrequest"] = 1 };
+
+                        for (; ; )
+                        {
+                            // In case of the OOB auth the server doesn't respond instantly. This works more like a long poll.
+                            // The server times out in about 10 seconds so there's no need to back off.
+                            var checkOobTask = PerformSingleLoginRequest(username,
+                                                                         password,
+                                                                         keyIterationCount,
+                                                                         extraParameters,
+                                                                         clientInfo,
+                                                                         rest);
+
+                            var completedTask = await Task.WhenAny(approveTask, checkOobTask);
+
+                            // The user responded from the UI
+                            if (approveTask.IsCompleted)
+                            {
+                                var answer = approveTask.Result;
+
+                                // 2FA canceled. We're done for good!
+                                if (answer == OobResult.Cancel)
+                                {
+                                    // TODO: Cancel checkOobTask
+                                    throw new CanceledMultiFactorException("Out of band step is canceled by the user");
+                                }
+
+                                // The user came back with the passcode.
+                                passcode = answer.Passcode;
+                                rememberMe = answer.RememberMe;
+                                state = OobState.Otp;
+
+                                break;
+                            }
+                            else if (checkOobTask.IsCompleted)
+                            {
+                                var response = checkOobTask.Result;
+                                session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+
+                                // The server told us the OOB was approved
+                                if (session != null)
+                                {
+                                    // Tell the UI to stop waiting as we're done
+                                    doneSignal.Release();
+                                    rememberMe = (await approveTask).RememberMe;
+
+                                    // Done
+                                    break;
+                                }
+
+                                if (GetOptionalErrorAttribute(response, "cause") != "outofbandrequired")
+                                    throw MakeLoginError(response);
+
+                                // Retry
+                                extraParameters["outofbandretry"] = "1";
+                                extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
+
+                                // OOB check timed out, try again
+                                continue;
+                            }
+                            else
+                            {
+                                throw new InternalErrorException("Logic error: expected at least one task to complete");
+                            }
+                        }
+                    }
                     break;
+                case OobState.Otp:
+                    {
+                        if (otpAttempt >= 3)
+                            throw new BadMultiFactorException($"Second factor authentication failed after {otpAttempt} attempts");
 
-                if (GetOptionalErrorAttribute(response, "cause") != "outofbandrequired")
-                    throw MakeLoginError(response);
+                        otpAttempt++;
+                        var response = await PerformSingleLoginRequest(username,
+                                                                        password,
+                                                                        keyIterationCount,
+                                                                        new Dictionary<string, object>
+                                                                        {
+                                                                            ["otp"] = passcode,
+                                                                            ["provider"] = "lastpassauth",
+                                                                        },
+                                                                        clientInfo,
+                                                                        rest);
 
-                // Retry
-                extraParameters["outofbandretry"] = "1";
-                extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
+                        session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+                        if (session != null)
+                        {
+                            // Done
+                            break;
+                        }
+
+                        if (GetOptionalErrorAttribute(response, "cause") != "multifactorresponsefailed")
+                            throw MakeLoginError(response);
+
+                        // Go back to polling
+                        state = OobState.PollOob;
+                    }
+                    break;
+                }
             }
 
-            if (answer.RememberMe)
+            if (rememberMe)
                 await MarkDeviceAsTrusted(session, clientInfo, rest);
 
             return session;
+        }
+
+        // Returns a valid session or throws
+        internal static async Task<Session> LoginWithOob_DuoWebSdk(string username,
+                                                                   string password,
+                                                                   int keyIterationCount,
+                                                                   Dictionary<string, string> parameters,
+                                                                   ClientInfo clientInfo,
+                                                                   IUi ui,
+                                                                   RestClient rest)
+        {
+            var result = await ApproveDuo(username, parameters, ui, rest);
+            if (result == OobResult.Cancel)
+                throw new CanceledMultiFactorException("Out of band step is canceled by the user");
+
+            var response = await PerformSingleLoginRequest(username,
+                                                           password,
+                                                           keyIterationCount,
+                                                           new Dictionary<string, object>
+                                                           {
+                                                               ["otp"] = result.Passcode,
+                                                               ["provider"] = "duo",
+                                                           },
+                                                           clientInfo,
+                                                           rest);
+
+            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+            if (session != null)
+                return session;
+
+            throw MakeLoginError(response);
         }
 
         internal static async Task<OobResult> ApproveOob(string username,
@@ -247,10 +387,16 @@ namespace PasswordManagerAccess.LastPass
 
             return method switch
             {
-                "lastpassauth" => await ui.ApproveLastPassAuth(),
+                "lastpassauth" => await ApproveLastPassAuth(ui),
                 "duo" => await ApproveDuo(username, parameters, ui, rest),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported")
             };
+        }
+
+        internal static async Task<OobResult> ApproveLastPassAuth(IUi ui)
+        {
+            using var done = new SemaphoreSlim(0, 1);
+            return await ui.ApproveLastPassAuth(0, done);
         }
 
         internal static async Task<OobResult> ApproveDuo(string username,

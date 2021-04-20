@@ -20,8 +20,8 @@ namespace LastPassGui
         {
             InitializeComponent();
 
-            duoDevicePanel.Visible = false;
-            lastPassAuthPanel.Visible = false;
+            duoDevicePanel.Enabled = false;
+            lastPassAuthPanel.Enabled = false;
         }
 
         public void SetDefaults(string username, string password, string deviceId, string description)
@@ -70,7 +70,7 @@ namespace LastPassGui
             throw new NotImplementedException();
         }
 
-        public async Task<OobResult> ApproveLastPassAuth()
+        public async Task<OobResult> ApproveLastPassAuth(int attempt, SemaphoreSlim done)
         {
             using var cancelSemaphore = new SemaphoreSlim(0, 1);
             using var continueSemaphore = new SemaphoreSlim(0, 1);
@@ -78,23 +78,26 @@ namespace LastPassGui
             void cancelHandler(object s, EventArgs e) => cancelSemaphore.Release();
             void continueHandler(object s, EventArgs e) => continueSemaphore.Release();
 
+            lastPassAuthAtempt.Text = $"Attempt: {attempt + 1}";
             lastPassAuthCancel.Click += cancelHandler;
             lastPassAuthContinue.Click += continueHandler;
-            lastPassAuthPanel.Visible = true;
+            lastPassAuthPanel.Enabled = true;
 
+            var doneTask = done.WaitAsync();
             var cancelTask = cancelSemaphore.WaitAsync();
             var continueTask = continueSemaphore.WaitAsync();
 
-            var completedTask = await Task.WhenAny(new[] { cancelTask, continueTask });
+            var completedTask = await Task.WhenAny(doneTask, cancelTask, continueTask);
 
-            lastPassAuthPanel.Visible = false;
+            lastPassAuthPanel.Enabled = false;
             lastPassAuthCancel.Click -= cancelHandler;
             lastPassAuthContinue.Click -= continueHandler;
 
-            if (completedTask == cancelTask)
-            {
+            if (completedTask == doneTask)
                 return OobResult.Cancel;
-            }
+
+            if (completedTask == cancelTask)
+                return OobResult.Cancel;
 
             if (completedTask == continueTask)
                 return OobResult.ContinueWithPasscode(lastPassAuthPasscodeInput.Text, lastPassAuthRememberMeCheck.Checked);
@@ -139,11 +142,11 @@ namespace LastPassGui
             duoDevicePick.SelectedIndexChanged += deviceHandler;
             duoFactorPick.SelectedIndexChanged += factorHandler;
             duoContinue.Click += continueHandler;
-            duoDevicePanel.Visible = true;
+            duoDevicePanel.Enabled = true;
 
             await semaphore.WaitAsync();
 
-            duoDevicePanel.Visible = false;
+            duoDevicePanel.Enabled = false;
             duoDevicePick.SelectedIndexChanged -= deviceHandler;
             duoFactorPick.SelectedIndexChanged -= factorHandler;
             duoContinue.Click -= continueHandler;

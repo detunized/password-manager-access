@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
@@ -31,7 +32,7 @@ namespace PasswordManagerAccess.Example.LastPass
                 return await ProvideOtpPasscode("Yubikey");
             }
 
-            public async Task<OobResult> ApproveLastPassAuth()
+            public async Task<OobResult> ApproveLastPassAuth(int attempt, SemaphoreSlim done)
             {
                 return await ApproveOutOfBand("LastPass Authenticator");
             }
