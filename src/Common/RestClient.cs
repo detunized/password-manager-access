@@ -305,7 +305,18 @@ namespace PasswordManagerAccess.Common
         // TODO: Make these readonly dictionaries
         public static readonly HttpHeaders NoHeaders = new HttpHeaders();
         public static readonly HttpCookies NoCookies = new HttpCookies();
+
+        // NoParameters is a normal value, it's just just for convenience to not to type
+        // new Dictionary<string, object>() every time. Plus it saves an allocation.
+        // For the JSON requests it's sent as "{}", for the Form requests as "".
         public static readonly PostParameters NoParameters = new PostParameters();
+
+        // JsonBlank is a special case. It's used to send blank or no content which is
+        // impossible to express in JSON. This is only relevant for JSON variants.
+        public static readonly PostParameters JsonBlank = new PostParameters();
+
+        // JsonNull is used to send "null". This is only relevant for JSON variants.
+        public static readonly PostParameters JsonNull = new PostParameters();
 
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
@@ -584,7 +595,18 @@ namespace PasswordManagerAccess.Common
 
         private static HttpContent ToJsonContent(PostParameters parameters)
         {
-            return new StringContent(JsonConvert.SerializeObject(parameters), Encoding.UTF8, "application/json");
+            return new StringContent(JsonParametersToString(parameters), Encoding.UTF8, "application/json");
+        }
+
+        private static string JsonParametersToString(PostParameters parameters)
+        {
+            if (parameters == JsonBlank)
+                return "";
+
+            if (parameters == JsonNull)
+                return "null";
+
+            return JsonConvert.SerializeObject(parameters);
         }
 
         private static HttpContent ToFormContent(PostParameters parameters)

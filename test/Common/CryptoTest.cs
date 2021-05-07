@@ -288,6 +288,60 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
+        // XChaCha20Poly1305
+        //
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(15)]
+        public void DecryptXChaCha20Poly1305_throws_on_too_short_ciphertext(int size)
+        {
+            Exceptions.AssertThrowsInternalError(
+                () => Crypto.DecryptXChaCha20Poly1305(new byte[size], new byte[24], new byte[32]),
+                "Ciphertext must be at least 16 bytes long");
+        }
+
+        [Theory]
+        [MemberData(nameof(XChaCha20Poly1305TestCases))]
+        public void DecryptXChaCha20Poly1305_decrypts_ciphertext(CryptoTestVectors.XChaCha20Poly1305TestVector v)
+        {
+            // TODO: Associated data is not supported yet
+            if (v.AssociatedData.Length > 0)
+                return;
+
+            var plaintext = Crypto.DecryptXChaCha20Poly1305(v.Ciphertext, v.Nonce, v.Key);
+
+            Assert.Equal(v.Plaintext, plaintext);
+        }
+
+        [Theory]
+        [MemberData(nameof(XChaCha20Poly1305TestCases))]
+        public void DecryptXChaCha20Poly1305_throws_on_corrupt_data(CryptoTestVectors.XChaCha20Poly1305TestVector v)
+        {
+            // TODO: Associated data is not supported yet
+            if (v.AssociatedData.Length > 0)
+                return;
+
+            static void Check(byte[] ciphertext, byte[] nonce, byte[] key)
+            {
+                Exceptions.AssertThrowsCrypto(() => Crypto.DecryptXChaCha20Poly1305(ciphertext, nonce, key),
+                                              "Tag doesn't match, the data is corrupted or the key is incorrect");
+            }
+
+            static byte[] Corrupt(byte[] original)
+            {
+                var corrupted = original.Sub(0, int.MaxValue);
+                corrupted[corrupted.Length / 2]++;
+                return corrupted;
+            }
+
+            Check(Corrupt(v.Ciphertext), v.Nonce, v.Key);
+            Check(v.Ciphertext, Corrupt(v.Nonce), v.Key);
+            Check(v.Ciphertext, v.Nonce, Corrupt(v.Key));
+        }
+
+        //
         // RSA
         //
 
@@ -397,6 +451,13 @@ namespace PasswordManagerAccess.Test.Common
         // $ echo -n 'All your base are belong to us!!' | openssl enc -aes-256-cbc -K 39f394bd59d0cc1e2fe3db0d878f8f7702056fd16be7e8d57d64537fe1361a18 -iv 605ba2015660383d8afaceb2f3268c3b -nopad | base64
         // TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=
         private static readonly byte[] AesCiphertextCbcAligned = "TZ1+if9ofqRKTatyUaOnfono97F1Jjr+jVBAKgu/dq8=".Decode64();
+
+        //
+        // XChaCha20Poly1305
+        //
+
+        public static readonly IEnumerable<object[]> XChaCha20Poly1305TestCases =
+            TestBase.ToMemberData(CryptoTestVectors.XChaCha20Poly1305TestVectors);
 
         //
         // RSA

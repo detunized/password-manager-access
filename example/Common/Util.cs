@@ -21,7 +21,6 @@ namespace PasswordManagerAccess.Example.Common
             return ReadConfig(filename);
         }
 
-
         // Read YAML-like config. Example:
         // username: dude
         // password: farout

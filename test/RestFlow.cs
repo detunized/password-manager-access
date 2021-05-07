@@ -248,13 +248,31 @@ namespace PasswordManagerAccess.Test
             return GetLastResponse().Expected;
         }
 
-        void IRestTransport.MakeRequest<TContent>(Uri uri,
-                                                  HttpMethod method,
-                                                  HttpContent content,
-                                                  IReadOnlyDictionary<string, string> headers,
-                                                  IReadOnlyDictionary<string, string> cookies,
-                                                  int maxRedirectCount,
-                                                  RestResponse<TContent> allocatedResult)
+        //
+        // IRestTransport implementation
+        //
+
+        public void MakeRequest<TContent>(Uri uri,
+                                          HttpMethod method,
+                                          HttpContent content,
+                                          IReadOnlyDictionary<string, string> headers,
+                                          IReadOnlyDictionary<string, string> cookies,
+                                          int maxRedirectCount,
+                                          RestResponse<TContent> allocatedResult)
+        {
+            // Make sure we don't try to request in parallel during testing.
+            // Otherwise RestFlow has to be reworked to be made thread safe.
+            lock (_requestLock)
+                MakeRequestLocked(uri, method, content, headers, cookies, maxRedirectCount, allocatedResult);
+        }
+
+        private void MakeRequestLocked<TContent>(Uri uri,
+                                                 HttpMethod method,
+                                                 HttpContent content,
+                                                 IReadOnlyDictionary<string, string> headers,
+                                                 IReadOnlyDictionary<string, string> cookies,
+                                                 int maxRedirectCount,
+                                                 RestResponse<TContent> allocatedResult)
         {
             if (_currentIndex >= _responses.Count)
                 Assert.True(false, $"Too many requests, there's no response available for {method} to '{uri}'");
@@ -315,9 +333,13 @@ namespace PasswordManagerAccess.Test
             }
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
         }
+
+        //
+        // Data
+        //
 
         private static readonly string[] NoFragments = new string[0];
         private static readonly Dictionary<string, string> NoHeaders = new Dictionary<string, string>();
@@ -325,5 +347,7 @@ namespace PasswordManagerAccess.Test
 
         private int _currentIndex = 0;
         private readonly List<Response> _responses = new List<Response>();
+
+        private readonly object _requestLock = new object();
     }
 }
