@@ -233,7 +233,14 @@ namespace PasswordManagerAccess.Common
 
         private static HttpClient MakeDefaultHttpClient()
         {
-            var handler = new HttpClientHandler() { UseCookies = false, AllowAutoRedirect = false };
+            var handler = new HttpClientHandler
+            {
+                UseCookies = false,
+                AllowAutoRedirect = false,
+#if MITM_PROXY
+                Proxy = new WebProxy("http://127.0.0.1:8080"),
+#endif
+            };
             return new HttpClient(handler, true);
         }
 
