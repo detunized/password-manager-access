@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Bitwarden.Ui;
@@ -18,7 +19,8 @@ namespace PasswordManagerAccess.Bitwarden
                                           string baseUrl,
                                           IUi ui,
                                           ISecureStorage storage,
-                                          IRestTransport transport)
+                                          IRestTransport transport,
+                                          Logger logger = null)
         {
             // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
             if (baseUrl.IsNullOrEmpty())
@@ -42,7 +44,7 @@ namespace PasswordManagerAccess.Bitwarden
             var encryptedVault = DownloadVault(rest, token);
 
             // 6. Decrypt and parse the vault. Done!
-            return DecryptVault(encryptedVault, key);
+            return DecryptVault(encryptedVault, key, logger);
         }
 
         //
@@ -398,16 +400,62 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static Account[] DecryptVault(Response.Vault vault, byte[] key)
+        internal static Account[] DecryptVault(Response.Vault vault, byte[] key, Logger logger = null)
         {
             var vaultKey = DecryptVaultKey(vault.Profile, key);
             var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
+            if (logger != null)
+                LogPrivateKeySafely(privateKey, logger);
             var orgKeys = DecryptOrganizationKeys(vault.Profile, privateKey);
             var folders = ParseFolders(vault.Folders, vaultKey);
 
             return vault.Ciphers
                 .Where(i => i.Type == Response.ItemType.Login)
                 .Select(i => ParseAccountItem(i, vaultKey, orgKeys, folders)).ToArray();
+        }
+
+        internal static void LogPrivateKeySafely(byte[] asn1, Logger logger)
+        {
+            // Log parsed key
+            var rsa = Pem.ParsePrivateKeyPkcs8(asn1);
+            LogPublicItem(rsa.Exponent, "Exponent", logger);
+            LogPublicItem(rsa.Modulus, "Modulus", logger);
+            LogPrivateItem(rsa.P, "P", logger);
+            LogPrivateItem(rsa.Q, "Q", logger);
+            LogPrivateItem(rsa.DP, "DP", logger);
+            LogPrivateItem(rsa.DQ, "DQ", logger);
+            LogPrivateItem(rsa.InverseQ, "InverseQ", logger);
+            LogPrivateItem(rsa.D, "D", logger);
+
+            // Log ASN.1 stream with private bits stripped out
+            var hex = new StringBuilder(asn1.ToHex());
+            CensorBytes(hex, rsa.P);
+            CensorBytes(hex, rsa.Q);
+            CensorBytes(hex, rsa.DP);
+            CensorBytes(hex, rsa.DQ);
+            CensorBytes(hex, rsa.InverseQ);
+            CensorBytes(hex, rsa.D);
+            logger.Log("Raw key ASN.1: {0}", hex);
+        }
+
+        internal static void LogPublicItem(byte[] item, string name, Logger logger)
+        {
+            logger.Log("Parsed key: {0} = ({1}) {2}", name, item.Length, item.ToHex());
+        }
+
+        internal static void LogPrivateItem(byte[] item, string name, Logger logger)
+        {
+            logger.Log("Parsed key: {0} = ({1}) {2}...{3}",
+                       name,
+                       item.Length,
+                       item.Sub(0, 10).ToHex(),
+                       item.Sub(item.Length - 11, 10).ToHex());
+        }
+
+        internal static void CensorBytes(StringBuilder hex, byte[] item)
+        {
+            var fragment = item.Sub(10, item.Length - 20).ToHex();
+            hex.Replace(fragment, "-".Repeat(fragment.Length));
         }
 
         internal static byte[] DecryptVaultKey(Response.Profile profile, byte[] derivedKey)

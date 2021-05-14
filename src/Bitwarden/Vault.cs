@@ -15,9 +15,14 @@ namespace PasswordManagerAccess.Bitwarden
         // The device ID should be unique to each installation, but it should not be new on
         // every run. A new random device ID should be generated with GenerateRandomDeviceId
         // on the first run and reused later on.
-        public static Vault Open(string username, string password, string deviceId, IUi ui, ISecureStorage storage)
+        public static Vault Open(string username,
+                                 string password,
+                                 string deviceId,
+                                 IUi ui,
+                                 ISecureStorage storage,
+                                 ILogger logger = null)
         {
-            return Open(username, password, deviceId, null, ui, storage);
+            return Open(username, password, deviceId, null, ui, storage, logger);
         }
 
         // This version allows custom base URL. baseUrl could be set to null or "" for a default value.
@@ -26,10 +31,18 @@ namespace PasswordManagerAccess.Bitwarden
                                  string deviceId,
                                  string baseUrl,
                                  IUi ui,
-                                 ISecureStorage storage)
+                                 ISecureStorage storage,
+                                 ILogger logger = null)
         {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVault(username, password, deviceId, baseUrl, ui, storage, transport));
+            return new Vault(Client.OpenVault(username,
+                                              password,
+                                              deviceId,
+                                              baseUrl,
+                                              ui,
+                                              storage,
+                                              transport,
+                                              Logger.WrapOrNull(logger)));
         }
 
         public static string GenerateRandomDeviceId()

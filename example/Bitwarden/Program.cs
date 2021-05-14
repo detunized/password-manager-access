@@ -71,6 +71,14 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
         }
 
+        private class ConsoleLogger: ILogger
+        {
+            public void Log(DateTime timestamp, string text)
+            {
+                Util.WriteLine($"{timestamp} {text}", ConsoleColor.Gray);
+            }
+        }
+
         public static void Main(string[] args)
         {
             var config = Util.ReadConfig();
@@ -98,7 +106,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
                                        deviceId,
                                        baseUrl,
                                        new TextUi(),
-                                       new PlainStorage());
+                                       new PlainStorage(),
+                                       new ConsoleLogger());
 
                 for (int i = 0; i < vault.Accounts.Length; ++i)
                 {
