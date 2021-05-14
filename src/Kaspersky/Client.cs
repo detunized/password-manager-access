@@ -355,7 +355,7 @@ namespace PasswordManagerAccess.Kaspersky
         //
 
         internal const string SessionCookieName = "AuthSession";
-        internal static readonly string[] AuthCookieNames = {"AuthenticationValidityTicket", "myk_sid", "myk_auth"};
+        internal static readonly string[] AuthCookieNames = {"myk_sid", "myk_auth"};
 
         internal const string DeviceKind = "browser";
         internal const int ServiceId = 5;
