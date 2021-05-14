@@ -17,7 +17,7 @@ The following services are supported by this library:
   - [Bitwarden](https://bitwarden.com)
   - [Dashlane](https://dashlane.com)
   - [Dropbox Passwords (work in progress)](https://www.dropbox.com/features/security/passwords)
-  - [Kaspersky Password Manager (broken, being fixed)](https://www.kaspersky.com/password-manager)
+  - [Kaspersky Password Manager](https://www.kaspersky.com/password-manager)
   - [LastPass](https://lastpass.com)
   - [RoboForm](https://roboform.com)
   - [Sticky Password](https://www.stickypassword.com)

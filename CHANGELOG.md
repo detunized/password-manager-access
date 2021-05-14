@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.4.2
+  - Kaspersky: fixed a problem during login (obsolete cookie)
+
 ## 8.4.1
   - Kdbx: added public facing API that was forgotten in 8.4.0
 
