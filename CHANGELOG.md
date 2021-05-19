@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.4.3
+  - LastPass: fixed a problem during login where it would fail with an unknown error
+
 ## 8.4.2
   - Kaspersky: fixed a problem during login (obsolete cookie)
 
