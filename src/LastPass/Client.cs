@@ -47,19 +47,42 @@ namespace PasswordManagerAccess.LastPass
         internal static Session Login(string username, string password, ClientInfo clientInfo,IUi ui, RestClient rest)
         {
             // 1. First we need to request PBKDF2 key iteration count.
-            var keyIterationCount = RequestIterationCount(username, rest);
+            //
+            // We no longer request the iteration count from the server in a separate request because it
+            // started to fail in weird ways. It seems there's a special combination or the UA and cookies
+            // that returns the correct result. And that is not 100% reliable. After two or three attempts
+            // it starts to fail again with an incorrect result.
+            //
+            // So we just went back a few years to the original way LastPass used to handle the iterations.
+            // Namely, submit the default value and if it fails, the error would contain the correct value:
+            // <response><error iterations="5000" /></response>
+            var keyIterationCount = 100100;
 
-            // 2. Knowing the iterations count we can hash the password and log in.
-            //    One the first attempt simply with the username and password.
-            var response = PerformSingleLoginRequest(username,
+            XDocument response = null;
+            Session session = null;
+            for (var i = 0; i < 2; i++)
+            {
+                // 2. Knowing the iterations count we can hash the password and log in.
+                //    One the first attempt simply with the username and password.
+                response = PerformSingleLoginRequest(username,
                                                      password,
                                                      keyIterationCount,
                                                      new Dictionary<string, object>(),
                                                      clientInfo,
                                                      rest);
-            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
-            if (session != null)
-                return session;
+                session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+                if (session != null)
+                    return session;
+
+                // It's possible for the request above to come back with the correct iteration count.
+                // In this case we have to parse and repeat.
+                var correctIterationCount = GetOptionalErrorAttribute(response, "iterations");
+                if (correctIterationCount == null)
+                    break;
+
+                if (!int.TryParse(correctIterationCount, out keyIterationCount))
+                    throw new InternalErrorException($"Failed to parse the iteration count, expected an integer value '{correctIterationCount}'");
+            }
 
             // 3. The simple login failed. This is usually due to some error, invalid credentials or
             //    a multifactor authentication being enabled.
@@ -93,19 +116,6 @@ namespace PasswordManagerAccess.LastPass
                 throw MakeLoginError(response);
 
             return session;
-        }
-
-        internal static int RequestIterationCount(string username, RestClient rest)
-        {
-            var response = rest.PostForm("iterations.php", new Dictionary<string, object> {["email"] = username});
-            if (!response.IsSuccessful)
-                throw MakeError(response);
-
-            // LastPass server is supposed to return plain text int, nothing fancy.
-            if (int.TryParse(response.Content, out var count))
-                return count;
-
-            throw new InternalErrorException("Request iteration count failed: unexpected response");
         }
 
         internal static XDocument PerformSingleLoginRequest(string username,

@@ -21,8 +21,25 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
-                    .ExpectUrl("/iterations.php")
+                .Post(OkResponseNoPrivateKey)
+                    .ExpectUrl("/login.php")
+                .Get(TestData.BlobBase64)
+                    .ExpectUrl("/getaccts.php?")
+                .Post("")
+                    .ExpectUrl("/logout.php");
+
+            // TODO: Decryption fails here because of the incorrect password
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void OpenVault_returns_accounts_with_iteration_retry()
+        {
+            var flow = new RestFlow()
+                .Post(IterationResponse)
+                    .ExpectUrl("/login.php")
                 .Post(OkResponseNoPrivateKey)
                     .ExpectUrl("/login.php")
                 .Get(TestData.BlobBase64)
@@ -40,8 +57,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_otp()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
-                    .ExpectUrl("/iterations.php")
                 .Post(OtpRequiredResponse)
                     .ExpectUrl("/login.php")
                 .Post(OkResponseNoPrivateKey)
@@ -62,8 +77,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_otp_and_rememeber_me()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
-                    .ExpectUrl("/iterations.php")
                 .Post(OtpRequiredResponse)
                     .ExpectUrl("/login.php")
                 .Post(OkResponseNoPrivateKey)
@@ -86,8 +99,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_oob()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
-                    .ExpectUrl("/iterations.php")
                 .Post(OobRequiredResponse)
                     .ExpectUrl("/login.php")
                 .Post(OobRetryResponse)
@@ -113,8 +124,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_oob_and_rememeber_me()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
-                    .ExpectUrl("/iterations.php")
                 .Post(OobRequiredResponse)
                     .ExpectUrl("/login.php")
                 .Post(OobRetryResponse)
@@ -142,7 +151,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_throws_on_invalid_username()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post("<response><error cause='unknownemail' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
@@ -154,7 +162,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_throws_on_invalid_password()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post("<response><error cause='unknownpassword' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
@@ -166,7 +173,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_throws_on_canceled_otp()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post(OtpRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
@@ -178,7 +184,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_throws_on_failed_otp()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post(OtpRequiredResponse)
                 .Post("<response><error cause='googleauthfailed' /></response>");
 
@@ -191,7 +196,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_throws_on_canceled_oob()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post(OobRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
@@ -203,7 +207,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_throws_on_failed_oob()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post(OobRequiredResponse)
                 .Post("<response><error cause='multifactorresponsefailed' /></response>");
 
@@ -220,7 +223,6 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_throws_on_other_errors(string response, string expected)
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post(response);
 
             Exceptions.AssertThrowsInternalError(
@@ -232,11 +234,24 @@ namespace PasswordManagerAccess.Test.LastPass
         public void Login_returns_session()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString())
                 .Post(OkResponse);
 
             var session = Client.Login(Username, Password, ClientInfo, null, flow);
 
+            Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void Login_returns_session_with_iteration_retry()
+        {
+            var flow = new RestFlow()
+                .Post(IterationResponse)
+                .Post(OkResponse);
+
+            var session = Client.Login(Username, Password, ClientInfo, null, flow);
+
+            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
         }
 
@@ -244,13 +259,28 @@ namespace PasswordManagerAccess.Test.LastPass
         public void Login_returns_session_with_otp()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString()) // 1. iterations
-                .Post(OtpRequiredResponse)          // 2. normal login attempt
-                .Post(OkResponse)                   // 3. login with otp
-                .Post("");                          // 4. save trusted device
+                .Post(OtpRequiredResponse) // 1. normal login attempt
+                .Post(OkResponse)          // 2. login with otp
+                .Post("");                 // 3. save trusted device
 
             var session = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
+            Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
+            AssertSessionWithPrivateKey(session);
+        }
+
+        [Fact]
+        public void Login_returns_session_with_iteration_retry_and_otp()
+        {
+            var flow = new RestFlow()
+                .Post(IterationResponse)   // 1. normal login attempt
+                .Post(OtpRequiredResponse) // 2. normal login attempt with updated iteration count
+                .Post(OkResponse)          // 3. login with otp
+                .Post("");                 // 4. save trusted device
+
+            var session = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
+
+            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
         }
 
@@ -258,51 +288,29 @@ namespace PasswordManagerAccess.Test.LastPass
         public void Login_returns_session_with_oob()
         {
             var flow = new RestFlow()
-                .Post(KeyIterationCount.ToString()) // 1. iterations
-                .Post(OobRequiredResponse)          // 2. normal login attempt
-                .Post(OkResponse)                   // 3. check oob
-                .Post("");                          // 4. save trusted device
+                .Post(OobRequiredResponse) // 1. normal login attempt
+                .Post(OkResponse)          // 2. check oob
+                .Post("");                 // 3. save trusted device
 
             var session = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
+            Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
         }
 
-        [Theory]
-        [InlineData("-1", -1)]
-        [InlineData("0", 0)]
-        [InlineData("1337", 1337)]
-        [InlineData("100100", 100100)]
-        public void RequestIterationCount_returns_iteration_count(string response, int expected)
-        {
-            var flow = new RestFlow().Post(response);
-            var count = Client.RequestIterationCount(Username, flow);
-
-            Assert.Equal(expected, count);
-        }
-
-        [Theory]
-        [InlineData("")]
-        [InlineData("abc")]
-        [InlineData("12345678901234567890")]
-        public void RequestIterationCount_throws_on_invalid_response(string response)
-        {
-            var flow = new RestFlow().Post(response);
-
-            Exceptions.AssertThrowsInternalError(
-                () => Client.RequestIterationCount(Username, flow),
-                "Request iteration count failed: unexpected response");
-        }
-
         [Fact]
-        public void RequestIterationCount_makes_POST_request_to_specific_url_with_parameters()
+        public void Login_returns_session_with_iteration_retry_and_oob()
         {
             var flow = new RestFlow()
-                .Post("0")
-                    .ExpectUrl("https://lastpass.com/iterations.php")
-                    .ExpectContent($"email={Username}");
+                .Post(IterationResponse)   // 1. normal login attempt
+                .Post(OobRequiredResponse) // 2. normal login attempt with updated iteration count
+                .Post(OkResponse)          // 3. check oob
+                .Post("");                 // 4. save trusted device
 
-            Client.RequestIterationCount(Username, flow.ToRestClient(BaseUrl));
+            var session = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
+
+            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
+            AssertSessionWithPrivateKey(session);
         }
 
         [Fact]
@@ -327,13 +335,13 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("https://lastpass.com/login.php")
                     .ExpectContent("method=cli")
                     .ExpectContent($"username={Username}")
-                    .ExpectContent($"iterations={KeyIterationCount}")
+                    .ExpectContent($"iterations={CorrectKeyIterationCount}")
                     .ExpectContent("hash=5e966139c28deab2c5955fcfa66ae6bebb55548a5f79d1d639abf7b0ce78d891")
                     .ExpectContent($"trustlabel={ClientInfo.Description}");
 
             Client.PerformSingleLoginRequest(Username,
                                              Password,
-                                             KeyIterationCount,
+                                             CorrectKeyIterationCount,
                                              new Dictionary<string, object>(),
                                              ClientInfo,
                                              flow.ToRestClient(BaseUrl));
@@ -345,7 +353,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post(OkResponse);
             var session = Client.LoginWithOtp(Username,
                                               Password,
-                                              KeyIterationCount,
+                                              DefaultKeyIterationCount,
                                               Client.OtpMethod.GoogleAuth,
                                               ClientInfo,
                                               OtpProvidingUi,
@@ -363,7 +371,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             Client.LoginWithOtp(Username,
                                 Password,
-                                KeyIterationCount,
+                                DefaultKeyIterationCount,
                                 Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
                                 OtpProvidingUi,
@@ -381,7 +389,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             Client.LoginWithOtp(Username,
                                 Password,
-                                KeyIterationCount,
+                                DefaultKeyIterationCount,
                                 Client.OtpMethod.GoogleAuth,
                                 ClientInfo,
                                 OtpProvidingWithRememberMeUi,
@@ -394,7 +402,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post(OkResponse);
             var session = Client.LoginWithOob(Username,
                                               Password,
-                                              KeyIterationCount,
+                                              DefaultKeyIterationCount,
                                               LastPassAuthOobParameters,
                                               ClientInfo,
                                               WaitingForOobUi,
@@ -414,7 +422,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             var session = Client.LoginWithOob(Username,
                                               Password,
-                                              KeyIterationCount,
+                                              DefaultKeyIterationCount,
                                               LastPassAuthOobParameters,
                                               ClientInfo,
                                               WaitingForOobUi,
@@ -432,7 +440,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             var session = Client.LoginWithOob(Username,
                                               Password,
-                                              KeyIterationCount,
+                                              DefaultKeyIterationCount,
                                               LastPassAuthOobParameters,
                                               ClientInfo,
                                               PasscodeProvidingOobUi,
@@ -452,7 +460,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             Client.LoginWithOob(Username,
                                 Password,
-                                KeyIterationCount,
+                                DefaultKeyIterationCount,
                                 LastPassAuthOobParameters,
                                 ClientInfo,
                                 WaitingForOobWithRememberMeUi,
@@ -673,7 +681,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ExtractSessionFromLoginResponse_returns_session()
         {
             var xml = XDocument.Parse(OkResponse);
-            var session = Client.ExtractSessionFromLoginResponse(xml, KeyIterationCount, ClientInfo);
+            var session = Client.ExtractSessionFromLoginResponse(xml, DefaultKeyIterationCount, ClientInfo);
 
             AssertSessionWithPrivateKey(session);
         }
@@ -684,7 +692,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ExtractSessionFromLoginResponse_returns_session_without_private_key(string response)
         {
             var xml = XDocument.Parse(response);
-            var session = Client.ExtractSessionFromLoginResponse(xml, KeyIterationCount, ClientInfo);
+            var session = Client.ExtractSessionFromLoginResponse(xml, DefaultKeyIterationCount, ClientInfo);
 
             AssertSessionWithoutPrivateKey(session);
         }
@@ -823,7 +831,6 @@ namespace PasswordManagerAccess.Test.LastPass
         private static void AssertSessionCommon(Session session)
         {
             Assert.Equal("session-id", session.Id);
-            Assert.Equal(KeyIterationCount, session.KeyIterationCount);
             Assert.Equal("token", session.Token);
             Assert.Equal(Platform.Desktop, session.Platform);
         }
@@ -836,14 +843,15 @@ namespace PasswordManagerAccess.Test.LastPass
         private const string Username = "username";
         private const string Password = "password";
         private const string Otp = "123456";
-        private const int KeyIterationCount = 1337;
+        private const int DefaultKeyIterationCount = 100100;
+        private const int CorrectKeyIterationCount = 1337;
 
         private static readonly ClientInfo ClientInfo = new ClientInfo(Platform.Desktop,
                                                                        "client-id",
                                                                        "description");
 
         private static readonly Session Session = new Session("session-id",
-                                                              KeyIterationCount,
+                                                              CorrectKeyIterationCount,
                                                               "token",
                                                               Platform.Desktop,
                                                               "private-key");
@@ -898,6 +906,11 @@ namespace PasswordManagerAccess.Test.LastPass
         private const string OobRetryResponse =
             "<response>" +
                 "<error cause='outofbandrequired' retryid='retry-id' />" +
+            "</response>";
+
+        private const string IterationResponse =
+            "<response>" +
+                "<error iterations='1337' />" +
             "</response>";
     }
 }
