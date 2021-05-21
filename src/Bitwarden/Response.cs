@@ -18,6 +18,9 @@ namespace PasswordManagerAccess.Bitwarden.Response
         [JsonProperty(PropertyName = "error_description")]
         public string Description;
 
+        [JsonProperty(PropertyName = "Message")]
+        public string Message;
+
         [JsonProperty(PropertyName = "ErrorModel")]
         public ErrorModel Info;
     }
