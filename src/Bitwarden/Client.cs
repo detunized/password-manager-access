@@ -26,7 +26,7 @@ namespace PasswordManagerAccess.Bitwarden
             if (baseUrl.IsNullOrEmpty())
                 baseUrl = DefaultBaseUrl;
 
-            var rest = new RestClient(transport, baseUrl);
+            var rest = new RestClient(transport, baseUrl, defaultHeaders: DefaultRestHeaders);
 
             // 1. Request the number of KDF iterations needed to derive the key
             var iterations = RequestKdfIterationCount(username, rest);
@@ -328,9 +328,9 @@ namespace PasswordManagerAccess.Bitwarden
                 {"password", passwordHash.ToBase64()},
                 {"grant_type", "password"},
                 {"scope", "api offline_access"},
-                {"client_id", "web"},
-                {"deviceType", "9"},
-                {"deviceName", "chrome"},
+                {"client_id", "cli"},
+                {"deviceType", DeviceType},
+                {"deviceName", DeviceName},
                 {"deviceIdentifier", deviceId},
             };
 
@@ -569,7 +569,12 @@ namespace PasswordManagerAccess.Bitwarden
                 return new InternalErrorException("Unexpected response from the server");
             }
 
-            var message = error.Value.Info.Message ?? error.Value.Description ?? error.Value.Id ?? "unknown error";
+            var e = error.Value;
+            var message = e.Info.Message ??
+                          e.Description ??
+                          e.Message ??
+                          e.Id ??
+                          "unknown error";
 
             if (message.Contains("Username or password is incorrect"))
                 return new BadCredentialsException(message);
@@ -603,6 +608,14 @@ namespace PasswordManagerAccess.Bitwarden
 
         private const string DefaultBaseUrl = "https://vault.bitwarden.com";
         private const string RememberMeTokenKey = "remember-me-token";
+        private const string DeviceType = "7";
+        private const string DeviceName = "macos";
+
+        private static readonly Dictionary<string, string> DefaultRestHeaders = new Dictionary<string, string>
+        {
+            ["User-Agent"] = "Bitwarden_CLI/[object Promise] (MACOS)",
+            ["Device-Type"] = DeviceType,
+        };
 
         private static readonly Response.KdfInfo DefaultKdfInfo = new Response.KdfInfo
         {

@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.4.4
+  - Bitwarden: fixed a protocol change
+  - Bitwarden: handle "too many requests" error in a better way
+
+## 8.4.3
+  - LastPass: fixed a problem during login where it would fail with an unknown error
+
 ## 8.4.2
   - Kaspersky: fixed a problem during login (obsolete cookie)
 
