@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.4.5
+  - RoboForm: fixed a crash when account parsing failed. Now the accounts that
+    failed to parse are marked with "failed to parse".
+
 ## 8.4.4
   - Bitwarden: fixed a protocol change
   - Bitwarden: handle "too many requests" error in a better way
