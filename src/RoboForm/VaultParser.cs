@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -91,11 +92,18 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static Account ParseAccount(string content, string name, string path)
         {
-            var json = JObject.Parse(content);
-            var url = json.StringAt("g", json.StringAt("m", ""));
-            var fields = ParseFields(json["f"] as JArray ?? new JArray());
-            var username = GuessUsername(fields);
-            var password = GuessPassword(fields);
+            var url = "failed to parse";
+            var fields = Array.Empty<Account.Field>();
+            var username = "failed to parse";
+            var password = "failed to parse";
+
+            if (Json.TryParse(content, out var json))
+            {
+                url = json.StringAt("g", json.StringAt("m", ""));
+                fields = ParseFields(json["f"] as JArray ?? new JArray());
+                username = GuessUsername(fields);
+                password = GuessPassword(fields);
+            }
 
             return new Account(name, path, url, fields, username, password);
         }

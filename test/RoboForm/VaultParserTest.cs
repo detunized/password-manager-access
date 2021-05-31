@@ -172,6 +172,30 @@ namespace PasswordManagerAccess.Test.RoboForm
             Assert.Null(item);
         }
 
+        [Fact]
+        public void ParseAccount_returns_parsed_account()
+        {
+            var json = "{\"p\":true,\"pwd\":\"passw0rd\",\"n\":\"\",\"g\":\"https://app.asana.com/\",\"m\":\"https://app.asana.com/\",\"f\":[{\"n\":\"e\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"dude@lebowski.com\",\"id\":\"email_input\"},{\"n\":\"p\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":2,\"v\":\"faroutman\",\"id\":\"password_input\"},{\"n\":\"Submit$\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":0,\"v\":\"555:692:login::0:Log In\\n\",\"id\":\"\"}]}";
+            var account = VaultParser.ParseAccount(json, "blah", "blah-blah");
+            Assert.Equal("blah", account.Name);
+            Assert.Equal("blah-blah", account.Path);
+            Assert.Equal("https://app.asana.com/", account.Url);
+            Assert.Equal("dude@lebowski.com", account.GuessedUsername);
+            Assert.Equal("faroutman", account.GuessedPassword);
+        }
+
+        [Fact]
+        public void ParseAccount_returns_dummy_account_when_parsing_fails()
+        {
+            var json = "~~~not-a-json~~~";
+            var account = VaultParser.ParseAccount(json, "blah", "blah-blah");
+            Assert.Equal("blah", account.Name);
+            Assert.Equal("blah-blah", account.Path);
+            Assert.Equal("failed to parse", account.Url);
+            Assert.Equal("failed to parse", account.GuessedUsername);
+            Assert.Equal("failed to parse", account.GuessedPassword);
+        }
+
         //
         // Data
         //
