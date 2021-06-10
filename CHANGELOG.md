@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.4.6
+  - 1Password: the login protocol updated to match the current
+  - 1Password: better error reporting on failures
+
 ## 8.4.5
   - RoboForm: fixed a crash when account parsing failed. Now the accounts that
     failed to parse are marked with "failed to parse".
