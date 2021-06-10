@@ -703,6 +703,17 @@ namespace PasswordManagerAccess.OnePassword
                 // Ignore, it wasn't a server error
             }
 
+            try
+            {
+                var reason = JsonConvert.DeserializeObject<R.FailureReason>(response).Reason;
+                if (!reason.IsNullOrEmpty())
+                    return new InternalErrorException($"The server responded with the failure reason: '{reason}'");
+            }
+            catch (JsonException)
+            {
+                // Ignore, it wasn't a server error
+            }
+
             return null;
         }
 

@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
@@ -72,6 +73,15 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         [Fact]
         public void StartNewSession_throws_on_invalid_json()
+        {
+            var flow = new RestFlow().Post("{'reason': 'deprecated'}", HttpStatusCode.Forbidden);
+
+            Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, flow),
+                                                 "The server responded with the failure reason: 'deprecated'");
+        }
+
+        [Fact]
+        public void StartNewSession_reports_failure_reason()
         {
             var flow = new RestFlow().Post("} invalid json {");
 

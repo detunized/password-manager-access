@@ -243,6 +243,12 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly string Message;
     }
 
+    internal class FailureReason
+    {
+        [JsonProperty("reason", Required = Required.Always)]
+        public readonly string Reason;
+    }
+
     internal class Mfa
     {
         [JsonProperty("dsecret", DefaultValueHandling = DefaultValueHandling.Populate)]
