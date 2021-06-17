@@ -122,6 +122,9 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     internal class KeysetInfo
     {
+        [JsonProperty("uuid", Required = Required.Always)]
+        public readonly string Id;
+
         [JsonProperty("encryptedBy", Required = Required.Always)]
         public readonly string EncryptedBy;
 

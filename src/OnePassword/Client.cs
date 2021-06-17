@@ -624,23 +624,47 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static void DecryptKeysets(R.KeysetInfo[] keysets, ClientInfo clientInfo, Keychain keychain)
         {
-            var sorted = keysets
-                .OrderByDescending(x => x.EncryptedBy == MasterKeyId) // everything with "mp" goes first
-                .ThenByDescending(x => x.SerialNumber)                // and then is sorted by "sn"
-                .ToArray();
+            // Find the master keyset
+            var masterKeyset = keysets
+                .Where(x => x.EncryptedBy == MasterKeyId)
+                .OrderByDescending(x => x.SerialNumber)
+                .FirstOrDefault();
 
-            if (sorted[0].EncryptedBy != MasterKeyId)
-                throw new InternalErrorException($"Invalid keyset (key must be encrypted by '{MasterKeyId}')");
+            if (masterKeyset is null)
+                throw new InternalErrorException("Master keyset not found");
 
-            var keyInfo = sorted[0].KeyOrMasterKey;
+            // Derive the master key. The rest of the keyset should decrypt by master or its derivatives.
+            var keyInfo = masterKeyset.KeyOrMasterKey;
             var masterKey = DeriveMasterKey(algorithm: keyInfo.Algorithm,
                                             iterations: keyInfo.Iterations,
                                             salt: keyInfo.Salt.Decode64Loose(),
                                             clientInfo: clientInfo);
             keychain.Add(masterKey);
 
-            foreach (var i in sorted)
-                DecryptKeyset(i, keychain);
+            // Build a topological map: key -> other keys encrypted by that key
+            var encryptsKeysets = new Dictionary<string, List<R.KeysetInfo>>();
+            foreach (var keyset in keysets)
+                encryptsKeysets.GetOrAdd(GetEncryptedBy(keyset), () => new List<R.KeysetInfo>()).Add(keyset);
+
+            // Start from "mp" and topologically walk the keys in a valid decryption order
+            var queue = new Queue<R.KeysetInfo>(encryptsKeysets[MasterKeyId]);
+            while (queue.Count > 0)
+            {
+                var keyset = queue.Dequeue();
+                DecryptKeyset(keyset, keychain);
+
+                // If the newly decrypted key encrypts some other keys, add them to the back of the queue
+                if (encryptsKeysets.TryGetValue(keyset.Id, out var newKeysets))
+                    foreach (var newKeyset in newKeysets)
+                        queue.Enqueue(newKeyset);
+            }
+        }
+
+        internal static string GetEncryptedBy(R.KeysetInfo keyset)
+        {
+            return keyset.EncryptedBy.IsNullOrEmpty()
+                ? keyset.KeyOrMasterKey.KeyId
+                : keyset.EncryptedBy;
         }
 
         internal static void DecryptKeyset(R.KeysetInfo keyset, Keychain keychain)
