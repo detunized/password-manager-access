@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.4.7
+  - 1Password: fixed a rarely occuring issue with the decryption of the keysets
+
 ## 8.4.6
   - 1Password: the login protocol updated to match the current
   - 1Password: better error reporting on failures
