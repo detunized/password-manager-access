@@ -238,7 +238,7 @@ namespace PasswordManagerAccess.Common
                 UseCookies = false,
                 AllowAutoRedirect = false,
 #if MITM_PROXY
-                Proxy = new WebProxy("http://127.0.0.1:8080"),
+                Proxy = new WebProxy("http://127.0.0.1:8888"),
 #endif
             };
             return new HttpClient(handler, true);
