@@ -28,7 +28,8 @@ namespace PasswordManagerAccess.OnePassword
         // a different result.
         public IReadOnlyDictionary<string, string> Sign(Uri uri,
                                                         HttpMethod method,
-                                                        IReadOnlyDictionary<string, string> headers)
+                                                        IReadOnlyDictionary<string, string> headers,
+                                                        HttpContent content)
         {
             var id = _requestId;
             _requestId += 1;

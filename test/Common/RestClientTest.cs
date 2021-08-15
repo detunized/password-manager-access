@@ -453,7 +453,8 @@ namespace PasswordManagerAccess.Test.Common
         {
             public IReadOnlyDictionary<string, string> Sign(Uri uri,
                                                             HttpMethod method,
-                                                            IReadOnlyDictionary<string, string> headers)
+                                                            IReadOnlyDictionary<string, string> headers,
+                                                            HttpContent content)
             {
                 return headers.Merge(new Dictionary<string, string>
                 {
@@ -468,7 +469,8 @@ namespace PasswordManagerAccess.Test.Common
         {
             public IReadOnlyDictionary<string, string> Sign(Uri uri,
                                                             HttpMethod method,
-                                                            IReadOnlyDictionary<string, string> headers)
+                                                            IReadOnlyDictionary<string, string> headers,
+                                                            HttpContent content)
             {
                 return new Dictionary<string, string>();
             }
@@ -478,7 +480,8 @@ namespace PasswordManagerAccess.Test.Common
         {
             public IReadOnlyDictionary<string, string> Sign(Uri uri,
                                                             HttpMethod method,
-                                                            IReadOnlyDictionary<string, string> headers)
+                                                            IReadOnlyDictionary<string, string> headers,
+                                                            HttpContent content)
             {
                 return headers.ToDictionary(x => x.Key, x => x.Value + "-modified");
             }
