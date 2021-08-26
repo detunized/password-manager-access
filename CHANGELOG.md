@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.4.8
+  - 1Password: bumped the client version to get rid of the "deprecated" error
+
 ## 8.4.7
   - 1Password: fixed a rarely occuring issue with the decryption of the keysets
 
