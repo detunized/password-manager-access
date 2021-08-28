@@ -3,9 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
@@ -14,243 +11,11 @@ namespace PasswordManagerAccess.Dashlane
 {
     using R = Response;
 
-    internal class Dl1RequestSigner: IRequestSigner
-    {
-        public IReadOnlyDictionary<string, string> Sign(Uri uri,
-                                                        HttpMethod method,
-                                                        IReadOnlyDictionary<string, string> headers,
-                                                        HttpContent content)
-        {
-            var headersToSign = FormatHeaderForSigning(headers, content);
-            var headerOrder = headersToSign.Keys.OrderBy(x => x).ToArray();
-            var request = BuildRequest(uri, method, headersToSign, headerOrder, content);
-            var requestHashHex = Crypto.Sha256(request).ToHex();
-            var timestamp = Os.UnixSeconds();
-            var signingMaterial = BuildAuthSigningMaterial(timestamp, requestHashHex);
-            var signature = Crypto.HmacSha256(AppAccessSecret, signingMaterial).ToHex();
-            var extraHeaders = new Dictionary<string, string>
-            {
-                ["Authorization"] = BuildAuthHeader(timestamp, headerOrder, signature),
-            };
-
-            return headers.Merge(extraHeaders);
-        }
-
-        internal static string BuildAuthHeader(uint timestamp, string[] headerOrder, string signature)
-        {
-            var headers = headerOrder.JoinToString(";");
-            return $"DL1-HMAC-SHA256 AppAccessKey={AppAccessKey},Timestamp={timestamp},SignedHeaders={headers},Signature={signature}";
-        }
-
-        internal static string HashBody(HttpContent content)
-        {
-            var body = content.ReadAsStringAsync().GetAwaiter().GetResult();
-            return Crypto.Sha256(body).ToHex();
-        }
-
-        internal static Dictionary<string, string> FormatHeaderForSigning(IReadOnlyDictionary<string, string> headers,
-                                                                          HttpContent content)
-        {
-            var formattedHeaders = new Dictionary<string, string>();
-
-            foreach (var kv in headers)
-            {
-                var name = kv.Key.ToLower();
-                if (ExcludeHeadersLowerCase.Contains(name))
-                    continue;
-
-                formattedHeaders[name] = kv.Value;
-            }
-
-            foreach (var kv in content.Headers)
-            {
-                var name = kv.Key.ToLower();
-                if (ExcludeHeadersLowerCase.Contains(name))
-                    continue;
-
-                formattedHeaders[name] = kv.Value.JoinToString(", ");
-            }
-
-            return formattedHeaders;
-        }
-
-        internal static string BuildRequest(Uri uri,
-                                            HttpMethod method,
-                                            Dictionary<string, string> headersToSign,
-                                            string[] headerOrder,
-                                            HttpContent content)
-        {
-            var request = new StringBuilder();
-            request.AppendLine(method.ToString());
-            request.AppendLine(uri.AbsolutePath);
-            request.AppendLine("");
-            foreach (var name in headerOrder)
-                request.AppendLine($"{name}:{headersToSign[name]}");
-            request.AppendLine("");
-            request.AppendLine(headerOrder.JoinToString(";"));
-
-            // The last line should not have the trailing '\n'!
-            request.Append(HashBody(content));
-
-            return request.ToString();
-        }
-
-        internal static string BuildAuthSigningMaterial(uint timestamp, string requestHash)
-        {
-            return $"DL1-HMAC-SHA256\n{timestamp}\n{requestHash}";
-        }
-
-        private const string AppAccessKey = "C4F8H4SEAMXNBQVSASVBWDDZNCVTESMY";
-        private static readonly byte[] AppAccessSecret = "Na9Dz3WcmjMZ5pdYU1AmC5TdYkeWAOzvOK6PkbU4QjfjPQTSaXY8pjPwrvHfVH14".ToBytes();
-
-        private static readonly HashSet<string> ExcludeHeadersLowerCase = new HashSet<string>
-        {
-            "content-length",
-            "user-agent",
-        };
-    }
-
     internal static class Remote
     {
-        public static void OpenVaultNewWebProtocol(string username, Ui ui, IRestTransport transport)
-        {
-            var rest = new RestClient(transport,
-                                      "https://api.dashlane.com/v1/authentication/",
-                                      new Dl1RequestSigner(),
-                                      defaultHeaders: new Dictionary<string, string>
-                                      {
-                                          ["dashlane-client-agent"] =
-                                              "{\"platform\":\"server_leeloo\",\"version\":\"57.220.0.1495220\"}",
-                                          ["User-Agent"] =
-                                              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36",
-                                      });
-
-            RequestEmailToken(username, rest);
-            RegisterNewDevice(username, ui, rest);
-        }
-
-        internal class Response<T>
-        {
-            [JsonProperty("requestId", Required = Required.Always)]
-            public readonly string RequestId;
-
-            [JsonProperty("data", Required = Required.Always)]
-            public readonly T Data;
-        }
-
-        internal readonly struct VerificationMethods
-        {
-            [JsonProperty("verification", Required = Required.Always)]
-            public readonly VerificationMethod[] Methods;
-        }
-
-        internal readonly struct VerificationMethod
-        {
-            [JsonProperty("type", Required = Required.Always)]
-            public readonly string Name;
-        }
-
-        internal readonly struct AuthTicket
-        {
-            [JsonProperty("authTicket", Required = Required.Always)]
-            public readonly string Ticket;
-        }
-
-        internal readonly struct DeviceInfo
-        {
-            [JsonProperty("deviceAccessKey", Required = Required.Always)]
-            public readonly string AccessKey;
-
-            [JsonProperty("deviceSecretKey", Required = Required.Always)]
-            public readonly string SecretKey;
-
-            [JsonProperty("publicUserId", Required = Required.Always)]
-            public readonly string UserId;
-        }
-
-        internal static void RequestEmailToken(string username, RestClient rest)
-        {
-            var response = rest.PostJson<Response<VerificationMethods>>("RequestDeviceRegistration",
-                                                                        new Dictionary<string, object>
-                                                                        {
-                                                                            ["login"] = username,
-                                                                        },
-                                                                        headers: new Dictionary<string, string>
-                                                                        {
-                                                                            ["Accept"] = "application/json",
-                                                                        });
-            if (!response.IsSuccessful)
-                throw MakeSpecializedError(response);
-
-            if (response.Data.Data.Methods.Any(x => x.Name == "email_token"))
-                return;
-
-            throw new InternalErrorException("Unexpected response: no email MFA method found");
-        }
-
-        internal static DeviceInfo RegisterNewDevice(string username, Ui ui, RestClient rest)
-        {
-            var code = ui.ProvideEmailPasscode(0);
-            if (code == Ui.Passcode.Cancel)
-                throw new CanceledMultiFactorException("MFA canceled by the user");
-
-            var ticket = SubmitEmailToken(username, code.Code, rest);
-            return RegisterDevice(username, ticket, rest);
-        }
-
-        internal static string SubmitEmailToken(string username, string token, RestClient rest)
-        {
-            var response = rest.PostJson<Response<AuthTicket>>("PerformEmailTokenVerification",
-                                                               new Dictionary<string, object>
-                                                               {
-                                                                   ["login"] = username,
-                                                                   ["token"] = token,
-                                                               },
-                                                               headers: new Dictionary<string, string>
-                                                               {
-                                                                   ["Accept"] = "application/json",
-                                                               });
-
-            if (!response.IsSuccessful)
-                throw MakeSpecializedError(response);
-
-            return response.Data.Data.Ticket;
-        }
-
-        internal static DeviceInfo RegisterDevice(string username, string ticket, RestClient rest)
-        {
-            var response = rest.PostJson<Response<DeviceInfo>>("CompleteDeviceRegistrationWithAuthTicket",
-                                                               new Dictionary<string, object>
-                                                               {
-                                                                   ["login"] = username,
-                                                                   ["authTicket"] = ticket,
-                                                                   ["device"] = new Dictionary<string, object>
-                                                                   {
-                                                                       ["appVersion"] = "57.220.0.1516771",
-                                                                       ["deviceName"] = "password-manager-access",
-                                                                       ["osCountry"] = "US",
-                                                                       ["osLanguage"] = "en",
-                                                                       ["platform"] = "server_leeloo",
-                                                                       ["temporary"] = true,
-                                                                   },
-                                                               },
-                                                               headers: new Dictionary<string, string>
-                                                               {
-                                                                   ["Accept"] = "application/json",
-                                                               });
-
-            if (!response.IsSuccessful)
-                throw MakeSpecializedError(response);
-
-            return response.Data.Data;
-        }
-
         // TODO: Don't return JObject
         public static R.Vault OpenVault(string username, string deviceId, Ui ui, IRestTransport transport)
         {
-            OpenVaultNewWebProtocol(username, ui, transport);
-            throw new InternalErrorException("WIP");
-
             var rest = new RestClient(transport, BaseApiUrl);
 
             var loginType = RequestLoginType(username, rest);
@@ -521,7 +286,7 @@ namespace PasswordManagerAccess.Dashlane
             return token == null || token.Type != JTokenType.String ? defaultValue : (string)token;
         }
 
-        private static BaseException MakeSpecializedError(RestResponse response)
+        internal static BaseException MakeSpecializedError(RestResponse response)
         {
             Uri uri = response.RequestUri;
 
