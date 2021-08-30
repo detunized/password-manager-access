@@ -125,26 +125,29 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void DecryptBlob_returns_decrypted_content_from_kwc3_blob()
         {
-            Assert.Equal(Content, Parse.DecryptBlob(Blob, Password));
+            Assert.Equal(Content, Parse.DecryptBlob(Blob, Password, new Parse.DerivedKeyCache()));
         }
 
         [Fact]
         public void DecryptBlob_throws_on_incorrect_password()
         {
-            Exceptions.AssertThrowsBadCredentials(() => Parse.DecryptBlob(Blob, "Incorrect password"),
-                                                  "The password is incorrect");
+            Exceptions.AssertThrowsBadCredentials(
+                () => Parse.DecryptBlob(Blob, "Incorrect password", new Parse.DerivedKeyCache()),
+                "The password is incorrect");
         }
 
         [Fact]
         public void DecryptBlob_throws_on_non_ascii_password()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(() => Parse.DecryptBlob(Blob, "\x80\x90\xA0"),
-                                                      "Non ASCII passwords");
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Parse.DecryptBlob(Blob, "\x80\x90\xA0", new Parse.DerivedKeyCache()),
+                "Non ASCII passwords");
         }
 
         [Fact]
-        public void ComputeEncryptionKey_returns_correct_result()
+        public void ComputeEncryptionKey_derives_key_and_stores_it_in_cache()
         {
+            var cache = new Parse.DerivedKeyCache();
             var key = Parse.ComputeEncryptionKey(
                 Password.ToBytes(),
                 Salt32,
@@ -152,8 +155,14 @@ namespace PasswordManagerAccess.Test.Dashlane
                     new Parse.Pbkdf2Config(Parse.Pbkdf2Config.HashMethodType.Sha1, 10204, 32),
                     Parse.CryptoConfig.CipherModeType.Cbc,
                     Parse.CryptoConfig.IvGenerationModeType.EvpByteToKey,
-                    Parse.CryptoConfig.SignatureModeType.None));
+                    Parse.CryptoConfig.SignatureModeType.None),
+                cache);
+
             Assert.Equal("OAIU9FREAugcAkNtoeoUithzi2qXJQc6Gfj5WgPD0mY=".Decode64(), key);
+            Assert.Single(cache.Keys);
+            Assert.Contains(
+                "pbkdf2-Sha1-10204-70617373776f7264-73616c7473616c7473616c7473616c7473616c7473616c7473616c7473616c74",
+                cache.Keys);
         }
 
         [Fact]
@@ -278,7 +287,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
-        public void ExtractEncryptedAccounts_returns_accounts()
+        public void ExtractEncryptedAccounts_returns_accounts_and_caches_keys()
         {
             var blob = "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRLV0MzAxW0NQiQrbiEe4yl26Ga" +
                        "gNu1edW/lK/INVrdUkE1+nmpiTZHlNkKKSK5NXbWGuztnk3256De1/2GtaUXjTKOMYvh" +
@@ -287,7 +296,11 @@ namespace PasswordManagerAccess.Test.Dashlane
                        "BH0N3aJR7AkqRRALhUaLsMgYWsCxPqD9dP0dsp7A03htUKllVMfjfRexwJfJGi2ezSUv" +
                        "egGVt3k=";
 
-            Assert.Equal(2, Parse.ExtractEncryptedAccounts(blob.Decode64(), Password).Length);
+            var cache = new Parse.DerivedKeyCache();
+            var accounts = Parse.ExtractEncryptedAccounts(blob.Decode64(), Password, cache);
+
+            Assert.Equal(2, accounts.Length);
+            Assert.Single(cache.Keys);
         }
 
         //

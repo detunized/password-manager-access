@@ -36,6 +36,7 @@ namespace PasswordManagerAccess.Dashlane
             string Name { get; }
             int SaltLength { get; }
 
+            string GetUniqueId(byte[] password, byte[] salt);
             byte[] Derive(byte[] password, byte[] salt);
         }
 
@@ -54,6 +55,11 @@ namespace PasswordManagerAccess.Dashlane
                 TimeCost = timeCost;
                 Parallelism = parallelism;
                 SaltLength = saltLength;
+            }
+
+            public string GetUniqueId(byte[] password, byte[] salt)
+            {
+                return $"{Name}-{MemoryCost}-{TimeCost}-{Parallelism}-{password.ToHex()}-{salt.ToHex()}";
             }
 
             public byte[] Derive(byte[] password, byte[] salt)
@@ -92,6 +98,11 @@ namespace PasswordManagerAccess.Dashlane
                 SaltLength = saltLength;
             }
 
+            public string GetUniqueId(byte[] password, byte[] salt)
+            {
+                return $"{Name}-{HashMethod}-{Iterations}-{password.ToHex()}-{salt.ToHex()}";
+            }
+
             public byte[] Derive(byte[] password, byte[] salt)
             {
                 switch (HashMethod)
@@ -110,6 +121,11 @@ namespace PasswordManagerAccess.Dashlane
         {
             public string Name => "none";
             public int SaltLength => 0;
+
+            public string GetUniqueId(byte[] password, byte[] salt)
+            {
+                return Name;
+            }
 
             public byte[] Derive(byte[] password, byte[] salt)
             {
@@ -153,6 +169,26 @@ namespace PasswordManagerAccess.Dashlane
                 IvGenerationMode = ivGenerationMode;
                 SignatureMode = signatureMode;
             }
+        }
+
+        public class DerivedKeyCache
+        {
+            public byte[] GetOrDerive(byte[] password, byte[] salt, IKdfConfig config)
+            {
+                var id = config.GetUniqueId(password, salt);
+                if (_cache.TryGetValue(id, out var key))
+                    return key;
+
+                key = config.Derive(password, salt);
+                _cache[id] = key;
+
+                return key;
+            }
+
+            // For testing
+            internal IReadOnlyCollection<string> Keys => _cache.Keys;
+
+            private Dictionary<string, byte[]> _cache = new Dictionary<string, byte[]>();
         }
 
         public class Blob
@@ -351,12 +387,12 @@ namespace PasswordManagerAccess.Dashlane
             throw new InternalErrorException("Invalid blob format: expected to find '$'");
         }
 
-        public static byte[] DecryptBlob(byte[] blob, string password)
+        public static byte[] DecryptBlob(byte[] blob, string password, DerivedKeyCache keyCache)
         {
-            return DecryptBlob(blob, PasswordToBytes(password));
+            return DecryptBlob(blob, PasswordToBytes(password), keyCache);
         }
 
-        public static byte[] DecryptBlob(byte[] blob, byte[] password)
+        public static byte[] DecryptBlob(byte[] blob, byte[] password, DerivedKeyCache keyCache)
         {
             // 1. Parse
             var parsed = ParseEncryptedBlob(blob);
@@ -365,7 +401,7 @@ namespace PasswordManagerAccess.Dashlane
             //
             // Depending on the mode, the key is either the actual encryption key or an interim key
             // that is used to derive the iv, HMAC and the encryption keys.
-            var key = ComputeEncryptionKey(password, parsed.Salt, parsed.CryptoConfig);
+            var key = ComputeEncryptionKey(password, parsed.Salt, parsed.CryptoConfig, keyCache);
             var iv = DeriveIv(key, parsed);
 
             // 3. Derive the encryption key and the HMAC key
@@ -385,12 +421,12 @@ namespace PasswordManagerAccess.Dashlane
             return Inflate(plaintext.Sub(6, int.MaxValue));
         }
 
-        // TODO: This function does nothing special. Inline this?
-        public static byte[] ComputeEncryptionKey(byte[] password, byte[] salt, CryptoConfig config)
+        public static byte[] ComputeEncryptionKey(byte[] password,
+                                                  byte[] salt,
+                                                  CryptoConfig config,
+                                                  DerivedKeyCache cache)
         {
-            // TODO: This is slow for some of the algorithms, this needs to be cached or large
-            // vaults would take forever to open.
-            return config.KdfConfig.Derive(password, salt);
+            return cache.GetOrDerive(password, salt, config.KdfConfig);
         }
 
         public static byte[] PasswordToBytes(string password)
@@ -518,9 +554,9 @@ namespace PasswordManagerAccess.Dashlane
             return item != null ? item.Value : defaultValue;
         }
 
-        public static Account[] ExtractEncryptedAccounts(byte[] blob, string password)
+        public static Account[] ExtractEncryptedAccounts(byte[] blob, string password, DerivedKeyCache keyCache)
         {
-            return ExtractAccountsFromXml(DecryptBlob(blob, password).ToUtf8());
+            return ExtractAccountsFromXml(DecryptBlob(blob, password, keyCache).ToUtf8());
         }
     }
 }

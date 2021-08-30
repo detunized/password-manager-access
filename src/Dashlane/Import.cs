@@ -66,13 +66,13 @@ namespace PasswordManagerAccess.Dashlane
         public static byte[] ImportLocalKey(string filename, string password)
         {
             var blob = File.ReadAllText(filename).Decode64();
-            return Parse.DecryptBlob(blob, password);
+            return Parse.DecryptBlob(blob, password, new Parse.DerivedKeyCache());
         }
 
         internal static string LoadSettingsFile(string filename, byte[] key)
         {
             var blob = File.ReadAllBytes(filename);
-            return Parse.DecryptBlob(blob, key).ToUtf8();
+            return Parse.DecryptBlob(blob, key, new Parse.DerivedKeyCache()).ToUtf8();
         }
 
         // The local key is optional. It doesn't exist in the older versions. This function returns

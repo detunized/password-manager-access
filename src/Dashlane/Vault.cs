@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PasswordManagerAccess.Common;
@@ -38,6 +39,7 @@ namespace PasswordManagerAccess.Dashlane
         internal Vault(R.Vault blob, string password)
         {
             var accounts = new Dictionary<string, Account>();
+            var keyCache = new Parse.DerivedKeyCache();
 
             // This is used with the MFA. The server supplies the password prefix that is used in encryption.
             var serverKey = blob.ServerKey ?? "";
@@ -45,7 +47,7 @@ namespace PasswordManagerAccess.Dashlane
 
             var fullFile = blob.EncryptedAccounts;
             if (!string.IsNullOrWhiteSpace(fullFile))
-                foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), fullPassword))
+                foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), fullPassword, keyCache))
                     accounts[i.Id] = i;
 
             foreach (var transaction in blob.Transactions ?? new R.Transaction[0])
@@ -58,7 +60,7 @@ namespace PasswordManagerAccess.Dashlane
                 case "BACKUP_EDIT":
                     var content = transaction.Content;
                     if (!string.IsNullOrWhiteSpace(content))
-                        foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword))
+                        foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword, keyCache))
                             accounts[i.Id] = i;
 
                     break;

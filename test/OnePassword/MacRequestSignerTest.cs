@@ -69,7 +69,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         private static string Sign(string url, HttpMethod method, MacRequestSigner signer = null)
         {
-            var headers = (signer ?? MakeSigner()).Sign(new Uri(url), method, NoHeaders);
+            var headers = (signer ?? MakeSigner()).Sign(new Uri(url), method, NoHeaders, BlankContent);
             return Assert.Contains("X-AgileBits-MAC", headers);
         }
 
@@ -78,5 +78,6 @@ namespace PasswordManagerAccess.Test.OnePassword
         //
 
         private static readonly Dictionary<string, string> NoHeaders = new Dictionary<string, string>();
+        private static readonly HttpContent BlankContent = new StringContent("");
     }
 }

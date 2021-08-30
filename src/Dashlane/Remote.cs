@@ -286,7 +286,7 @@ namespace PasswordManagerAccess.Dashlane
             return token == null || token.Type != JTokenType.String ? defaultValue : (string)token;
         }
 
-        private static BaseException MakeSpecializedError(RestResponse response)
+        internal static BaseException MakeSpecializedError(RestResponse response)
         {
             Uri uri = response.RequestUri;
 

@@ -238,7 +238,7 @@ namespace PasswordManagerAccess.Common
                 UseCookies = false,
                 AllowAutoRedirect = false,
 #if MITM_PROXY
-                Proxy = new WebProxy("http://127.0.0.1:8080"),
+                Proxy = new WebProxy("http://127.0.0.1:8888"),
 #endif
             };
             return new HttpClient(handler, true);
@@ -289,13 +289,13 @@ namespace PasswordManagerAccess.Common
     // Signs the request by returning a new set of headers
     internal interface IRequestSigner
     {
-        ReadOnlyHttpHeaders Sign(Uri uri, HttpMethod method, ReadOnlyHttpHeaders headers);
+        ReadOnlyHttpCookies Sign(Uri uri, HttpMethod method, ReadOnlyHttpCookies headers, HttpContent content);
     }
 
     // Unit request signer that does nothing
     internal class UnitRequestSigner: IRequestSigner
     {
-        public ReadOnlyHttpHeaders Sign(Uri uri, HttpMethod method, ReadOnlyHttpHeaders headers)
+        public ReadOnlyHttpCookies Sign(Uri uri, HttpMethod method, ReadOnlyHttpCookies headers, HttpContent content)
         {
             return headers;
         }
@@ -592,7 +592,7 @@ namespace PasswordManagerAccess.Common
             Transport.MakeRequest(uri,
                                   method,
                                   content,
-                                  Signer.Sign(uri, method, DefaultHeaders.Merge(headers)),
+                                  Signer.Sign(uri, method, DefaultHeaders.Merge(headers), content),
                                   DefaultCookies.Merge(cookies),
                                   maxRedirects,
                                   allocatedResult);
