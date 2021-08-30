@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.4.9
+  - Dashlane: fixed major performance issues when opening large vaults
+
 ## 8.4.8
   - 1Password: bumped the client version to get rid of the "deprecated" error
 
