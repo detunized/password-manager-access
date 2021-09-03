@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.5.0
+  - Bitwarden: added support for Duo MFA option for organizations
+
 ## 8.4.9
   - Dashlane: fixed major performance issues when opening large vaults
 
