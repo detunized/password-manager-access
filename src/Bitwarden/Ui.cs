@@ -29,6 +29,7 @@ namespace PasswordManagerAccess.Bitwarden.Ui
         Duo,
         YubiKey,
         U2f,
+        DuoOrg,
     }
 
     public class Passcode

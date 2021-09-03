@@ -114,6 +114,7 @@ namespace PasswordManagerAccess.Bitwarden
                 passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
                 break;
             case Response.SecondFactorMethod.Duo:
+            case Response.SecondFactorMethod.DuoOrg:
             {
                 var duo = Duo.Authenticate((string)extra["Host"] ?? "",
                                            (string)extra["Signature"] ?? "",
@@ -245,6 +246,9 @@ namespace PasswordManagerAccess.Bitwarden
                     break;
                 case Response.SecondFactorMethod.RememberMe:
                     break;
+                case Response.SecondFactorMethod.DuoOrg:
+                    availableMethods.Add(MfaMethod.DuoOrg);
+                    break;
                 }
             }
 
@@ -266,6 +270,7 @@ namespace PasswordManagerAccess.Bitwarden
                 MfaMethod.Duo => Response.SecondFactorMethod.Duo,
                 MfaMethod.YubiKey => Response.SecondFactorMethod.YubiKey,
                 MfaMethod.U2f => Response.SecondFactorMethod.U2f,
+                MfaMethod.DuoOrg => Response.SecondFactorMethod.DuoOrg,
                 _ => throw new InternalErrorException("The user responded with invalid input")
             };
         }

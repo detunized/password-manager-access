@@ -61,8 +61,8 @@ namespace PasswordManagerAccess.Bitwarden.Response
         Duo = 2,
         YubiKey = 3,
         U2f = 4,
-
         RememberMe = 5,
+        DuoOrg = 6,
     }
 
     [JsonObject(ItemRequired = Required.Always)]
