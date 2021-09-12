@@ -71,7 +71,6 @@ namespace PasswordManagerAccess.LastPass
             });
         }
 
-        // TODO: Write a test for the RSA case!
         public static SharedFolder Parse_SHAR(Chunk chunk, byte[] encryptionKey, RSAParameters rsaKey)
         {
             return chunk.Payload.Open(reader =>
