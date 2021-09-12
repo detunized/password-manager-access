@@ -80,9 +80,9 @@ namespace PasswordManagerAccess.LastPass
 
                 // Key
                 var rsaEncryptedFolderKey = ReadItem(reader);
-                using var rsa = new RSACryptoServiceProvider();
-                rsa.ImportParameters(rsaKey);
-                var key = rsa.Decrypt(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), true).ToUtf8().DecodeHex();
+                var key = Crypto.DecryptRsaSha1(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), rsaKey)
+                    .ToUtf8()
+                    .DecodeHex();
 
                 // Name
                 var encryptedName = ReadItem(reader);
