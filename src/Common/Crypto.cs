@@ -422,7 +422,7 @@ namespace PasswordManagerAccess.Common
             try
             {
                 using var rsa = new RSACryptoServiceProvider();
-                rsa.ImportParameters(privateKey);
+                rsa.ImportParameters(RestoreLeadingZeros(privateKey));
                 return rsa.Decrypt(ciphertext, padding);
             }
             catch (CryptographicException e)
@@ -434,7 +434,9 @@ namespace PasswordManagerAccess.Common
         // Sometimes we see the numbers with too few bits, which is normal BTW. The .NET is very
         // picky about that and it requires us to add the leading zeros to have the exact length.
         // The exact length is not really known so we're trying to guess it from the numbers
-        // themselves.
+        // themselves. This doesn't seem to be a problem on .NET Core, it only fails on Windows
+        // with .NET Framework 4+. This operation is fairly cheap when all the lengths are ok and
+        // there are no unnecessary allocations happening in that case.
         internal static RSAParameters RestoreLeadingZeros(RSAParameters parameters)
         {
             var bytes = GuessKeyBitLength(parameters) / 8;
