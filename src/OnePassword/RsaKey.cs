@@ -28,7 +28,7 @@ namespace PasswordManagerAccess.OnePassword
                 D = json.D.Decode64Loose(),
             };
 
-            return new RsaKey(json.Id, Crypto.RestoreLeadingZeros(parameters));
+            return new RsaKey(json.Id, parameters);
         }
 
         public RsaKey(string id, RSAParameters parameters)
