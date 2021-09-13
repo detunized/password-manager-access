@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.5.1
+  - Bitwarden: fixed a problem with some private RSA keys causing crashes
+
 ## 8.5.0
   - Bitwarden: added support for Duo MFA option for organizations
 
