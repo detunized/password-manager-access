@@ -10,7 +10,7 @@
   - 1Password: bumped the client version to get rid of the "deprecated" error
 
 ## 8.4.7
-  - 1Password: fixed a rarely occuring issue with the decryption of the keysets
+  - 1Password: fixed a rarely occurring issue with the decryption of the keysets
 
 ## 8.4.6
   - 1Password: the login protocol updated to match the current
@@ -163,7 +163,7 @@
 
 ## 0.5.0
   - RoboForm: ported from the original repo and now could be used
-  - ZohoVault: MFA "rememeber me" option
+  - ZohoVault: MFA "remember me" option
   - Bitwarden: Fixed Duo on Xamarin Android
 
 ## 0.4.0
