@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.5.2
+  - ZohoVault: fixed a vault parsing problem for records with missing attributes
+
 ## 8.5.1
   - Bitwarden: fixed a problem with some private RSA keys causing crashes
 
