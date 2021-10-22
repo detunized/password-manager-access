@@ -1,9 +1,9 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using Moq;
+using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault;
 using PasswordManagerAccess.ZohoVault.Ui;
@@ -325,6 +325,26 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var sharingKey = Client.DecryptSharingKey(vault, TestData.Key2).ToUtf8();
 
             Assert.Equal("ItaDMKNE|x4gu1gEom9f@'GWsjH!}$OS", sharingKey);
+        }
+
+        [Theory]
+        [InlineData("{'SECRETID':'id'}")]
+        [InlineData("{'SECRETID':'id','SECRETDATA':'{}'}")]
+        [InlineData("{'SECRETID':'id','SECRETDATA':'{\\'username\\':null,\\'password\\':null}'}")]
+        [InlineData("{'SECRETID':'id','SECRETDATA':'{\\'username\\':\\'\\',\\'password\\':\\'\\'}'}")]
+        [InlineData("{'SECRETID':'id','SECRETNAME':null,'SECRETURL':null,'SECURENOTE':null,'SECRETDATA':null,'ISSHARED':null}")]
+        [InlineData("{'SECRETID':'id','SECRETNAME':'','SECRETURL':'','SECURENOTE':'','ISSHARED':''}")]
+        public void ParseAccount_handles_missing_nulls_and_blanks(string json)
+        {
+            var secret = JsonConvert.DeserializeObject<R.Secret>(json);
+            var account = Client.ParseAccount(secret, new byte[32]);
+
+            Assert.Equal("id", account.Id);
+            Assert.Equal("", account.Name);
+            Assert.Equal("", account.Username);
+            Assert.Equal("", account.Password);
+            Assert.Equal("", account.Url);
+            Assert.Equal("", account.Note);
         }
 
         [Fact]

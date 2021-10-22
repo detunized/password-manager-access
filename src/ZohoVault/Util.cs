@@ -22,6 +22,13 @@ namespace PasswordManagerAccess.ZohoVault
             return key.ToHex().Substring(0, 32).ToBytes();
         }
 
+        public static string DecryptStringLoose(string ctrCiphertextBase64, byte[] key)
+        {
+            return ctrCiphertextBase64.IsNullOrEmpty()
+                ? ""
+                : DecryptString(ctrCiphertextBase64, key);
+        }
+
         public static string DecryptString(string ctrCiphertextBase64, byte[] key)
         {
             return Decrypt(ctrCiphertextBase64.Decode64(), key).ToUtf8();

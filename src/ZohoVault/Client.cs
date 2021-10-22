@@ -435,13 +435,13 @@ namespace PasswordManagerAccess.ZohoVault
         {
             try
             {
-                var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data);
+                var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data ?? "{}");
                 return new Account(secret.Id,
-                                   secret.Name,
-                                   Util.DecryptString(data.Username, key),
-                                   Util.DecryptString(data.Password, key),
-                                   secret.Url,
-                                   Util.DecryptString(secret.Note, key));
+                                   secret.Name ?? "",
+                                   Util.DecryptStringLoose(data.Username, key),
+                                   Util.DecryptStringLoose(data.Password, key),
+                                   secret.Url ?? "",
+                                   Util.DecryptStringLoose(secret.Note, key));
             }
             catch (JsonException)
             {
