@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.5.3
+- Bitwarden: updated the login protocol to match the latest server software updates
+
 ## 8.5.2
   - ZohoVault: fixed a vault parsing problem for records with missing attributes
 
