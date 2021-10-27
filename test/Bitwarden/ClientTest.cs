@@ -187,6 +187,17 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void RequestAuthToken_sends_auth_email_header()
+        {
+            var rest = new RestFlow()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectHeader("Auth-Email", "dXNlcm5hbWU")
+                .ToRestClient();
+
+            Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
+        }
+
+        [Fact]
         public void RequestAuthToken_with_second_factor_options_adds_extra_parameters()
         {
             var rest = new RestFlow()

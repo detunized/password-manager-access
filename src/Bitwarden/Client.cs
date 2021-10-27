@@ -344,7 +344,12 @@ namespace PasswordManagerAccess.Bitwarden
                 parameters["twoFactorRemember"] = secondFactorOptions.RememberMe ? "1" : "0";
             }
 
-            var response = rest.PostForm<Response.AuthToken>("identity/connect/token", parameters);
+            var headers = new Dictionary<string, string>
+            {
+                ["Auth-Email"] = username.ToBytes().ToUrlSafeBase64NoPadding(),
+            };
+
+            var response = rest.PostForm<Response.AuthToken>("identity/connect/token", parameters, headers);
             if (response.IsSuccessful)
             {
                 var token = response.Data;
