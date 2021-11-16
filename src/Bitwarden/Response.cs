@@ -82,6 +82,7 @@ namespace PasswordManagerAccess.Bitwarden.Response
 
     public struct Profile
     {
+        public string Email;
         public string Key;
         public string PrivateKey;
         public Organization[] Organizations;
@@ -131,5 +132,30 @@ namespace PasswordManagerAccess.Bitwarden.Response
         public string Password;
         public string Uri;
         public string Totp;
+    }
+
+    //
+    // CLI/API
+    //
+
+    internal class TokenCliApi
+    {
+        [JsonProperty("token_type", Required = Required.Always)]
+        public string TokenType;
+
+        [JsonProperty("access_token", Required = Required.Always)]
+        public string AccessToken;
+
+        [JsonProperty("Key", Required = Required.Always)]
+        public string Key;
+
+        [JsonProperty("PrivateKey", Required = Required.Always)]
+        public string PrivateKey;
+
+        [JsonProperty("Kdf", Required = Required.Always)]
+        public int KdfMethod;
+
+        [JsonProperty("KdfIterations", Required = Required.Always)]
+        public int KdfIterations;
     }
 }

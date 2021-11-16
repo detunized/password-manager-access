@@ -10,15 +10,17 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Bitwarden
 {
+    using R = Response;
+
     internal static class Client
     {
-        public static Account[] OpenVault(string username,
-                                          string password,
-                                          string deviceId,
-                                          string baseUrl,
-                                          IUi ui,
-                                          ISecureStorage storage,
-                                          IRestTransport transport)
+        public static Account[] OpenVaultBrowser(string username,
+                                                 string password,
+                                                 string deviceId,
+                                                 string baseUrl,
+                                                 IUi ui,
+                                                 ISecureStorage storage,
+                                                 IRestTransport transport)
         {
             // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
             if (baseUrl.IsNullOrEmpty())
@@ -42,6 +44,32 @@ namespace PasswordManagerAccess.Bitwarden
             var encryptedVault = DownloadVault(rest, token);
 
             // 6. Decrypt and parse the vault. Done!
+            return DecryptVault(encryptedVault, key);
+        }
+
+        public static Account[] OpenVaultCliApi(string clientId,
+                                                string clientSecret,
+                                                string password,
+                                                string deviceId,
+                                                string baseUrl,
+                                                IRestTransport transport)
+        {
+            // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
+            if (baseUrl.IsNullOrEmpty())
+                baseUrl = DefaultBaseUrl;
+
+            var rest = new RestClient(transport, baseUrl, defaultHeaders: DefaultRestHeaders);
+
+            // 1. Login and get the client info
+            var authInfo = LoginCliApi(clientId, clientSecret, deviceId, rest);
+
+            // 2. Fetch the vault
+            var encryptedVault = DownloadVault(rest, $"{authInfo.TokenType} {authInfo.AccessToken}");
+
+            // 3. Derive the master encryption key or KEK (key encryption key)
+            var key = Util.DeriveKey(encryptedVault.Profile.Email, password, authInfo.KdfIterations);
+
+            // 4. Decrypt and parse the vault. Done!
             return DecryptVault(encryptedVault, key);
         }
 
@@ -158,6 +186,29 @@ namespace PasswordManagerAccess.Bitwarden
             }
 
             throw new BadMultiFactorException("Second factor code is not correct");
+        }
+
+        internal static R.TokenCliApi LoginCliApi(string clientId,
+                                                  string clientSecret,
+                                                  string deviceId,
+                                                  RestClient rest)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "client_id", clientId },
+                { "client_secret", clientSecret },
+                { "grant_type", "client_credentials" },
+                { "scope", "api" },
+                { "deviceType", DeviceType },
+                { "deviceName", DeviceName },
+                { "deviceIdentifier", deviceId },
+            };
+
+            var response = rest.PostForm<R.TokenCliApi>("identity/connect/token", parameters);
+            if (response.IsSuccessful)
+                return response.Data;
+
+            throw MakeSpecializedError(response);
         }
 
         internal static SecondFactorOptions GetRememberMeOptions(ISecureStorage storage)
