@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.Net;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
@@ -114,6 +115,33 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Exceptions.AssertThrowsUnsupportedFeature(
                 () => Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest),
                 "not supported");
+        }
+
+        [Fact]
+        public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result()
+        {
+            var rest = new RestFlow()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'Kdf': 13, 'KdfIterations': 1337}")
+                .ExpectUrl("/identity/connect/token");
+
+            var result = Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest);
+
+            Assert.Equal("Bearer", result.TokenType);
+            Assert.Equal("wa-wa-wee-wa", result.AccessToken);
+            Assert.Equal(13, result.KdfMethod);
+            Assert.Equal(1337, result.KdfIterations);
+        }
+
+        [Fact]
+        public void LoginCliApi_throws_on_incorrect_client_credentials()
+        {
+            var rest = new RestFlow()
+                .Post("{'error':'invalid_client'}", status: HttpStatusCode.BadRequest)
+                .ExpectUrl("/identity/connect/token");
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest),
+                "Client ID or secret is incorrect");
         }
 
         [Fact]
@@ -343,6 +371,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         //
 
         private const string Username = "username";
+        private const string ClientId = "client-id";
+        private const string ClientSecret = "client-secret";
         private const string DeviceId = "device-id";
         private const string RememberMeToken = "remember-me-token";
         private static readonly byte[] PasswordHash = "password-hash".ToBytes();
