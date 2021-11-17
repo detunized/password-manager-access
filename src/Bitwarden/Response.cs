@@ -146,12 +146,6 @@ namespace PasswordManagerAccess.Bitwarden.Response
         [JsonProperty("access_token", Required = Required.Always)]
         public string AccessToken;
 
-        [JsonProperty("Key", Required = Required.Always)]
-        public string Key;
-
-        [JsonProperty("PrivateKey", Required = Required.Always)]
-        public string PrivateKey;
-
         [JsonProperty("Kdf", Required = Required.Always)]
         public int KdfMethod;
 
