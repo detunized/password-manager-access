@@ -595,6 +595,9 @@ namespace PasswordManagerAccess.Bitwarden
             if (message.Contains("Two-step token is invalid"))
                 return new BadMultiFactorException(message);
 
+            if (e.Id == "invalid_client")
+                return new BadCredentialsException("Client ID or secret is incorrect");
+
             return new InternalErrorException($"Server responded with an error: '{message}'");
         }
 
