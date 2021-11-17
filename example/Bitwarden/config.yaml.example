@@ -1,4 +1,12 @@
+# For the browser mode
 username: someone@gmail.com
+password: passw0rd!
+device-id: 40e485a2-9728-5896-9939-14e977482d18
+base-url: http://localhost
+
+# For the CLI/API mode
+client-id: user.a6047118-6587-4888-a785-ad980084f273
+client-secret: yIV5T3GHYZbqmArtNa7FUbFRTS4xpF
 password: passw0rd!
 device-id: 40e485a2-9728-5896-9939-14e977482d18
 base-url: http://localhost

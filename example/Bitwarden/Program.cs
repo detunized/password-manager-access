@@ -93,12 +93,28 @@ namespace PasswordManagerAccess.Example.Bitwarden
 
             try
             {
-                var vault = Vault.Open(config["username"],
-                                       config["password"],
-                                       deviceId,
-                                       baseUrl,
-                                       new TextUi(),
-                                       new PlainStorage());
+                Vault vault;
+                if (config.ContainsKey("client-id"))
+                {
+                    // Fully non-interactive CLI/API mode
+                    Console.WriteLine("Using the CLI/API mode");
+                    vault = Vault.Open(new ClientInfoCliApi(clientId: config["client-id"],
+                                                            clientSecret: config["client-secret"],
+                                                            password: config["password"],
+                                                            deviceId: deviceId),
+                                       baseUrl);
+                }
+                else
+                {
+                    // Possibly interactive browser mode
+                    Console.WriteLine("Using the browser mode");
+                    vault = Vault.Open(new ClientInfoBrowser(username: config["username"],
+                                                             password: config["password"],
+                                                             deviceId: deviceId),
+                                       baseUrl: baseUrl,
+                                       ui: new TextUi(),
+                                       storage: new PlainStorage());
+                }
 
                 for (int i = 0; i < vault.Accounts.Length; ++i)
                 {
