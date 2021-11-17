@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.6.0
+- Bitwarden: new CLI/API to bypass the captcha
+
 ## 8.5.3
 - Bitwarden: updated the login protocol to match the latest server software updates
 
