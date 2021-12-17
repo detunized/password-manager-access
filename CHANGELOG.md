@@ -1,5 +1,8 @@
 # Changelog
 
+## 8.6.1
+- 1Password: bumped the client version to get rid of the "deprecated" error
+
 ## 8.6.0
 - Bitwarden: new CLI/API to bypass the captcha
 
