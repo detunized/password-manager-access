@@ -1,13 +1,16 @@
 # Changelog
 
+## 8.6.2
+  - 1Password: bumped the client version to get rid of the "deprecated" error
+
 ## 8.6.1
-- 1Password: bumped the client version to get rid of the "deprecated" error
+  - 1Password: bumped the client version to get rid of the "deprecated" error
 
 ## 8.6.0
-- Bitwarden: new CLI/API to bypass the captcha
+  - Bitwarden: new CLI/API to bypass the captcha
 
 ## 8.5.3
-- Bitwarden: updated the login protocol to match the latest server software updates
+  - Bitwarden: updated the login protocol to match the latest server software updates
 
 ## 8.5.2
   - ZohoVault: fixed a vault parsing problem for records with missing attributes
