@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.6.3
+  - 1Password: changed to client name/version to the latest CLI to minimize the
+    "deprecated" errors in the future
+
 ## 8.6.2
   - 1Password: bumped the client version to get rid of the "deprecated" error
 
