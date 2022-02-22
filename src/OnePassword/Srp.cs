@@ -103,7 +103,7 @@ namespace PasswordManagerAccess.OnePassword
 
             var k1 = Util.Hkdf(method: method,
                                ikm: srpInfo.Salt,
-                               salt: clientInfo.Username.ToBytes());
+                               salt: clientInfo.Username.ToLowerInvariant().ToBytes());
             var k2 = Util.Pbes2(method: srpInfo.KeyMethod,
                                 password: clientInfo.Password,
                                 salt: k1,

@@ -684,7 +684,7 @@ namespace PasswordManagerAccess.OnePassword
             //       by either trying to call the original JS functions in the browser console
             //       or by changing to some really weird password and trying to log in.
 
-            var k1 = Util.Hkdf(algorithm, salt, clientInfo.Username.ToLower().ToBytes());
+            var k1 = Util.Hkdf(algorithm, salt, clientInfo.Username.ToLowerInvariant().ToBytes());
             var k2 = Util.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
             var key = clientInfo.AccountKey.CombineWith(k2);
 
