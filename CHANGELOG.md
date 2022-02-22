@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.6.4
+  - 1Password: fixed a bug where login might fail when emails contain uppercase
+    letters
+
 ## 8.6.3
   - 1Password: changed to client name/version to the latest CLI to minimize the
     "deprecated" errors in the future
