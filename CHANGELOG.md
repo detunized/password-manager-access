@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.7.0
+  - Bitwarden: private and organization collection support
+  - Bitwarden: "hide password" collection flag support
+
 ## 8.6.4
   - 1Password: fixed a bug where login might fail when emails contain uppercase
     letters
