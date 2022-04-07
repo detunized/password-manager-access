@@ -14,6 +14,7 @@ namespace PasswordManagerAccess.Bitwarden
         public readonly string Totp;
         public readonly string DeletedDate;
         public readonly string Folder;
+        public readonly string[] Collections;
 
         public Account(string id,
                        string name,
@@ -23,7 +24,8 @@ namespace PasswordManagerAccess.Bitwarden
                        string note,
                        string totp,
                        string deletedDate,
-                       string folder)
+                       string folder,
+                       string[] collections)
         {
             Id = id;
             Name = name;
@@ -34,6 +36,7 @@ namespace PasswordManagerAccess.Bitwarden
             Totp = totp;
             DeletedDate = deletedDate;
             Folder = folder;
+            Collections = collections;
         }
     }
 }

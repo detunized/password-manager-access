@@ -20,7 +20,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var folder = "folder";
             var totp = "totp";
             var deletedDate = "deleted date";
-            var account = new Account(id, name, username, password, url, note, totp, deletedDate, folder);
+            var collections = new[] { "collection1", "collection2" };
+            var account = new Account(id, name, username, password, url, note, totp, deletedDate, folder, collections);
 
             Assert.Equal(id, account.Id);
             Assert.Equal(name, account.Name);
@@ -31,6 +32,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal(totp, account.Totp);
             Assert.Equal(deletedDate, account.DeletedDate);
             Assert.Equal(folder, account.Folder);
+            Assert.Same(collections, account.Collections);
         }
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -465,10 +466,11 @@ namespace PasswordManagerAccess.Bitwarden
             var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
             var orgKeys = DecryptOrganizationKeys(vault.Profile, privateKey);
             var folders = ParseFolders(vault.Folders, vaultKey);
+            var collections = ParseCollections(vault.Collections, vaultKey, orgKeys);
 
             return vault.Ciphers
                 .Where(i => i.Type == Response.ItemType.Login)
-                .Select(i => ParseAccountItem(i, vaultKey, orgKeys, folders)).ToArray();
+                .Select(i => ParseAccountItem(i, vaultKey, orgKeys, folders, collections)).ToArray();
         }
 
         internal static byte[] DecryptVaultKey(Response.Profile profile, byte[] derivedKey)
@@ -504,10 +506,37 @@ namespace PasswordManagerAccess.Bitwarden
             return folders.ToDictionary(i => i.Id, i => DecryptToString(i.Name, key));
         }
 
-        internal static Account ParseAccountItem(Response.Item item,
+        internal class Collection
+        {
+            public readonly string Id;
+            public readonly string Name;
+            public readonly bool HidePasswords;
+
+            public Collection(string id, string name, bool hidePasswords)
+            {
+                Id = id;
+                Name = name;
+                HidePasswords = hidePasswords;
+            }
+        }
+
+        internal static Dictionary<string, Collection> ParseCollections(Response.Collection[] folders,
+                                                                        byte[] vaultKey,
+                                                                        Dictionary<string, byte[]> orgKeys)
+        {
+            return folders.ToDictionary(
+                x => x.Id,
+                x => new Collection(
+                    id: x.Id,
+                    name: DecryptToString(x.Name, x.OrganizationId.IsNullOrEmpty() ? vaultKey : orgKeys[x.OrganizationId]),
+                    hidePasswords: x.HidePasswords));
+        }
+
+        internal static Account ParseAccountItem(R.Item item,
                                                  byte[] vaultKey,
                                                  Dictionary<string, byte[]> orgKeys,
-                                                 Dictionary<string, string> folders)
+                                                 Dictionary<string, string> folders,
+                                                 Dictionary<string, Collection> collections)
         {
             var key = item.OrganizationId.IsNullOrEmpty()
                 ? vaultKey
@@ -525,7 +554,20 @@ namespace PasswordManagerAccess.Bitwarden
                                note: DecryptToStringOrBlank(item.Notes, key),
                                totp: DecryptToStringOrBlank(item.Login.Totp, key),
                                deletedDate: item.DeletedDate,
-                               folder: folder);
+                               folder: folder,
+                               collections: CollectionIdsToCollectionNames(item.CollectionIds, collections));
+        }
+
+        internal static string[] CollectionIdsToCollectionNames(string[] collectionIds,
+                                                                Dictionary<string, Collection> collections)
+        {
+            if (collectionIds.Length == 0)
+                return Array.Empty<string>();
+
+            return collectionIds
+                .Select(x => collections.GetOrDefault(x, null)?.Name)
+                .Where(x => x != null)
+                .ToArray();
         }
 
         internal static byte[] DecryptToBytes(string s, byte[] key)

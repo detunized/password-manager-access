@@ -78,6 +78,7 @@ namespace PasswordManagerAccess.Bitwarden.Response
         public Profile Profile;
         public Item[] Ciphers;
         public Folder[] Folders;
+        public Collection[] Collections;
     }
 
     public struct Profile
@@ -102,6 +103,21 @@ namespace PasswordManagerAccess.Bitwarden.Response
         public string Name;
     }
 
+    public struct Collection
+    {
+        [JsonProperty("id", Required = Required.Always)]
+        public string Id;
+
+        [JsonProperty("name", Required = Required.Always)]
+        public string Name;
+
+        [JsonProperty("organizationId")]
+        public string OrganizationId;
+
+        [JsonProperty("hidePasswords")]
+        public bool HidePasswords;
+    }
+
     public enum ItemType
     {
         Login = 1,
@@ -121,6 +137,7 @@ namespace PasswordManagerAccess.Bitwarden.Response
         public string FolderId;
         public string OrganizationId;
         public string DeletedDate;
+        public string[] CollectionIds;
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public LoginInfo Login;

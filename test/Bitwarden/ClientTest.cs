@@ -303,6 +303,24 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void DecryptVault_assigns_collections()
+        {
+            var accounts = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
+                                               "zTrKlq/dviZ7aFFyRLDdT8Zju2rRM80+NzDtCl4hvlc=".Decode64());
+
+            Assert.Equal(3, accounts.Length);
+
+            Assert.Equal("both", accounts[0].Name);
+            Assert.Equal(new[] { "Default Collection", "Hidden pwd" }, accounts[0].Collections);
+
+            Assert.Equal("hiddenonly", accounts[1].Name);
+            Assert.Equal(new[] { "Hidden pwd" }, accounts[1].Collections);
+
+            Assert.Equal("defonly", accounts[2].Name);
+            Assert.Equal(new[] { "Default Collection" }, accounts[2].Collections);
+        }
+
+        [Fact]
         public void ParseAccountItem_returns_account()
         {
             var vault = LoadVaultFixture();
@@ -311,7 +329,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 {"d0e9210c-610b-4427-a344-a99600d462d3", "folder1"},
                 {"94542f0a-d858-46ce-87a5-a99600d47732", "folder2"},
             };
-            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, null, folders);
+            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, null, folders, new Dictionary<string, Client.Collection>());
 
             Assert.Equal("a323db80-891a-4d91-9304-a981014cf3ca", account.Id);
             Assert.Equal("Facebook", account.Name);
@@ -361,9 +379,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
             return mock.Object;
         }
 
-        private Response.Vault LoadVaultFixture()
+        private Response.Vault LoadVaultFixture(string name = "vault")
         {
-            return JsonConvert.DeserializeObject<Response.Vault>(GetFixture("vault"));
+            return JsonConvert.DeserializeObject<Response.Vault>(GetFixture(name));
         }
 
         //
