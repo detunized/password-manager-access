@@ -555,7 +555,8 @@ namespace PasswordManagerAccess.Bitwarden
                                totp: DecryptToStringOrBlank(item.Login.Totp, key),
                                deletedDate: item.DeletedDate,
                                folder: folder,
-                               collections: CollectionIdsToCollectionNames(item.CollectionIds, collections));
+                               collections: CollectionIdsToCollectionNames(item.CollectionIds, collections),
+                               hidePassword: ResolveHidePassword(item.CollectionIds, collections));
         }
 
         internal static string[] CollectionIdsToCollectionNames(string[] collectionIds,
@@ -568,6 +569,20 @@ namespace PasswordManagerAccess.Bitwarden
                 .Select(x => collections.GetOrDefault(x, null)?.Name)
                 .Where(x => x != null)
                 .ToArray();
+        }
+
+        internal static bool ResolveHidePassword(string[] collectionIds,
+                                                 Dictionary<string, Collection> collections)
+        {
+            // Only hide the password when all the collections this item is in have "hide password" enabled.
+            foreach (var id in collectionIds)
+            {
+                var c = collections.GetOrDefault(id, null);
+                if (c == null || !c.HidePasswords)
+                    return false;
+            }
+
+            return true;
         }
 
         internal static byte[] DecryptToBytes(string s, byte[] key)

@@ -303,7 +303,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void DecryptVault_assigns_collections()
+        public void DecryptVault_assigns_collections_and_resolves_HidePassword()
         {
             var accounts = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
                                                "zTrKlq/dviZ7aFFyRLDdT8Zju2rRM80+NzDtCl4hvlc=".Decode64());
@@ -312,12 +312,15 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
             Assert.Equal("both", accounts[0].Name);
             Assert.Equal(new[] { "Default Collection", "Hidden pwd" }, accounts[0].Collections);
+            Assert.False(accounts[0].HidePassword);
 
             Assert.Equal("hiddenonly", accounts[1].Name);
             Assert.Equal(new[] { "Hidden pwd" }, accounts[1].Collections);
+            Assert.True(accounts[1].HidePassword);
 
             Assert.Equal("defonly", accounts[2].Name);
             Assert.Equal(new[] { "Default Collection" }, accounts[2].Collections);
+            Assert.False(accounts[2].HidePassword);
         }
 
         [Fact]
