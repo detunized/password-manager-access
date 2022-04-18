@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.Bitwarden
         public readonly string Totp;
         public readonly string DeletedDate;
         public readonly string Folder;
-        public readonly string[] Collections;
+        public readonly string[] CollectionIds;
         public readonly bool HidePassword;
 
         public Account(string id,
@@ -26,7 +26,7 @@ namespace PasswordManagerAccess.Bitwarden
                        string totp,
                        string deletedDate,
                        string folder,
-                       string[] collections,
+                       string[] collectionIds,
                        bool hidePassword)
         {
             Id = id;
@@ -38,7 +38,7 @@ namespace PasswordManagerAccess.Bitwarden
             Totp = totp;
             DeletedDate = deletedDate;
             Folder = folder;
-            Collections = collections;
+            CollectionIds = collectionIds;
             HidePassword = hidePassword;
         }
     }

@@ -358,15 +358,16 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal(3, accounts.Length);
 
             Assert.Equal("both", accounts[0].Name);
-            Assert.Equal(new[] { "Default Collection", "Hidden pwd" }, accounts[0].Collections);
+            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" },
+                         accounts[0].CollectionIds);
             Assert.False(accounts[0].HidePassword);
 
             Assert.Equal("hiddenonly", accounts[1].Name);
-            Assert.Equal(new[] { "Hidden pwd" }, accounts[1].Collections);
+            Assert.Equal(new[] { "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" }, accounts[1].CollectionIds);
             Assert.True(accounts[1].HidePassword);
 
             Assert.Equal("defonly", accounts[2].Name);
-            Assert.Equal(new[] { "Default Collection" }, accounts[2].Collections);
+            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88" }, accounts[2].CollectionIds);
             Assert.False(accounts[2].HidePassword);
         }
 

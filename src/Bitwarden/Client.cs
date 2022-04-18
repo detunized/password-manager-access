@@ -576,20 +576,8 @@ namespace PasswordManagerAccess.Bitwarden
                                totp: DecryptToStringOrBlank(item.Login.Totp, key),
                                deletedDate: item.DeletedDate,
                                folder: folder,
-                               collections: CollectionIdsToCollectionNames(item.CollectionIds, collections),
+                               collectionIds: item.CollectionIds ?? Array.Empty<string>(),
                                hidePassword: ResolveHidePassword(item.CollectionIds, collections));
-        }
-
-        internal static string[] CollectionIdsToCollectionNames(string[] collectionIds,
-                                                                Dictionary<string, Collection> collections)
-        {
-            if (collectionIds.Length == 0)
-                return Array.Empty<string>();
-
-            return collectionIds
-                .Select(x => collections.GetOrDefault(x, null)?.Name)
-                .Where(x => x != null)
-                .ToArray();
         }
 
         internal static bool ResolveHidePassword(string[] collectionIds,

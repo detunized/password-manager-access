@@ -32,7 +32,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                                       totp: totp,
                                       deletedDate: deletedDate,
                                       folder: folder,
-                                      collections: collections,
+                                      collectionIds: collections,
                                       hidePassword: hidePassword);
 
             Assert.Equal(id, account.Id);
@@ -44,7 +44,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal(totp, account.Totp);
             Assert.Equal(deletedDate, account.DeletedDate);
             Assert.Equal(folder, account.Folder);
-            Assert.Same(collections, account.Collections);
+            Assert.Same(collections, account.CollectionIds);
             Assert.Equal(hidePassword, account.HidePassword);
         }
     }
