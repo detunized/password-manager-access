@@ -337,6 +337,17 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void DecryptVault_resolves_HidePassword_with_no_collections()
+        {
+            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
+
+            Assert.Equal(3, accounts.Length);
+            Assert.False(accounts[0].HidePassword);
+            Assert.False(accounts[1].HidePassword);
+            Assert.False(accounts[2].HidePassword);
+        }
+
+        [Fact]
         public void DecryptVault_assigns_collections_and_resolves_HidePassword()
         {
             var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),

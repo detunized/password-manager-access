@@ -568,15 +568,12 @@ namespace PasswordManagerAccess.Bitwarden
         internal static bool ResolveHidePassword(string[] collectionIds,
                                                  Dictionary<string, Collection> collections)
         {
-            // Only hide the password when all the collections this item is in have "hide password" enabled.
-            foreach (var id in collectionIds)
-            {
-                var c = collections.GetOrDefault(id, null);
-                if (c == null || !c.HidePasswords)
-                    return false;
-            }
+            // Items that don't have any collections associated with them cannot hide their password.
+            if (collectionIds.Length == 0)
+                return false;
 
-            return true;
+            // Only hide the password when ALL the collections this item is in have "hide password" enabled.
+            return collectionIds.All(x => collections.GetOrDefault(x, null)?.HidePasswords == true);
         }
 
         internal static byte[] DecryptToBytes(string s, byte[] key)
