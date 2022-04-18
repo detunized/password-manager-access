@@ -279,7 +279,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_returns_accounts()
         {
-            var accounts = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
 
             Assert.Equal(3, accounts.Length);
             Assert.Equal("Facebook", accounts[0].Name);
@@ -288,9 +288,43 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void DecryptVault_returns_collections()
+        {
+            var (_, collections, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
+                                                          KekForVaultWithCollections);
+
+            Assert.Equal(2, collections.Length);
+
+            Assert.Equal("b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", collections[0].Id);
+            Assert.Equal("Default Collection", collections[0].Name);
+            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", collections[0].OrganizationId);
+            Assert.False(collections[0].HidePasswords);
+
+            Assert.Equal("0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5", collections[1].Id);
+            Assert.Equal("Hidden pwd", collections[1].Name);
+            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", collections[1].OrganizationId);
+            Assert.True(collections[1].HidePasswords);
+        }
+
+        [Fact]
+        public void DecryptVault_returns_organizations()
+        {
+            var (_, _, organizations) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
+                                                            KekForVaultWithCollections);
+
+            Assert.Equal(2, organizations.Length);
+
+            Assert.Equal("487e674f-7b11-4b33-9d1a-adb2007f6a6a", organizations[0].Id);
+            Assert.Equal("Gobias Industries Inc", organizations[0].Name);
+
+            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", organizations[1].Id);
+            Assert.Equal("Free Sharing Corp", organizations[1].Name);
+        }
+
+        [Fact]
         public void DecryptVault_assigns_folders()
         {
-            var accounts = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
 
             Assert.Equal("Facebook", accounts[0].Name);
             Assert.Equal("folder2", accounts[0].Folder);
@@ -305,8 +339,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_assigns_collections_and_resolves_HidePassword()
         {
-            var accounts = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
-                                               "zTrKlq/dviZ7aFFyRLDdT8Zju2rRM80+NzDtCl4hvlc=".Decode64());
+            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
+                                                       KekForVaultWithCollections);
 
             Assert.Equal(3, accounts.Length);
 
@@ -332,7 +366,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 {"d0e9210c-610b-4427-a344-a99600d462d3", "folder1"},
                 {"94542f0a-d858-46ce-87a5-a99600d47732", "folder2"},
             };
-            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, null, folders, new Dictionary<string, Client.Collection>());
+            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, null, folders, new Dictionary<string, Collection>());
 
             Assert.Equal("a323db80-891a-4d91-9304-a981014cf3ca", account.Id);
             Assert.Equal("Facebook", account.Name);
@@ -399,6 +433,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private static readonly byte[] PasswordHash = "password-hash".ToBytes();
         private static readonly byte[] Kek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
         private static readonly byte[] Key = "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();
+        private static readonly byte[] KekForVaultWithCollections = "zTrKlq/dviZ7aFFyRLDdT8Zju2rRM80+NzDtCl4hvlc=".Decode64();
 
         private const string EncryptedString = "2.8RPqQRT3z5dTQtNAE/2XWw==|cl1uG8jueR0kxPPklGjVJAGCJqaw+YwmDPyNJtIwsXg=|klc2vOsbPPZD5K1MDMf/nqSNLBrOMPVUNycgCgl6l44=";
         private const string Plaintext = "Hey, check this out!";

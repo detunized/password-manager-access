@@ -15,13 +15,13 @@ namespace PasswordManagerAccess.Bitwarden
 
     internal static class Client
     {
-        public static Account[] OpenVaultBrowser(string username,
-                                                 string password,
-                                                 string deviceId,
-                                                 string baseUrl,
-                                                 IUi ui,
-                                                 ISecureStorage storage,
-                                                 IRestTransport transport)
+        public static (Account[], Collection[], Organization[]) OpenVaultBrowser(string username,
+                                                                                 string password,
+                                                                                 string deviceId,
+                                                                                 string baseUrl,
+                                                                                 IUi ui,
+                                                                                 ISecureStorage storage,
+                                                                                 IRestTransport transport)
         {
             // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
             if (baseUrl.IsNullOrEmpty())
@@ -48,12 +48,12 @@ namespace PasswordManagerAccess.Bitwarden
             return DecryptVault(encryptedVault, key);
         }
 
-        public static Account[] OpenVaultCliApi(string clientId,
-                                                string clientSecret,
-                                                string password,
-                                                string deviceId,
-                                                string baseUrl,
-                                                IRestTransport transport)
+        public static (Account[], Collection[], Organization[]) OpenVaultCliApi(string clientId,
+                                                                                string clientSecret,
+                                                                                string password,
+                                                                                string deviceId,
+                                                                                string baseUrl,
+                                                                                IRestTransport transport)
         {
             // Reset to default. Let the user simply pass a null or "" and not bother with an overload.
             if (baseUrl.IsNullOrEmpty())
@@ -460,17 +460,26 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static Account[] DecryptVault(Response.Vault vault, byte[] key)
+        internal static (Account[], Collection[], Organization[]) DecryptVault(Response.Vault vault, byte[] key)
         {
             var vaultKey = DecryptVaultKey(vault.Profile, key);
             var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
             var orgKeys = DecryptOrganizationKeys(vault.Profile, privateKey);
             var folders = ParseFolders(vault.Folders, vaultKey);
             var collections = ParseCollections(vault.Collections, vaultKey, orgKeys);
+            var organizations = ParseOrganizations(vault.Profile.Organizations);
+            var collectionsById = collections.ToDictionary(x => x.Id);
 
-            return vault.Ciphers
+            var accounts = vault.Ciphers
                 .Where(i => i.Type == Response.ItemType.Login)
-                .Select(i => ParseAccountItem(i, vaultKey, orgKeys, folders, collections)).ToArray();
+                .Select(i => ParseAccountItem(i, vaultKey, orgKeys, folders, collectionsById)).ToArray();
+
+            return (accounts, collections, organizations);
+        }
+
+        private static Organization[] ParseOrganizations(R.Organization[] organizations)
+        {
+            return organizations.Select(x => new Organization(x.Id ?? "", x.Name ?? "")).ToArray();
         }
 
         internal static byte[] DecryptVaultKey(Response.Profile profile, byte[] derivedKey)
@@ -501,35 +510,20 @@ namespace PasswordManagerAccess.Bitwarden
             return profile.Organizations.ToDictionary(x => x.Id, x => DecryptRsaToBytes(x.Key, privateKey));
         }
 
-        internal static Dictionary<string, string> ParseFolders(Response.Folder[] folders, byte[] key)
+        internal static Dictionary<string, string> ParseFolders(R.Folder[] folders, byte[] key)
         {
             return folders.ToDictionary(i => i.Id, i => DecryptToString(i.Name, key));
         }
 
-        internal class Collection
+        internal static Collection[] ParseCollections(R.Collection[] collections,
+                                                      byte[] vaultKey,
+                                                      Dictionary<string, byte[]> orgKeys)
         {
-            public readonly string Id;
-            public readonly string Name;
-            public readonly bool HidePasswords;
-
-            public Collection(string id, string name, bool hidePasswords)
-            {
-                Id = id;
-                Name = name;
-                HidePasswords = hidePasswords;
-            }
-        }
-
-        internal static Dictionary<string, Collection> ParseCollections(Response.Collection[] folders,
-                                                                        byte[] vaultKey,
-                                                                        Dictionary<string, byte[]> orgKeys)
-        {
-            return folders.ToDictionary(
-                x => x.Id,
-                x => new Collection(
-                    id: x.Id,
-                    name: DecryptToString(x.Name, x.OrganizationId.IsNullOrEmpty() ? vaultKey : orgKeys[x.OrganizationId]),
-                    hidePasswords: x.HidePasswords));
+            return collections.Select(x => new Collection(
+                id: x.Id,
+                name: DecryptToString(x.Name, x.OrganizationId.IsNullOrEmpty() ? vaultKey : orgKeys[x.OrganizationId]),
+                organizationId: x.OrganizationId ?? "",
+                hidePasswords: x.HidePasswords)).ToArray();
         }
 
         internal static Account ParseAccountItem(R.Item item,

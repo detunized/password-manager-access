@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 
@@ -10,6 +12,11 @@ namespace PasswordManagerAccess.Bitwarden
     public class Vault
     {
         public readonly Account[] Accounts;
+        public readonly Collection[] Collections;
+        public readonly Organization[] Organizations;
+
+        public readonly IReadOnlyDictionary<string, Collection> CollectionsById;
+        public readonly IReadOnlyDictionary<string, Organization> OrganizationsById;
 
         // The main entry point. Use this function to open the vault in the browser mode. In
         // this the login process is interactive when 2FA is enabled. This is an old mode
@@ -28,13 +35,15 @@ namespace PasswordManagerAccess.Bitwarden
         public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVaultBrowser(username: clientInfo.Username,
-                                                     password: clientInfo.Password,
-                                                     deviceId: clientInfo.DeviceId,
-                                                     baseUrl: baseUrl,
-                                                     ui: ui,
-                                                     storage: storage,
-                                                     transport: transport));
+            var (accounts, collections, organizations) = Client.OpenVaultBrowser(username: clientInfo.Username,
+                                                                                 password: clientInfo.Password,
+                                                                                 deviceId: clientInfo.DeviceId,
+                                                                                 baseUrl: baseUrl,
+                                                                                 ui: ui,
+                                                                                 storage: storage,
+                                                                                 transport: transport);
+
+            return new Vault(accounts, collections, organizations);
         }
 
         // The main entry point. Use this function to open the vault in the CLI/API mode. In
@@ -49,12 +58,14 @@ namespace PasswordManagerAccess.Bitwarden
         public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null)
         {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVaultCliApi(clientId: clientInfo.ClientId,
-                                                    clientSecret: clientInfo.ClientSecret,
-                                                    password: clientInfo.Password,
-                                                    deviceId: clientInfo.DeviceId,
-                                                    baseUrl: baseUrl,
-                                                    transport: transport));
+            var (accounts, collections, organizations) = Client.OpenVaultCliApi(clientId: clientInfo.ClientId,
+                                                                                clientSecret: clientInfo.ClientSecret,
+                                                                                password: clientInfo.Password,
+                                                                                deviceId: clientInfo.DeviceId,
+                                                                                baseUrl: baseUrl,
+                                                                                transport: transport);
+
+            return new Vault(accounts, collections, organizations);
         }
 
         [Obsolete("Please use the overloads with either ClientInfoBrowser or ClientInfoCliApi")]
@@ -88,9 +99,14 @@ namespace PasswordManagerAccess.Bitwarden
         // Private
         //
 
-        private Vault(Account[] accounts)
+        private Vault(Account[] accounts, Collection[] collections, Organization[] organizations)
         {
             Accounts = accounts;
+            Collections = collections;
+            Organizations = organizations;
+
+            CollectionsById = collections.ToDictionary(x => x.Id);
+            OrganizationsById = organizations.ToDictionary(x => x.Id);
         }
     }
 }

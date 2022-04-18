@@ -91,8 +91,13 @@ namespace PasswordManagerAccess.Bitwarden.Response
 
     public struct Organization
     {
+        [JsonProperty("id", Required = Required.Always)]
         public string Id;
+
+        [JsonProperty("name", Required = Required.Always)]
         public string Name;
+
+        [JsonProperty("key", Required = Required.Always)]
         public string Key;
     }
 
