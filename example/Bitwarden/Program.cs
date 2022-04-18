@@ -141,18 +141,21 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 {
                     Console.WriteLine("Collections:");
                     foreach (var c in vault.Collections)
-                    {
                         Console.WriteLine($"  - id: {c.Id}, name: {c.Name}, org: {c.OrganizationId}, hide passwords: {c.HidePasswords}");
-                    }
                 }
 
                 if (vault.Organizations.Length > 0)
                 {
                     Console.WriteLine("Organizations:");
                     foreach (var o in vault.Organizations)
-                    {
                         Console.WriteLine($"  - id: {o.Id}, name: {o.Name}");
-                    }
+                }
+
+                if (vault.ParseErrors.Length > 0)
+                {
+                    Console.WriteLine("Parse errors:");
+                    foreach (var e in vault.ParseErrors)
+                        Console.WriteLine($"  - error: ${e.Description}");
                 }
             }
             catch (BaseException e)

@@ -279,18 +279,20 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_returns_accounts()
         {
-            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var (accounts, _, _, errors) = Client.DecryptVault(LoadVaultFixture(), Kek);
 
             Assert.Equal(3, accounts.Length);
             Assert.Equal("Facebook", accounts[0].Name);
             Assert.Equal("Google", accounts[1].Name);
             Assert.Equal("only name", accounts[2].Name);
+
+            Assert.Empty(errors);
         }
 
         [Fact]
         public void DecryptVault_returns_collections()
         {
-            var (_, collections, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
+            var (_, collections, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
                                                           KekForVaultWithCollections);
 
             Assert.Equal(2, collections.Length);
@@ -309,8 +311,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_returns_organizations()
         {
-            var (_, _, organizations) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
-                                                            KekForVaultWithCollections);
+            var (_, _, organizations, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
+                                                               KekForVaultWithCollections);
 
             Assert.Equal(2, organizations.Length);
 
@@ -324,7 +326,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_assigns_folders()
         {
-            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var (accounts, _, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
 
             Assert.Equal("Facebook", accounts[0].Name);
             Assert.Equal("folder2", accounts[0].Folder);
@@ -339,7 +341,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_resolves_HidePassword_with_no_collections()
         {
-            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var (accounts, _, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
 
             Assert.Equal(3, accounts.Length);
             Assert.False(accounts[0].HidePassword);
@@ -350,8 +352,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_assigns_collections_and_resolves_HidePassword()
         {
-            var (accounts, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
-                                                       KekForVaultWithCollections);
+            var (accounts, _, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
+                                                          KekForVaultWithCollections);
 
             Assert.Equal(3, accounts.Length);
 
@@ -366,6 +368,15 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal("defonly", accounts[2].Name);
             Assert.Equal(new[] { "Default Collection" }, accounts[2].Collections);
             Assert.False(accounts[2].HidePassword);
+        }
+
+        [Fact]
+        public void DecryptVault_returns_errors()
+        {
+            var (accounts, _, _, errors) = Client.DecryptVault(LoadVaultFixture("vault-with-errors"), Kek);
+
+            Assert.Equal(1, accounts.Length);
+            Assert.Equal(2, errors.Length);
         }
 
         [Fact]
