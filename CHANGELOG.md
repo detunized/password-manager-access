@@ -1,5 +1,11 @@
 # Changelog
 
+## 9.0.0
+  - Bitwarden: collections and organizations added to the vault
+  - Bitwarden: accounts changed to store collection IDs and not collection names
+  - Bitwarden: errors collected during parsing and decryption are now stored in the vault
+  - Bitwarden: occasional inverted "hide password" flag bug fixed
+
 ## 8.7.0
   - Bitwarden: private and organization collection support
   - Bitwarden: "hide password" collection flag support
