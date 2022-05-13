@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.Net;
 using Moq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
@@ -269,6 +270,15 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get("RESULT=TRUE")
                     .ExpectUrl("https://accounts.zoho.com/logout?")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
+
+            Client.LogOut(LoginCookies, "com", flow);
+        }
+
+        [Fact]
+        public void LogOut_accepts_302_HTTP_status_code()
+        {
+            var flow = new RestFlow()
+                .Get("", HttpStatusCode.Redirect);
 
             Client.LogOut(LoginCookies, "com", flow);
         }

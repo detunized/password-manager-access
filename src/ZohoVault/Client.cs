@@ -327,8 +327,10 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static void LogOut(HttpCookies cookies, string tld, RestClient rest)
         {
-            var response = rest.Get(LogoutUrl(tld), Headers, cookies);
-            if (!response.IsSuccessful)
+            // It's ok to have 2XX or 3XX HTTP status. Sometimes the server sends a redirect.
+            // There's no need to follow it to complete a logout.
+            var response = rest.Get(LogoutUrl(tld), Headers, cookies, maxRedirects: 0);
+            if (response.HasError || (int)response.StatusCode / 100 > 3)
                 throw MakeErrorOnFailedRequest(response);
         }
 
