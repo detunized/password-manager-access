@@ -1,5 +1,8 @@
 # Changelog
 
+## 9.0.1
+  - ZohoVault: fixed a bug where logout might fail due to too many HTTP redirects
+
 ## 9.0.0
   - Bitwarden: collections and organizations added to the vault
   - Bitwarden: accounts changed to store collection IDs and not collection names
