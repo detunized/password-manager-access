@@ -21,12 +21,13 @@ namespace PasswordManagerAccess.LastPass
                                           IUi ui,
                                           IRestTransport transport)
         {
+            var lowerCaseUsername = username.ToLowerInvariant();
             var rest = new RestClient(transport, "https://lastpass.com");
-            var session = Login(username, password, clientInfo, ui, rest);
+            var session = Login(lowerCaseUsername, password, clientInfo, ui, rest);
             try
             {
                 var blob = DownloadVault(session, rest);
-                var key = Util.DeriveKey(username, password, session.KeyIterationCount);
+                var key = Util.DeriveKey(lowerCaseUsername, password, session.KeyIterationCount);
 
                 var privateKey = new RSAParameters();
                 if (!session.EncryptedPrivateKey.IsNullOrEmpty())

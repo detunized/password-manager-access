@@ -148,6 +148,22 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void OpenVault_lower_cases_email()
+        {
+            var flow = new RestFlow()
+                .Post(OkResponseNoPrivateKey)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent($"username={Username}")
+                .Get(TestData.BlobBase64)
+                .Post("");
+
+            // TODO: Decryption fails here because of the incorrect password
+            var accounts = Client.OpenVault(Username.ToUpperInvariant(), Password, ClientInfo, null, flow);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
         public void OpenVault_throws_on_invalid_username()
         {
             var flow = new RestFlow()
