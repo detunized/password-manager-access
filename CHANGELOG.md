@@ -1,5 +1,9 @@
 # Changelog
 
+## 9.0.2
+  - LasrPass: fixed a bug where login might fail when the email contained upper case
+    letters
+
 ## 9.0.1
   - ZohoVault: fixed a bug where logout might fail due to too many HTTP redirects
 
