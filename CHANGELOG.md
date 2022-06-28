@@ -1,7 +1,10 @@
 # Changelog
 
+## 9.1.0
+  - LastPass: added support to the regional server redirect
+
 ## 9.0.2
-  - LasrPass: fixed a bug where login might fail when the email contained upper case
+  - LastPass: fixed a bug where login might fail when the email contained upper case
     letters
 
 ## 9.0.1
