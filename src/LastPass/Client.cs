@@ -22,8 +22,7 @@ namespace PasswordManagerAccess.LastPass
                                           IRestTransport transport)
         {
             var lowerCaseUsername = username.ToLowerInvariant();
-            var rest = new RestClient(transport, "https://lastpass.com");
-            var session = Login(lowerCaseUsername, password, clientInfo, ui, rest);
+            var (session, rest) = Login(lowerCaseUsername, password, clientInfo, ui, transport);
             try
             {
                 var blob = DownloadVault(session, rest);
@@ -45,8 +44,14 @@ namespace PasswordManagerAccess.LastPass
         // Internal
         //
 
-        internal static Session Login(string username, string password, ClientInfo clientInfo,IUi ui, RestClient rest)
+        internal static (Session, RestClient) Login(string username,
+                                                    string password,
+                                                    ClientInfo clientInfo,
+                                                    IUi ui,
+                                                    IRestTransport transport)
         {
+            var rest = new RestClient(transport, "https://lastpass.com");
+
             // 1. First we need to request PBKDF2 key iteration count.
             //
             // We no longer request the iteration count from the server in a separate request because it
@@ -61,19 +66,31 @@ namespace PasswordManagerAccess.LastPass
 
             XDocument response = null;
             Session session = null;
-            for (var i = 0; i < 2; i++)
+
+            // We have a maximum of 3 retries in case we need to try again with the correct domain and/or
+            // the number of KDF iterations the second/third time around.
+            for (var i = 0; i < 3; i++)
             {
                 // 2. Knowing the iterations count we can hash the password and log in.
-                //    One the first attempt simply with the username and password.
+                //    On the first attempt simply with the username and password.
                 response = PerformSingleLoginRequest(username,
                                                      password,
                                                      keyIterationCount,
                                                      new Dictionary<string, object>(),
                                                      clientInfo,
                                                      rest);
+
                 session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
                 if (session != null)
-                    return session;
+                    return (session, rest);
+
+                // It's possible we're being redirected to another region.
+                var server = GetOptionalErrorAttribute(response, "server");
+                if (!server.IsNullOrEmpty())
+                {
+                    rest = new RestClient(transport, "https://" + server);
+                    continue;
+                }
 
                 // It's possible for the request above to come back with the correct iteration count.
                 // In this case we have to parse and repeat.
@@ -116,7 +133,8 @@ namespace PasswordManagerAccess.LastPass
             if (session == null)
                 throw MakeLoginError(response);
 
-            return session;
+            // All good
+            return (session, rest);
         }
 
         internal static XDocument PerformSingleLoginRequest(string username,

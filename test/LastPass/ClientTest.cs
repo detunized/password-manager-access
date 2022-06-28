@@ -247,46 +247,88 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void Login_returns_session()
+        public void Login_returns_session_and_rest_client()
         {
             var flow = new RestFlow()
                 .Post(OkResponse);
 
-            var session = Client.Login(Username, Password, ClientInfo, null, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
 
             Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(BaseUrl, rest.BaseUrl);
         }
 
         [Fact]
-        public void Login_returns_session_with_iteration_retry()
+        public void Login_returns_session_and_rest_client_with_iteration_retry()
         {
             var flow = new RestFlow()
                 .Post(IterationResponse)
                 .Post(OkResponse);
 
-            var session = Client.Login(Username, Password, ClientInfo, null, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
 
             Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(BaseUrl, rest.BaseUrl);
         }
 
         [Fact]
-        public void Login_returns_session_with_otp()
+        public void Login_returns_session_and_rest_client_with_server_retry()
+        {
+            var flow = new RestFlow()
+                .Post(ServerResponse)
+                    .ExpectUrl(BaseUrl)
+                .Post(OkResponse)
+                    .ExpectUrl(AlternativeBaseUrl);
+
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
+
+            Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
+            AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(AlternativeBaseUrl, rest.BaseUrl);
+        }
+
+        [Fact]
+        public void Login_returns_session_and_rest_client_with_server_and_iteration_retries()
+        {
+            var flow = new RestFlow()
+                .Post(ServerResponse)
+                    .ExpectUrl(BaseUrl)
+                .Post(IterationResponse)
+                    .ExpectUrl(AlternativeBaseUrl)
+                .Post(OkResponse)
+                    .ExpectUrl(AlternativeBaseUrl);
+
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
+
+            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
+            AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(AlternativeBaseUrl, rest.BaseUrl);
+        }
+
+        [Fact]
+        public void Login_returns_session_and_rest_client_with_otp()
         {
             var flow = new RestFlow()
                 .Post(OtpRequiredResponse) // 1. normal login attempt
                 .Post(OkResponse)          // 2. login with otp
                 .Post("");                 // 3. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
             Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(BaseUrl, rest.BaseUrl);
         }
 
         [Fact]
-        public void Login_returns_session_with_iteration_retry_and_otp()
+        public void Login_returns_session_and_rest_client_with_iteration_retry_and_otp()
         {
             var flow = new RestFlow()
                 .Post(IterationResponse)   // 1. normal login attempt
@@ -294,28 +336,32 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)          // 3. login with otp
                 .Post("");                 // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
             Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(BaseUrl, rest.BaseUrl);
         }
 
         [Fact]
-        public void Login_returns_session_with_oob()
+        public void Login_returns_session_and_rest_client_with_oob()
         {
             var flow = new RestFlow()
                 .Post(OobRequiredResponse) // 1. normal login attempt
                 .Post(OkResponse)          // 2. check oob
                 .Post("");                 // 3. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
             Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(BaseUrl, rest.BaseUrl);
         }
 
         [Fact]
-        public void Login_returns_session_with_iteration_retry_and_oob()
+        public void Login_returns_session_and_rest_client_with_iteration_retry_and_oob()
         {
             var flow = new RestFlow()
                 .Post(IterationResponse)   // 1. normal login attempt
@@ -323,10 +369,12 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)          // 3. check oob
                 .Post("");                 // 4. save trusted device
 
-            var session = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
             Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
+
+            Assert.Equal(BaseUrl, rest.BaseUrl);
         }
 
         [Fact]
@@ -856,6 +904,7 @@ namespace PasswordManagerAccess.Test.LastPass
         //
 
         private const string BaseUrl = "https://lastpass.com";
+        private const string AlternativeBaseUrl = "https://lastpass.eu";
         private const string Username = "username";
         private const string Password = "password";
         private const string Otp = "123456";
@@ -927,6 +976,11 @@ namespace PasswordManagerAccess.Test.LastPass
         private const string IterationResponse =
             "<response>" +
                 "<error iterations='1337' />" +
+            "</response>";
+
+        private const string ServerResponse =
+            "<response>" +
+                "<error server='lastpass.eu' message='our princess is in another castle' />" +
             "</response>";
     }
 }
