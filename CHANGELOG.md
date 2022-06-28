@@ -1,5 +1,8 @@
 # Changelog
 
+## 9.1.1
+  - Newtonsoft.Json upgraded to 13.0.1 to fix a potential vulnerability
+
 ## 9.1.0
   - LastPass: added support to the regional server redirect
 
