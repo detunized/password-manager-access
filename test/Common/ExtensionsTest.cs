@@ -70,13 +70,26 @@ namespace PasswordManagerAccess.Test.Common
 
         [Theory]
         [InlineData("", "")]
-        [InlineData("YQ==", "a")]
-        [InlineData("YWI=", "ab")]
-        [InlineData("YWJj", "abc")]
-        [InlineData("YWJjZA==", "abcd")]
+        [InlineData("Pj4+Pg==", ">>>>")]
         public void String_ToBase64_returns_base64(string base64, string raw)
         {
             Assert.Equal(base64, raw.ToBase64());
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("Pj4-Pg==", ">>>>")]
+        public void String_ToUrlSafeBase64_returns_urlsafe_base64_with_padding(string expected, string raw)
+        {
+            Assert.Equal(expected, raw.ToUrlSafeBase64());
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("Pj4-Pg", ">>>>")]
+        public void String_ToUrlSafeBase64NoPadding_returns_urlsafe_base64_without_padding(string expected, string raw)
+        {
+            Assert.Equal(expected, raw.ToUrlSafeBase64NoPadding());
         }
 
         // TODO: Add more test cases to make sure it matches JS.

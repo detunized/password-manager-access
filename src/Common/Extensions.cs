@@ -62,6 +62,16 @@ namespace PasswordManagerAccess.Common
             return s.ToBytes().ToBase64();
         }
 
+        public static string ToUrlSafeBase64(this string s)
+        {
+            return s.ToBytes().ToUrlSafeBase64();
+        }
+
+        public static string ToUrlSafeBase64NoPadding(this string s)
+        {
+            return s.ToBytes().ToUrlSafeBase64NoPadding();
+        }
+
         public static string EncodeUri(this string s)
         {
             return Uri.EscapeUriString(s);
