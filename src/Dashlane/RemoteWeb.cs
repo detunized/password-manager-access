@@ -9,7 +9,7 @@ namespace PasswordManagerAccess.Dashlane
     // The new web protocol doesn't seem to be fully implemented by Dashlane. They fall back
     // to ws1.dashlane.com calls all the time. Some features are not supported by the
     // web/extension clients. It's been put on ice for now.
-    internal static class RemoteWeb
+    internal static class ClientWeb
     {
         public static void OpenVault(string username, Ui ui, IRestTransport transport)
         {
@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.Dashlane
                 });
 
             if (!response.IsSuccessful)
-                throw Remote.MakeSpecializedError(response);
+                throw Client.MakeSpecializedError(response);
 
             if (response.Data.Data.Methods.Any(x => x.Name == "email_token"))
                 return;
@@ -77,7 +77,7 @@ namespace PasswordManagerAccess.Dashlane
                                                                    });
 
             if (!response.IsSuccessful)
-                throw Remote.MakeSpecializedError(response);
+                throw Client.MakeSpecializedError(response);
 
             return response.Data.Data.Ticket;
         }
@@ -106,7 +106,7 @@ namespace PasswordManagerAccess.Dashlane
                 });
 
             if (!response.IsSuccessful)
-                throw Remote.MakeSpecializedError(response);
+                throw Client.MakeSpecializedError(response);
 
             return response.Data.Data;
         }

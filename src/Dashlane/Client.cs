@@ -11,7 +11,7 @@ namespace PasswordManagerAccess.Dashlane
 {
     using R = Response;
 
-    internal static class Remote
+    internal static class Client
     {
         // TODO: Don't return JObject
         public static R.Vault OpenVault(string username, string deviceId, Ui ui, IRestTransport transport)
