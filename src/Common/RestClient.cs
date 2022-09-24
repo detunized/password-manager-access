@@ -132,8 +132,11 @@ namespace PasswordManagerAccess.Common
                     request.Headers.TryAddWithoutValidation(h.Key, h.Value);
 
                 // Set cookies
-                var cookieHeaderValue = string.Join("; ", cookies.Select(x => $"{x.Key}={x.Value}"));
-                request.Headers.TryAddWithoutValidation("Cookie", cookieHeaderValue);
+                if (cookies.Count > 0)
+                {
+                    var cookieHeaderValue = string.Join("; ", cookies.Select(x => $"{x.Key}={x.Value}"));
+                    request.Headers.TryAddWithoutValidation("Cookie", cookieHeaderValue);
+                }
 
                 // Don't use .Result here but rather .GetAwaiter().GetResult()
                 // It produces a nicer call stack and no AggregateException nonsense
