@@ -42,5 +42,26 @@ namespace PasswordManagerAccess.Dashlane.ResponseWeb
 
         [JsonProperty("publicUserId", Required = Required.Always)]
         public readonly string UserId;
+
+        // TODO: Make this required
+        [JsonProperty("sharingKeys", Required = Required.Default)]
+        public readonly SharingKeys SharingKeys;
+    }
+
+    internal readonly struct SharingKeys
+    {
+        // TODO: Make this required
+        [JsonProperty("publicKey", Required = Required.Default)]
+        public readonly string PublicKey;
+
+        // TODO: Make this required
+        [JsonProperty("privateKey", Required = Required.Default)]
+        public readonly string PrivateKey;
+    }
+
+    internal readonly struct PairingInfo
+    {
+        [JsonProperty("pairingId", Required = Required.Always)]
+        public readonly string PairingId;
     }
 }
