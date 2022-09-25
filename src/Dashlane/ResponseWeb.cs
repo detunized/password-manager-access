@@ -59,9 +59,24 @@ namespace PasswordManagerAccess.Dashlane.ResponseWeb
         public readonly string PrivateKey;
     }
 
-    internal readonly struct PairingInfo
+    internal struct ErrorEnvelope
     {
-        [JsonProperty("pairingId", Required = Required.Always)]
-        public readonly string PairingId;
+        [JsonProperty("requestId", Required = Required.Always)]
+        public readonly string RequestId;
+
+        [JsonProperty("errors", Required = Required.Always)]
+        public readonly Error[] Errors;
+    }
+
+    internal struct Error
+    {
+        [JsonProperty("type", Required = Required.Always)]
+        public readonly string Type;
+
+        [JsonProperty("code", Required = Required.Always)]
+        public readonly string Code;
+
+        [JsonProperty("message", Required = Required.Always)]
+        public readonly string Message;
     }
 }

@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 
 // TODO: Merge R and RW
@@ -64,108 +64,122 @@ namespace PasswordManagerAccess.Dashlane
                                       });
 
             RequestEmailToken(username, rest);
-            var info = RegisterNewDevice(username, ui, rest);
-            return $"{info.AccessKey}-{info.SecretKey}";
-        }
 
-        internal static void RequestEmailToken(string username, RestClient rest)
-        {
-            var response = rest.PostJson<RW.Envelope<RW.VerificationMethods>>(
-                "RequestDeviceRegistration",
-                new Dictionary<string, object>
-                {
-                    ["login"] = username,
-                },
-                headers: new Dictionary<string, string>
-                {
-                    ["Accept"] = "application/json",
-                });
-
-            if (!response.IsSuccessful)
-                throw Client.MakeSpecializedError(response);
-
-            if (response.Data.Data.Methods.Any(x => x.Name == "email_token"))
-                return;
-
-            throw new InternalErrorException("Unexpected response: no email MFA method found");
-        }
-
-        internal static RW.DeviceInfo RegisterNewDevice(string username, Ui ui, RestClient rest)
-        {
             var code = ui.ProvideEmailPasscode(0);
             if (code == Ui.Passcode.Cancel)
                 throw new CanceledMultiFactorException("MFA canceled by the user");
 
             var ticket = SubmitEmailToken(username, code.Code, rest);
-            var deviceInfo = RegisterDevice(username, ticket, code.RememberMe, rest);
-            // TODO: "Remember me" related
-            //var pairingId = RequestPairing(rest);
-            return deviceInfo;
+            var info = RegisterDevice(username, ticket, code.RememberMe, rest);
+
+            return $"{info.AccessKey}-{info.SecretKey}";
+        }
+
+        internal static void RequestEmailToken(string username, RestClient rest)
+        {
+            var response = PostJson<RW.VerificationMethods>("RequestDeviceRegistration",
+                                                           new Dictionary<string, object>
+                                                           {
+                                                               ["login"] = username,
+                                                           },
+                                                           rest);
+
+            if (response.Methods.Any(x => x.Name == "email_token"))
+                return;
+
+            throw new InternalErrorException("Unexpected response: no email MFA method found");
         }
 
         internal static string SubmitEmailToken(string username, string token, RestClient rest)
         {
-            var response = rest.PostJson<RW.Envelope<RW.AuthTicket>>("PerformEmailTokenVerification",
-                                                                   new Dictionary<string, object>
-                                                                   {
-                                                                       ["login"] = username,
-                                                                       ["token"] = token,
-                                                                   },
-                                                                   headers: new Dictionary<string, string>
-                                                                   {
-                                                                       ["Accept"] = "application/json",
-                                                                   });
-
-            if (!response.IsSuccessful)
-                throw Client.MakeSpecializedError(response);
-
-            return response.Data.Data.Ticket;
+            return PostJson<RW.AuthTicket>("PerformEmailTokenVerification",
+                                           new Dictionary<string, object>
+                                           {
+                                               ["login"] = username,
+                                               ["token"] = token,
+                                           },
+                                           rest).Ticket;
         }
 
         internal static RW.DeviceInfo RegisterDevice(string username, string ticket, bool rememberMe, RestClient rest)
         {
-            var response = rest.PostJson<RW.Envelope<RW.DeviceInfo>>(
-                "CompleteDeviceRegistrationWithAuthTicket",
-                new Dictionary<string, object>
-                {
-                    ["login"] = username,
-                    ["authTicket"] = ticket,
-                    ["device"] = new Dictionary<string, object>
-                    {
-                        ["appVersion"] = AppVersion,
-                        ["deviceName"] = ClientName,
-                        ["osCountry"] = "US",
-                        ["osLanguage"] = "en-US",
-                        ["platform"] = Platform,
-                        ["temporary"] = !rememberMe,
-                    },
-                },
-                headers: new Dictionary<string, string>
-                {
-                    ["Accept"] = "application/json",
-                });
-
-            if (!response.IsSuccessful)
-                throw Client.MakeSpecializedError(response);
-
-            return response.Data.Data;
+            return PostJson<RW.DeviceInfo>("CompleteDeviceRegistrationWithAuthTicket",
+                                           new Dictionary<string, object>
+                                           {
+                                               ["login"] = username,
+                                               ["authTicket"] = ticket,
+                                               ["device"] = new Dictionary<string, object>
+                                               {
+                                                   ["appVersion"] = AppVersion,
+                                                   ["deviceName"] = ClientName,
+                                                   ["osCountry"] = "US",
+                                                   ["osLanguage"] = "en-US",
+                                                   ["platform"] = Platform,
+                                                   ["temporary"] = !rememberMe,
+                                               },
+                                           },
+                                           rest);
         }
 
-        internal static string RequestPairing(RestClient rest)
+        internal static T PostJson<T>(string endpoint, Dictionary<string, object> parameters, RestClient rest)
         {
-            var response = rest.PostJson<RW.Envelope<RW.PairingInfo>>(
-                "CompleteDeviceRegistrationWithAuthTicket",
-                RestClient.NoParameters,
+            var response = rest.PostJson<RW.Envelope<T>>(
+                endpoint,
+                parameters,
                 headers: new Dictionary<string, string>
                 {
                     ["Accept"] = "application/json",
                 });
 
-            if (!response.IsSuccessful)
-                throw Client.MakeSpecializedError(response);
+            if (response.IsSuccessful)
+                return response.Data.Data;
 
-            return response.Data.Data.PairingId;
+            throw MakeSpecializedError(response);
         }
+
+        internal static BaseException MakeSpecializedError(RestResponse<string> response)
+        {
+            var uri = response.RequestUri;
+
+            if (response.IsNetworkError)
+                return new NetworkErrorException($"A network error occurred during a request to {uri}", response.Error);
+
+            // The request was successful but we failed to parse. This is usually due to changed format.
+            if (response.IsHttpOk && response.Error is JsonException)
+                return new InternalErrorException($"Failed to parse JSON response from {uri}", response.Error);
+
+            // Otherwise we need to check for the returned error. This is also a JSON parsing error because the schema
+            // for error and for regular responses are different.
+            return TryParseReturnedError(response) ??
+                   new InternalErrorException($"Unexpected response from {uri}", response.Error);
+        }
+
+        internal static BaseException TryParseReturnedError(RestResponse<string> response)
+        {
+            var uri = response.RequestUri;
+            RW.ErrorEnvelope errorResponse;
+            try
+            {
+                errorResponse = JsonConvert.DeserializeObject<RW.ErrorEnvelope>(response.Content);
+            }
+            catch (JsonException e)
+            {
+                return new InternalErrorException($"Invalid JSON in response from '{uri}'", e);
+            }
+
+            if (errorResponse.Errors.Length == 0)
+                return null;
+
+            var error = errorResponse.Errors[0];
+            switch (error.Code)
+            {
+            case "verification_failed":
+                return new BadMultiFactorException(error.Message);
+            default:
+                return new InternalErrorException(error.Message);
+            }
+        }
+
 
         //
         // Data
