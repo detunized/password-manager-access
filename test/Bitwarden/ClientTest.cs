@@ -376,8 +376,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var (accounts, _, _, errors) = Client.DecryptVault(LoadVaultFixture("vault-with-errors"), Kek);
 
-            Assert.Equal(1, accounts.Length);
-            Assert.Equal(2, errors.Length);
+            Assert.Single(accounts);
+            Assert.Single(errors);
         }
 
         [Fact]
