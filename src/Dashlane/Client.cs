@@ -29,7 +29,7 @@ namespace PasswordManagerAccess.Dashlane
             // time around. So remember-me function is this mode is more or less useless. The
             // registered device shows up in the admin area though.
             if (registered && loginType != LoginType.GoogleAuth_Always)
-                return Fetch(username, deviceId, rest);
+                return Fetch_TODO_remove(username, deviceId, rest);
 
             // Try to fetch a few times and then register the device
             var attempt = 0;
@@ -182,10 +182,10 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static R.Vault Fetch(string username, string deviceId, IRestTransport transport)
         {
-            return Fetch(username, deviceId, new RestClient(transport, BaseApiUrl));
+            return Fetch_TODO_remove(username, deviceId, new RestClient(transport, BaseApiUrl));
         }
 
-        internal static R.Vault Fetch(string username, string deviceId, RestClient rest)
+        internal static R.Vault Fetch_TODO_remove(string username, string deviceId, RestClient rest)
         {
             var parameters = CommonFetchParameters(username);
             parameters["uki"] = deviceId;

@@ -142,7 +142,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Incorrect authentification'}");
             Exceptions.AssertThrowsBadMultiFactor(() => Client.Fetch(Username, Uki, rest),
-                                                  "Invalid email token");
+                                                  "Invalid UKI or email token");
         }
 
         [Fact]
