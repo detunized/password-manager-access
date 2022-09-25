@@ -13,6 +13,20 @@ namespace PasswordManagerAccess.Test.Dashlane
     public class VaultTest: TestBase
     {
         [Fact]
+        public void Open_returns_accounts_with_existing_device_id()
+        {
+            var flow = new RestFlow().Post(GetFixture("non-empty-vault"));
+
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   null,
+                                   new Storage { DeviceId = Uki },
+                                   flow);
+
+            Assert.NotEmpty(vault.Accounts);
+        }
+
+        [Fact]
         public void Open_returns_accounts_with_email_token_and_device_registration()
         {
             var flow = new RestFlow()
@@ -21,13 +35,13 @@ namespace PasswordManagerAccess.Test.Dashlane
                 .Post(GetFixture("device-registered"))
                 .Post(GetFixture("non-empty-vault"));
 
-            var v = Vault.Open(Username,
-                               Password,
-                               new OtpProvidingUi { Code = Otp, RememberMe = false },
-                               new Storage { DeviceId = "" },
-                               flow);
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   new Storage { DeviceId = "" },
+                                   flow);
 
-            Assert.NotEmpty(v.Accounts);
+            Assert.NotEmpty(vault.Accounts);
         }
 
         [Fact]
@@ -56,13 +70,13 @@ namespace PasswordManagerAccess.Test.Dashlane
                 .Post(GetFixture("device-registered"))
                 .Post(GetFixture("non-empty-vault"));
 
-            var v = Vault.Open(Username,
-                               Password,
-                               new OtpProvidingUi { Code = Otp, RememberMe = false },
-                               new Storage { DeviceId = "" },
-                               flow);
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   new Storage { DeviceId = "" },
+                                   flow);
 
-            Assert.NotEmpty(v.Accounts);
+            Assert.NotEmpty(vault.Accounts);
         }
 
         [Fact]
