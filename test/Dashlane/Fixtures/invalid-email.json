@@ -1,0 +1,10 @@
+{
+    "requestId": "2df1c900-1616-4778-9ea6-690909e49301",
+    "errors": [
+        {
+            "type": "business_error",
+            "code": "user_not_found",
+            "message": "The given login does not exist."
+        }
+    ]
+}

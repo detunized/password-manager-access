@@ -1,8 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Linq;
+using System.Net;
 using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
@@ -12,6 +12,77 @@ namespace PasswordManagerAccess.Test.Dashlane
 {
     public class VaultTest: TestBase
     {
+        [Fact]
+        public void Open_returns_accounts_with_email_token_and_device_registration()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var v = Vault.Open(Username,
+                               Password,
+                               new OtpProvidingUi { Code = Otp, RememberMe = false },
+                               new Storage { DeviceId = "" },
+                               flow);
+
+            Assert.NotEmpty(v.Accounts);
+        }
+
+        [Fact]
+        public void Open_throws_on_invalid_email_address()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("invalid-email"), HttpStatusCode.BadRequest);
+
+            Exceptions.AssertThrowsBadCredentials(
+                () => Vault.Open(Username,
+                                 Password,
+                                 new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                 new Storage { DeviceId = "" },
+                                 flow),
+                "Invalid username: ");
+        }
+
+        [Fact]
+        public void Open_returns_accounts_with_email_token_after_2_bad_attempts()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
+                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var v = Vault.Open(Username,
+                               Password,
+                               new OtpProvidingUi { Code = Otp, RememberMe = false },
+                               new Storage { DeviceId = "" },
+                               flow);
+
+            Assert.NotEmpty(v.Accounts);
+        }
+
+        [Fact]
+        public void Open_throws_on_invalid_email_token_after_3_attempts()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
+                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
+                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest);
+
+            Exceptions.AssertThrowsBadMultiFactor(
+                () => Vault.Open(Username,
+                                 Password,
+                                 new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                 new Storage { DeviceId = "" },
+                                 flow),
+                "MFA failed: ");
+        }
+
         [Fact(Skip = "TODO: Migrate fixtures")]
         public void Open_opens_empty_vault()
         {
@@ -112,20 +183,18 @@ namespace PasswordManagerAccess.Test.Dashlane
 
         class OtpProvidingUi: Ui
         {
-            public override Passcode ProvideGoogleAuthPasscode(int attempt)
-            {
-                return new Passcode(Otp, false);
-            }
+            public string Code { get; set; }
+            public bool RememberMe { get; set; }
 
-            public override Passcode ProvideEmailPasscode(int attempt)
-            {
-                throw new NotImplementedException();
-            }
+            public override Passcode ProvideGoogleAuthPasscode(int attempt) => new Passcode(Code, RememberMe);
+            public override Passcode ProvideEmailPasscode(int attempt) => new Passcode(Code, RememberMe);
         }
 
         class Storage: ISecureStorage
         {
-            public string LoadString(string name) => "";
+            public string DeviceId { get; set; }
+
+            public string LoadString(string name) => DeviceId;
             public void StoreString(string name, string value) {}
         }
 

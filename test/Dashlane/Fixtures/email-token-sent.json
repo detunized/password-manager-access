@@ -1,0 +1,10 @@
+{
+    "requestId": "ffaa5424-ab8a-40b7-b64d-260d30979bd9",
+    "data": {
+        "verification": [
+            {
+                "type": "email_token"
+            }
+        ]
+    }
+}

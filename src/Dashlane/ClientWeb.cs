@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -28,7 +29,7 @@ namespace PasswordManagerAccess.Dashlane
             {
                 if (uki.IsNullOrEmpty())
                 {
-                    uki = RegisterNewDevice(username, ui, transport);
+                    uki = RegisterNewDeviceWithMultipleAttempts(username, ui, transport);
                     storage.StoreString(DeviceUkiKey, uki);
 
                     // We don't want to try twice with a newly issued UKI. Take one attempt away.
@@ -52,7 +53,7 @@ namespace PasswordManagerAccess.Dashlane
         }
 
         // Returns a valid UKI
-        internal static string RegisterNewDevice(string username, Ui ui, IRestTransport transport)
+        internal static string RegisterNewDeviceWithMultipleAttempts(string username, Ui ui, IRestTransport transport)
         {
             var rest = new RestClient(transport,
                                       AuthApiBaseUrl,
@@ -65,24 +66,33 @@ namespace PasswordManagerAccess.Dashlane
 
             RequestEmailToken(username, rest);
 
-            var code = ui.ProvideEmailPasscode(0);
-            if (code == Ui.Passcode.Cancel)
-                throw new CanceledMultiFactorException("MFA canceled by the user");
+            for (var attempt = 0; ; attempt++)
+            {
+                var code = ui.ProvideEmailPasscode(attempt);
+                if (code == Ui.Passcode.Cancel)
+                    throw new CanceledMultiFactorException("MFA canceled by the user");
 
-            var ticket = SubmitEmailToken(username, code.Code, rest);
-            var info = RegisterDevice(username, ticket, code.RememberMe, rest);
-
-            return $"{info.AccessKey}-{info.SecretKey}";
+                try
+                {
+                    var ticket = SubmitEmailToken(username, code.Code, rest);
+                    var info = RegisterDevice(username, ticket, code.RememberMe, rest);
+                    return $"{info.AccessKey}-{info.SecretKey}";
+                }
+                catch (BadMultiFactorException e) when (attempt < MaxMfaAttempts - 1)
+                {
+                    // Do nothing, try again
+                }
+            }
         }
 
         internal static void RequestEmailToken(string username, RestClient rest)
         {
             var response = PostJson<RW.VerificationMethods>("RequestDeviceRegistration",
-                                                           new Dictionary<string, object>
-                                                           {
-                                                               ["login"] = username,
-                                                           },
-                                                           rest);
+                                                            new Dictionary<string, object>
+                                                            {
+                                                                ["login"] = username,
+                                                            },
+                                                            rest);
 
             if (response.Methods.Any(x => x.Name == "email_token"))
                 return;
@@ -193,6 +203,7 @@ namespace PasswordManagerAccess.Dashlane
         private const string AppVersion = "6.2236.11";
         private const string Platform = "server_standalone";
         private const string ClientName = "Chrome - Mac OS (PMA)";
+        private const int MaxMfaAttempts = 3;
         private static readonly string ClientAgent = $"{{\"platform\":\"{Platform}\",\"version\":\"{AppVersion}\"}}";
     }
 }
