@@ -173,10 +173,12 @@ namespace PasswordManagerAccess.Dashlane
             var error = errorResponse.Errors[0];
             switch (error.Code)
             {
+            case "user_not_found":
+                return new BadCredentialsException($"Invalid username: '{error.Message}'");
             case "verification_failed":
-                return new BadMultiFactorException(error.Message);
+                return new BadMultiFactorException($"MFA failed: '{error.Message}'");
             default:
-                return new InternalErrorException(error.Message);
+                return new InternalErrorException($"Request failed with error: '{error.Message}'");
             }
         }
 
