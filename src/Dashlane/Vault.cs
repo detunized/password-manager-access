@@ -12,10 +12,10 @@ namespace PasswordManagerAccess.Dashlane
 
     public class Vault
     {
-        public static Vault Open(string username, string password, string deviceId, Ui ui)
+        public static Vault Open(string username, string password, Ui ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return Open(username, password, deviceId, ui, transport);
+            return Open(username, password, ui, storage, transport);
         }
 
         public static string GenerateRandomDeviceId()
@@ -31,9 +31,9 @@ namespace PasswordManagerAccess.Dashlane
         // Internal
         //
 
-        internal static Vault Open(string username, string password, string deviceId, Ui ui, IRestTransport transport)
+        internal static Vault Open(string username, string password, Ui ui, ISecureStorage storage, IRestTransport transport)
         {
-            return new Vault(ClientWeb.OpenVault(username, ui, transport), password);
+            return new Vault(ClientWeb.OpenVault(username, ui, storage, transport), password);
         }
 
         internal Vault(R.Vault blob, string password)

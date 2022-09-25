@@ -128,7 +128,7 @@ namespace PasswordManagerAccess.Example.Dashlane
             {
                 // Fetch and parse first.
                 Console.WriteLine("Fetching and parsing the remote vault");
-                var vault = Vault.Open(username, password, deviceId, new TextUi());
+                var vault = Vault.Open(username, password, new TextUi(), new PlainStorage());
 
                 // And then dump the accounts.
                 Console.WriteLine("The vault has {0} account(s) in it:", vault.Accounts.Length);

@@ -180,6 +180,11 @@ namespace PasswordManagerAccess.Dashlane
             PerformRegisterDeviceStep(RegisterEndpoint, parameters, rest);
         }
 
+        internal static R.Vault Fetch(string username, string deviceId, IRestTransport transport)
+        {
+            return Fetch(username, deviceId, new RestClient(transport, BaseApiUrl));
+        }
+
         internal static R.Vault Fetch(string username, string deviceId, RestClient rest)
         {
             var parameters = CommonFetchParameters(username);
@@ -258,7 +263,7 @@ namespace PasswordManagerAccess.Dashlane
                 switch (message)
                 {
                 case "Incorrect authentification": // Important: it's misspelled in the original code
-                    throw new BadMultiFactorException("Invalid email token");
+                    throw new BadMultiFactorException("Invalid UKI or email token");
                 case "Bad OTP":
                     throw new BadMultiFactorException("Invalid second factor code");
                 default:
