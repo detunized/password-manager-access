@@ -1,9 +1,9 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using Moq;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
 using Xunit;
@@ -20,7 +20,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var vault = Vault.Open(Username,
                                    Password,
                                    null,
-                                   new Storage { DeviceId = Uki },
+                                   new Storage(Uki),
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);
@@ -38,7 +38,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var vault = Vault.Open(Username,
                                    Password,
                                    new OtpProvidingUi { Code = Otp, RememberMe = false },
-                                   new Storage { DeviceId = "" },
+                                   new Storage(""),
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);
@@ -56,7 +56,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var vault = Vault.Open(Username,
                                    Password,
                                    new OtpProvidingUi { Code = Otp, RememberMe = false },
-                                   new Storage { DeviceId = "" },
+                                   new Storage(""),
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);
@@ -75,7 +75,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var vault = Vault.Open(Username,
                                    Password,
                                    new OtpProvidingUi { Code = Otp, RememberMe = false },
-                                   new Storage { DeviceId = Uki },
+                                   new Storage(Uki),
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);
@@ -94,7 +94,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var vault = Vault.Open(Username,
                                    Password,
                                    new OtpProvidingUi { Code = Otp, RememberMe = false },
-                                   new Storage { DeviceId = Uki },
+                                   new Storage(Uki),
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);
@@ -110,7 +110,7 @@ namespace PasswordManagerAccess.Test.Dashlane
                 () => Vault.Open(Username,
                                  Password,
                                  new OtpProvidingUi { Code = Otp, RememberMe = false },
-                                 new Storage { DeviceId = "" },
+                                 new Storage(""),
                                  flow),
                 "Invalid username: ");
         }
@@ -129,7 +129,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var vault = Vault.Open(Username,
                                    Password,
                                    new OtpProvidingUi { Code = Otp, RememberMe = false },
-                                   new Storage { DeviceId = "" },
+                                   new Storage(""),
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);
@@ -148,9 +148,52 @@ namespace PasswordManagerAccess.Test.Dashlane
                 () => Vault.Open(Username,
                                  Password,
                                  new OtpProvidingUi { Code = Otp, RememberMe = false },
-                                 new Storage { DeviceId = "" },
+                                 new Storage(""),
                                  flow),
                 "MFA failed: ");
+        }
+
+        [Theory]
+        [InlineData(false, "")]
+        [InlineData(true, "5d95e3ccccaa40a1-9cf2dbfd517b6b85ab0a7e2cb23972a195aeef5440db095c187782ea0d349962")]
+        public void Open_respects_remember_me_option(bool rememberMe, string expectedDeviceId)
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var storage = new Storage("");
+
+            Vault.Open(Username,
+                       Password,
+                       new OtpProvidingUi { Code = Otp, RememberMe = rememberMe },
+                       storage,
+                       flow);
+
+            Assert.Equal(expectedDeviceId, storage.Values["device-uki"]);
+        }
+
+        [Fact]
+        public void Open_erases_invalid_uki()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("invalid-uki"))
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var storage = new Storage("invalid-uki");
+
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   storage,
+                                   flow);
+
+            Assert.Equal("", storage.Values["device-uki"]);
         }
 
         [Fact]
@@ -216,16 +259,28 @@ namespace PasswordManagerAccess.Test.Dashlane
 
         class Storage: ISecureStorage
         {
-            public string DeviceId { get; set; }
+            public Dictionary<string, string> Values { get; } = new Dictionary<string, string>();
 
-            public string LoadString(string name) => DeviceId;
-            public void StoreString(string name, string value) {}
+            public Storage(string deviceId)
+            {
+                StoreString("device-uki", deviceId);
+            }
+
+            public string LoadString(string name)
+            {
+                return Values[name];
+            }
+
+            public void StoreString(string name, string value)
+            {
+                Values[name] = value;
+            }
         }
 
         private string[] Accounts(string filename)
         {
             var flow = new RestFlow().Post(GetFixture(filename));
-            return Vault.Open(Username, Password, null, new Storage { DeviceId = Uki }, flow)
+            return Vault.Open(Username, Password, null, new Storage(Uki), flow)
                 .Accounts
                 .Select(i => i.Name)
                 .ToArray();

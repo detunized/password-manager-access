@@ -25,8 +25,11 @@ namespace PasswordManagerAccess.Dashlane
             {
                 if (uki.IsNullOrEmpty())
                 {
-                    uki = RegisterNewDeviceWithMultipleAttempts(username, ui, transport);
-                    storage.StoreString(DeviceUkiKey, uki);
+                    bool rememberMe;
+                    (uki, rememberMe) = RegisterNewDeviceWithMultipleAttempts(username, ui, transport);
+
+                    if (rememberMe)
+                        storage.StoreString(DeviceUkiKey, uki);
 
                     // We don't want to try twice with a newly issued UKI. Take one attempt away.
                     i++;
@@ -52,8 +55,10 @@ namespace PasswordManagerAccess.Dashlane
         // Internal
         //
 
-        // Returns a valid UKI
-        internal static string RegisterNewDeviceWithMultipleAttempts(string username, Ui ui, IRestTransport transport)
+        // Returns a valid UKI and "remember me"
+        internal static (string, bool) RegisterNewDeviceWithMultipleAttempts(string username,
+                                                                             Ui ui,
+                                                                             IRestTransport transport)
         {
             var rest = new RestClient(transport,
                                       AuthApiBaseUrl,
@@ -67,7 +72,7 @@ namespace PasswordManagerAccess.Dashlane
             var mfaMethods = RequestDeviceRegistration(username, rest);
             var mfaMethod = ChooseMfaMethod(mfaMethods);
 
-            for (var attempt = 0; ; attempt++)
+            for (var attempt = 0;; attempt++)
             {
                 var code = mfaMethod switch
                 {
@@ -89,7 +94,7 @@ namespace PasswordManagerAccess.Dashlane
                     };
 
                     var info = RegisterDevice(username, ticket, code.RememberMe, rest);
-                    return $"{info.AccessKey}-{info.SecretKey}";
+                    return ($"{info.AccessKey}-{info.SecretKey}", code.RememberMe);
                 }
                 catch (BadMultiFactorException) when (attempt < MaxMfaAttempts - 1)
                 {
