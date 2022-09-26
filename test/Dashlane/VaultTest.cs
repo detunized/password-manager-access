@@ -179,18 +179,6 @@ namespace PasswordManagerAccess.Test.Dashlane
                                                        "MFA canceled by the user");
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
-        public void GenerateRandomDeviceId_returns_device_id()
-        {
-            var id = Vault.GenerateRandomDeviceId();
-
-            Assert.Equal(69, id.Length);
-
-            var parts = id.Split('-');
-            Assert.Equal(6, parts.Length);
-            Assert.All(parts, p => Assert.Matches("^[0-9a-f]+$", p));
-        }
-
         //
         // Helpers
         //

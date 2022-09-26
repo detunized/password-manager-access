@@ -18,15 +18,6 @@ namespace PasswordManagerAccess.Dashlane
             return Open(username, password, ui, storage, transport);
         }
 
-        public static string GenerateRandomDeviceId()
-        {
-            // Generates something like this:
-            // 852dc12ff32a4fc0905e3ff0076868bf-92d3115e-9dae-4c70-a139-5b0063da4ed6
-            return new[] {32, 8, 4, 4, 4, 12}
-                .Select(Crypto.RandomHex)
-                .JoinToString("-");
-        }
-
         //
         // Internal
         //

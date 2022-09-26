@@ -85,45 +85,6 @@ namespace PasswordManagerAccess.Example.Dashlane
             var username = config["username"];
             var password = config["password"];
 
-            // The device ID is optional.
-            var deviceId = config.ContainsKey("device-id") ? config["device-id"] : "";
-
-            // It seems we don't have a device ID. We need one to authenticate with the server. A
-            // device ID must be registered with the Dashlane server. There are two ways to obtain
-            // one.
-
-            // On a machine that has a Dashlane client installed we could rummage through the
-            // settings database and find the device ID that is used by the client. This way we can
-            // pretend to be that client and silently authenticate with the server.
-            if (deviceId == "")
-            {
-                try
-                {
-                    Console.WriteLine("No device ID is specified. Looking for the local Dashlane");
-                    Console.WriteLine($"settings database (profile name: {username})");
-
-                    deviceId = Import.ImportLocalDeviceId(username, password);
-
-                    Console.WriteLine($"The device ID is found in the local database: {deviceId}");
-                }
-                catch (BaseException e)
-                {
-                    Console.WriteLine("Could not import the device ID from the local Dashlane setting)");
-                    Util.PrintException(e);
-                }
-            }
-
-            // Alternatively, we could try to generate a new device ID and register it with the
-            // server. The process is interactive. The server will send an email with a security
-            // token that the user must provide via the Ui interface. This device ID should be used
-            // on the subsequent runs.
-            if (deviceId == "")
-            {
-                deviceId = Vault.GenerateRandomDeviceId();
-                Console.WriteLine($"Generated a new device ID: {deviceId}");
-                Console.WriteLine("Please store it and use it on the subsequent runs");
-            }
-
             try
             {
                 // Fetch and parse first.
