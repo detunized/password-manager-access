@@ -23,7 +23,7 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static Vault Open(string username, string password, Ui ui, ISecureStorage storage, IRestTransport transport)
         {
-            return new Vault(ClientWeb.OpenVault(username, ui, storage, transport), password);
+            return new Vault(Client.OpenVault(username, ui, storage, transport), password);
         }
 
         internal Vault(R.Vault blob, string password)
