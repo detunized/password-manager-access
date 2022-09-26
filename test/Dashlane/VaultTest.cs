@@ -48,7 +48,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void Open_returns_accounts_with_otp_token_and_device_registration()
         {
             var flow = new RestFlow()
-                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("otp-requested"))
                 .Post(GetFixture("email-token-verified"))
                 .Post(GetFixture("device-registered"))
                 .Post(GetFixture("non-empty-vault"));
@@ -57,6 +57,44 @@ namespace PasswordManagerAccess.Test.Dashlane
                                    Password,
                                    new OtpProvidingUi { Code = Otp, RememberMe = false },
                                    new Storage { DeviceId = "" },
+                                   flow);
+
+            Assert.NotEmpty(vault.Accounts);
+        }
+
+        [Fact]
+        public void Open_returns_accounts_with_email_token_and_device_registration_with_expired_device_id()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("invalid-uki"))
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   new Storage { DeviceId = Uki },
+                                   flow);
+
+            Assert.NotEmpty(vault.Accounts);
+        }
+
+        [Fact]
+        public void Open_returns_accounts_with_otp_token_and_device_registration_with_expired_device_id()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("invalid-uki"))
+                .Post(GetFixture("otp-requested"))
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   new Storage { DeviceId = Uki },
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);

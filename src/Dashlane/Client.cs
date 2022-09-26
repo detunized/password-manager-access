@@ -1,10 +1,10 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.Dashlane.Response;
 
@@ -36,9 +36,9 @@ namespace PasswordManagerAccess.Dashlane
                 {
                     return Fetch(username, uki, transport);
                 }
-                catch (BadMultiFactorException)
+                catch (BadCredentialsException)
                 {
-                    // In case of expired or invalid UKI we get a BadMultiFactorException here
+                    // In case of expired or invalid UKI we get a BadCredentialsException here
                     // Wipe the old UKI as it's no longer valid and try again
                     uki = "";
                     storage.StoreString(DeviceUkiKey, "");
@@ -184,27 +184,52 @@ namespace PasswordManagerAccess.Dashlane
             if (response.IsSuccessful)
                 return response.Data.Data;
 
-            throw MakeSpecializedError(response);
+            throw MakeSpecializedError(response, TryParseAuthError);
         }
 
-        internal static BaseException MakeSpecializedError(RestResponse<string> response)
+        internal static R.Vault Fetch(string username, string deviceId, IRestTransport transport)
+        {
+            var rest = new RestClient(transport, FetchBaseApiUrl);
+            var parameters = new Dictionary<string, object>
+            {
+                ["login"] = username,
+                ["lock"] = "nolock",
+                ["timestamp"] = "0",
+                ["sharingTimestamp"] = "0",
+                ["uki"] = deviceId,
+            };
+
+            var response = rest.PostForm<R.Vault>("12/backup/latest", parameters);
+            if (response.IsSuccessful)
+                return response.Data;
+
+            throw MakeSpecializedError(response, TryParseFetchError);
+        }
+
+        internal static BaseException MakeSpecializedError(RestResponse<string> response,
+                                                           Func<RestResponse<string>, BaseException> parseError)
         {
             var uri = response.RequestUri;
 
             if (response.IsNetworkError)
                 return new NetworkErrorException($"A network error occurred during a request to {uri}", response.Error);
 
-            // The request was successful but we failed to parse. This is usually due to changed format.
-            if (response.IsHttpOk && response.Error is JsonException)
-                return new InternalErrorException($"Failed to parse JSON response from {uri}", response.Error);
+            // First try to parse the error JSON. It has a different schema.
+            var error = parseError(response);
+            if (error != null)
+                return error;
 
-            // Otherwise we need to check for the returned error. This is also a JSON parsing error because the schema
-            // for error and for regular responses are different.
-            return TryParseReturnedError(response) ??
-                   new InternalErrorException($"Unexpected response from {uri}", response.Error);
+            // The original JSON didn't parse either. This is usually due to changed format.
+            if (response.Error is JsonException)
+                return new InternalErrorException(
+                    $"Failed to parse JSON response from {uri} (HTTP status: ${response.StatusCode})",
+                    response.Error);
+
+            return new InternalErrorException($"Unexpected response from {uri} (HTTP status: ${response.StatusCode})",
+                                              response.Error);
         }
 
-        internal static BaseException TryParseReturnedError(RestResponse<string> response)
+        internal static BaseException TryParseAuthError(RestResponse<string> response)
         {
             var uri = response.RequestUri;
             R.ErrorEnvelope errorResponse;
@@ -232,69 +257,24 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        internal static R.Vault Fetch(string username, string deviceId, IRestTransport transport)
+        internal static BaseException TryParseFetchError(RestResponse<string> response)
         {
-            var rest = new RestClient(transport, BaseApiUrl);
-            var parameters = new Dictionary<string, object>
-            {
-                ["login"] = username,
-                ["lock"] = "nolock",
-                ["timestamp"] = "0",
-                ["sharingTimestamp"] = "0",
-                ["uki"] = deviceId,
-            };
-
-            var response = rest.PostForm<R.Vault>(LatestEndpoint, parameters);
-            if (response.IsSuccessful)
-                return response.Data;
-
-            CheckForErrors(response);
-
-            throw new NetworkErrorException("Network error occurred", response.Error);
-        }
-
-        internal static void CheckForErrors(RestResponse<string> response)
-        {
-            var json = ParseJson(response);
-            var error = json.SelectToken("error");
-            if (error != null)
-            {
-                var message = GetStringProperty(error, "message", "Unknown error");
-                throw new InternalErrorException($"Request to '{response.RequestUri}' failed with error: '{message}'");
-            }
-
-            if (GetStringProperty(json, "objectType", "") == "message")
-            {
-                var message = GetStringProperty(json, "content", "Unknown error");
-                switch (message)
-                {
-                case "Incorrect authentification": // Important: it's misspelled in the original code
-                    throw new BadMultiFactorException("Invalid UKI or email token");
-                case "Bad OTP":
-                    throw new BadMultiFactorException("Invalid second factor code");
-                default:
-                    throw new InternalErrorException(
-                        $"Request to '{response.RequestUri}' failed with error: '{message}'");
-                }
-            }
-        }
-
-        internal static JObject ParseJson(RestResponse<string> response)
-        {
+            var uri = response.RequestUri;
+            R.FetchError error;
             try
             {
-                return JObject.Parse(response.Content);
+                error = JsonConvert.DeserializeObject<R.FetchError>(response.Content);
             }
             catch (JsonException e)
             {
-                throw new InternalErrorException($"Invalid JSON in response from '{response.RequestUri}'", e);
+                return new InternalErrorException($"Invalid JSON in response from '{uri}'", e);
             }
-        }
 
-        internal static string GetStringProperty(JToken root, string name, string defaultValue)
-        {
-            var token = root.SelectToken(name);
-            return token == null || token.Type != JTokenType.String ? defaultValue : (string)token;
+            // "authentification" misspelled on the Dashlane side
+            if (error.Type == "message" && error.Content == "Incorrect authentification")
+                return new BadCredentialsException("Invalid credentials");
+
+            return new InternalErrorException($"Request failed with error: '{error.Content}'");
         }
 
         //
@@ -302,6 +282,7 @@ namespace PasswordManagerAccess.Dashlane
         //
 
         private const string AuthApiBaseUrl = "https://api.dashlane.com/v1/authentication/";
+        private const string FetchBaseApiUrl = "https://ws1.dashlane.com/";
         private const string UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
         private const string DeviceUkiKey = "device-uki";
         private const string AppVersion = "6.2236.11";
@@ -310,7 +291,5 @@ namespace PasswordManagerAccess.Dashlane
         private const int MaxMfaAttempts = 3;
         private static readonly string ClientAgent = $"{{\"platform\":\"{Platform}\",\"version\":\"{AppVersion}\"}}";
 
-        private const string BaseApiUrl = "https://ws1.dashlane.com/";
-        private const string LatestEndpoint = "12/backup/latest";
     }
 }

@@ -59,7 +59,7 @@ namespace PasswordManagerAccess.Dashlane.Response
         public readonly string PrivateKey;
     }
 
-    internal struct ErrorEnvelope
+    internal readonly struct ErrorEnvelope
     {
         [JsonProperty("requestId", Required = Required.Always)]
         public readonly string RequestId;
@@ -68,7 +68,7 @@ namespace PasswordManagerAccess.Dashlane.Response
         public readonly Error[] Errors;
     }
 
-    internal struct Error
+    internal readonly struct Error
     {
         [JsonProperty("type", Required = Required.Always)]
         public readonly string Type;
@@ -78,6 +78,15 @@ namespace PasswordManagerAccess.Dashlane.Response
 
         [JsonProperty("message", Required = Required.Always)]
         public readonly string Message;
+    }
+
+    internal readonly struct FetchError
+    {
+        [JsonProperty("objectType", Required = Required.Always)]
+        public readonly string Type;
+
+        [JsonProperty("content", Required = Required.Always)]
+        public readonly string Content;
     }
 
     internal class Vault
