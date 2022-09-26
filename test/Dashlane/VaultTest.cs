@@ -153,86 +153,52 @@ namespace PasswordManagerAccess.Test.Dashlane
                 "MFA failed: ");
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_empty_vault()
         {
             Assert.Empty(Accounts("empty-vault"));
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_a_vault_with_empty_fullfile_and_one_add_transaction()
         {
             Assert.Equal(new[]{Dude}, Accounts("empty-fullfile-one-add-transaction"));
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_a_vault_with_empty_fullfile_and_two_add_transations()
         {
             Assert.Equal(new[]{Dude, Nam}, Accounts("empty-fullfile-two-add-transactions"));
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_a_vault_with_empty_fullfile_and_two_add_and_one_remove_transations()
         {
             Assert.Equal(new[]{Dude, Nam}, Accounts("empty-fullfile-two-add-one-remove-transactions"));
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_a_vault_with_two_accounts_in_fullfile()
         {
             Assert.Equal(new[]{Dude, Nam}, Accounts("two-accounts-in-fullfile"));
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_one_remove_transaction()
         {
             Assert.Equal(new[]{Dude}, Accounts("two-accounts-in-fullfile-one-remove-transaction"));
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_two_remove_transactions()
         {
             Assert.Empty(Accounts("two-accounts-in-fullfile-two-remove-transactions"));
         }
 
-        [Fact(Skip = "TODO: Migrate fixtures")]
+        [Fact]
         public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_two_remove_and_one_add_transactions()
         {
             Assert.Equal(new[]{Dude}, Accounts("two-accounts-in-fullfile-two-remove-one-add-transactions"));
-        }
-
-        //
-        // MFA
-        //
-
-        [Fact(Skip = "TODO: Migrate fixtures")]
-        public void Open_calls_gets_opt_from_ui()
-        {
-            var flow = new RestFlow()
-                .Post(GetFixture("exists-otp"))
-                .Post(GetFixture("device-registered"))
-                .Post(GetFixture("empty-vault"))
-                    .ExpectContent($"otp={Otp}");
-
-            var ui = new Mock<Ui>();
-            ui.Setup(x => x.ProvideGoogleAuthPasscode(It.IsAny<int>())).Returns(new Ui.Passcode(Otp, false));
-
-            Vault.Open(Username, Password, ui.Object, new Storage(), flow);
-        }
-
-        [Fact(Skip = "TODO: Migrate fixtures")]
-        public void Open_throws_on_user_canceled_otp()
-        {
-            var flow = new RestFlow()
-                .Post(GetFixture("exists-otp"))
-                .Post(GetFixture("device-registered"))
-                .Post(GetFixture("empty-vault"));
-
-            var ui = new Mock<Ui>();
-            ui.Setup(x => x.ProvideGoogleAuthPasscode(It.IsAny<int>())).Returns(Ui.Passcode.Cancel);
-
-            Exceptions.AssertThrowsCanceledMultiFactor(() => Vault.Open(Username, Password, ui.Object, new Storage(), flow),
-                                                       "MFA canceled by the user");
         }
 
         //
@@ -258,11 +224,8 @@ namespace PasswordManagerAccess.Test.Dashlane
 
         private string[] Accounts(string filename)
         {
-            var flow = new RestFlow()
-                .Post(GetFixture("exists-yes"))
-                .Post(GetFixture("device-registered"))
-                .Post(GetFixture(filename));
-            return Vault.Open(Username, Password, null, new Storage(), flow)
+            var flow = new RestFlow().Post(GetFixture(filename));
+            return Vault.Open(Username, Password, null, new Storage { DeviceId = Uki }, flow)
                 .Accounts
                 .Select(i => i.Name)
                 .ToArray();
