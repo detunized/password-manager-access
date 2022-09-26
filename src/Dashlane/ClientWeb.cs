@@ -78,7 +78,7 @@ namespace PasswordManagerAccess.Dashlane
                     var info = RegisterDevice(username, ticket, code.RememberMe, rest);
                     return $"{info.AccessKey}-{info.SecretKey}";
                 }
-                catch (BadMultiFactorException e) when (attempt < MaxMfaAttempts - 1)
+                catch (BadMultiFactorException) when (attempt < MaxMfaAttempts - 1)
                 {
                     // Do nothing, try again
                 }
