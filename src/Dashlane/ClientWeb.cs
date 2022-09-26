@@ -1,12 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
-
-// TODO: Merge R and RW
 using R = PasswordManagerAccess.Dashlane.Response;
-using RW = PasswordManagerAccess.Dashlane.ResponseWeb;
 
 namespace PasswordManagerAccess.Dashlane
 {
@@ -98,14 +94,14 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        internal static RW.VerificationMethod[] RequestDeviceRegistration(string username, RestClient rest)
+        internal static R.VerificationMethod[] RequestDeviceRegistration(string username, RestClient rest)
         {
-            return PostJson<RW.VerificationMethods>("RequestDeviceRegistration",
-                                                    new Dictionary<string, object>
-                                                    {
-                                                        ["login"] = username,
-                                                    },
-                                                    rest).Methods;
+            return PostJson<R.VerificationMethods>("RequestDeviceRegistration",
+                                                   new Dictionary<string, object>
+                                                   {
+                                                       ["login"] = username,
+                                                   },
+                                                   rest).Methods;
         }
 
         private enum MfaMethod
@@ -114,7 +110,7 @@ namespace PasswordManagerAccess.Dashlane
             Otp
         }
 
-        private static MfaMethod ChooseMfaMethod(RW.VerificationMethod[] mfaMethods)
+        private static MfaMethod ChooseMfaMethod(R.VerificationMethod[] mfaMethods)
         {
             if (mfaMethods.Length == 0)
                 throw new InternalErrorException("No MFA methods are provided by the server");
@@ -132,55 +128,54 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static string SubmitEmailToken(string username, string token, RestClient rest)
         {
-            return PostJson<RW.AuthTicket>("PerformEmailTokenVerification",
-                                           new Dictionary<string, object>
-                                           {
-                                               ["login"] = username,
-                                               ["token"] = token,
-                                           },
-                                           rest).Ticket;
+            return PostJson<R.AuthTicket>("PerformEmailTokenVerification",
+                                          new Dictionary<string, object>
+                                          {
+                                              ["login"] = username,
+                                              ["token"] = token,
+                                          },
+                                          rest).Ticket;
         }
 
         internal static string SubmitOtpToken(string username, string token, RestClient rest)
         {
-            return PostJson<RW.AuthTicket>("PerformTotpVerification",
-                                           new Dictionary<string, object>
-                                           {
-                                               ["login"] = username,
-                                               ["otp"] = token,
-                                           },
-                                           rest).Ticket;
+            return PostJson<R.AuthTicket>("PerformTotpVerification",
+                                          new Dictionary<string, object>
+                                          {
+                                              ["login"] = username,
+                                              ["otp"] = token,
+                                          },
+                                          rest).Ticket;
         }
 
-        internal static RW.DeviceInfo RegisterDevice(string username, string ticket, bool rememberMe, RestClient rest)
+        internal static R.DeviceInfo RegisterDevice(string username, string ticket, bool rememberMe, RestClient rest)
         {
-            return PostJson<RW.DeviceInfo>("CompleteDeviceRegistrationWithAuthTicket",
-                                           new Dictionary<string, object>
-                                           {
-                                               ["login"] = username,
-                                               ["authTicket"] = ticket,
-                                               ["device"] = new Dictionary<string, object>
-                                               {
-                                                   ["appVersion"] = AppVersion,
-                                                   ["deviceName"] = ClientName,
-                                                   ["osCountry"] = "US",
-                                                   ["osLanguage"] = "en-US",
-                                                   ["platform"] = Platform,
-                                                   ["temporary"] = !rememberMe,
-                                               },
-                                           },
-                                           rest);
+            return PostJson<R.DeviceInfo>("CompleteDeviceRegistrationWithAuthTicket",
+                                          new Dictionary<string, object>
+                                          {
+                                              ["login"] = username,
+                                              ["authTicket"] = ticket,
+                                              ["device"] = new Dictionary<string, object>
+                                              {
+                                                  ["appVersion"] = AppVersion,
+                                                  ["deviceName"] = ClientName,
+                                                  ["osCountry"] = "US",
+                                                  ["osLanguage"] = "en-US",
+                                                  ["platform"] = Platform,
+                                                  ["temporary"] = !rememberMe,
+                                              },
+                                          },
+                                          rest);
         }
 
         internal static T PostJson<T>(string endpoint, Dictionary<string, object> parameters, RestClient rest)
         {
-            var response = rest.PostJson<RW.Envelope<T>>(
-                endpoint,
-                parameters,
-                headers: new Dictionary<string, string>
-                {
-                    ["Accept"] = "application/json",
-                });
+            var response = rest.PostJson<R.Envelope<T>>(endpoint,
+                                                        parameters,
+                                                        headers: new Dictionary<string, string>
+                                                        {
+                                                            ["Accept"] = "application/json",
+                                                        });
 
             if (response.IsSuccessful)
                 return response.Data.Data;
@@ -208,10 +203,10 @@ namespace PasswordManagerAccess.Dashlane
         internal static BaseException TryParseReturnedError(RestResponse<string> response)
         {
             var uri = response.RequestUri;
-            RW.ErrorEnvelope errorResponse;
+            R.ErrorEnvelope errorResponse;
             try
             {
-                errorResponse = JsonConvert.DeserializeObject<RW.ErrorEnvelope>(response.Content);
+                errorResponse = JsonConvert.DeserializeObject<R.ErrorEnvelope>(response.Content);
             }
             catch (JsonException e)
             {
@@ -232,7 +227,6 @@ namespace PasswordManagerAccess.Dashlane
                 return new InternalErrorException($"Request failed with error: '{error.Message}'");
             }
         }
-
 
         //
         // Data

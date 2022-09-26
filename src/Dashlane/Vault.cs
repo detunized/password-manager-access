@@ -5,11 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.Dashlane.Response;
 
 namespace PasswordManagerAccess.Dashlane
 {
-    using R = Response;
-
     public class Vault
     {
         public static Vault Open(string username, string password, Ui ui, ISecureStorage storage)
@@ -41,7 +40,7 @@ namespace PasswordManagerAccess.Dashlane
                 foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), fullPassword, keyCache))
                     accounts[i.Id] = i;
 
-            foreach (var transaction in blob.Transactions ?? new R.Transaction[0])
+            foreach (var transaction in blob.Transactions ?? Array.Empty<R.Transaction>())
             {
                 if (transaction.Kind != "AUTHENTIFIANT")
                     continue;

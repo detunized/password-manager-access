@@ -5,18 +5,78 @@ using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.Dashlane.Response
 {
-    internal class LoginType
+    internal class Envelope<T>
     {
-        [JsonProperty(PropertyName = "exists", Required = Required.Always)]
-        public readonly string Exists;
+        [JsonProperty("requestId", Required = Required.Always)]
+        public readonly string RequestId;
+
+        [JsonProperty("data", Required = Required.Always)]
+        public readonly T Data;
     }
 
-    internal class Status
+    internal readonly struct VerificationMethods
     {
-        [JsonProperty(PropertyName = "code", Required = Required.Always)]
-        public readonly int Code;
+        [JsonProperty("verification", Required = Required.Always)]
+        public readonly VerificationMethod[] Methods;
+    }
 
-        [JsonProperty(PropertyName = "message", Required = Required.Always)]
+    internal readonly struct VerificationMethod
+    {
+        [JsonProperty("type", Required = Required.Always)]
+        public readonly string Name;
+    }
+
+    internal readonly struct AuthTicket
+    {
+        [JsonProperty("authTicket", Required = Required.Always)]
+        public readonly string Ticket;
+    }
+
+    internal readonly struct DeviceInfo
+    {
+        [JsonProperty("deviceAccessKey", Required = Required.Always)]
+        public readonly string AccessKey;
+
+        [JsonProperty("deviceSecretKey", Required = Required.Always)]
+        public readonly string SecretKey;
+
+        [JsonProperty("publicUserId", Required = Required.Always)]
+        public readonly string UserId;
+
+        // TODO: Make this required
+        [JsonProperty("sharingKeys", Required = Required.Default)]
+        public readonly SharingKeys SharingKeys;
+    }
+
+    internal readonly struct SharingKeys
+    {
+        // TODO: Make this required
+        [JsonProperty("publicKey", Required = Required.Default)]
+        public readonly string PublicKey;
+
+        // TODO: Make this required
+        [JsonProperty("privateKey", Required = Required.Default)]
+        public readonly string PrivateKey;
+    }
+
+    internal struct ErrorEnvelope
+    {
+        [JsonProperty("requestId", Required = Required.Always)]
+        public readonly string RequestId;
+
+        [JsonProperty("errors", Required = Required.Always)]
+        public readonly Error[] Errors;
+    }
+
+    internal struct Error
+    {
+        [JsonProperty("type", Required = Required.Always)]
+        public readonly string Type;
+
+        [JsonProperty("code", Required = Required.Always)]
+        public readonly string Code;
+
+        [JsonProperty("message", Required = Required.Always)]
         public readonly string Message;
     }
 

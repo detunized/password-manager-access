@@ -5,11 +5,10 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.Dashlane.Response;
 
 namespace PasswordManagerAccess.Dashlane
 {
-    using R = Response;
-
     // TODO: Merge this with ClientWeb
     internal static class Client
     {
