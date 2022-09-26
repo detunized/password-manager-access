@@ -1,0 +1,10 @@
+{
+    "requestId": "f8aec971-39a8-4ae6-a474-5e2ba1010d75",
+    "data": {
+        "verification": [
+            {
+                "type": "totp"
+            }
+        ]
+    }
+}

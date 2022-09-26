@@ -64,17 +64,30 @@ namespace PasswordManagerAccess.Dashlane
                                           ["User-Agent"] = UserAgent,
                                       });
 
-            RequestEmailToken(username, rest);
+            var mfaMethods = RequestDeviceRegistration(username, rest);
+            var mfaMethod = ChooseMfaMethod(mfaMethods);
 
             for (var attempt = 0; ; attempt++)
             {
-                var code = ui.ProvideEmailPasscode(attempt);
+                var code = mfaMethod switch
+                {
+                    MfaMethod.Email => ui.ProvideEmailPasscode(attempt),
+                    MfaMethod.Otp => ui.ProvideGoogleAuthPasscode(attempt),
+                    _ => throw new InternalErrorException("Logical error"),
+                };
+
                 if (code == Ui.Passcode.Cancel)
                     throw new CanceledMultiFactorException("MFA canceled by the user");
 
                 try
                 {
-                    var ticket = SubmitEmailToken(username, code.Code, rest);
+                    var ticket = mfaMethod switch
+                    {
+                        MfaMethod.Email => SubmitEmailToken(username, code.Code, rest),
+                        MfaMethod.Otp => SubmitOtpToken(username, code.Code, rest),
+                        _ => throw new InternalErrorException("Logical error"),
+                    };
+
                     var info = RegisterDevice(username, ticket, code.RememberMe, rest);
                     return $"{info.AccessKey}-{info.SecretKey}";
                 }
@@ -85,19 +98,36 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        internal static void RequestEmailToken(string username, RestClient rest)
+        internal static RW.VerificationMethod[] RequestDeviceRegistration(string username, RestClient rest)
         {
-            var response = PostJson<RW.VerificationMethods>("RequestDeviceRegistration",
-                                                            new Dictionary<string, object>
-                                                            {
-                                                                ["login"] = username,
-                                                            },
-                                                            rest);
+            return PostJson<RW.VerificationMethods>("RequestDeviceRegistration",
+                                                    new Dictionary<string, object>
+                                                    {
+                                                        ["login"] = username,
+                                                    },
+                                                    rest).Methods;
+        }
 
-            if (response.Methods.Any(x => x.Name == "email_token"))
-                return;
+        private enum MfaMethod
+        {
+            Email,
+            Otp
+        }
 
-            throw new InternalErrorException("Unexpected response: no email MFA method found");
+        private static MfaMethod ChooseMfaMethod(RW.VerificationMethod[] mfaMethods)
+        {
+            if (mfaMethods.Length == 0)
+                throw new InternalErrorException("No MFA methods are provided by the server");
+
+            if (mfaMethods.Any(x => x.Name == "totp"))
+                return MfaMethod.Otp;
+
+            if (mfaMethods.Any(x => x.Name == "email"))
+                return MfaMethod.Email;
+
+
+            var names = mfaMethods.Select(x => x.Name).JoinToString(", ");
+            throw new UnsupportedFeatureException($"None of the [{names}] MFA methods are supported");
         }
 
         internal static string SubmitEmailToken(string username, string token, RestClient rest)
@@ -107,6 +137,17 @@ namespace PasswordManagerAccess.Dashlane
                                            {
                                                ["login"] = username,
                                                ["token"] = token,
+                                           },
+                                           rest).Ticket;
+        }
+
+        internal static string SubmitOtpToken(string username, string token, RestClient rest)
+        {
+            return PostJson<RW.AuthTicket>("PerformTotpVerification",
+                                           new Dictionary<string, object>
+                                           {
+                                               ["login"] = username,
+                                               ["otp"] = token,
                                            },
                                            rest).Ticket;
         }

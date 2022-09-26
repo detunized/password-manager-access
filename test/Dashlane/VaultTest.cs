@@ -45,6 +45,24 @@ namespace PasswordManagerAccess.Test.Dashlane
         }
 
         [Fact]
+        public void Open_returns_accounts_with_otp_token_and_device_registration()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   new Storage { DeviceId = "" },
+                                   flow);
+
+            Assert.NotEmpty(vault.Accounts);
+        }
+
+        [Fact]
         public void Open_throws_on_invalid_email_address()
         {
             var flow = new RestFlow()
