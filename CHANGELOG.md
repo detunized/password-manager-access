@@ -1,5 +1,8 @@
 # Changelog
 
+## 10.0.0
+  - Dashlane: new web protocol to replace the outdated and no longer supported desktop protocol
+
 ## 9.1.1
   - Newtonsoft.Json upgraded to 13.0.1 to fix a potential vulnerability
 
