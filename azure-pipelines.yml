@@ -32,15 +32,15 @@ jobs:
       platform: '$(buildPlatform)'
       configuration: '$(buildConfiguration)'
 
-  - task: CmdLine@2
-    inputs:
-      script: dir /s
-
   - task: VSTest@2
     inputs:
       platform: '$(buildPlatform)'
       configuration: '$(buildConfiguration)'
-
+      testSelector: 'testAssemblies'
+      testAssemblyVer2: |
+        **\PasswordManagerAccess.Test.dll
+        !**\obj\**
+      searchFolder: '$(System.DefaultWorkingDirectory)'
 #
 # Linux
 #
