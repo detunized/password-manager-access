@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Text;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using Xunit;
@@ -300,6 +301,21 @@ namespace PasswordManagerAccess.Test.Common
         public void String_Repeat_returns_repeated_string(string s, int times, string expected)
         {
             Assert.Equal(expected, s.Repeat(times));
+        }
+        
+        //
+        // StringBuilder
+        //
+
+        [Theory]
+        [InlineData("", "", "\n")]
+        [InlineData("init-", "line2", "init-line2\n")]
+        [InlineData("\r", "\r", "\r\r\n")]
+        [InlineData("\r\n", "\r\n", "\r\n\r\n\n")]
+        public void StringBuilder_AppendLineLf_appends_line_with_lf(string a, string b, string expected)
+        {
+            var s = new StringBuilder(a).AppendLineLf(b).ToString();
+            Assert.Equal(expected, s);
         }
 
         //

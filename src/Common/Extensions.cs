@@ -210,6 +210,15 @@ namespace PasswordManagerAccess.Common
 
             return result.ToString();
         }
+        
+        //
+        // StringBuilder
+        //
+
+        internal static StringBuilder AppendLineLf(this StringBuilder sb, string s)
+        {
+            return sb.Append(s).Append('\n');
+        }
 
         //
         // byte[]
