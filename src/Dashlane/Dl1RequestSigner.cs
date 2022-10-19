@@ -21,11 +21,23 @@ namespace PasswordManagerAccess.Dashlane
                                                         IReadOnlyDictionary<string, string> headers,
                                                         HttpContent content)
         {
+            return Sign(uri, method, headers, content, Os.UnixSeconds());
+        }
+        
+        //
+        // Internal
+        //
+
+        internal static IReadOnlyDictionary<string, string> Sign(Uri uri,
+                                                                 HttpMethod method,
+                                                                 IReadOnlyDictionary<string, string> headers,
+                                                                 HttpContent content,
+                                                                 uint timestamp)
+        {
             var headersToSign = FormatHeaderForSigning(headers, content);
             var headerOrder = headersToSign.Keys.OrderBy(x => x).ToArray();
             var request = BuildRequest(uri, method, headersToSign, headerOrder, content);
             var requestHashHex = Crypto.Sha256(request).ToHex();
-            var timestamp = Os.UnixSeconds();
             var signingMaterial = BuildAuthSigningMaterial(timestamp, requestHashHex);
             var signature = Crypto.HmacSha256(AppAccessSecret, signingMaterial).ToHex();
             var extraHeaders = new Dictionary<string, string>
@@ -81,13 +93,13 @@ namespace PasswordManagerAccess.Dashlane
                                             HttpContent content)
         {
             var request = new StringBuilder();
-            request.AppendLine(method.ToString());
-            request.AppendLine(uri.AbsolutePath);
-            request.AppendLine("");
+            request.AppendLineLf(method.ToString());
+            request.AppendLineLf(uri.AbsolutePath);
+            request.AppendLineLf("");
             foreach (var name in headerOrder)
-                request.AppendLine($"{name}:{headersToSign[name]}");
-            request.AppendLine("");
-            request.AppendLine(headerOrder.JoinToString(";"));
+                request.AppendLineLf($"{name}:{headersToSign[name]}");
+            request.AppendLineLf("");
+            request.AppendLineLf(headerOrder.JoinToString(";"));
 
             // The last line should not have the trailing '\n'!
             request.Append(HashBody(content));
