@@ -34,14 +34,17 @@ namespace PasswordManagerAccess.Dashlane.Response
 
     internal readonly struct DeviceInfo
     {
+        [JsonProperty("publicUserId", Required = Required.Always)]
+        public readonly string UserId;
+
         [JsonProperty("deviceAccessKey", Required = Required.Always)]
         public readonly string AccessKey;
 
         [JsonProperty("deviceSecretKey", Required = Required.Always)]
         public readonly string SecretKey;
 
-        [JsonProperty("publicUserId", Required = Required.Always)]
-        public readonly string UserId;
+        [JsonProperty("serverKey")]
+        public readonly string ServerKey;
 
         // TODO: Make this required
         [JsonProperty("sharingKeys", Required = Required.Default)]
@@ -91,25 +94,21 @@ namespace PasswordManagerAccess.Dashlane.Response
 
     internal class Vault
     {
-        [JsonProperty(PropertyName = "token")]
-        public readonly string Token;
-
-        [JsonProperty(PropertyName = "serverKey")]
-        public readonly string ServerKey;
-
         [JsonProperty(PropertyName = "fullBackupFile")]
         public readonly string EncryptedAccounts;
 
         [JsonProperty(PropertyName = "transactionList")]
         public readonly Transaction[] Transactions;
 
-        // This one is not used and is only used to identify this data structure during de-serialization.
+        //
+        // These ones are not used and only needed to identify this data structure during de-serialization.
+        //
+        
         [JsonProperty(PropertyName = "timestamp", Required = Required.Always)]
-        public readonly string Timestamp;
-
-        // This one is not used and is only used to identify this data structure during de-serialization.
+        public readonly string UnusedTimestamp;
+        
         [JsonProperty(PropertyName = "summary", Required = Required.Always)]
-        public readonly object Summary;
+        public readonly object UnusedSummary;
     }
 
     internal class Transaction

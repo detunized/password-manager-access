@@ -12,11 +12,17 @@ namespace PasswordManagerAccess.Dashlane
 {
     internal static class Client
     {
-        public static R.Vault OpenVault(string username, Ui ui, ISecureStorage storage, IRestTransport transport)
+        public static (R.Vault Vault, string ServerKey) OpenVault(string username, 
+                                                                  Ui ui, 
+                                                                  ISecureStorage storage, 
+                                                                  IRestTransport transport)
         {
             // Dashlane requires a registered known to the server device ID (UKI) to access the vault. When there's no
             // UKI available we need to initiate a login sequence with a forced OTP.
             var uki = storage.LoadString(DeviceUkiKey);
+            
+            // Server key is a server provided part of the password used in the vault decryptioin.
+            var serverKey = "";
 
             // Give 2 attempts max
             // 1. Possibly fail to fetch the vault with an expired UKI
@@ -25,10 +31,12 @@ namespace PasswordManagerAccess.Dashlane
             {
                 if (uki.IsNullOrEmpty())
                 {
-                    bool rememberMe;
-                    (uki, rememberMe) = RegisterNewDeviceWithMultipleAttempts(username, ui, transport);
-
-                    if (rememberMe)
+                    var registerResult = RegisterNewDeviceWithMultipleAttempts(username, ui, transport);
+                    
+                    uki = registerResult.Uki;
+                    serverKey = registerResult.ServerKey;
+                    
+                    if (registerResult.RememberMe)
                         storage.StoreString(DeviceUkiKey, uki);
 
                     // We don't want to try twice with a newly issued UKI. Take one attempt away.
@@ -37,7 +45,7 @@ namespace PasswordManagerAccess.Dashlane
 
                 try
                 {
-                    return Fetch(username, uki, transport);
+                    return (Fetch(username, uki, transport), serverKey);
                 }
                 catch (BadCredentialsException)
                 {
@@ -55,8 +63,22 @@ namespace PasswordManagerAccess.Dashlane
         // Internal
         //
 
+        internal readonly struct RegisterResult
+        {
+            public readonly string Uki;
+            public readonly string ServerKey;
+            public readonly bool RememberMe;
+
+            public RegisterResult(string uki, string serverKey, bool rememberMe)
+            {
+                Uki = uki;
+                ServerKey = serverKey;
+                RememberMe = rememberMe;
+            }
+        }
+
         // Returns a valid UKI and "remember me"
-        internal static (string, bool) RegisterNewDeviceWithMultipleAttempts(string username,
+        internal static RegisterResult RegisterNewDeviceWithMultipleAttempts(string username,
                                                                              Ui ui,
                                                                              IRestTransport transport)
         {
@@ -94,7 +116,9 @@ namespace PasswordManagerAccess.Dashlane
                     };
 
                     var info = RegisterDevice(username, ticket, code.RememberMe, rest);
-                    return ($"{info.AccessKey}-{info.SecretKey}", code.RememberMe);
+                    return new RegisterResult($"{info.AccessKey}-{info.SecretKey}",
+                                              info.ServerKey ?? "",
+                                              code.RememberMe);
                 }
                 catch (BadMultiFactorException) when (attempt < MaxMfaAttempts - 1)
                 {

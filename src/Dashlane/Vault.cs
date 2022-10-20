@@ -23,16 +23,16 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static Vault Open(string username, string password, Ui ui, ISecureStorage storage, IRestTransport transport)
         {
-            return new Vault(Client.OpenVault(username, ui, storage, transport), password);
+            var (vault, serverKey) = Client.OpenVault(username, ui, storage, transport);
+            return new Vault(vault, serverKey, password);
         }
 
-        internal Vault(R.Vault blob, string password)
+        internal Vault(R.Vault blob, string serverKey, string password)
         {
             var accounts = new Dictionary<string, Account>();
             var keyCache = new Parse.DerivedKeyCache();
 
             // This is used with the MFA. The server supplies the password prefix that is used in encryption.
-            var serverKey = blob.ServerKey ?? "";
             var fullPassword = serverKey + password;
 
             var fullFile = blob.EncryptedAccounts;
