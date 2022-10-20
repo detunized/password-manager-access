@@ -1,5 +1,9 @@
 # Changelog
 
+## 10.1.0
+  - Dashlane: added support for "Always on" OTP
+  - Dashlane: fixed a login problem on Windows
+  
 ## 10.0.0
   - Dashlane: new web protocol to replace the outdated and no longer supported desktop protocol
 
