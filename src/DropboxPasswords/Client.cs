@@ -69,6 +69,37 @@ namespace PasswordManagerAccess.DropboxPasswords
         // Internal
         //
 
+        internal const string ClientId = "8ho1d12ibryh3ez";
+
+        internal static string GenerateOAuth2AuthenticationUrl()
+        {
+            return GenerateOAuth2AuthenticationUrl(Crypto.RandomBytes(128));
+        }
+
+        internal static string GenerateOAuth2AuthenticationUrl(byte[] entropy)
+        {
+            var (verifier, challenge) = GenerateOAuth2PkceValues(entropy);
+            return $"https://dropbox.com/oauth2/authorize?" +
+                   $"response_type=code&client_id={ClientId}&" +
+                   $"redirect_uri=https://www.dropbox.com/passwords_extension/auth_redirect&" +
+                   $"token_access_type=legacy&" +
+                   $"code_challenge_method=S256&" +
+                   $"code_challenge={challenge}" +
+                   $"locale=en";
+        }
+
+        internal static (string Verifier, string Challenge) GenerateOAuth2PkceValues(byte[] entropy)
+        {
+            var verifier = entropy.Select(x => x.ToString("D"))
+                .JoinToString(",")
+                .ToUrlSafeBase64NoPadding()
+                .Substring(0, 128);
+            var challenge = Crypto.Sha256(verifier)
+                .ToUrlSafeBase64NoPadding()
+                .Substring(0, 128);
+            return (verifier, challenge);
+        }
+
         internal static R.EncryptedEntry[] DownloadAllEntries(R.RootFolder rootFolder,
                                                               string rootPath,
                                                               RestClient contentRest)
@@ -193,7 +224,7 @@ namespace PasswordManagerAccess.DropboxPasswords
         {
             try
             {
-                return JsonConvert.DeserializeObject<T>(json);
+                return JsonConvert.DeserializeObject<T>(json)!;
             }
             catch (JsonException e)
             {
