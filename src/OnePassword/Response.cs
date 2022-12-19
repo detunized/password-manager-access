@@ -215,6 +215,9 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty("totp")]
         public readonly BasicMfa GoogleAuth;
 
+        [JsonProperty("webAuthn")]
+        public readonly WebAuthnMfa WebAuthn;
+
         [JsonProperty("duo")]
         public readonly DuoMfa Duo;
     }
@@ -223,6 +226,15 @@ namespace PasswordManagerAccess.OnePassword.Response
     {
         [JsonProperty("enabled", Required = Required.Always)]
         public readonly bool Enabled;
+    }
+
+    internal class WebAuthnMfa: BasicMfa
+    {
+        [JsonProperty("keyHandles")]
+        public readonly string[] KeyHandles;
+
+        [JsonProperty("challenge")]
+        public readonly string Challenge;
     }
 
     internal class DuoMfa: BasicMfa

@@ -9,6 +9,11 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword.Ui;
 using R = PasswordManagerAccess.OnePassword.Response;
 
+// TODO: Try to minimize number of #if's to make the code easier to follow and test!
+#if NETFRAMEWORK
+using U2fWin10;
+#endif
+
 namespace PasswordManagerAccess.OnePassword
 {
     public static class Client
@@ -302,6 +307,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             GoogleAuthenticator,
             RememberMeToken,
+            WebAuthn,
             Duo,
         }
 
@@ -366,6 +372,9 @@ namespace PasswordManagerAccess.OnePassword
             if (mfa.RememberMe?.Enabled == true)
                 factors.Add(new SecondFactor(SecondFactorKind.RememberMeToken));
 
+            if (mfa.WebAuthn?.Enabled == true)
+                factors.Add(new SecondFactor(SecondFactorKind.WebAuthn, mfa.WebAuthn));
+
             if (mfa.Duo?.Enabled == true)
                 factors.Add(new SecondFactor(SecondFactorKind.Duo, mfa.Duo));
 
@@ -388,15 +397,15 @@ namespace PasswordManagerAccess.OnePassword
 
             // TODO: Allow to choose 2FA method via UI like in Bitwarden
             var factor = ChooseInteractiveSecondFactor(factors);
-            var passcode = GetSecondFactorPasscode(factor, ui, rest);
 
-            if (passcode == Passcode.Cancel)
+           var secondFactorResult = GetSecondFactorResult(factor, ui, rest);
+           if (secondFactorResult.Canceled)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
-            var token = SubmitSecondFactorCode(factor.Kind, passcode.Code, sessionKey, rest);
+            var token = SubmitSecondFactorResult(factor.Kind, secondFactorResult, sessionKey, rest);
 
             // Store the token with the application. Next time we're not gonna need to enter any passcodes.
-            if (passcode.RememberMe)
+            if (secondFactorResult.RememberMe)
                 storage.StoreString(RememberMeTokenKey, token);
         }
 
@@ -412,9 +421,15 @@ namespace PasswordManagerAccess.OnePassword
             if (string.IsNullOrEmpty(token))
                 return false;
 
+            var result = SecondFactorResult.Done(new Dictionary<string, string>
+                                                 {
+                                                     ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id)
+                                                 },
+                                                 true);
+
             try
             {
-                SubmitSecondFactorCode(SecondFactorKind.RememberMeToken, token, sessionKey, rest);
+                SubmitSecondFactorResult(SecondFactorKind.RememberMeToken, result, sessionKey, rest);
             }
             catch (BadMultiFactorException)
             {
@@ -445,17 +460,99 @@ namespace PasswordManagerAccess.OnePassword
             throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
         }
 
-        internal static Passcode GetSecondFactorPasscode(SecondFactor factor, IUi ui, RestClient rest)
+        internal class SecondFactorResult
+        {
+            public readonly Dictionary<string, string> Parameters;
+            public readonly bool RememberMe;
+            public readonly bool Canceled;
+
+            public static SecondFactorResult Done(Dictionary<string, string> parameters, bool rememberMe)
+            {
+                return new SecondFactorResult(parameters: parameters,
+                                              rememberMe: rememberMe,
+                                              canceled: false);
+            }
+
+            public static SecondFactorResult Cancel()
+            {
+                return new SecondFactorResult(parameters: null,
+                                              rememberMe: false,
+                                              canceled: true);
+            }
+
+            private SecondFactorResult(Dictionary<string, string> parameters, bool rememberMe, bool canceled)
+            {
+                Canceled = canceled;
+                RememberMe = rememberMe;
+                Parameters = parameters;
+            }
+        }
+
+        internal static SecondFactorResult GetSecondFactorResult(SecondFactor factor, IUi ui, RestClient rest)
         {
             return factor.Kind switch
             {
-                SecondFactorKind.GoogleAuthenticator => ui.ProvideGoogleAuthPasscode(),
+                SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(factor, ui),
+                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, ui),
                 SecondFactorKind.Duo => AuthenticateWithDuo(factor, ui, rest),
                 _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here")
             };
         }
 
-        internal static Passcode AuthenticateWithDuo(SecondFactor factor, IUi ui, RestClient rest)
+        internal static SecondFactorResult AuthenticateWithGoogleAuth(SecondFactor factor, IUi ui)
+        {
+            var passcode = ui.ProvideGoogleAuthPasscode();
+            if (passcode == Passcode.Cancel)
+                return SecondFactorResult.Cancel();
+
+            return SecondFactorResult.Done(new Dictionary<string, string>
+                                           {
+                                               ["code"] = passcode.Code,
+                                           },
+                                           passcode.RememberMe);
+        }
+
+        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, IUi ui)
+        {
+#if NETFRAMEWORK
+            // TODO: Support regional domains!
+            // TODO: Throw on multiple key handles!
+            // TODO: Support RemeberMe! Need to request this from the UI!
+
+            if (!(factor.Parameters is R.WebAuthnMfa extra))
+                throw new InternalErrorException("WebAuthn extra parameters expected");
+
+            try
+            {
+                var assertion = WebAuthN.GetAssertion(appId: "1password.com",
+                                                      challenge: extra.Challenge,
+                                                      origin: "https://my.1password.com",
+                                                      crossOrigin: false,
+                                                      keyHandle: extra.KeyHandles[0]);
+
+                return SecondFactorResult.Done(new Dictionary<string, string>
+                                               {
+                                                   ["keyHandle"] = assertion.KeyHandle,
+                                                   ["signature"] = assertion.Signature,
+                                                   ["authenticatorData"] = assertion.AuthData,
+                                                   ["clientDataJSON"] = assertion.ClientData,
+                                               },
+                                               false);
+            }
+            catch (CanceledException)
+            {
+                return SecondFactorResult.Cancel();
+            }
+            catch (ErrorException e)
+            {
+                throw new InternalErrorException("WebAuthn authentication failed", e);
+            }
+#else
+            throw new UnsupportedFeatureException("WebAuthn is not supported on this platform");
+#endif
+        }
+
+        internal static SecondFactorResult AuthenticateWithDuo(SecondFactor factor, IUi ui, RestClient rest)
         {
             if (!(factor.Parameters is R.DuoMfa extra))
                 throw new InternalErrorException("Duo extra parameters expected");
@@ -473,35 +570,30 @@ namespace PasswordManagerAccess.OnePassword
                                           ui,
                                           rest.Transport);
 
-            return result == null ? null : new Passcode(result.Passcode, result.RememberMe);
+            if (result == null)
+                return SecondFactorResult.Cancel();
+
+            return SecondFactorResult.Done(new Dictionary<string, string>
+                                           {
+                                               ["sigResponse"] = result.Passcode
+                                           },
+                                           result.RememberMe);
         }
 
         // Returns "remember me" token when successful
-        internal static string SubmitSecondFactorCode(SecondFactorKind factor,
-                                                      string code,
-                                                      AesKey sessionKey,
-                                                      RestClient rest)
+        internal static string SubmitSecondFactorResult(SecondFactorKind factor,
+                                                        SecondFactorResult result,
+                                                        AesKey sessionKey,
+                                                        RestClient rest)
         {
-            var key = "";
-            object data = null;
-
-            switch (factor)
+            var key = factor switch
             {
-            case SecondFactorKind.GoogleAuthenticator:
-                key = "totp";
-                data = new Dictionary<string, string> {["code"] = code};
-                break;
-            case SecondFactorKind.RememberMeToken:
-                key = "dsecret";
-                data = new Dictionary<string, string> {["dshmac"] = Util.HashRememberMeToken(code, sessionKey.Id)};
-                break;
-            case SecondFactorKind.Duo:
-                key = "duo";
-                data = new Dictionary<string, string> {["sigResponse"] = code};
-                break;
-            default:
-                throw new InternalErrorException($"2FA method {factor} is not valid");
-            }
+                SecondFactorKind.GoogleAuthenticator => "totp",
+                SecondFactorKind.RememberMeToken => "dsecret",
+                SecondFactorKind.WebAuthn => "webAuthn",
+                SecondFactorKind.Duo => "duo",
+                _ => throw new InternalErrorException($"2FA method {factor} is not valid"),
+            };
 
             try
             {
@@ -510,7 +602,7 @@ namespace PasswordManagerAccess.OnePassword
                                                         {
                                                             ["sessionID"] = sessionKey.Id,
                                                             ["client"] = ClientId,
-                                                            [key] = data,
+                                                            [key] = result.Parameters,
                                                         },
                                                         sessionKey,
                                                         rest);
@@ -798,6 +890,9 @@ namespace PasswordManagerAccess.OnePassword
 
         private static readonly SecondFactorKind[] SecondFactorPriority =
         {
+#if NETFRAMEWORK
+            SecondFactorKind.WebAuthn,
+#endif
             SecondFactorKind.Duo,
             SecondFactorKind.GoogleAuthenticator,
         };

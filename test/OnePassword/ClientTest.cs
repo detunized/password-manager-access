@@ -281,7 +281,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void SubmitSecondFactorCode_returns_remember_me_token()
         {
             var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
-            var token = Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
+            var token = Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
                                                       "123456",
                                                       TestData.SessionKey,
                                                       flow);
@@ -297,7 +297,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v1/auth/mfa")
                 .ToRestClient(ApiUrl);
 
-            Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
+            Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
                                           "123456",
                                           TestData.SessionKey,
                                           flow);
@@ -309,7 +309,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.SubmitSecondFactorCode(Client.SecondFactorKind.GoogleAuthenticator,
+                () => Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
                                                     "123456",
                                                     TestData.SessionKey,
                                                     flow),
