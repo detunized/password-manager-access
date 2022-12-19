@@ -193,11 +193,11 @@ namespace PasswordManagerAccess.DropboxPasswords
         {
             try
             {
-                return JsonConvert.DeserializeObject<T>(json);
+                return JsonConvert.DeserializeObject<T>(json) ?? throw MakeDeserializeError<T>();
             }
             catch (JsonException e)
             {
-                throw MakeError($"Failed to deserialize {typeof(T)} from JSON in response", e);
+                throw MakeDeserializeError<T>(e);
             }
         }
 
@@ -213,6 +213,11 @@ namespace PasswordManagerAccess.DropboxPasswords
         internal static InternalErrorException MakeError(string message, Exception? inner = null)
         {
             return new InternalErrorException(message, inner);
+        }
+
+        internal static InternalErrorException MakeDeserializeError<T>(Exception? inner = null)
+        {
+            return MakeError($"Failed to deserialize {typeof(T)} from JSON in response", inner);
         }
     }
 }
