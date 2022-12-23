@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -282,9 +283,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
             var token = Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
-                                                      "123456",
-                                                      TestData.SessionKey,
-                                                      flow);
+                                                        GoogleAuthMfaResult,
+                                                        TestData.SessionKey,
+                                                        flow);
 
             Assert.Equal("gUhBItRHUI7vAc04TJNUkA", token);
         }
@@ -298,9 +299,9 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ToRestClient(ApiUrl);
 
             Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
-                                          "123456",
-                                          TestData.SessionKey,
-                                          flow);
+                                            GoogleAuthMfaResult,
+                                            TestData.SessionKey,
+                                            flow);
         }
 
         [Fact]
@@ -310,9 +311,9 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsBadMultiFactor(
                 () => Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
-                                                    "123456",
-                                                    TestData.SessionKey,
-                                                    flow),
+                                                      GoogleAuthMfaResult,
+                                                      TestData.SessionKey,
+                                                      flow),
                 "Incorrect second factor code");
         }
 
@@ -547,6 +548,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator),
         };
+
+        private static readonly Client.SecondFactorResult GoogleAuthMfaResult = Client.SecondFactorResult.Done(
+            new Dictionary<string, string>
+            {
+                ["code"] = "123456",
+            },
+            false);
 
         // TODO: All the tests here use the data from this account. I don't care about the account
         //       or exposing its credentials, but I don't want to have inconsistent test data.
