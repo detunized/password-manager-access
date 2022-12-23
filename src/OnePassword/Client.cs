@@ -9,14 +9,9 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword.Ui;
 using R = PasswordManagerAccess.OnePassword.Response;
 
-// TODO: Try to minimize number of #if's to make the code easier to follow and test!
-#if NETFRAMEWORK
-using U2fWin10;
-#endif
-
 namespace PasswordManagerAccess.OnePassword
 {
-    public static class Client
+    public static partial class Client
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
@@ -512,46 +507,6 @@ namespace PasswordManagerAccess.OnePassword
                                            passcode.RememberMe);
         }
 
-        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, IUi ui)
-        {
-#if NETFRAMEWORK
-            // TODO: Support regional domains!
-            // TODO: Throw on multiple key handles!
-            // TODO: Support RemeberMe! Need to request this from the UI!
-
-            if (!(factor.Parameters is R.WebAuthnMfa extra))
-                throw new InternalErrorException("WebAuthn extra parameters expected");
-
-            try
-            {
-                var assertion = WebAuthN.GetAssertion(appId: "1password.com",
-                                                      challenge: extra.Challenge,
-                                                      origin: "https://my.1password.com",
-                                                      crossOrigin: false,
-                                                      keyHandle: extra.KeyHandles[0]);
-
-                return SecondFactorResult.Done(new Dictionary<string, string>
-                                               {
-                                                   ["keyHandle"] = assertion.KeyHandle,
-                                                   ["signature"] = assertion.Signature,
-                                                   ["authData"] = assertion.AuthData,
-                                                   ["clientData"] = assertion.ClientData,
-                                               },
-                                               false);
-            }
-            catch (CanceledException)
-            {
-                return SecondFactorResult.Cancel();
-            }
-            catch (ErrorException e)
-            {
-                throw new InternalErrorException("WebAuthn authentication failed", e);
-            }
-#else
-            throw new UnsupportedFeatureException("WebAuthn is not supported on this platform");
-#endif
-        }
-
         internal static SecondFactorResult AuthenticateWithDuo(SecondFactor factor, IUi ui, RestClient rest)
         {
             if (!(factor.Parameters is R.DuoMfa extra))
@@ -887,14 +842,5 @@ namespace PasswordManagerAccess.OnePassword
 
         private const string MasterKeyId = "mp";
         private const string RememberMeTokenKey = "remember-me-token";
-
-        private static readonly SecondFactorKind[] SecondFactorPriority =
-        {
-#if NETFRAMEWORK
-            SecondFactorKind.WebAuthn,
-#endif
-            SecondFactorKind.Duo,
-            SecondFactorKind.GoogleAuthenticator,
-        };
     }
 }
