@@ -534,8 +534,8 @@ namespace PasswordManagerAccess.OnePassword
                                                {
                                                    ["keyHandle"] = assertion.KeyHandle,
                                                    ["signature"] = assertion.Signature,
-                                                   ["authenticatorData"] = assertion.AuthData,
-                                                   ["clientDataJSON"] = assertion.ClientData,
+                                                   ["authData"] = assertion.AuthData,
+                                                   ["clientData"] = assertion.ClientData,
                                                },
                                                false);
             }
