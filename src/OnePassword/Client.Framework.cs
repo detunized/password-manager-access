@@ -15,11 +15,13 @@ namespace PasswordManagerAccess.OnePassword
         internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, IUi ui)
         {
             // TODO: Support regional domains!
-            // TODO: Throw on multiple key handles!
             // TODO: Support RemeberMe! Need to request this from the UI!
 
             if (!(factor.Parameters is R.WebAuthnMfa extra))
                 throw new InternalErrorException("WebAuthn extra parameters expected");
+
+            if (extra.KeyHandles.Length > 1)
+                throw new UnsupportedFeatureException("Multiple WebAuthn keys are not supported");
 
             try
             {
