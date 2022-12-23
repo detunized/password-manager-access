@@ -193,7 +193,7 @@ namespace PasswordManagerAccess.OnePassword
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, sessionKey, ui, storage, macRest);
+                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, clientInfo, sessionKey, ui, storage, macRest);
 
             return (sessionKey, macRest);
         }
@@ -380,6 +380,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static void PerformSecondFactorAuthentication(SecondFactor[] factors,
+                                                               ClientInfo clientInfo,
                                                                AesKey sessionKey,
                                                                IUi ui,
                                                                ISecureStorage storage,
@@ -393,7 +394,7 @@ namespace PasswordManagerAccess.OnePassword
             // TODO: Allow to choose 2FA method via UI like in Bitwarden
             var factor = ChooseInteractiveSecondFactor(factors);
 
-           var secondFactorResult = GetSecondFactorResult(factor, ui, rest);
+           var secondFactorResult = GetSecondFactorResult(factor, clientInfo, ui, rest);
            if (secondFactorResult.Canceled)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
@@ -483,18 +484,21 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static SecondFactorResult GetSecondFactorResult(SecondFactor factor, IUi ui, RestClient rest)
+        internal static SecondFactorResult GetSecondFactorResult(SecondFactor factor,
+                                                                 ClientInfo clientInfo,
+                                                                 IUi ui,
+                                                                 RestClient rest)
         {
             return factor.Kind switch
             {
-                SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(factor, ui),
-                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, ui),
+                SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(ui),
+                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, clientInfo),
                 SecondFactorKind.Duo => AuthenticateWithDuo(factor, ui, rest),
                 _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here")
             };
         }
 
-        internal static SecondFactorResult AuthenticateWithGoogleAuth(SecondFactor factor, IUi ui)
+        internal static SecondFactorResult AuthenticateWithGoogleAuth(IUi ui)
         {
             var passcode = ui.ProvideGoogleAuthPasscode();
             if (passcode == Passcode.Cancel)

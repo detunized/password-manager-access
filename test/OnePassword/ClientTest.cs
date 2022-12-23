@@ -241,6 +241,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsCanceledMultiFactor(
                 () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors,
+                                                               ClientInfo,
                                                                TestData.SessionKey,
                                                                new CancelingUi(),
                                                                null,

@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using PasswordManagerAccess.Common;
-using PasswordManagerAccess.OnePassword.Ui;
 using R = PasswordManagerAccess.OnePassword.Response;
 using U2fWin10;
 
@@ -12,9 +11,8 @@ namespace PasswordManagerAccess.OnePassword
     // This part only compiles under .NET Framework
     public static partial class Client
     {
-        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, IUi ui)
+        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, ClientInfo clientInfo)
         {
-            // TODO: Support regional domains!
             // TODO: Support RemeberMe! Need to request this from the UI!
 
             if (!(factor.Parameters is R.WebAuthnMfa extra))
@@ -27,7 +25,7 @@ namespace PasswordManagerAccess.OnePassword
             {
                 var assertion = WebAuthN.GetAssertion(appId: "1password.com",
                                                       challenge: extra.Challenge,
-                                                      origin: "https://my.1password.com",
+                                                      origin: $"https://{clientInfo.Domain}",
                                                       crossOrigin: false,
                                                       keyHandle: extra.KeyHandles[0]);
 
