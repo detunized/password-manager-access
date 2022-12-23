@@ -1,5 +1,8 @@
 # Changelog
 
+## 10.2.0
+  - 1Password: added support for WebAuthn MFA with USB keys on Windows 10+
+  
 ## 10.1.0
   - Dashlane: added support for "Always on" OTP
   - Dashlane: fixed a login problem on Windows
