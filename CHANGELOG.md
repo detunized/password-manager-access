@@ -1,5 +1,8 @@
 # Changelog
 
+## 10.2.1
+  - Bitwarden: fixed an "unusual traffic" error that was happening in some setups
+  
 ## 10.2.0
   - 1Password: added support for WebAuthn MFA with USB keys on Windows 10+
   
