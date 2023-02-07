@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Bitwarden.Ui;
@@ -708,16 +709,42 @@ namespace PasswordManagerAccess.Bitwarden
         // Private
         //
 
+        private static string GetPlatform()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return "macos";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return "linux";
+
+            // Don't crash, just assume Windows
+            return "windows";
+        }
+
         private const string DefaultApiUrl = "https://api.bitwarden.com";
         private const string DefaultIdentityUrl = "https://identity.bitwarden.com";
 
         private const string RememberMeTokenKey = "remember-me-token";
-        private const string DeviceType = "7";
-        private const string DeviceName = "macos";
+
+        private static readonly string DeviceName = GetPlatform();
+        private static readonly string DeviceType = DeviceName switch
+        {
+            "windows" => "6",
+            "macos" => "7",
+            "linux" => "8",
+            _ => throw new InternalErrorException($"Unexpected device name {DeviceName}")
+        };
+        private static readonly string UserAgent = DeviceName switch
+        {
+            "windows" => "Bitwarden_CLI/[object Promise] (WINDOWS)",
+            "macos" => "Bitwarden_CLI/[object Promise] (MACOS)",
+            "linux" => "Bitwarden_CLI/2023.1.0 (LINUX)",
+            _ => throw new InternalErrorException($"Unexpected device name {DeviceName}")
+        };
 
         private static readonly Dictionary<string, string> DefaultRestHeaders = new Dictionary<string, string>
         {
-            ["User-Agent"] = "Bitwarden_CLI/[object Promise] (MACOS)",
+            ["User-Agent"] = UserAgent,
             ["Device-Type"] = DeviceType,
         };
 
