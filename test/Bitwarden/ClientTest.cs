@@ -15,6 +15,28 @@ namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class ClientTest: TestBase
     {
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        public void MakeRestClients_returns_default_urls(string baseUrl)
+        {
+            var rest = Client.MakeRestClients(baseUrl, new RestFlow());
+
+            Assert.Equal(ApiUrl, rest.Api.BaseUrl);
+            Assert.Equal(IdentityUrl, rest.Identity.BaseUrl);
+        }
+
+        [Theory]
+        [InlineData("https://base.url")]
+        [InlineData("https://base.url/")]
+        public void MakeRestClients_combines_base_url_with_endpoints(string baseUrl)
+        {
+            var rest = Client.MakeRestClients(baseUrl, new RestFlow());
+
+            Assert.Equal("https://base.url/api", rest.Api.BaseUrl);
+            Assert.Equal("https://base.url/identity", rest.Identity.BaseUrl);
+        }
+
         [Fact]
         public void RequestKdfIterationCount_returns_iteration_count()
         {
@@ -32,8 +54,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'Kdf': 0, 'KdfIterations': 1337}")
-                    .ExpectUrl("/api/accounts/prelogin")
-                .ToRestClient();
+                    .ExpectUrl(ApiUrl + "/accounts/prelogin")
+                .ToRestClient(ApiUrl);
 
             Client.RequestKdfIterationCount(Username, rest);
         }
@@ -51,16 +73,19 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void Login_returns_auth_token_on_non_2fa_login()
         {
-            var rest = new RestFlow()
+            var apiRest = new RestFlow();
+            var idRest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
-                .ToRestClient();
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             var token = Client.Login(Username,
                                      PasswordHash,
                                      DeviceId,
                                      null,
                                      SetupSecureStorage(null),
-                                     rest);
+                                     apiRest,
+                                     idRest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
         }
@@ -68,39 +93,46 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void Login_sends_remember_me_token_when_available()
         {
-            var rest = new RestFlow()
+            var apiRest = new RestFlow();
+            var idRest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectUrl(IdentityUrl + "/connect/token")
                     .ExpectContent($"twoFactorToken={RememberMeToken}", "twoFactorProvider=5")
-                .ToRestClient();
+                .ToRestClient(IdentityUrl);
 
-            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(RememberMeToken), rest);
+            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(RememberMeToken), apiRest, idRest);
         }
 
         [Fact]
         public void Login_does_not_send_remember_me_token_when_not_available()
         {
-            var rest = new RestFlow()
+            var apiRest = new RestFlow();
+            var idRest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectUrl(IdentityUrl + "/connect/token")
                     .ExpectContent(c => Assert.DoesNotContain("twoFactorToken", c))
                     .ExpectContent(c => Assert.DoesNotContain("twoFactorProvider", c))
-                .ToRestClient();
+                .ToRestClient(IdentityUrl);
 
-            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest);
+            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), apiRest, idRest);
         }
 
         [Fact]
         public void Login_asks_ui_to_choose_second_factor_method()
         {
-            var rest = new RestFlow()
-                .Post(GetFixture("login-mfa"), System.Net.HttpStatusCode.BadRequest)
+            var apiRest = new RestFlow();
+            var idRest = new RestFlow()
+                .Post(GetFixture("login-mfa"), HttpStatusCode.BadRequest)
+                    .ExpectUrl(IdentityUrl + "/connect/token")
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
-                .ToRestClient();
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             var ui = new Mock<IUi>();
             ui.Setup(x => x.ChooseMfaMethod(It.IsAny<MfaMethod[]>())).Returns(MfaMethod.GoogleAuth);
             ui.Setup(x => x.ProvideGoogleAuthPasscode()).Returns(new Passcode("123456", false));
 
-            Client.Login(Username, PasswordHash, DeviceId, ui.Object, SetupSecureStorage(null), rest);
+            Client.Login(Username, PasswordHash, DeviceId, ui.Object, SetupSecureStorage(null), apiRest, idRest);
 
             ui.Verify(x => x.ChooseMfaMethod(It.IsAny<MfaMethod[]>()), Times.Once);
         }
@@ -108,12 +140,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void Login_throws_when_no_supported_second_factor_methods_are_available()
         {
-            var rest = new RestFlow()
-                .Post(GetFixture("login-mfa-unsupported-only"), System.Net.HttpStatusCode.BadRequest)
-                .ToRestClient();
+            var apiRest = new RestFlow();
+            var idRest = new RestFlow()
+                .Post(GetFixture("login-mfa-unsupported-only"), HttpStatusCode.BadRequest)
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             Exceptions.AssertThrowsUnsupportedFeature(
-                () => Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest),
+                () => Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), apiRest, idRest),
                 "not supported");
         }
 
@@ -122,7 +156,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'Kdf': 13, 'KdfIterations': 1337}")
-                .ExpectUrl("/identity/connect/token");
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             var result = Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest);
 
@@ -137,7 +172,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'error':'invalid_client'}", status: HttpStatusCode.BadRequest)
-                .ExpectUrl("/identity/connect/token");
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             Exceptions.AssertThrowsBadCredentials(
                 () => Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest),
@@ -149,7 +185,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
-                .ToRestClient();
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
 
@@ -162,8 +199,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void RequestAuthToken_returns_second_factor_response()
         {
             var rest = new RestFlow()
-                .Post(GetFixture("login-mfa"), System.Net.HttpStatusCode.BadRequest)
-                .ToRestClient();
+                .Post(GetFixture("login-mfa"), HttpStatusCode.BadRequest)
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
 
@@ -183,7 +221,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'TwoFactorToken': 'remember-me-token'}")
-                .ToRestClient();
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
 
@@ -197,8 +236,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
-                    .ExpectUrl("/identity/connect/token")
-                .ToRestClient();
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
 
             Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
         }
@@ -208,8 +247,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectUrl(IdentityUrl + "/connect/token")
                     .ExpectContent("deviceIdentifier=device-id")
-                .ToRestClient();
+                .ToRestClient(IdentityUrl);
 
             Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
         }
@@ -219,8 +259,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectUrl(IdentityUrl + "/connect/token")
                     .ExpectHeader("Auth-Email", "dXNlcm5hbWU")
-                .ToRestClient();
+                .ToRestClient(IdentityUrl);
 
             Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
         }
@@ -230,8 +271,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
+                    .ExpectUrl(IdentityUrl + "/connect/token")
                     .ExpectContent("twoFactorToken=code", "twoFactorProvider=2", "twoFactorRemember=1")
-                .ToRestClient();
+                .ToRestClient(IdentityUrl);
 
             Client.RequestAuthToken(Username,
                                     PasswordHash,
@@ -245,7 +287,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Get(GetFixture("vault"))
-                .ToRestClient();
+                    .ExpectUrl(ApiUrl + "/sync")
+                .ToRestClient(ApiUrl);
 
             var response = Client.DownloadVault(rest, "token");
 
@@ -259,8 +302,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Get(GetFixture("vault"))
-                    .ExpectUrl("/api/sync")
-                .ToRestClient();
+                    .ExpectUrl(ApiUrl + "/sync")
+                .ToRestClient(ApiUrl);
 
             Client.DownloadVault(rest, "token");
         }
@@ -270,8 +313,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow()
                 .Get(GetFixture("vault"))
+                    .ExpectUrl(ApiUrl + "/sync")
                     .ExpectHeader("Authorization", "token")
-                .ToRestClient();
+                .ToRestClient(ApiUrl);
 
             Client.DownloadVault(rest, "token");
         }
@@ -293,7 +337,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void DecryptVault_returns_collections()
         {
             var (_, collections, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"),
-                                                          KekForVaultWithCollections);
+                                                             KekForVaultWithCollections);
 
             Assert.Equal(2, collections.Length);
 
@@ -447,6 +491,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         //
         // Data
         //
+
+        private const string ApiUrl = "https://api.bitwarden.com";
+        private const string IdentityUrl = "https://identity.bitwarden.com";
 
         private const string Username = "username";
         private const string ClientId = "client-id";
