@@ -11,8 +11,10 @@ namespace PasswordManagerAccess.LastPass
         public readonly string Password;
         public readonly string Url;
         public readonly string Path;
+        public readonly string Notes;
+        public readonly string Favorite;
 
-        public Account(string id, string name, string username, string password, string url, string path)
+        public Account(string id, string name, string username, string password, string url, string path, string notes, string favorite)
         {
             Id = id;
             Name = name;
@@ -20,6 +22,8 @@ namespace PasswordManagerAccess.LastPass
             Password = password;
             Url = url;
             Path = path;
+            Notes = notes;
+            Favorite= favorite;
         }
    }
 }

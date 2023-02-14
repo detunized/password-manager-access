@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.LastPass
                     return null;
 
                 var notes = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
-                SkipItem(reader);
+                var favorite = ReadItem(reader).ToUtf8();
                 SkipItem(reader);
                 var username = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var password = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.LastPass
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
                 // Parse secure note
-                if (secureNoteMarker == "1")
+                if (false && secureNoteMarker == "1")
                 {
                     var type = "";
                     ParseSecureNoteServer(notes, ref type, ref url, ref username, ref password);
@@ -67,7 +67,7 @@ namespace PasswordManagerAccess.LastPass
                 // Adjust the path to include the group and the shared folder, if any.
                 var path = MakeAccountPath(group, folder);
 
-                return new Account(id, name, username, password, url, path);
+                return new Account(id, name, username, password, url, path, notes, favorite);
             });
         }
 
