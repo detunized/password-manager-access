@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.LastPass
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
                 // Parse secure note
-                if (false && secureNoteMarker == "1")
+                if (ParserOptions.ParseSecureNotesToAccount && secureNoteMarker == "1")
                 {
                     var type = "";
                     ParseSecureNoteServer(notes, ref type, ref url, ref username, ref password);
