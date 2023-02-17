@@ -67,7 +67,7 @@ namespace PasswordManagerAccess.LastPass
                 // Adjust the path to include the group and the shared folder, if any.
                 var path = MakeAccountPath(group, folder);
 
-                return new Account(id, name, username, password, url, path, notes, favorite);
+                return new Account(id, name, username, password, url, path, notes, favorite, folder != null);
             });
         }
 

@@ -75,7 +75,7 @@ namespace PasswordManagerAccess.Example.LastPass
                 var vault = Vault.Open(config["username"],
                                        config["password"],
                                        new ClientInfo(Platform.Desktop,
-                                                      config["device-id"],
+                                                      config["client-id"],
                                                       config["client-description"]),
                                        new TextUi());
 
