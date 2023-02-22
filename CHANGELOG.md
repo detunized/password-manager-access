@@ -1,15 +1,22 @@
 # Changelog
 
+## 10.3.0
+  - LastPass: added support for the favorite flag for the parsed items (see `IsFavorite` in `Account`)
+  - LastPass: set a flag when the item is shared (see `IsShared` in `Account`)
+  - LastPass: added `ParserOptions.ParseSecureNotesToAccount` to control whether the secure notes
+    should be parsed into accounts or left as is. This allows extraction of all secure notes, not
+    only of the "server" type (thanks to Kyle Spearrin @kspearrin)
+
 ## 10.2.1
   - Bitwarden: fixed an "unusual traffic" error that was happening in some setups
-  
+
 ## 10.2.0
   - 1Password: added support for WebAuthn MFA with USB keys on Windows 10+
-  
+
 ## 10.1.0
   - Dashlane: added support for "Always on" OTP
   - Dashlane: fixed a login problem on Windows
-  
+
 ## 10.0.0
   - Dashlane: new web protocol to replace the outdated and no longer supported desktop protocol
 
