@@ -28,7 +28,7 @@ namespace PasswordManagerAccess.LastPass
         //
         // TODO: Add a test for the folder case!
         // TODO: Add a test case that covers secure note account!
-        public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder = null)
+        public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder, ParserOptions options)
         {
             return chunk.Payload.Open(reader =>
             {
@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.LastPass
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
                 // Parse secure note
-                if (ParserOptions.ParseSecureNotesToAccount && secureNoteMarker == "1")
+                if (options.ParseSecureNotesToAccount && secureNoteMarker == "1")
                 {
                     var type = "";
                     ParseSecureNoteServer(notes, ref type, ref url, ref username, ref password);

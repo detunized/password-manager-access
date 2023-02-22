@@ -77,7 +77,12 @@ namespace PasswordManagerAccess.Example.LastPass
                                        new ClientInfo(Platform.Desktop,
                                                       config["client-id"],
                                                       config["client-description"]),
-                                       new TextUi());
+                                       new TextUi(),
+                                       new ParserOptions
+                                       {
+                                           // Set to true to parse "server" secure notes
+                                           ParseSecureNotesToAccount = false,
+                                       });
 
                 // Dump all the accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)
@@ -89,14 +94,20 @@ namespace PasswordManagerAccess.Example.LastPass
                                       "  username: {3}\n" +
                                       "  password: {4}\n" +
                                       "       url: {5}\n" +
-                                      "      path: {6}\n",
+                                      "      path: {6}\n" +
+                                      "     notes: {7}\n" +
+                                      "  favorite: {8}\n" +
+                                      "    shared: {9}\n",
                                       i + 1,
                                       account.Id,
                                       account.Name,
                                       account.Username,
                                       account.Password,
                                       account.Url,
-                                      account.Path);
+                                      account.Path,
+                                      account.Notes,
+                                      account.IsFavorite,
+                                      account.IsShared);
                 }
             }
             catch (BaseException e)
