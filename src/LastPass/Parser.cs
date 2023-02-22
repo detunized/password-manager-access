@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.LastPass
                     return null;
 
                 var notes = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
-                var favorite = ReadItem(reader).ToUtf8();
+                var isFavorite = ReadItem(reader).ToUtf8() == "1";
                 SkipItem(reader);
                 var username = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var password = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
@@ -67,7 +67,15 @@ namespace PasswordManagerAccess.LastPass
                 // Adjust the path to include the group and the shared folder, if any.
                 var path = MakeAccountPath(group, folder);
 
-                return new Account(id, name, username, password, url, path, notes, favorite, folder != null);
+                return new Account(id: id,
+                                   name: name,
+                                   username: username,
+                                   password: password,
+                                   url: url,
+                                   path: path,
+                                   notes: notes,
+                                   isFavorite: isFavorite,
+                                   isShared: folder != null);
             });
         }
 

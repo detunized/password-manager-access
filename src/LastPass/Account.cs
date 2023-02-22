@@ -12,11 +12,18 @@ namespace PasswordManagerAccess.LastPass
         public readonly string Url;
         public readonly string Path;
         public readonly string Notes;
-        public readonly string Favorite;
-        public readonly bool Shared;
+        public readonly bool IsFavorite;
+        public readonly bool IsShared;
 
-        public Account(string id, string name, string username, string password, string url, string path,
-            string notes, string favorite, bool shared)
+        public Account(string id,
+                       string name,
+                       string username,
+                       string password,
+                       string url,
+                       string path,
+                       string notes,
+                       bool isFavorite,
+                       bool isShared)
         {
             Id = id;
             Name = name;
@@ -25,8 +32,8 @@ namespace PasswordManagerAccess.LastPass
             Url = url;
             Path = path;
             Notes = notes;
-            Favorite= favorite;
-            Shared = shared;
+            IsFavorite = isFavorite;
+            IsShared = isShared;
         }
-   }
+    }
 }
