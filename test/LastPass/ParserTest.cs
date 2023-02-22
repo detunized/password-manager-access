@@ -44,7 +44,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 var accounts = Parser.ExtractChunks(reader).Where(i => i.Id == "ACCT").ToArray();
                 for (var i = 0; i < accounts.Length; ++i)
                 {
-                    var account = Parser.Parse_ACCT(accounts[i], TestData.EncryptionKey);
+                    var account = Parser.Parse_ACCT(accounts[i], TestData.EncryptionKey, null, ParserOptions.Default);
                     Assert.StartsWith(TestData.Accounts[i].Url, account.Url);
                 }
             });
@@ -53,8 +53,7 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void ParseEncryptedPrivateKey_returns_private_key()
         {
-            var rsa = Parser.ParseEncryptedPrivateKey(TestData.EncryptedPrivateKey,
-                                                           TestData.EncryptionKey);
+            var rsa = Parser.ParseEncryptedPrivateKey(TestData.EncryptedPrivateKey, TestData.EncryptionKey);
 
             Assert.Equal(TestData.RsaD, rsa.D);
             Assert.Equal(TestData.RsaDP, rsa.DP);

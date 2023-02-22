@@ -29,7 +29,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default);
 
             Assert.NotEmpty(accounts);
         }
@@ -48,7 +48,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default);
 
             Assert.NotEmpty(accounts);
         }
@@ -68,7 +68,7 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow, ParserOptions.Default);
 
             Assert.NotEmpty(accounts);
         }
@@ -90,7 +90,12 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, OtpProvidingWithRememberMeUi, flow);
+            var accounts = Client.OpenVault(Username,
+                                            Password,
+                                            ClientInfo,
+                                            OtpProvidingWithRememberMeUi,
+                                            flow,
+                                            ParserOptions.Default);
 
             Assert.NotEmpty(accounts);
         }
@@ -115,7 +120,12 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow);
+            var accounts = Client.OpenVault(Username,
+                                            Password,
+                                            ClientInfo,
+                                            WaitingForOobUi,
+                                            flow,
+                                            ParserOptions.Default);
 
             Assert.NotEmpty(accounts);
         }
@@ -142,7 +152,12 @@ namespace PasswordManagerAccess.Test.LastPass
                     .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, WaitingForOobWithRememberMeUi, flow);
+            var accounts = Client.OpenVault(Username,
+                                            Password,
+                                            ClientInfo,
+                                            WaitingForOobWithRememberMeUi,
+                                            flow,
+                                            ParserOptions.Default);
 
             Assert.NotEmpty(accounts);
         }
@@ -158,7 +173,12 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username.ToUpperInvariant(), Password, ClientInfo, null, flow);
+            var accounts = Client.OpenVault(Username.ToUpperInvariant(),
+                                            Password,
+                                            ClientInfo,
+                                            null,
+                                            flow,
+                                            ParserOptions.Default);
 
             Assert.NotEmpty(accounts);
         }
@@ -170,7 +190,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='unknownemail' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default),
                 "Invalid username");
         }
 
@@ -181,7 +201,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='unknownpassword' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default),
                 "Invalid password");
         }
 
@@ -192,7 +212,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OtpRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow, ParserOptions.Default),
                 "Second factor step is canceled by the user");
         }
 
@@ -204,7 +224,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='googleauthfailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, OtpProvidingUi, flow, ParserOptions.Default),
                 "Second factor code is incorrect");
         }
 
@@ -215,7 +235,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OobRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, CancelingUi, flow, ParserOptions.Default),
                 "Out of band step is canceled by the user");
         }
 
@@ -227,7 +247,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<response><error cause='multifactorresponsefailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, WaitingForOobUi, flow, ParserOptions.Default),
                 "Out of band authentication failed");
         }
 
@@ -242,7 +262,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(response);
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow),
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default),
                 expected);
         }
 
@@ -810,7 +830,10 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void ParseVault_returns_vault_with_correct_accounts()
         {
-            var accounts = Client.ParseVault(TestData.Blob, TestData.EncryptionKey, TestData.PrivateKey);
+            var accounts = Client.ParseVault(TestData.Blob,
+                                             TestData.EncryptionKey,
+                                             TestData.PrivateKey,
+                                             ParserOptions.Default);
 
             Assert.Equal(TestData.Accounts.Length, accounts.Length);
             for (var i = 0; i < accounts.Length; i++)
@@ -838,7 +861,8 @@ namespace PasswordManagerAccess.Test.LastPass
             Exceptions.AssertThrowsInternalError(
                 () => Client.ParseVault(TestData.Blob.Sub(0, TestData.Blob.Length - cut),
                                         TestData.EncryptionKey,
-                                        TestData.PrivateKey),
+                                        TestData.PrivateKey,
+                                        ParserOptions.Default),
                 "Blob is truncated or corrupted");
         }
 

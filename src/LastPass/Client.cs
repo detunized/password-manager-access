@@ -19,7 +19,8 @@ namespace PasswordManagerAccess.LastPass
                                           string password,
                                           ClientInfo clientInfo,
                                           IUi ui,
-                                          IRestTransport transport)
+                                          IRestTransport transport,
+                                          ParserOptions options)
         {
             var lowerCaseUsername = username.ToLowerInvariant();
             var (session, rest) = Login(lowerCaseUsername, password, clientInfo, ui, transport);
@@ -32,7 +33,7 @@ namespace PasswordManagerAccess.LastPass
                 if (!session.EncryptedPrivateKey.IsNullOrEmpty())
                     privateKey = Parser.ParseEncryptedPrivateKey(session.EncryptedPrivateKey, key);
 
-                return ParseVault(blob, key, privateKey);
+                return ParseVault(blob, key, privateKey, options);
             }
             finally
             {
@@ -472,7 +473,7 @@ namespace PasswordManagerAccess.LastPass
                 .ToDictionary(x => x.Name.LocalName, x => x.Value);
         }
 
-        internal static Account[] ParseVault(byte[] blob, byte[] encryptionKey, RSAParameters privateKey)
+        internal static Account[] ParseVault(byte[] blob, byte[] encryptionKey, RSAParameters privateKey, ParserOptions options)
         {
             return blob.Open(
                 reader =>
@@ -481,7 +482,7 @@ namespace PasswordManagerAccess.LastPass
                     if (!IsComplete(chunks))
                         throw new InternalErrorException("Blob is truncated or corrupted");
 
-                    return ParseAccounts(chunks, encryptionKey, privateKey);
+                    return ParseAccounts(chunks, encryptionKey, privateKey, options);
                 });
         }
 
@@ -494,26 +495,27 @@ namespace PasswordManagerAccess.LastPass
 
         internal static Account[] ParseAccounts(List<Parser.Chunk> chunks,
                                                 byte[] encryptionKey,
-                                                RSAParameters privateKey)
+                                                RSAParameters privateKey,
+                                                ParserOptions options)
         {
             var accounts = new List<Account>(chunks.Count(i => i.Id == "ACCT"));
             SharedFolder folder = null;
 
-            foreach (var i in chunks)
+            foreach (var chunk in chunks)
             {
-                switch (i.Id)
+                switch (chunk.Id)
                 {
                 case "ACCT":
-                    var account = Parser.Parse_ACCT(
-                        i,
-                        folder == null ? encryptionKey : folder.EncryptionKey,
-                        folder);
+                    var account = Parser.Parse_ACCT(chunk,
+                                                    folder == null ? encryptionKey : folder.EncryptionKey,
+                                                    folder,
+                                                    options);
 
                     if (account != null)
                         accounts.Add(account);
                     break;
                 case "SHAR":
-                    folder = Parser.Parse_SHAR(i, encryptionKey, privateKey);
+                    folder = Parser.Parse_SHAR(chunk, encryptionKey, privateKey);
                     break;
                 }
             }

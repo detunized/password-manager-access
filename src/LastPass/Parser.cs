@@ -28,7 +28,7 @@ namespace PasswordManagerAccess.LastPass
         //
         // TODO: Add a test for the folder case!
         // TODO: Add a test case that covers secure note account!
-        public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder = null)
+        public static Account Parse_ACCT(Chunk chunk, byte[] encryptionKey, SharedFolder folder, ParserOptions options)
         {
             return chunk.Payload.Open(reader =>
             {
@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.LastPass
                     return null;
 
                 var notes = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
-                SkipItem(reader);
+                var isFavorite = ReadItem(reader).ToUtf8() == "1";
                 SkipItem(reader);
                 var username = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
                 var password = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.LastPass
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
                 // Parse secure note
-                if (secureNoteMarker == "1")
+                if (options.ParseSecureNotesToAccount && secureNoteMarker == "1")
                 {
                     var type = "";
                     ParseSecureNoteServer(notes, ref type, ref url, ref username, ref password);
@@ -67,7 +67,15 @@ namespace PasswordManagerAccess.LastPass
                 // Adjust the path to include the group and the shared folder, if any.
                 var path = MakeAccountPath(group, folder);
 
-                return new Account(id, name, username, password, url, path);
+                return new Account(id: id,
+                                   name: name,
+                                   username: username,
+                                   password: password,
+                                   url: url,
+                                   path: path,
+                                   notes: notes,
+                                   isFavorite: isFavorite,
+                                   isShared: folder != null);
             });
         }
 

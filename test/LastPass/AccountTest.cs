@@ -17,8 +17,19 @@ namespace PasswordManagerAccess.Test.LastPass
             var password = "password";
             var url = "url";
             var path = "path/to/item";
+            var notes = "note";
+            var isFavorite = true;
+            var isShared = true;
 
-            var account = new Account(id, name, username, password, url, path);
+            var account = new Account(id: id,
+                                      name: name,
+                                      username: username,
+                                      password: password,
+                                      url: url,
+                                      path: path,
+                                      notes: notes,
+                                      isFavorite: isFavorite,
+                                      isShared: isShared);
 
             Assert.Equal(id, account.Id);
             Assert.Equal(name, account.Name);
@@ -26,6 +37,9 @@ namespace PasswordManagerAccess.Test.LastPass
             Assert.Equal(password, account.Password);
             Assert.Equal(url, account.Url);
             Assert.Equal(path, account.Path);
+            Assert.Equal(notes, account.Notes);
+            Assert.Equal(isFavorite, account.IsFavorite);
+            Assert.Equal(isShared, account.IsShared);
         }
     }
 }

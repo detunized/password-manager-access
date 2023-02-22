@@ -12,8 +12,13 @@ namespace PasswordManagerAccess.LastPass
 
         public static Vault Open(string username, string password, ClientInfo clientInfo, IUi ui)
         {
+            return Open(username, password, clientInfo, ui, ParserOptions.Default);
+        }
+
+        public static Vault Open(string username, string password, ClientInfo clientInfo, IUi ui, ParserOptions options)
+        {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVault(username, password, clientInfo, ui, transport));
+            return new Vault(Client.OpenVault(username, password, clientInfo, ui, transport, options));
         }
 
         public static string GenerateRandomClientId()
