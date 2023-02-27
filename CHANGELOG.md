@@ -1,5 +1,8 @@
 # Changelog
 
+## 10.4.0
+  - LastPass: parse TOTP value when available (enterprise accounts only) and return in `Account.Totp`
+
 ## 10.3.0
   - LastPass: added support for the favorite flag for the parsed items (see `IsFavorite` in `Account`)
   - LastPass: set a flag when the item is shared (see `IsShared` in `Account`)
