@@ -77,6 +77,11 @@ namespace PasswordManagerAccess.Common
             return Uri.EscapeUriString(s);
         }
 
+        public static string EncodeUriData(this string s)
+        {
+            return Uri.EscapeDataString(s);
+        }
+
         public static bool IsHex(this string s)
         {
             if (s.Length % 2 != 0)
@@ -210,7 +215,7 @@ namespace PasswordManagerAccess.Common
 
             return result.ToString();
         }
-        
+
         //
         // StringBuilder
         //

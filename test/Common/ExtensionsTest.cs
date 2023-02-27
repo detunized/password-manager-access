@@ -104,6 +104,12 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(uri, raw.EncodeUri());
         }
 
+        [Fact]
+        public void String_EncodeUriData_escapes_special_characters()
+        {
+            Assert.Equal("blah%40gmail.com", "blah@gmail.com".EncodeUriData());
+        }
+
         [Theory]
         [InlineData("", true)]
         [InlineData("deadbeef", true)]
@@ -302,7 +308,7 @@ namespace PasswordManagerAccess.Test.Common
         {
             Assert.Equal(expected, s.Repeat(times));
         }
-        
+
         //
         // StringBuilder
         //
