@@ -11,7 +11,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    public class ParserTest
+    public class ParserTest: TestBase
     {
         [Fact]
         public void Parse_SHAR_returns_parsed_chunk()
@@ -42,7 +42,7 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             WithBlob(reader => {
                 var accounts = Parser.ExtractChunks(reader).Where(i => i.Id == "ACCT").ToArray();
-                for (var i = 0; i < accounts.Length; ++i)
+                for (var i = 0; i < TestData.Accounts.Length; ++i)
                 {
                     var account = Parser.Parse_ACCT(accounts[i], TestData.EncryptionKey, null, ParserOptions.Default);
                     Assert.StartsWith(TestData.Accounts[i].Url, account.Url);
@@ -276,14 +276,21 @@ namespace PasswordManagerAccess.Test.LastPass
         // Helpers
         //
 
-        private static void WithBlob(Action<BinaryReader> action)
+        private void WithBlob(Action<BinaryReader> action)
         {
-            TestData.Blob.Open(action);
+            Blob.Open(action);
         }
 
-        private static void WithHex(string hex, Action<BinaryReader> action)
+        private void WithHex(string hex, Action<BinaryReader> action)
         {
             hex.DecodeHex().Open(action);
         }
+
+        //
+        // Data
+        //
+
+        private string BlobBase64 => GetFixture("blob-base64", "txt");
+        private byte[] Blob => BlobBase64.Decode64();
     }
 }

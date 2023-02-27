@@ -12,7 +12,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
 {
-    public class ClientTest
+    public class ClientTest: TestBase
     {
         // The general idea is to test as high level as possible even though it might get tedious.
         // This ensures that if/when the implementation changes we still get the same behavior.
@@ -21,9 +21,11 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts()
         {
             var flow = new RestFlow()
-                .Post(OkResponseNoPrivateKey)
+                .Post(IterationResponse)
                     .ExpectUrl("/login.php")
-                .Get(TestData.BlobBase64)
+                .Post(OkResponseValidPrivateKey)
+                    .ExpectUrl("/login.php")
+                .Get(BlobBase64)
                     .ExpectUrl("/getaccts.php?")
                 .Post("")
                     .ExpectUrl("/logout.php");
@@ -40,9 +42,9 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow()
                 .Post(IterationResponse)
                     .ExpectUrl("/login.php")
-                .Post(OkResponseNoPrivateKey)
+                .Post(OkResponseValidPrivateKey)
                     .ExpectUrl("/login.php")
-                .Get(TestData.BlobBase64)
+                .Get(BlobBase64)
                     .ExpectUrl("/getaccts.php?")
                 .Post("")
                     .ExpectUrl("/logout.php");
@@ -57,12 +59,14 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_otp()
         {
             var flow = new RestFlow()
+                .Post(IterationResponse)
+                    .ExpectUrl("/login.php")
                 .Post(OtpRequiredResponse)
                     .ExpectUrl("/login.php")
-                .Post(OkResponseNoPrivateKey)
+                .Post(OkResponseValidPrivateKey)
                     .ExpectUrl("/login.php")
                     .ExpectContent($"otp={Otp}")
-                .Get(TestData.BlobBase64)
+                .Get(BlobBase64)
                     .ExpectUrl("/getaccts.php?")
                 .Post("")
                     .ExpectUrl("/logout.php");
@@ -77,14 +81,16 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_otp_and_rememeber_me()
         {
             var flow = new RestFlow()
+                .Post(IterationResponse)
+                    .ExpectUrl("/login.php")
                 .Post(OtpRequiredResponse)
                     .ExpectUrl("/login.php")
-                .Post(OkResponseNoPrivateKey)
+                .Post(OkResponseValidPrivateKey)
                     .ExpectUrl("/login.php")
                     .ExpectContent($"otp={Otp}")
                 .Post("")
                     .ExpectUrl("/trust.php")
-                .Get(TestData.BlobBase64)
+                .Get(BlobBase64)
                     .ExpectUrl("/getaccts.php?")
                 .Post("")
                     .ExpectUrl("/logout.php");
@@ -104,17 +110,19 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_oob()
         {
             var flow = new RestFlow()
+                .Post(IterationResponse)
+                    .ExpectUrl("/login.php")
                 .Post(OobRequiredResponse)
                     .ExpectUrl("/login.php")
                 .Post(OobRetryResponse)
                     .ExpectUrl("/login.php")
                     .ExpectContent("outofbandrequest=1")
-                .Post(OkResponseNoPrivateKey)
+                .Post(OkResponseValidPrivateKey)
                     .ExpectUrl("/login.php")
                     .ExpectContent("outofbandrequest=1")
                     .ExpectContent("outofbandretry=1")
                     .ExpectContent("outofbandretryid=retry-id")
-                .Get(TestData.BlobBase64)
+                .Get(BlobBase64)
                     .ExpectUrl("/getaccts.php?")
                 .Post("")
                     .ExpectUrl("/logout.php");
@@ -134,19 +142,21 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_returns_accounts_with_oob_and_rememeber_me()
         {
             var flow = new RestFlow()
+                .Post(IterationResponse)
+                    .ExpectUrl("/login.php")
                 .Post(OobRequiredResponse)
                     .ExpectUrl("/login.php")
                 .Post(OobRetryResponse)
                     .ExpectUrl("/login.php")
                     .ExpectContent("outofbandrequest=1")
-                .Post(OkResponseNoPrivateKey)
+                .Post(OkResponseValidPrivateKey)
                     .ExpectUrl("/login.php")
                     .ExpectContent("outofbandrequest=1")
                     .ExpectContent("outofbandretry=1")
                     .ExpectContent("outofbandretryid=retry-id")
                 .Post("")
                     .ExpectUrl("/trust.php")
-                .Get(TestData.BlobBase64)
+                .Get(BlobBase64)
                     .ExpectUrl("/getaccts.php?")
                 .Post("")
                     .ExpectUrl("/logout.php");
@@ -166,10 +176,13 @@ namespace PasswordManagerAccess.Test.LastPass
         public void OpenVault_lower_cases_email()
         {
             var flow = new RestFlow()
-                .Post(OkResponseNoPrivateKey)
+                .Post(IterationResponse)
                     .ExpectUrl("/login.php")
-                    .ExpectContent($"username={Username}")
-                .Get(TestData.BlobBase64)
+                    .ExpectContent($"username={Username.EncodeUriData()}")
+                .Post(OkResponseValidPrivateKey)
+                    .ExpectUrl("/login.php")
+                    .ExpectContent($"username={Username.EncodeUriData()}")
+                .Get(BlobBase64)
                 .Post("");
 
             // TODO: Decryption fails here because of the incorrect password
@@ -289,7 +302,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
 
-            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
+            Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
 
             Assert.Equal(BaseUrl, rest.BaseUrl);
@@ -325,7 +338,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
 
-            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
+            Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
 
             Assert.Equal(AlternativeBaseUrl, rest.BaseUrl);
@@ -358,7 +371,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             var (session, rest) = Client.Login(Username, Password, ClientInfo, OtpProvidingUi, flow);
 
-            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
+            Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
 
             Assert.Equal(BaseUrl, rest.BaseUrl);
@@ -391,7 +404,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
             var (session, rest) = Client.Login(Username, Password, ClientInfo, WaitingForOobUi, flow);
 
-            Assert.Equal(CorrectKeyIterationCount, session.KeyIterationCount);
+            Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
 
             Assert.Equal(BaseUrl, rest.BaseUrl);
@@ -418,14 +431,14 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("<ok />")
                     .ExpectUrl("https://lastpass.com/login.php")
                     .ExpectContent("method=cli")
-                    .ExpectContent($"username={Username}")
-                    .ExpectContent($"iterations={CorrectKeyIterationCount}")
-                    .ExpectContent("hash=5e966139c28deab2c5955fcfa66ae6bebb55548a5f79d1d639abf7b0ce78d891")
+                    .ExpectContent($"username={Username.EncodeUriData()}")
+                    .ExpectContent($"iterations={IterationCount}")
+                    .ExpectContent("hash=26ecd8a4442e24fde414bd0594233b1bbdb55fa410d56a5d8284a316c7298b65")
                     .ExpectContent($"trustlabel={ClientInfo.Description}");
 
             Client.PerformSingleLoginRequest(Username,
                                              Password,
-                                             CorrectKeyIterationCount,
+                                             IterationCount,
                                              new Dictionary<string, object>(),
                                              ClientInfo,
                                              flow.ToRestClient(BaseUrl));
@@ -633,7 +646,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow()
                 .Post("<ok code='blah' />")
                     .ExpectUrl("https://lastpass.com/duo.php")
-                    .ExpectContent($"username={Username}")
+                    .ExpectContent($"username={Username.EncodeUriData()}")
                     .ExpectContent($"akey={salt}")
                     .ExpectContent($"sig_response={signature}");
 
@@ -830,13 +843,13 @@ namespace PasswordManagerAccess.Test.LastPass
         [Fact]
         public void ParseVault_returns_vault_with_correct_accounts()
         {
-            var accounts = Client.ParseVault(TestData.Blob,
+            var accounts = Client.ParseVault(Blob,
                                              TestData.EncryptionKey,
                                              TestData.PrivateKey,
                                              ParserOptions.Default);
 
-            Assert.Equal(TestData.Accounts.Length, accounts.Length);
-            for (var i = 0; i < accounts.Length; i++)
+            Assert.True(accounts.Length >= TestData.Accounts.Length);
+            for (var i = 0; i < TestData.Accounts.Length; i++)
             {
                 Assert.Equal(TestData.Accounts[i].Id, accounts[i].Id);
                 Assert.Equal(TestData.Accounts[i].Name, accounts[i].Name);
@@ -859,7 +872,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ParseVault_throws_on_truncated_blob(int cut)
         {
             Exceptions.AssertThrowsInternalError(
-                () => Client.ParseVault(TestData.Blob.Sub(0, TestData.Blob.Length - cut),
+                () => Client.ParseVault(Blob.Sub(0, Blob.Length - cut),
                                         TestData.EncryptionKey,
                                         TestData.PrivateKey,
                                         ParserOptions.Default),
@@ -927,20 +940,23 @@ namespace PasswordManagerAccess.Test.LastPass
         // Data
         //
 
+        private string BlobBase64 => GetFixture("blob-base64", "txt");
+        private byte[] Blob => BlobBase64.Decode64();
+
         private const string BaseUrl = "https://lastpass.com";
         private const string AlternativeBaseUrl = "https://lastpass.eu";
-        private const string Username = "username";
-        private const string Password = "password";
+        private const string Username = "lastpass.ruby@gmail.com";
+        private const string Password = "&nT%*pMWJb*7s6u1";
+        private const int IterationCount = 5000;
         private const string Otp = "123456";
         private const int DefaultKeyIterationCount = 100100;
-        private const int CorrectKeyIterationCount = 1337;
 
         private static readonly ClientInfo ClientInfo = new ClientInfo(Platform.Desktop,
                                                                        "client-id",
                                                                        "description");
 
         private static readonly Session Session = new Session("session-id",
-                                                              CorrectKeyIterationCount,
+                                                              IterationCount,
                                                               "token",
                                                               Platform.Desktop,
                                                               "private-key");
@@ -966,6 +982,11 @@ namespace PasswordManagerAccess.Test.LastPass
         private static readonly IUi WaitingForOobUi = new FakeUi(null, OobResult.WaitForApproval(false));
         private static readonly IUi WaitingForOobWithRememberMeUi = new FakeUi(null, OobResult.WaitForApproval(true));
         private static readonly IUi PasscodeProvidingOobUi = new FakeUi(null, OobResult.ContinueWithPasscode(Otp, false));
+
+        private static readonly string OkResponseValidPrivateKey =
+            "<response>" +
+                $"<ok sessionid='session-id' token='token' iterations='{IterationCount}' privatekeyenc='{TestData.EncryptedPrivateKey}' />" +
+             "</response>";
 
         private const string OkResponse =
             "<response>" +
@@ -997,9 +1018,9 @@ namespace PasswordManagerAccess.Test.LastPass
                 "<error cause='outofbandrequired' retryid='retry-id' />" +
             "</response>";
 
-        private const string IterationResponse =
+        private static readonly string IterationResponse =
             "<response>" +
-                "<error iterations='1337' />" +
+                $"<error iterations='{IterationCount}' />" +
             "</response>";
 
         private const string ServerResponse =

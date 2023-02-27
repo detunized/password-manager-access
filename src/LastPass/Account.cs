@@ -12,6 +12,7 @@ namespace PasswordManagerAccess.LastPass
         public readonly string Url;
         public readonly string Path;
         public readonly string Notes;
+        public readonly string Totp;
         public readonly bool IsFavorite;
         public readonly bool IsShared;
 
@@ -22,6 +23,7 @@ namespace PasswordManagerAccess.LastPass
                        string url,
                        string path,
                        string notes,
+                       string totp,
                        bool isFavorite,
                        bool isShared)
         {
@@ -32,6 +34,7 @@ namespace PasswordManagerAccess.LastPass
             Url = url;
             Path = path;
             Notes = notes;
+            Totp = totp;
             IsFavorite = isFavorite;
             IsShared = isShared;
         }

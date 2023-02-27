@@ -96,8 +96,9 @@ namespace PasswordManagerAccess.Example.LastPass
                                       "       url: {5}\n" +
                                       "      path: {6}\n" +
                                       "     notes: {7}\n" +
-                                      "  favorite: {8}\n" +
-                                      "    shared: {9}\n",
+                                      "      totp: {8}\n" +
+                                      "  favorite: {9}\n" +
+                                      "    shared: {10}\n",
                                       i + 1,
                                       account.Id,
                                       account.Name,
@@ -106,6 +107,7 @@ namespace PasswordManagerAccess.Example.LastPass
                                       account.Url,
                                       account.Path,
                                       account.Notes,
+                                      account.Totp,
                                       account.IsFavorite,
                                       account.IsShared);
                 }

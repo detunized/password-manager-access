@@ -35,22 +35,44 @@ namespace PasswordManagerAccess.LastPass
                 var placeholder = "decryption failed";
 
                 // Read all items
+                // 0: id
                 var id = ReadItem(reader).ToUtf8();
+
+                // 1: name
                 var name = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+
+                // 2: group
                 var group = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+
+                // 3: url
                 var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
 
                 // Ignore "group" accounts. They have no credentials.
                 if (url == "http://group")
                     return null;
 
+                // 4: extra (notes)
                 var notes = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+
+                // 5: fav (is favorite)
                 var isFavorite = ReadItem(reader).ToUtf8() == "1";
+
+                // 6: sharedfromaid (?)
                 SkipItem(reader);
+
+                // 7: username
                 var username = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+
+                // 8: password
                 var password = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+
+                // 9: pwprotect (?)
                 SkipItem(reader);
+
+                // 10: genpw (?)
                 SkipItem(reader);
+
+                // 11: sn (is secure note)
                 var secureNoteMarker = ReadItem(reader).ToUtf8();
 
                 // Parse secure note
@@ -64,6 +86,96 @@ namespace PasswordManagerAccess.LastPass
                         return null;
                 }
 
+                // 12: last_touch_gmt (?)
+                SkipItem(reader);
+
+                // 13: autologin (?)
+                SkipItem(reader);
+
+                // 14: never_autofill (?)
+                SkipItem(reader);
+
+                // 15: realm (?)
+                SkipItem(reader);
+
+                // 16: id_again (?)
+                SkipItem(reader);
+
+                // 17: custom_js (?)
+                SkipItem(reader);
+
+                // 18: submit_id (?)
+                SkipItem(reader);
+
+                // 19: captcha_id (?)
+                SkipItem(reader);
+
+                // 20: urid (?)
+                SkipItem(reader);
+
+                // 21: basic_auth (?)
+                SkipItem(reader);
+
+                // 22: method (?)
+                SkipItem(reader);
+
+                // 23: action (?)
+                SkipItem(reader);
+
+                // 24: groupid (?)
+                SkipItem(reader);
+
+                // 25: deleted (?)
+                SkipItem(reader);
+
+                // 26: attachkey (?)
+                SkipItem(reader);
+
+                // 27: attachpresent (?)
+                SkipItem(reader);
+
+                // 28: individualshare (?)
+                SkipItem(reader);
+
+                // 29: notetype (?)
+                SkipItem(reader);
+
+                // 30: noalert (?)
+                SkipItem(reader);
+
+                // 31: last_modified_gmt (?)
+                SkipItem(reader);
+
+                // 32: hasbeenshared (?)
+                SkipItem(reader);
+
+                // 33: last_pwchange_gmt (?)
+                SkipItem(reader);
+
+                // 34: created_gmt (?)
+                SkipItem(reader);
+
+                // 35: vulnerable (?)
+                SkipItem(reader);
+
+                // 36: pwch (?)
+                SkipItem(reader);
+
+                // 37: breached (?)
+                SkipItem(reader);
+
+                // 38: template (?)
+                SkipItem(reader);
+
+                // 39: totp (?)
+                var totp = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
+
+                // 3 more left. Don't even bother skipping them.
+
+                // 40: trustedHostnames (?)
+                // 41: last_credential_monitoring_gmt (?)
+                // 42: last_credential_monitoring_stat (?)
+
                 // Adjust the path to include the group and the shared folder, if any.
                 var path = MakeAccountPath(group, folder);
 
@@ -74,6 +186,7 @@ namespace PasswordManagerAccess.LastPass
                                    url: url,
                                    path: path,
                                    notes: notes,
+                                   totp: totp,
                                    isFavorite: isFavorite,
                                    isShared: folder != null);
             });
