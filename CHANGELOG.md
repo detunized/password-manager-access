@@ -1,5 +1,8 @@
 # Changelog
 
+## 10.5.0
+  - All: target the latest .NET Framework 4.8 instead of 4.7.2 in attempt to solve TLS 1.3 issues
+
 ## 10.4.0
   - LastPass: parse TOTP value when available (enterprise accounts only) and return in `Account.Totp`
 
