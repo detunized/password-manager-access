@@ -13,12 +13,19 @@ namespace PasswordManagerAccess.Test.OnePassword
         public const string AccountKey = "A3-RTN9SA-DY9445Y5FF96X6E7B5GPFA95R9";
         public const string Uuid = "rz64r4uhyvgew672nm4ncaqonq";
         public const string Domain = "my.1password.com";
+        public const string DeviceName = "device-name";
+        public const string DeviceModel = "device-model";
 
-        public static readonly ClientInfo ClientInfo = new ClientInfo(username: Username,
-                                                                      password: Password,
-                                                                      accountKey: AccountKey,
-                                                                      uuid: Uuid,
-                                                                      domain: Domain);
+        public static readonly ClientInfo ClientInfo = new ClientInfo
+        {
+            Username = Username,
+            Password = Password,
+            AccountKey = AccountKey,
+            Uuid = Uuid,
+            Domain = Domain,
+            DeviceName = DeviceName,
+            DeviceModel = DeviceModel,
+        };
 
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
 

@@ -563,11 +563,15 @@ namespace PasswordManagerAccess.Test.OnePassword
         //       or exposing its credentials, but I don't want to have inconsistent test data.
         //       Everything should be either re-encrypted or somehow harmonized across all the tests
         //       to use the same username, password and account key.
-        private static readonly ClientInfo ClientInfo = new ClientInfo(
-            username: "detunized@gmail.com",
-            password: "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
-            accountKey: "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
-            uuid: "rz64r4uhyvgew672nm4ncaqonq",
-            domain: "my.1password.com");
+        private static readonly ClientInfo ClientInfo = new ClientInfo
+        {
+            Username = "detunized@gmail.com",
+            Password = "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
+            AccountKey = "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
+            Uuid = "rz64r4uhyvgew672nm4ncaqonq",
+            Domain = "my.1password.com",
+            DeviceName = "Chrome",
+            DeviceModel = "103"
+        };
     }
 }

@@ -3,25 +3,27 @@
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class ClientInfo
+    public class ClientInfo
     {
-        public readonly string Username;
-        public readonly string Password;
-        public readonly AccountKey AccountKey;
-        public readonly string Uuid;
-        public readonly string Domain;
+        public string Username { get; set; }
+        public string Password { get; set; }
+        public string AccountKey { get; set; }
+        public string Uuid { get; set; }
+        public string Domain { get; set; } // Use Region.ToDomain to convert from Region
+        public string DeviceName { get; set; }
+        public string DeviceModel { get; set; }
 
-        public ClientInfo(string username,
-                          string password,
-                          string accountKey,
-                          string uuid,
-                          string domain)
+        internal AccountKey ParsedAccountKey
         {
-            Username = username;
-            Password = password;
-            AccountKey = AccountKey.Parse(accountKey);
-            Uuid = uuid;
-            Domain = domain;
+            get
+            {
+                if (_parsedAccountKey == null)
+                    _parsedAccountKey = OnePassword.AccountKey.Parse(AccountKey);
+
+                return _parsedAccountKey;
+            }
         }
+
+        private AccountKey _parsedAccountKey;
     }
 }

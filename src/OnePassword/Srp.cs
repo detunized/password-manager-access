@@ -108,7 +108,7 @@ namespace PasswordManagerAccess.OnePassword
                                 password: clientInfo.Password,
                                 salt: k1,
                                 iterations: iterations);
-            var x = clientInfo.AccountKey.CombineWith(k2);
+            var x = clientInfo.ParsedAccountKey.CombineWith(k2);
 
             return x.ToBigInt();
         }

@@ -13,7 +13,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    public static partial class Client
+    public static class Client
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
@@ -22,40 +22,15 @@ namespace PasswordManagerAccess.OnePassword
         public const string ClientVersion = "1120401";
         public const string ClientId = ClientName + "/" + ClientVersion;
 
-        public enum Region
-        {
-            Global,
-            Europe,
-            Canada
-        }
-
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
-        public static Session LogIn(string username,
-                                    string password,
-                                    string accountKey,
-                                    string uuid,
-                                    Region region,
-                                    IUi ui,
-                                    ISecureStorage storage)
-        {
-            return LogIn(username, password, accountKey, uuid, GetDomain(region), ui, storage);
-        }
-
-        // Valid domains are: my.1password.com, my.1password.eu, my.1password.ca
-        public static Session LogIn(string username,
-                                    string password,
-                                    string accountKey,
-                                    string uuid,
-                                    string domain,
-                                    IUi ui,
-                                    ISecureStorage storage)
+        public static Session LogIn(ClientInfo clientInfo, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
             try
             {
-                return LogIn(new ClientInfo(username, password, accountKey, uuid, domain), ui, storage, transport);
+                return LogIn(clientInfo, ui, storage, transport);
             }
             catch (Exception)
             {
@@ -91,17 +66,6 @@ namespace PasswordManagerAccess.OnePassword
             return new Vault(info, accounts);
         }
 
-        public static string GetDomain(Region region)
-        {
-            return region switch
-            {
-                Region.Global => "my.1password.com",
-                Region.Europe => "my.1password.eu",
-                Region.Canada => "my.1password.ca",
-                _ => throw new InternalErrorException("The region is not valid")
-            };
-        }
-
         // Use this function to generate a unique random identifier for each new client.
         public static string GenerateRandomUuid()
         {
@@ -112,10 +76,7 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
-        internal static Session LogIn(ClientInfo clientInfo,
-                                      IUi ui,
-                                      ISecureStorage storage,
-                                      IRestTransport transport)
+        internal static Session LogIn(ClientInfo clientInfo, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             var rest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
             var (sessionKey, sessionRest) = LogIn(clientInfo, ui, storage, rest);
@@ -231,8 +192,8 @@ namespace PasswordManagerAccess.OnePassword
                                                        {
                                                            ["deviceUuid"] = clientInfo.Uuid,
                                                            ["email"] = clientInfo.Username,
-                                                           ["skFormat"] = clientInfo.AccountKey.Format,
-                                                           ["skid"] = clientInfo.AccountKey.Uuid,
+                                                           ["skFormat"] = clientInfo.ParsedAccountKey.Format,
+                                                           ["skid"] = clientInfo.ParsedAccountKey.Uuid,
                                                            ["userUuid"] = "", // TODO: Where do we get this?
                                                        });
 
@@ -244,7 +205,8 @@ namespace PasswordManagerAccess.OnePassword
             switch (status)
             {
             case "ok":
-                if (info.KeyFormat != clientInfo.AccountKey.Format || info.KeyUuid != clientInfo.AccountKey.Uuid)
+                if (info.KeyFormat != clientInfo.ParsedAccountKey.Format ||
+                    info.KeyUuid != clientInfo.ParsedAccountKey.Uuid)
                     throw new BadCredentialsException("The account key is incorrect");
 
                 var srpInfo = new SrpInfo(srpMethod: info.Auth.Method,
@@ -274,6 +236,10 @@ namespace PasswordManagerAccess.OnePassword
                 ["uuid"] = clientInfo.Uuid,
                 ["clientName"] = ClientName,
                 ["clientVersion"] = ClientVersion,
+                ["osName"] = GetOsName(),
+                ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that.
+                ["name"] = clientInfo.DeviceName,
+                ["model"] = clientInfo.DeviceModel,
             });
 
             if (!response.IsSuccessful)
@@ -343,7 +309,7 @@ namespace PasswordManagerAccess.OnePassword
                 new Dictionary<string, object>
                 {
                     ["sessionID"] = sessionKey.Id,
-                    ["clientVerifyHash"] = Util.CalculateClientHash(clientInfo.AccountKey.Uuid, sessionKey.Id),
+                    ["clientVerifyHash"] = Util.CalculateClientHash(clientInfo.ParsedAccountKey.Uuid, sessionKey.Id),
                     ["client"] = ClientId,
                 },
                 sessionKey,
@@ -778,7 +744,7 @@ namespace PasswordManagerAccess.OnePassword
 
             var k1 = Util.Hkdf(algorithm, salt, clientInfo.Username.ToLowerInvariant().ToBytes());
             var k2 = Util.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
-            var key = clientInfo.AccountKey.CombineWith(k2);
+            var key = clientInfo.ParsedAccountKey.CombineWith(k2);
 
             return new AesKey(MasterKeyId, key);
         }
@@ -879,6 +845,20 @@ namespace PasswordManagerAccess.OnePassword
             {
                 throw new InternalErrorException("Failed to parse JSON in response from the server", e);
             }
+        }
+
+        internal static string GetOsName()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return "Windows";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return "macOS";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return "Linux";
+
+            return "Unknown";
         }
 
         //

@@ -62,13 +62,18 @@ namespace Example
                                           string uuid,
                                           string domain)
         {
-            var session = Client.LogIn(username,
-                                       password,
-                                       accountKey,
-                                       uuid,
-                                       domain,
-                                       new TextUi(),
-                                       new PlainStorage());
+            var clientInfo = new ClientInfo
+            {
+                Username = username,
+                Password = password,
+                AccountKey = accountKey,
+                Uuid = uuid,
+                Domain = string.IsNullOrWhiteSpace(domain) ? Region.Global.ToDomain() : domain,
+                DeviceName = "PMA 1Password example",
+                DeviceModel = "1.0.0",
+            };
+
+            var session = Client.LogIn(clientInfo, new TextUi(), new PlainStorage());
 
             try
             {
