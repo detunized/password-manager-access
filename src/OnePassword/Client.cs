@@ -4,9 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword.Ui;
+using U2fWin10;
 using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
@@ -511,6 +513,45 @@ namespace PasswordManagerAccess.OnePassword
                                            passcode.RememberMe);
         }
 
+        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, ClientInfo clientInfo, IUi ui)
+        {
+            var rememberMe = ui.ProvideWebAuthnRememberMe();
+            if (rememberMe == Passcode.Cancel)
+                return SecondFactorResult.Cancel();
+
+            if (!(factor.Parameters is R.WebAuthnMfa extra))
+                throw new InternalErrorException("WebAuthn extra parameters expected");
+
+            if (extra.KeyHandles.Length > 1)
+                throw new UnsupportedFeatureException("Multiple WebAuthn keys are not supported");
+
+            try
+            {
+                var assertion = WebAuthN.GetAssertion(appId: "1password.com",
+                                                      challenge: extra.Challenge,
+                                                      origin: $"https://{clientInfo.Domain}",
+                                                      crossOrigin: false,
+                                                      keyHandle: extra.KeyHandles[0]);
+
+                return SecondFactorResult.Done(new Dictionary<string, string>
+                                               {
+                                                   ["keyHandle"] = assertion.KeyHandle,
+                                                   ["signature"] = assertion.Signature,
+                                                   ["authData"] = assertion.AuthData,
+                                                   ["clientData"] = assertion.ClientData,
+                                               },
+                                               rememberMe.RememberMe);
+            }
+            catch (CanceledException)
+            {
+                return SecondFactorResult.Cancel();
+            }
+            catch (ErrorException e)
+            {
+                throw new InternalErrorException("WebAuthn authentication failed", e);
+            }
+        }
+
         internal static SecondFactorResult AuthenticateWithDuo(SecondFactor factor, IUi ui, RestClient rest)
         {
             if (!(factor.Parameters is R.DuoMfa extra))
@@ -846,5 +887,23 @@ namespace PasswordManagerAccess.OnePassword
 
         private const string MasterKeyId = "mp";
         private const string RememberMeTokenKey = "remember-me-token";
+
+        private static SecondFactorKind[] SecondFactorPriority =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? SecondFactorPriorityWindows
+                : SecondFactorPriorityOtherPlatforms;
+
+        private static readonly SecondFactorKind[] SecondFactorPriorityWindows =
+        {
+            SecondFactorKind.WebAuthn,
+            SecondFactorKind.Duo,
+            SecondFactorKind.GoogleAuthenticator,
+        };
+
+        private static readonly SecondFactorKind[] SecondFactorPriorityOtherPlatforms =
+        {
+            SecondFactorKind.Duo,
+            SecondFactorKind.GoogleAuthenticator,
+        };
     }
 }

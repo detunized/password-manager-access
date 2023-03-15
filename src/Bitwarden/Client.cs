@@ -9,10 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
-
-#if NETFRAMEWORK
 using U2fWin10;
-#endif
 
 namespace PasswordManagerAccess.Bitwarden
 {
@@ -253,9 +250,6 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
         {
-            // TODO: Decide what to do on other platforms
-            // TODO: See how to get rid of the #if in favor of some cleaner way (partial classes?)
-#if NETFRAMEWORK
             var appId = (string)u2fParams["appId"];
             var challenge = (string)u2fParams["challenge"];
             var keyHandle = (string)u2fParams["keys"][0]["keyHandle"]; // TODO: Support multiple keys
@@ -284,9 +278,6 @@ namespace PasswordManagerAccess.Bitwarden
 
             // TODO: Add support for remember-me.
             return new Passcode(token, false);
-#else
-            throw new UnsupportedFeatureException("U2f is not supported on this platform");
-#endif
         }
 
         internal static Response.SecondFactorMethod ChooseSecondFactorMethod(Response.SecondFactor secondFactor, IUi ui)
@@ -313,9 +304,8 @@ namespace PasswordManagerAccess.Bitwarden
                     availableMethods.Add(MfaMethod.YubiKey);
                     break;
                 case Response.SecondFactorMethod.U2f:
-#if NETFRAMEWORK
-                    availableMethods.Add(MfaMethod.U2f);
-#endif
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        availableMethods.Add(MfaMethod.U2f);
                     break;
                 case Response.SecondFactorMethod.RememberMe:
                     break;
