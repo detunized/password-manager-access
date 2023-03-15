@@ -492,7 +492,7 @@ namespace PasswordManagerAccess.OnePassword
             return factor.Kind switch
             {
                 SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(ui),
-                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, clientInfo),
+                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, clientInfo, ui),
                 SecondFactorKind.Duo => AuthenticateWithDuo(factor, ui, rest),
                 _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here")
             };

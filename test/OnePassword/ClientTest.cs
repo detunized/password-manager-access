@@ -518,6 +518,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         private class NotImplementedUi: IUi
         {
             public virtual Passcode ProvideGoogleAuthPasscode() => throw new NotImplementedException();
+            public virtual Passcode ProvideWebAuthnRememberMe() => throw new NotImplementedException();
             public virtual DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw new NotImplementedException();
             public virtual string ProvideDuoPasscode(DuoDevice device) => throw new NotImplementedException();
             public virtual void UpdateDuoStatus(DuoStatus status, string text) => throw new NotImplementedException();
@@ -526,6 +527,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         private class CancelingUi: NotImplementedUi
         {
             public override Passcode ProvideGoogleAuthPasscode() => Passcode.Cancel;
+            public override Passcode ProvideWebAuthnRememberMe() => Passcode.Cancel;
         }
 
         private string EncryptFixture(string name)

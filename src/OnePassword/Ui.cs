@@ -7,8 +7,13 @@ namespace PasswordManagerAccess.OnePassword.Ui
 {
     public interface IUi: IDuoUi
     {
-        // Return Passcode.Cancel
+        // Return Passcode.Cancel to cancel
         Passcode ProvideGoogleAuthPasscode();
+
+        // Only the `Passcode.RememberMe` is used. The `Passcode.Code` is ignored as it's requested later
+        // with the system UI and there's no way around it.
+        // Return Passcode.Cancel to cancel
+        Passcode ProvideWebAuthnRememberMe();
     }
 
     public class Passcode

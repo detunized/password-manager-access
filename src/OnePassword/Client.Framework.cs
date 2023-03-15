@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword.Ui;
 using R = PasswordManagerAccess.OnePassword.Response;
 using U2fWin10;
 
@@ -11,9 +12,11 @@ namespace PasswordManagerAccess.OnePassword
     // This part only compiles under .NET Framework
     public static partial class Client
     {
-        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, ClientInfo clientInfo)
+        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, ClientInfo clientInfo, IUi ui)
         {
-            // TODO: Support RemeberMe! Need to request this from the UI!
+            var rememberMe = ui.ProvideWebAuthnRememberMe();
+            if (rememberMe == Passcode.Cancel)
+                return SecondFactorResult.Cancel();
 
             if (!(factor.Parameters is R.WebAuthnMfa extra))
                 throw new InternalErrorException("WebAuthn extra parameters expected");
@@ -36,7 +39,7 @@ namespace PasswordManagerAccess.OnePassword
                                                    ["authData"] = assertion.AuthData,
                                                    ["clientData"] = assertion.ClientData,
                                                },
-                                               false);
+                                               rememberMe.RememberMe);
             }
             catch (CanceledException)
             {

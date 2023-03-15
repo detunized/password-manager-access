@@ -20,6 +20,14 @@ namespace Example
                     ? Passcode.Cancel
                     : new Passcode(passcode, GetRememberMe());
             }
+
+            public Passcode ProvideWebAuthnRememberMe()
+            {
+                var yesNo = GetAnswer($"Remember this device? {PressEnterToCancel}").ToLower();
+                return string.IsNullOrWhiteSpace(yesNo)
+                    ? Passcode.Cancel
+                    : new Passcode("", yesNo == "y" || yesNo == "yes");
+            }
         }
 
         public static void Main()
