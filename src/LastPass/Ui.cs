@@ -27,6 +27,7 @@ namespace PasswordManagerAccess.LastPass.Ui
         //    OobResult.ContinueWithPasscode(passcode, rememberMe).
         OobResult ApproveLastPassAuth();
         OobResult ApproveDuo();
+        OobResult ApproveSalesforceAuth();
     }
 
     public class OtpResult

@@ -40,6 +40,11 @@ namespace PasswordManagerAccess.Example.LastPass
                 return ApproveOutOfBand("Duo Security");
             }
 
+            public OobResult ApproveSalesforceAuth()
+            {
+                return ApproveOutOfBand("Salesforce Authenticator");
+            }
+
             //
             // Private
             //
