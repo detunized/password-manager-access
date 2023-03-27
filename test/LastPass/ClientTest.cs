@@ -587,6 +587,17 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void ApproveOob_calls_Ui_ApproveSalesforceAuth()
+        {
+            var ui = new Mock<IUi>();
+            ui.Setup(x => x.ApproveSalesforceAuth()).Returns(OobResult.Cancel);
+
+            Client.ApproveOob(Username, SalesforceAuthOobParameters, ui.Object, null);
+
+            ui.VerifyAll();
+        }
+
+        [Fact]
         public void ApproveOob_calls_IDuoUi()
         {
             // TODO: See how to test this. Maybe Duo.Authenticate should be hidden behind an interface that we can mock.
@@ -896,6 +907,7 @@ namespace PasswordManagerAccess.Test.LastPass
             public OtpResult ProvideYubikeyPasscode() => _otp;
             public OobResult ApproveLastPassAuth() => _oob;
             public OobResult ApproveDuo() => _oob;
+            public OobResult ApproveSalesforceAuth() => _oob;
 
             public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
             {
@@ -969,6 +981,11 @@ namespace PasswordManagerAccess.Test.LastPass
         private static readonly Dictionary<string, string> DuoOobParameters = new Dictionary<string, string>
         {
             ["outofbandtype"] = "duo"
+        };
+
+        private static readonly Dictionary<string, string> SalesforceAuthOobParameters = new Dictionary<string, string>
+        {
+            ["outofbandtype"] = "salesforcehash"
         };
 
         // OTP and OOB

@@ -274,6 +274,7 @@ namespace PasswordManagerAccess.LastPass
             {
                 "lastpassauth" => ui.ApproveLastPassAuth(),
                 "duo" => ApproveDuo(username, parameters, ui, rest),
+                "salesforcehash" => ui.ApproveSalesforceAuth(),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported")
             };
         }
