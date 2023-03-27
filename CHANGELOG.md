@@ -1,12 +1,16 @@
 # Changelog
 
+## 12.0.0
+  - LastPass: added support for Salesforce Authenticator MFA method (enterprise accounts only, thanks
+    to Kyle Spearrin @kspearrin)
+
 ## 11.0.0
   - 1Password: added support for "remember me" option when WebAuthn MFA is used
-  - 1Password: added the device name and model parameters to prevent the application being registered 
+  - 1Password: added the device name and model parameters to prevent the application being registered
     with "Unknown device" label in the account control panel
   - 1Password: the operating system is passed to the server during device registration
   - All: allow WebAuthn to be used on any Windows platform regardless of the .NET environment
-    (.NET Framework, .NET Core or .NET 5/6/7) 
+    (.NET Framework, .NET Core or .NET 5/6/7)
 
 ## 10.5.0
   - All: target the latest .NET Framework 4.8 instead of 4.7.2 in attempt to solve TLS 1.3 issues
