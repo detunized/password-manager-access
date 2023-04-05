@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
@@ -161,7 +162,6 @@ namespace PasswordManagerAccess.ZohoVault
         {
             var cookies = new Dictionary<string, string> {["iamcsr"] = token};
 
-            // TODO: Verify this!
             // Check if we have a "remember me" token saved from one of the previous sessions
             var (rememberMeKey, rememberMeValue) = LoadRememberMeToken(storage);
             bool haveRememberMe = !rememberMeKey.IsNullOrEmpty() && !rememberMeValue.IsNullOrEmpty();
@@ -252,7 +252,14 @@ namespace PasswordManagerAccess.ZohoVault
             }
 
             // Has to be done regardless of the "remember me" setting
-            return MarkDeviceTrusted(userInfo, code.RememberMe, token, logInResult.MfaToken, rest);
+            var cookies = MarkDeviceTrusted(userInfo, code.RememberMe, token, logInResult.MfaToken, rest);
+
+            if (code.RememberMe)
+                FindAndSaveRememberMeToken(cookies, storage);
+            else
+                EraseRememberMeToken(storage);
+
+            return cookies;
         }
 
         internal static void SubmitTotp(UserInfo userInfo, Ui.Passcode passcode, string token, string mfaToken, RestClient rest)
@@ -476,6 +483,15 @@ namespace PasswordManagerAccess.ZohoVault
             return status.Errors[0];
         }
 
+        internal static void FindAndSaveRememberMeToken(HttpCookies cookies, ISecureStorage storage)
+        {
+            var name = cookies.Keys.FirstOrDefault(x => RememberMeCookieNamePattern.IsMatch(x));
+            if (name.IsNullOrEmpty())
+                return;
+
+            SaveRememberMeToken(name, cookies[name!], storage);
+        }
+
         //
         // Private
         //
@@ -512,7 +528,7 @@ namespace PasswordManagerAccess.ZohoVault
             return (storage.LoadString(RememberMeTokenKey), storage.LoadString(RememberMeTokenValue));
         }
 
-        private static void SaveRememberMeToken(ISecureStorage storage, string key, string value)
+        private static void SaveRememberMeToken(string key, string value, ISecureStorage storage)
         {
             storage.StoreString(RememberMeTokenKey, key);
             storage.StoreString(RememberMeTokenValue, value);
@@ -520,7 +536,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         private static void EraseRememberMeToken(ISecureStorage storage)
         {
-            SaveRememberMeToken(storage, null, null);
+            SaveRememberMeToken(null, null, storage);
         }
 
         //
@@ -563,6 +579,8 @@ namespace PasswordManagerAccess.ZohoVault
         // Important! Most of the requests fail without a valid User-Agent header
         private static readonly Dictionary<string, string> Headers =
             new Dictionary<string, string> { { "User-Agent", UserAgent } };
+
+        private static readonly Regex RememberMeCookieNamePattern = new Regex(@"^IAM.*TFATICKET_\d+$");
 
         private const string RememberMeTokenKey = "remember-me-token-key";
         private const string RememberMeTokenValue = "remember-me-token-value";

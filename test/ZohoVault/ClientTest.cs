@@ -373,6 +373,35 @@ namespace PasswordManagerAccess.Test.ZohoVault
                          info.EncryptionCheck);
         }
 
+        [Theory]
+        [InlineData("blah", "blah-blah-blah", false)]
+        [InlineData("TFATICKET_63359013", "blah-blah-blah", false)]
+        [InlineData("IAMTFATICKET_633590133", "blah-blah-blah", true)]
+        [InlineData("IAMEU1TFATICKET_20085519105", "blah-blah-blah", true)]
+        public void FindAndSaveRememberMeToken_stores_token(string name, string value, bool isValid)
+        {
+            var storage = new SimpleStorage();
+            Client.FindAndSaveRememberMeToken(new Dictionary<string, string>
+            {
+                ["pff"] = "grr",
+                [name] = value,
+                ["grr"] = "pff",
+            }, storage);
+
+            if (isValid)
+            {
+                var tokenKey = Assert.Contains("remember-me-token-key", (IDictionary<string, string>)storage.Db);
+                Assert.Equal(name, tokenKey);
+
+                var tokenValue = Assert.Contains("remember-me-token-value", (IDictionary<string, string>)storage.Db);
+                Assert.Equal(value, tokenValue);
+            }
+            else
+            {
+                Assert.Empty(storage.Db);
+            }
+        }
+
         //
         // Helpers
         //
@@ -397,6 +426,21 @@ namespace PasswordManagerAccess.Test.ZohoVault
             mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns((string)null);
 
             return mock.Object;
+        }
+
+        private class SimpleStorage : ISecureStorage
+        {
+            public Dictionary<string, string> Db { get; set; } = new Dictionary<string, string>();
+
+            public string LoadString(string name)
+            {
+                return Db.TryGetValue(name, out var v) ? v : null;
+            }
+
+            public void StoreString(string name, string value)
+            {
+                Db[name] = value;
+            }
         }
 
         private class CancellingUi: IUi
