@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PasswordManagerAccess.csproj" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="Otp.NET" Version="1.3.0" />
   </ItemGroup>
 
 </Project>

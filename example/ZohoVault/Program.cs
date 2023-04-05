@@ -11,9 +11,23 @@ namespace PasswordManagerAccess.Example.ZohoVault
 {
     class TextUi: BaseUi, IUi
     {
+        private readonly string _totpSecret;
+
+        public TextUi(string totpSecret)
+        {
+            _totpSecret = totpSecret;
+        }
+
         public Passcode ProvideGoogleAuthPasscode()
         {
-            return ProvideOtpPasscode("Google Authenticator");
+            if (string.IsNullOrEmpty(_totpSecret))
+                return ProvideOtpPasscode("Google Authenticator");
+
+            var totp = Util.CalculateGoogleAuthTotp(_totpSecret);
+            Console.WriteLine($"Auto-generated TOTP: {totp}");
+            Console.WriteLine("Remember this device: no");
+
+            return new Passcode(totp, false);
         }
 
         //
@@ -32,13 +46,16 @@ namespace PasswordManagerAccess.Example.ZohoVault
         static void Main(string[] args)
         {
             var config = Util.ReadConfig();
+            string totpSecret;
+            config.TryGetValue("google-auth-totp-secret", out totpSecret);
+
             try
             {
                 // Open the remote vault
                 var vault = Vault.Open(config["username"],
                                        config["password"],
                                        config["passphrase"],
-                                       new TextUi(),
+                                       new TextUi(totpSecret),
                                        new PlainStorage());
 
                 // Print the decrypted accounts

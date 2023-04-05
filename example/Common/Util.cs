@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using OtpNet;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Example.Common
@@ -72,6 +73,16 @@ namespace PasswordManagerAccess.Example.Common
             {
                 Console.ForegroundColor = originalColor;
             }
+        }
+
+        public static string CalculateGoogleAuthTotp(string secret)
+        {
+            return CalculateGoogleAuthTotp(secret, DateTime.UtcNow);
+        }
+
+        public static string CalculateGoogleAuthTotp(string secret, DateTime timestamp)
+        {
+            return new Totp(Base32Encoding.ToBytes(secret)).ComputeTotp(timestamp);
         }
     }
 }
