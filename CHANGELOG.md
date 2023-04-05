@@ -1,5 +1,9 @@
 # Changelog
 
+## 12.1.0
+  - ZohoVault: fixed "remember me" option which got broken at point when Zoho changed something on
+    their side
+
 ## 12.0.0
   - LastPass: added support for Salesforce Authenticator MFA method (enterprise accounts only, thanks
     to Kyle Spearrin @kspearrin)
