@@ -1,5 +1,10 @@
 # Changelog
 
+## 12.1.1
+  - 1Password: fixed the recently released broken feature to send the device name and model parameters
+    to prevent the application from being registered with the "Unknown device" label in the account
+    control panel
+
 ## 12.1.0
   - ZohoVault: fixed "remember me" option which got broken at point when Zoho changed something on
     their side
@@ -10,8 +15,8 @@
 
 ## 11.0.0
   - 1Password: added support for "remember me" option when WebAuthn MFA is used
-  - 1Password: added the device name and model parameters to prevent the application being registered
-    with "Unknown device" label in the account control panel
+  - 1Password: added the device name and model parameters to prevent the application from being
+    registered with the "Unknown device" label in the account control panel
   - 1Password: the operating system is passed to the server during device registration
   - All: allow WebAuthn to be used on any Windows platform regardless of the .NET environment
     (.NET Framework, .NET Core or .NET 5/6/7)
