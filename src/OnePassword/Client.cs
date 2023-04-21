@@ -311,6 +311,19 @@ namespace PasswordManagerAccess.OnePassword
                     ["sessionID"] = sessionKey.Id,
                     ["clientVerifyHash"] = Util.CalculateClientHash(clientInfo.ParsedAccountKey.Uuid, sessionKey.Id),
                     ["client"] = ClientId,
+                    ["device"] = new Dictionary<string, string>
+                    {
+                        ["uuid"] = clientInfo.Uuid,
+                        ["clientName"] = ClientName,
+                        ["clientVersion"] = ClientVersion,
+                        ["name"] = clientInfo.DeviceName,
+                        ["model"] = clientInfo.DeviceModel,
+                        ["osName"] = GetOsName(),
+                        ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET.
+                                            // Look into that.
+                        ["userAgent"] = "", // TODO: The browser uses a user agent string here. We need to figure out
+                                            // what CLI sends. This is not trivial at all because of the E2E encryption.
+                    },
                 },
                 sessionKey,
                 rest);
