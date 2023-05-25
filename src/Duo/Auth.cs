@@ -3,11 +3,12 @@
 
 using HtmlAgilityPack;
 using Newtonsoft.Json;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common
+namespace PasswordManagerAccess.Duo
 {
     // Common parts
-    internal static partial class Duo
+    internal static partial class Auth
     {
         public class Result
         {

@@ -1,7 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-namespace PasswordManagerAccess.Common
+namespace PasswordManagerAccess.Duo
 {
     // Adds Duo functionality to the module-specific Ui class.
     public interface IDuoUi

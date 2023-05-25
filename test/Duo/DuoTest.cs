@@ -2,17 +2,17 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Net;
-using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 using Xunit;
 
-namespace PasswordManagerAccess.Test.Common
+namespace PasswordManagerAccess.Test.Duo
 {
     public class DuoTest
     {
         [Fact]
         public void ParseSignature_returns_parts()
         {
-            var (tx, app) = Duo.ParseSignature("tx:app");
+            var (tx, app) = Auth.ParseSignature("tx:app");
 
             Assert.Equal("tx", tx);
             Assert.Equal("app", app);
@@ -24,14 +24,14 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("tx:app:other")]
         public void ParseSignature_throws_on_invalid_signature(string invalid)
         {
-            Exceptions.AssertThrowsInternalError(() => Duo.ParseSignature(invalid), "signature is invalid");
+            Exceptions.AssertThrowsInternalError(() => Auth.ParseSignature(invalid), "signature is invalid");
         }
 
         [Fact]
         public void DownloadFrame_returns_html_document()
         {
             var flow = new RestFlow().Post("<html></html>");
-            var html = Duo.DownloadFrame("tx", flow);
+            var html = Auth.DownloadFrame("tx", flow);
 
             Assert.Equal("<html></html>", html.DocumentNode.InnerHtml);
         }
@@ -41,7 +41,7 @@ namespace PasswordManagerAccess.Test.Common
         {
             var flow = new RestFlow().Post("", HttpStatusCode.BadRequest);
 
-            Exceptions.AssertThrowsInternalError(() => Duo.DownloadFrame("tx", flow));
+            Exceptions.AssertThrowsInternalError(() => Auth.DownloadFrame("tx", flow));
         }
 
         //

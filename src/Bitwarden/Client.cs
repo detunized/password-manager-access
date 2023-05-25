@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 using U2fWin10;
 
 namespace PasswordManagerAccess.Bitwarden
@@ -160,10 +161,10 @@ namespace PasswordManagerAccess.Bitwarden
             case Response.SecondFactorMethod.Duo:
             case Response.SecondFactorMethod.DuoOrg:
             {
-                var duo = Duo.AuthenticateV1((string)extra["Host"] ?? "",
-                                             (string)extra["Signature"] ?? "",
-                                             ui,
-                                             apiRest.Transport);
+                var duo = Auth.AuthenticateV1((string)extra["Host"] ?? "",
+                                              (string)extra["Signature"] ?? "",
+                                              ui,
+                                              apiRest.Transport);
 
                 if (duo != null)
                     passcode = new Passcode(duo.Passcode, duo.RememberMe);

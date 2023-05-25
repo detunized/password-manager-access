@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Xml.Linq;
 using Moq;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.LastPass;
 using PasswordManagerAccess.LastPass.Ui;
 using Xunit;

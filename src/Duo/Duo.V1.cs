@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common
+namespace PasswordManagerAccess.Duo
 {
     // V1 parts
-    internal static partial class Duo
+    internal static partial class Auth
     {
         // Returns the second factor token from Duo or null when canceled by the user.
         public static Result AuthenticateV1(string host, string signature, IDuoUi ui, IRestTransport transport)

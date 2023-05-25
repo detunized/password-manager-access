@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
 using U2fWin10;
 using R = PasswordManagerAccess.OnePassword.Response;
@@ -554,11 +555,11 @@ namespace PasswordManagerAccess.OnePassword
 
             var isV1 = extra.Url.IsNullOrEmpty();
             var result = isV1
-                ? Duo.AuthenticateV1(CheckParam(extra.Host, "host"),
-                                     CheckParam(extra.Signature, "sigRequest"),
-                                     ui,
-                                     rest.Transport)
-                : Duo.AuthenticateV4(extra.Url, ui, rest.Transport);
+                ? Auth.AuthenticateV1(CheckParam(extra.Host, "host"),
+                                      CheckParam(extra.Signature, "sigRequest"),
+                                      ui,
+                                      rest.Transport)
+                : Auth.AuthenticateV4(extra.Url, ui, rest.Transport);
 
             if (result == null)
                 return SecondFactorResult.Cancel();

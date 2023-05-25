@@ -9,6 +9,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.LastPass.Ui;
 
 namespace PasswordManagerAccess.LastPass
@@ -307,7 +308,7 @@ namespace PasswordManagerAccess.LastPass
             var salt = GetParam("duo_bytes");
 
             // Returns: AUTH|ZGV...Tcx|545...07b:APP|ZGV...TAx|145...09e
-            var result = Duo.AuthenticateV1(host, signature, ui, rest.Transport);
+            var result = Auth.AuthenticateV1(host, signature, ui, rest.Transport);
             if (result == null)
                 return OobResult.Cancel;
 

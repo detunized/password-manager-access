@@ -2,7 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.Example.Common
 {

@@ -6,11 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
+using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Common
+namespace PasswordManagerAccess.Duo
 {
     // V4 parts
-    internal static partial class Duo
+    internal static partial class Auth
     {
         public static Result AuthenticateV4(string authUrl, IDuoUi ui, IRestTransport transport)
         {

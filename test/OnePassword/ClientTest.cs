@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
 using PasswordManagerAccess.OnePassword.Ui;
 using Xunit;
