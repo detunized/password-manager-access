@@ -247,6 +247,9 @@ namespace PasswordManagerAccess.OnePassword.Response
 
         [JsonProperty("sigRequest")]
         public readonly string Signature;
+
+        [JsonProperty("authURL")]
+        public readonly string Url;
     }
 
     internal class Error

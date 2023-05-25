@@ -442,12 +442,16 @@ namespace PasswordManagerAccess.OnePassword
             public readonly Dictionary<string, string> Parameters;
             public readonly bool RememberMe;
             public readonly bool Canceled;
+            public readonly string Note; // Let the 2FA attach a note
 
-            public static SecondFactorResult Done(Dictionary<string, string> parameters, bool rememberMe)
+            public static SecondFactorResult Done(Dictionary<string, string> parameters,
+                                                  bool rememberMe,
+                                                  string note = "")
             {
                 return new SecondFactorResult(parameters: parameters,
                                               rememberMe: rememberMe,
-                                              canceled: false);
+                                              canceled: false,
+                                              note: note);
             }
 
             public static SecondFactorResult Cancel()
@@ -457,11 +461,15 @@ namespace PasswordManagerAccess.OnePassword
                                               canceled: true);
             }
 
-            private SecondFactorResult(Dictionary<string, string> parameters, bool rememberMe, bool canceled)
+            private SecondFactorResult(Dictionary<string, string> parameters,
+                                       bool rememberMe,
+                                       bool canceled,
+                                       string note = "")
             {
-                Canceled = canceled;
-                RememberMe = rememberMe;
                 Parameters = parameters;
+                RememberMe = rememberMe;
+                Canceled = canceled;
+                Note = note;
             }
         }
 
@@ -544,19 +552,22 @@ namespace PasswordManagerAccess.OnePassword
                 return param;
             }
 
-            var result = Duo.Authenticate(CheckParam(extra.Host, "host"),
-                                          CheckParam(extra.Signature, "sigRequest"),
-                                          ui,
-                                          rest.Transport);
+            var isV1 = extra.Url.IsNullOrEmpty();
+            var result = isV1
+                ? Duo.AuthenticateV1(CheckParam(extra.Host, "host"),
+                                     CheckParam(extra.Signature, "sigRequest"),
+                                     ui,
+                                     rest.Transport)
+                : Duo.AuthenticateV4(extra.Url, ui, rest.Transport);
 
             if (result == null)
                 return SecondFactorResult.Cancel();
 
-            return SecondFactorResult.Done(new Dictionary<string, string>
-                                           {
-                                               ["sigResponse"] = result.Passcode
-                                           },
-                                           result.RememberMe);
+            var key = isV1 ? "sigResponse" : "code";
+            var note = isV1 ? "v1" : "v4";
+            return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Passcode },
+                                           result.RememberMe,
+                                           note);
         }
 
         // Returns "remember me" token when successful
@@ -570,7 +581,12 @@ namespace PasswordManagerAccess.OnePassword
                 SecondFactorKind.GoogleAuthenticator => "totp",
                 SecondFactorKind.RememberMeToken => "dsecret",
                 SecondFactorKind.WebAuthn => "webAuthn",
-                SecondFactorKind.Duo => "duo",
+                SecondFactorKind.Duo => result.Note switch
+                {
+                    "v1" => "duo",
+                    "v4" => "duov4",
+                    _ => throw new InternalErrorException($"Invalid Duo version '{result.Note}'"),
+                },
                 _ => throw new InternalErrorException($"2FA method {factor} is not valid"),
             };
 
