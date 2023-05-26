@@ -1,5 +1,9 @@
 # Changelog
 
+## 12.2.0
+  - Duo: added V4 protocol support with mobile push, passcodes, sms codes and calls
+  - 1Password: added Duo V4 when available
+
 ## 12.1.1
   - 1Password: fixed the recently released broken feature to send the device name and model parameters
     to prevent the application from being registered with the "Unknown device" label in the account
