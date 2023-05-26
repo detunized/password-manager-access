@@ -555,11 +555,11 @@ namespace PasswordManagerAccess.OnePassword
 
             var isV1 = extra.Url.IsNullOrEmpty();
             var result = isV1
-                ? Auth.AuthenticateV1(CheckParam(extra.Host, "host"),
-                                      CheckParam(extra.Signature, "sigRequest"),
-                                      ui,
-                                      rest.Transport)
-                : Auth.AuthenticateV4(extra.Url, ui, rest.Transport);
+                ? DuoV1.Authenticate(CheckParam(extra.Host, "host"),
+                                     CheckParam(extra.Signature, "sigRequest"),
+                                     ui,
+                                     rest.Transport)
+                : DuoV4.Authenticate(extra.Url, ui, rest.Transport);
 
             if (result == null)
                 return SecondFactorResult.Cancel();

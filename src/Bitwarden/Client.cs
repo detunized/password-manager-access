@@ -161,10 +161,10 @@ namespace PasswordManagerAccess.Bitwarden
             case Response.SecondFactorMethod.Duo:
             case Response.SecondFactorMethod.DuoOrg:
             {
-                var duo = Auth.AuthenticateV1((string)extra["Host"] ?? "",
-                                              (string)extra["Signature"] ?? "",
-                                              ui,
-                                              apiRest.Transport);
+                var duo = DuoV1.Authenticate((string)extra["Host"] ?? "",
+                                             (string)extra["Signature"] ?? "",
+                                             ui,
+                                             apiRest.Transport);
 
                 if (duo != null)
                     passcode = new Passcode(duo.Passcode, duo.RememberMe);

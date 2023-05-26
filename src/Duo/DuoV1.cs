@@ -4,16 +4,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
-using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo.Response;
+using static PasswordManagerAccess.Duo.Util;
+using R = PasswordManagerAccess.Duo.ResponseV1;
 
 namespace PasswordManagerAccess.Duo
 {
-    // V1 parts
-    internal static partial class Auth
+    internal static class DuoV1
     {
         // Returns the second factor token from Duo or null when canceled by the user.
-        public static Result AuthenticateV1(string host, string signature, IDuoUi ui, IRestTransport transport)
+        public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport)
         {
             var rest = new RestClient(transport, $"https://{host}");
 
@@ -126,7 +127,7 @@ namespace PasswordManagerAccess.Duo
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = PostForm<R.SubmitFactor>("frame/prompt", parameters, rest);
+            var response = PostForm<SubmitFactor>("frame/prompt", parameters, rest);
             return response.TransactionId ?? "";
         }
 
@@ -160,11 +161,11 @@ namespace PasswordManagerAccess.Duo
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
                 var response = PostForm<R.Poll>("frame/status",
-                                                new Dictionary<string, object> {["sid"] = sid, ["txid"] = txid},
+                                                new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
                                                 rest);
 
                 var (status, text) = GetResponseStatus(response);
-                UpdateUi(status, text, ui);
+                Util.UpdateUi(status, text, ui);
 
                 switch (status)
                 {
@@ -186,7 +187,7 @@ namespace PasswordManagerAccess.Duo
         internal static string FetchToken(string sid, string url, IDuoUi ui, RestClient rest)
         {
             var response = PostForm<R.FetchToken>(url,
-                                                  new Dictionary<string, object> {["sid"] = sid},
+                                                  new Dictionary<string, object> { ["sid"] = sid },
                                                   rest);
 
             UpdateUi(response, ui);
@@ -198,30 +199,10 @@ namespace PasswordManagerAccess.Duo
             return token;
         }
 
-        // TODO: Clean up!
-        internal static T PostForm<T>(string endpoint, Dictionary<string, object> parameters, RestClient rest, Dictionary<string, string> extraHeaders = null)
-        {
-            var response = rest.PostForm<R.Envelope<T>>(endpoint, parameters, headers: extraHeaders);
-
-            // All good
-            if (response.IsSuccessful && response.Data.Status == "OK" && response.Data.Payload != null)
-                return response.Data.Payload;
-
-            throw MakeSpecializedError(response);
-        }
-
         internal static void UpdateUi(R.Status response, IDuoUi ui)
         {
             var (status, text) = GetResponseStatus(response);
-            UpdateUi(status, text, ui);
-        }
-
-        internal static void UpdateUi(DuoStatus status, string text, IDuoUi ui)
-        {
-            if (text.IsNullOrEmpty())
-                return;
-
-            ui.UpdateDuoStatus(status, text);
+            Util.UpdateUi(status, text, ui);
         }
 
         internal static (DuoStatus Status, string Text) GetResponseStatus(R.Status response)
@@ -290,52 +271,6 @@ namespace PasswordManagerAccess.Duo
                 "Passcode" => DuoFactor.Passcode,
                 _ => null
             };
-        }
-
-        internal static string GetFactorParameterValue(DuoFactor factor)
-        {
-            return factor switch
-            {
-                DuoFactor.Push => "Duo Push",
-                DuoFactor.Call => "Phone Call",
-                DuoFactor.Passcode => "Passcode",
-                DuoFactor.SendPasscodesBySms => "sms",
-                _ => ""
-            };
-        }
-
-        //
-        // Response models
-        //
-
-        internal static partial class R
-        {
-            public class SubmitFactor
-            {
-                [JsonProperty("txid")]
-                public string TransactionId;
-            }
-
-            public class Status
-            {
-                [JsonProperty("result")]
-                public string Result;
-
-                [JsonProperty("status")]
-                public string Message;
-            }
-
-            public class FetchToken: Status
-            {
-                [JsonProperty("cookie")]
-                public string Cookie;
-            }
-
-            public class Poll: Status
-            {
-                [JsonProperty("result_url")]
-                public string Url;
-            }
         }
     }
 }
