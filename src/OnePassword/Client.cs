@@ -888,6 +888,9 @@ namespace PasswordManagerAccess.OnePassword
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 return "Linux";
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Create("iOS")))
+                return "iOS";
+
             return "Unknown";
         }
 
