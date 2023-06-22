@@ -1,5 +1,8 @@
 # Changelog
 
+## 12.2.1
+  - 1Password: fixed broken platform detection on iOS that prevented from logging in correctly
+
 ## 12.2.0
   - Duo: added V4 protocol support with mobile push, passcodes, sms codes and calls
   - 1Password: added Duo V4 when available
