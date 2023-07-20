@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Linq;
+using Konscious.Security.Cryptography;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.Bitwarden.Response;
 
@@ -17,6 +18,15 @@ namespace PasswordManagerAccess.Bitwarden
                                                                   username.ToLower().Trim().ToBytes(),
                                                                   kdfInfo.Iterations,
                                                                   32),
+
+                R.KdfMethod.Argon2id => new Argon2id(password.ToBytes())
+                {
+                    Salt = Crypto.Sha256(username.ToLower().Trim()),
+                    Iterations = kdfInfo.Iterations,
+                    MemorySize = kdfInfo.Memory * 1024,
+                    DegreeOfParallelism = kdfInfo.Parallelism,
+                }.GetBytes(32),
+
                 _ => throw new UnsupportedFeatureException($"Unsupported KDF method: {kdfInfo.Kdf}")
             };
         }

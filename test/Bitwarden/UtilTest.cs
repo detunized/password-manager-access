@@ -14,14 +14,21 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void DeriveKey_returns_derived_key_pbkdf2()
         {
             var key = Util.DeriveKey(Username, Password, Pbkdf2KdfInfo);
-            Assert.Equal(DerivedKey.Decode64(), key);
+            Assert.Equal(DerivedKeyPbkdf2.Decode64(), key);
+        }
+
+        [Fact]
+        public void DeriveKey_returns_derived_key_argon2id()
+        {
+            var key = Util.DeriveKey(Username, Password, Argon2idKdfInfo);
+            Assert.Equal(DerivedKeyArgon2id.Decode64(), key);
         }
 
         [Fact]
         public void DeriveKey_trims_whitespace_and_lowercases_username()
         {
             var key = Util.DeriveKey(" UsErNaMe ", Password, Pbkdf2KdfInfo);
-            Assert.Equal(DerivedKey.Decode64(), key);
+            Assert.Equal(DerivedKeyPbkdf2.Decode64(), key);
         }
 
         [Fact]
@@ -35,7 +42,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void HashPassword_returns_hashed_password()
         {
-            var hash = Util.HashPassword(Password, DerivedKey.Decode64());
+            var hash = Util.HashPassword(Password, DerivedKeyPbkdf2.Decode64());
             Assert.Equal(PasswordHash.Decode64(), hash);
         }
 
@@ -59,12 +66,20 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
         private const string Username = "username";
         private const string Password = "password";
-        private const string DerivedKey = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
+        private const string DerivedKeyPbkdf2 = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
+        private const string DerivedKeyArgon2id = "qwJqLHT2PdOduAiV1cfA9bXk3iDCa0sVSJG1mWuKVEk=";
         private const string PasswordHash = "zhQ5ps7B3qN3/m2JVn+UckMTPH5dOI6K369pCiLL9wQ=";
         private static readonly R.KdfInfo Pbkdf2KdfInfo = new R.KdfInfo
         {
             Kdf = R.KdfMethod.Pbkdf2Sha256,
             Iterations = 100,
+        };
+        private static readonly R.KdfInfo Argon2idKdfInfo = new R.KdfInfo
+        {
+            Kdf = R.KdfMethod.Argon2id,
+            Iterations = 3,
+            Memory = 64,
+            Parallelism = 4,
         };
     }
 }
