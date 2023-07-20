@@ -4,23 +4,32 @@
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
 using Xunit;
+using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
     public class UtilTest
     {
         [Fact]
-        public void DeriveKey_returns_derived_key()
+        public void DeriveKey_returns_derived_key_pbkdf2()
         {
-            var key = Util.DeriveKey(Username, Password, 100);
+            var key = Util.DeriveKey(Username, Password, Pbkdf2KdfInfo);
             Assert.Equal(DerivedKey.Decode64(), key);
         }
 
         [Fact]
         public void DeriveKey_trims_whitespace_and_lowercases_username()
         {
-            var key = Util.DeriveKey(" UsErNaMe ", Password, 100);
+            var key = Util.DeriveKey(" UsErNaMe ", Password, Pbkdf2KdfInfo);
             Assert.Equal(DerivedKey.Decode64(), key);
+        }
+
+        [Fact]
+        public void DeriveKey_throws_on_unsupported_kdf()
+        {
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Util.DeriveKey(Username, Password, new R.KdfInfo { Kdf = (R.KdfMethod)13 }),
+                "KDF method");
         }
 
         [Fact]
@@ -52,5 +61,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string Password = "password";
         private const string DerivedKey = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
         private const string PasswordHash = "zhQ5ps7B3qN3/m2JVn+UckMTPH5dOI6K369pCiLL9wQ=";
+        private static readonly R.KdfInfo Pbkdf2KdfInfo = new R.KdfInfo
+        {
+            Kdf = R.KdfMethod.Pbkdf2Sha256,
+            Iterations = 100,
+        };
     }
 }

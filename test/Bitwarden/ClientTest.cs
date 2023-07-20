@@ -9,7 +9,7 @@ using Xunit;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Bitwarden.Ui;
-using Response = PasswordManagerAccess.Bitwarden.Response;
+using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -38,36 +38,52 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void RequestKdfIterationCount_returns_iteration_count()
+        public void RequestKdfInfo_returns_kdf_info_pbkdf2()
         {
             var rest = new RestFlow()
-                .Post("{'Kdf': 0, 'KdfIterations': 1337}")
+                .Post("{'kdf': 0, 'kdfIterations': 1337, 'kdfMemory': null, 'kdfParallelism': null}")
                 .ToRestClient();
 
-            var count = Client.RequestKdfIterationCount(Username, rest);
+            var kdf = Client.RequestKdfInfo(Username, rest);
 
-            Assert.Equal(1337, count);
+            Assert.Equal(R.KdfMethod.Pbkdf2Sha256, kdf.Kdf);
+            Assert.Equal(1337, kdf.Iterations);
         }
 
         [Fact]
-        public void RequestKdfIterationCount_makes_POST_request_to_specific_endpoint()
+        public void RequestKdfInfo_returns_kdf_info_argon2di()
         {
             var rest = new RestFlow()
-                .Post("{'Kdf': 0, 'KdfIterations': 1337}")
+                .Post("{'kdf': 1, 'kdfIterations': 3, 'kdfMemory': 64, 'kdfParallelism': 4}")
+                .ToRestClient();
+
+            var kdf = Client.RequestKdfInfo(Username, rest);
+
+            Assert.Equal(R.KdfMethod.Argon2id, kdf.Kdf);
+            Assert.Equal(3, kdf.Iterations);
+            Assert.Equal(64, kdf.Memory);
+            Assert.Equal(4, kdf.Parallelism);
+        }
+
+        [Fact]
+        public void RequestKdfInfo_makes_POST_request_to_specific_endpoint()
+        {
+            var rest = new RestFlow()
+                .Post("{'Kdf': 0, 'KdfIterations': 1337, 'kdfMemory': null, 'kdfParallelism': null}")
                     .ExpectUrl(ApiUrl + "/accounts/prelogin")
                 .ToRestClient(ApiUrl);
 
-            Client.RequestKdfIterationCount(Username, rest);
+            Client.RequestKdfInfo(Username, rest);
         }
 
         [Fact]
-        public void RequestKdfIterationCount_throws_on_unsupported_kdf_method()
+        public void RequestKdfInfo_throws_on_unsupported_kdf_method()
         {
             var rest = new RestFlow()
-                .Post("{'Kdf': 13, 'KdfIterations': 1337}")
+                .Post("{'Kdf': 13, 'KdfIterations': 1337, 'kdfMemory': null, 'kdfParallelism': null}")
                 .ToRestClient();
 
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestKdfIterationCount(Username, rest), "KDF");
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestKdfInfo(Username, rest), "KDF method");
         }
 
         [Fact]
@@ -152,19 +168,47 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result()
+        public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
         {
             var rest = new RestFlow()
-                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'Kdf': 13, 'KdfIterations': 1337}")
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'Kdf': 0, 'KdfIterations': 1337, 'KdfMemory': null, 'KdfParallelism': null}")
                     .ExpectUrl(IdentityUrl + "/connect/token")
                 .ToRestClient(IdentityUrl);
 
-            var result = Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest);
+            var (token, kdfInfo) = Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest);
 
-            Assert.Equal("Bearer", result.TokenType);
-            Assert.Equal("wa-wa-wee-wa", result.AccessToken);
-            Assert.Equal(13, result.KdfMethod);
-            Assert.Equal(1337, result.KdfIterations);
+            Assert.Equal("Bearer wa-wa-wee-wa", token);
+            Assert.Equal(R.KdfMethod.Pbkdf2Sha256, kdfInfo.Kdf);
+            Assert.Equal(1337, kdfInfo.Iterations);
+        }
+
+        [Fact]
+        public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
+        {
+            var rest = new RestFlow()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'Kdf': 1, 'KdfIterations': 3, 'KdfMemory': 64, 'KdfParallelism': 4}")
+                    .ExpectUrl(IdentityUrl + "/connect/token")
+                .ToRestClient(IdentityUrl);
+
+            var (token, kdfInfo) = Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest);
+
+            Assert.Equal("Bearer wa-wa-wee-wa", token);
+            Assert.Equal(R.KdfMethod.Argon2id, kdfInfo.Kdf);
+            Assert.Equal(3, kdfInfo.Iterations);
+            Assert.Equal(64, kdfInfo.Memory);
+            Assert.Equal(4, kdfInfo.Parallelism);
+        }
+
+        [Fact]
+        public void LoginCliApi_throws_on_unsupported_kdf()
+        {
+            var rest = new RestFlow()
+                .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa', 'Kdf': 13, 'KdfIterations': 1337, 'KdfMemory': null, 'KdfParallelism': null}")
+                .ToRestClient(IdentityUrl);
+
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest),
+                "KDF method");
         }
 
         [Fact]
@@ -210,10 +254,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
             var methods = response.SecondFactor.Methods.Keys;
             Assert.Equal(5, methods.Count);
-            Assert.Contains(Response.SecondFactorMethod.GoogleAuth, methods);
-            Assert.Contains(Response.SecondFactorMethod.Email, methods);
-            Assert.Contains(Response.SecondFactorMethod.Duo, methods);
-            Assert.Contains(Response.SecondFactorMethod.YubiKey, methods);
+            Assert.Contains(R.SecondFactorMethod.GoogleAuth, methods);
+            Assert.Contains(R.SecondFactorMethod.Email, methods);
+            Assert.Contains(R.SecondFactorMethod.Duo, methods);
+            Assert.Contains(R.SecondFactorMethod.YubiKey, methods);
         }
 
         [Fact]
@@ -278,7 +322,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Client.RequestAuthToken(Username,
                                     PasswordHash,
                                     DeviceId,
-                                    new Client.SecondFactorOptions(Response.SecondFactorMethod.Duo, "code", true),
+                                    new Client.SecondFactorOptions(R.SecondFactorMethod.Duo, "code", true),
                                     rest);
         }
 
@@ -483,9 +527,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
             return mock.Object;
         }
 
-        private Response.Vault LoadVaultFixture(string name = "vault")
+        private R.Vault LoadVaultFixture(string name = "vault")
         {
-            return JsonConvert.DeserializeObject<Response.Vault>(GetFixture(name));
+            return JsonConvert.DeserializeObject<R.Vault>(GetFixture(name));
         }
 
         //

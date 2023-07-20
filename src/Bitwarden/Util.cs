@@ -1,19 +1,24 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Bitwarden
 {
     internal static class Util
     {
-        public static byte[] DeriveKey(string username, string password, int iterations)
+        public static byte[] DeriveKey(string username, string password, R.KdfInfo kdfInfo)
         {
-            return Pbkdf2.GenerateSha256(password.ToBytes(), username.ToLower().Trim().ToBytes(), iterations, 32);
+            return kdfInfo.Kdf switch
+            {
+                R.KdfMethod.Pbkdf2Sha256 => Pbkdf2.GenerateSha256(password.ToBytes(),
+                                                                  username.ToLower().Trim().ToBytes(),
+                                                                  kdfInfo.Iterations,
+                                                                  32),
+                _ => throw new UnsupportedFeatureException($"Unsupported KDF method: {kdfInfo.Kdf}")
+            };
         }
 
         public static byte[] HashPassword(string password, byte[] key)

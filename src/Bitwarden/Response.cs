@@ -33,13 +33,22 @@ namespace PasswordManagerAccess.Bitwarden.Response
     public enum KdfMethod
     {
         Pbkdf2Sha256 = 0,
+        Argon2id = 1,
     }
 
-    [JsonObject(ItemRequired = Required.Always)]
     public struct KdfInfo
     {
+        [JsonProperty("kdf", Required = Required.Always)]
         public KdfMethod Kdf;
-        public int KdfIterations;
+
+        [JsonProperty("kdfIterations", Required = Required.Always)]
+        public int Iterations;
+
+        [JsonProperty("kdfMemory", NullValueHandling = NullValueHandling.Ignore)]
+        public int Memory;
+
+        [JsonProperty("kdfParallelism", NullValueHandling = NullValueHandling.Ignore)]
+        public int Parallelism;
     }
 
     public struct AuthToken
@@ -169,9 +178,15 @@ namespace PasswordManagerAccess.Bitwarden.Response
         public string AccessToken;
 
         [JsonProperty("Kdf", Required = Required.Always)]
-        public int KdfMethod;
+        public KdfMethod Kdf;
 
         [JsonProperty("KdfIterations", Required = Required.Always)]
         public int KdfIterations;
+
+        [JsonProperty("KdfMemory", NullValueHandling = NullValueHandling.Ignore)]
+        public int Memory;
+
+        [JsonProperty("KdfParallelism", NullValueHandling = NullValueHandling.Ignore)]
+        public int Parallelism;
     }
 }
