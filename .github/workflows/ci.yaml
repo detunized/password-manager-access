@@ -27,12 +27,11 @@ jobs:
       with:
         dotnet-version: 6.0.x
 
-
     - name: Restore
-      run: 'dotnet restore $env:solution'
+      run: dotnet restore $solution
 
     - name: Build
-      run: 'dotnet build -c $env:buildConfiguration --no-restore $env:solution'
+      run: dotnet build -c $buildConfiguration --no-restore $solution
 
     - name: Test
-      run: 'dotnet test -c $env:buildConfiguration --framework $env:framework --logger trx --no-build $env:solution'
+      run: dotnet test -c $buildConfiguration --framework $framework --logger trx --no-build $solution
