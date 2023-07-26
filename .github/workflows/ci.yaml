@@ -29,19 +29,10 @@ jobs:
 
 
     - name: Restore
-      bash: 'dotnet restore $env:solution'
-      displayName: Restore
+      run: 'dotnet restore $env:solution'
 
     - name: Build
-      bash: 'dotnet build -c $env:buildConfiguration --no-restore $env:solution'
-      displayName: Build
+      run: 'dotnet build -c $env:buildConfiguration --no-restore $env:solution'
 
     - name: Test
-      bash: 'dotnet test -c $env:buildConfiguration --framework $env:framework --logger trx --no-build $env:solution'
-
-    - task: PublishTestResults@2
-      condition: always()
-      inputs:
-        testResultsFormat: VSTest
-        testResultsFiles: test/TestResults/*.trx
-
+      run: 'dotnet test -c $env:buildConfiguration --framework $env:framework --logger trx --no-build $env:solution'
