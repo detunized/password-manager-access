@@ -2,9 +2,13 @@ name: .NET build, test and release
 
 on:
   push:
-    branches: ['master', 'refs/tags/v*']
+    branches:
+      - master
+    tags:
+      - v*
   pull_request:
-    branches: ['master']
+    branches:
+      - master
 
 jobs:
   Build:
