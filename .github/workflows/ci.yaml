@@ -27,6 +27,12 @@ jobs:
       with:
         dotnet-version: 3.1.x
 
+    - name: Info
+      run: |
+        dotnet --info
+        dotnet --list-sdks
+        dotnet --list-runtimes
+
     - name: Restore
       run: dotnet restore $solution
 
