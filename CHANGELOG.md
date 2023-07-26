@@ -1,5 +1,8 @@
 # Changelog
 
+## 12.3.0
+  - Bitwarden: Argon2id KDF support added
+
 ## 12.2.1
   - 1Password: fixed broken platform detection on iOS that prevented from logging in correctly
 
