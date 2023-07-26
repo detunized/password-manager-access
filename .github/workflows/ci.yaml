@@ -1,0 +1,47 @@
+name: .NET build, test and release
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+
+    env:
+      framework: 'netcoreapp3.0'
+      solution: 'password-manager-access.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 6.0.x
+
+
+    - name: Restore
+      bash: 'dotnet restore $env:solution'
+      displayName: Restore
+
+    - name: Build
+      bash: 'dotnet build -c $env:buildConfiguration --no-restore $env:solution'
+      displayName: Build
+
+    - name: Test
+      bash: 'dotnet test -c $env:buildConfiguration --framework $env:framework --logger trx --no-build $env:solution'
+
+    - task: PublishTestResults@2
+      condition: always()
+      inputs:
+        testResultsFormat: VSTest
+        testResultsFiles: test/TestResults/*.trx
+

@@ -1,8 +1,9 @@
 trigger:
-- master
-- merge
-- develop
-- refs/tags/v*
+- disabled-for-now
+# - master
+# - merge
+# - develop
+# - refs/tags/v*
 
 jobs:
 
