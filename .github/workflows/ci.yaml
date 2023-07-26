@@ -34,7 +34,7 @@ jobs:
       run: msbuild $solution /t:Restore /p:Configuration=$env:buildConfiguration
 
     - name: List all the files
-      run: dotnet test -f net48 --no-build
+      run: dotnet test -f net48 --configuration Release --no-build
 
   Linux:
     runs-on: ubuntu-latest
