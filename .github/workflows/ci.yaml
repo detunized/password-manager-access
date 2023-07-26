@@ -58,10 +58,16 @@ jobs:
 
     steps:
       - name: Build
-        run: ci/make-nuget-package.sh ${{ github.ref_name }}
+        run: |
+          pwd
+          ls -l
+          ./ci/make-nuget-package.sh ${{ github.ref_name }}
 
       - name: Push
-        run: ci/push-package-to-nuget.sh
+        run: |
+          pwd
+          ls -l
+          ./ci/push-package-to-nuget.sh
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
