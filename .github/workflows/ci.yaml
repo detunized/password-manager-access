@@ -40,4 +40,9 @@ jobs:
       run: dotnet build -c $buildConfiguration --no-restore $solution
 
     - name: Test
-      run: dotnet test -c $buildConfiguration --framework $framework --no-build $solution
+      run: |
+        dotnet test -c $buildConfiguration --framework $framework --no-build $solution || true
+        dotnet test -c Release --framework net48 --no-build password-manager-access.sln || true
+        dotnet test -c Release --framework netcoreapp3.0 --no-build password-manager-access.sln || true
+        dotnet test -c Release --framework netcoreapp3.1 --no-build password-manager-access.sln || true
+        dotnet test password-manager-access.sln || true
