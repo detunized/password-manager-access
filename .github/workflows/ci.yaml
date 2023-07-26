@@ -7,7 +7,36 @@ on:
     branches: [ "master" ]
 
 jobs:
-  linux:
+  Windows:
+    runs-on: windows-latest
+
+    env:
+      framework: net48
+      solution: password-manager-access.sln
+      buildPlatform: Any CPU
+      buildConfiguration: Release
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+          fetch-depth: 0
+
+    - name: Install .NET
+      uses: actions/setup-dotnet@v3
+      with:
+          dotnet-version: 6.0.x
+
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Restore the application
+      run: msbuild $solution /t:Restore /p:Configuration=$buildConfiguration
+
+    - name: List all the files
+      run: dir /s
+
+  Linux:
     runs-on: ubuntu-latest
 
     env:
@@ -46,6 +75,6 @@ jobs:
       uses: dorny/test-reporter@v1
       if: success() || failure()
       with:
-        name: .NET Tests
+        name: Linux tests
         path: test/TestResults/test-results.trx
         reporter: dotnet-trx
