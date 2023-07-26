@@ -37,7 +37,7 @@ jobs:
       run: dotnet restore $solution
 
     - name: Build
-      run: dotnet build --configuration $buildConfiguration --framework $framework --no-restore $solution
+      run: dotnet build --configuration $buildConfiguration --no-restore $solution
 
     - name: Test
       run: dotnet test --configuration $buildConfiguration --framework $framework --no-build $solution
