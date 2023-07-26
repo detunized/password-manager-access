@@ -7,38 +7,13 @@ on:
     branches: [ "master" ]
 
 jobs:
-  Windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        framework: [net48, net6]
 
-    env:
-      framework: net48
-      solution: password-manager-access.sln
-      buildPlatform: Any CPU
-      buildConfiguration: Release
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-          fetch-depth: 0
-
-    - name: Info
-      run: |
-          dotnet --info
-          dotnet --list-sdks
-          dotnet --list-runtimes
-
-    - name: Test
-      run: dotnet test --framework net48 --configuration Release --logger "trx;LogFileName=test-results.trx"
-
-  Linux:
-    runs-on: ubuntu-latest
-
-    env:
-      framework: net6
-      solution: password-manager-access.sln
-      buildPlatform: Any CPU
-      buildConfiguration: Release
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout
@@ -46,30 +21,86 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 6.0.x
-
-    - name: Info
+    - name: .NET info
       run: |
-        dotnet --info
-        dotnet --list-sdks
-        dotnet --list-runtimes
+          dotnet --info
+          dotnet --list-sdks
+          dotnet --list-runtimes
 
-    - name: Restore
-      run: dotnet restore $solution
-
-    - name: Build
-      run: dotnet build --configuration $buildConfiguration --no-restore $solution
-
-    - name: Test
-      run: dotnet test --configuration $buildConfiguration --framework $framework --logger "trx;LogFileName=test-results.trx" --no-build $solution
+    - name: Test ${{ matrix.framework }}
+      run: dotnet test --configuration Release --framework ${{ matrix.framework }} --logger "trx;LogFileName=test-results.trx"
 
     - name: Test Report
       uses: dorny/test-reporter@v1
       if: success() || failure()
       with:
-        name: Linux tests
+        name: $${{ matrix.os }} $${{ matrix.framework }} tests
         path: test/TestResults/test-results.trx
         reporter: dotnet-trx
+
+#    Windows:
+#    runs-on: windows-latest
+#
+#    env:
+#      framework: net48
+#      solution: password-manager-access.sln
+#      buildPlatform: Any CPU
+#      buildConfiguration: Release
+#
+#    steps:
+#    - name: Checkout
+#      uses: actions/checkout@v3
+#      with:
+#          fetch-depth: 0
+#
+#    - name: Info
+#      run: |
+#          dotnet --info
+#          dotnet --list-sdks
+#          dotnet --list-runtimes
+#
+#    - name: Test
+#      run: dotnet test --framework net48 --configuration Release --logger "trx;LogFileName=test-results.trx"
+#
+#  Linux:
+#    runs-on: ubuntu-latest
+#
+#    env:
+#      framework: net6
+#      solution: password-manager-access.sln
+#      buildPlatform: Any CPU
+#      buildConfiguration: Release
+#
+#    steps:
+#    - name: Checkout
+#      uses: actions/checkout@v3
+#      with:
+#        fetch-depth: 0
+#
+#    - name: Install .NET
+#      uses: actions/setup-dotnet@v3
+#      with:
+#        dotnet-version: 6.0.x
+#
+#    - name: Info
+#      run: |
+#        dotnet --info
+#        dotnet --list-sdks
+#        dotnet --list-runtimes
+#
+#    - name: Restore
+#      run: dotnet restore $solution
+#
+#    - name: Build
+#      run: dotnet build --configuration $buildConfiguration --no-restore $solution
+#
+#    - name: Test
+#      run: dotnet test --configuration $buildConfiguration --framework $framework --logger "trx;LogFileName=test-results.trx" --no-build $solution
+#
+#    - name: Test Report
+#      uses: dorny/test-reporter@v1
+#      if: success() || failure()
+#      with:
+#        name: Linux tests
+#        path: test/TestResults/test-results.trx
+#        reporter: dotnet-trx
