@@ -25,7 +25,7 @@ jobs:
     - name: Install .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 3.1.x
 
     - name: Restore
       run: dotnet restore $solution
@@ -34,4 +34,4 @@ jobs:
       run: dotnet build -c $buildConfiguration --no-restore $solution
 
     - name: Test
-      run: dotnet test -c $buildConfiguration --framework $framework --logger trx --no-build $solution
+      run: dotnet test -c $buildConfiguration --framework $framework --no-build $solution
