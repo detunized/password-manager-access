@@ -11,10 +11,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        framework: [net48, net6]
-        exclude:
-          - os: ubuntu-latest
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        framework: [net6]
+        include:
+          - os: windows-latest
             framework: net48
 
     runs-on: ${{ matrix.os }}
@@ -38,7 +38,7 @@ jobs:
         uses: dorny/test-reporter@v1
         if: success() || failure()
         with:
-          name: $${{ matrix.os }} $${{ matrix.framework }} tests
+          name: ${{ matrix.os }} ${{ matrix.framework }} tests
           path: test/TestResults/test-results.trx
           reporter: dotnet-trx
 
