@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      framework: 'netcoreapp3.0'
-      solution: 'password-manager-access.sln'
-      buildPlatform: 'Any CPU'
-      buildConfiguration: 'Release'
+      framework: net6
+      solution: password-manager-access.sln
+      buildPlatform: Any CPU
+      buildConfiguration: Release
 
     steps:
     - name: Checkout
@@ -25,7 +25,7 @@ jobs:
     - name: Install .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 3.1.x
+        dotnet-version: 6.0.x
 
     - name: Info
       run: |
@@ -37,12 +37,7 @@ jobs:
       run: dotnet restore $solution
 
     - name: Build
-      run: dotnet build -c $buildConfiguration --no-restore $solution
+      run: dotnet build --configuration $buildConfiguration --framework $framework --no-restore $solution
 
     - name: Test
-      run: |
-        dotnet test -c $buildConfiguration --framework $framework --no-build $solution || true
-        dotnet test -c Release --framework net48 --no-build password-manager-access.sln || true
-        dotnet test -c Release --framework netcoreapp3.0 --no-build password-manager-access.sln || true
-        dotnet test -c Release --framework netcoreapp3.1 --no-build password-manager-access.sln || true
-        dotnet test password-manager-access.sln || true
+      run: dotnet test --configuration $buildConfiguration --framework $framework --no-build $solution
