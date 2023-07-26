@@ -12,9 +12,6 @@ on:
 
 jobs:
   Build:
-    # TODO: enable this after testing
-    if: false
-
     strategy:
       fail-fast: false
       matrix:
@@ -50,8 +47,7 @@ jobs:
           reporter: dotnet-trx
 
   Release:
-    # TODO: enable this after testing
-    # needs: Build
+    needs: Build
     if: startsWith(github.ref, 'refs/tags/v')
 
     runs-on: ubuntu-latest
@@ -63,16 +59,10 @@ jobs:
           fetch-depth: 0
 
       - name: Build
-        run: |
-          pwd
-          ls -l
-          ./ci/make-nuget-package.sh ${{ github.ref_name }}
+        run: ci/make-nuget-package.sh ${{ github.ref_name }}
 
       - name: Push
-        run: |
-          pwd
-          ls -l
-          ./ci/push-package-to-nuget.sh
+        run: ci/push-package-to-nuget.sh
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
@@ -80,5 +70,5 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ github.workspace }}/**/*.nupkg
-          tag_name: $${{ github.ref_name }}
-
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
