@@ -31,7 +31,7 @@ jobs:
       uses: microsoft/setup-msbuild@v1.0.2
 
     - name: Restore the application
-      run: msbuild $solution /t:Restore /p:Configuration=$buildConfiguration
+      run: msbuild $solution /t:Restore /p:Configuration=$env:buildConfiguration
 
     - name: List all the files
       run: dir /s
