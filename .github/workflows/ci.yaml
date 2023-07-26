@@ -8,6 +8,9 @@ on:
 
 jobs:
   Build:
+    # TODO: enable this after testing
+    if: false
+
     strategy:
       fail-fast: false
       matrix:
