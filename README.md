@@ -1,7 +1,6 @@
 # Password Manager Access for .NET in C#
 
-[![Build status](https://ci.appveyor.com/api/projects/status/83qpps4fqdv0vn60?svg=true)](https://ci.appveyor.com/project/detunized/password-manager-access)
-[![Build Status](https://detunized.visualstudio.com/password-manager-access/_apis/build/status/detunized.password-manager-access?branchName=master)](https://detunized.visualstudio.com/password-manager-access/_build/latest?definitionId=1&branchName=master)
+[![.NET build, test and release](https://github.com/detunized/password-manager-access/actions/workflows/ci.yaml/badge.svg)](https://github.com/detunized/password-manager-access/actions/workflows/ci.yaml)
 [![NuGet Badge](https://buildstats.info/nuget/PasswordManagerAccess)](https://www.nuget.org/packages/PasswordManagerAccess/)
 
 Password Manager Access provides read only access API to various online
