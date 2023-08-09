@@ -20,7 +20,7 @@ namespace PasswordManagerAccess.OnePassword
         public const string ClientName = "1Password CLI";
         // TODO: Even though the CLI version doesn't seem to get outdated as quickly as the web one,
         //       it's possible this needs to be updated every now and then. Keep an eye on this.
-        public const string ClientVersion = "1120401";
+        public const string ClientVersion = "2190004";
         public const string ClientId = ClientName + "/" + ClientVersion;
 
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
