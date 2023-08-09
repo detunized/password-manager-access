@@ -362,7 +362,7 @@ namespace PasswordManagerAccess.OnePassword
                     ["client"] = ClientId,
                     ["device"] = new Dictionary<string, string>
                     {
-                        ["uuid"] = credentials.Uuid,
+                        ["uuid"] = credentials.DeviceUuid,
                         ["clientName"] = ClientName,
                         ["clientVersion"] = ClientVersion,
                         ["name"] = device.Name,

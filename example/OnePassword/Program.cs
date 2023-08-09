@@ -80,7 +80,7 @@ namespace Example
                                            Password = password,
                                            AccountKey = accountKey,
                                            Domain = domain,
-                                           Uuid = uuid,
+                                           DeviceUuid = uuid,
                                        },
                                        clientInfo,
                                        new TextUi(),

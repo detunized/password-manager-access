@@ -573,7 +573,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             Username = "detunized@gmail.com",
             Password = "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
             AccountKey = "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
-            Uuid = "rz64r4uhyvgew672nm4ncaqonq",
+            DeviceUuid = "rz64r4uhyvgew672nm4ncaqonq",
             Domain = "my.1password.com",
        };
     }

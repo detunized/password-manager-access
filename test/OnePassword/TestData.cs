@@ -11,7 +11,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public const string Username = "username";
         public const string Password = "password";
         public const string AccountKey = "A3-RTN9SA-DY9445Y5FF96X6E7B5GPFA95R9";
-        public const string Uuid = "rz64r4uhyvgew672nm4ncaqonq";
+        public const string DeviceUuid = "rz64r4uhyvgew672nm4ncaqonq";
         public const string Domain = "my.1password.com";
         public const string DeviceName = "device-name";
         public const string DeviceModel = "device-model";
@@ -21,8 +21,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             Username = Username,
             Password = Password,
             AccountKey = AccountKey,
-            Uuid = Uuid,
             Domain = Domain,
+            DeviceUuid = DeviceUuid,
        };
 
         public static readonly DeviceInfo DeviceInfo = new DeviceInfo
