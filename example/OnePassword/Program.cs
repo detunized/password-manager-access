@@ -69,7 +69,6 @@ namespace Example
         {
             var clientInfo = new DeviceInfo
             {
-                Uuid = uuid,
                 Name = "PMA 1Password example",
                 Model = "1.0.0",
             };

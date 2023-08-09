@@ -100,7 +100,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Post("{'success': 1}");
 
-            Client.RegisterDevice(TestData.DeviceInfo, flow);
+            Client.RegisterDevice(TestData.DeviceUuid, TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -111,7 +111,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v1/device")
                 .ToRestClient(ApiUrl);
 
-            Client.RegisterDevice(TestData.DeviceInfo, flow);
+            Client.RegisterDevice(TestData.DeviceUuid, TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -119,8 +119,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Post("{'success': 0}");
 
-            Exceptions.AssertThrowsInternalError(() => Client.RegisterDevice(TestData.DeviceInfo, flow),
-                                                 "Failed to register the device");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.RegisterDevice(TestData.DeviceUuid, TestData.DeviceInfo, flow),
+                "Failed to register the device");
         }
 
         [Fact]
@@ -128,7 +129,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Put("{'success': 1}");
 
-            Client.ReauthorizeDevice(TestData.DeviceInfo, flow);
+            Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -139,7 +140,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v1/device")
                 .ToRestClient(ApiUrl);
 
-            Client.ReauthorizeDevice(TestData.DeviceInfo, flow);
+            Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -147,8 +148,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Put("{'success': 0}");
 
-            Exceptions.AssertThrowsInternalError(() => Client.ReauthorizeDevice(TestData.DeviceInfo, flow),
-                                                 "Failed to reauthorize the device");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.DeviceInfo, flow),
+                "Failed to reauthorize the device");
         }
 
         [Fact]

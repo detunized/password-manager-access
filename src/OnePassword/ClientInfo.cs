@@ -12,7 +12,6 @@ namespace PasswordManagerAccess.OnePassword
     // TODO: Rename to ApplicationInfo?
     public class DeviceInfo
     {
-        public string Uuid { get; set; }
         public string Name { get; set; }
         public string Model { get; set; }
     }

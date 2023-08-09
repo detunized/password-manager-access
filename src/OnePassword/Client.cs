@@ -241,7 +241,7 @@ namespace PasswordManagerAccess.OnePassword
                                                                             DeviceInfo device,
                                                                             RestClient rest)
         {
-            var url = $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{device.Uuid}";
+            var url = $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
             if (!credentials.UserUuid.IsNullOrEmpty())
                 url += $"/{credentials.UserUuid}";
 
@@ -265,10 +265,10 @@ namespace PasswordManagerAccess.OnePassword
 
                 return (info.SessionId, srpInfo);
             case "device-not-registered":
-                RegisterDevice(device, MakeRestClient(rest, sessionId: info.SessionId));
+                RegisterDevice(credentials.DeviceUuid, device, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             case "device-deleted":
-                ReauthorizeDevice(device, MakeRestClient(rest, sessionId: info.SessionId));
+                ReauthorizeDevice(credentials.DeviceUuid, device, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             default:
                 throw new InternalErrorException(
@@ -278,11 +278,11 @@ namespace PasswordManagerAccess.OnePassword
             return StartNewSession(credentials, device, rest);
         }
 
-        internal static void RegisterDevice(DeviceInfo device, RestClient rest)
+        internal static void RegisterDevice(string uuid, DeviceInfo device, RestClient rest)
         {
             var response = rest.PostJson<R.SuccessStatus>("v1/device", new Dictionary<string, object>
             {
-                ["uuid"] = device.Uuid,
+                ["uuid"] = uuid,
                 ["clientName"] = ClientName,
                 ["clientVersion"] = ClientVersion,
                 ["osName"] = GetOsName(),
@@ -295,18 +295,18 @@ namespace PasswordManagerAccess.OnePassword
                 throw MakeError(response);
 
             if (response.Data.Success != 1)
-                throw new InternalErrorException($"Failed to register the device '{device.Uuid}'");
+                throw new InternalErrorException($"Failed to register the device '{uuid}'");
         }
 
-        internal static void ReauthorizeDevice(DeviceInfo device, RestClient rest)
+        internal static void ReauthorizeDevice(string uuid, DeviceInfo device, RestClient rest)
         {
-            var response = rest.Put<R.SuccessStatus>($"v1/device/{device.Uuid}/reauthorize");
+            var response = rest.Put<R.SuccessStatus>($"v1/device/{uuid}/reauthorize");
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
             if (response.Data.Success != 1)
-                throw new InternalErrorException($"Failed to reauthorize the device '{device.Uuid}'");
+                throw new InternalErrorException($"Failed to reauthorize the device '{uuid}'");
         }
 
         internal enum VerifyStatus
