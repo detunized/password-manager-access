@@ -3,27 +3,35 @@
 
 namespace PasswordManagerAccess.OnePassword
 {
-    public class ClientInfo
+    // TODO: Split this file
+    public class Credentials
     {
         public string Username { get; set; }
         public string Password { get; set; }
         public string AccountKey { get; set; }
+        public string Domain { get; set; }
         public string Uuid { get; set; }
-        public string Domain { get; set; } // Use Region.ToDomain to convert from Region
-        public string DeviceName { get; set; }
-        public string DeviceModel { get; set; }
 
-        internal AccountKey ParsedAccountKey
-        {
-            get
-            {
-                if (_parsedAccountKey == null)
-                    _parsedAccountKey = OnePassword.AccountKey.Parse(AccountKey);
+        //
+        // Internal
+        //
 
-                return _parsedAccountKey;
-            }
-        }
+        internal string UserUuid { get; set; }
 
-        private AccountKey _parsedAccountKey;
+        // TODO: Cache this
+        internal AccountKey ParsedAccountKey => OnePassword.AccountKey.Parse(AccountKey);
+    }
+
+    public class ServiceAccount
+    {
+        public string Token { get; set; }
+    }
+
+    // TODO: Rename to ApplicationInfo?
+    public class DeviceInfo
+    {
+        public string Uuid { get; set; }
+        public string Name { get; set; }
+        public string Model { get; set; }
     }
 }

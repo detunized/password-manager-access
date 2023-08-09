@@ -9,19 +9,19 @@ namespace PasswordManagerAccess.OnePassword
     /// various operations like opening vaults or logging out.
     public class Session
     {
-        internal readonly ClientInfo ClientInfo;
+        internal readonly Credentials Credentials;
         internal readonly Keychain Keychain;
         internal readonly AesKey Key;
         internal readonly RestClient Rest;
         internal readonly IRestTransport Transport;
 
-        internal Session(ClientInfo clientInfo,
+        internal Session(Credentials credentials,
                          Keychain keychain,
                          AesKey key,
                          RestClient rest,
                          IRestTransport transport)
         {
-            ClientInfo = clientInfo;
+            Credentials = credentials;
             Keychain = keychain;
             Key = key;
             Rest = rest;

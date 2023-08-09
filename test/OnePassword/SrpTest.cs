@@ -128,7 +128,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var key = Srp.ComputeKey(secretA,
                                      sharedA,
                                      sharedB,
-                                     TestData.ClientInfo,
+                                     TestData.Credentials,
                                      TestData.SrpInfo,
                                      TestData.SessionId);
 
@@ -140,7 +140,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             const string expected = "104882354933197857481625453411657638660079750214611069684" +
                                     "692024916274069892339";
-            var x = Srp.ComputeX(TestData.ClientInfo, TestData.SrpInfo);
+            var x = Srp.ComputeX(TestData.Credentials, TestData.SrpInfo);
 
             Assert.Equal(expected, x.ToString());
         }

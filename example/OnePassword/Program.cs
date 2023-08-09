@@ -42,13 +42,17 @@ namespace Example
             // See config.yaml.example for an example.
             var config = Util.ReadConfig();
 
+            string serviceAccountToken;
+            config.TryGetValue("service-account-token", out serviceAccountToken);
+
             try
             {
                 DumpAllVaults(config["username"],
                               config["password"],
                               config["account-key"],
+                              config["domain"],
                               config["device-id"],
-                              config["domain"]);
+                              serviceAccountToken ?? "");
             }
             catch (BaseException e)
             {
@@ -59,21 +63,28 @@ namespace Example
         private static void DumpAllVaults(string username,
                                           string password,
                                           string accountKey,
+                                          string domain,
                                           string uuid,
-                                          string domain)
+                                          string serviceAccountToken)
         {
-            var clientInfo = new ClientInfo
+            var clientInfo = new DeviceInfo
             {
-                Username = username,
-                Password = password,
-                AccountKey = accountKey,
                 Uuid = uuid,
-                Domain = string.IsNullOrWhiteSpace(domain) ? Region.Global.ToDomain() : domain,
-                DeviceName = "PMA 1Password example",
-                DeviceModel = "1.0.0",
+                Name = "PMA 1Password example",
+                Model = "1.0.0",
             };
 
-            var session = Client.LogIn(clientInfo, new TextUi(), new PlainStorage());
+            var session = Client.LogIn(new Credentials
+                                       {
+                                           Username = username,
+                                           Password = password,
+                                           AccountKey = accountKey,
+                                           Domain = domain,
+                                           Uuid = uuid,
+                                       },
+                                       clientInfo,
+                                       new TextUi(),
+                                       new PlainStorage());
 
             try
             {

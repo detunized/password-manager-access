@@ -26,12 +26,12 @@ namespace PasswordManagerAccess.OnePassword
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
-        public static Session LogIn(ClientInfo clientInfo, IUi ui, ISecureStorage storage)
+        public static Session LogIn(Credentials credentials, DeviceInfo device, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
             try
             {
-                return LogIn(clientInfo, ui, storage, transport);
+                return LogIn(credentials, device, ui, storage, transport);
             }
             catch (Exception)
             {
@@ -54,7 +54,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static VaultInfo[] ListAllVaults(Session session)
         {
-            return ListAllVaults(session.ClientInfo, session.Keychain, session.Key, session.Rest);
+            return ListAllVaults(session.Credentials, session.Keychain, session.Key, session.Rest);
         }
 
         public static Vault OpenVault(VaultInfo info, Session session)
@@ -77,15 +77,64 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
-        internal static Session LogIn(ClientInfo clientInfo, IUi ui, ISecureStorage storage, IRestTransport transport)
+        internal static Session LogIn(Credentials credentials,
+                                      DeviceInfo device,
+                                      IUi ui,
+                                      ISecureStorage storage,
+                                      IRestTransport transport)
         {
-            var rest = MakeRestClient(transport, GetApiUrl(clientInfo.Domain));
-            var (sessionKey, sessionRest) = LogIn(clientInfo, ui, storage, rest);
+            FetchUserUuidIfNeeded(credentials, storage, transport);
+            var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
+            var (sessionKey, sessionRest) = LogIn(credentials, device, ui, storage, rest);
 
-            return new Session(clientInfo, new Keychain(), sessionKey, sessionRest, transport);
+            return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
         }
 
-        internal static VaultInfo[] ListAllVaults(ClientInfo clientInfo,
+        internal static void FetchUserUuidIfNeeded(Credentials credentials,
+                                                   ISecureStorage storage,
+                                                   IRestTransport transport)
+        {
+            // The User UUID is retrieved on the first login. Then it could be stored and reused later on.
+            if (!credentials.UserUuid.IsNullOrEmpty())
+                return;
+
+            // 1. Try to load from the local storage
+            var uuid = storage.LoadString(UserUuidKey);
+
+            // 2. Need to fetch the user UUID from the server when it's not available locally.
+            //    This usually means the first login.
+            if (uuid.IsNullOrEmpty())
+            {
+                var rest = MakeRestClient(transport, GetApiUrl(DefaultDomain));
+                uuid = RequestUserUuid(credentials.Username, rest);
+
+                // 3. Store to be reused the next time.
+                storage.StoreString(UserUuidKey, uuid);
+            }
+
+            // 4. Done
+            credentials.UserUuid = uuid;
+        }
+
+        internal static string RequestUserUuid(string username, RestClient rest)
+        {
+            var response = rest.PostJson<R.UserLoginInfo>("/v2/auth/methods",
+                                                          new Dictionary<string, object>
+                                                          {
+                                                              ["email"] = username,
+                                                          });
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var info = response.Data;
+
+            if (info.UserUuid.IsNullOrEmpty())
+                throw new BadCredentialsException($"Unknown username: '{username}'");
+
+            return info.UserUuid;
+        }
+
+        internal static VaultInfo[] ListAllVaults(Credentials credentials,
                                                   Keychain keychain,
                                                   AesKey sessionKey,
                                                   RestClient rest)
@@ -101,7 +150,7 @@ namespace PasswordManagerAccess.OnePassword
             var keysets = GetKeysets(sessionKey, rest);
 
             // Step 3: Derive and decrypt the keys
-            DecryptKeysets(keysets.Keysets, clientInfo, keychain);
+            DecryptKeysets(keysets.Keysets, credentials, keychain);
 
             // Step 4: Get all the vaults the user has access to
             var vaults = GetAccessibleVaults(accountInfo, keychain);
@@ -116,7 +165,8 @@ namespace PasswordManagerAccess.OnePassword
         {
         }
 
-        internal static (AesKey, RestClient) LogIn(ClientInfo clientInfo,
+        internal static (AesKey, RestClient) LogIn(Credentials credentials,
+                                                   DeviceInfo device,
                                                    IUi ui,
                                                    ISecureStorage storage,
                                                    RestClient rest)
@@ -125,7 +175,7 @@ namespace PasswordManagerAccess.OnePassword
             {
                 try
                 {
-                    return LoginAttempt(clientInfo, ui, storage, rest);
+                    return LoginAttempt(credentials, device, ui, storage, rest);
                 }
                 catch (RetryLoginException)
                 {
@@ -133,31 +183,32 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        private static (AesKey, RestClient) LoginAttempt(ClientInfo clientInfo,
+        private static (AesKey, RestClient) LoginAttempt(Credentials credentials,
+                                                         DeviceInfo device,
                                                          IUi ui,
                                                          ISecureStorage storage,
                                                          RestClient rest)
         {
             // Step 1: Request to initiate a new session
-            var (sessionId, srpInfo) = StartNewSession(clientInfo, rest);
+            var (sessionId, srpInfo) = StartNewSession(credentials, device, rest);
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
             var sessionRest = MakeRestClient(rest, sessionId: sessionId);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(clientInfo, srpInfo, sessionId, sessionRest);
+            var sessionKey = Srp.Perform(credentials, srpInfo, sessionId, sessionRest);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
             var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), sessionId);
 
             // Step 3: Verify the key with the server
-            var verifiedOrMfa = VerifySessionKey(clientInfo, sessionKey, macRest);
+            var verifiedOrMfa = VerifySessionKey(credentials, device, sessionKey, macRest);
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, clientInfo, sessionKey, ui, storage, macRest);
+                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, credentials, sessionKey, ui, storage, macRest);
 
             return (sessionKey, macRest);
         }
@@ -186,18 +237,15 @@ namespace PasswordManagerAccess.OnePassword
             return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
         }
 
-        internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(ClientInfo clientInfo, RestClient rest)
+        internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(Credentials credentials,
+                                                                            DeviceInfo device,
+                                                                            RestClient rest)
         {
-            var response = rest.PostJson<R.NewSession>("v3/auth/start",
-                                                       new Dictionary<string, object>
-                                                       {
-                                                           ["deviceUuid"] = clientInfo.Uuid,
-                                                           ["email"] = clientInfo.Username,
-                                                           ["skFormat"] = clientInfo.ParsedAccountKey.Format,
-                                                           ["skid"] = clientInfo.ParsedAccountKey.Uuid,
-                                                           ["userUuid"] = "", // TODO: Where do we get this?
-                                                       });
+            var url = $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{device.Uuid}";
+            if (!credentials.UserUuid.IsNullOrEmpty())
+                url += $"/{credentials.UserUuid}";
 
+            var response = rest.Get<R.NewSession>(url);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -206,8 +254,8 @@ namespace PasswordManagerAccess.OnePassword
             switch (status)
             {
             case "ok":
-                if (info.KeyFormat != clientInfo.ParsedAccountKey.Format ||
-                    info.KeyUuid != clientInfo.ParsedAccountKey.Uuid)
+                if (info.KeyFormat != credentials.ParsedAccountKey.Format ||
+                    info.KeyUuid != credentials.ParsedAccountKey.Uuid)
                     throw new BadCredentialsException("The account key is incorrect");
 
                 var srpInfo = new SrpInfo(srpMethod: info.Auth.Method,
@@ -217,48 +265,48 @@ namespace PasswordManagerAccess.OnePassword
 
                 return (info.SessionId, srpInfo);
             case "device-not-registered":
-                RegisterDevice(clientInfo, MakeRestClient(rest, sessionId: info.SessionId));
+                RegisterDevice(device, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             case "device-deleted":
-                ReauthorizeDevice(clientInfo, MakeRestClient(rest, sessionId: info.SessionId));
+                ReauthorizeDevice(device, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             default:
                 throw new InternalErrorException(
                     $"Failed to start a new session, unsupported response status '{status}'");
             }
 
-            return StartNewSession(clientInfo, rest);
+            return StartNewSession(credentials, device, rest);
         }
 
-        internal static void RegisterDevice(ClientInfo clientInfo, RestClient rest)
+        internal static void RegisterDevice(DeviceInfo device, RestClient rest)
         {
             var response = rest.PostJson<R.SuccessStatus>("v1/device", new Dictionary<string, object>
             {
-                ["uuid"] = clientInfo.Uuid,
+                ["uuid"] = device.Uuid,
                 ["clientName"] = ClientName,
                 ["clientVersion"] = ClientVersion,
                 ["osName"] = GetOsName(),
                 ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that.
-                ["name"] = clientInfo.DeviceName,
-                ["model"] = clientInfo.DeviceModel,
+                ["name"] = device.Name,
+                ["model"] = device.Model,
             });
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
             if (response.Data.Success != 1)
-                throw new InternalErrorException($"Failed to register the device '{clientInfo.Uuid}'");
+                throw new InternalErrorException($"Failed to register the device '{device.Uuid}'");
         }
 
-        internal static void ReauthorizeDevice(ClientInfo clientInfo, RestClient rest)
+        internal static void ReauthorizeDevice(DeviceInfo device, RestClient rest)
         {
-            var response = rest.Put<R.SuccessStatus>($"v1/device/{clientInfo.Uuid}/reauthorize");
+            var response = rest.Put<R.SuccessStatus>($"v1/device/{device.Uuid}/reauthorize");
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
             if (response.Data.Success != 1)
-                throw new InternalErrorException($"Failed to reauthorize the device '{clientInfo.Uuid}'");
+                throw new InternalErrorException($"Failed to reauthorize the device '{device.Uuid}'");
         }
 
         internal enum VerifyStatus
@@ -303,22 +351,22 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static VerifyResult VerifySessionKey(ClientInfo clientInfo, AesKey sessionKey, RestClient rest)
+        internal static VerifyResult VerifySessionKey(Credentials credentials, DeviceInfo device, AesKey sessionKey, RestClient rest)
         {
             var response = PostEncryptedJson<R.VerifyKey>(
                 "v2/auth/verify",
                 new Dictionary<string, object>
                 {
                     ["sessionID"] = sessionKey.Id,
-                    ["clientVerifyHash"] = Util.CalculateClientHash(clientInfo.ParsedAccountKey.Uuid, sessionKey.Id),
+                    ["clientVerifyHash"] = Util.CalculateClientHash(credentials.ParsedAccountKey.Uuid, sessionKey.Id),
                     ["client"] = ClientId,
                     ["device"] = new Dictionary<string, string>
                     {
-                        ["uuid"] = clientInfo.Uuid,
+                        ["uuid"] = credentials.Uuid,
                         ["clientName"] = ClientName,
                         ["clientVersion"] = ClientVersion,
-                        ["name"] = clientInfo.DeviceName,
-                        ["model"] = clientInfo.DeviceModel,
+                        ["name"] = device.Name,
+                        ["model"] = device.Model,
                         ["osName"] = GetOsName(),
                         ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET.
                                             // Look into that.
@@ -362,7 +410,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static void PerformSecondFactorAuthentication(SecondFactor[] factors,
-                                                               ClientInfo clientInfo,
+                                                               Credentials credentials,
                                                                AesKey sessionKey,
                                                                IUi ui,
                                                                ISecureStorage storage,
@@ -376,7 +424,7 @@ namespace PasswordManagerAccess.OnePassword
             // TODO: Allow to choose 2FA method via UI like in Bitwarden
             var factor = ChooseInteractiveSecondFactor(factors);
 
-           var secondFactorResult = GetSecondFactorResult(factor, clientInfo, ui, rest);
+           var secondFactorResult = GetSecondFactorResult(factor, credentials, ui, rest);
            if (secondFactorResult.Canceled)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
@@ -475,14 +523,14 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static SecondFactorResult GetSecondFactorResult(SecondFactor factor,
-                                                                 ClientInfo clientInfo,
+                                                                 Credentials credentials,
                                                                  IUi ui,
                                                                  RestClient rest)
         {
             return factor.Kind switch
             {
                 SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(ui),
-                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, clientInfo, ui),
+                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, credentials, ui),
                 SecondFactorKind.Duo => AuthenticateWithDuo(factor, ui, rest),
                 _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here")
             };
@@ -501,7 +549,7 @@ namespace PasswordManagerAccess.OnePassword
                                            passcode.RememberMe);
         }
 
-        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, ClientInfo clientInfo, IUi ui)
+        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, Credentials credentials, IUi ui)
         {
             var rememberMe = ui.ProvideWebAuthnRememberMe();
             if (rememberMe == Passcode.Cancel)
@@ -517,7 +565,7 @@ namespace PasswordManagerAccess.OnePassword
             {
                 var assertion = WebAuthN.GetAssertion(appId: "1password.com",
                                                       challenge: extra.Challenge,
-                                                      origin: $"https://{clientInfo.Domain}",
+                                                      origin: $"https://{credentials.Domain}",
                                                       crossOrigin: false,
                                                       keyHandle: extra.KeyHandles[0]);
 
@@ -712,7 +760,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException("Failed to logout");
         }
 
-        internal static void DecryptKeysets(R.KeysetInfo[] keysets, ClientInfo clientInfo, Keychain keychain)
+        internal static void DecryptKeysets(R.KeysetInfo[] keysets, Credentials credentials, Keychain keychain)
         {
             // Find the master keyset
             var masterKeyset = keysets
@@ -728,7 +776,7 @@ namespace PasswordManagerAccess.OnePassword
             var masterKey = DeriveMasterKey(algorithm: keyInfo.Algorithm,
                                             iterations: keyInfo.Iterations,
                                             salt: keyInfo.Salt.Decode64Loose(),
-                                            clientInfo: clientInfo);
+                                            credentials: credentials);
             keychain.Add(masterKey);
 
             // Build a topological map: key -> other keys encrypted by that key
@@ -766,15 +814,15 @@ namespace PasswordManagerAccess.OnePassword
         internal static AesKey DeriveMasterKey(string algorithm,
                                                int iterations,
                                                byte[] salt,
-                                               ClientInfo clientInfo)
+                                               Credentials credentials)
         {
             // TODO: Check if the Unicode normalization is the correct one. This could be done
             //       by either trying to call the original JS functions in the browser console
             //       or by changing to some really weird password and trying to log in.
 
-            var k1 = Util.Hkdf(algorithm, salt, clientInfo.Username.ToLowerInvariant().ToBytes());
-            var k2 = Util.Pbes2(algorithm, clientInfo.Password.Normalize(), k1, iterations);
-            var key = clientInfo.ParsedAccountKey.CombineWith(k2);
+            var k1 = Util.Hkdf(algorithm, salt, credentials.Username.ToLowerInvariant().ToBytes());
+            var k2 = Util.Pbes2(algorithm, credentials.Password.Normalize(), k1, iterations);
+            var key = credentials.ParsedAccountKey.CombineWith(k2);
 
             return new AesKey(MasterKeyId, key);
         }
@@ -899,6 +947,7 @@ namespace PasswordManagerAccess.OnePassword
         //
 
         private const string MasterKeyId = "mp";
+        private const string UserUuidKey = "user-uuid";
         private const string RememberMeTokenKey = "remember-me-token";
 
         private static SecondFactorKind[] SecondFactorPriority =>

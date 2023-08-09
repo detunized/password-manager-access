@@ -15,9 +15,9 @@ namespace PasswordManagerAccess.OnePassword
     internal static class Srp
     {
         // Returns the session encryption key
-        public static AesKey Perform(ClientInfo clientInfo, SrpInfo srpInfo, string sessionId, RestClient rest)
+        public static AesKey Perform(Credentials credentials, SrpInfo srpInfo, string sessionId, RestClient rest)
         {
-            var key = Perform(GenerateSecretA(), clientInfo, srpInfo, sessionId, rest);
+            var key = Perform(GenerateSecretA(), credentials, srpInfo, sessionId, rest);
             return new AesKey(sessionId, key);
         }
 
@@ -26,7 +26,7 @@ namespace PasswordManagerAccess.OnePassword
         //
 
         internal static byte[] Perform(BigInteger secretA,
-                                       ClientInfo clientInfo,
+                                       Credentials credentials,
                                        SrpInfo srpInfo,
                                        string sessionId,
                                        RestClient rest)
@@ -34,7 +34,7 @@ namespace PasswordManagerAccess.OnePassword
             var sharedA = ComputeSharedA(secretA);
             var sharedB = ExchangeAForB(sharedA, sessionId, rest);
             ValidateB(sharedB);
-            return ComputeKey(secretA, sharedA, sharedB, clientInfo, srpInfo, sessionId);
+            return ComputeKey(secretA, sharedA, sharedB, credentials, srpInfo, sessionId);
         }
 
         internal static BigInteger GenerateSecretA()
@@ -74,7 +74,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static byte[] ComputeKey(BigInteger secretA,
                                           BigInteger sharedA,
                                           BigInteger sharedB,
-                                          ClientInfo clientInfo,
+                                          Credentials credentials,
                                           SrpInfo srpInfo,
                                           string sessionId)
         {
@@ -82,14 +82,14 @@ namespace PasswordManagerAccess.OnePassword
             var ab = sharedA.ToHex() + sharedB.ToHex();
             var hashAb = Crypto.Sha256(ab).ToBigInt();
             var s = sessionId.ToBytes().ToBigInt();
-            var x = ComputeX(clientInfo, srpInfo);
+            var x = ComputeX(credentials, srpInfo);
             var y = sharedB - SirpG.ModExp(x, SirpN) * s;
             var z = y.ModExp(secretA + hashAb * x, SirpN);
 
             return Crypto.Sha256(z.ToHex());
         }
 
-        internal static BigInteger ComputeX(ClientInfo clientInfo, SrpInfo srpInfo)
+        internal static BigInteger ComputeX(Credentials credentials, SrpInfo srpInfo)
         {
             var method = srpInfo.SrpMethod;
             var iterations = srpInfo.Iterations;
@@ -103,12 +103,12 @@ namespace PasswordManagerAccess.OnePassword
 
             var k1 = Util.Hkdf(method: method,
                                ikm: srpInfo.Salt,
-                               salt: clientInfo.Username.ToLowerInvariant().ToBytes());
+                               salt: credentials.Username.ToLowerInvariant().ToBytes());
             var k2 = Util.Pbes2(method: srpInfo.KeyMethod,
-                                password: clientInfo.Password,
+                                password: credentials.Password,
                                 salt: k1,
                                 iterations: iterations);
-            var x = clientInfo.ParsedAccountKey.CombineWith(k2);
+            var x = credentials.ParsedAccountKey.CombineWith(k2);
 
             return x.ToBigInt();
         }

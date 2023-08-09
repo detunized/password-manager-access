@@ -24,7 +24,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow()
                 .Get(EncryptFixture("get-account-info-response"))
                 .Get(EncryptFixture("get-keysets-response"));
-            var vaults = Client.ListAllVaults(ClientInfo, new Keychain(), TestData.SessionKey, flow);
+            var vaults = Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow);
 
             Assert.NotEmpty(vaults);
         }
@@ -32,8 +32,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_returns_session_on_ok()
         {
-            var flow = new RestFlow().Post(GetFixture("start-new-session-response"));
-            var (sessionId, srpInfo) = Client.StartNewSession(TestData.ClientInfo, flow);
+            var flow = new RestFlow().Get(GetFixture("start-new-session-response"));
+            var (sessionId, srpInfo) = Client.StartNewSession(TestData.Credentials, TestData.DeviceInfo, flow);
 
             Assert.Equal(TestData.SessionId, sessionId);
             Assert.Equal(TestData.SrpInfo.SrpMethod, srpInfo.SrpMethod);
@@ -46,49 +46,53 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void StartNewSession_makes_GET_request_to_specific_url()
         {
             var flow = new RestFlow()
-                .Post(GetFixture("start-new-session-response"))
-                    .ExpectUrl("1password.com/api/v3/auth")
+                .Get(GetFixture("start-new-session-response"))
+                    .ExpectUrl("1password.com/api/v2/auth")
                 .ToRestClient(ApiUrl);
 
-            Client.StartNewSession(TestData.ClientInfo, flow);
+            Client.StartNewSession(TestData.Credentials, TestData.DeviceInfo, flow);
         }
 
         [Fact]
         public void StartNewSession_throws_on_unknown_status()
         {
-            var flow = new RestFlow().Post("{'status': 'unknown', 'sessionID': 'blah'}");
+            var flow = new RestFlow().Get("{'status': 'unknown', 'sessionID': 'blah'}");
 
-            Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, flow),
-                                                 "Failed to start a new session, unsupported response status");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.StartNewSession(TestData.Credentials, TestData.DeviceInfo, flow),
+                "Failed to start a new session, unsupported response status");
         }
 
         [Fact]
         public void StartNewSession_throws_on_network_error()
         {
             var error = new HttpRequestException("Network error");
-            var flow = new RestFlow().Post(error);
+            var flow = new RestFlow().Get(error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Client.StartNewSession(TestData.ClientInfo, flow),
-                                                        "Network error");
+            var e = Exceptions.AssertThrowsNetworkError(
+                () => Client.StartNewSession(TestData.Credentials, TestData.DeviceInfo, flow),
+                "Network error");
             Assert.Same(error, e.InnerException);
         }
 
         [Fact]
         public void StartNewSession_throws_on_invalid_json()
         {
-            var flow = new RestFlow().Post("{'reason': 'deprecated'}", HttpStatusCode.Forbidden);
+            var flow = new RestFlow().Get("{'reason': 'deprecated'}", HttpStatusCode.Forbidden);
 
-            Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, flow),
-                                                 "The server responded with the failure reason: 'deprecated'");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.StartNewSession(TestData.Credentials, TestData.DeviceInfo, flow),
+                "The server responded with the failure reason: 'deprecated'");
         }
 
         [Fact]
         public void StartNewSession_reports_failure_reason()
         {
-            var flow = new RestFlow().Post("} invalid json {");
+            var flow = new RestFlow().Get("} invalid json {");
 
-            Exceptions.AssertThrowsInternalError(() => Client.StartNewSession(TestData.ClientInfo, flow),
-                                                 "Invalid or unexpected response");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.StartNewSession(TestData.Credentials, TestData.DeviceInfo, flow),
+                "Invalid or unexpected response");
         }
 
         [Fact]
@@ -96,7 +100,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Post("{'success': 1}");
 
-            Client.RegisterDevice(TestData.ClientInfo, flow);
+            Client.RegisterDevice(TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -107,7 +111,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v1/device")
                 .ToRestClient(ApiUrl);
 
-            Client.RegisterDevice(TestData.ClientInfo, flow);
+            Client.RegisterDevice(TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -115,7 +119,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Post("{'success': 0}");
 
-            Exceptions.AssertThrowsInternalError(() => Client.RegisterDevice(TestData.ClientInfo, flow),
+            Exceptions.AssertThrowsInternalError(() => Client.RegisterDevice(TestData.DeviceInfo, flow),
                                                  "Failed to register the device");
         }
 
@@ -124,7 +128,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Put("{'success': 1}");
 
-            Client.ReauthorizeDevice(TestData.ClientInfo, flow);
+            Client.ReauthorizeDevice(TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -135,7 +139,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v1/device")
                 .ToRestClient(ApiUrl);
 
-            Client.ReauthorizeDevice(TestData.ClientInfo, flow);
+            Client.ReauthorizeDevice(TestData.DeviceInfo, flow);
         }
 
         [Fact]
@@ -143,7 +147,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Put("{'success': 0}");
 
-            Exceptions.AssertThrowsInternalError(() => Client.ReauthorizeDevice(TestData.ClientInfo, flow),
+            Exceptions.AssertThrowsInternalError(() => Client.ReauthorizeDevice(TestData.DeviceInfo, flow),
                                                  "Failed to reauthorize the device");
         }
 
@@ -151,7 +155,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void VerifySessionKey_returns_success()
         {
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response"));
-            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow);
+            var result = Client.VerifySessionKey(TestData.Credentials, TestData.DeviceInfo, TestData.SessionKey, flow);
 
             Assert.Equal(Client.VerifyStatus.Success, result.Status);
         }
@@ -164,14 +168,14 @@ namespace PasswordManagerAccess.Test.OnePassword
                     .ExpectUrl("1password.com/api/v2/auth/verify")
                 .ToRestClient(ApiUrl);
 
-            Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow);
+            Client.VerifySessionKey(TestData.Credentials, TestData.DeviceInfo, TestData.SessionKey, flow);
         }
 
         [Fact]
         public void VerifySessionKey_returns_factors()
         {
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
-            var result = Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow);
+            var result = Client.VerifySessionKey(TestData.Credentials, TestData.DeviceInfo, TestData.SessionKey, flow);
 
             Assert.Equal(3, result.Factors.Length);
         }
@@ -182,7 +186,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.VerifySessionKey(TestData.ClientInfo, TestData.SessionKey, flow),
+                () => Client.VerifySessionKey(TestData.Credentials, TestData.DeviceInfo, TestData.SessionKey, flow),
                 "Username, password or account key");
         }
 
@@ -242,7 +246,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsCanceledMultiFactor(
                 () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors,
-                                                               ClientInfo,
+                                                               Credentials,
                                                                TestData.SessionKey,
                                                                new CancelingUi(),
                                                                null,
@@ -458,7 +462,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var keysets = ParseFixture<R.KeysetsInfo>("get-keysets-response");
             var keychain = new Keychain();
-            Client.DecryptKeysets(keysets.Keysets, ClientInfo, keychain);
+            Client.DecryptKeysets(keysets.Keysets, Credentials, keychain);
 
             // Master key
             Assert.NotNull(keychain.GetAes("mp"));
@@ -485,7 +489,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var key = Client.DeriveMasterKey("PBES2g-HS256",
                                              100000,
                                              "i2enf0xq-XPKCFFf5UZqNQ".Decode64Loose(),
-                                             TestData.ClientInfo);
+                                             TestData.Credentials);
 
             Assert.Equal("mp", key.Id);
             Assert.Equal(expected, key.Key);
@@ -564,15 +568,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         //       or exposing its credentials, but I don't want to have inconsistent test data.
         //       Everything should be either re-encrypted or somehow harmonized across all the tests
         //       to use the same username, password and account key.
-        private static readonly ClientInfo ClientInfo = new ClientInfo
+        private static readonly Credentials Credentials = new Credentials
         {
             Username = "detunized@gmail.com",
             Password = "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
             AccountKey = "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
             Uuid = "rz64r4uhyvgew672nm4ncaqonq",
             Domain = "my.1password.com",
-            DeviceName = "Chrome",
-            DeviceModel = "103"
-        };
+       };
     }
 }

@@ -7,6 +7,15 @@ using Newtonsoft.Json;
 // TODO: Rename to Wire or Model since not all this things are responses
 namespace PasswordManagerAccess.OnePassword.Response
 {
+    internal class UserLoginInfo
+    {
+        [JsonProperty("userUuid")]
+        public readonly string UserUuid;
+
+        [JsonProperty("signInAddress")]
+        public readonly string Url;
+    }
+
     internal class NewSession
     {
         [JsonProperty("status", Required = Required.Always)]

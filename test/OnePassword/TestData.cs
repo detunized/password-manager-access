@@ -16,15 +16,19 @@ namespace PasswordManagerAccess.Test.OnePassword
         public const string DeviceName = "device-name";
         public const string DeviceModel = "device-model";
 
-        public static readonly ClientInfo ClientInfo = new ClientInfo
+        public static readonly Credentials Credentials = new Credentials
         {
             Username = Username,
             Password = Password,
             AccountKey = AccountKey,
             Uuid = Uuid,
             Domain = Domain,
-            DeviceName = DeviceName,
-            DeviceModel = DeviceModel,
+       };
+
+        public static readonly DeviceInfo DeviceInfo = new DeviceInfo
+        {
+            Name = DeviceName,
+            Model = DeviceModel,
         };
 
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
