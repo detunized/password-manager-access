@@ -1,5 +1,11 @@
 # Changelog
 
+## 13.0.0
+  - 1Password: service account support. API breaking change! Please check the provided example
+    program for the new API. Mainly the `ClientInfo` class is split into `Credentials` and
+    `AppInfo`. `Credentials` is used only in the regular login mode. To use the service account mode
+    see the `ServiceAccount` overload.
+
 ## 12.3.0
   - Bitwarden: Argon2id KDF support added
 
