@@ -91,55 +91,10 @@ namespace PasswordManagerAccess.OnePassword
                                       ISecureStorage storage,
                                       IRestTransport transport)
         {
-            FetchUserUuidIfNeeded(credentials, storage, transport);
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
             var (sessionKey, sessionRest) = LogIn(credentials, app, ui, storage, rest);
 
             return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
-        }
-
-        internal static void FetchUserUuidIfNeeded(Credentials credentials,
-                                                   ISecureStorage storage,
-                                                   IRestTransport transport)
-        {
-            // The User UUID is retrieved on the first login. Then it could be stored and reused later on.
-            if (!credentials.UserUuid.IsNullOrEmpty())
-                return;
-
-            // 1. Try to load from the local storage
-            var uuid = storage.LoadString(UserUuidKey);
-
-            // 2. Need to fetch the user UUID from the server when it's not available locally.
-            //    This usually means the first login.
-            if (uuid.IsNullOrEmpty())
-            {
-                var rest = MakeRestClient(transport, GetApiUrl(DefaultDomain));
-                uuid = RequestUserUuid(credentials.Username, rest);
-
-                // 3. Store to be reused the next time.
-                storage.StoreString(UserUuidKey, uuid);
-            }
-
-            // 4. Done
-            credentials.UserUuid = uuid;
-        }
-
-        internal static string RequestUserUuid(string username, RestClient rest)
-        {
-            var response = rest.PostJson<R.UserLoginInfo>("/v2/auth/methods",
-                                                          new Dictionary<string, object>
-                                                          {
-                                                              ["email"] = username,
-                                                          });
-            if (!response.IsSuccessful)
-                throw MakeError(response);
-
-            var info = response.Data;
-
-            if (info.UserUuid.IsNullOrEmpty())
-                throw new BadCredentialsException($"Unknown username: '{username}'");
-
-            return info.UserUuid;
         }
 
         internal static Credentials ParseServiceAccountToken(string token)
@@ -180,7 +135,6 @@ namespace PasswordManagerAccess.OnePassword
                 AccountKey = Validate(parsed.AccountKey, "account key"),
                 Domain = Validate(parsed.Domain, "domain"),
                 DeviceUuid = Validate(parsed.DeviceUuid, "device UUID"),
-                UserUuid = Credentials.IgnoreUserUuid,
                 SrpX = Validate(parsed.SrpX, "SRP X value"),
                 Key = new AesKey(MasterKeyId, Validate(parsed.MasterUnlockKey.Key, "MUK").Decode64Loose()),
             };
@@ -294,11 +248,6 @@ namespace PasswordManagerAccess.OnePassword
                                                                             RestClient rest)
         {
             var url = $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
-
-            // TODO: don't use "ignore user uuid" sentinel
-            if (!credentials.UserUuid.IsNullOrEmpty() && credentials.UserUuid != Credentials.IgnoreUserUuid)
-                url += $"/{credentials.UserUuid}";
-
             var response = rest.Get<R.NewSession>(url);
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -1003,7 +952,6 @@ namespace PasswordManagerAccess.OnePassword
         //
 
         private const string MasterKeyId = "mp";
-        private const string UserUuidKey = "user-uuid";
         private const string RememberMeTokenKey = "remember-me-token";
 
         private static SecondFactorKind[] SecondFactorPriority =>

@@ -28,7 +28,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             Assert.Equal("A3-Y6T9TL-NYJW82-344C5-GTHJQ-YWGD6-NWC2J", parsed.AccountKey);
             Assert.Equal("lastpassruby-team.1password.com", parsed.Domain);
             Assert.Equal("qv557zvdo2kbta4z6x3t2shuby", parsed.DeviceUuid);
-            Assert.Equal(Credentials.IgnoreUserUuid, parsed.UserUuid);
             Assert.Equal("40cda13824f823d28b8bc34ee0c35581ea5195e09e599e4992d33b3fa8179525", parsed.SrpX);
             Assert.Equal("5FsPUVlIqJwvn5OBdqXbB1zWYG3CVJ6fmWxlZ8zchjk", parsed.Key.Key.ToUrlSafeBase64NoPadding());
         }
