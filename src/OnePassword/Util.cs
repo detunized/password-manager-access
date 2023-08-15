@@ -5,6 +5,8 @@ using System;
 using System.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
+using PasswordManagerAccess.OnePassword.Ui;
 using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
@@ -71,6 +73,30 @@ namespace PasswordManagerAccess.OnePassword
                 .Substring(0, 8);
         }
 
+        public class ThrowUi: IUi
+        {
+            public DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw MakeLogicError();
+            public string ProvideDuoPasscode(DuoDevice device) => throw MakeLogicError();
+            public void UpdateDuoStatus(DuoStatus status, string text) => throw MakeLogicError();
+            public Passcode ProvideGoogleAuthPasscode() => throw MakeLogicError();
+            public Passcode ProvideWebAuthnRememberMe() => throw MakeLogicError();
+        }
+
+        public class ThrowStorage: ISecureStorage
+        {
+            public string LoadString(string name) => throw MakeLogicError();
+            public void StoreString(string name, string value) => throw MakeLogicError();
+        }
+
+        //
+        // Internal
+        //
+
+        internal static InternalErrorException MakeLogicError()
+        {
+            return new InternalErrorException("Logic error: should not be called");
+        }
+
         internal static T Decrypt<T>(Encrypted encrypted, IDecryptor decryptor)
         {
             var plaintext = decryptor.Decrypt(encrypted).ToUtf8();
@@ -108,6 +134,10 @@ namespace PasswordManagerAccess.OnePassword
         {
             DecryptRsaKey(Encrypted.Parse(encryptedRsaKey), keychain);
         }
+
+        //
+        // Data
+        //
 
         private static readonly char[] Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567".ToCharArray();
         private const string SessionHmacSecret = "He never wears a Mac, in the pouring rain. Very strange.";

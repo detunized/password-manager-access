@@ -1,11 +1,14 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
 using R = PasswordManagerAccess.OnePassword.Response;
 using Xunit;
+using Util = PasswordManagerAccess.OnePassword.Util;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
@@ -90,8 +93,32 @@ namespace PasswordManagerAccess.Test.OnePassword
             Assert.NotNull(keychain.GetRsa("szerdhg2ww2ahjo4ilz57x7cce"));
         }
 
+        [Fact]
+        public void ThrowUi_throws_on_method_call()
+        {
+            var ui = new Util.ThrowUi();
+            AssertLogicError(() => ui.ChooseDuoFactor(Array.Empty<DuoDevice>()));
+            AssertLogicError(() => ui.ProvideDuoPasscode(new DuoDevice("", "", Array.Empty<DuoFactor>())));
+            AssertLogicError(() => ui.UpdateDuoStatus(DuoStatus.Info, ""));
+            AssertLogicError(() => ui.ProvideGoogleAuthPasscode());
+            AssertLogicError(() => ui.ProvideWebAuthnRememberMe());
+        }
+
+        [Fact]
+        public void ThrowStorage_throws_on_method_call()
+        {
+            var storage = new Util.ThrowStorage();
+            AssertLogicError(() => storage.LoadString(""));
+            AssertLogicError(() => storage.StoreString("", ""));
+        }
+
         //
-        // Data
+        // Helper
         //
+
+        static void AssertLogicError(Action f)
+        {
+            Exceptions.AssertThrowsInternalError(f, "Logic error");
+        }
     }
 }

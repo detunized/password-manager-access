@@ -40,11 +40,12 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
+        // Service account access is intended for the CLI and the automation tools. It's not supposed to have
+        // any 2FA used in the flow. Also we won't need to store anything between the sessions.
         public static Session LogIn(ServiceAccount serviceAccount, AppInfo app)
         {
             var credentials = ParseServiceAccountToken(serviceAccount.Token);
-            // TODO: Don't pass nulls!
-            return LogIn(credentials, app, null, null);
+            return LogIn(credentials, app, new Util.ThrowUi(), new Util.ThrowStorage());
         }
 
         public static void LogOut(Session session)
