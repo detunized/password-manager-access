@@ -405,4 +405,25 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty("userB", Required = Required.Always)]
         public readonly string B;
     }
+
+    internal class ServiceAccountToken
+    {
+        [JsonProperty("signInAddress")]
+        public readonly string Domain;
+
+        [JsonProperty("email")]
+        public readonly string Username;
+
+        [JsonProperty("secretKey")]
+        public readonly string AccountKey;
+
+        [JsonProperty("deviceUuid")]
+        public readonly string DeviceUuid;
+
+        [JsonProperty("srpX")]
+        public readonly string SrpX;
+
+        [JsonProperty("muk")]
+        public readonly AesKey MasterUnlockKey;
+    }
 }

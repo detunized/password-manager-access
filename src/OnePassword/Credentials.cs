@@ -25,7 +25,12 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
+        // Not a valid user UUID used a sentinel value
+        internal const string IgnoreUserUuid = "ignore-user-uuid";
+
         internal string UserUuid { get; set; }
+        internal string SrpX { get; set; }
+        internal AesKey Key { get; set; }
 
         internal AccountKey ParsedAccountKey
         {

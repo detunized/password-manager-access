@@ -82,7 +82,9 @@ namespace PasswordManagerAccess.OnePassword
             var ab = sharedA.ToHex() + sharedB.ToHex();
             var hashAb = Crypto.Sha256(ab).ToBigInt();
             var s = sessionId.ToBytes().ToBigInt();
-            var x = ComputeX(credentials, srpInfo);
+            var x = credentials.SrpX.IsNullOrEmpty()
+                ? ComputeX(credentials, srpInfo)
+                : credentials.SrpX.DecodeHex().ToBigInt();
             var y = sharedB - SirpG.ModExp(x, SirpN) * s;
             var z = y.ModExp(secretA + hashAb * x, SirpN);
 

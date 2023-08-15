@@ -67,23 +67,29 @@ namespace Example
                                           string uuid,
                                           string serviceAccountToken)
         {
-            var clientInfo = new DeviceInfo
+            var device = new DeviceInfo
             {
                 Name = "PMA 1Password example",
                 Model = "1.0.0",
             };
 
-            var session = Client.LogIn(new Credentials
-                                       {
-                                           Username = username,
-                                           Password = password,
-                                           AccountKey = accountKey,
-                                           Domain = domain,
-                                           DeviceUuid = uuid,
-                                       },
-                                       clientInfo,
-                                       new TextUi(),
-                                       new PlainStorage());
+            var session = string.IsNullOrEmpty(serviceAccountToken)
+                ? Client.LogIn(new Credentials
+                               {
+                                   Username = username,
+                                   Password = password,
+                                   AccountKey = accountKey,
+                                   Domain = domain,
+                                   DeviceUuid = uuid,
+                               },
+                               device,
+                               new TextUi(),
+                               new PlainStorage())
+                : Client.LogIn(new ServiceAccount
+                               {
+                                   Token = serviceAccountToken
+                               },
+                               device);
 
             try
             {

@@ -19,6 +19,33 @@ namespace PasswordManagerAccess.Test.OnePassword
     public class ClientTest: TestBase
     {
         [Fact]
+        public void ParseServiceAccountToken_returns_parsed_token()
+        {
+            var parsed = Client.ParseServiceAccountToken(TestData.ServiceAccountAccessToken);
+
+            Assert.Equal("3joey3mfq7yws@1passwordserviceaccounts.com", parsed.Username);
+            Assert.Null(parsed.Password);
+            Assert.Equal("A3-Y6T9TL-NYJW82-344C5-GTHJQ-YWGD6-NWC2J", parsed.AccountKey);
+            Assert.Equal("lastpassruby-team.1password.com", parsed.Domain);
+            Assert.Equal("qv557zvdo2kbta4z6x3t2shuby", parsed.DeviceUuid);
+            Assert.Equal(Credentials.IgnoreUserUuid, parsed.UserUuid);
+            Assert.Equal("40cda13824f823d28b8bc34ee0c35581ea5195e09e599e4992d33b3fa8179525", parsed.SrpX);
+            Assert.Equal("5FsPUVlIqJwvn5OBdqXbB1zWYG3CVJ6fmWxlZ8zchjk", parsed.Key.Key.ToUrlSafeBase64NoPadding());
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("blah-blah-blah")]
+        [InlineData("ops_")]
+        [InlineData("e30")]
+        [InlineData("ops_e30")]
+        public void ParseServiceAccountToken_throws_on_invalid_token(string token)
+        {
+            Exceptions.AssertThrowsInternalError(() => Client.ParseServiceAccountToken(token),
+                                                 "Invalid service account token");
+        }
+
+        [Fact]
         public void ListAllVaults_returns_vaults()
         {
             var flow = new RestFlow()

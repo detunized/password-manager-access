@@ -40,6 +40,12 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
+        public static Session LogIn(ServiceAccount serviceAccount, DeviceInfo device)
+        {
+            var credentials = ParseServiceAccountToken(serviceAccount.Token);
+            return LogIn(credentials, device, null, null);
+        }
+
         public static void LogOut(Session session)
         {
             try
@@ -132,6 +138,50 @@ namespace PasswordManagerAccess.OnePassword
                 throw new BadCredentialsException($"Unknown username: '{username}'");
 
             return info.UserUuid;
+        }
+
+        internal static Credentials ParseServiceAccountToken(string token)
+        {
+            static InternalErrorException Error(string detail, Exception inner = null)
+            {
+                return new InternalErrorException($"Invalid service account token: {detail}", inner);
+            }
+
+            static string Validate(string value, string name)
+            {
+                if (value.IsNullOrEmpty())
+                    throw Error($"invalid {name}");
+
+                return value;
+            }
+
+            if (token == null || !token.StartsWith("ops_"))
+                throw Error("invalid format");
+
+            R.ServiceAccountToken parsed;
+            try
+            {
+                parsed = JsonConvert.DeserializeObject<R.ServiceAccountToken>(
+                    token.Substring(4).Decode64Loose().ToUtf8());
+            }
+            catch (JsonException e)
+            {
+                throw Error("failed to parse JSON", e);
+            }
+
+            if (parsed == null)
+                throw Error("failed to parse JSON");
+
+            return new Credentials
+            {
+                Username = Validate(parsed.Username, "username"),
+                AccountKey = Validate(parsed.AccountKey, "account key"),
+                Domain = Validate(parsed.Domain, "domain"),
+                DeviceUuid = Validate(parsed.DeviceUuid, "device UUID"),
+                UserUuid = Credentials.IgnoreUserUuid,
+                SrpX = Validate(parsed.SrpX, "SRP X value"),
+                Key = new AesKey(MasterKeyId, Validate(parsed.MasterUnlockKey.Key, "MUK").Decode64Loose()),
+            };
         }
 
         internal static VaultInfo[] ListAllVaults(Credentials credentials,
@@ -242,7 +292,9 @@ namespace PasswordManagerAccess.OnePassword
                                                                             RestClient rest)
         {
             var url = $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
-            if (!credentials.UserUuid.IsNullOrEmpty())
+
+            // TODO: don't use "ignore user uuid" sentinel
+            if (!credentials.UserUuid.IsNullOrEmpty() && credentials.UserUuid != Credentials.IgnoreUserUuid)
                 url += $"/{credentials.UserUuid}";
 
             var response = rest.Get<R.NewSession>(url);
@@ -772,11 +824,13 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException("Master keyset not found");
 
             // Derive the master key. The rest of the keyset should decrypt by master or its derivatives.
+            // In case we're logged in via a service account, we should have the master unlock key (MUK)
+            // already provided by the token itself. It's passed in the credentials.
             var keyInfo = masterKeyset.KeyOrMasterKey;
-            var masterKey = DeriveMasterKey(algorithm: keyInfo.Algorithm,
-                                            iterations: keyInfo.Iterations,
-                                            salt: keyInfo.Salt.Decode64Loose(),
-                                            credentials: credentials);
+            var masterKey = credentials.Key ?? DeriveMasterKey(algorithm: keyInfo.Algorithm,
+                                                               iterations: keyInfo.Iterations,
+                                                               salt: keyInfo.Salt.Decode64Loose(),
+                                                               credentials: credentials);
             keychain.Add(masterKey);
 
             // Build a topological map: key -> other keys encrypted by that key
