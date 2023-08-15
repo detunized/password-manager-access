@@ -3,16 +3,9 @@
 
 namespace PasswordManagerAccess.OnePassword
 {
-    // TODO: Move this elsewhere
-    public class ServiceAccount
-    {
-        public string Token { get; set; }
-    }
-
-    // TODO: Rename to ApplicationInfo?
-    public class DeviceInfo
+    public class AppInfo
     {
         public string Name { get; set; }
-        public string Model { get; set; }
+        public string Version { get; set; }
     }
 }

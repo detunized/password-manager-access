@@ -67,10 +67,10 @@ namespace Example
                                           string uuid,
                                           string serviceAccountToken)
         {
-            var device = new DeviceInfo
+            var device = new AppInfo
             {
                 Name = "PMA 1Password example",
-                Model = "1.0.0",
+                Version = "1.0.0",
             };
 
             var session = string.IsNullOrEmpty(serviceAccountToken)

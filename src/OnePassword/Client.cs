@@ -26,12 +26,12 @@ namespace PasswordManagerAccess.OnePassword
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
-        public static Session LogIn(Credentials credentials, DeviceInfo device, IUi ui, ISecureStorage storage)
+        public static Session LogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
             try
             {
-                return LogIn(credentials, device, ui, storage, transport);
+                return LogIn(credentials, app, ui, storage, transport);
             }
             catch (Exception)
             {
@@ -40,10 +40,11 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        public static Session LogIn(ServiceAccount serviceAccount, DeviceInfo device)
+        public static Session LogIn(ServiceAccount serviceAccount, AppInfo app)
         {
             var credentials = ParseServiceAccountToken(serviceAccount.Token);
-            return LogIn(credentials, device, null, null);
+            // TODO: Don't pass nulls!
+            return LogIn(credentials, app, null, null);
         }
 
         public static void LogOut(Session session)
@@ -84,14 +85,14 @@ namespace PasswordManagerAccess.OnePassword
         //
 
         internal static Session LogIn(Credentials credentials,
-                                      DeviceInfo device,
+                                      AppInfo app,
                                       IUi ui,
                                       ISecureStorage storage,
                                       IRestTransport transport)
         {
             FetchUserUuidIfNeeded(credentials, storage, transport);
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
-            var (sessionKey, sessionRest) = LogIn(credentials, device, ui, storage, rest);
+            var (sessionKey, sessionRest) = LogIn(credentials, app, ui, storage, rest);
 
             return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
         }
@@ -216,7 +217,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static (AesKey, RestClient) LogIn(Credentials credentials,
-                                                   DeviceInfo device,
+                                                   AppInfo app,
                                                    IUi ui,
                                                    ISecureStorage storage,
                                                    RestClient rest)
@@ -225,7 +226,7 @@ namespace PasswordManagerAccess.OnePassword
             {
                 try
                 {
-                    return LoginAttempt(credentials, device, ui, storage, rest);
+                    return LoginAttempt(credentials, app, ui, storage, rest);
                 }
                 catch (RetryLoginException)
                 {
@@ -234,13 +235,13 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         private static (AesKey, RestClient) LoginAttempt(Credentials credentials,
-                                                         DeviceInfo device,
+                                                         AppInfo app,
                                                          IUi ui,
                                                          ISecureStorage storage,
                                                          RestClient rest)
         {
             // Step 1: Request to initiate a new session
-            var (sessionId, srpInfo) = StartNewSession(credentials, device, rest);
+            var (sessionId, srpInfo) = StartNewSession(credentials, app, rest);
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
@@ -254,7 +255,7 @@ namespace PasswordManagerAccess.OnePassword
             var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), sessionId);
 
             // Step 3: Verify the key with the server
-            var verifiedOrMfa = VerifySessionKey(credentials, device, sessionKey, macRest);
+            var verifiedOrMfa = VerifySessionKey(credentials, app, sessionKey, macRest);
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
@@ -288,7 +289,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(Credentials credentials,
-                                                                            DeviceInfo device,
+                                                                            AppInfo app,
                                                                             RestClient rest)
         {
             var url = $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
@@ -317,20 +318,20 @@ namespace PasswordManagerAccess.OnePassword
 
                 return (info.SessionId, srpInfo);
             case "device-not-registered":
-                RegisterDevice(credentials.DeviceUuid, device, MakeRestClient(rest, sessionId: info.SessionId));
+                RegisterDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             case "device-deleted":
-                ReauthorizeDevice(credentials.DeviceUuid, device, MakeRestClient(rest, sessionId: info.SessionId));
+                ReauthorizeDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
                 break;
             default:
                 throw new InternalErrorException(
                     $"Failed to start a new session, unsupported response status '{status}'");
             }
 
-            return StartNewSession(credentials, device, rest);
+            return StartNewSession(credentials, app, rest);
         }
 
-        internal static void RegisterDevice(string uuid, DeviceInfo device, RestClient rest)
+        internal static void RegisterDevice(string uuid, AppInfo app, RestClient rest)
         {
             var response = rest.PostJson<R.SuccessStatus>("v1/device", new Dictionary<string, object>
             {
@@ -339,8 +340,8 @@ namespace PasswordManagerAccess.OnePassword
                 ["clientVersion"] = ClientVersion,
                 ["osName"] = GetOsName(),
                 ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that.
-                ["name"] = device.Name,
-                ["model"] = device.Model,
+                ["name"] = app.Name,
+                ["model"] = app.Version,
             });
 
             if (!response.IsSuccessful)
@@ -350,7 +351,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException($"Failed to register the device '{uuid}'");
         }
 
-        internal static void ReauthorizeDevice(string uuid, DeviceInfo device, RestClient rest)
+        internal static void ReauthorizeDevice(string uuid, AppInfo app, RestClient rest)
         {
             var response = rest.Put<R.SuccessStatus>($"v1/device/{uuid}/reauthorize");
 
@@ -403,7 +404,7 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static VerifyResult VerifySessionKey(Credentials credentials, DeviceInfo device, AesKey sessionKey, RestClient rest)
+        internal static VerifyResult VerifySessionKey(Credentials credentials, AppInfo app, AesKey sessionKey, RestClient rest)
         {
             var response = PostEncryptedJson<R.VerifyKey>(
                 "v2/auth/verify",
@@ -417,8 +418,8 @@ namespace PasswordManagerAccess.OnePassword
                         ["uuid"] = credentials.DeviceUuid,
                         ["clientName"] = ClientName,
                         ["clientVersion"] = ClientVersion,
-                        ["name"] = device.Name,
-                        ["model"] = device.Model,
+                        ["name"] = app.Name,
+                        ["model"] = app.Version,
                         ["osName"] = GetOsName(),
                         ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET.
                                             // Look into that.

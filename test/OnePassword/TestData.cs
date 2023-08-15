@@ -13,8 +13,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         public const string AccountKey = "A3-RTN9SA-DY9445Y5FF96X6E7B5GPFA95R9";
         public const string DeviceUuid = "rz64r4uhyvgew672nm4ncaqonq";
         public const string Domain = "my.1password.com";
-        public const string DeviceName = "device-name";
-        public const string DeviceModel = "device-model";
+        public const string AppName = "app-name";
+        public const string AppVersion = "app-version";
 
         public static readonly Credentials Credentials = new Credentials
         {
@@ -25,10 +25,10 @@ namespace PasswordManagerAccess.Test.OnePassword
             DeviceUuid = DeviceUuid,
        };
 
-        public static readonly DeviceInfo DeviceInfo = new DeviceInfo
+        public static readonly AppInfo AppInfo = new AppInfo
         {
-            Name = DeviceName,
-            Model = DeviceModel,
+            Name = AppName,
+            Version = AppVersion,
         };
 
         public const string SessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
