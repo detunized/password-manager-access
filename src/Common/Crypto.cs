@@ -411,7 +411,6 @@ namespace PasswordManagerAccess.Common
             return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA1);
         }
 
-        // TODO: Test this function. One .NET 4.7.2 it throws "unsupported" or something like that.
         public static byte[] DecryptRsaSha256(byte[] ciphertext, RSAParameters privateKey)
         {
             return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA256);
@@ -421,7 +420,7 @@ namespace PasswordManagerAccess.Common
         {
             try
             {
-                using var rsa = new RSACryptoServiceProvider();
+                using var rsa = RSA.Create();
                 rsa.ImportParameters(RestoreLeadingZeros(privateKey));
                 return rsa.Decrypt(ciphertext, padding);
             }

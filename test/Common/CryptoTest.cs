@@ -362,6 +362,14 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(RsaPlaintext.ToBytes(), plaintext);
         }
 
+        [Fact]
+        public void DecryptRsaSha256_decrypts_ciphertext()
+        {
+            var plaintext = Crypto.DecryptRsaSha256(RsaSha256.Ciphertext, RsaKey);
+
+            Assert.Equal(RsaPlaintext.ToBytes(), plaintext);
+        }
+
         [Theory]
         [MemberData(nameof(RsaTestCases))]
         public void DecryptRsa_decrypts_ciphertext(RsaTestCase tc)
@@ -635,8 +643,15 @@ namespace PasswordManagerAccess.Test.Common
             "lRokZGYVqhiFk364eyT8X1ZualO4TfTxNeZPCfJADVB6lVWXAIXVhL2wdupX2KsThAYmjPKKGlcOdPnR8ZZ" +
             "WD1F7stgIw==");
 
-        // TODO: Add a test case for RSAEncryptionPadding.OaepSHA256. On .NET 4.7.2 it throws.
+        private static readonly RsaTestCase RsaSha256 = new RsaTestCase(
+            RSAEncryptionPadding.OaepSHA256,
+            "Ap0o4nz8O86QfK2USakYCIPbaQTpXVHo70bDYyNwdCzp61P7kUPMRXcdcmtZzSjUoRkDhuoRpXxxzojLdHt" +
+            "XBsvo2/L6/h0sdo7kGHD1nIhBVyda/7akWyCgm5uVUhsZcl/xTsfTLREh/DRKrhyXOBBO5A4raUVmtP/dj1" +
+            "GJmSsEdkltPMRpNl2KQptxDROsQ0/I63wEH4Qt1e7Lu1yf+yCP0pN+2i1OaL5RUUYmvzwSbZ5sTgRbtqLO3" +
+            "8fJdUgkunM+0An6OpFKXJx1bQNenwe8Cd9qGytgh6FSwTQv77LO/ug3/QpR6GxfCY0hNZTe7J0uticAtthx" +
+            "tpGYxyej5Q==");
 
-        public static readonly IEnumerable<object[]> RsaTestCases = TestBase.ToMemberData(RsaPkcs1, RsaSha1);
+        public static readonly IEnumerable<object[]> RsaTestCases =
+            TestBase.ToMemberData(RsaPkcs1, RsaSha1, RsaSha256);
     }
 }
