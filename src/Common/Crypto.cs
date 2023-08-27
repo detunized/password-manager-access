@@ -6,6 +6,15 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 
+#if NET48_OR_GREATER
+using System.Runtime.InteropServices;
+#elif NETSTANDARD2_0
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Crypto.Digests;
+using Org.BouncyCastle.Crypto.Encodings;
+using Org.BouncyCastle.Crypto.Engines;
+#endif
+
 namespace PasswordManagerAccess.Common
 {
     internal static class Crypto
@@ -403,24 +412,57 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] DecryptRsaPkcs1(byte[] ciphertext, RSAParameters privateKey)
         {
-            return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.Pkcs1);
+            // PKCS1 is supported on all platforms
+            return DecryptRsaSystemCryptography(ciphertext, privateKey, RSAEncryptionPadding.Pkcs1);
         }
 
         public static byte[] DecryptRsaSha1(byte[] ciphertext, RSAParameters privateKey)
         {
-            return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA1);
+            // OAEP-SHA1 is supported on all platforms
+            return DecryptRsaSystemCryptography(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA1);
         }
 
         public static byte[] DecryptRsaSha256(byte[] ciphertext, RSAParameters privateKey)
         {
-            return DecryptRsa(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA256);
+            // OAEP-SHA256 support is very messy
+
+#if NET6_0_OR_GREATER
+            // 1. The easiest case is .NET 6+. RSA.Create() supports this out of the box on all platforms.
+            return DecryptRsaSystemCryptography(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA256);
+
+#elif NET48_OR_GREATER
+            // 2.1. .NET Framework supports this on Windows via RSACng
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                using var rsa = new RSACng();
+                return DecryptRsaSystemCryptography(ciphertext, rsa, privateKey, RSAEncryptionPadding.OaepSHA256);
+            }
+
+            // 2.2. He we could only end up under Mono.
+            // TODO: Should we support this?
+            throw new UnsupportedFeatureException("RSA-OAEP-SHA256 is not supported on this platform");
+
+#elif NETSTANDARD2_0
+            // 3. Otherwise we have to use Bouncy Castle
+            return DecryptRsaOaepSha256BouncyCastle(ciphertext, privateKey);
+#endif
         }
 
-        public static byte[] DecryptRsa(byte[] ciphertext, RSAParameters privateKey, RSAEncryptionPadding padding)
+        internal static byte[] DecryptRsaSystemCryptography(byte[] ciphertext,
+                                                            RSAParameters privateKey,
+                                                            RSAEncryptionPadding padding)
+        {
+            using var rsa = RSA.Create();
+            return DecryptRsaSystemCryptography(ciphertext, rsa, privateKey, padding);
+        }
+
+        internal static byte[] DecryptRsaSystemCryptography(byte[] ciphertext,
+                                                            RSA rsa,
+                                                            RSAParameters privateKey,
+                                                            RSAEncryptionPadding padding)
         {
             try
             {
-                using var rsa = RSA.Create();
                 rsa.ImportParameters(RestoreLeadingZeros(privateKey));
                 return rsa.Decrypt(ciphertext, padding);
             }
@@ -428,6 +470,18 @@ namespace PasswordManagerAccess.Common
             {
                 throw new CryptoException("RSA decryption failed", e);
             }
+        }
+
+        internal static byte[] DecryptRsaOaepSha256BouncyCastle(byte[] ciphertext, RSAParameters privateKey)
+        {
+#if NETSTANDARD2_0
+            var keyPair = DotNetUtilities.GetRsaKeyPair(privateKey);
+            var rsaEngine = new OaepEncoding(new RsaEngine(), new Sha256Digest());
+            rsaEngine.Init(false, keyPair.Private);
+            return rsaEngine.ProcessBlock(ciphertext, 0, ciphertext.Length);
+#else
+            throw new InternalErrorException("Logical error: this should only be called on .NET Standard 2.0");
+#endif
         }
 
         // Sometimes we see the numbers with too few bits, which is normal BTW. The .NET is very

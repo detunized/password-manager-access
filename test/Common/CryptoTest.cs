@@ -370,15 +370,6 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(RsaPlaintext.ToBytes(), plaintext);
         }
 
-        [Theory]
-        [MemberData(nameof(RsaTestCases))]
-        public void DecryptRsa_decrypts_ciphertext(RsaTestCase tc)
-        {
-            var plaintext = Crypto.DecryptRsa(tc.Ciphertext, RsaKey, tc.Padding);
-
-            Assert.Equal(RsaPlaintext.ToBytes(), plaintext);
-        }
-
         [Fact]
         public void RestoreLeadingZeros_pads_to_correct_length()
         {
@@ -650,8 +641,5 @@ namespace PasswordManagerAccess.Test.Common
             "GJmSsEdkltPMRpNl2KQptxDROsQ0/I63wEH4Qt1e7Lu1yf+yCP0pN+2i1OaL5RUUYmvzwSbZ5sTgRbtqLO3" +
             "8fJdUgkunM+0An6OpFKXJx1bQNenwe8Cd9qGytgh6FSwTQv77LO/ug3/QpR6GxfCY0hNZTe7J0uticAtthx" +
             "tpGYxyej5Q==");
-
-        public static readonly IEnumerable<object[]> RsaTestCases =
-            TestBase.ToMemberData(RsaPkcs1, RsaSha1, RsaSha256);
     }
 }

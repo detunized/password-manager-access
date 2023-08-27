@@ -426,7 +426,7 @@ namespace PasswordManagerAccess.ZohoVault
                 InverseQ = privateKeyComponents[7].DecodeHexLoose(),
             };
 
-            return Crypto.DecryptRsa(vaultResponse.SharingKey.DecodeHex(), rsaKey, RSAEncryptionPadding.Pkcs1);
+            return Crypto.DecryptRsaPkcs1(vaultResponse.SharingKey.DecodeHex(), rsaKey);
         }
 
         internal static Account[] ParseAccounts(R.Vault vaultResponse, byte[] vaultKey, byte[] sharingKey)
