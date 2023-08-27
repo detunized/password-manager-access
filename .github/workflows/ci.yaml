@@ -19,7 +19,9 @@ jobs:
         framework: [net6]
         include:
           - os: windows-latest
-            framework: [net48, net472]
+            framework: net48
+          - os: windows-latest
+            framework: net472
 
     runs-on: ${{ matrix.os }}
 
