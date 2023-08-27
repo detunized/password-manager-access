@@ -443,6 +443,8 @@ namespace PasswordManagerAccess.Common
             throw new UnsupportedFeatureException("RSA-OAEP-SHA256 is not supported on this platform");
 
 #elif NETSTANDARD2_0
+            // TODO: Remove this!
+            throw new InternalErrorException("Failure test. Should fail on net472.");
             // 3. Otherwise we have to use Bouncy Castle
             return DecryptRsaOaepSha256BouncyCastle(ciphertext, privateKey);
 #endif
