@@ -944,6 +944,9 @@ namespace PasswordManagerAccess.OnePassword
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Create("iOS")))
                 return "iOS";
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Create("Android")))
+                return "Android";
+
             return "Unknown";
         }
 
