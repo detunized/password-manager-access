@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.Linq;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
@@ -36,18 +37,22 @@ namespace PasswordManagerAccess.OnePassword
 
         public bool CanDecrypt(Encrypted encrypted)
         {
-            return CanDecrypt(encrypted.Scheme, encrypted.KeyId);
+            if (encrypted.Scheme == AesKey.EncryptionScheme)
+                return _aes.ContainsKey(encrypted.KeyId);
+
+            if (RsaKey.EncryptionSchemes.Contains(encrypted.Scheme))
+                return _rsa.ContainsKey(encrypted.KeyId);
+
+            throw new UnsupportedFeatureException($"Encryption scheme '{encrypted.Scheme}' is not supported");
         }
 
         public byte[] Decrypt(Encrypted encrypted)
         {
-            switch (encrypted.Scheme)
-            {
-            case AesKey.EncryptionScheme:
+            if (encrypted.Scheme == AesKey.EncryptionScheme)
                 return GetAes(encrypted.KeyId).Decrypt(encrypted);
-            case RsaKey.EncryptionScheme:
+
+            if (RsaKey.EncryptionSchemes.Contains(encrypted.Scheme))
                 return GetRsa(encrypted.KeyId).Decrypt(encrypted);
-            }
 
             throw new UnsupportedFeatureException($"Encryption scheme '{encrypted.Scheme}' is not supported");
         }
@@ -55,16 +60,6 @@ namespace PasswordManagerAccess.OnePassword
         //
         // Private
         //
-
-        private bool CanDecrypt(string scheme, string keyId)
-        {
-            return scheme switch
-            {
-                AesKey.EncryptionScheme => _aes.ContainsKey(keyId),
-                RsaKey.EncryptionScheme => _rsa.ContainsKey(keyId),
-                _ => throw new UnsupportedFeatureException($"Encryption scheme '{scheme}' is not supported")
-            };
-        }
 
         private readonly Dictionary<string, AesKey> _aes = new Dictionary<string, AesKey>();
         private readonly Dictionary<string, RsaKey> _rsa = new Dictionary<string, RsaKey>();
