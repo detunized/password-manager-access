@@ -8,7 +8,9 @@ using System.Security.Cryptography;
 
 #if NET48_OR_GREATER
 using System.Runtime.InteropServices;
-#elif NETSTANDARD2_0
+#endif
+
+#if NET48_OR_GREATER || NETSTANDARD2_0
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Crypto.Digests;
 using Org.BouncyCastle.Crypto.Encodings;
@@ -438,9 +440,8 @@ namespace PasswordManagerAccess.Common
                 return DecryptRsaSystemCryptography(ciphertext, rsa, privateKey, RSAEncryptionPadding.OaepSHA256);
             }
 
-            // 2.2. He we could only end up under Mono.
-            // TODO: Should we support this?
-            throw new UnsupportedFeatureException("RSA-OAEP-SHA256 is not supported on this platform");
+            // 2.2. We must be running in Mono.
+            return DecryptRsaOaepSha256BouncyCastle(ciphertext, privateKey);
 
 #elif NETSTANDARD2_0
             // 3. Otherwise we have to use Bouncy Castle
@@ -474,13 +475,13 @@ namespace PasswordManagerAccess.Common
 
         internal static byte[] DecryptRsaOaepSha256BouncyCastle(byte[] ciphertext, RSAParameters privateKey)
         {
-#if NETSTANDARD2_0
+#if NET48_OR_GREATER || NETSTANDARD2_0
             var keyPair = DotNetUtilities.GetRsaKeyPair(privateKey);
             var rsaEngine = new OaepEncoding(new RsaEngine(), new Sha256Digest());
             rsaEngine.Init(false, keyPair.Private);
             return rsaEngine.ProcessBlock(ciphertext, 0, ciphertext.Length);
 #else
-            throw new InternalErrorException("Logical error: this should only be called on .NET Standard 2.0");
+            throw new InternalErrorException("This platform doesn't support Bouncy Castle");
 #endif
         }
 
