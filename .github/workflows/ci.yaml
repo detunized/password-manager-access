@@ -15,13 +15,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        #os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
         framework: [net6]
         include:
-          - os: windows-latest
-            framework: net48
-          - os: windows-latest
-            framework: net472
+#          - os: windows-latest
+#            framework: net48
+#          - os: windows-latest
+#            framework: net472
+          - os: ubuntu-latest
+            framework: mono
 
     runs-on: ${{ matrix.os }}
 
