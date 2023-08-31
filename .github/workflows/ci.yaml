@@ -34,6 +34,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Mono on Linux
+        if: matrix.framework == 'mono' && matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get install gnupg ca-certificates
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+          sudo apt install apt-transport-https
+          sudo apt update
+          sudo apt install mono-devel
+
       - name: .NET info
         run: |
             dotnet --info
