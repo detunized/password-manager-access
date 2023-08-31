@@ -44,6 +44,12 @@ jobs:
           sudo apt install mono-devel
           mono --version
 
+      - name: Install Mono on macOS
+        if: matrix.framework == 'mono' && matrix.os == 'macos-latest'
+        run: |
+            brew install mono
+            mono --version
+
       - name: .NET info
         run: |
             dotnet --info
@@ -53,7 +59,7 @@ jobs:
       - name: Test mono
         if: matrix.framework == 'mono'
         run: |
-            dotnet build --configuration Release --framework net48 --project test/PasswordManagerAccess.Test/PasswordManagerAccess.Test.csproj
+            dotnet build --configuration Release --framework net48
             mono ~/.nuget/packages/xunit.runner.console/2.4.1/tools/net472/xunit.console.exe test/bin/Release/net48/PasswordManagerAccess.Test.dll -xml test/TestResults/test-results.trx
 
       - name: Test ${{ matrix.framework }}
