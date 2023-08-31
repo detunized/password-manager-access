@@ -42,6 +42,7 @@ jobs:
           sudo apt install apt-transport-https
           sudo apt update
           sudo apt install mono-devel
+          mono --version
 
       - name: .NET info
         run: |
@@ -50,7 +51,12 @@ jobs:
             dotnet --list-runtimes
 
       - name: Test ${{ matrix.framework }}
+        if: matrix.framework != 'mono'
         run: dotnet test --configuration Release --framework ${{ matrix.framework }} --logger "trx;LogFileName=test-results.trx"
+
+      - name: Test Mono/net48
+        if: matrix.framework == 'mono'
+        run: dotnet test --configuration Release --framework net48 --logger "trx;LogFileName=test-results.trx"
 
       - name: Test Report
         uses: dorny/test-reporter@v1
