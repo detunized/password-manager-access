@@ -10,8 +10,6 @@ namespace PasswordManagerAccess.OnePassword
     internal class RsaKey: IDecryptor
     {
         public const string ContainerType = "b5+jwk+json";
-        public const string OaepSha1 = "RSA-OAEP";
-        public const string OaepSha256 = "RSA-OAEP-256";
         public static readonly string[] EncryptionSchemes = {OaepSha1, OaepSha256};
 
         public readonly string Id;
@@ -45,10 +43,19 @@ namespace PasswordManagerAccess.OnePassword
             if (e.KeyId != Id)
                 throw new InternalErrorException("Mismatching key id");
 
-            if (EncryptionSchemes.Contains(e.Scheme))
-                return Crypto.DecryptRsaSha1(e.Ciphertext, Parameters);
-
-            throw new InternalErrorException($"Invalid encryption scheme '{e.Scheme}'");
+            return e.Scheme switch
+            {
+                OaepSha1 => Crypto.DecryptRsaSha1(e.Ciphertext, Parameters),
+                OaepSha256 => Crypto.DecryptRsaSha256(e.Ciphertext, Parameters),
+                _ => throw new InternalErrorException($"Invalid encryption scheme '{e.Scheme}'"),
+            };
         }
+
+        //
+        // Private
+        //
+
+        private const string OaepSha1 = "RSA-OAEP";
+        private const string OaepSha256 = "RSA-OAEP-256";
     }
 }
