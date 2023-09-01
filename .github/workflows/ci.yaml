@@ -48,7 +48,7 @@ jobs:
       - name: Install Mono on macOS
         if: matrix.framework == 'mono' && matrix.os == 'macos-latest'
         run: |
-            brew install mono
+            echo brew install mono
             mono --version
 
       - name: .NET info
