@@ -43,26 +43,23 @@ jobs:
           sudo apt install apt-transport-https
           sudo apt update
           sudo apt install mono-devel
-          mono --version
-
-      - name: Install Mono on macOS
-        if: matrix.framework == 'mono' && matrix.os == 'macos-latest'
-        run: |
-            echo brew install mono
-            mono --version
 
       - name: .NET info
         run: |
-            dotnet --info
-            dotnet --list-sdks
-            dotnet --list-runtimes
+          dotnet --info
+          dotnet --list-sdks
+          dotnet --list-runtimes
 
-      # TODO: Figure out how to export the TRX report on Mono
+      - name: Mono info
+        if: matrix.framework == 'mono'
+        run: mono --version
+
+        # TODO: Figure out how to export the TRX report on Mono
       - name: Test mono
         if: matrix.framework == 'mono'
         run: |
-            dotnet build --configuration Release --framework net48
-            mono ~/.nuget/packages/xunit.runner.console/2.5.0/tools/net472/xunit.console.exe test/bin/Release/net48/PasswordManagerAccess.Test.dll
+          dotnet build --configuration Release --framework net48
+          mono ~/.nuget/packages/xunit.runner.console/2.5.0/tools/net472/xunit.console.exe test/bin/Release/net48/PasswordManagerAccess.Test.dll
 
       - name: Test ${{ matrix.framework }}
         if: matrix.framework != 'mono'
