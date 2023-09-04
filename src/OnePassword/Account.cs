@@ -20,18 +20,33 @@ namespace PasswordManagerAccess.OnePassword
         public string Password => _password ??= GetPassword();
         public string MainUrl => _url ??= GetUrl();
         public string Note => Details.Note ?? "";
-        public Url[] Urls => _urls ??= ExtractUrls(Overview);
-        public Field[] Fields => _fields ??= ExtractFields(Details);
+        public Url[] Urls => _urls ?? AssignUrls();
+        public Otp[] Otps => _otps ?? AssignOtps();
+        public Field[] Fields => _fields ?? AssignFields();
 
         public readonly struct Url
         {
             public readonly string Name;
             public readonly string Value;
 
-            public Url(string name, string value)
+            internal Url(string name, string value)
             {
                 Name = name;
                 Value = value;
+            }
+        }
+
+        public readonly struct Otp
+        {
+            public readonly string Name;
+            public readonly string Secret;
+            public readonly string Section;
+
+            internal Otp(string name, string secret, string section)
+            {
+                Name = name;
+                Secret = secret;
+                Section = section;
             }
         }
 
@@ -41,7 +56,7 @@ namespace PasswordManagerAccess.OnePassword
             public readonly string Value;
             public readonly string Section;
 
-            public Field(string name, string value, string section)
+            internal Field(string name, string value, string section)
             {
                 Name = name;
                 Value = value;
@@ -110,25 +125,44 @@ namespace PasswordManagerAccess.OnePassword
             return "";
         }
 
-        internal static Url[] ExtractUrls(R.VaultItemOverview overview)
+        internal Url[] AssignUrls()
         {
-            return overview.Urls?
+            _urls = Overview.Urls?
                 .Select(x => new Url(name: x.Name, value: x.Url))
                 .ToArray() ?? Array.Empty<Url>();
+            return _urls;
         }
 
-        internal static Field[] ExtractFields(R.VaultItemDetails details)
+        internal Otp[] AssignOtps()
         {
-            return details.Sections?
-                .SelectMany(ExtractSectionFields)
-                .ToArray() ?? Array.Empty<Field>();
+            ParseFields();
+            return _otps!;
         }
 
-        internal static IEnumerable<Field> ExtractSectionFields(R.VaultItemSection section)
+        internal Field[] AssignFields()
         {
-            var name = section.Name;
-            return section.Fields?
-                .Select(x => new Field(name: x.Name, value: x.Value, section: name)) ?? Array.Empty<Field>();
+            ParseFields();
+            return _fields!;
+        }
+
+        internal void ParseFields()
+        {
+            var otps = new List<Otp>();
+            var fields = new List<Field>();
+
+            foreach (var section in Details.Sections ?? Array.Empty<R.VaultItemSection>())
+            {
+                foreach (var field in section.Fields ?? Array.Empty<R.VaultItemSectionField>())
+                {
+                    if (field.Kind == "concealed" && field.Id?.StartsWith("TOTP_") == true)
+                        otps.Add(new Otp(name: field.Name, secret: field.Value, section: section.Name));
+                    else
+                        fields.Add(new Field(name: field.Name, value: field.Value, section: section.Name));
+                }
+            }
+
+            _otps = otps.ToArray();
+            _fields = fields.ToArray();
         }
 
         private readonly R.VaultItem _itemInfo;
@@ -143,6 +177,7 @@ namespace PasswordManagerAccess.OnePassword
         private string? _password;
         private string? _url;
         private Url[]? _urls;
+        private Otp[]? _otps;
         private Field[]? _fields;
 
         internal const string LoginTemplateId = "001";
