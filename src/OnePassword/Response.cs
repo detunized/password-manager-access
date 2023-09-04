@@ -1,8 +1,10 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.ComponentModel;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 // TODO: Rename to Wire or Model since not all this things are responses
 namespace PasswordManagerAccess.OnePassword.Response
@@ -388,13 +390,40 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     internal class VaultItemSectionField
     {
-        [JsonProperty("t", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue("")]
+        [JsonProperty("n")]
+        public readonly string Id;
+
+        [JsonProperty("t")]
         public readonly string Name;
 
-        [JsonProperty("v", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue("")]
+        [JsonConverter(typeof(VaultItemSectionFieldValueConverter))]
+        [JsonProperty("v")]
         public readonly string Value;
+
+        [JsonProperty("k")]
+        public readonly string Kind;
+    }
+
+    // The "v" value could be practically anything. We are only interested in the string values.
+    // The rest is simply converted to JSON as a fallback.
+    internal class VaultItemSectionFieldValueConverter: JsonConverter<string>
+    {
+        public override string ReadJson(JsonReader reader,
+                                        Type objectType,
+                                        string existingValue,
+                                        bool hasExistingValue,
+                                        JsonSerializer serializer)
+        {
+            var token = JToken.Load(reader);
+            return token.Type switch
+            {
+                JTokenType.String => token.Value<string>(),
+                _ => token.ToString(Formatting.None)
+            };
+        }
+
+        public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer) =>
+            throw new NotImplementedException();
     }
 
     internal class AForB
