@@ -1,5 +1,15 @@
 # Changelog
 
+## 13.1.0
+  - Global: Bouncy Castle dependency added to `net48` and `netstandard2.0` targets (not to `net6.0`)
+    in the main project file
+  - 1Password: added support for RSA-OAEP-256 encryption (via Bouncy Castle on Mono and
+    `netstandard2.0` platforms) (issue #99)
+  - 1Password: OTP fields are parsed and are available now via `Account.Otps` property (issue #101)
+  - 1Password: fixed parsing of some specific fields that were causing crashes before, like the
+    address or "sign with" fields
+  - 1Password: fixed a BadRequest HTTP 400 error on Xamarin/Android (issue #100)
+
 ## 13.0.0
   - 1Password: service account support. API breaking change! Please check the provided example
     program for the new API. Mainly the `ClientInfo` class is split into `Credentials` and
