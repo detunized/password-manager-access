@@ -275,7 +275,7 @@ namespace PasswordManagerAccess.Test
                                                  RestResponse<TContent> allocatedResult)
         {
             if (_currentIndex >= _responses.Count)
-                Assert.True(false, $"Too many requests, there's no response available for {method} to '{uri}'");
+                Assert.Fail($"Too many requests, there's no response available for {method} to '{uri}'");
 
             var r = _responses[_currentIndex++];
             var e = r.Expected;
