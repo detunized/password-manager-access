@@ -126,6 +126,11 @@ namespace Example
                                   account.Password,
                                   account.MainUrl,
                                   account.Note);
+
+                foreach (var otp in account.Otps)
+                    Console.WriteLine("         otp: {0}: {1} (section: {2})", otp.Name, otp.Secret, otp.Section);
+                foreach (var field in account.Fields)
+                    Console.WriteLine("       field: {0}: {1} (section: {2})", field.Name, field.Value, field.Section);
             }
         }
     }
