@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using Xunit;
 using PasswordManagerAccess.DropboxPasswords;
@@ -11,6 +12,18 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
 {
     public class ClientTest: TestBase
     {
+        [Fact]
+        public void CryptoBoxOpenEasy_decrypts_ciphertext()
+        {
+            var plaintext = Client.CryptoBoxOpenEasy(
+                ciphertext: "kDZmVHrS3ZRNZUnUcaKQ6z5KqR5XYY6ymmJLAZhNVJk=".Decode64(),
+                nonce: "nSgGUq0+wgk6FuTonn/gLX3tMRYyDEsP".Decode64(),
+                ourPrivateKey: "EDrBprqwud8YbZ10T0/7JmDcQY1tKWDmUFNqV8bw5k0=".Decode64(),
+                theirPublicKey: "1YPKexhpTXpqx9WQC2rfQ19qg1SD27jKkv8Iu2CqZU4=".Decode64());
+
+            Assert.Equal("043edb6f0d6da92fe4dca929684dadcf".DecodeHex(), plaintext);
+        }
+
         [Fact]
         public void OpenVault_returns_accounts()
         {
