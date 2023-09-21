@@ -9,7 +9,9 @@ using System.Linq;
 // TODO: This library implement exactly what we need but it has a somewhat incompatible license.
 //       See if we could repurpose NaCl.Core which is MIT licensed to do what we need.
 //       It doesn't provide the crypto_box_open_easy equivalent by default.
+#if USE_NACL
 using NaCl;
+#endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
@@ -258,7 +260,12 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         internal static (byte[] PublicKey, byte[] PrivateKey) CryptoBoxKeypair()
         {
+#if USE_NACL
             Curve25519XSalsa20Poly1305.KeyPair(out var privateKey, out var publicKey);
+#else
+            var privateKey = new byte[PrivateKeySize];
+            var publicKey = new byte[PublicKeySize];
+#endif
             if (publicKey.Length != PublicKeySize || privateKey.Length != PrivateKeySize)
                 throw new InternalErrorException("Invalid key length");
 
@@ -267,10 +274,11 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         public static byte[] CryptoBoxOpenEasy(byte[] ciphertext, byte[] nonce, byte[] ourPrivateKey, byte[] theirPublicKey)
         {
+#if USE_NACL
             var plain = new byte[ciphertext.Length - XSalsa20Poly1305.TagLength];
             if (new Curve25519XSalsa20Poly1305(ourPrivateKey, theirPublicKey).TryDecrypt(plain, ciphertext, nonce))
                 return plain;
-
+#endif
             throw new InternalErrorException("Failed to decrypt");
         }
 
