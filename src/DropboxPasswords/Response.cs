@@ -13,6 +13,24 @@ namespace PasswordManagerAccess.DropboxPasswords
 {
     internal static class Response
     {
+        public class OAuth2Token
+        {
+            [JsonProperty("token_type", Required = Required.Always)]
+            public readonly string TokenType;
+
+            [JsonProperty("access_token", Required = Required.Always)]
+            public readonly string AccessToken;
+
+            [JsonProperty("scope")]
+            public readonly string Scope;
+
+            [JsonProperty("uid")]
+            public readonly string Uid;
+
+            [JsonProperty("account_id")]
+            public readonly string AccountId;
+        }
+
         public class AccountInfo
         {
             [JsonProperty("account_id", Required = Required.Always)]
@@ -23,6 +41,33 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("disabled", Required = Required.Always)]
             public readonly bool Disabled;
+
+            [JsonProperty("root_info", Required = Required.Always)]
+            public readonly RootInfo RootInfo;
+        }
+
+        public class RootInfo
+        {
+            [JsonProperty("root_namespace_id", Required = Required.Always)]
+            public readonly string RootNamespaceId;
+        }
+
+        public class EnrollStatus
+        {
+            [JsonProperty("status", Required = Required.Always)]
+            public readonly Status Status;
+
+            [JsonProperty("active_keyset_name", Required = Required.Always)]
+            public readonly string ActiveKeysetName;
+
+            [JsonProperty("device_hid", Required = Required.Always)]
+            public readonly string DeviceHid;
+        }
+
+        public class Status
+        {
+            [JsonProperty(".tag", Required = Required.Always)]
+            public readonly string Tag;
         }
 
         public class Features
@@ -38,6 +83,100 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             [JsonProperty("passwords_path_root", Required = Required.Always)]
             public readonly string RootPath;
+        }
+
+        public class BoltInfo
+        {
+            [JsonProperty("app_id", Required = Required.Always)]
+            public readonly string AppId;
+
+            [JsonProperty("unique_id", Required = Required.Always)]
+            public readonly string UniqueId;
+
+            [JsonProperty("revision", Required = Required.Always)]
+            public readonly string Revision;
+
+            [JsonProperty("token", Required = Required.Always)]
+            public readonly string Token;
+        }
+
+        // TODO: Remove this in favor of dynamic access.
+        public class SubscriptionUpdate
+        {
+            [JsonProperty("channel_payloads")]
+            public readonly ChannelPayload[] ChannelPayloads;
+        }
+
+        public class ChannelPayload
+        {
+            [JsonProperty("channel_state")]
+            public readonly ChannelState ChannelState;
+
+            [JsonProperty("payloads")]
+            public readonly Payload[] Payloads;
+        }
+
+        public class ChannelState
+        {
+            [JsonProperty("channel_id")]
+            public readonly ChannelId ChannelId;
+
+            [JsonProperty("revision")]
+            public readonly string Revision;
+
+            [JsonProperty("token")]
+            public readonly string Token;
+        }
+
+        public class ChannelId
+        {
+            [JsonProperty("app_id")]
+            public readonly string AppId;
+
+            [JsonProperty("unique_id")]
+            public readonly string UniqueId;
+        }
+
+        public class Payload
+        {
+            [JsonProperty("revision")]
+            public readonly string Revision;
+
+            [JsonProperty("payload")]
+            public readonly PayloadDetails PayloadDetails;
+        }
+
+        public class PayloadDetails
+        {
+            [JsonProperty("source_device_id")]
+            public readonly string SourceDeviceId;
+
+            [JsonProperty("target_device_id")]
+            public readonly string TargetDeviceId;
+
+            [JsonProperty("message_type")]
+            public readonly int MessageType;
+
+            [JsonProperty("encrypted_user_key_bundle")]
+            public readonly EncryptedUserKeyBundle EncryptedUserKeyBundle;
+
+            [JsonProperty("source_device_public_key")]
+            public readonly string SourceDevicePublicKey;
+
+            [JsonProperty("enroll_action")]
+            public readonly string EnrollAction;
+
+            [JsonProperty("notification_id")]
+            public readonly string NotificationId;
+        }
+
+        public class EncryptedUserKeyBundle
+        {
+            [JsonProperty("encrypted_data")]
+            public readonly string EncryptedDataBase64;
+
+            [JsonProperty("nonce")]
+            public readonly string NonceBase64;
         }
 
         public class RootFolder

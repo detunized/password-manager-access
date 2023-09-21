@@ -1,12 +1,20 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using PasswordManagerAccess.Common;
 
 #nullable enable
 
 namespace PasswordManagerAccess.DropboxPasswords
 {
+    // TODO: Move this out of here!
+    public interface IUi
+    {
+        // Returns the redirect URL with the code. null if canceled or errored.
+        string PerformOAuthLogin(string url, string redirectUrl);
+    }
+
     public class Vault
     {
         public readonly Account[] Accounts;
@@ -15,6 +23,17 @@ namespace PasswordManagerAccess.DropboxPasswords
         {
             using var transport = new RestTransport();
             return Open(oauthToken, recoveryWords, transport);
+        }
+
+        public static Vault Open(string username, string deviceId, IUi ui, ISecureStorage storage)
+        {
+            using var transport = new RestTransport();
+            return new Vault(Client.OpenVault(username, deviceId, ui, storage, transport));
+        }
+
+        public static string GenerateRandomDeviceId()
+        {
+            return Guid.NewGuid().ToString().ToUpper();
         }
 
         //
