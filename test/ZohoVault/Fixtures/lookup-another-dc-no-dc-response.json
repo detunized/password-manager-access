@@ -1,0 +1,15 @@
+{
+    "status_code": 500,
+    "data": {
+        "loginid": "dude@lebowski.com",
+        "redirect_uri": "https://accounts.zoho.com/signin"
+    },
+    "resource_name": "lookup",
+    "message": "User exists in another DC",
+    "errors": [
+        {
+            "code": "U400",
+            "message": "User exists in another DC"
+        }
+    ]
+}

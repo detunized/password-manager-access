@@ -78,6 +78,25 @@ namespace PasswordManagerAccess.ZohoVault
             throw new UnsupportedFeatureException($"Unsupported data center '{dataCenter}'");
         }
 
+        internal static string UrlToDataCenter(string url)
+        {
+            var host = new Uri(url).Host;
+
+            if (host.EndsWith(".com"))
+                return "us";
+
+            if (host.EndsWith(".eu"))
+                return "eu";
+
+            if (host.EndsWith(".in"))
+                return "in";
+
+            if (host.EndsWith(".com.au"))
+                return "au";
+
+            throw new UnsupportedFeatureException($"Unsupported sign-in host '{host}'");
+        }
+
         internal static string RequestToken(RestClient rest)
         {
             var loginPage = rest.Get(LoginPageUrl, Headers);
@@ -130,9 +149,13 @@ namespace PasswordManagerAccess.ZohoVault
                 if (result == null)
                     throw MakeInvalidResponseError("lookup result not found");
 
+                var dc = result.DataCenter;
+                if (dc.IsNullOrEmpty())
+                    dc = UrlToDataCenter(result.Href);
+
                 return new UserInfo(id: result.UserId,
                                     digest: result.Digest,
-                                    tld: DataCenterToTld(result.DataCenter));
+                                    tld: DataCenterToTld(dc));
             }
 
             var error = GetError(status);
@@ -144,7 +167,11 @@ namespace PasswordManagerAccess.ZohoVault
                 if (redirect == null)
                     throw MakeInvalidResponseError("redirect info not found");
 
-                return RequestUserInfo(username, token, DataCenterToTld(redirect.DataCenter), rest);
+                var dc = redirect.DataCenter;
+                if (dc.IsNullOrEmpty())
+                    dc = UrlToDataCenter(redirect.RedirectUrl);
+
+                return RequestUserInfo(username, token, DataCenterToTld(dc), rest);
             // User doesn't exist
             case "U401":
                 throw new BadCredentialsException("The username is invalid");

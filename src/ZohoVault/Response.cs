@@ -140,7 +140,10 @@ namespace PasswordManagerAccess.ZohoVault.Response
         [JsonProperty("digest", Required = Required.Always)]
         public readonly string Digest;
 
-        [JsonProperty("dc", Required = Required.Always)]
+        [JsonProperty("href", Required = Required.Always)]
+        public readonly string Href;
+
+        [JsonProperty("dc")]
         public readonly string DataCenter;
     }
 

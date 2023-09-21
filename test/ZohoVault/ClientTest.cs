@@ -88,6 +88,23 @@ namespace PasswordManagerAccess.Test.ZohoVault
                                                       "Unsupported data center");
         }
 
+        [Theory]
+        [InlineData("https://accounts.zoho.com/signin", "us")]
+        [InlineData("https://accounts.zoho.eu/signin", "eu")]
+        [InlineData("https://accounts.zoho.in/signin", "in")]
+        [InlineData("https://accounts.zoho.com.au/signin", "au")]
+        public void UrlToDataCenter_returns_data_center(string url, string dc)
+        {
+            Assert.Equal(dc, Client.UrlToDataCenter(url));
+        }
+
+        [Fact]
+        public void UrlToDataCenter_throws_on_unknown_tld()
+        {
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.UrlToDataCenter("https://accounts.zoho.xyz/signin"),
+                                                      "Unsupported sign-in host");
+        }
+
         [Fact]
         public void RequestToken_makes_GET_request_and_returns_token()
         {
@@ -123,13 +140,18 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("com", user.Tld);
         }
 
-        [Fact]
-        public void RequestUserInfo_makes_POST_requests_and_returns_user_info_from_another_DC()
+        [Theory]
+        [InlineData("lookup-another-dc-response", "lookup-success-response")]
+        [InlineData("lookup-another-dc-no-dc-response", "lookup-success-response")]
+        [InlineData("lookup-another-dc-response", "lookup-success-no-dc-response")]
+        [InlineData("lookup-another-dc-no-dc-response", "lookup-success-no-dc-response")]
+        public void RequestUserInfo_makes_POST_requests_and_returns_user_info_from_another_DC(string lookupFixture,
+                                                                                              string resultFixture)
         {
             var flow = new RestFlow()
-                .Post(GetFixture("lookup-another-dc-response"))
+                .Post(GetFixture(lookupFixture))
                     .ExpectUrl($"https://accounts.zoho.eu/signin/v2/lookup/{Username}")
-                .Post(GetFixture("lookup-success-response"))
+                .Post(GetFixture(resultFixture))
                     .ExpectUrl($"https://accounts.zoho.com/signin/v2/lookup/{Username}");
 
             var user = Client.RequestUserInfo(Username, OAuthCookieValue, "eu", flow);
