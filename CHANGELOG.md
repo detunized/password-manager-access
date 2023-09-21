@@ -1,5 +1,8 @@
 # Changelog
 
+## 13.1.1
+  - ZohoVault: fixed a problem at login that started happening recently after the protocol change
+
 ## 13.1.0
   - Global: Bouncy Castle dependency added to `net48` and `netstandard2.0` targets (not to `net6.0`)
     in the main project file
