@@ -44,12 +44,10 @@ namespace PasswordManagerAccess.DropboxPasswords
                     // public key to the server which passes it along to one of the devices. The device encrypts the master key
                     // end sends it back to us.
                     var masterKey = LoadMasterKey(storage);
-                    var keyset = LoadKeyset(storage);
-                    if (masterKey == null || keyset == null)
+                    if (masterKey == null)
                     {
-                        (masterKey, keyset) = EnrollNewDevice(deviceId, storage, transport, apiRest);
+                        masterKey = EnrollNewDevice(deviceId, transport, apiRest);
                         storage.StoreString(MasterKeyKey, masterKey.ToBase64());
-                        storage.StoreString(KeysetKey, JsonConvert.SerializeObject(keyset));
                     }
 
                     // 1. Get account info
@@ -81,10 +79,10 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                      defaultHeaders: apiRest.DefaultHeaders);
                     var entries = DownloadAllEntries(rootFolder, features.Eligibility.RootPath, contentRest);
 
-                    // Try to find all keysets that decrypt (normally there's only one).
+                    // 5. Try to find all keysets that decrypt (normally there's only one).
                     var keysets = FindAndDecryptAllKeysets(entries, Util.HashMasterKey(masterKey));
 
-                    // Try to decrypt all account entries and see what decrypts.
+                    // 6. Try to decrypt all account entries and see what decrypts.
                     var accounts = FindAndDecryptAllAccounts(entries, keysets);
 
                     // Done, phew!
@@ -106,10 +104,7 @@ namespace PasswordManagerAccess.DropboxPasswords
         }
 
         // Returns the master key on successful enrollment.
-        private static (byte[] masterKey, R.EncryptedEntry keyset) EnrollNewDevice(string deviceId,
-                                                                                   ISecureStorage storage,
-                                                                                   IRestTransport transport,
-                                                                                   RestClient apiRest)
+        private static byte[] EnrollNewDevice(string deviceId, IRestTransport transport, RestClient apiRest)
         {
             // To enroll we need to generate a key pair. The public key will be sent to the server.
             // These keys don't need to persist since we don't do anything else but enrolling the device with them.
@@ -138,30 +133,10 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                     },
                                                     RestClient.NoHeaders,
                                                     apiRest);
-
+            // TODO: Check enrollStatus
             // TODO: Notify the the UI to tell the user to approve on another device
 
-            // 2. We need to request this to get the root path to be used in the follow up requests
-            var features = Post<R.Features>("passwords/get_features_v2",
-                                            RestClient.JsonNull, // Important to send null!
-                                            RestClient.NoHeaders,
-                                            apiRest);
-
-            var contentRest = new RestClient(apiRest.Transport,
-                                             "https://content.dropboxapi.com/2",
-                                             defaultHeaders: apiRest.DefaultHeaders);
-
-            // 3. Download the encrypted keyset that decrypts the vault. To decrypt it we need to also get the master key.
-            var keysetResponse = contentRest.PostRaw("passwords/download",
-                                                     "",
-                                                     MakePathHeaders($"/{enrollStatus.ActiveKeysetName}.json",
-                                                                     features.Eligibility.RootPath));
-            if (!keysetResponse.IsSuccessful)
-                throw new InternalErrorException("Failed to download the master keyset");
-
-            // TODO: 3. Send the ack
-
-            // 4. Get Bolt credentials that are used to subscribe to a Bolt channel to receive the master key
+            // 2. Get Bolt credentials that are used to subscribe to a Bolt channel to receive the master key
             var boltInfo = Post<R.BoltInfo>("passwords/get_bolt_info",
                                             new Dictionary<string, object>
                                             {
@@ -174,7 +149,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                                              "https://thunder.dropbox.com/2",
                                              defaultHeaders: apiRest.DefaultHeaders);
 
-            // 5. Subscribe to a Bolt channel to receive the encrypted master key
+            // 3. Subscribe to a Bolt channel to receive the encrypted master key
             var keys = PostDynamicJson("payloads/subscribe",
                                        new Dictionary<string, object>
                                        {
@@ -195,9 +170,10 @@ namespace PasswordManagerAccess.DropboxPasswords
                                        RestClient.NoHeaders,
                                        thunderRest);
 
+            // TODO: Handle refused enrollment
             var payload = keys.SelectToken("$.channel_payloads[0].payloads[0].payload");
             if (payload == null)
-                throw new InternalErrorException("Failed to enroll the device");
+                throw new InternalErrorException("Failed to enroll the device: no master key found in the response payload");
 
             var sourceDevicePublicKey = payload.StringAt("source_device_public_key", null);
             var encryptedData = payload.SelectToken("encrypted_user_key_bundle.encrypted_data")?.ToString();
@@ -206,13 +182,11 @@ namespace PasswordManagerAccess.DropboxPasswords
             if (sourceDevicePublicKey == null || encryptedData == null || nonce == null)
                 throw new InternalErrorException("Failed to extract the public key and the encrypted master key");
 
-            // Unlock the master key
-            var masterKey = CryptoBoxOpenEasy(encryptedData.Decode64(),
-                                              nonce.Decode64(),
-                                              privateKey,
-                                              sourceDevicePublicKey.Decode64());
-
-            return (masterKey, ParseKeyset(keysetResponse.Content) ?? throw new InternalErrorException("Failed to parse the keyset"));
+            // Decrypt the master key
+            return CryptoBoxOpenEasy(encryptedData.Decode64(),
+                                     nonce.Decode64(),
+                                     privateKey,
+                                     sourceDevicePublicKey.Decode64());
         }
 
         private static string AcquireOAuthToken(IUi ui, IRestTransport transport)
@@ -256,11 +230,6 @@ namespace PasswordManagerAccess.DropboxPasswords
             var masterKeyString = storage.LoadString(MasterKeyKey) ?? "";
             var masterKey = masterKeyString.Decode64();
             return masterKey.Length == MasterKeySize ? masterKey : null;
-        }
-
-        internal static R.EncryptedEntry? LoadKeyset(ISecureStorage storage)
-        {
-            return ParseKeyset(storage.LoadString(KeysetKey) ?? "");
         }
 
         private static Response.EncryptedEntry? ParseKeyset(string json)
@@ -346,7 +315,6 @@ namespace PasswordManagerAccess.DropboxPasswords
         internal const string PrivateKeyKey = "private-key";
         internal const string OAuthTokenKey = "oauth-token";
         internal const string MasterKeyKey = "master-key";
-        internal const string KeysetKey = "keyset";
 
         internal const int PublicKeySize = 32;
         internal const int PrivateKeySize = 32;
