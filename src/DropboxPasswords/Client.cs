@@ -6,12 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-// TODO: This library implement exactly what we need but it has a somewhat incompatible license.
-//       See if we could repurpose NaCl.Core which is MIT licensed to do what we need.
-//       It doesn't provide the crypto_box_open_easy equivalent by default.
-#if USE_NACL
+// TODO: NaCl.net is licensed under the MPL 2.0 license. Best would be to have a MIT licensed version.
 using NaCl;
-#endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
@@ -25,87 +21,15 @@ namespace PasswordManagerAccess.DropboxPasswords
         // TODO: Add error handling everywhere!
         public static Account[] OpenVault(string username, string deviceId, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
-            var oauthToken = storage.LoadString(OAuthTokenKey);
-            if (oauthToken.IsNullOrEmpty())
+            for (var attempt = 0; attempt < 2; attempt++)
             {
-                // 1. Generate PKCE challenge
-                var (verifier, challenge) = GenerateOAuth2PkceValues();
-
-                // 2. Perform OAuth2 login. On success the browser will be redirected to a URL with a code. Example:
-                //    https://www.dropbox.com/passwords_extension/auth_redirect?code=QTyFLnr4PfgAAAAAAAAAwFlYxU9pqEhQ6dMUo7nAju0
-                var redirectUrl = ui.PerformOAuthLogin(GenerateOAuth2AuthenticationUrl(challenge),
-                                                       "https://www.dropbox.com/passwords_extension/auth_redirect");
-                if (redirectUrl.IsNullOrEmpty())
-                    throw new InternalErrorException("Failed to perform OAuth2 login");
-
-                // 3. Parse redirect URL and extract the code
-                var code = ExtractQueryParameter(redirectUrl, "code");
-                if (code.IsNullOrEmpty())
-                    throw new InternalErrorException("Invalid redirect URL. Missing auth code");
-
-                // 3. Exchange the code for an OAuth2 token via a POST to:
-                var rest = new RestClient(transport, "https://api.dropboxapi.com/oauth2");
-                var response = rest.PostForm<R.OAuth2Token>("token",
-                                                            new Dictionary<string, object>
-                                                            {
-                                                                ["grant_type"] = "authorization_code",
-                                                                ["code"] = code,
-                                                                ["client_id"] = ClientId,
-                                                                ["code_verifier"] = verifier,
-                                                                ["redirect_uri"] = "https://www.dropbox.com/passwords_extension/auth_redirect",
-                                                            },
-                                                            RestClient.NoHeaders);
-
-                if (!response.IsSuccessful)
-                    throw new InternalErrorException("Failed to exchange auth code for an OAuth2 token");
-
-                oauthToken = response.Data.AccessToken;
-                storage.StoreString(OAuthTokenKey, oauthToken);
-            }
-
-            // Normally we would use the master key to decrypt the vault. In case we don't have it, we need to enroll
-            // a new device and receive the key form one of the devices enrolled previously. To do that we send the
-            // public key to the server which passes it along to one of the devices. The device encrypts the master key
-            // end sends it back to us.
-            var masterKey = LoadMasterKey(storage);
-            if (masterKey == null)
-            {
-                // To enroll we need to generate a key pair. The public key will be sent to the server.
-                // These keys don't need to persist since we don't do anything else but enrolling the device with them.
-                // We can throw them away after we're done.
-                var (publicKey, privateKey) = CryptoBoxKeypair();
-
-                // publicKey = "TCbJZg07erD5JLdngqn0leqaTv4yDPaPciZ4/IlgqUM=".Decode64();
-                // privateKey = "EDrBprqwud8YbZ10T0/7JmDcQY1tKWDmUFNqV8bw5k0=".Decode64();
-
-                // A working example of crypto_box_open_easy from the original JS source:
-                // gA(
-                //     {
-                //         encrypted: Si.fromBase64("kDZmVHrS3ZRNZUnUcaKQ6z5KqR5XYY6ymmJLAZhNVJk=").data.val, // encrypted key
-                //         nonce: Si.fromBase64("nSgGUq0+wgk6FuTonn/gLX3tMRYyDEsP").data.val                  // nonce
-                //     },
-                //     Si.fromBase64("EDrBprqwud8YbZ10T0/7JmDcQY1tKWDmUFNqV8bw5k0=").data.val,                // out private key
-                //     Si.fromBase64("1YPKexhpTXpqx9WQC2rfQ19qg1SD27jKkv8Iu2CqZU4=").data.val
-                // )
-
-                // CryptoBoxOpenEasy(ciphertext: "kDZmVHrS3ZRNZUnUcaKQ6z5KqR5XYY6ymmJLAZhNVJk=".Decode64(),
-                //                   nonce: "nSgGUq0+wgk6FuTonn/gLX3tMRYyDEsP".Decode64(),
-                //                   ourPrivateKey: "EDrBprqwud8YbZ10T0/7JmDcQY1tKWDmUFNqV8bw5k0=".Decode64(),
-                //                   theirPublicKey: "1YPKexhpTXpqx9WQC2rfQ19qg1SD27jKkv8Iu2CqZU4=".Decode64());
-
-                /*
+                var oauthToken = storage.LoadString(OAuthTokenKey);
+                if (oauthToken.IsNullOrEmpty())
                 {
-                    "encryptedBundle": {
-                        "base64EncryptedData": "YqvCKDWnmyzM1GhQQIeL91syNpzCK7poC5w610vv1Qsdq1Tjnr169ElXE0IXhQqFD6t9M+xnzdEefAzkPO+q1qb5iadkdoapWYTsjlrHJsDi+B5J3gUa+Pswo8TjTb4UTWqlydPl2SlyOSexEb1tZ/ZZxbKWzJ7HXT8ClrzbBnDR0XUnMuy0/qhKgqfPCSl8AmPdRZ9Jgho2RSou1dR/93QucIFrH6QVQMcck76EQTNfzf2ha59ViTOxnAcwNKyUEsa1wc81Q9uaWRzSVpsGsU+9yQp6nQBsqvU6UySV7G6M9OR+PBxcfTAHK3VFWG0UHoysCSdOXG8pqU+4aOc\u003d",
-                        "base64Nonce": "bfs71uSzIiXkYN/5nGs5TmdMU34JHAPB"
-                    },
-                    "type": "keyset",
-                    "version": 1,
-                    "identifier": "39B0B629-9D00-4C10-AF7D-62CD0D7383B9"
+                    oauthToken = AcquireOAuthToken(ui, transport);
+                    storage.StoreString(OAuthTokenKey, oauthToken);
                 }
-                */
 
-                // 1. Create the API client
                 var apiRest = new RestClient(transport,
                                              "https://api.dropboxapi.com/2",
                                              defaultHeaders: new Dictionary<string, string>
@@ -113,120 +37,242 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                  ["Authorization"] = $"Bearer {oauthToken}",
                                                  ["Origin"] = "chrome-extension://bmhejbnmpamgfnomlahkonpanlkcfabg",
                                              });
+                try
+                {
+                    // Normally we would use the master key to decrypt the vault. In case we don't have it, we need to enroll
+                    // a new device and receive the key form one of the devices enrolled previously. To do that we send the
+                    // public key to the server which passes it along to one of the devices. The device encrypts the master key
+                    // end sends it back to us.
+                    var masterKey = LoadMasterKey(storage);
+                    var keyset = LoadKeyset(storage);
+                    if (masterKey == null || keyset == null)
+                    {
+                        (masterKey, keyset) = EnrollNewDevice(deviceId, storage, transport, apiRest);
+                        storage.StoreString(MasterKeyKey, masterKey.ToBase64());
+                        storage.StoreString(KeysetKey, JsonConvert.SerializeObject(keyset));
+                    }
 
-                // 2. Features
-                var features = Post<R.Features>("passwords/get_features_v2",
-                                                RestClient.JsonNull, // Important to send null!
-                                                RestClient.NoHeaders,
-                                                apiRest);
+                    // 1. Get account info
+                    var accountInfo = Post<R.AccountInfo>("users/get_current_account",
+                                                          RestClient.JsonNull, // Important to send null!
+                                                          RestClient.NoHeaders,
+                                                          apiRest);
+                    if (accountInfo.Disabled)
+                        throw new InternalErrorException("The account is disabled");
 
-                // 3. Get account info
-                var accountInfo = Post<R.AccountInfo>("users/get_current_account",
-                                                      RestClient.JsonNull, // Important to send null!
-                                                      RestClient.NoHeaders,
-                                                      apiRest);
+                    // 2. Get features
+                    var features = Post<R.Features>("passwords/get_features_v2",
+                                                    RestClient.JsonNull, // Important to send null!
+                                                    RestClient.NoHeaders,
+                                                    apiRest);
+                    if (features.Eligibility.Tag != "enabled")
+                        throw new InternalErrorException("Dropbox Passwords is not enabled on this account");
 
-                // 4. Enroll the device
-                var enrollStatus = Post<R.EnrollStatus>("passwords/enroll_device",
-                                                        new Dictionary<string, object>
-                                                        {
-                                                            ["device_id"] = deviceId,
-                                                            ["device_public_key"] = publicKey.ToBase64(),
-                                                            ["client_ts_ms_utc"] = Os.UnixSeconds(),
-                                                            ["app_version"] = "3.23.1",
-                                                            ["platform"] = "chrome",
-                                                            ["platform_version"] = "Chrome 115.0.0.0",
-                                                            ["device_name"] = "Chrome Mac OS",
-                                                            ["enroll_action"] = new Dictionary<string, string>
-                                                            {
-                                                                [".tag"] = "enroll_device"
-                                                            },
-                                                            ["build_channel"] = new Dictionary<string, string>
-                                                            {
-                                                                [".tag"] = "external"
-                                                            }
-                                                        },
-                                                        RestClient.NoHeaders,
+                    // 3. List the root folder
+                    // TODO: Very long folders are not supported. See "has_more" and "cursor".
+                    var rootFolder = Post<R.RootFolder>("files/list_folder",
+                                                        new Dictionary<string, object> {["path"] = ""},
+                                                        MakeRootPathHeaders(features.Eligibility.RootPath),
                                                         apiRest);
 
-                // 5. Get Bolt credentials
-                var boltInfo = Post<R.BoltInfo>("passwords/get_bolt_info",
-                                                new Dictionary<string, object>
-                                                {
-                                                    ["device_id"] = deviceId,
-                                                },
-                                                RestClient.NoHeaders,
-                                                apiRest);
+                    // 4. Get all entries
+                    var contentRest = new RestClient(apiRest.Transport,
+                                                     "https://content.dropboxapi.com/2",
+                                                     defaultHeaders: apiRest.DefaultHeaders);
+                    var entries = DownloadAllEntries(rootFolder, features.Eligibility.RootPath, contentRest);
 
-                // 6. Subscribe to a Bolt channel to receive the public key
-                var thunderRest = new RestClient(transport,
-                                                 "https://thunder.dropbox.com/2",
-                                                 defaultHeaders: apiRest.DefaultHeaders);
+                    // Try to find all keysets that decrypt (normally there's only one).
+                    var keysets = FindAndDecryptAllKeysets(entries, Util.HashMasterKey(masterKey));
 
-                var keys = PostDynamicJson("payloads/subscribe",
-                                           new Dictionary<string, object>
-                                           {
-                                               ["channel_states"] = new[]
-                                               {
-                                                   new Dictionary<string, object>
-                                                   {
-                                                       ["channel_id"] = new Dictionary<string, object>
-                                                       {
-                                                           ["app_id"] = "passwords_bolt",
-                                                           ["unique_id"] = boltInfo.UniqueId,
-                                                       },
-                                                       ["revision"] = boltInfo.Revision,
-                                                       ["token"] = boltInfo.Token,
-                                                   }
-                                               }
-                                           },
-                                           RestClient.NoHeaders,
-                                           thunderRest);
+                    // Try to decrypt all account entries and see what decrypts.
+                    var accounts = FindAndDecryptAllAccounts(entries, keysets);
 
-                if (keys.SelectToken("$.channel_payloads[0].payloads[0].payload") is var payload && payload != null)
-                {
-                    var sourceDevicePublicKey = payload.StringAt("source_device_public_key", null);
-                    var encryptedData = payload.SelectToken("encrypted_user_key_bundle.encrypted_data")?.ToString();
-                    var nonce = payload.SelectToken("encrypted_user_key_bundle.nonce")?.ToString();
-
-                    if (sourceDevicePublicKey == null || encryptedData == null || nonce == null)
-                        throw new InternalErrorException("Failed to extract the public key and the encrypted master key");
-
-                    masterKey = CryptoBoxOpenEasy(encryptedData.Decode64(),
-                                                  nonce.Decode64(),
-                                                  privateKey,
-                                                  sourceDevicePublicKey.Decode64());
-                    storage.StoreString(MasterKeyKey, masterKey.ToBase64());
+                    // Done, phew!
+                    return accounts;
                 }
+                catch (TokenExpiredException e)
+                {
+                    if (attempt == 0)
+                    {
+                        storage.StoreString(OAuthTokenKey, null);
+                        continue;
+                    }
 
-                var contentRest = new RestClient(transport,
-                                                 "https://content.dropboxapi.com/2",
-                                                 defaultHeaders: apiRest.DefaultHeaders);
-
-                var keysetResponse = contentRest.PostRaw("passwords/download",
-                                                         "",
-                                                         MakePathHeaders($"/{enrollStatus.ActiveKeysetName}.json",
-                                                                         features.Eligibility.RootPath));
-                if (!keysetResponse.IsSuccessful)
-                    throw new InternalErrorException("Failed to download the master keyset");
-
-                Console.WriteLine("Public key: {0}", publicKey.ToBase64());
-                Console.WriteLine("Private key: {0}", privateKey.ToBase64());
-                Console.WriteLine("Master keyset: {0}", keysetResponse.Content);
-
-                Console.WriteLine("Public key: {0}", publicKey.ToBase64());
+                    throw new InternalErrorException("Failed to open the vault", e);
+                }
             }
 
             return Array.Empty<Account>();
+        }
+
+        // Returns the master key on successful enrollment.
+        private static (byte[] masterKey, R.EncryptedEntry keyset) EnrollNewDevice(string deviceId,
+                                                                                   ISecureStorage storage,
+                                                                                   IRestTransport transport,
+                                                                                   RestClient apiRest)
+        {
+            // To enroll we need to generate a key pair. The public key will be sent to the server.
+            // These keys don't need to persist since we don't do anything else but enrolling the device with them.
+            // We can throw them away after we're done.
+            var (publicKey, privateKey) = CryptoBoxKeypair();
+
+            // 1. Initial enrollment request which sends the notification to other devices to prompt the user to approve
+            var enrollStatus = Post<R.EnrollStatus>("passwords/enroll_device",
+                                                    new Dictionary<string, object>
+                                                    {
+                                                        ["device_id"] = deviceId,
+                                                        ["device_public_key"] = publicKey.ToBase64(),
+                                                        ["client_ts_ms_utc"] = Os.UnixSeconds(),
+                                                        ["app_version"] = "3.23.1",
+                                                        ["platform"] = "chrome",
+                                                        ["platform_version"] = "Chrome 115.0.0.0",
+                                                        ["device_name"] = "Chrome Mac OS",
+                                                        ["enroll_action"] = new Dictionary<string, string>
+                                                        {
+                                                            [".tag"] = "enroll_device"
+                                                        },
+                                                        ["build_channel"] = new Dictionary<string, string>
+                                                        {
+                                                            [".tag"] = "external"
+                                                        }
+                                                    },
+                                                    RestClient.NoHeaders,
+                                                    apiRest);
+
+            // TODO: Notify the the UI to tell the user to approve on another device
+
+            // 2. We need to request this to get the root path to be used in the follow up requests
+            var features = Post<R.Features>("passwords/get_features_v2",
+                                            RestClient.JsonNull, // Important to send null!
+                                            RestClient.NoHeaders,
+                                            apiRest);
+
+            var contentRest = new RestClient(apiRest.Transport,
+                                             "https://content.dropboxapi.com/2",
+                                             defaultHeaders: apiRest.DefaultHeaders);
+
+            // 3. Download the encrypted keyset that decrypts the vault. To decrypt it we need to also get the master key.
+            var keysetResponse = contentRest.PostRaw("passwords/download",
+                                                     "",
+                                                     MakePathHeaders($"/{enrollStatus.ActiveKeysetName}.json",
+                                                                     features.Eligibility.RootPath));
+            if (!keysetResponse.IsSuccessful)
+                throw new InternalErrorException("Failed to download the master keyset");
+
+            // TODO: 3. Send the ack
+
+            // 4. Get Bolt credentials that are used to subscribe to a Bolt channel to receive the master key
+            var boltInfo = Post<R.BoltInfo>("passwords/get_bolt_info",
+                                            new Dictionary<string, object>
+                                            {
+                                                ["device_id"] = deviceId,
+                                            },
+                                            RestClient.NoHeaders,
+                                            apiRest);
+
+            var thunderRest = new RestClient(transport,
+                                             "https://thunder.dropbox.com/2",
+                                             defaultHeaders: apiRest.DefaultHeaders);
+
+            // 5. Subscribe to a Bolt channel to receive the encrypted master key
+            var keys = PostDynamicJson("payloads/subscribe",
+                                       new Dictionary<string, object>
+                                       {
+                                           ["channel_states"] = new[]
+                                           {
+                                               new Dictionary<string, object>
+                                               {
+                                                   ["channel_id"] = new Dictionary<string, object>
+                                                   {
+                                                       ["app_id"] = "passwords_bolt",
+                                                       ["unique_id"] = boltInfo.UniqueId,
+                                                   },
+                                                   ["revision"] = boltInfo.Revision,
+                                                   ["token"] = boltInfo.Token,
+                                               }
+                                           }
+                                       },
+                                       RestClient.NoHeaders,
+                                       thunderRest);
+
+            var payload = keys.SelectToken("$.channel_payloads[0].payloads[0].payload");
+            if (payload == null)
+                throw new InternalErrorException("Failed to enroll the device");
+
+            var sourceDevicePublicKey = payload.StringAt("source_device_public_key", null);
+            var encryptedData = payload.SelectToken("encrypted_user_key_bundle.encrypted_data")?.ToString();
+            var nonce = payload.SelectToken("encrypted_user_key_bundle.nonce")?.ToString();
+
+            if (sourceDevicePublicKey == null || encryptedData == null || nonce == null)
+                throw new InternalErrorException("Failed to extract the public key and the encrypted master key");
+
+            // Unlock the master key
+            var masterKey = CryptoBoxOpenEasy(encryptedData.Decode64(),
+                                              nonce.Decode64(),
+                                              privateKey,
+                                              sourceDevicePublicKey.Decode64());
+
+            return (masterKey, ParseKeyset(keysetResponse.Content) ?? throw new InternalErrorException("Failed to parse the keyset"));
+        }
+
+        private static string AcquireOAuthToken(IUi ui, IRestTransport transport)
+        {
+            // 1. Generate PKCE challenge
+            var (verifier, challenge) = GenerateOAuth2PkceValues();
+
+            // 2. Perform OAuth2 login. On success the browser will be redirected to a URL with a code. Example:
+            //    https://www.dropbox.com/passwords_extension/auth_redirect?code=QTyFLnr4PfgAAAAAAAAAwFlYxU9pqEhQ6dMUo7nAju0
+            var redirectUrl = ui.PerformOAuthLogin(GenerateOAuth2AuthenticationUrl(challenge),
+                                                   "https://www.dropbox.com/passwords_extension/auth_redirect");
+            if (redirectUrl.IsNullOrEmpty())
+                throw new InternalErrorException("Failed to perform OAuth2 login");
+
+            // 3. Parse redirect URL and extract the code
+            var code = ExtractQueryParameter(redirectUrl, "code");
+            if (code.IsNullOrEmpty())
+                throw new InternalErrorException("Invalid redirect URL. Missing auth code");
+
+            // 3. Exchange the code for an OAuth2 token via a POST to:
+            var rest = new RestClient(transport, "https://api.dropboxapi.com/oauth2");
+            var response = rest.PostForm<R.OAuth2Token>("token",
+                                                        new Dictionary<string, object>
+                                                        {
+                                                            ["grant_type"] = "authorization_code",
+                                                            ["code"] = code,
+                                                            ["client_id"] = ClientId,
+                                                            ["code_verifier"] = verifier,
+                                                            ["redirect_uri"] = "https://www.dropbox.com/passwords_extension/auth_redirect",
+                                                        },
+                                                        RestClient.NoHeaders);
+
+            if (!response.IsSuccessful)
+                throw new InternalErrorException("Failed to exchange auth code for an OAuth2 token");
+
+            return response.Data.AccessToken;
         }
 
         internal static byte[]? LoadMasterKey(ISecureStorage storage)
         {
             var masterKeyString = storage.LoadString(MasterKeyKey) ?? "";
             var masterKey = masterKeyString.Decode64();
-            if (masterKey.Length != MasterKeySize)
+            return masterKey.Length == MasterKeySize ? masterKey : null;
+        }
+
+        internal static R.EncryptedEntry? LoadKeyset(ISecureStorage storage)
+        {
+            return ParseKeyset(storage.LoadString(KeysetKey) ?? "");
+        }
+
+        private static Response.EncryptedEntry? ParseKeyset(string json)
+        {
+            try
+            {
+                return JsonConvert.DeserializeObject<Response.EncryptedEntry>(json);
+            }
+            catch (JsonException)
+            {
                 return null;
-            return masterKey;
+            }
         }
 
         internal static (byte[] PublicKey, byte[] PrivateKey) LoadOrGenerateKeys(ISecureStorage storage)
@@ -260,12 +306,7 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         internal static (byte[] PublicKey, byte[] PrivateKey) CryptoBoxKeypair()
         {
-#if USE_NACL
             Curve25519XSalsa20Poly1305.KeyPair(out var privateKey, out var publicKey);
-#else
-            var privateKey = new byte[PrivateKeySize];
-            var publicKey = new byte[PublicKeySize];
-#endif
             if (publicKey.Length != PublicKeySize || privateKey.Length != PrivateKeySize)
                 throw new InternalErrorException("Invalid key length");
 
@@ -274,12 +315,11 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         public static byte[] CryptoBoxOpenEasy(byte[] ciphertext, byte[] nonce, byte[] ourPrivateKey, byte[] theirPublicKey)
         {
-#if USE_NACL
             var plain = new byte[ciphertext.Length - XSalsa20Poly1305.TagLength];
             if (new Curve25519XSalsa20Poly1305(ourPrivateKey, theirPublicKey).TryDecrypt(plain, ciphertext, nonce))
                 return plain;
-#endif
-            throw new InternalErrorException("Failed to decrypt");
+
+            throw new CryptoException("Failed to decrypt");
         }
 
         // TODO: Move to Common
@@ -306,10 +346,11 @@ namespace PasswordManagerAccess.DropboxPasswords
         internal const string PrivateKeyKey = "private-key";
         internal const string OAuthTokenKey = "oauth-token";
         internal const string MasterKeyKey = "master-key";
+        internal const string KeysetKey = "keyset";
 
         internal const int PublicKeySize = 32;
         internal const int PrivateKeySize = 32;
-        internal const int MasterKeySize = 32;
+        internal const int MasterKeySize = 16;
 
         internal static string GenerateOAuth2AuthenticationUrl(string challenge)
         {
@@ -566,8 +607,24 @@ namespace PasswordManagerAccess.DropboxPasswords
         // Errors
         //
 
-        internal static InternalErrorException MakeError(RestResponse response)
+        internal class TokenExpiredException: Exception
         {
+        }
+
+        internal static InternalErrorException MakeError(RestResponse<string> response)
+        {
+            // Try to deserialize the error response first
+            try
+            {
+                var error = JsonConvert.DeserializeObject<Response.Error>(response.Content);
+                if (error != null && error.Status.Tag == "invalid_access_token")
+                    throw new TokenExpiredException();
+            }
+            catch (JsonException)
+            {
+                // Ignore the failed attempt to deserialize the error response and return a generic error below
+            }
+
             return MakeError($"POST request to {response.RequestUri} failed");
         }
 

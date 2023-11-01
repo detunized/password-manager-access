@@ -13,8 +13,13 @@ namespace PasswordManagerAccess.DropboxPasswords
     {
         public static byte[] DeriveMasterKeyFromRecoveryWords(string[] recoveryWords)
         {
+            return HashMasterKey(ConvertRecoveryWordsToRecoveryKey(recoveryWords));
+        }
+
+        public static byte[] HashMasterKey(byte[] masterKey)
+        {
             using var blake = new HMACBlake2B(Array.Empty<byte>(), 256);
-            return blake.ComputeHash(ConvertRecoveryWordsToRecoveryKey(recoveryWords));
+            return blake.ComputeHash(masterKey);
         }
 
         //

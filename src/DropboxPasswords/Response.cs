@@ -70,6 +70,15 @@ namespace PasswordManagerAccess.DropboxPasswords
             public readonly string Tag;
         }
 
+        public class Error
+        {
+            [JsonProperty("error_summary", Required = Required.Always)]
+            public readonly string Summary;
+
+            [JsonProperty("error", Required = Required.Always)]
+            public readonly Status Status;
+        }
+
         public class Features
         {
             [JsonProperty("eligibility", Required = Required.Always)]
@@ -253,7 +262,7 @@ namespace PasswordManagerAccess.DropboxPasswords
             [JsonProperty("identifier", Required = Required.Always)]
             public readonly string Id;
 
-            [JsonProperty("name", Required = Required.Always)]
+            [JsonProperty("name")]
             public readonly string Name;
 
             [JsonProperty("items", Required = Required.Always)]
