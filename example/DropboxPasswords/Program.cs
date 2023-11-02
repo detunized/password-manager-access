@@ -93,7 +93,7 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
                     return;
                 }
 
-                var accounts = Vault.Open(config["username"], config["device-id"], new TextUi(), new PlainStorage()).Accounts;
+                var accounts = Vault.Open(config["device-id"], new TextUi(), new PlainStorage()).Accounts;
                 //var accounts = Vault.Open("", words).Accounts;
                 for (var i = 0; i < accounts.Length; ++i)
                 {

@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.DropboxPasswords
     {
         // TODO: Refactor this and clean it up. This is work in progress.
         // TODO: Add error handling everywhere!
-        public static Account[] OpenVault(string username, string deviceId, IUi ui, ISecureStorage storage, IRestTransport transport)
+        public static Account[] OpenVault(string deviceId, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             for (var attempt = 0; attempt < 2; attempt++)
             {
@@ -584,8 +584,8 @@ namespace PasswordManagerAccess.DropboxPasswords
             // Try to deserialize the error response first
             try
             {
-                var error = JsonConvert.DeserializeObject<Response.Error>(response.Content);
-                if (error != null && error.Status.Tag == "invalid_access_token")
+                var error = JsonConvert.DeserializeObject<Response.Error>(response.Content ?? "");
+                if (error?.Status.Tag == "invalid_access_token")
                     throw new TokenExpiredException();
             }
             catch (JsonException)
@@ -593,7 +593,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                 // Ignore the failed attempt to deserialize the error response and return a generic error below
             }
 
-            return MakeError($"POST request to {response.RequestUri} failed");
+            return MakeError($"POST request to {response.RequestUri} failed", response.Error);
         }
 
         internal static InternalErrorException MakeError(string message, Exception? inner = null)

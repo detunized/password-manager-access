@@ -25,10 +25,10 @@ namespace PasswordManagerAccess.DropboxPasswords
             return Open(oauthToken, recoveryWords, transport);
         }
 
-        public static Vault Open(string username, string deviceId, IUi ui, ISecureStorage storage)
+        public static Vault Open(string deviceId, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVault(username, deviceId, ui, storage, transport));
+            return new Vault(Client.OpenVault(deviceId, ui, storage, transport));
         }
 
         public static string GenerateRandomDeviceId()

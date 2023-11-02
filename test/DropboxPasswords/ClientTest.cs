@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using Xunit;
@@ -11,7 +12,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
 {
     public class ClientTest: TestBase
     {
-        [Fact(Skip = "Disabled because of NaCl.Net for now")]
+        [Fact]
         public void CryptoBoxOpenEasy_decrypts_ciphertext()
         {
             var plaintext = Client.CryptoBoxOpenEasy(
@@ -24,7 +25,20 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         }
 
         [Fact]
-        public void OpenVault_returns_accounts()
+        public void OpenVault_with_bolt_returns_accounts()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("account-info"))
+                .Post(GetFixture("features"))
+                .Post(GetFixture("root-folder"))
+                .Post(GetFixture("entry-keyset"))
+                .Post(GetFixture("entry-vault"));
+
+            var account = Client.OpenVault("device-id", null, GetStorage(), flow);
+        }
+
+        [Fact]
+        public void OpenVault_with_recovery_words_returns_accounts()
         {
             var flow = new RestFlow()
                 .Post(GetFixture("account-info"))
@@ -63,6 +77,19 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
             var keysets = Client.FindAndDecryptAllKeysets(entries, MasterKey);
 
             Assert.Single(keysets);
+        }
+
+        //
+        // Helpers
+        //
+
+        private static ISecureStorage GetStorage()
+        {
+            return new MemoryStorage(new Dictionary<string, string>
+            {
+                ["oauth-token"] = "oauth-token",
+                ["master-key"] = UtilTest.MasterKeyRaw.ToBase64(),
+            });
         }
 
         //

@@ -78,6 +78,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
 
         internal static readonly byte[] RecoveryKey = "5aff62570a3a60754f72a563bdd5a35e".DecodeHex();
 
+        internal static readonly byte[] MasterKeyRaw = "5aff62570a3a60754f72a563bdd5a35e".DecodeHex();
         internal static readonly byte[] MasterKey =
             "4a0a046a2d4e2ee312c550a54fe96b573133e0d5b34f09b985c2b02876b98e6f".DecodeHex();
     }
