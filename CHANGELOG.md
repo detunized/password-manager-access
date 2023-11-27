@@ -1,5 +1,8 @@
 # Changelog
 
+## 13.2.0
+  - 1Password: added support for multiple WebAuthn keys
+
 ## 13.1.1
   - ZohoVault: fixed a problem at login that started happening recently after the protocol change
 
