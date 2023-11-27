@@ -561,8 +561,8 @@ namespace PasswordManagerAccess.OnePassword
             if (!(factor.Parameters is R.WebAuthnMfa extra))
                 throw new InternalErrorException("WebAuthn extra parameters expected");
 
-            if (extra.KeyHandles.Length > 1)
-                throw new UnsupportedFeatureException("Multiple WebAuthn keys are not supported");
+            if (extra.KeyHandles.Length == 0)
+                throw new InternalErrorException("Expected at least one WebAuthn key to be provided");
 
             try
             {
@@ -570,7 +570,7 @@ namespace PasswordManagerAccess.OnePassword
                                                       challenge: extra.Challenge,
                                                       origin: $"https://{credentials.Domain}",
                                                       crossOrigin: false,
-                                                      keyHandle: extra.KeyHandles[0]);
+                                                      keyHandles: extra.KeyHandles);
 
                 return SecondFactorResult.Done(new Dictionary<string, string>
                                                {
