@@ -1,0 +1,7 @@
+{
+    "token_type": "bearer",
+    "access_token": "SpEDMQTeZlUAAAAAAAAAAVWWS95lD7vRptHu5Prl9NA02kM5PsdBhY--QBpOexA8",
+    "scope": "account_info.read account_info.write contacts.read contacts.write file_requests.read file_requests.write files.content.read files.content.write files.metadata.read files.metadata.write private:account_info.read private:account_info.write private:files.content.read private:files.content.write private:files.metadata.read private:settings.read private:sharing.read private:sharing.write sharing.read sharing.write",
+    "uid": "3472601408",
+    "account_id": "dbid:AAD7aMTP1kLKKxwZlTCEM9JGnZXtH956UB4"
+}

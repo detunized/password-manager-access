@@ -7,10 +7,7 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.DropboxPasswords;
 using PuppeteerSharp;
-#if NET48_OR_GREATER
-#else
 using System.Runtime.InteropServices;
-#endif
 
 namespace PasswordManagerAccess.Example.DropboxPasswords
 {
@@ -20,24 +17,10 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
         {
             public string PerformOAuthLogin(string url, string redirectUrl)
             {
-                // Detect the Chrome installation path
+                // Detect the Chrome installation path.
+                // Note that this will not work for all installations. This code here is purely to demonstrate how
+                // this might be implemented. The real application should launch the browser in a more robust way.
                 var chromePath = "";
-#if NET48_OR_GREATER
-                switch (Environment.OSVersion.Platform)
-                {
-                case PlatformID.Win32NT:
-                    chromePath = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
-                    break;
-                case PlatformID.MacOSX:
-                    chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-                    break;
-                case PlatformID.Unix:
-                    chromePath = "/usr/bin/google-chrome";
-                    break;
-                default:
-                    throw new InvalidOperationException("Unsupported platform");
-                }
-#else
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     chromePath = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -46,7 +29,6 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
                     chromePath = "/usr/bin/google-chrome";
                 else
                     throw new InvalidOperationException("Unsupported platform");
-#endif
 
                 return Task.Run(async () =>
                 {

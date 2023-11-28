@@ -21,86 +21,84 @@ namespace PasswordManagerAccess.DropboxPasswords
         // TODO: Add error handling everywhere!
         public static Account[] OpenVault(string deviceId, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
-            for (var attempt = 0; attempt < 2; attempt++)
+            try
             {
-                var oauthToken = storage.LoadString(OAuthTokenKey);
-                if (oauthToken.IsNullOrEmpty())
-                {
-                    oauthToken = AcquireOAuthToken(ui, transport);
-                    storage.StoreString(OAuthTokenKey, oauthToken);
-                }
-
-                var apiRest = new RestClient(transport,
-                                             "https://api.dropboxapi.com/2",
-                                             defaultHeaders: new Dictionary<string, string>
-                                             {
-                                                 ["Authorization"] = $"Bearer {oauthToken}",
-                                                 ["Origin"] = "chrome-extension://bmhejbnmpamgfnomlahkonpanlkcfabg",
-                                             });
-                try
-                {
-                    // Normally we would use the master key to decrypt the vault. In case we don't have it, we need to enroll
-                    // a new device and receive the key form one of the devices enrolled previously. To do that we send the
-                    // public key to the server which passes it along to one of the devices. The device encrypts the master key
-                    // end sends it back to us.
-                    var masterKey = LoadMasterKey(storage);
-                    if (masterKey == null)
-                    {
-                        masterKey = EnrollNewDevice(deviceId, transport, apiRest);
-                        storage.StoreString(MasterKeyKey, masterKey.ToBase64());
-                    }
-
-                    // 1. Get account info
-                    var accountInfo = Post<R.AccountInfo>("users/get_current_account",
-                                                          RestClient.JsonNull, // Important to send null!
-                                                          RestClient.NoHeaders,
-                                                          apiRest);
-                    if (accountInfo.Disabled)
-                        throw new InternalErrorException("The account is disabled");
-
-                    // 2. Get features
-                    var features = Post<R.Features>("passwords/get_features_v2",
-                                                    RestClient.JsonNull, // Important to send null!
-                                                    RestClient.NoHeaders,
-                                                    apiRest);
-                    if (features.Eligibility.Tag != "enabled")
-                        throw new InternalErrorException("Dropbox Passwords is not enabled on this account");
-
-                    // 3. List the root folder
-                    // TODO: Very long folders are not supported. See "has_more" and "cursor".
-                    var rootFolder = Post<R.RootFolder>("files/list_folder",
-                                                        new Dictionary<string, object> {["path"] = ""},
-                                                        MakeRootPathHeaders(features.Eligibility.RootPath),
-                                                        apiRest);
-
-                    // 4. Get all entries
-                    var contentRest = new RestClient(apiRest.Transport,
-                                                     "https://content.dropboxapi.com/2",
-                                                     defaultHeaders: apiRest.DefaultHeaders);
-                    var entries = DownloadAllEntries(rootFolder, features.Eligibility.RootPath, contentRest);
-
-                    // 5. Try to find all keysets that decrypt (normally there's only one).
-                    var keysets = FindAndDecryptAllKeysets(entries, Util.HashMasterKey(masterKey));
-
-                    // 6. Try to decrypt all account entries and see what decrypts.
-                    var accounts = FindAndDecryptAllAccounts(entries, keysets);
-
-                    // Done, phew!
-                    return accounts;
-                }
-                catch (TokenExpiredException e)
-                {
-                    if (attempt == 0)
-                    {
-                        storage.StoreString(OAuthTokenKey, null);
-                        continue;
-                    }
-
-                    throw new InternalErrorException("Failed to open the vault", e);
-                }
+                // We allow one attempt to fail due to an expired token. If it fails again we give up.
+                return OpenVaultAttempt(deviceId, ui, storage, transport);
+            }
+            catch (TokenExpiredException)
+            {
+                storage.StoreString(OAuthTokenKey, null);
             }
 
-            return Array.Empty<Account>();
+            return OpenVaultAttempt(deviceId, ui, storage, transport);
+        }
+
+        internal static Account[] OpenVaultAttempt(string deviceId, IUi ui, ISecureStorage storage, IRestTransport transport)
+        {
+            var oauthToken = storage.LoadString(OAuthTokenKey);
+            if (oauthToken.IsNullOrEmpty())
+            {
+                oauthToken = AcquireOAuthToken(ui, transport);
+                storage.StoreString(OAuthTokenKey, oauthToken);
+            }
+
+            var apiRest = new RestClient(transport,
+                                         "https://api.dropboxapi.com/2",
+                                         defaultHeaders: new Dictionary<string, string>
+                                         {
+                                             ["Authorization"] = $"Bearer {oauthToken}",
+                                             ["Origin"] = "chrome-extension://bmhejbnmpamgfnomlahkonpanlkcfabg",
+                                         });
+
+            // Normally we would use the master key to decrypt the vault. In case we don't have it, we need to enroll
+            // a new device and receive the key form one of the devices enrolled previously. To do that we send the
+            // public key to the server which passes it along to one of the devices. The device encrypts the master key
+            // end sends it back to us.
+            var masterKey = LoadMasterKey(storage);
+            if (masterKey == null)
+            {
+                masterKey = EnrollNewDevice(deviceId, transport, apiRest);
+                storage.StoreString(MasterKeyKey, masterKey.ToBase64());
+            }
+
+            // 1. Get account info
+            var accountInfo = Post<R.AccountInfo>("users/get_current_account",
+                                                  RestClient.JsonNull, // Important to send null!
+                                                  RestClient.NoHeaders,
+                                                  apiRest);
+            if (accountInfo.Disabled)
+                throw new InternalErrorException("The account is disabled");
+
+            // 2. Get features
+            var features = Post<R.Features>("passwords/get_features_v2",
+                                            RestClient.JsonNull, // Important to send null!
+                                            RestClient.NoHeaders,
+                                            apiRest);
+            if (features.Eligibility.Tag != "enabled")
+                throw new InternalErrorException("Dropbox Passwords is not enabled on this account");
+
+            // 3. List the root folder
+            // TODO: Very long folders are not supported. See "has_more" and "cursor".
+            var rootFolder = Post<R.RootFolder>("files/list_folder",
+                                                new Dictionary<string, object> { ["path"] = "" },
+                                                MakeRootPathHeaders(features.Eligibility.RootPath),
+                                                apiRest);
+
+            // 4. Get all entries
+            var contentRest = new RestClient(apiRest.Transport,
+                                             "https://content.dropboxapi.com/2",
+                                             defaultHeaders: apiRest.DefaultHeaders);
+            var entries = DownloadAllEntries(rootFolder, features.Eligibility.RootPath, contentRest);
+
+            // 5. Try to find all keysets that decrypt (normally there's only one).
+            var keysets = FindAndDecryptAllKeysets(entries, Util.HashMasterKey(masterKey));
+
+            // 6. Try to decrypt all account entries and see what decrypts.
+            var accounts = FindAndDecryptAllAccounts(entries, keysets);
+
+            // Done, phew!
+            return accounts;
         }
 
         // Returns the master key on successful enrollment.
@@ -411,7 +409,6 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                               RestClient contentRest)
         {
             return rootFolder.Entries
-                .AsParallel() // Download in parallel
                 .Where(e => e.IsDownloadable && e.Tag == "file")
                 .Select(e => DownloadFolderEntry(e.Path, rootPath, contentRest))
                 .ToArray(); // This will force the actual download

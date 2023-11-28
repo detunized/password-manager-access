@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Collections.Generic;
+using System.Net;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using Xunit;
@@ -35,6 +36,79 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                 .Post(GetFixture("entry-vault"));
 
             var account = Client.OpenVault("device-id", null, GetStorage(), flow);
+            Assert.NotEmpty(account);
+        }
+
+        [Fact]
+        public void OpenVault_throws_on_server_errors_at_any_step()
+        {
+            var fixtures = new[] {"account-info", "features", "root-folder", "entry-keyset", "entry-vault"};
+            foreach (var failOnFixture in fixtures)
+            {
+                var flow = new RestFlow();
+                foreach (var fixture in fixtures)
+                    if (fixture == failOnFixture)
+                        flow.Post("", HttpStatusCode.NotFound);
+                    else
+                        flow.Post(GetFixture(fixture));
+
+                Exceptions.AssertThrowsInternalError(() => Client.OpenVault("device-id", null, GetStorage(), flow));
+            }
+        }
+
+        [Fact]
+        public void OpenVault_restarts_on_expired_token_at_any_step_performs_oauth_and_sets_new_token()
+        {
+            var fixtures = new[] {"account-info", "features", "root-folder", "entry-keyset", "entry-vault"};
+            foreach (var failOnFixture in fixtures)
+            {
+                var flow = new RestFlow();
+                foreach (var fixture in fixtures)
+                {
+                    if (fixture == failOnFixture)
+                    {
+                        // Add an expired token response
+                        flow.Post(GetFixture("expired-oauth"), HttpStatusCode.Unauthorized);
+
+                        // Add OAuth steps
+                        flow.Post(GetFixture("code-for-oauth-exchange"));
+
+                        // And the all the steps once again
+                        foreach (var f in fixtures)
+                            flow.Post(GetFixture(f));
+
+                        break;
+                    }
+
+                    flow.Post(GetFixture(fixture));
+                }
+
+                var storage = GetStorage();
+                var accounts = Client.OpenVault("device-id", GetUi(), storage, flow);
+
+                Assert.NotEmpty(accounts);
+                Assert.Equal(OAuthToken, storage.Values["oauth-token"]);
+            }
+        }
+
+        [Fact]
+        public void OpenVault_without_oauth_token_opens_browser()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("code-for-oauth-exchange"))
+                .Post(GetFixture("account-info"))
+                .Post(GetFixture("features"))
+                .Post(GetFixture("root-folder"))
+                .Post(GetFixture("entry-keyset"))
+                .Post(GetFixture("entry-vault"));
+
+            var storage = GetStorage();
+            storage.Values.Remove("oauth-token");
+
+            var accounts = Client.OpenVault("device-id", GetUi(), storage, flow);
+
+            Assert.NotEmpty(accounts);
+            Assert.Equal(OAuthToken, storage.Values["oauth-token"]);
         }
 
         [Fact]
@@ -83,7 +157,20 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         // Helpers
         //
 
-        private static ISecureStorage GetStorage()
+        private class OAuthPerformingUi: IUi
+        {
+            public string PerformOAuthLogin(string url, string redirectUrl)
+            {
+                return "https://www.dropbox.com/passwords_extension/auth_redirect?code=code";
+            }
+        }
+
+        private static IUi GetUi()
+        {
+            return new OAuthPerformingUi();
+        }
+
+        private static MemoryStorage GetStorage()
         {
             return new MemoryStorage(new Dictionary<string, string>
             {
@@ -99,5 +186,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         // TODO: Share with UtilTest
         private static readonly byte[] MasterKey =
             "4a0a046a2d4e2ee312c550a54fe96b573133e0d5b34f09b985c2b02876b98e6f".DecodeHex();
+
+        private const string OAuthToken = "SpEDMQTeZlUAAAAAAAAAAVWWS95lD7vRptHu5Prl9NA02kM5PsdBhY--QBpOexA8";
     }
 }
