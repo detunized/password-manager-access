@@ -19,16 +19,15 @@ namespace PasswordManagerAccess.DropboxPasswords
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string oauthToken, string[] recoveryWords)
-        {
-            using var transport = new RestTransport();
-            return Open(oauthToken, recoveryWords, transport);
-        }
-
         public static Vault Open(string deviceId, IUi ui, ISecureStorage storage)
         {
+            return Open(deviceId, Array.Empty<string>(), ui, storage);
+        }
+
+        public static Vault Open(string deviceId, string[] recoveryWords, IUi ui, ISecureStorage storage)
+        {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVault(deviceId, ui, storage, transport));
+            return new Vault(Client.OpenVault(deviceId, recoveryWords, ui, storage, transport));
         }
 
         public static string GenerateRandomDeviceId()
@@ -43,11 +42,6 @@ namespace PasswordManagerAccess.DropboxPasswords
         internal Vault(Account[] accounts)
         {
             Accounts = accounts;
-        }
-
-        internal static Vault Open(string oauthToken, string[] recoveryWords, IRestTransport transport)
-        {
-            return new Vault(Client.OpenVault(oauthToken, recoveryWords, transport));
         }
     }
 }

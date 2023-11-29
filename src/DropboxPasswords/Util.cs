@@ -11,23 +11,8 @@ namespace PasswordManagerAccess.DropboxPasswords
 {
     internal static class Util
     {
-        public static byte[] DeriveMasterKeyFromRecoveryWords(string[] recoveryWords)
-        {
-            return HashMasterKey(ConvertRecoveryWordsToRecoveryKey(recoveryWords));
-        }
-
-        public static byte[] HashMasterKey(byte[] masterKey)
-        {
-            using var blake = new HMACBlake2B(Array.Empty<byte>(), 256);
-            return blake.ComputeHash(masterKey);
-        }
-
-        //
-        // Internal
-        //
-
         // TODO: Only English recovery words are supported
-        internal static byte[] ConvertRecoveryWordsToRecoveryKey(string[] recoveryWords)
+        public static byte[] DeriveMasterKeyFromRecoveryWords(string[] recoveryWords)
         {
             if (recoveryWords.Length != 12)
                 throw new InternalErrorException("Exactly 12 recovery words must be provided");
@@ -71,6 +56,16 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             return key;
         }
+
+        public static byte[] ConvertMasterKeyToEncryptionKey(byte[] masterKey)
+        {
+            using var blake = new HMACBlake2B(Array.Empty<byte>(), 256);
+            return blake.ComputeHash(masterKey);
+        }
+
+        //
+        // Internal
+        //
 
         internal static int CalculateChecksum(byte[] key)
         {

@@ -17,24 +17,33 @@ namespace PasswordManagerAccess.DropboxPasswords
 {
     internal static class Client
     {
-        // TODO: Refactor this and clean it up. This is work in progress.
         // TODO: Add error handling everywhere!
-        public static Account[] OpenVault(string deviceId, IUi ui, ISecureStorage storage, IRestTransport transport)
+        // The `recoveryWords` parameter is optional (could be empty, no nulls please). If it's provided we don't use
+        // the master key request and don't store it. It's too involved to create multiple overloads for that.
+        public static Account[] OpenVault(string deviceId, string[] recoveryWords, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             try
             {
                 // We allow one attempt to fail due to an expired token. If it fails again we give up.
-                return OpenVaultAttempt(deviceId, ui, storage, transport);
+                return OpenVaultAttempt(deviceId, recoveryWords, ui, storage, transport);
             }
             catch (TokenExpiredException)
             {
                 storage.StoreString(OAuthTokenKey, null);
             }
 
-            return OpenVaultAttempt(deviceId, ui, storage, transport);
+            return OpenVaultAttempt(deviceId, recoveryWords, ui, storage, transport);
         }
 
-        internal static Account[] OpenVaultAttempt(string deviceId, IUi ui, ISecureStorage storage, IRestTransport transport)
+        //
+        // Internal
+        //
+
+        internal static Account[] OpenVaultAttempt(string deviceId,
+                                                   string[] recoveryWords,
+                                                   IUi ui,
+                                                   ISecureStorage storage,
+                                                   IRestTransport transport)
         {
             var oauthToken = storage.LoadString(OAuthTokenKey);
             if (oauthToken.IsNullOrEmpty())
@@ -54,8 +63,12 @@ namespace PasswordManagerAccess.DropboxPasswords
             // Normally we would use the master key to decrypt the vault. In case we don't have it, we need to enroll
             // a new device and receive the key form one of the devices enrolled previously. To do that we send the
             // public key to the server which passes it along to one of the devices. The device encrypts the master key
-            // end sends it back to us.
-            var masterKey = LoadMasterKey(storage);
+            // end sends it back to us. We need to to all of that unless the master key is provided in a form of the
+            // recovery words. In that case we don't store anything.
+            // TODO: Consider storing the master key in the secure storage based on the user's settings.
+            var masterKey = recoveryWords.Length > 0
+                ? Util.DeriveMasterKeyFromRecoveryWords(recoveryWords)
+                : LoadMasterKey(storage);
             if (masterKey == null)
             {
                 masterKey = EnrollNewDevice(deviceId, transport, apiRest);
@@ -92,7 +105,8 @@ namespace PasswordManagerAccess.DropboxPasswords
             var entries = DownloadAllEntries(rootFolder, features.Eligibility.RootPath, contentRest);
 
             // 5. Try to find all keysets that decrypt (normally there's only one).
-            var keysets = FindAndDecryptAllKeysets(entries, Util.HashMasterKey(masterKey));
+            var encryptionKey = Util.ConvertMasterKeyToEncryptionKey(masterKey);
+            var keysets = FindAndDecryptAllKeysets(entries, encryptionKey);
 
             // 6. Try to decrypt all account entries and see what decrypts.
             var accounts = FindAndDecryptAllAccounts(entries, keysets);
@@ -102,7 +116,7 @@ namespace PasswordManagerAccess.DropboxPasswords
         }
 
         // Returns the master key on successful enrollment.
-        private static byte[] EnrollNewDevice(string deviceId, IRestTransport transport, RestClient apiRest)
+        internal static byte[] EnrollNewDevice(string deviceId, IRestTransport transport, RestClient apiRest)
         {
             // To enroll we need to generate a key pair. The public key will be sent to the server.
             // These keys don't need to persist since we don't do anything else but enrolling the device with them.
@@ -187,7 +201,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                                      sourceDevicePublicKey.Decode64());
         }
 
-        private static string AcquireOAuthToken(IUi ui, IRestTransport transport)
+        internal static string AcquireOAuthToken(IUi ui, IRestTransport transport)
         {
             // 1. Generate PKCE challenge
             var (verifier, challenge) = GenerateOAuth2PkceValues();
@@ -230,24 +244,6 @@ namespace PasswordManagerAccess.DropboxPasswords
             return masterKey.Length == MasterKeySize ? masterKey : null;
         }
 
-        internal static (byte[] PublicKey, byte[] PrivateKey) CryptoBoxKeypair()
-        {
-            Curve25519XSalsa20Poly1305.KeyPair(out var privateKey, out var publicKey);
-            if (publicKey.Length != PublicKeySize || privateKey.Length != PrivateKeySize)
-                throw new InternalErrorException("Invalid key length");
-
-            return (publicKey, privateKey);
-        }
-
-        public static byte[] CryptoBoxOpenEasy(byte[] ciphertext, byte[] nonce, byte[] ourPrivateKey, byte[] theirPublicKey)
-        {
-            var plain = new byte[ciphertext.Length - XSalsa20Poly1305.TagLength];
-            if (new Curve25519XSalsa20Poly1305(ourPrivateKey, theirPublicKey).TryDecrypt(plain, ciphertext, nonce))
-                return plain;
-
-            throw new CryptoException("Failed to decrypt");
-        }
-
         // App info
         internal const string ClientId = "8ho1d12ibryh3ez";
 
@@ -287,63 +283,6 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             return (verifier, challenge);
         }
-
-        //--------------------------------------------------------------------------------------------------------------
-
-        public static Account[] OpenVault(string oauthToken, string[] recoveryWords, IRestTransport transport)
-        {
-            // We do this first to fail early in case the recovery words are incorrect.
-            var masterKey = Util.DeriveMasterKeyFromRecoveryWords(recoveryWords);
-
-            var rest = new RestClient(transport,
-                                      "https://api.dropboxapi.com/2",
-                                      defaultHeaders: new Dictionary<string, string>
-                                      {
-                                          ["Authorization"] = $"Bearer {oauthToken}"
-                                      });
-
-            // 1. Get account info
-            var accountInfo = Post<R.AccountInfo>("users/get_current_account",
-                                                  RestClient.JsonNull, // Important to send null!
-                                                  RestClient.NoHeaders,
-                                                  rest);
-            if (accountInfo.Disabled)
-                throw new InternalErrorException("The account is disabled");
-
-            // 2. Get features
-            var features = Post<R.Features>("passwords/get_features_v2",
-                                            RestClient.JsonNull, // Important to send null!
-                                            RestClient.NoHeaders,
-                                            rest);
-            if (features.Eligibility.Tag != "enabled")
-                throw new InternalErrorException("Dropbox Passwords is not enabled on this account");
-
-            // 3. List the root folder
-            // TODO: Very long folders are not supported. See "has_more" and "cursor".
-            var rootFolder = Post<R.RootFolder>("files/list_folder",
-                                                new Dictionary<string, object> {["path"] = ""},
-                                                MakeRootPathHeaders(features.Eligibility.RootPath),
-                                                rest);
-
-            // 4. Get all entries
-            var contentRest = new RestClient(rest.Transport,
-                                             "https://content.dropboxapi.com/2",
-                                             defaultHeaders: rest.DefaultHeaders);
-            var entries = DownloadAllEntries(rootFolder, features.Eligibility.RootPath, contentRest);
-
-            // Try to find all keysets that decrypt (normally there's only one).
-            var keysets = FindAndDecryptAllKeysets(entries, masterKey);
-
-            // Try to decrypt all account entries and see what decrypts.
-            var accounts = FindAndDecryptAllAccounts(entries, keysets);
-
-            // Done, phew!
-            return accounts;
-        }
-
-        //
-        // Internal
-        //
 
         internal static R.EncryptedEntry[] DownloadAllEntries(R.RootFolder rootFolder,
                                                               string rootPath,
@@ -475,6 +414,27 @@ namespace PasswordManagerAccess.DropboxPasswords
         // Crypto
         //
 
+        internal static (byte[] PublicKey, byte[] PrivateKey) CryptoBoxKeypair()
+        {
+            Curve25519XSalsa20Poly1305.KeyPair(out var privateKey, out var publicKey);
+            if (publicKey.Length != PublicKeySize || privateKey.Length != PrivateKeySize)
+                throw new InternalErrorException("Invalid key length");
+
+            return (publicKey, privateKey);
+        }
+
+        internal static byte[] CryptoBoxOpenEasy(byte[] ciphertext,
+                                                 byte[] nonce,
+                                                 byte[] ourPrivateKey,
+                                                 byte[] theirPublicKey)
+        {
+            var plain = new byte[ciphertext.Length - XSalsa20Poly1305.TagLength];
+            if (new Curve25519XSalsa20Poly1305(ourPrivateKey, theirPublicKey).TryDecrypt(plain, ciphertext, nonce))
+                return plain;
+
+            throw new CryptoException("Failed to decrypt");
+        }
+
         internal static R.Keyset DecryptKeyset(R.EncryptedEntry entry, byte[] key)
         {
             return Deserialize<R.Keyset>(Decrypt(entry.EncryptedBundle, key));
@@ -491,6 +451,10 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                    encrypted.NonceBase64.Decode64(),
                                                    key);
         }
+
+        //
+        // JSON
+        //
 
         internal static T Deserialize<T>(byte[] json)
         {

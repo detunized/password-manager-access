@@ -67,16 +67,38 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
 
             try
             {
-                var words = config["recovery-words"].Split(' ');
-                if (words.Length != 12)
+                // The device is required. The first time it should be generated using
+                // Vault.GenerateRandomDeviceId and stored for later reuse. It's not a
+                // good idea to generate a new device ID on every run.
+                var deviceId = config.ContainsKey("device-id") ? config["device-id"] : "";
+                if (string.IsNullOrEmpty(deviceId))
                 {
-                    Console.WriteLine("Exactly 12 words separated by a single space should be provided.\n" +
-                                      "See config.yaml.example for reference.");
-                    return;
+                    deviceId = Vault.GenerateRandomDeviceId();
+                    Console.WriteLine($"Your newly generated device ID is {deviceId}. " +
+                                      "Store it and use it for subsequent runs.");
                 }
 
-                var accounts = Vault.Open(config["device-id"], new TextUi(), new PlainStorage()).Accounts;
-                //var accounts = Vault.Open("", words).Accounts;
+                // The recovery words are optional. It's possible to use the recovery words instead a full device
+                // enrollment with an approval on another enrolled device. In this case the master key is not
+                // saved to the secure storage. Instead it's derived from the recovery words every time the vault
+                // is opened.
+                var words = Array.Empty<string>();
+                if (config.ContainsKey("recovery-words"))
+                {
+                    words = config["recovery-words"].Split(' ');
+                    if (words.Length != 12)
+                    {
+                        Console.WriteLine("Exactly 12 words separated by a single space should be provided.\n" +
+                                          "See config.yaml.example for reference.");
+                        return;
+                    }
+                }
+
+                var vault = words.Length > 0
+                    ? Vault.Open(config["device-id"], words, new TextUi(), new PlainStorage())
+                    : Vault.Open(config["device-id"], new TextUi(), new PlainStorage());
+
+                var accounts = vault.Accounts;
                 for (var i = 0; i < accounts.Length; ++i)
                 {
                     var account = accounts[i];

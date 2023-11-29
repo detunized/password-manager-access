@@ -31,37 +31,37 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
             Assert.Equal(MasterKey, key);
         }
 
-        [Fact]
-        public void ConvertRecoveryWordsToRecoveryKey_returns_recovery_key()
-        {
-            var key = Util.ConvertRecoveryWordsToRecoveryKey(RecoveryWords);
-
-            Assert.Equal(RecoveryKey, key);
-        }
-
         [Theory]
         [InlineData(0)]
         [InlineData(11)]
         [InlineData(13)]
-        public void ConvertRecoveryWordsToRecoveryKey_throws_on_invalid_number_of_words(int size)
+        public void DeriveMasterKeyFromRecoveryWords_throws_on_invalid_number_of_words(int size)
         {
-            Exceptions.AssertThrowsInternalError(() => Util.ConvertRecoveryWordsToRecoveryKey(new string[size]),
+            Exceptions.AssertThrowsInternalError(() => Util.DeriveMasterKeyFromRecoveryWords(new string[size]),
                                                  "Exactly 12 recovery words must be provided");
         }
 
         [Fact]
-        public void ConvertRecoveryWordsToRecoveryKey_throws_on_invalid_word()
+        public void DeriveMasterKeyFromRecoveryWords_throws_on_invalid_word()
         {
             var words = RecoveryWords.Take(11).Append("blah-blah").ToArray();
 
-            Exceptions.AssertThrowsInternalError(() => Util.ConvertRecoveryWordsToRecoveryKey(words),
+            Exceptions.AssertThrowsInternalError(() => Util.DeriveMasterKeyFromRecoveryWords(words),
                                                  "Recovery word 'blah-blah' is invalid");
+        }
+
+        [Fact]
+        public void ConvertMasterKeyToEncryptionKey_returns_keyset_encryption_key()
+        {
+            var key = Util.ConvertMasterKeyToEncryptionKey(MasterKey);
+
+            Assert.Equal(KeysetEncryptionKey, key);
         }
 
         [Fact]
         public void CalculateChecksum_returns_checksum()
         {
-            var checksum = Util.CalculateChecksum(RecoveryKey);
+            var checksum = Util.CalculateChecksum(MasterKey);
 
             Assert.Equal(1, checksum);
         }
@@ -76,10 +76,8 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
             "differ", "feed", "glove", "upgrade", "hand", "rotate",
         };
 
-        internal static readonly byte[] RecoveryKey = "5aff62570a3a60754f72a563bdd5a35e".DecodeHex();
-
-        internal static readonly byte[] MasterKeyRaw = "5aff62570a3a60754f72a563bdd5a35e".DecodeHex();
-        internal static readonly byte[] MasterKey =
+        internal static readonly byte[] MasterKey = "5aff62570a3a60754f72a563bdd5a35e".DecodeHex();
+        internal static readonly byte[] KeysetEncryptionKey =
             "4a0a046a2d4e2ee312c550a54fe96b573133e0d5b34f09b985c2b02876b98e6f".DecodeHex();
     }
 }

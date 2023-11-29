@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Newtonsoft.Json;
@@ -35,7 +36,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                 .Post(GetFixture("entry-keyset"))
                 .Post(GetFixture("entry-vault"));
 
-            var account = Client.OpenVault("device-id", null, GetStorage(), flow);
+            var account = Client.OpenVault("device-id", Array.Empty<string>(), null, GetStorage(), flow);
             Assert.NotEmpty(account);
         }
 
@@ -52,7 +53,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                     else
                         flow.Post(GetFixture(fixture));
 
-                Exceptions.AssertThrowsInternalError(() => Client.OpenVault("device-id", null, GetStorage(), flow));
+                Exceptions.AssertThrowsInternalError(() => Client.OpenVault("device-id", Array.Empty<string>(), null, GetStorage(), flow));
             }
         }
 
@@ -84,7 +85,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                 }
 
                 var storage = GetStorage();
-                var accounts = Client.OpenVault("device-id", GetUi(), storage, flow);
+                var accounts = Client.OpenVault("device-id", Array.Empty<string>(), GetUi(), storage, flow);
 
                 Assert.NotEmpty(accounts);
                 Assert.Equal(OAuthToken, storage.Values["oauth-token"]);
@@ -105,7 +106,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
             var storage = GetStorage();
             storage.Values.Remove("oauth-token");
 
-            var accounts = Client.OpenVault("device-id", GetUi(), storage, flow);
+            var accounts = Client.OpenVault("device-id", Array.Empty<string>(), GetUi(), storage, flow);
 
             Assert.NotEmpty(accounts);
             Assert.Equal(OAuthToken, storage.Values["oauth-token"]);
@@ -121,7 +122,14 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                 .Post(GetFixture("entry-keyset"))
                 .Post(GetFixture("entry-vault"));
 
-            var accounts = Client.OpenVault("token", UtilTest.RecoveryWords, flow);
+            var words = new string[]
+            {
+                "aerobic", "walnut", "swift", "bracket", "surround",
+                "obey", "nature", "news", "city", "draw",
+                "hidden", "paper"
+            };
+
+            var accounts = Client.OpenVault("device-id", UtilTest.RecoveryWords, GetUi(), GetStorage(), flow);
 
             Assert.Equal(2, accounts.Length);
 
@@ -175,7 +183,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
             return new MemoryStorage(new Dictionary<string, string>
             {
                 ["oauth-token"] = "oauth-token",
-                ["master-key"] = UtilTest.MasterKeyRaw.ToBase64(),
+                ["master-key"] = UtilTest.MasterKey.ToBase64(),
             });
         }
 
