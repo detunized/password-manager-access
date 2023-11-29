@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                 : LoadMasterKey(storage);
             if (masterKey == null)
             {
-                masterKey = EnrollNewDevice(deviceId, transport, apiRest);
+                masterKey = EnrollNewDevice(deviceId, ui, transport, apiRest);
                 storage.StoreString(MasterKeyKey, masterKey.ToBase64());
             }
 
@@ -116,7 +116,7 @@ namespace PasswordManagerAccess.DropboxPasswords
         }
 
         // Returns the master key on successful enrollment.
-        internal static byte[] EnrollNewDevice(string deviceId, IRestTransport transport, RestClient apiRest)
+        internal static byte[] EnrollNewDevice(string deviceId, IUi ui, IRestTransport transport, RestClient apiRest)
         {
             // To enroll we need to generate a key pair. The public key will be sent to the server.
             // These keys don't need to persist since we don't do anything else but enrolling the device with them.
@@ -124,7 +124,7 @@ namespace PasswordManagerAccess.DropboxPasswords
             var (publicKey, privateKey) = CryptoBoxKeypair();
 
             // 1. Initial enrollment request which sends the notification to other devices to prompt the user to approve
-            var enrollStatus = Post<R.EnrollStatus>("passwords/enroll_device",
+            var enrollInfo = Post<R.EnrollDevice>("passwords/enroll_device",
                                                     new Dictionary<string, object>
                                                     {
                                                         ["device_id"] = deviceId,
@@ -133,7 +133,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                         ["app_version"] = "3.23.1",
                                                         ["platform"] = "chrome",
                                                         ["platform_version"] = "Chrome 115.0.0.0",
-                                                        ["device_name"] = "Chrome Mac OS",
+                                                        ["device_name"] = "TODO: Provide device name",
                                                         ["enroll_action"] = new Dictionary<string, string>
                                                         {
                                                             [".tag"] = "enroll_device"
@@ -145,8 +145,16 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                     },
                                                     RestClient.NoHeaders,
                                                     apiRest);
-            // TODO: Check enrollStatus
-            // TODO: Notify the the UI to tell the user to approve on another device
+
+            if (enrollInfo.Status.Tag != "device_requested")
+                throw new InternalErrorException(
+                    MakeErrorMessage($"expected status 'device_requested', got '{enrollInfo.Status.Tag}'"));
+
+            var deviceNames = enrollInfo.Status.DeviceRequested
+                .Select(x => x.Name.IsNullOrEmpty() ? "Unknown" : x.Name)
+                .ToArray();
+
+            ui.EnrollRequestSent(deviceNames);
 
             // 2. Get Bolt credentials that are used to subscribe to a Bolt channel to receive the master key
             var boltInfo = Post<R.BoltInfo>("passwords/get_bolt_info",
@@ -182,23 +190,37 @@ namespace PasswordManagerAccess.DropboxPasswords
                                        RestClient.NoHeaders,
                                        thunderRest);
 
-            // TODO: Handle refused enrollment
             var payload = keys.SelectToken("$.channel_payloads[0].payloads[0].payload");
             if (payload == null)
-                throw new InternalErrorException("Failed to enroll the device: no master key found in the response payload");
+                throw new InternalErrorException(MakeErrorMessage("invalid response format"));
+
+            var messageType = payload.IntAt("message_type", -1);
+            switch (messageType)
+            {
+            case 1: // Accepted
+                break;
+
+            case 3: // Denied
+                throw new BadMultiFactorException(MakeErrorMessage("enrollment request was denied"));
+
+            default:
+                throw new InternalErrorException(MakeErrorMessage($"unknown message type {messageType}"));
+            }
 
             var sourceDevicePublicKey = payload.StringAt("source_device_public_key", null);
             var encryptedData = payload.SelectToken("encrypted_user_key_bundle.encrypted_data")?.ToString();
             var nonce = payload.SelectToken("encrypted_user_key_bundle.nonce")?.ToString();
 
             if (sourceDevicePublicKey == null || encryptedData == null || nonce == null)
-                throw new InternalErrorException("Failed to extract the public key and the encrypted master key");
+                throw new InternalErrorException(MakeErrorMessage("invalid public/master key format"));
 
             // Decrypt the master key
             return CryptoBoxOpenEasy(encryptedData.Decode64(),
                                      nonce.Decode64(),
                                      privateKey,
                                      sourceDevicePublicKey.Decode64());
+
+            static string MakeErrorMessage(string message) => $"Failed to enroll the device: {message}";
         }
 
         internal static string AcquireOAuthToken(IUi ui, IRestTransport transport)

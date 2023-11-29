@@ -171,6 +171,10 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
             {
                 return "https://www.dropbox.com/passwords_extension/auth_redirect?code=code";
             }
+
+            public void EnrollRequestSent(string[] deviceNames)
+            {
+            }
         }
 
         private static IUi GetUi()

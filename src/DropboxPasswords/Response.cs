@@ -52,10 +52,10 @@ namespace PasswordManagerAccess.DropboxPasswords
             public readonly string RootNamespaceId;
         }
 
-        public class EnrollStatus
+        public class EnrollDevice
         {
             [JsonProperty("status", Required = Required.Always)]
-            public readonly Status Status;
+            public readonly EnrollStatus Status;
 
             [JsonProperty("active_keyset_name", Required = Required.Always)]
             public readonly string ActiveKeysetName;
@@ -68,6 +68,21 @@ namespace PasswordManagerAccess.DropboxPasswords
         {
             [JsonProperty(".tag", Required = Required.Always)]
             public readonly string Tag;
+        }
+
+        public class EnrollStatus: Status
+        {
+            [JsonProperty("device_requested")]
+            public readonly DeviceInfo[] DeviceRequested;
+        }
+
+        public class DeviceInfo
+        {
+            [JsonProperty("device_name")]
+            public readonly string Name;
+
+            [JsonProperty("device_id")]
+            public readonly string Id;
         }
 
         public class Error

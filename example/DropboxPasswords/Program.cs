@@ -59,6 +59,13 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
                     }
                 }).GetAwaiter().GetResult();
             }
+
+            public void EnrollRequestSent(string[] deviceNames)
+            {
+                Util.WriteLine("Please approve the enrollment request that has been sent to the following devices:", ConsoleColor.Green);
+                foreach (var name in deviceNames)
+                    Util.WriteLine($"  - {name}", ConsoleColor.Yellow);
+            }
         }
 
         static void Main(string[] args)
