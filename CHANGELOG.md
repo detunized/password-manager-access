@@ -1,5 +1,8 @@
 # Changelog
 
+## 14.0.0
+  - Dropbox Passwords: initial release
+
 ## 13.2.0
   - 1Password: added support for multiple WebAuthn keys
 
