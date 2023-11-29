@@ -230,47 +230,6 @@ namespace PasswordManagerAccess.DropboxPasswords
             return masterKey.Length == MasterKeySize ? masterKey : null;
         }
 
-        private static Response.EncryptedEntry? ParseKeyset(string json)
-        {
-            try
-            {
-                return JsonConvert.DeserializeObject<Response.EncryptedEntry>(json);
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
-
-        internal static (byte[] PublicKey, byte[] PrivateKey) LoadOrGenerateKeys(ISecureStorage storage)
-        {
-            var (publicKey, privateKey) = LoadKeys(storage);
-            if (publicKey != null && privateKey != null)
-                return (publicKey, privateKey);
-
-            GenerateAndStoreKeys(storage);
-            return LoadKeys(storage)!;
-        }
-
-        internal static (byte[]? PublicKey, byte[]? PrivateKey) LoadKeys(ISecureStorage storage)
-        {
-            var publicKeyString = storage.LoadString(PublicKeyKey) ?? "";
-            var privateKeyString = storage.LoadString(PrivateKeyKey) ?? "";
-            var publicKey = publicKeyString.Decode64();
-            var privateKey = privateKeyString.Decode64();
-            if (publicKey.Length != PublicKeySize || privateKey.Length != PrivateKeySize)
-                return (null, null);
-
-            return (publicKey, privateKey);
-        }
-
-        internal static void GenerateAndStoreKeys(ISecureStorage storage)
-        {
-            var (publicKey, privateKey) = CryptoBoxKeypair();
-            storage.StoreString(PublicKeyKey, publicKey.ToBase64());
-            storage.StoreString(PrivateKeyKey, privateKey.ToBase64());
-        }
-
         internal static (byte[] PublicKey, byte[] PrivateKey) CryptoBoxKeypair()
         {
             Curve25519XSalsa20Poly1305.KeyPair(out var privateKey, out var publicKey);
@@ -293,8 +252,6 @@ namespace PasswordManagerAccess.DropboxPasswords
         internal const string ClientId = "8ho1d12ibryh3ez";
 
         // Storage keys
-        internal const string PublicKeyKey = "public-key";
-        internal const string PrivateKeyKey = "private-key";
         internal const string OAuthTokenKey = "oauth-token";
         internal const string MasterKeyKey = "master-key";
 
