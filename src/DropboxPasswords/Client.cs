@@ -200,7 +200,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                 throw new InternalErrorException("Failed to perform OAuth2 login");
 
             // 3. Parse redirect URL and extract the code
-            var code = ExtractQueryParameter(redirectUrl, "code");
+            var code = Url.ExtractQueryParameter(redirectUrl, "code");
             if (code.IsNullOrEmpty())
                 throw new InternalErrorException("Invalid redirect URL. Missing auth code");
 
@@ -287,22 +287,6 @@ namespace PasswordManagerAccess.DropboxPasswords
                 return plain;
 
             throw new CryptoException("Failed to decrypt");
-        }
-
-        // TODO: Move to Common
-        internal static string ExtractQueryParameter(string url, string name)
-        {
-            var nameEquals = name + '=';
-            var start = url.IndexOf(nameEquals, StringComparison.Ordinal);
-            if (start < 0)
-                return null;
-
-            start += nameEquals.Length;
-            var end = url.IndexOf('&', start);
-
-            return end < 0
-                ? url.Substring(start) // The last parameter
-                : url.Substring(start, end - start);
         }
 
         // App info

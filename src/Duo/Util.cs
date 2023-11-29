@@ -33,22 +33,6 @@ namespace PasswordManagerAccess.Duo
             throw MakeSpecializedError(response);
         }
 
-        // Returns null when not found
-        internal static string ExtractQueryParameter(string url, string name)
-        {
-            var nameEquals = name + '=';
-            var start = url.IndexOf(nameEquals, StringComparison.Ordinal);
-            if (start < 0)
-                return null;
-
-            start += nameEquals.Length;
-            var end = url.IndexOf('&', start);
-
-            return end < 0
-                ? url.Substring(start) // The last parameter
-                : url.Substring(start, end - start);
-        }
-
         internal static string GetFactorParameterValue(DuoFactor factor)
         {
             return factor switch

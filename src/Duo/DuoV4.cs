@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
 using PasswordManagerAccess.Common;
-using static PasswordManagerAccess.Duo.Util;
 using R = PasswordManagerAccess.Duo.ResponseV4;
 
 namespace PasswordManagerAccess.Duo
@@ -86,9 +85,9 @@ namespace PasswordManagerAccess.Duo
         {
             var response = rest.Get(authUrl);
             if (!response.IsSuccessful)
-                throw MakeSpecializedError(response);
+                throw Util.MakeSpecializedError(response);
 
-            return (Parse(response.Content), response.RequestUri.AbsoluteUri, response.Cookies);
+            return (Util.Parse(response.Content), response.RequestUri.AbsoluteUri, response.Cookies);
         }
 
         internal static (string Host, Dictionary<string, string> Cookies) SubmitSystemProperties(
@@ -100,7 +99,7 @@ namespace PasswordManagerAccess.Duo
             // Find the main form
             var form = html.DocumentNode.SelectSingleNode("//form[@id='plugin_form']");
             if (form == null)
-                throw MakeInvalidResponseError("Duo HTML: the main form is not found");
+                throw Util.MakeInvalidResponseError("Duo HTML: the main form is not found");
 
             // Assign the known values. There are might be others defaulted to "". We're going to ignore them as long
             // as it doesn't break the process.
@@ -120,15 +119,15 @@ namespace PasswordManagerAccess.Duo
 
             var response = rest.PostForm(url, properties, cookies: cookies);
             if (!response.IsSuccessful)
-                throw MakeSpecializedError(response);
+                throw Util.MakeSpecializedError(response);
 
             return (response.RequestUri.Host, response.Cookies);
         }
 
         internal static string ExtractSessionId(string url)
         {
-            return ExtractQueryParameter(url, "sid") ??
-                   throw MakeInvalidResponseError("failed to find the session ID parameter in the URL");
+            return Url.ExtractQueryParameter(url, "sid") ??
+                   throw Util.MakeInvalidResponseError("failed to find the session ID parameter in the URL");
         }
 
         internal static string ExtractXsrf(HtmlDocument html)
@@ -138,7 +137,7 @@ namespace PasswordManagerAccess.Duo
                 .GetAttributeValue("value", "");
 
             if (xsrf.IsNullOrEmpty())
-                throw MakeInvalidResponseError("failed to find the 'xsrf' token");
+                throw Util.MakeInvalidResponseError("failed to find the 'xsrf' token");
 
             return xsrf;
         }
@@ -147,7 +146,7 @@ namespace PasswordManagerAccess.Duo
         {
             var response = rest.Get<Response.Envelope<R.Data>>($"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}");
             if (!response.IsSuccessful)
-                throw MakeSpecializedError(response);
+                throw Util.MakeSpecializedError(response);
 
             return ParseDeviceData(response.Data.Payload);
         }
@@ -174,14 +173,14 @@ namespace PasswordManagerAccess.Duo
             {
                 ["sid"] = sid,
                 ["device"] = choice.Device.Id,
-                ["factor"] = GetFactorParameterValue(choice.Factor),
+                ["factor"] = Util.GetFactorParameterValue(choice.Factor),
                 ["postAuthDestination"] = "OIDC_EXIT",
             };
 
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = PostForm<Response.SubmitFactor>("prompt", parameters, rest);
+            var response = Util.PostForm<Response.SubmitFactor>("prompt", parameters, rest);
             return response.TransactionId ?? "";
         }
 
@@ -196,7 +195,7 @@ namespace PasswordManagerAccess.Duo
         {
             var txid = SubmitFactor(sid, choice, passcode, rest);
             if (txid.IsNullOrEmpty())
-                throw MakeInvalidResponseError("transaction ID (txid) is expected but wasn't found");
+                throw Util.MakeInvalidResponseError("transaction ID (txid) is expected but wasn't found");
 
             if (!PollForResultUrl(sid, txid, ui, rest))
                 return null;
@@ -212,28 +211,28 @@ namespace PasswordManagerAccess.Duo
             // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
-                var response = PostForm<R.Status>("status",
-                                                  new Dictionary<string, object>
-                                                  {
-                                                      ["sid"] = sid,
-                                                      ["txid"] = txid,
-                                                  },
-                                                  rest,
-                                                  new Dictionary<string, string>
-                                                  {
-                                                      ["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0",
-                                                      ["Accept"] = "*/*",
-                                                      ["Accept-Language"] = "en-US,en;q=0.5",
-                                                      ["Accept-Encoding"] = "gzip, deflate, br",
-                                                      // TODO: Fix host
-                                                      ["Referer"] = $"https://api-005dde75.duosecurity.com/frame/v4/auth/prompt?sid={sid}",
-                                                      ["Sec-Fetch-Dest"] = "empty",
-                                                      ["Sec-Fetch-Mode"] = "cors",
-                                                      ["Sec-Fetch-Site"] = "same-origin",
-                                                  });
+                var response = Util.PostForm<R.Status>("status",
+                                                       new Dictionary<string, object>
+                                                       {
+                                                           ["sid"] = sid,
+                                                           ["txid"] = txid,
+                                                       },
+                                                       rest,
+                                                       new Dictionary<string, string>
+                                                       {
+                                                           ["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0",
+                                                           ["Accept"] = "*/*",
+                                                           ["Accept-Language"] = "en-US,en;q=0.5",
+                                                           ["Accept-Encoding"] = "gzip, deflate, br",
+                                                           // TODO: Fix host
+                                                           ["Referer"] = $"https://api-005dde75.duosecurity.com/frame/v4/auth/prompt?sid={sid}",
+                                                           ["Sec-Fetch-Dest"] = "empty",
+                                                           ["Sec-Fetch-Mode"] = "cors",
+                                                           ["Sec-Fetch-Site"] = "same-origin",
+                                                       });
 
                 var (status, text) = GetResponseStatus(response);
-                UpdateUi(status, text, ui);
+                Util.UpdateUi(status, text, ui);
 
                 switch (status)
                 {
@@ -246,7 +245,7 @@ namespace PasswordManagerAccess.Duo
                 // TODO: Need to sleep or wait here!
             }
 
-            throw MakeInvalidResponseError("expected to receive a valid result or error, got none of it");
+            throw Util.MakeInvalidResponseError("expected to receive a valid result or error, got none of it");
         }
 
         internal static (DuoStatus Status, string Text) GetResponseStatus(R.Status response)
@@ -268,22 +267,22 @@ namespace PasswordManagerAccess.Duo
                                          {
                                              ["sid"] = sid,
                                              ["txid"] = txid,
-                                             ["factor"] = GetFactorParameterValue(choice.Factor),
+                                             ["factor"] = Util.GetFactorParameterValue(choice.Factor),
                                              ["device_key"] = choice.Device.Id,
                                              ["_xsrf"] = xsrf,
                                              ["dampen_choice"] = "false",
                                          });
 
             if (!response.IsSuccessful)
-                throw MakeSpecializedError(response);
+                throw Util.MakeSpecializedError(response);
 
             return ExtractCode(response.RequestUri.AbsoluteUri);
         }
 
         internal static string ExtractCode(string redirectUrl)
         {
-            return ExtractQueryParameter(redirectUrl, "duo_code") ??
-                   throw MakeInvalidResponseError($"failed to find the 'duo_code' auth token");
+            return Url.ExtractQueryParameter(redirectUrl, "duo_code") ??
+                   throw Util.MakeInvalidResponseError($"failed to find the 'duo_code' auth token");
         }
 
         //
