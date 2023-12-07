@@ -45,7 +45,7 @@ namespace PasswordManagerAccess.LastPass
                 var group = Util.DecryptAes256Plain(ReadItem(reader), encryptionKey, placeholder);
 
                 // 3: url
-                var url = ReadItem(reader).ToUtf8().DecodeHex().ToUtf8();
+                var url = ReadItem(reader).ToUtf8().DecodeHexLoose().ToUtf8();
 
                 // Ignore "group" accounts. They have no credentials.
                 if (url == "http://group")
