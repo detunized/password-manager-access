@@ -97,7 +97,7 @@ namespace PasswordManagerAccess.Common
         public static byte[] DecodeHex(this string s)
         {
             if (s.Length % 2 != 0)
-                throw new InternalErrorException("input length must be multiple of 2");
+                throw new InternalErrorException($"input length must be multiple of 2, got {s.Length}");
 
             var bytes = new byte[s.Length / 2];
             for (var i = 0; i < s.Length / 2; ++i)
