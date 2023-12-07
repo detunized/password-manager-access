@@ -1,5 +1,8 @@
 # Changelog
 
+## 14.0.1
+  - LastPass: fixed a rare problem with the vault parsing
+
 ## 14.0.0
   - Dropbox Passwords: initial release
 
