@@ -31,8 +31,8 @@ namespace PasswordManagerAccess.ZohoVault
             // cookies and in the request data.
             var token = RequestToken(rest);
 
-            // TLD is determined by the region/data center. Each user is associated with a specific region.
-            var userInfo = RequestUserInfo(username, token, DataCenterToTld(DefaultDataCenter), rest);
+            // Each user is associated with a specific region. We get this in a form of a sign-in URL.
+            var userInfo = RequestUserInfo(username, token, DefaultDomain, rest);
 
             // Perform the login dance that possibly involves the MFA steps. The cookies are later
             // used by the subsequent requests.
@@ -44,15 +44,15 @@ namespace PasswordManagerAccess.ZohoVault
 
             try
             {
-                var vaultKey = Authenticate(passphrase, cookies, userInfo.Tld, rest);
-                var vaultResponse = DownloadVault(cookies, userInfo.Tld, rest);
+                var vaultKey = Authenticate(passphrase, cookies, userInfo.Domain, rest);
+                var vaultResponse = DownloadVault(cookies, userInfo.Domain, rest);
                 var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
 
                 return ParseAccounts(vaultResponse, vaultKey, sharingKey);
             }
             finally
             {
-                LogOut(cookies, userInfo.Tld, rest);
+                LogOut(cookies, userInfo.Domain, rest);
             }
         }
 
@@ -60,41 +60,17 @@ namespace PasswordManagerAccess.ZohoVault
         // Internal
         //
 
-        internal static string DataCenterToTld(string dataCenter)
+        // Use https://accounts.zoho.eu/oauth/serverinfo to find all domains
+        internal static string UrlToDomain(string url)
         {
-            // From here: https://accounts.zoho.eu/oauth/serverinfo
-            switch (dataCenter)
-            {
-            case "us":
-                return "com";
-            case "eu":
-                return "eu";
-            case "in":
-                return "in";
-            case "au":
-                return "com.au";
-            }
+            const string hostPrefix = "accounts.";
 
-            throw new UnsupportedFeatureException($"Unsupported data center '{dataCenter}'");
-        }
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.Host.StartsWith(hostPrefix))
+                throw new InternalErrorException(
+                    $"Expected a valid URL with a domain starting with '{hostPrefix}', got '{url}'");
 
-        internal static string UrlToDataCenter(string url)
-        {
-            var host = new Uri(url).Host;
-
-            if (host.EndsWith(".com"))
-                return "us";
-
-            if (host.EndsWith(".eu"))
-                return "eu";
-
-            if (host.EndsWith(".in"))
-                return "in";
-
-            if (host.EndsWith(".com.au"))
-                return "au";
-
-            throw new UnsupportedFeatureException($"Unsupported sign-in host '{host}'");
+            // Everywhere in the code we use the main domain name, like zoho.com or zohocloud.ca.
+            return uri.Host.Substring(hostPrefix.Length);
         }
 
         internal static string RequestToken(RestClient rest)
@@ -114,20 +90,20 @@ namespace PasswordManagerAccess.ZohoVault
         {
             public readonly string Id;
             public readonly string Digest;
-            public readonly string Tld;
+            public readonly string Domain;
 
-            public UserInfo(string id, string digest, string tld)
+            public UserInfo(string id, string digest, string domain)
             {
                 Id = id;
                 Digest = digest;
-                Tld = tld;
+                Domain = domain;
             }
         }
 
-        internal static UserInfo RequestUserInfo(string username, string token, string tld, RestClient rest)
+        internal static UserInfo RequestUserInfo(string username, string token, string domain, RestClient rest)
         {
             var response = rest.PostForm<R.Lookup>(
-                LookupUrl(tld, username),
+                LookupUrl(domain, username),
                 new Dictionary<string, object>
                 {
                     ["mode"] = "primary",
@@ -149,13 +125,7 @@ namespace PasswordManagerAccess.ZohoVault
                 if (result == null)
                     throw MakeInvalidResponseError("lookup result not found");
 
-                var dc = result.DataCenter;
-                if (dc.IsNullOrEmpty())
-                    dc = UrlToDataCenter(result.Href);
-
-                return new UserInfo(id: result.UserId,
-                                    digest: result.Digest,
-                                    tld: DataCenterToTld(dc));
+                return new UserInfo(result.UserId, result.Digest, UrlToDomain(result.Href));
             }
 
             var error = GetError(status);
@@ -167,11 +137,7 @@ namespace PasswordManagerAccess.ZohoVault
                 if (redirect == null)
                     throw MakeInvalidResponseError("redirect info not found");
 
-                var dc = redirect.DataCenter;
-                if (dc.IsNullOrEmpty())
-                    dc = UrlToDataCenter(redirect.RedirectUrl);
-
-                return RequestUserInfo(username, token, DataCenterToTld(dc), rest);
+                return RequestUserInfo(username, token, UrlToDomain(redirect.RedirectUrl), rest);
             // User doesn't exist
             case "U401":
                 throw new BadCredentialsException("The username is invalid");
@@ -359,21 +325,21 @@ namespace PasswordManagerAccess.ZohoVault
             throw MakeInvalidResponseError(status);
         }
 
-        internal static void LogOut(HttpCookies cookies, string tld, RestClient rest)
+        internal static void LogOut(HttpCookies cookies, string domain, RestClient rest)
         {
             // It's ok to have 2XX or 3XX HTTP status. Sometimes the server sends a redirect.
             // There's no need to follow it to complete a logout.
-            var response = rest.Get(LogoutUrl(tld), Headers, cookies, maxRedirects: 0);
+            var response = rest.Get(LogoutUrl(domain), Headers, cookies, maxRedirects: 0);
             if (response.HasError || (int)response.StatusCode / 100 > 3)
                 throw MakeErrorOnFailedRequest(response);
         }
 
         // TODO: Rather return a session object or something like that
         // Returns the encryption key
-        internal static byte[] Authenticate(string passphrase, HttpCookies cookies, string tld, RestClient rest)
+        internal static byte[] Authenticate(string passphrase, HttpCookies cookies, string domain, RestClient rest)
         {
             // Fetch key derivation parameters and some other stuff
-            var info = GetAuthInfo(cookies, tld, rest);
+            var info = GetAuthInfo(cookies, domain, rest);
 
             // Decryption key
             var key = Util.ComputeKey(passphrase, info.Salt, info.IterationCount);
@@ -417,9 +383,9 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        internal static AuthInfo GetAuthInfo(HttpCookies cookies, string tld, RestClient rest)
+        internal static AuthInfo GetAuthInfo(HttpCookies cookies, string domain, RestClient rest)
         {
-            var info = GetWrapped<R.AuthInfo>(AuthInfoUrl(tld), cookies, rest);
+            var info = GetWrapped<R.AuthInfo>(AuthInfoUrl(domain), cookies, rest);
 
             if (info.KdfMethod != "PBKDF2_AES")
                 throw new UnsupportedFeatureException($"KDF method '{info.KdfMethod}' is not supported");
@@ -427,9 +393,9 @@ namespace PasswordManagerAccess.ZohoVault
             return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
         }
 
-        internal static R.Vault DownloadVault(HttpCookies cookies, string tld, RestClient rest)
+        internal static R.Vault DownloadVault(HttpCookies cookies, string domain, RestClient rest)
         {
-            return GetWrapped<R.Vault>(VaultUrl(tld), cookies, rest);
+            return GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
         }
 
         internal static byte[] DecryptSharingKey(R.Vault vaultResponse, byte[] key)
@@ -570,7 +536,7 @@ namespace PasswordManagerAccess.ZohoVault
         // Data
         //
 
-        private const string DefaultDataCenter = "us";
+        private const string DefaultDomain = "zoho.com";
 
         private const string ServiceName = "ZohoVault";
         private const string OAuthScope = "ZohoVault.secrets.READ";
@@ -578,25 +544,25 @@ namespace PasswordManagerAccess.ZohoVault
         private static readonly string LoginPageUrl =
             $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
 
-        private static string LookupUrl(string tld, string username) =>
-            $"https://accounts.zoho.{tld}/signin/v2/lookup/{username}";
+        private static string LookupUrl(string domain, string username) =>
+            $"https://accounts.{domain}/signin/v2/lookup/{username}";
 
         private static string LogInUrl(UserInfo user, long timestamp) =>
-            $"https://accounts.zoho.{user.Tld}/signin/v2/primary/{user.Id}/password?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
+            $"https://accounts.{user.Domain}/signin/v2/primary/{user.Id}/password?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
 
         private static string TotpUrl(UserInfo user, long timestamp) =>
-            $"https://accounts.zoho.{user.Tld}/signin/v2/secondary/{user.Id}/totp?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
+            $"https://accounts.{user.Domain}/signin/v2/secondary/{user.Id}/totp?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
 
         private static string TrustUrl(UserInfo user) =>
-            $"https://accounts.zoho.{user.Tld}/signin/v2/secondary/{user.Id}/trust";
+            $"https://accounts.{user.Domain}/signin/v2/secondary/{user.Id}/trust";
 
-        private static string AuthInfoUrl(string tld) =>
-            $"https://vault.zoho.{tld}/api/json/login?OPERATION_NAME=GET_LOGIN";
+        private static string AuthInfoUrl(string domain) =>
+            $"https://vault.{domain}/api/json/login?OPERATION_NAME=GET_LOGIN";
 
-        private static string VaultUrl(string tld) =>
-            $"https://vault.zoho.{tld}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1";
+        private static string VaultUrl(string domain) =>
+            $"https://vault.{domain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1";
 
-        private static string LogoutUrl(string tld) => $"https://accounts.zoho.{tld}/logout?servicename=ZohoVault";
+        private static string LogoutUrl(string domain) => $"https://accounts.{domain}/logout?servicename=ZohoVault";
 
         private const string UserAgent =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";

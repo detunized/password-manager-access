@@ -72,37 +72,29 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Theory]
-        [InlineData("us", "com")]
-        [InlineData("eu", "eu")]
-        [InlineData("in", "in")]
-        [InlineData("au", "com.au")]
-        public void DataCenterToTld_returns_tld(string dc, string tld)
+        [InlineData("https://accounts.zoho.com/singin", "zoho.com")]
+        [InlineData("https://accounts.zohocloud.ca/singin", "zohocloud.ca")]
+        [InlineData("https://accounts.zoho.eu/singin", "zoho.eu")]
+        [InlineData("https://accounts.zoho.in/singin", "zoho.in")]
+        [InlineData("https://accounts.zoho.jp/singin", "zoho.jp")]
+        [InlineData("https://accounts.zoho.uk/singin", "zoho.uk")]
+        [InlineData("https://accounts.zoho.com.au/singin", "zoho.com.au")]
+        public void UrlToDomain_extracts_base_domain_from_url(string url, string expected)
         {
-            Assert.Equal(tld, Client.DataCenterToTld(dc));
-        }
-
-        [Fact]
-        public void DataCenterToTld_throws_on_unknown_data_center()
-        {
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.DataCenterToTld("zx"),
-                                                      "Unsupported data center");
+            var domain = Client.UrlToDomain(url);
+            Assert.Equal(expected, domain);
         }
 
         [Theory]
-        [InlineData("https://accounts.zoho.com/signin", "us")]
-        [InlineData("https://accounts.zoho.eu/signin", "eu")]
-        [InlineData("https://accounts.zoho.in/signin", "in")]
-        [InlineData("https://accounts.zoho.com.au/signin", "au")]
-        public void UrlToDataCenter_returns_data_center(string url, string dc)
+        [InlineData("https://invalid.zoho.com/login")]
+        [InlineData("https://zoho.com/login")]
+        [InlineData("invalid")]
+        [InlineData("http:/accounts.zoho.com/login")]
+        public void UrlToDomain_throws_on_invalid_domain(string url)
         {
-            Assert.Equal(dc, Client.UrlToDataCenter(url));
-        }
-
-        [Fact]
-        public void UrlToDataCenter_throws_on_unknown_tld()
-        {
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.UrlToDataCenter("https://accounts.zoho.xyz/signin"),
-                                                      "Unsupported sign-in host");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.UrlToDomain(url),
+                $"Expected a valid URL with a domain starting with 'accounts.', got '{url}'");
         }
 
         [Fact]
@@ -133,32 +125,27 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("lookup-success-response"))
                     .ExpectUrl($"https://accounts.zoho.xyz/signin/v2/lookup/{Username}");
 
-            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "xyz", flow);
+            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "zoho.xyz", flow);
 
             Assert.Equal("633590133", user.Id);
             Assert.StartsWith("5edfa5597c0acd2b", user.Digest);
-            Assert.Equal("com", user.Tld);
+            Assert.Equal("zoho.com", user.Domain);
         }
 
-        [Theory]
-        [InlineData("lookup-another-dc-response", "lookup-success-response")]
-        [InlineData("lookup-another-dc-no-dc-response", "lookup-success-response")]
-        [InlineData("lookup-another-dc-response", "lookup-success-no-dc-response")]
-        [InlineData("lookup-another-dc-no-dc-response", "lookup-success-no-dc-response")]
-        public void RequestUserInfo_makes_POST_requests_and_returns_user_info_from_another_DC(string lookupFixture,
-                                                                                              string resultFixture)
+        [Fact]
+        public void RequestUserInfo_makes_POST_requests_and_returns_user_info_from_another_region()
         {
             var flow = new RestFlow()
-                .Post(GetFixture(lookupFixture))
+                .Post(GetFixture("lookup-another-region-response"))
                     .ExpectUrl($"https://accounts.zoho.eu/signin/v2/lookup/{Username}")
-                .Post(GetFixture(resultFixture))
+                .Post(GetFixture("lookup-success-response"))
                     .ExpectUrl($"https://accounts.zoho.com/signin/v2/lookup/{Username}");
 
-            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "eu", flow);
+            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "zoho.eu", flow);
 
             Assert.Equal("633590133", user.Id);
             Assert.StartsWith("5edfa5597c0acd2b", user.Digest);
-            Assert.Equal("com", user.Tld);
+            Assert.Equal("zoho.com", user.Domain);
         }
 
         [Fact]
@@ -168,7 +155,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("lookup-no-user-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.RequestUserInfo("unknown", OAuthCookieValue, "com", flow),
+                () => Client.RequestUserInfo("unknown", OAuthCookieValue, DefaultDomain, flow),
                 "The username is invalid");
         }
 
@@ -178,8 +165,9 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Post(GetFixture("lookup-unknown-error-response"));
 
-            Exceptions.AssertThrowsInternalError(() => Client.RequestUserInfo(Username, OAuthCookieValue, "com", flow),
-                                                 "Unexpected response: message: 'Unknown error', status code: '600/");
+            Exceptions.AssertThrowsInternalError(
+                () => Client.RequestUserInfo(Username, OAuthCookieValue, DefaultDomain, flow),
+                "Unexpected response: message: 'Unknown error', status code: '600/");
         }
 
         [Fact]
@@ -197,13 +185,13 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Fact]
-        public void LogIn_makes_requests_to_specified_tld()
+        public void LogIn_makes_requests_to_specified_regional_domain()
         {
             var flow = new RestFlow()
                 .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                     .ExpectUrl("https://accounts.zoho.eu/signin/");
 
-            Client.LogIn(new Client.UserInfo("id", "digest", "eu"),
+            Client.LogIn(new Client.UserInfo("id", "digest", "zoho.eu"),
                          Password,
                          OAuthCookieValue,
                          null, GetSecureStorage(), flow);
@@ -293,7 +281,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectUrl("https://accounts.zoho.com/logout?")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            Client.LogOut(LoginCookies, "com", flow);
+            Client.LogOut(LoginCookies, DefaultDomain, flow);
         }
 
         [Fact]
@@ -302,7 +290,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Get("", HttpStatusCode.Redirect);
 
-            Client.LogOut(LoginCookies, "com", flow);
+            Client.LogOut(LoginCookies, DefaultDomain, flow);
         }
 
         [Fact]
@@ -313,7 +301,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            var key = Client.Authenticate(TestData.Passphrase, LoginCookies, "com", flow);
+            var key = Client.Authenticate(TestData.Passphrase, LoginCookies, DefaultDomain, flow);
 
             Assert.Equal(TestData.Key, key);
         }
@@ -325,7 +313,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("auth-info-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.Authenticate("Not really a passphrase", LoginCookies, "com", flow),
+                () => Client.Authenticate("Not really a passphrase", LoginCookies, DefaultDomain, flow),
                 "Passphrase is incorrect");
         }
 
@@ -336,7 +324,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-response"))
                 .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT");
 
-            var vault = Client.DownloadVault(LoginCookies, "com", flow);
+            var vault = Client.DownloadVault(LoginCookies, DefaultDomain, flow);
 
             Assert.NotEmpty(vault.Secrets);
         }
@@ -387,7 +375,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            var info = Client.GetAuthInfo(LoginCookies, "com", flow);
+            var info = Client.GetAuthInfo(LoginCookies, DefaultDomain, flow);
 
             Assert.Equal(1000, info.IterationCount);
             Assert.Equal("f78e6ffce8e57501a02c9be303db2c68".ToBytes(), info.Salt);
@@ -498,7 +486,9 @@ namespace PasswordManagerAccess.Test.ZohoVault
         private const string RememberMeCookieName = "remember-me-cookie-name";
         private const string RememberMeCookieValue = "remember-me-cookie-value";
 
-        private Client.UserInfo UserInfo => new Client.UserInfo("id", "digest", "com");
+        private const string DefaultDomain = "zoho.com";
+
+        private Client.UserInfo UserInfo => new Client.UserInfo("id", "digest", DefaultDomain);
 
         private static readonly Dictionary<string, string> OAuthCookies =
             new Dictionary<string, string> { { OAuthCookieName, OAuthCookieValue } };

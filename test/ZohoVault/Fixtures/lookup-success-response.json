@@ -20,8 +20,7 @@
             }
         },
         "digest": "5edfa5597c0acd2b6d9ce6358884ee9596eaafeb9aee278912b3083fa03c2e18d4ccbe09dd06c00939157cb00b3259af",
-        "href": "https://accounts.zoho.com/signin/v2/lookup/lastpass.ruby@gmail.com",
-        "dc": "us"
+        "href": "https://accounts.zoho.com/signin/v2/lookup/lastpass.ruby@gmail.com"
     },
     "status_code": 201,
     "code": "U200",
