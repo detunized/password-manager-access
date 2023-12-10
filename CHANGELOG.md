@@ -1,5 +1,9 @@
 # Changelog
 
+## 14.1.0
+  - ZohoVault: added support for any region, not only a fixed list of data centers. zohocloud.ca and
+    other previously unsupported regions work now.
+
 ## 14.0.1
   - LastPass: fixed a rare problem with the vault parsing
 
