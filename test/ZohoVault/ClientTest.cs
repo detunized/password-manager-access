@@ -27,7 +27,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-response"))
                 .Get(""); // Logout
 
-            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetSecureStorage(), flow);
+            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetStorage(), flow);
             var accounts = vault.Accounts;
 
             Assert.Equal(2, accounts.Length);
@@ -58,7 +58,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-with-shared-items-response"))
                 .Get(""); // Logout
 
-            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetSecureStorage(), flow);
+            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetStorage(), flow);
             var accounts = vault.Accounts;
 
             Assert.Single(accounts);
@@ -179,7 +179,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                     .ExpectContent($"{{\"passwordauth\":{{\"password\":\"{Password}\"}}}}")
                     .ExpectCookie("iamcsr", OAuthCookieValue);
 
-            var cookies = Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow);
+            var cookies = Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
@@ -194,7 +194,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Client.LogIn(new Client.UserInfo("id", "digest", "zoho.eu"),
                          Password,
                          OAuthCookieValue,
-                         null, GetSecureStorage(), flow);
+                         null, GetStorage(), flow);
         }
 
         [Fact]
@@ -204,7 +204,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-incorrect-password-response"));
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow),
+                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow),
                 "The password is incorrect");
         }
 
@@ -218,7 +218,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                                                                           Password,
                                                                           OAuthCookieValue,
                                                                           new CancellingUi(),
-                                                                          GetSecureStorage(),
+                                                                          GetStorage(),
                                                                           flow),
                                                        "is canceled by the user");
         }
@@ -230,27 +230,29 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-unknown-error-response"));
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow),
+                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow),
                 "Unexpected response: message: 'Unknown error', status code: '600/");
         }
 
-        [Fact(Skip = "MFA is not implemented yet")]
+        [Fact]
         public void LogIn_sends_remember_me_token_in_cookies()
         {
             var flow = new RestFlow()
-                .Post("showsuccess('blah',)")
+                .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                     .ExpectCookie(RememberMeCookieName, RememberMeCookieValue);
 
-            Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetSecureStorage(), flow);
+            Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow);
         }
 
-        [Fact(Skip = "MFA is not implemented yet")]
+        [Fact]
         public void LogIn_works_when_remember_me_token_is_not_available()
         {
             var flow = new RestFlow()
-                .Post("showsuccess('blah',)");
+                .Post(GetFixture("login-mfa-required-response"))
+                .Post(GetFixture("mfa-success-response"))
+                .Post(GetFixture("trust-success-response"));
 
-            Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetEmptySecureStorage(), flow);
+            Client.LogIn(UserInfo, Password, OAuthCookieValue, new OtpProvidingUi(), GetEmptyStorage(), flow);
         }
 
         [Fact]
@@ -267,7 +269,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                                        Password,
                                        OAuthCookieValue,
                                        new OtpProvidingUi(),
-                                       GetSecureStorage(),
+                                       GetStorage(),
                                        flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
@@ -390,7 +392,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [InlineData("IAMEU1TFATICKET_20085519105", "blah-blah-blah", true)]
         public void FindAndSaveRememberMeToken_stores_token(string name, string value, bool isValid)
         {
-            var storage = new SimpleStorage();
+            var storage = GetEmptyStorage();
             Client.FindAndSaveRememberMeToken(new Dictionary<string, string>
             {
                 ["pff"] = "grr",
@@ -400,15 +402,15 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
             if (isValid)
             {
-                var tokenKey = Assert.Contains("remember-me-token-key", (IDictionary<string, string>)storage.Db);
+                var tokenKey = Assert.Contains("remember-me-token-key", storage.Values);
                 Assert.Equal(name, tokenKey);
 
-                var tokenValue = Assert.Contains("remember-me-token-value", (IDictionary<string, string>)storage.Db);
+                var tokenValue = Assert.Contains("remember-me-token-value", storage.Values);
                 Assert.Equal(value, tokenValue);
             }
             else
             {
-                Assert.Empty(storage.Db);
+                Assert.Empty(storage.Values);
             }
         }
 
@@ -416,41 +418,18 @@ namespace PasswordManagerAccess.Test.ZohoVault
         // Helpers
         //
 
-        private static Mock<ISecureStorage> GetSecureStorageMock()
+        private static MemoryStorage GetStorage()
         {
-            var mock = new Mock<ISecureStorage>();
-            mock.Setup(x => x.LoadString("remember-me-token-key")).Returns(RememberMeCookieName);
-            mock.Setup(x => x.LoadString("remember-me-token-value")).Returns(RememberMeCookieValue);
-
-            return mock;
-        }
-
-        private static ISecureStorage GetSecureStorage()
-        {
-            return GetSecureStorageMock().Object;
-        }
-
-        private static ISecureStorage GetEmptySecureStorage()
-        {
-            var mock = new Mock<ISecureStorage>();
-            mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns((string)null);
-
-            return mock.Object;
-        }
-
-        private class SimpleStorage : ISecureStorage
-        {
-            public Dictionary<string, string> Db { get; set; } = new Dictionary<string, string>();
-
-            public string LoadString(string name)
+            return new MemoryStorage(new Dictionary<string, string>
             {
-                return Db.TryGetValue(name, out var v) ? v : null;
-            }
+                ["remember-me-token-key"] = RememberMeCookieName,
+                ["remember-me-token-value"] = RememberMeCookieValue,
+            });
+        }
 
-            public void StoreString(string name, string value)
-            {
-                Db[name] = value;
-            }
+        private static MemoryStorage GetEmptyStorage()
+        {
+            return new MemoryStorage();
         }
 
         private class CancellingUi: IUi
