@@ -1,5 +1,8 @@
 # Changelog
 
+## 14.1.1
+  - Dashlane: updated the login protocol, which fixes recent login problems
+
 ## 14.1.0
   - ZohoVault: added support for any region, not only a fixed list of data centers. zohocloud.ca and
     other previously unsupported regions work now.
