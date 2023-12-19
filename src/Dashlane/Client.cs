@@ -12,15 +12,15 @@ namespace PasswordManagerAccess.Dashlane
 {
     internal static class Client
     {
-        public static (R.Vault Vault, string ServerKey) OpenVault(string username, 
-                                                                  Ui ui, 
-                                                                  ISecureStorage storage, 
+        public static (R.Vault Vault, string ServerKey) OpenVault(string username,
+                                                                  Ui ui,
+                                                                  ISecureStorage storage,
                                                                   IRestTransport transport)
         {
             // Dashlane requires a registered known to the server device ID (UKI) to access the vault. When there's no
             // UKI available we need to initiate a login sequence with a forced OTP.
             var uki = storage.LoadString(DeviceUkiKey);
-            
+
             // Server key is a server provided part of the password used in the vault decryptioin.
             var serverKey = "";
 
@@ -32,10 +32,10 @@ namespace PasswordManagerAccess.Dashlane
                 if (uki.IsNullOrEmpty())
                 {
                     var registerResult = RegisterNewDeviceWithMultipleAttempts(username, ui, transport);
-                    
+
                     uki = registerResult.Uki;
                     serverKey = registerResult.ServerKey;
-                    
+
                     if (registerResult.RememberMe)
                         storage.StoreString(DeviceUkiKey, uki);
 
