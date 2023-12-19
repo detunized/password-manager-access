@@ -16,7 +16,10 @@ namespace PasswordManagerAccess.Dashlane.Response
 
     internal readonly struct VerificationMethods
     {
-        [JsonProperty("verification", Required = Required.Always)]
+        [JsonProperty("accountType", Required = Required.Always)]
+        public readonly string AccountType;
+
+        [JsonProperty("verifications", Required = Required.Always)]
         public readonly VerificationMethod[] Methods;
     }
 
@@ -103,10 +106,10 @@ namespace PasswordManagerAccess.Dashlane.Response
         //
         // These ones are not used and only needed to identify this data structure during de-serialization.
         //
-        
+
         [JsonProperty(PropertyName = "timestamp", Required = Required.Always)]
         public readonly string UnusedTimestamp;
-        
+
         [JsonProperty(PropertyName = "summary", Required = Required.Always)]
         public readonly object UnusedSummary;
     }

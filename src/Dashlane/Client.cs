@@ -129,10 +129,18 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static R.VerificationMethod[] RequestDeviceRegistration(string username, RestClient rest)
         {
-            return PostJson<R.VerificationMethods>("RequestDeviceRegistration",
+            return PostJson<R.VerificationMethods>("GetAuthenticationMethodsForDevice",
                                                    new Dictionary<string, object>
                                                    {
                                                        ["login"] = username,
+                                                       ["methods"] = new[]
+                                                       {
+                                                           "email_token",
+                                                           "totp",
+                                                           "duo_push",
+                                                           "dashlane_authenticator",
+                                                           "u2f",
+                                                       },
                                                    },
                                                    rest).Methods;
         }
@@ -312,13 +320,12 @@ namespace PasswordManagerAccess.Dashlane
 
         private const string AuthApiBaseUrl = "https://api.dashlane.com/v1/authentication/";
         private const string FetchBaseApiUrl = "https://ws1.dashlane.com/";
-        private const string UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
+        private const string UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
         private const string DeviceUkiKey = "device-uki";
-        private const string AppVersion = "6.2236.11";
-        private const string Platform = "server_standalone";
+        private const string AppVersion = "6.2350-prod-webapp-60cde8db";
+        private const string Platform = "server_leeloo";
         private const string ClientName = "Chrome - Mac OS (PMA)";
         private const int MaxMfaAttempts = 3;
-        private static readonly string ClientAgent = $"{{\"platform\":\"{Platform}\",\"version\":\"{AppVersion}\"}}";
-
+        private static readonly string ClientAgent = $"{{\"platform\":\"{Platform}\",\"version\":\"{AppVersion}\",\"osversion\":\"OS_X_10_15_7\",\"language\":\"en\"}}";
     }
 }
