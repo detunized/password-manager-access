@@ -31,6 +31,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var flow = new RestFlow()
                 .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-triggered"))
                 .Post(GetFixture("email-token-verified"))
                 .Post(GetFixture("device-registered"))
                 .Post(GetFixture("non-empty-vault"));
@@ -68,6 +69,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var flow = new RestFlow()
                 .Post(GetFixture("invalid-uki"))
                 .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-triggered"))
                 .Post(GetFixture("email-token-verified"))
                 .Post(GetFixture("device-registered"))
                 .Post(GetFixture("non-empty-vault"));
@@ -120,6 +122,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var flow = new RestFlow()
                 .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-triggered"))
                 .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
                 .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
                 .Post(GetFixture("email-token-verified"))
@@ -160,6 +163,7 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var flow = new RestFlow()
                 .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-triggered"))
                 .Post(GetFixture("email-token-verified"))
                 .Post(GetFixture("device-registered"))
                 .Post(GetFixture("non-empty-vault"));
@@ -181,6 +185,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var flow = new RestFlow()
                 .Post(GetFixture("invalid-uki"))
                 .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-triggered"))
                 .Post(GetFixture("email-token-verified"))
                 .Post(GetFixture("device-registered"))
                 .Post(GetFixture("non-empty-vault"));

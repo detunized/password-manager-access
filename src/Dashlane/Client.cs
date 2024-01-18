@@ -94,6 +94,10 @@ namespace PasswordManagerAccess.Dashlane
             var mfaMethods = RequestDeviceRegistration(username, rest);
             var mfaMethod = ChooseMfaMethod(mfaMethods);
 
+            // When email 2FA is selected we need to tell the server to send the token to the user
+            if (mfaMethod == MfaMethod.Email)
+                TriggerEmailToken(username, rest);
+
             for (var attempt = 0;; attempt++)
             {
                 var code = mfaMethod switch
@@ -143,6 +147,16 @@ namespace PasswordManagerAccess.Dashlane
                                                        },
                                                    },
                                                    rest).Methods;
+        }
+
+        internal static void TriggerEmailToken(string username, RestClient rest)
+        {
+            PostJson<R.Blank>("RequestEmailTokenVerification",
+                              new Dictionary<string, object>
+                              {
+                                  ["login"] = username,
+                              },
+                              rest);
         }
 
         private enum MfaMethod
