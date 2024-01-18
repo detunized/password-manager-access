@@ -21,7 +21,7 @@ namespace PasswordManagerAccess.Dashlane
             // UKI available we need to initiate a login sequence with a forced OTP.
             var uki = storage.LoadString(DeviceUkiKey);
 
-            // Server key is a server provided part of the password used in the vault decryptioin.
+            // Server key is a server provided part of the password used in the vault decryption.
             var serverKey = "";
 
             // Give 2 attempts max
