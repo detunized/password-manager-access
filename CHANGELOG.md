@@ -1,5 +1,8 @@
 # Changelog
 
+## 14.1.2
+  - Dashlane: fixed a login problem when email 2FA tokens were used
+
 ## 14.1.1
   - Dashlane: updated the login protocol, which fixes recent login problems
 
