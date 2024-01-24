@@ -151,6 +151,30 @@ namespace PasswordManagerAccess.Test.Dashlane
             Assert.NotEmpty(vault.Accounts);
         }
 
+        [Theory]
+        [InlineData("")]
+        [InlineData("1")]
+        [InlineData("12345")]
+        [InlineData("12345a")]
+        [InlineData("1234567")]
+        public void Open_asks_ui_for_another_token_when_it_is_not_6_digits(string token)
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-triggered"))
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   MakeUi(new Ui.Passcode(token, false), new Ui.Passcode(Otp, false)),
+                                   new Storage(""),
+                                   flow);
+
+            Assert.NotEmpty(vault.Accounts);
+        }
+
         [Fact]
         public void Open_returns_accounts_with_email_token_after_2_bad_attempts()
         {
@@ -367,6 +391,6 @@ namespace PasswordManagerAccess.Test.Dashlane
         private const string Dude = "dude.com";
         private const string Nam = "nam.com";
 
-        private const string Otp = "1337";
+        private const string Otp = "123456";
     }
 }

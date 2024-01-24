@@ -122,24 +122,45 @@ namespace PasswordManagerAccess.Dashlane
                     throw new InternalErrorException("Return value Resend is invalid in this context");
                 }
 
+                // Both the email token and the GA OTP are 6 digits long. When we have something else the server
+                // returns a "malformed request" error. It's hard to distinguish a legitimately malformed request
+                // and a wrong code. So we make sure it's always 6 digits before we send it to the server.
+                switch (mfaMethod)
+                {
+                case MfaMethod.Email:
+                case MfaMethod.Otp:
+                    if (!(code.Code.Length == 6 && code.Code.All(char.IsDigit)))
+                    {
+                        --attempt; // There was no attempt yet, we're re-requesting the code from the user
+                        continue;
+                    }
+                    break;
+
+                    // Future proofing
+                default:
+                    throw new InternalErrorException("Logical error");
+                }
+
+                string ticket;
                 try
                 {
-                    var ticket = mfaMethod switch
+                    ticket = mfaMethod switch
                     {
                         MfaMethod.Email => SubmitEmailToken(username, code.Code, rest),
                         MfaMethod.Otp => SubmitOtpToken(username, code.Code, rest),
                         _ => throw new InternalErrorException("Logical error"),
                     };
-
-                    var info = RegisterDevice(username, ticket, code.RememberMe, rest);
-                    return new RegisterResult($"{info.AccessKey}-{info.SecretKey}",
-                                              info.ServerKey ?? "",
-                                              code.RememberMe);
                 }
                 catch (BadMultiFactorException) when (attempt < MaxMfaAttempts - 1)
                 {
                     // Do nothing, try again
+                    continue;
                 }
+
+                var info = RegisterDevice(username, ticket, code.RememberMe, rest);
+                return new RegisterResult($"{info.AccessKey}-{info.SecretKey}",
+                                          info.ServerKey ?? "",
+                                          code.RememberMe);
             }
         }
 
