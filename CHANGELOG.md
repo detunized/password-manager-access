@@ -1,5 +1,9 @@
 # Changelog
 
+## 14.1.3
+  - Dashlane: fixed a login problem with malformed email 2FA tokens
+  - Dashlane: fixed the resend email token functionality
+
 ## 14.1.2
   - Dashlane: fixed a login problem when email 2FA tokens were used
 
