@@ -38,7 +38,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             var vault = Vault.Open(Username,
                                    Password,
-                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   MakeUi(Otp, false),
                                    new Storage(""),
                                    flow);
 
@@ -56,11 +56,25 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             var vault = Vault.Open(Username,
                                    Password,
-                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   MakeUi(Otp, false),
                                    new Storage(""),
                                    flow);
 
             Assert.NotEmpty(vault.Accounts);
+        }
+
+        [Fact]
+        public void Open_throws_on_resend_with_totp()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("otp-requested"));
+
+            Exceptions.AssertThrowsInternalError(() => Vault.Open(Username,
+                                                                  Password,
+                                                                  MakeUi(Ui.Passcode.Resend),
+                                                                  new Storage(""),
+                                                                  flow),
+                                                 "Return value Resend is invalid in this context");
         }
 
         [Fact]
@@ -76,7 +90,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             var vault = Vault.Open(Username,
                                    Password,
-                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   MakeUi(Otp, false),
                                    new Storage(Uki),
                                    flow);
 
@@ -95,7 +109,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             var vault = Vault.Open(Username,
                                    Password,
-                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   MakeUi(Otp, false),
                                    new Storage(Uki),
                                    flow);
 
@@ -111,10 +125,30 @@ namespace PasswordManagerAccess.Test.Dashlane
             Exceptions.AssertThrowsBadCredentials(
                 () => Vault.Open(Username,
                                  Password,
-                                 new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                 MakeUi(Otp, false),
                                  new Storage(""),
                                  flow),
                 "Invalid username: ");
+        }
+
+        [Fact]
+        public void Open_returns_accounts_with_email_token_after_1_resend()
+        {
+            var flow = new RestFlow()
+                .Post(GetFixture("email-token-sent"))
+                .Post(GetFixture("email-token-triggered")) // First token trigger
+                .Post(GetFixture("email-token-triggered")) // Resend
+                .Post(GetFixture("email-token-verified"))
+                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("non-empty-vault"));
+
+            var vault = Vault.Open(Username,
+                                   Password,
+                                   MakeUi(Ui.Passcode.Resend, new Ui.Passcode(Otp, false)),
+                                   new Storage(""),
+                                   flow);
+
+            Assert.NotEmpty(vault.Accounts);
         }
 
         [Fact]
@@ -131,7 +165,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             var vault = Vault.Open(Username,
                                    Password,
-                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   MakeUi(Otp, false),
                                    new Storage(""),
                                    flow);
 
@@ -150,7 +184,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             Exceptions.AssertThrowsBadMultiFactor(
                 () => Vault.Open(Username,
                                  Password,
-                                 new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                 MakeUi(Otp, false),
                                  new Storage(""),
                                  flow),
                 "MFA failed: ");
@@ -172,7 +206,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             Vault.Open(Username,
                        Password,
-                       new OtpProvidingUi { Code = Otp, RememberMe = rememberMe },
+                       MakeUi(Otp, rememberMe),
                        storage,
                        flow);
 
@@ -194,7 +228,7 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             var vault = Vault.Open(Username,
                                    Password,
-                                   new OtpProvidingUi { Code = Otp, RememberMe = false },
+                                   MakeUi(Otp, false),
                                    storage,
                                    flow);
 
@@ -253,13 +287,44 @@ namespace PasswordManagerAccess.Test.Dashlane
         // Helpers
         //
 
-        class OtpProvidingUi: Ui
+        class SequenceUi: Ui
         {
-            public string Code { get; set; }
-            public bool RememberMe { get; set; }
+            private readonly bool _loop;
+            private readonly Passcode[] _passcodes;
+            private int _current;
 
-            public override Passcode ProvideGoogleAuthPasscode(int attempt) => new Passcode(Code, RememberMe);
-            public override Passcode ProvideEmailPasscode(int attempt) => new Passcode(Code, RememberMe);
+            public SequenceUi(Passcode[] passcodes, bool loop = false)
+            {
+                _passcodes = passcodes;
+                _loop = loop;
+            }
+
+            public override Passcode ProvideGoogleAuthPasscode(int attempt) => Next();
+            public override Passcode ProvideEmailPasscode(int attempt) => Next();
+
+            private Passcode Next()
+            {
+                if (_current >= _passcodes.Length)
+                    Assert.Fail("SequenceUi: No more passcodes");
+
+                var passcode = _passcodes[_current];
+                _current++;
+
+                if (_loop && _current >= _passcodes.Length)
+                    _current = 0;
+
+                return passcode;
+            }
+        }
+
+        Ui MakeUi(string code, bool rememberMe)
+        {
+            return new SequenceUi(new[] { new Ui.Passcode(code, rememberMe) }, true);
+        }
+
+        Ui MakeUi(params Ui.Passcode[] passcodes)
+        {
+            return new SequenceUi(passcodes, false);
         }
 
         class Storage: ISecureStorage

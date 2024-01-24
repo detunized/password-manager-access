@@ -110,6 +110,18 @@ namespace PasswordManagerAccess.Dashlane
                 if (code == Ui.Passcode.Cancel)
                     throw new CanceledMultiFactorException("MFA canceled by the user");
 
+                if (code == Ui.Passcode.Resend)
+                {
+                    if (mfaMethod == MfaMethod.Email)
+                    {
+                        TriggerEmailToken(username, rest);
+                        --attempt; // There was no attempt yet, we're just resending the token
+                        continue;
+                    }
+
+                    throw new InternalErrorException("Return value Resend is invalid in this context");
+                }
+
                 try
                 {
                     var ticket = mfaMethod switch
@@ -175,7 +187,6 @@ namespace PasswordManagerAccess.Dashlane
 
             if (mfaMethods.Any(x => x.Name == "email_token"))
                 return MfaMethod.Email;
-
 
             var names = mfaMethods.Select(x => x.Name).JoinToString(", ");
             throw new UnsupportedFeatureException($"None of the [{names}] MFA methods are supported");

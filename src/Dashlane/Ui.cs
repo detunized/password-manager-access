@@ -29,6 +29,7 @@ namespace PasswordManagerAccess.Dashlane
         }
 
         // To cancel return Passcode.Cancel
+        // DO NOT return Passcode.Resend, it's only valid for email passcode
         public abstract Passcode ProvideGoogleAuthPasscode(int attempt);
 
         // To cancel return Passcode.Cancel
