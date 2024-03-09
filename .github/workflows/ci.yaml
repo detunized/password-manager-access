@@ -29,9 +29,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    env:
-      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
