@@ -29,6 +29,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,6 +54,14 @@ jobs:
       - name: Mono info
         if: matrix.framework == 'mono'
         run: mono --version
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
         # TODO: Figure out how to export the TRX report on Mono
       - name: Test mono
