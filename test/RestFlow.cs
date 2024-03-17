@@ -6,12 +6,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using Xunit;
 
 namespace PasswordManagerAccess.Test
 {
-    internal class RestFlow: IRestTransport
+    internal class RestFlow: HttpMessageHandler, IRestTransport
     {
         public class ResponseContent
         {
@@ -264,6 +266,43 @@ namespace PasswordManagerAccess.Test
             // Otherwise RestFlow has to be reworked to be made thread safe.
             lock (_requestLock)
                 MakeRequestLocked(uri, method, content, headers, cookies, maxRedirectCount, allocatedResult);
+        }
+
+        //
+        // HttpMessageHandler implementation
+        //
+
+        // This adapter fits the RestFlow into the RestClient/HttpClient pipeline
+        // TODO: This will not be needed once we switch over to the RestClient completely
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            // The cookies are coming in the headers, so we have to parse them out
+            var cc = new CookieContainer();
+            cc.SetCookies(request.RequestUri, request.Headers.GetValues("Cookie").JoinToString("; "));
+            var cookies = cc.GetCookies(request.RequestUri).Cast<Cookie>().ToDictionary(x => x.Name, x => x.Value);
+
+            var result = new RestResponse<string>();
+            MakeRequest(request.RequestUri,
+                        request.Method,
+                        request.Content,
+                        request.Headers.ToDictionary(x => x.Key, x => x.Value.First()),
+                        cookies,
+                        0,
+                        result);
+
+            var response = new HttpResponseMessage(result.StatusCode)
+            {
+                Content = new StringContent(result.Content),
+            };
+
+            foreach (var header in result.Headers)
+                response.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+            // Need to convert the cookies into the Set-Cookie headers for RestClient to pick them up
+            foreach (var cookie in result.Cookies)
+                response.Headers.TryAddWithoutValidation("Set-Cookie", $"{cookie.Key}={cookie.Value}");
+
+            return Task.FromResult(response);
         }
 
         private void MakeRequestLocked<TContent>(Uri uri,
