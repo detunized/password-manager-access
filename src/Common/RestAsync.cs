@@ -6,7 +6,9 @@
 using System;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading.Tasks;
 using RestSharp;
+using RestSharp.Authenticators;
 using RestSharp.Serializers;
 using RestSharp.Serializers.Json;
 
@@ -21,6 +23,7 @@ namespace PasswordManagerAccess.Common
     {
         internal class Config
         {
+            public string? UserAgent { get; set; } = null;
             public Func<HttpMessageHandler, HttpMessageHandler>? ConfigureMessageHandler { get; set; }
         }
 
@@ -28,18 +31,21 @@ namespace PasswordManagerAccess.Common
         {
             var options = new RestClientOptions(baseUrl)
             {
-#if MITM_PROXY
-                Proxy = new WebProxy("http://127.0.0.1:8888"),
-#endif
+                UserAgent = config.UserAgent,
                 ConfigureMessageHandler = config.ConfigureMessageHandler,
                 ThrowOnAnyError = true,
                 ThrowOnDeserializationError = true,
+
+                // There's no way to set the authenticator later. We use a delegating authenticator that by default
+                // does nothing. It could be updated to delegate to a different authenticator later.
+                Authenticator = new DelegatingAuthenticator(),
+
+#if MITM_PROXY
+                Proxy = new WebProxy("http://127.0.0.1:8888"),
+#endif
             };
 
-            var rest = new RestSharp.RestClient(options, configureSerialization: ConfigureSerialization);
-            rest.AddDefaultHeader("User-Agent", "");
-
-            return rest;
+            return new RestSharp.RestClient(options, configureSerialization: ConfigureSerialization);
         }
 
         //
@@ -60,6 +66,26 @@ namespace PasswordManagerAccess.Common
         // RestSharp.RestClient extensions
         //
 
-        // ...
+        public static void UpdateAuthenticator(this RestSharp.RestClient rest, IAuthenticator authenticator)
+        {
+            if (!(rest.Options.Authenticator is DelegatingAuthenticator da))
+                throw new InternalErrorException("This instance of RestClient is not created via RestAsync.Create");
+
+            da.DelegateTo = authenticator;
+        }
+    }
+
+    // TODO: Move out of here
+    internal class DelegatingAuthenticator: IAuthenticator
+    {
+        public IAuthenticator? DelegateTo { get; set; }
+
+        public DelegatingAuthenticator(IAuthenticator? delegateTo = null)
+        {
+            DelegateTo = delegateTo;
+        }
+
+        public ValueTask Authenticate(IRestClient client, RestRequest request) =>
+            DelegateTo?.Authenticate(client, request) ?? new ValueTask();
     }
 }
