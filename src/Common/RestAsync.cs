@@ -33,8 +33,9 @@ namespace PasswordManagerAccess.Common
             {
                 UserAgent = config.UserAgent,
                 ConfigureMessageHandler = config.ConfigureMessageHandler,
-                ThrowOnAnyError = true,
-                ThrowOnDeserializationError = true,
+                // TODO: We need these for the tests, but don't need them for prod.
+                //ThrowOnAnyError = true,
+                //ThrowOnDeserializationError = true,
 
                 // There's no way to set the authenticator later. We use a delegating authenticator that by default
                 // does nothing. It could be updated to delegate to a different authenticator later.
@@ -72,6 +73,40 @@ namespace PasswordManagerAccess.Common
                 throw new InternalErrorException("This instance of RestClient is not created via RestAsync.Create");
 
             da.DelegateTo = authenticator;
+        }
+
+        //
+        // RestSharp.RestResponse extensions
+        //
+
+        public static bool IsNetworkError(this RestSharp.RestResponse response) =>
+            response.ErrorException is HttpRequestException _;
+
+        public static bool IsJsonError(this RestSharp.RestResponse response) =>
+            response.ErrorException is JsonException _;
+
+        //
+        // JsonSerializer extensions
+        //
+
+        public static bool TryDeserialize<T>(string json, out T? result) where T: class
+            => TryDeserialize(json, out result, out _);
+
+        public static bool TryDeserialize<T>(string json, out T? result, out JsonException? error) where T: class
+        {
+            try
+            {
+                result = JsonSerializer.Deserialize<T>(json);
+                error = null;
+                return result != null;
+            }
+            catch (JsonException e)
+            {
+                result = null;
+                error = e;
+            }
+
+            return false;
         }
     }
 
