@@ -304,9 +304,13 @@ namespace PasswordManagerAccess.Test
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             // The cookies are coming in the headers, so we have to parse them out
-            var cc = new CookieContainer();
-            cc.SetCookies(request.RequestUri, request.Headers.GetValues("Cookie").JoinToString("; "));
-            var cookies = cc.GetCookies(request.RequestUri).Cast<Cookie>().ToDictionary(x => x.Name, x => x.Value);
+            var cookies = NoCookies;
+            if (request.Headers.TryGetValues("Cookie", out var cookieHeader))
+            {
+                var cc = new CookieContainer();
+                cc.SetCookies(request.RequestUri!, cookieHeader.JoinToString("; "));
+                cookies = cc.GetCookies(request.RequestUri).Cast<Cookie>().ToDictionary(x => x.Name, x => x.Value);
+            }
 
             var result = new RestResponse<string>();
             MakeRequest(request.RequestUri,
