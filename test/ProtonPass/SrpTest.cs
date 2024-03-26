@@ -42,6 +42,26 @@ namespace PasswordManagerAccess.Test.ProtonPass
             act.Should().Throw<InternalErrorException>().WithMessage(errorMessage);
         }
 
+        [Fact]
+        public void HashPassword_returns_a_hashed_password()
+        {
+            // Arrange
+            var password = "1";
+            var salt = "sNvZT3Qzr/0y5w==".Decode64();
+            var modulus = Modulus.Decode64();
+            var expected =
+                ("tuZc58X9xAdwpHA+yO5NGpWUDi/fgfeYmhjlg71Yhv3u1DDrIGisnWDnKGGlyC+OFZjyec59KN0wOgtkW4uQmXUv9tYYFFhZBy5" +
+                 "QfXdF5JrmG8TF0+kAFJJTpjaEKhCllLZ4Ic+2ToQ2QGg050K9OaQQnoc4fUE+/qWiWBIFMNowaltUbXvhFTfz6gXZcOc01aemGj" +
+                 "tv3hXOKdLBJ+2E8PV8AC1lzNif+3wAnoiKKLBAWsoK+/VQvGDp+UNfbFsZkx45HteILjBPeLj6Tlrr1br/4yekmTLsagvA9kRlz" +
+                 "wKZCnkUzy2W26oV6jk8gIciTAPxPHjQJCbzMghjpq1IwQ==").Decode64();
+
+            // Act
+            var hash = Srp.HashPassword(password, salt, modulus);
+
+            // Assert
+            hash.Should().Equal(expected);
+        }
+
         //
         // Data
         //
