@@ -30,14 +30,15 @@ namespace PasswordManagerAccess.ProtonPass
             rest.AddDefaultHeader("X-Pm-Appversion", AppVersion);
 
             // TODO: Only create a session when we don't have one
-            var session = await CreateSession(rest, cancellationToken);
+            var session = await RequestNewAuthSession(rest, cancellationToken);
         }
 
         //
         // Internal
         //
 
-        internal static async Task<Model.Session> CreateSession(RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Model.Session> RequestNewAuthSession(RestClient rest,
+                                                                        CancellationToken cancellationToken)
         {
             var request = new RestRequest("auth/v4/sessions");
             var response = await rest.ExecutePostAsync<Model.Session>(request, cancellationToken).ConfigureAwait(false);

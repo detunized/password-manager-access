@@ -17,24 +17,24 @@ namespace PasswordManagerAccess.Test.ProtonPass
     public class ClientTest: TestBase
     {
         [Fact]
-        public async void CreateSession_returns_a_session()
+        public async void RequestNewAuthSession_returns_a_session()
         {
             // Arrange
             var flow = new RestFlow().Post(GetFixture("sessions"));
 
             // Act
-            var session = await Client.CreateSession(flow, new CancellationTokenSource().Token);
+            var session = await Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
 
             // Assert
             session.Code.Should().Be(1000);
             session.TokenType.Should().Be("Bearer");
             session.AccessToken.Should().Be("gx6unefgftd3dem4uaf2ajimi4l4cgjq");
-            session.Uid.Should().Be("mbv6z4cpi4mseqh2wbljnrynlbr7lcqm");
+            session.Id.Should().Be("mbv6z4cpi4mseqh2wbljnrynlbr7lcqm");
         }
 
         [Fact(Skip = "Figure out the way to signal the RestFlow problems and re-throw in the error handling code. " +
                      "Otherwise the exceptions get swallowed.")]
-        public async void CreateSession_makes_a_POST_request()
+        public async void RequestNewAuthSession_makes_a_POST_request()
         {
             // Arrange
             var flow = new RestFlow().Post(GetFixture("sessions"))
@@ -43,17 +43,17 @@ namespace PasswordManagerAccess.Test.ProtonPass
                 .ExpectContent("");
 
             // Act/assert
-            await Client.CreateSession(flow, new CancellationTokenSource().Token);
+            await Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
         }
 
         [Fact]
-        public async void CreateSession_fails_on_invalid_json()
+        public async void RequestNewAuthSession_fails_on_invalid_json()
         {
             // Arrange
             var flow = new RestFlow().Post("}{");
 
             // Act
-            Func<Task> act = () => Client.CreateSession(flow, new CancellationTokenSource().Token);
+            Func<Task> act = () => Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
 
             // Assert
             await act.Should()
@@ -62,14 +62,14 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void CreateSession_fails_on_error()
+        public async void RequestNewAuthSession_fails_on_error()
         {
             // Arrange
             var flow = new RestFlow().Post("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}",
                                            HttpStatusCode.BadRequest);
 
             // Act
-            Func<Task> act = () => Client.CreateSession(flow, new CancellationTokenSource().Token);
+            Func<Task> act = () => Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
 
             // Assert
             await act.Should()
