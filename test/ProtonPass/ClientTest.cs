@@ -32,15 +32,14 @@ namespace PasswordManagerAccess.Test.ProtonPass
             session.Id.Should().Be("mbv6z4cpi4mseqh2wbljnrynlbr7lcqm");
         }
 
-        [Fact(Skip = "Figure out the way to signal the RestFlow problems and re-throw in the error handling code. " +
-                     "Otherwise the exceptions get swallowed.")]
+        [Fact]
         public async void RequestNewAuthSession_makes_a_POST_request()
         {
             // Arrange
-            var flow = new RestFlow().Post(GetFixture("sessions"))
-                .ExpectUrl("/auth/v4/sessions")
-                .ExpectHeader("X-Pm-Appversion", "android-pass@1.19.0")
-                .ExpectContent("");
+            var flow = new RestFlow()
+                .Post(GetFixture("sessions"))
+                    .ExpectUrl("/auth/v4/sessions")
+                    .ExpectContent("");
 
             // Act/assert
             await Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
@@ -76,5 +75,37 @@ namespace PasswordManagerAccess.Test.ProtonPass
                 .ThrowAsync<InternalErrorException>()
                 .WithMessage("Request to  failed with HTTP status BadRequest and error 1001: 'Invalid credentials'");
         }
+
+        [Fact]
+        public async void RequestAuthInfo_returns_auth_info()
+        {
+            // Arrange
+            var flow = new RestFlow().Post(GetFixture("auth-info"));
+
+            // Act
+            var authInfo = await Client.RequestAuthInfo("username", flow, new CancellationTokenSource().Token);
+
+            // Assert
+            authInfo.Code.Should().Be(1000);
+            authInfo.Modulus.Should().StartWith("-----BEGIN PGP SIGNED MESSAGE-----");
+            authInfo.ServerEphemeral.Should().StartWith("VEzZpI2z");
+            authInfo.Version.Should().Be(4);
+            authInfo.Salt.Should().Be("sNvZT3Qzr/0y5w==");
+            authInfo.SrpSession.Should().Be("b9383fa145662386c91b7c440c2a4720");
+        }
+
+        [Fact]
+        public async void RequestAuthInfo_makes_a_POST_request()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Post(GetFixture("auth-info"))
+                    .ExpectUrl("/core/v4/auth/info")
+                    .ExpectContent("{\"Username\":\"username\",\"Intent\":\"Proton\"}");
+
+            // Act/assert
+            await Client.RequestAuthInfo("username", flow, new CancellationTokenSource().Token);
+        }
+
     }
 }

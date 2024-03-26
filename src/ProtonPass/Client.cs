@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using RestSharp;
+using RestSharp.Authenticators.OAuth2;
 using RestClient = RestSharp.RestClient;
 
 namespace PasswordManagerAccess.ProtonPass
@@ -31,6 +32,12 @@ namespace PasswordManagerAccess.ProtonPass
 
             // TODO: Only create a session when we don't have one
             var session = await RequestNewAuthSession(rest, cancellationToken);
+
+            rest.AddDefaultHeader("X-Pm-Uid", session.Id);
+            rest.UpdateAuthenticator(new OAuth2AuthorizationRequestHeaderAuthenticator(session.AccessToken,
+                                                                                       session.TokenType));
+
+             var authInfo = await RequestAuthInfo(username, rest, cancellationToken);
         }
 
         //
@@ -42,6 +49,24 @@ namespace PasswordManagerAccess.ProtonPass
         {
             var request = new RestRequest("auth/v4/sessions");
             var response = await rest.ExecutePostAsync<Model.Session>(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data!;
+        }
+
+        internal static async Task<Model.AuthInfo> RequestAuthInfo(string username,
+                                                                   RestClient rest,
+                                                                   CancellationToken cancellationToken)
+        {
+            var request = new RestRequest("core/v4/auth/info")
+                .AddJsonBody(new
+                {
+                    Username = username,
+                    Intent = "Proton",
+                });
+
+            var response = await rest.ExecutePostAsync<Model.AuthInfo>(request, cancellationToken);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
