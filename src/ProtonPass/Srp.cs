@@ -57,10 +57,9 @@ namespace PasswordManagerAccess.ProtonPass
 
         internal static byte[] HashPasswordVersion1(string password, string username)
         {
-            var md5 = Crypto.Md5(username.ToLower());
-            var encodedSalt = md5.ToHex();
-            var hashed = BCrypt.Net.BCrypt.HashPassword(password, BCryptSaltHeader + encodedSalt);
-            return FixBCryptHash(hashed, encodedSalt).ToBytes();
+            var salt = Crypto.Md5(username.ToLower()).ToHex();
+            var hashed = BCryptHashPassword(password, salt);
+            return FixBCryptHash(hashed, salt).ToBytes();
         }
 
         internal static byte[] HashPasswordVersion2(string password, string username)
@@ -71,7 +70,12 @@ namespace PasswordManagerAccess.ProtonPass
         internal static byte[] HashPasswordVersion3(string password, byte[] salt)
         {
             var bcryptSalt = EncodeBase64(salt.Concat("proton".ToBytes()).ToArray(), 16);
-            return BCrypt.Net.BCrypt.HashPassword(password, BCryptSaltHeader + bcryptSalt).ToBytes();
+            return BCryptHashPassword(password, bcryptSalt).ToBytes();
+        }
+
+        internal static string BCryptHashPassword(string password, string salt)
+        {
+            return BCrypt.Net.BCrypt.HashPassword(password, BCryptSaltHeader + salt);
         }
 
         // It appears that when BCrypt internally parses the salt parameter it trims it to 22 characters and then
