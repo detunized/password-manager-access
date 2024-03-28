@@ -34,10 +34,65 @@ namespace PasswordManagerAccess.ProtonPass
                 .Decode64();
         }
 
-        internal static byte[] HashPassword(string password, byte[] salt, byte[] modulus)
+        internal static byte[] HashPassword(int version, string password, string username, byte[] salt, byte[] modulus)
         {
-            var bcryptSalt = "$2y$10$" + EncodeBase64(salt.Concat("proton".ToBytes()).ToArray(), 16);
-            return ExpandHash(BCrypt.Net.BCrypt.HashPassword(password, bcryptSalt).ToBytes().Concat(modulus).ToArray());
+            var hash = version switch
+            {
+                0 => HashPasswordVersion0(password, username),
+                1 => HashPasswordVersion1(password, username),
+                2 => HashPasswordVersion2(password, username),
+                3 or 4 => HashPasswordVersion3(password, salt),
+                _ => throw new InternalErrorException($"Unsupported SRP version: {version}")
+            };
+
+            return ExpandHash(hash.Concat(modulus).ToArray());
+        }
+
+        internal static byte[] HashPasswordVersion0(string password, string username)
+        {
+            var usernamePassword = (username.ToLower() + password).ToBytes();
+            var sha512 = Crypto.Sha512(usernamePassword);
+            return HashPasswordVersion1(sha512.ToBase64(), username);
+        }
+
+        internal static byte[] HashPasswordVersion1(string password, string username)
+        {
+            var md5 = Crypto.Md5(username.ToLower());
+            var encodedSalt = md5.ToHex();
+            var hashed = BCrypt.Net.BCrypt.HashPassword(password, BCryptSaltHeader + encodedSalt);
+            return FixBCryptHash(hashed, encodedSalt).ToBytes();
+        }
+
+        internal static byte[] HashPasswordVersion2(string password, string username)
+        {
+            return HashPasswordVersion1(password, SanitizeUsername(username));
+        }
+
+        internal static byte[] HashPasswordVersion3(string password, byte[] salt)
+        {
+            var bcryptSalt = EncodeBase64(salt.Concat("proton".ToBytes()).ToArray(), 16);
+            return BCrypt.Net.BCrypt.HashPassword(password, BCryptSaltHeader + bcryptSalt).ToBytes();
+        }
+
+        // It appears that when BCrypt internally parses the salt parameter it trims it to 22 characters and then
+        // does base64 decoding. When the result is calculated it is encoded back to base64 and because it was trimmed
+        // at a weird border sometimes the re-encoded value is different in the last character. The pm-srp library
+        // does it differently. They insert the original salt substring without re-encoding it, so it always matches
+        // the input salt parameter. Here we replace the salt part of the hash with the original salt.
+        internal static string FixBCryptHash(string hash, string salt)
+        {
+            if (hash.Length != 60)
+                throw new InternalErrorException($"Invalid bcrypt hash: expected length 60, got {hash.Length}");
+
+            if (!hash.StartsWith(BCryptSaltHeader))
+                throw new InternalErrorException("Invalid bcrypt hash: missing version and cost");
+
+            return BCryptSaltHeader + salt.Substring(0, 22) + hash.Substring(7 + 22);
+        }
+
+        internal static string SanitizeUsername(string username)
+        {
+            return username.Replace("-", "").Replace(".", "").Replace("_", "");
         }
 
         internal static byte[] ExpandHash(byte[] hash)
@@ -97,6 +152,12 @@ namespace PasswordManagerAccess.ProtonPass
 
             return new string(encoded);
         }
+
+        //
+        // Data
+        //
+
+        private const string BCryptSaltHeader = "$2y$10$";
 
         private static readonly char[] Base64Code =
         {

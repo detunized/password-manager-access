@@ -42,24 +42,32 @@ namespace PasswordManagerAccess.Test.ProtonPass
             act.Should().Throw<InternalErrorException>().WithMessage(errorMessage);
         }
 
-        [Fact]
-        public void HashPassword_returns_a_hashed_password()
+        // Test cases are generated using https://github.com/ProtonMail/go-srp
+        [Theory]
+        [InlineData(0, "password", "username", "QVBzxZXN/p8EHPIDOA0UjFi5s4f/OHNLYYDUXRYhAznMXlkJKRnS0eRM06JjNbz1gLX6KtTKEOrTcIP6Ue1o0Mop1daJRgvpbUQG+8NViAQcvgPF68t1801/w/J/q82dtZQzSIVGyqh8VXsItQNhmr7U1PEDK+hIJvjBqk33M7cjvz8LoNaCA4WIjb3y63Ysh0oeRPqeEItOPdAdsujNaDAH3hYBSEr1pS7ZZzIATCeHcznHoY/DspsDgElSyuEVllzWlaZNLRgAq9o7HqvP9V0n4rf507d8j2+rz84prTxJda7Tf8jnBKLpe7PIZI/7b1sawdTF9gFP1de+3WmSUw==")]
+        [InlineData(0, "password", "uSeRnAmE", "QVBzxZXN/p8EHPIDOA0UjFi5s4f/OHNLYYDUXRYhAznMXlkJKRnS0eRM06JjNbz1gLX6KtTKEOrTcIP6Ue1o0Mop1daJRgvpbUQG+8NViAQcvgPF68t1801/w/J/q82dtZQzSIVGyqh8VXsItQNhmr7U1PEDK+hIJvjBqk33M7cjvz8LoNaCA4WIjb3y63Ysh0oeRPqeEItOPdAdsujNaDAH3hYBSEr1pS7ZZzIATCeHcznHoY/DspsDgElSyuEVllzWlaZNLRgAq9o7HqvP9V0n4rf507d8j2+rz84prTxJda7Tf8jnBKLpe7PIZI/7b1sawdTF9gFP1de+3WmSUw==")]
+        [InlineData(1, "password", "username", "+oL95gPMxaUWeEPOy06xnc4TgkPokBXaVxSoAD7WsWInQL8xbMHrPiEZ2D0gJ2JWdZ7VR3RE/XvOCbOqjRhfcgGsasCh90ouRZXi1N1R6NI3cMcC7QwZuRSwwfDPg5rjlgFBb4K650TypRJhqmciS88ucV2XiJhfO+/Ugn5JpU46KozpapAe5rMBlZP59JA/Y30eSh9DC4m4giA1TX36Rn1L99V02dBs+lU8A8CjDD+dcUgeW5iDJE7gkHfG8jH+MULYtQReiJmkXxLPfRsmNy6nUUZ40dgiMV7bHyAXqZZ1C3e1Oz4L4lnLUcdowHQBgZmPwWvAyozro24ylOWSPw==")]
+        [InlineData(1, "password", "uSeRnAmE", "+oL95gPMxaUWeEPOy06xnc4TgkPokBXaVxSoAD7WsWInQL8xbMHrPiEZ2D0gJ2JWdZ7VR3RE/XvOCbOqjRhfcgGsasCh90ouRZXi1N1R6NI3cMcC7QwZuRSwwfDPg5rjlgFBb4K650TypRJhqmciS88ucV2XiJhfO+/Ugn5JpU46KozpapAe5rMBlZP59JA/Y30eSh9DC4m4giA1TX36Rn1L99V02dBs+lU8A8CjDD+dcUgeW5iDJE7gkHfG8jH+MULYtQReiJmkXxLPfRsmNy6nUUZ40dgiMV7bHyAXqZZ1C3e1Oz4L4lnLUcdowHQBgZmPwWvAyozro24ylOWSPw==")]
+        [InlineData(2, "password", "username", "+oL95gPMxaUWeEPOy06xnc4TgkPokBXaVxSoAD7WsWInQL8xbMHrPiEZ2D0gJ2JWdZ7VR3RE/XvOCbOqjRhfcgGsasCh90ouRZXi1N1R6NI3cMcC7QwZuRSwwfDPg5rjlgFBb4K650TypRJhqmciS88ucV2XiJhfO+/Ugn5JpU46KozpapAe5rMBlZP59JA/Y30eSh9DC4m4giA1TX36Rn1L99V02dBs+lU8A8CjDD+dcUgeW5iDJE7gkHfG8jH+MULYtQReiJmkXxLPfRsmNy6nUUZ40dgiMV7bHyAXqZZ1C3e1Oz4L4lnLUcdowHQBgZmPwWvAyozro24ylOWSPw==")]
+        [InlineData(2, "password", "uSeRnAmE", "+oL95gPMxaUWeEPOy06xnc4TgkPokBXaVxSoAD7WsWInQL8xbMHrPiEZ2D0gJ2JWdZ7VR3RE/XvOCbOqjRhfcgGsasCh90ouRZXi1N1R6NI3cMcC7QwZuRSwwfDPg5rjlgFBb4K650TypRJhqmciS88ucV2XiJhfO+/Ugn5JpU46KozpapAe5rMBlZP59JA/Y30eSh9DC4m4giA1TX36Rn1L99V02dBs+lU8A8CjDD+dcUgeW5iDJE7gkHfG8jH+MULYtQReiJmkXxLPfRsmNy6nUUZ40dgiMV7bHyAXqZZ1C3e1Oz4L4lnLUcdowHQBgZmPwWvAyozro24ylOWSPw==")]
+        [InlineData(2, "password", "--u.Se-Rn_AmE__.", "+oL95gPMxaUWeEPOy06xnc4TgkPokBXaVxSoAD7WsWInQL8xbMHrPiEZ2D0gJ2JWdZ7VR3RE/XvOCbOqjRhfcgGsasCh90ouRZXi1N1R6NI3cMcC7QwZuRSwwfDPg5rjlgFBb4K650TypRJhqmciS88ucV2XiJhfO+/Ugn5JpU46KozpapAe5rMBlZP59JA/Y30eSh9DC4m4giA1TX36Rn1L99V02dBs+lU8A8CjDD+dcUgeW5iDJE7gkHfG8jH+MULYtQReiJmkXxLPfRsmNy6nUUZ40dgiMV7bHyAXqZZ1C3e1Oz4L4lnLUcdowHQBgZmPwWvAyozro24ylOWSPw==")]
+        [InlineData(3, "password", "username", "+hUoDyOSCTsuCTbPuEi44SrgzklYClF5QeXsZQTpnWtrYN26zLrOilsl8vJO8QTu9FCxaSsgexg2fN4S7ktJLoZ5nAgvCdh22Hcpv1C4N64uZxgi1NmLztxaeXRIEhqyEpVpcr42lGLexibvkYIFdYdARigRXwi4Mg0mvOBBDadCZGpQGMbZ13RKbPjU7SUdugMQW5OCBMia0MK1+6FqWDq02iBQ86cPSjFV1pI5hoziV3pZkmPXuSJGVAp7RvjXLCxW5g6m9qwKqJaKbKJZ9ZaGFnvi99h47Rp7JjECpvg42hvvaB/YNLWH2Qtqcn9yGHiC6E/eUxGGt2gl1B2dMA==")]
+        [InlineData(4, "password", "username", "+hUoDyOSCTsuCTbPuEi44SrgzklYClF5QeXsZQTpnWtrYN26zLrOilsl8vJO8QTu9FCxaSsgexg2fN4S7ktJLoZ5nAgvCdh22Hcpv1C4N64uZxgi1NmLztxaeXRIEhqyEpVpcr42lGLexibvkYIFdYdARigRXwi4Mg0mvOBBDadCZGpQGMbZ13RKbPjU7SUdugMQW5OCBMia0MK1+6FqWDq02iBQ86cPSjFV1pI5hoziV3pZkmPXuSJGVAp7RvjXLCxW5g6m9qwKqJaKbKJZ9ZaGFnvi99h47Rp7JjECpvg42hvvaB/YNLWH2Qtqcn9yGHiC6E/eUxGGt2gl1B2dMA==")]
+        public void HashPassword_returns_a_hashed_password(int version, string password, string username, string expected)
         {
             // Arrange
-            var password = "1";
-            var salt = "sNvZT3Qzr/0y5w==".Decode64();
-            var modulus = Modulus.Decode64();
-            var expected =
-                ("tuZc58X9xAdwpHA+yO5NGpWUDi/fgfeYmhjlg71Yhv3u1DDrIGisnWDnKGGlyC+OFZjyec59KN0wOgtkW4uQmXUv9tYYFFhZBy5" +
-                 "QfXdF5JrmG8TF0+kAFJJTpjaEKhCllLZ4Ic+2ToQ2QGg050K9OaQQnoc4fUE+/qWiWBIFMNowaltUbXvhFTfz6gXZcOc01aemGj" +
-                 "tv3hXOKdLBJ+2E8PV8AC1lzNif+3wAnoiKKLBAWsoK+/VQvGDp+UNfbFsZkx45HteILjBPeLj6Tlrr1br/4yekmTLsagvA9kRlz" +
-                 "wKZCnkUzy2W26oV6jk8gIciTAPxPHjQJCbzMghjpq1IwQ==").Decode64();
+            var expectedBytes = expected.Decode64();
+            var salt = "salt!salt!".ToBytes();
+
+            var modulus = new byte[256];
+            for (var i = 0; i < 256; i++)
+                modulus[i] = (byte)i;
 
             // Act
-            var hash = Srp.HashPassword(password, salt, modulus);
+            var hash = Srp.HashPassword(version, password, username, salt, modulus);
 
             // Assert
-            hash.Should().Equal(expected);
+            hash.Should().Equal(expectedBytes);
         }
 
         //
