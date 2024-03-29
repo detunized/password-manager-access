@@ -139,6 +139,50 @@ namespace PasswordManagerAccess.Test.ProtonPass
             output.Should().Be(expected);
         }
 
+        [Theory]
+        [InlineData("", "", "")]
+        [InlineData("", "DEADBEEF", "DEADBEEF")]
+        [InlineData("DEADBEEF", "", "DEADBEEF")]
+        [InlineData("DEAD", "BEEF", "DEADBEEF")]
+        [InlineData("DEADBEEF", "BADC0FFE", "DEADBEEFBADC0FFE")]
+        public void Concat2_returns_concatenated_arrays(string aHex, string bHex, string expectedHex)
+        {
+            // Arrange
+            var a = aHex.DecodeHex();
+            var b = bHex.DecodeHex();
+            var expected = expectedHex.DecodeHex();
+
+            // Act
+            var result = Srp.Concat(a, b);
+
+            // Assert
+            result.Should().Equal(expected);
+        }
+
+        [Theory]
+        [InlineData("", "", "", "")]
+        [InlineData("DEADBEEF", "", "", "DEADBEEF")]
+        [InlineData("", "DEADBEEF", "", "DEADBEEF")]
+        [InlineData("", "", "DEADBEEF", "DEADBEEF")]
+        [InlineData("", "DEAD", "BEEF", "DEADBEEF")]
+        [InlineData("DEAD", "", "BEEF", "DEADBEEF")]
+        [InlineData("DEAD", "BEEF", "", "DEADBEEF")]
+        [InlineData("DEAD", "BEEF", "BADC0FFE", "DEADBEEFBADC0FFE")]
+        public void Concat3_returns_concatenated_arrays(string aHex, string bHex, string cHex, string expectedHex)
+        {
+            // Arrange
+            var a = aHex.DecodeHex();
+            var b = bHex.DecodeHex();
+            var c = cHex.DecodeHex();
+            var expected = expectedHex.DecodeHex();
+
+            // Act
+            var result = Srp.Concat(a, b, c);
+
+            // Assert
+            result.Should().Equal(expected);
+        }
+
         //
         // Data
         //

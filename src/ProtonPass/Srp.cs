@@ -157,6 +157,25 @@ namespace PasswordManagerAccess.ProtonPass
             return new string(encoded);
         }
 
+        // TODO: Move to Common (could be turned into an extension method)
+        internal static byte[] Concat(byte[] a, byte[] b)
+        {
+            var result = new byte[a.Length + b.Length];
+            Buffer.BlockCopy(a, 0, result, 0, a.Length);
+            Buffer.BlockCopy(b, 0, result, a.Length, b.Length);
+            return result;
+        }
+
+        // TODO: Move to Common (could be turned into an extension method)
+        internal static byte[] Concat(byte[] a, byte[] b, byte[] c)
+        {
+            var result = new byte[a.Length + b.Length + c.Length];
+            Buffer.BlockCopy(a, 0, result, 0, a.Length);
+            Buffer.BlockCopy(b, 0, result, a.Length, b.Length);
+            Buffer.BlockCopy(c, 0, result, a.Length + b.Length, c.Length);
+            return result;
+        }
+
         //
         // Data
         //
