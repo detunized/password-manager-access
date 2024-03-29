@@ -4,6 +4,7 @@
 #nullable enable
 
 using System;
+using System.Numerics;
 using FluentAssertions;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ProtonPass;
@@ -13,6 +14,56 @@ namespace PasswordManagerAccess.Test.ProtonPass
 {
     public class SrpTest
     {
+        // Test cases are generated using https://github.com/ProtonMail/go-srp
+        [Fact]
+        public void GenerateProofs_returns_proofs()
+        {
+            // Arrange
+            var serverEphemeralBytes = ServerEphemeral.Decode64();
+            var modulus = Modulus.Decode64();
+            var hashPassword = Srp.HashPassword(0, "password", "username", Array.Empty<byte>(), modulus);
+
+            var expectedClientEphemeral =
+                ("kLP+/2h0p+uQGz59GtpPlRFemMa0H6H0DiRLCveLc4RIzlZt+PcmlVBanNdV5wvK6JWdjuoKCK1Zo0IZcYVGAKWbbMOkEmTha1m" +
+                 "DGH2nvOu6Tp5T5PytI+ohRN8xD3wzAY9vg/kjO8cZc8t5GKncfHar1go2P5I0ipEZ0Yc4QlKb8GMq0j4o2o/FLrZUen6dzdspmR" +
+                 "xq7iKNP3vCg/C/N6wUyrcUse5zsCA4oStlfatDYqsmJGZwBbLrq7++9kESnGFYlKpUnk6McEDmMm4w8nZWDMOUFTKPjj2DbgR4U" +
+                 "el/Q7+phz3ph+605Rx6LxWqZJXs2n5u50iskPSSw4aeiw==").Decode64();
+
+            var expectedClientProof =
+                ("NxvhCQi7O1YsqJH6qK8z7Ofvak+iDBoMZLK7RQ6apiYtQ92k0LK/tsKUVB1hBzKNPc3AtANZWgZmClZ6EwX3HURmsCZ5IItuTG/" +
+                 "Doxt2uGwQVXcIF/jIQRf/CXbySci0ZUrgAKsbOFKb1hZImQFXjDHgwouDfnQv/vpDucY54C8M1KLrsFkijWrxtKOJyqPy0C5BYr" +
+                 "YOTmPpOOLdAnQ+79VxInhWBYL7+Pbzf8SYC9RWKuO2nKjZqPHURYnM+YE5ieiI0oReI+/IbgsTbnZvjQ1EYgJT7e9dfYTF7hSvo" +
+                 "xPzZzSi1Dvr73g8YchIxEugqOOSQ/tM6SnVwvKbWKQyiA==").Decode64();
+
+            var expectedServerProof =
+                ("8ntsxOyL95QBgCi1yj+KRFYXF+Nx93y0h6zQRKFb/tem85a+lCm4EZTJsUUBH+qxz41oisrpr3afa6PuzSOmCHms1iugv3bQzSV" +
+                 "X/BMKZl6Iq7vJG2GiHSvXkmo1CdGKQgoNbsw4c4RZCJfRQ1TVeL2aekErGx+gsyQ9r3sApARhcoz1hverRIB8bIzb+goJj5rLS/" +
+                 "cx6Ce6lKZKt3kcSarEIFzO5cuKyj+sqF5SW/yH1pwEsF+RDPPIcOGbtprbujm3VHzawY678ufCpPDNsgp7BPX8cB2EOxn+/22ig" +
+                 "G9hZqDm7DFQi/1u/NY4BGMzQCIMNb92khCsUkioHuqg7A==").Decode64();
+
+            // Need to supply a "random" number or the tests will fail
+            BigInteger GetRandomBigInt(BigInteger min, BigInteger max)
+            {
+                return BigInteger.Parse(
+                    "105470616520292742113796707158374971919237113921001814738018539058088099151969076072037119025817" +
+                    "025309092299131390290642000536535453569561803785071242711094590131126040239289433612227116128028" +
+                    "805349993386278410760127857080891258890968456587363742272616744158895304082261290072729719945715" +
+                    "737117999787687229057403553386563956741397002904180141195436141164475790436201393962812827253064" +
+                    "294812283952343066489492827921449224134654166270552984438424061767821739424805349057494074140637" +
+                    "786202712971068138429500248316356726979554318393344595633669068348422081621361182199116750832205" +
+                    "20501587197458892001573436641639539315377");
+            }
+
+            // Act
+            var proofs = Srp.GenerateProofs(2048, serverEphemeralBytes, modulus, hashPassword, GetRandomBigInt);
+
+            // Assert
+            proofs.Should().NotBeNull();
+            proofs.ClientEphemeral.Should().Equal(expectedClientEphemeral);
+            proofs.ClientProof.Should().Equal(expectedClientProof);
+            proofs.ServerProof.Should().Equal(expectedServerProof);
+        }
+
         [Fact]
         public void ParseModulus_parses_base64_url_encoded_string()
         {
@@ -186,6 +237,12 @@ namespace PasswordManagerAccess.Test.ProtonPass
         //
         // Data
         //
+
+        private const string ServerEphemeral =
+            "M099L/yzzNqcgzcmm71Rl+ibyBRmyaMAk4JvOC3wJmkR0OnzsN6mECmbci2yV3mJHpIZyKJy3iaoUjOGJF4Bb/KUThk4x3IsP+PY+RFJ" +
+            "3d/fNOvBygdRqjr4liR+gnn+vWEgDW9CDClY4Bg6X9hx0JDV7RjYXqKBVWCT4+Tg+F0dv7XmZnbFygqJcSigBM7M5ZMI2IgFVkKWdwvm" +
+            "rhoMsxFbtV7NeSJ17+8Q7TlMt+L1/DiddReN1Gtuu8KBpS5whXGqPkg/gU7H+oUagQbCtkzIOjgmmyInwMKUohI/jdPPd1i7mtO1Yj6+" +
+            "hJVLVHkJkn+GCV6iWed0KvTbdSC9hA==";
 
         private const string Modulus =
             "A5AwfkcWr2Sq7Wy8hpOHAnAFo8hZdKsVmInqvOckcHaeV36YPTK4H7yfE5cUtkHaL/MaPl1J5expZ9x/mXkAjsTicSXEi3iAAaBa4CrW" +

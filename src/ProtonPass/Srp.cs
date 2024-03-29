@@ -5,12 +5,121 @@
 
 using System;
 using System.Linq;
+using System.Numerics;
+using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ProtonPass
 {
     internal static class Srp
     {
+        internal class Proofs
+        {
+            public byte[] ClientEphemeral { get; }
+            public byte[] ClientProof { get; }
+            public byte[] ServerProof { get; }
+
+            public Proofs(byte[] clientEphemeral, byte[] clientProof, byte[] serverProof)
+            {
+                ClientEphemeral = clientEphemeral;
+                ClientProof = clientProof;
+                ServerProof = serverProof;
+            }
+        }
+
+        internal static Proofs GenerateProofs(int bitLength,
+                                              byte[] serverEphemeralBytes,
+                                              byte[] modulusBytes,
+                                              byte[] hashedPasswordBytes)
+        {
+            return GenerateProofs(bitLength,
+                                  serverEphemeralBytes,
+                                  modulusBytes,
+                                  hashedPasswordBytes,
+                                  GetRandomBigInteger);
+        }
+
+        internal static Proofs GenerateProofs(int bitLength,
+                                              byte[] serverEphemeralBytes,
+                                              byte[] modulusBytes,
+                                              byte[] hashedPasswordBytes,
+                                              Func<BigInteger, BigInteger, BigInteger> getRandomBigInt)
+        {
+            // This code is adapted from https://github.com/ProtonMail/go-srp/blob/master/srp.go
+            // The original code is MIT licensed.
+            // There's a lot of crypto mumbo-jumbo going on here. We're not going to event attempt to
+            // make sense of it. It works according to the tests. It's a crypto/math black box.
+            var serverEphemeral = ToBigInteger(serverEphemeralBytes);
+            var generator = new BigInteger(2);
+            var generatorBytes = ToBytes(generator, bitLength);
+            var modulus = ToBigInteger(modulusBytes);
+            var modulusMinusOne = modulus - 1;
+            var secret = getRandomBigInt(new BigInteger(bitLength * 2), modulusMinusOne);
+            var ephemeral = generator.ModExp(secret, modulus);
+            var scramblingParam = ToBigInteger(ExpandHash(Concat(ToBytes(ephemeral, bitLength), serverEphemeralBytes)));
+            var multiplier = ToBigInteger(ExpandHash(Concat(generatorBytes, modulusBytes))) % modulus;
+            var hashedPassword = ToBigInteger(hashedPasswordBytes);
+            var baseClientSide = (serverEphemeral - generator.ModExp(hashedPassword, modulus) * multiplier % modulus) % modulus;
+            var exponent = (scramblingParam * hashedPassword % modulusMinusOne + secret) % modulusMinusOne;
+            var sharedSecret = baseClientSide.ModExp(exponent, modulus);
+            var clientEphemeralBytes = ToBytes(ephemeral, bitLength);
+            var sharedSecretBytes = ToBytes(sharedSecret, bitLength);
+            var clientProof = ExpandHash(Concat(clientEphemeralBytes, serverEphemeralBytes, sharedSecretBytes));
+            var serverProof = ExpandHash(Concat(clientEphemeralBytes, clientProof, sharedSecretBytes));
+
+            return new Proofs(clientEphemeralBytes, clientProof, serverProof);
+        }
+
+        internal static BigInteger ToBigInteger(byte[] bytes)
+        {
+            // Append a zero byte to make sure the number is positive
+            return new BigInteger(bytes.Append((byte)0).ToArray());
+        }
+
+        internal static byte[] ToBytes(BigInteger n)
+        {
+            var bytes = n.ToByteArray();
+            return bytes[bytes.Length - 1] == 0
+                ? bytes.Sub(0, bytes.Length - 1)
+                : bytes;
+        }
+
+        internal static byte[] ToBytes(BigInteger n, int bitLength)
+        {
+            var original = ToBytes(n);
+            var byteLength = bitLength / 8;
+
+            if (original.Length < byteLength)
+                return Concat(original, new byte[byteLength - original.Length]);
+
+            if (original.Length > byteLength)
+                return original.Sub(0, byteLength);
+
+            return original;
+        }
+
+        internal static BigInteger GetRandomBigInteger(BigInteger minValue, BigInteger maxValue)
+        {
+            if (minValue >= maxValue)
+                throw new ArgumentException("minValue must be less than maxValue");
+
+            var range = maxValue - minValue;
+            var length = range.ToByteArray().Length;
+            BigInteger result;
+
+            using var random = new RNGCryptoServiceProvider();
+            var bytes = new byte[length];
+
+            do
+            {
+                random.GetBytes(bytes);
+                bytes[length - 1] &= 0x7F; // Ensure positive result
+                result = new BigInteger(bytes);
+            } while (result >= range);
+
+            return result + minValue;
+        }
+
         internal static byte[] ParseModulus(string message)
         {
             const string startToken = "-----BEGIN PGP SIGNED MESSAGE-----";
@@ -45,7 +154,7 @@ namespace PasswordManagerAccess.ProtonPass
                 _ => throw new InternalErrorException($"Unsupported SRP version: {version}")
             };
 
-            return ExpandHash(hash.Concat(modulus).ToArray());
+            return ExpandHash(Concat(hash, modulus));
         }
 
         internal static byte[] HashPasswordVersion0(string password, string username)
@@ -69,7 +178,7 @@ namespace PasswordManagerAccess.ProtonPass
 
         internal static byte[] HashPasswordVersion3(string password, byte[] salt)
         {
-            var bcryptSalt = EncodeBase64(salt.Concat("proton".ToBytes()).ToArray(), 16);
+            var bcryptSalt = EncodeBase64(Concat(salt, "proton".ToBytes()), 16);
             return BCryptHashPassword(password, bcryptSalt).ToBytes();
         }
 
