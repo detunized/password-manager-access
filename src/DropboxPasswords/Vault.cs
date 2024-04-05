@@ -22,15 +22,15 @@ namespace PasswordManagerAccess.DropboxPasswords
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string deviceId, IUi ui, ISecureStorage storage)
+        public static Vault Open(ClientInfo clientInfo, IUi ui, ISecureStorage storage)
         {
-            return Open(deviceId, Array.Empty<string>(), ui, storage);
+            return Open(clientInfo, Array.Empty<string>(), ui, storage);
         }
 
-        public static Vault Open(string deviceId, string[] recoveryWords, IUi ui, ISecureStorage storage)
+        public static Vault Open(ClientInfo clientInfo, string[] recoveryWords, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVault(deviceId, recoveryWords, ui, storage, transport));
+            return new Vault(Client.OpenVault(clientInfo, recoveryWords, ui, storage, transport));
         }
 
         public static string GenerateRandomDeviceId()

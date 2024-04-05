@@ -20,26 +20,26 @@ namespace PasswordManagerAccess.DropboxPasswords
         // TODO: Add error handling everywhere!
         // The `recoveryWords` parameter is optional (could be empty, no nulls please). If it's provided we don't use
         // the master key request and don't store it. It's too involved to create multiple overloads for that.
-        public static Account[] OpenVault(string deviceId, string[] recoveryWords, IUi ui, ISecureStorage storage, IRestTransport transport)
+        public static Account[] OpenVault(ClientInfo clientInfo, string[] recoveryWords, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             try
             {
                 // We allow one attempt to fail due to an expired token. If it fails again we give up.
-                return OpenVaultAttempt(deviceId, recoveryWords, ui, storage, transport);
+                return OpenVaultAttempt(clientInfo, recoveryWords, ui, storage, transport);
             }
             catch (TokenExpiredException)
             {
                 storage.StoreString(OAuthTokenKey, null);
             }
 
-            return OpenVaultAttempt(deviceId, recoveryWords, ui, storage, transport);
+            return OpenVaultAttempt(clientInfo, recoveryWords, ui, storage, transport);
         }
 
         //
         // Internal
         //
 
-        internal static Account[] OpenVaultAttempt(string deviceId,
+        internal static Account[] OpenVaultAttempt(ClientInfo clientInfo,
                                                    string[] recoveryWords,
                                                    IUi ui,
                                                    ISecureStorage storage,
@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                 : LoadMasterKey(storage);
             if (masterKey == null)
             {
-                masterKey = EnrollNewDevice(deviceId, ui, transport, apiRest);
+                masterKey = EnrollNewDevice(clientInfo, ui, transport, apiRest);
                 storage.StoreString(MasterKeyKey, masterKey.ToBase64());
             }
 
@@ -116,7 +116,7 @@ namespace PasswordManagerAccess.DropboxPasswords
         }
 
         // Returns the master key on successful enrollment.
-        internal static byte[] EnrollNewDevice(string deviceId, IUi ui, IRestTransport transport, RestClient apiRest)
+        internal static byte[] EnrollNewDevice(ClientInfo clientInfo, IUi ui, IRestTransport transport, RestClient apiRest)
         {
             // To enroll we need to generate a key pair. The public key will be sent to the server.
             // These keys don't need to persist since we don't do anything else but enrolling the device with them.
@@ -127,13 +127,13 @@ namespace PasswordManagerAccess.DropboxPasswords
             var enrollInfo = Post<R.EnrollDevice>("passwords/enroll_device",
                                                     new Dictionary<string, object>
                                                     {
-                                                        ["device_id"] = deviceId,
+                                                        ["device_id"] = clientInfo.DeviceId,
                                                         ["device_public_key"] = publicKey.ToBase64(),
                                                         ["client_ts_ms_utc"] = Os.UnixSeconds(),
                                                         ["app_version"] = "3.23.1",
                                                         ["platform"] = "chrome",
                                                         ["platform_version"] = "Chrome 115.0.0.0",
-                                                        ["device_name"] = "TODO: Provide device name",
+                                                        ["device_name"] = clientInfo.DeviceName,
                                                         ["enroll_action"] = new Dictionary<string, string>
                                                         {
                                                             [".tag"] = "enroll_device"
@@ -160,7 +160,7 @@ namespace PasswordManagerAccess.DropboxPasswords
             var boltInfo = Post<R.BoltInfo>("passwords/get_bolt_info",
                                             new Dictionary<string, object>
                                             {
-                                                ["device_id"] = deviceId,
+                                                ["device_id"] = clientInfo.DeviceId,
                                             },
                                             RestClient.NoHeaders,
                                             apiRest);

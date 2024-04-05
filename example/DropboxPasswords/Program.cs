@@ -101,9 +101,11 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
                     }
                 }
 
+                var clientInfo = new ClientInfo(config["device-id"], "PMA Dropbox Passwords Example");
+
                 var vault = words.Length > 0
-                    ? Vault.Open(config["device-id"], words, new TextUi(), new PlainStorage())
-                    : Vault.Open(config["device-id"], new TextUi(), new PlainStorage());
+                    ? Vault.Open(clientInfo, words, new TextUi(), new PlainStorage())
+                    : Vault.Open(clientInfo, new TextUi(), new PlainStorage());
 
                 var accounts = vault.Accounts;
                 for (var i = 0; i < accounts.Length; ++i)
