@@ -1,5 +1,9 @@
 # Changelog
 
+## 15.0.0
+  - Dropbox Passwords: added the device name configuration options, this name is displayed to
+    the user during the login sequence
+
 ## 14.1.3
   - Dashlane: fixed a login problem with malformed email 2FA tokens
   - Dashlane: fixed the resend email token functionality
