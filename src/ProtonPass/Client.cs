@@ -38,6 +38,13 @@ namespace PasswordManagerAccess.ProtonPass
                                                                                        session.TokenType));
 
              var authInfo = await RequestAuthInfo(username, rest, cancellationToken);
+             var proof = Srp.GenerateProofs(authInfo.Version,
+                                            password,
+                                            username,
+                                            authInfo.Salt.Decode64(),
+                                            Srp.ParseModulus(authInfo.Modulus),
+                                            authInfo.ServerEphemeral.Decode64());
+             var v4 = await SubmitSrpProof(username, authInfo.SrpSession, proof, rest, cancellationToken);
         }
 
         //
@@ -59,11 +66,33 @@ namespace PasswordManagerAccess.ProtonPass
                                                                    RestClient rest,
                                                                    CancellationToken cancellationToken)
         {
-            var request = new RestRequest("core/v4/auth/info")
+            var request = new RestRequest("auth/v4/info")
                 .AddJsonBody(new
                 {
                     Username = username,
                     Intent = "Proton",
+                });
+
+            var response = await rest.ExecutePostAsync<Model.AuthInfo>(request, cancellationToken);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data!;
+        }
+
+        private static async Task<object> SubmitSrpProof(string username,
+                                                         string srpSession,
+                                                         Srp.Proofs proof,
+                                                         RestClient rest,
+                                                         CancellationToken cancellationToken)
+        {
+            var request = new RestRequest("auth/v4")
+                .AddJsonBody(new
+                {
+                    Username = username,
+                    ClientEphemeral = proof.ClientEphemeral.ToBase64(),
+                    ClientProof = proof.ClientProof.ToBase64(),
+                    SRPSession = srpSession,
                 });
 
             var response = await rest.ExecutePostAsync<Model.AuthInfo>(request, cancellationToken);

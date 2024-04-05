@@ -55,7 +55,11 @@ namespace PasswordManagerAccess.Test.ProtonPass
             }
 
             // Act
-            var proofs = Srp.GenerateProofs(2048, serverEphemeralBytes, modulus, hashPassword, GetRandomBigInt);
+            var proofs = Srp.GenerateProofs(Srp.BitLength,
+                                            serverEphemeralBytes,
+                                            modulus,
+                                            hashPassword,
+                                            GetRandomBigInt);
 
             // Assert
             proofs.Should().NotBeNull();

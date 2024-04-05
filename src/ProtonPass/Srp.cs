@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.ProtonPass
 {
     internal static class Srp
     {
-        internal class Proofs
+        public class Proofs
         {
             public byte[] ClientEphemeral { get; }
             public byte[] ClientProof { get; }
@@ -26,6 +26,23 @@ namespace PasswordManagerAccess.ProtonPass
                 ServerProof = serverProof;
             }
         }
+
+        public static Proofs GenerateProofs(int version,
+                                            string password,
+                                            string username,
+                                            byte[] saltBytes,
+                                            byte[] serverEphemeralBytes,
+                                            byte[] modulusBytes)
+        {
+            return GenerateProofs(BitLength,
+                                  serverEphemeralBytes,
+                                  modulusBytes,
+                                  HashPassword(version, password, username, saltBytes, modulusBytes));
+        }
+
+        //
+        // Internal, exposed for testing purposes only
+        //
 
         internal static Proofs GenerateProofs(int bitLength,
                                               byte[] serverEphemeralBytes,
@@ -288,6 +305,8 @@ namespace PasswordManagerAccess.ProtonPass
         //
         // Data
         //
+
+        internal const int BitLength = 2048;
 
         private const string BCryptSaltHeader = "$2y$10$";
 
