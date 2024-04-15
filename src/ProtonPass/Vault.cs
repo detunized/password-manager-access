@@ -14,9 +14,10 @@ namespace PasswordManagerAccess.ProtonPass
         // TODO: Consider removing the = default on the cancellation token
         public static async Task<Vault> Open(string username,
                                              string password,
+                                             IAsyncUi ui,
                                              CancellationToken cancellationToken = default)
         {
-            return await Open(username, password, cancellationToken, new RestAsync.Config());
+            return await Open(username, password, ui, new RestAsync.Config(), cancellationToken);
         }
 
         //
@@ -25,10 +26,11 @@ namespace PasswordManagerAccess.ProtonPass
 
         internal static async Task<Vault> Open(string username,
                                                string password,
-                                               CancellationToken cancellationToken,
-                                               RestAsync.Config config)
+                                               IAsyncUi ui,
+                                               RestAsync.Config config,
+                                               CancellationToken cancellationToken)
         {
-            await Client.Open(username, password, config, cancellationToken);
+            await Client.Open(username, password, ui, config, cancellationToken);
             return new Vault();
         }
     }
