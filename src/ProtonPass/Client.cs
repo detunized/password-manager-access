@@ -102,6 +102,19 @@ namespace PasswordManagerAccess.ProtonPass
             return response.Data!;
         }
 
+        internal class NeedCaptchaException: BaseException
+        {
+            public string Url { get; }
+            public string HumanVerificationToken { get; }
+
+            public NeedCaptchaException(string url, string humanVerificationToken):
+                base("CAPTCHA verification required", null)
+            {
+                Url = url;
+                HumanVerificationToken = humanVerificationToken;
+            }
+        }
+
         internal static BaseException MakeError<T>(RestSharp.RestResponse<T> response)
         {
             if (response.IsNetworkError())
@@ -110,9 +123,21 @@ namespace PasswordManagerAccess.ProtonPass
             if (!response.IsSuccessStatusCode)
             {
                 // Try to parse the error object from the response
+                var errorCode = 0;
                 var errorText = "";
                 if (RestAsync.TryDeserialize<Model.Error>(response.Content ?? "", out var error))
-                    errorText = $" and error {error!.Code}: '{error.Text ?? ""}'";
+                {
+                    errorCode = error!.Code;
+                    errorText = $" and error {errorCode}: '{error.Text ?? ""}'";
+                }
+
+                // TODO: Check what kind of other human verification methods are there
+                if (errorCode == 9001 && error!.Details is { } errorDetails &&
+                    errorDetails.HumanVerificationMethods?.Contains("captcha") == true)
+                {
+                    // TODO: Verify that the url and the token are set
+                    return new NeedCaptchaException(errorDetails.Url!, errorDetails.HumanVerificationToken!);
+                }
 
                 return new InternalErrorException(
                     $"Request to {response.ResponseUri} failed with HTTP status {response.StatusCode}{errorText}");

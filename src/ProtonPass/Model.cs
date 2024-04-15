@@ -18,6 +18,34 @@ namespace PasswordManagerAccess.ProtonPass
             [JsonPropertyName("Error")]
             [JsonRequired]
             public string? Text { get; set; }
+
+            [JsonPropertyName("Details")]
+            public ErrorDetails? Details { get; set; }
+        }
+
+        // Everything must be optional in this class
+        public class ErrorDetails
+        {
+            [JsonPropertyName("HumanVerificationToken")]
+            public string? HumanVerificationToken { get; set; }
+
+            [JsonPropertyName("HumanVerificationMethods")]
+            public string[]? HumanVerificationMethods { get; set; }
+
+            [JsonPropertyName("Direct")]
+            public int Direct { get; set; }
+
+            [JsonPropertyName("Description")]
+            public string? Description { get; set; }
+
+            [JsonPropertyName("Title")]
+            public string? Title { get; set; }
+
+            [JsonPropertyName("WebUrl")]
+            public string? Url { get; set; }
+
+            [JsonPropertyName("ExpiresAt")]
+            public int ExpiresAt { get; set; }
         }
 
         public class Session
@@ -76,7 +104,6 @@ namespace PasswordManagerAccess.ProtonPass
 
             [JsonPropertyName("Username")]
             public string Username { get; set; }
-
         }
     }
 }
