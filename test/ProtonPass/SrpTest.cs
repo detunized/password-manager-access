@@ -56,9 +56,9 @@ namespace PasswordManagerAccess.Test.ProtonPass
 
             // Act
             var proofs = Srp.GenerateProofs(Srp.BitLength,
+                                            hashPassword,
                                             serverEphemeralBytes,
                                             modulus,
-                                            hashPassword,
                                             GetRandomBigInt);
 
             // Assert

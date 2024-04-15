@@ -34,10 +34,11 @@ namespace PasswordManagerAccess.ProtonPass
                                             byte[] serverEphemeralBytes,
                                             byte[] modulusBytes)
         {
-            return GenerateProofs(BitLength,
-                                  serverEphemeralBytes,
-                                  modulusBytes,
-                                  HashPassword(version, password, username, saltBytes, modulusBytes));
+            return GenerateProofs(
+                bitLength: BitLength,
+                hashedPasswordBytes: HashPassword(version, password, username, saltBytes, modulusBytes),
+                serverEphemeralBytes: serverEphemeralBytes,
+                modulusBytes: modulusBytes);
         }
 
         //
@@ -45,21 +46,21 @@ namespace PasswordManagerAccess.ProtonPass
         //
 
         internal static Proofs GenerateProofs(int bitLength,
+                                              byte[] hashedPasswordBytes,
                                               byte[] serverEphemeralBytes,
-                                              byte[] modulusBytes,
-                                              byte[] hashedPasswordBytes)
+                                              byte[] modulusBytes)
         {
-            return GenerateProofs(bitLength,
-                                  serverEphemeralBytes,
-                                  modulusBytes,
-                                  hashedPasswordBytes,
-                                  GetRandomBigInteger);
+            return GenerateProofs(bitLength: bitLength,
+                                  hashedPasswordBytes: hashedPasswordBytes,
+                                  serverEphemeralBytes: serverEphemeralBytes,
+                                  modulusBytes: modulusBytes,
+                                  getRandomBigInt: GetRandomBigInteger);
         }
 
         internal static Proofs GenerateProofs(int bitLength,
+                                              byte[] hashedPasswordBytes,
                                               byte[] serverEphemeralBytes,
                                               byte[] modulusBytes,
-                                              byte[] hashedPasswordBytes,
                                               Func<BigInteger, BigInteger, BigInteger> getRandomBigInt)
         {
             // This code is adapted from https://github.com/ProtonMail/go-srp/blob/master/srp.go
