@@ -27,9 +27,13 @@ namespace PasswordManagerAccess.Common
 
         public static byte[] RandomBytes(int size)
         {
-            using var random = new RNGCryptoServiceProvider();
             var bytes = new byte[size];
+#if NETFRAMEWORK || NETSTANDARD2_0
+            using var random = new RNGCryptoServiceProvider();
             random.GetBytes(bytes);
+#else
+            RandomNumberGenerator.Fill(bytes);
+#endif
             return bytes;
         }
 

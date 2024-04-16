@@ -72,9 +72,38 @@ namespace PasswordManagerAccess.Common
             return s.ToBytes().ToUrlSafeBase64NoPadding();
         }
 
+        // Uri.EscapeUri is deprecated. This is a simple replacement. It's not very efficient, but it's barely used.
         public static string EncodeUri(this string s)
         {
-            return Uri.EscapeUriString(s);
+            var encoded = new StringBuilder();
+
+            foreach (var c in s)
+            {
+                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+                    c == ';' || c == '/' || c == '?' || c == ':' || c == '@' || c == '&' ||
+                    c == '=' || c == '+' || c == '$' || c == ',' || c == '-' || c == '_' ||
+                    c == '.' || c == '!' || c == '~' || c == '*' || c == '\'' || c == '(' ||
+                    c == ')' || c == '#')
+                {
+                    encoded.Append(c);
+                }
+                else
+                {
+                    if (c < 128)
+                    {
+                        var b = (byte)c;
+                        encoded.Append($"%{b:X2}");
+                    }
+                    else
+                    {
+                        var bytes = Encoding.UTF8.GetBytes(new[] { c });
+                        foreach (var b in bytes)
+                            encoded.Append($"%{b:X2}");
+                    }
+                }
+            }
+
+            return encoded.ToString();
         }
 
         public static string EncodeUriData(this string s)

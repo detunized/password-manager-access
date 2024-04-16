@@ -56,22 +56,22 @@ namespace PasswordManagerAccess.ProtonPass
 
             [JsonPropertyName("AccessToken")]
             [JsonRequired]
-            public string AccessToken { get; set; }
+            public string AccessToken { get; set; } = "";
 
             [JsonPropertyName("RefreshToken")]
             [JsonRequired]
-            public string RefreshToken { get; set; }
+            public string RefreshToken { get; set; } = "";
 
             [JsonPropertyName("TokenType")]
             [JsonRequired]
-            public string TokenType { get; set; }
+            public string TokenType { get; set; } = "";
 
             [JsonPropertyName("Scopes")]
             public object[]? Scopes { get; set; }
 
             [JsonPropertyName("UID")]
             [JsonRequired]
-            public string Id { get; set; }
+            public string Id { get; set; } = "";
 
             [JsonPropertyName("LocalID")]
             public int LocalId { get; set; }
@@ -85,25 +85,25 @@ namespace PasswordManagerAccess.ProtonPass
 
             [JsonPropertyName("Modulus")]
             [JsonRequired]
-            public string Modulus { get; set; }
+            public string Modulus { get; set; } = "";
 
             [JsonPropertyName("ServerEphemeral")]
             [JsonRequired]
-            public string ServerEphemeral { get; set; }
+            public string ServerEphemeral { get; set; } = "";
 
             [JsonPropertyName("Version")]
             public int Version { get; set; }
 
             [JsonPropertyName("Salt")]
             [JsonRequired]
-            public string Salt { get; set; }
+            public string Salt { get; set; } = "";
 
             [JsonPropertyName("SRPSession")]
             [JsonRequired]
-            public string SrpSession { get; set; }
+            public string SrpSession { get; set; } = "";
 
             [JsonPropertyName("Username")]
-            public string Username { get; set; }
+            public string Username { get; set; } = "";
         }
     }
 }

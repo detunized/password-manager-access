@@ -122,16 +122,17 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        private static AesManaged CreateAes256Ecb(byte[] key)
+        // TODO: Move to common crypto module
+        private static Aes CreateAes256Ecb(byte[] key)
         {
-            return new AesManaged
-            {
-                BlockSize = 128,
-                KeySize = 256,
-                Key = key,
-                Mode = CipherMode.ECB,
-                Padding = PaddingMode.None
-            };
+            var aes = Aes.Create();
+            aes.BlockSize = 128;
+            aes.KeySize = 256;
+            aes.Key = key;
+            aes.Mode = CipherMode.ECB;
+            aes.Padding = PaddingMode.None;
+
+            return aes;
         }
     }
 }

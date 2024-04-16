@@ -93,12 +93,13 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(expected, raw.ToUrlSafeBase64NoPadding());
         }
 
-        // TODO: Add more test cases to make sure it matches JS.
         [Theory]
         [InlineData("", "")]
         [InlineData(";,/?:@&=+$#", ";,/?:@&=+$#")]
         [InlineData("-_.!~*'()", "-_.!~*'()")]
         [InlineData("ABC abc 123", "ABC%20abc%20123")]
+        [InlineData(" #%^{}|\\\"<>`", "%20#%25%5E%7B%7D%7C%5C%22%3C%3E%60")]
+        [InlineData("éåäöü", "%C3%A9%C3%A5%C3%A4%C3%B6%C3%BC")]
         public void String_EscapeUri_escapes_special_characters(string raw, string uri)
         {
             Assert.Equal(uri, raw.EncodeUri());

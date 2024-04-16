@@ -403,10 +403,6 @@ namespace PasswordManagerAccess.Test
             }
         }
 
-        public void Dispose()
-        {
-        }
-
         //
         // Data
         //

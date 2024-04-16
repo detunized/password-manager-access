@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using FluentAssertions;
 using PasswordManagerAccess.Common;
 using Xunit;
 
@@ -11,6 +12,35 @@ namespace PasswordManagerAccess.Test.Common
 {
     public class CryptoTest
     {
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(16)]
+        [InlineData(129)]
+        [InlineData(1337)]
+        public void RandomBytes_returns_correct_number_of_bytes(int numBytes)
+        {
+            // Arrange/Act
+            var bytes = Crypto.RandomBytes(numBytes);
+
+            // Assert
+            bytes.Length.Should().Be(numBytes);
+        }
+
+        [Fact]
+        public void RandomBytes_looks_random()
+        {
+            // Act/Arrange
+            var bytes1 = Crypto.RandomBytes(32);
+            var bytes2 = Crypto.RandomBytes(32);
+            var bytes3 = Crypto.RandomBytes(32);
+
+            // Assert
+            bytes1.Should().NotEqual(bytes2);
+            bytes1.Should().NotEqual(bytes3);
+            bytes2.Should().NotEqual(bytes3);
+        }
+
         //
         // CRC32
         //

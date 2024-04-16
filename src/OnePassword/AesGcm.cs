@@ -74,7 +74,7 @@ namespace PasswordManagerAccess.OnePassword
             if (iv.Length != 12)
                 throw new InternalErrorException("The iv must be 12 bytes long");
 
-            using var aes = new AesManaged { Mode = CipherMode.ECB, Key = key };
+            using var aes = CreateAes256Ecb(key);
             using var encryptor = aes.CreateEncryptor();
             var counter = InitializeCounter(iv);
 
@@ -90,6 +90,19 @@ namespace PasswordManagerAccess.OnePassword
                 for (int j = 0; j < Math.Min(length - i, 16); ++j)
                     output[i + j] = (byte)(input[i + j] ^ block[j]);
             }
+        }
+
+        // TODO: Move to common crypto module (also this code is duplicated)
+        internal static Aes CreateAes256Ecb(byte[] key)
+        {
+            var aes = Aes.Create();
+            aes.BlockSize = 128;
+            aes.KeySize = 256;
+            aes.Key = key;
+            aes.Mode = CipherMode.ECB;
+            aes.Padding = PaddingMode.None;
+
+            return aes;
         }
 
         internal static byte[] ComputeTag(byte[] hashKey,

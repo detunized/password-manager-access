@@ -125,12 +125,9 @@ namespace PasswordManagerAccess.ProtonPass
             var length = range.ToByteArray().Length;
             BigInteger result;
 
-            using var random = new RNGCryptoServiceProvider();
-            var bytes = new byte[length];
-
             do
             {
-                random.GetBytes(bytes);
+                var bytes = Crypto.RandomBytes(length);
                 bytes[length - 1] &= 0x7F; // Ensure positive result
                 result = new BigInteger(bytes);
             } while (result >= range);
