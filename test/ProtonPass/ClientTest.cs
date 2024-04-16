@@ -100,7 +100,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             // Arrange
             var flow = new RestFlow()
                 .Post(GetFixture("auth-info"))
-                    .ExpectUrl("/core/v4/auth/info")
+                    .ExpectUrl("/auth/v4/info")
                     .ExpectContent("{\"Username\":\"username\",\"Intent\":\"Proton\"}");
 
             // Act/assert
