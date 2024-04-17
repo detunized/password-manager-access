@@ -43,6 +43,10 @@ namespace PasswordManagerAccess.Example.Common
             return _storage.ContainsKey(name) ? DecodeValue(_storage[name]) : null;
         }
 
+        //
+        // Private
+        //
+
         private static string FindFilename()
         {
             // Look in the same place as config.yaml
