@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;

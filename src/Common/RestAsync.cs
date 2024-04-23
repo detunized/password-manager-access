@@ -67,20 +67,30 @@ namespace PasswordManagerAccess.Common
         // RestSharp.RestClient extensions
         //
 
-        public static void UpdateAuthenticator(this RestSharp.RestClient rest, IAuthenticator authenticator)
+        public static RestSharp.RestClient AddOrUpdateDefaultHeader(this RestSharp.RestClient rest, string name, string value)
         {
-            if (!(rest.Options.Authenticator is DelegatingAuthenticator da))
+            rest.DefaultParameters.ReplaceParameter(new HeaderParameter(name, value));
+            return rest;
+        }
+
+        public static RestSharp.RestClient UpdateAuthenticator(this RestSharp.RestClient rest, IAuthenticator authenticator)
+        {
+            if (rest.Options.Authenticator is not DelegatingAuthenticator da)
                 throw new InternalErrorException("This instance of RestClient is not created via RestAsync.Create");
 
             da.DelegateTo = authenticator;
+            return rest;
         }
 
         //
         // RestSharp.RestResponse extensions
         //
 
+        // RestSharp marks all the responses with non 200 or 404 status as errors. So we try to heuristically
+        // match the actual network errors here. In those cases usually there's no status code and the error contains
+        // an inner exception.
         public static bool IsNetworkError(this RestSharp.RestResponse response) =>
-            response.ErrorException is HttpRequestException _;
+            response is { StatusCode: 0, ErrorException: HttpRequestException { InnerException: not null } };
 
         public static bool IsJsonError(this RestSharp.RestResponse response) =>
             response.ErrorException is JsonException _;
