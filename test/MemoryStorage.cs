@@ -3,13 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Test
 {
-    public class MemoryStorage: ISecureStorage
+    public class MemoryStorage: ISecureStorage, IAsyncSecureStorage
     {
-        public Dictionary<string, string> Values { get; } = new Dictionary<string, string>();
+        public Dictionary<string, string> Values { get; } = new();
         public Func<string, string> OnMissingValue { get; }
 
         public MemoryStorage(Dictionary<string, string> values = null, Func<string, string> onMissingValue = null)
@@ -20,14 +21,25 @@ namespace PasswordManagerAccess.Test
             OnMissingValue = onMissingValue ?? (name => "");
         }
 
-        public string LoadString(string name)
+        string ISecureStorage.LoadString(string name)
         {
             return Values.TryGetValue(name, out var value) ? value : OnMissingValue(name);
         }
 
-        public void StoreString(string name, string value)
+        void ISecureStorage.StoreString(string name, string value)
         {
             Values[name] = value;
+        }
+
+        Task<string> IAsyncSecureStorage.LoadString(string name)
+        {
+            return Task.FromResult(((ISecureStorage)this).LoadString(name));
+        }
+
+        Task IAsyncSecureStorage.StoreString(string name, string value)
+        {
+            ((ISecureStorage)this).StoreString(name, value);
+            return Task.CompletedTask;
         }
     }
 }
