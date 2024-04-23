@@ -85,7 +85,7 @@ namespace PasswordManagerAccess.ProtonPass
                 }
                 catch (TokenExpiredException)
                 {
-                    if (!refreshToken.IsNullOrEmpty() ||
+                    if (refreshToken.IsNullOrEmpty() ||
                         !await TryRefreshAuthSessionAndUpdate(sessionId!, refreshToken!, storage, rest, cancellationToken).ConfigureAwait(false))
                     {
                         // The refresh token is expired. We need to do a full login.
@@ -139,8 +139,7 @@ namespace PasswordManagerAccess.ProtonPass
 
                     // Update the RestClient
                     rest.AddOrUpdateDefaultHeader("X-Pm-Uid", auth.SessionId);
-                    rest.UpdateAuthenticator(
-                        new OAuth2AuthorizationRequestHeaderAuthenticator(auth.AccessToken, "Bearer"));
+                    rest.UpdateAuthenticator(new OAuth2AuthorizationRequestHeaderAuthenticator(auth.AccessToken, "Bearer"));
 
                     // Once the auth has been granted, the tokens returned by the server give full access to the vault.
                     // They need to be saved for the next sessions.
@@ -175,12 +174,21 @@ namespace PasswordManagerAccess.ProtonPass
             try
             {
                 var session = await RefreshAuthSession(sessionId, refreshToken, rest, cancellationToken).ConfigureAwait(false);
-                await StoreSession(sessionId, session.AccessToken, session.RefreshToken, storage).ConfigureAwait(false);
+
+                // Update the RestClient
+                rest.AddOrUpdateDefaultHeader("X-Pm-Uid", session.Id);
+                rest.UpdateAuthenticator(new OAuth2AuthorizationRequestHeaderAuthenticator(session.AccessToken, "Bearer"));
+
+                // Save for the next session
+                await StoreSession(session.Id, session.AccessToken, session.RefreshToken, storage).ConfigureAwait(false);
+
                 return true;
             }
             catch (TokenExpiredException)
             {
+                // The refresh token is expired as well. Erase everything and start from scratch.
                 await StoreSession(sessionId, null, null, storage).ConfigureAwait(false);
+
                 return false;
             }
         }
