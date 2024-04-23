@@ -16,6 +16,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var vault = await Vault.Open("username",
                                          "password",
                                          null!,
+                                         null!,
                                          new RestFlow(),
                                          new CancellationTokenSource().Token);
             vault.Should().NotBeNull();

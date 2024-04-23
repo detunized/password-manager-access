@@ -15,9 +15,10 @@ namespace PasswordManagerAccess.ProtonPass
         public static async Task<Vault> Open(string username,
                                              string password,
                                              IAsyncUi ui,
+                                             IAsyncSecureStorage storage,
                                              CancellationToken cancellationToken = default)
         {
-            return await Open(username, password, ui, new RestAsync.Config(), cancellationToken);
+            return await Open(username, password, ui, storage, new RestAsync.Config(), cancellationToken);
         }
 
         //
@@ -27,10 +28,11 @@ namespace PasswordManagerAccess.ProtonPass
         internal static async Task<Vault> Open(string username,
                                                string password,
                                                IAsyncUi ui,
+                                               IAsyncSecureStorage storage,
                                                RestAsync.Config config,
                                                CancellationToken cancellationToken)
         {
-            await Client.Open(username, password, ui, config, cancellationToken);
+            await Client.Open(username, password, ui, storage, config, cancellationToken);
             return new Vault();
         }
     }

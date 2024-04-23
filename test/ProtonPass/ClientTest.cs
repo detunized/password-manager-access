@@ -64,8 +64,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         public async void RequestNewAuthSession_fails_on_error()
         {
             // Arrange
-            var flow = new RestFlow().Post("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}",
-                                           HttpStatusCode.BadRequest);
+            var flow = new RestFlow().Post("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}", HttpStatusCode.BadRequest);
 
             // Act
             Func<Task> act = () => Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
@@ -73,7 +72,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             // Assert
             await act.Should()
                 .ThrowAsync<InternalErrorException>()
-                .WithMessage("Request to  failed with HTTP status BadRequest and error 1001: 'Invalid credentials'");
+                .WithMessage("Request to '' failed with HTTP status BadRequest and error 1001: 'Invalid credentials'");
         }
 
         [Fact]

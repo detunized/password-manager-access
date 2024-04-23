@@ -3,7 +3,11 @@
 
 #nullable enable
 
+using System;
 using System.Text.Json.Serialization;
+
+// All the models here are used in deserialization and are not supposed to be instantiated directly.
+// ReSharper disable ClassNeverInstantiated.Global
 
 namespace PasswordManagerAccess.ProtonPass
 {
@@ -104,6 +108,69 @@ namespace PasswordManagerAccess.ProtonPass
 
             [JsonPropertyName("Username")]
             public string Username { get; set; } = "";
+        }
+
+        public class Auth
+        {
+            [JsonPropertyName("Code")]
+            [JsonRequired]
+            public int Code { get; set; }
+
+            [JsonPropertyName("LocalID")]
+            public int LocalId { get; set; }
+
+            [JsonPropertyName("TokenType")]
+            [JsonRequired]
+            public string TokenType { get; set; } = "";
+
+            [JsonPropertyName("AccessToken")]
+            [JsonRequired]
+            public string AccessToken { get; set; } = "";
+
+            [JsonPropertyName("RefreshToken")]
+            [JsonRequired]
+            public string RefreshToken { get; set; } = "";
+
+            [JsonPropertyName("Scopes")]
+            public string[] Scopes { get; set; } = Array.Empty<string>();
+
+            [JsonPropertyName("UID")]
+            [JsonRequired]
+            public string SessionId { get; set; } = "";
+
+            [JsonPropertyName("UserID")]
+            public string UserId { get; set; } = "";
+
+            [JsonPropertyName("EventID")]
+            public string EventId { get; set; } = "";
+
+            [JsonPropertyName("PasswordMode")]
+            public int PasswordMode { get; set; }
+
+            [JsonPropertyName("ServerProof")]
+            [JsonRequired]
+            public string ServerProof { get; set; } = "";
+
+            [JsonPropertyName("Scope")]
+            public string Scope { get; set; } = "";
+
+            [JsonPropertyName("TwoFactor")]
+            public int TwoFactor { get; set; }
+
+            [JsonPropertyName("2FA")]
+            public Mfa Mfa { get; set; }
+
+            [JsonPropertyName("TemporaryPassword")]
+            public int TemporaryPassword { get; set; }
+        }
+
+        public struct Mfa
+        {
+            [JsonPropertyName("Enabled")]
+            public int Enabled { get; set; }
+
+            [JsonPropertyName("TOTP")]
+            public int Totp { get; set; }
         }
     }
 }

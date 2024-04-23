@@ -119,7 +119,8 @@ namespace PasswordManagerAccess.Example.ProtonPass
             {
                 var vault = Vault.Open(config["username"],
                                        config["password"],
-                                       new AsyncTextUi()).GetAwaiter().GetResult();
+                                       new AsyncTextUi(),
+                                       new AsyncPlainStorage()).GetAwaiter().GetResult();
             }
             catch (BaseException e)
             {
