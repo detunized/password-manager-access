@@ -8,16 +8,6 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.DropboxPasswords
 {
-    // TODO: Move this out of here!
-    public interface IUi
-    {
-        // Returns the redirect URL with the code. null if canceled or errored.
-        string PerformOAuthLogin(string url, string redirectUrl);
-
-        // Optional. Tell the user that the enrollment request has been sent to other enrolled devices.
-        void EnrollRequestSent(string[] deviceNames);
-    }
-
     public class Vault
     {
         public readonly Account[] Accounts;

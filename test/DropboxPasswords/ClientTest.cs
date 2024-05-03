@@ -172,8 +172,22 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                 return "https://www.dropbox.com/passwords_extension/auth_redirect?code=code";
             }
 
+            public void WillSendEnrollRequest()
+            {
+                // TODO: Add a test that checks this method is called
+                throw new NotImplementedException();
+            }
+
             public void EnrollRequestSent(string[] deviceNames)
             {
+                // TODO: Add a test that checks this method is called
+                throw new NotImplementedException();
+            }
+
+            public IUi.Action AskForNextAction()
+            {
+                // TODO: Add a test that checks this method is called
+                throw new NotImplementedException();
             }
         }
 

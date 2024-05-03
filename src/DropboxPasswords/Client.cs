@@ -20,7 +20,11 @@ namespace PasswordManagerAccess.DropboxPasswords
         // TODO: Add error handling everywhere!
         // The `recoveryWords` parameter is optional (could be empty, no nulls please). If it's provided we don't use
         // the master key request and don't store it. It's too involved to create multiple overloads for that.
-        public static Account[] OpenVault(ClientInfo clientInfo, string[] recoveryWords, IUi ui, ISecureStorage storage, IRestTransport transport)
+        public static Account[] OpenVault(ClientInfo clientInfo,
+                                          string[] recoveryWords,
+                                          IUi ui,
+                                          ISecureStorage storage,
+                                          IRestTransport transport)
         {
             try
             {
@@ -123,88 +127,133 @@ namespace PasswordManagerAccess.DropboxPasswords
             // We can throw them away after we're done.
             var (publicKey, privateKey) = CryptoBoxKeypair();
 
+            R.BoltInfo? boltInfo = null;
+            RestClient? thunderRest = null;
+            var shouldSendRequest = true;
+
+            while (true)
+            {
+                if (shouldSendRequest)
+                    SendEnrollRequest(clientInfo, publicKey, ui, apiRest);
+
+                // 2. Get Bolt credentials that are used to subscribe to a Bolt channel to receive the master key.
+                //    We need to do this only once. It doesn't change from long poll to long poll.
+                boltInfo ??= Post<R.BoltInfo>("passwords/get_bolt_info",
+                                              new Dictionary<string, object>
+                                              {
+                                                  ["device_id"] = clientInfo.DeviceId,
+                                              },
+                                              RestClient.NoHeaders,
+                                              apiRest);
+
+                thunderRest ??= new RestClient(transport,
+                                               "https://thunder.dropbox.com/2",
+                                               defaultHeaders: apiRest.DefaultHeaders);
+
+                // 3. Subscribe to a Bolt channel to receive the encrypted master key.
+                //    This is a long poll request that times out in around 50 seconds.
+                var keys = PostDynamicJson("payloads/subscribe",
+                                           new Dictionary<string, object>
+                                           {
+                                               ["channel_states"] = new[]
+                                               {
+                                                   new Dictionary<string, object>
+                                                   {
+                                                       ["channel_id"] = new Dictionary<string, object>
+                                                       {
+                                                           ["app_id"] = "passwords_bolt",
+                                                           ["unique_id"] = boltInfo.UniqueId,
+                                                       },
+                                                       ["revision"] = boltInfo.Revision,
+                                                       ["token"] = boltInfo.Token,
+                                                   }
+                                               }
+                                           },
+                                           RestClient.NoHeaders,
+                                           thunderRest);
+
+                // When the long poll times out we just get "{}" back. Otherwise we get the payload.
+                var payload = keys.SelectToken("$.channel_payloads[0].payloads[0].payload");
+                if (payload != null)
+                    return ParseEnrollResponsePayload(payload, privateKey);
+
+                // Ask the user what to do next
+                switch (ui.AskForNextAction())
+                {
+                // Do another long poll to continue waiting
+                case IUi.Action.KeepWaiting:
+                    shouldSendRequest = false;
+                    continue;
+
+                // Ask the server to resend the request
+                case IUi.Action.ResendRequest:
+                    shouldSendRequest = true;
+                    continue;
+
+                // Abort the enrollment
+                case IUi.Action.Cancel:
+                    throw new CanceledMultiFactorException("Enrollment request was canceled by the user");
+
+                default:
+                    throw new InternalErrorException("Logical error");
+                }
+            }
+        }
+
+        internal static void SendEnrollRequest(ClientInfo clientInfo, byte[] publicKey, IUi ui, RestClient apiRest)
+        {
+            // Tell the user to get ready.
+            ui.WillSendEnrollRequest();
+
             // 1. Initial enrollment request which sends the notification to other devices to prompt the user to approve
             var enrollInfo = Post<R.EnrollDevice>("passwords/enroll_device",
-                                                    new Dictionary<string, object>
-                                                    {
-                                                        ["device_id"] = clientInfo.DeviceId,
-                                                        ["device_public_key"] = publicKey.ToBase64(),
-                                                        ["client_ts_ms_utc"] = Os.UnixSeconds(),
-                                                        ["app_version"] = "3.23.1",
-                                                        ["platform"] = "chrome",
-                                                        ["platform_version"] = "Chrome 115.0.0.0",
-                                                        ["device_name"] = clientInfo.DeviceName,
-                                                        ["enroll_action"] = new Dictionary<string, string>
-                                                        {
-                                                            [".tag"] = "enroll_device"
-                                                        },
-                                                        ["build_channel"] = new Dictionary<string, string>
-                                                        {
-                                                            [".tag"] = "external"
-                                                        }
-                                                    },
-                                                    RestClient.NoHeaders,
-                                                    apiRest);
+                                                  new Dictionary<string, object>
+                                                  {
+                                                      ["device_id"] = clientInfo.DeviceId,
+                                                      ["device_public_key"] = publicKey.ToBase64(),
+                                                      ["client_ts_ms_utc"] = Os.UnixSeconds(),
+                                                      ["app_version"] = "3.23.1",
+                                                      ["platform"] = "chrome",
+                                                      ["platform_version"] = "Chrome 115.0.0.0",
+                                                      ["device_name"] = clientInfo.DeviceName,
+                                                      ["enroll_action"] = new Dictionary<string, string>
+                                                      {
+                                                          [".tag"] = "enroll_device"
+                                                      },
+                                                      ["build_channel"] = new Dictionary<string, string>
+                                                      {
+                                                          [".tag"] = "external"
+                                                      }
+                                                  },
+                                                  RestClient.NoHeaders,
+                                                  apiRest);
 
             if (enrollInfo.Status.Tag != "device_requested")
                 throw new InternalErrorException(
-                    MakeErrorMessage($"expected status 'device_requested', got '{enrollInfo.Status.Tag}'"));
+                    MakeEnrollErrorMessage($"expected status 'device_requested', got '{enrollInfo.Status.Tag}'"));
 
             var deviceNames = enrollInfo.Status.DeviceRequested
                 .Select(x => x.Name.IsNullOrEmpty() ? "Unknown" : x.Name)
                 .ToArray();
 
             ui.EnrollRequestSent(deviceNames);
+        }
 
-            // 2. Get Bolt credentials that are used to subscribe to a Bolt channel to receive the master key
-            var boltInfo = Post<R.BoltInfo>("passwords/get_bolt_info",
-                                            new Dictionary<string, object>
-                                            {
-                                                ["device_id"] = clientInfo.DeviceId,
-                                            },
-                                            RestClient.NoHeaders,
-                                            apiRest);
-
-            var thunderRest = new RestClient(transport,
-                                             "https://thunder.dropbox.com/2",
-                                             defaultHeaders: apiRest.DefaultHeaders);
-
-            // 3. Subscribe to a Bolt channel to receive the encrypted master key
-            var keys = PostDynamicJson("payloads/subscribe",
-                                       new Dictionary<string, object>
-                                       {
-                                           ["channel_states"] = new[]
-                                           {
-                                               new Dictionary<string, object>
-                                               {
-                                                   ["channel_id"] = new Dictionary<string, object>
-                                                   {
-                                                       ["app_id"] = "passwords_bolt",
-                                                       ["unique_id"] = boltInfo.UniqueId,
-                                                   },
-                                                   ["revision"] = boltInfo.Revision,
-                                                   ["token"] = boltInfo.Token,
-                                               }
-                                           }
-                                       },
-                                       RestClient.NoHeaders,
-                                       thunderRest);
-
-            var payload = keys.SelectToken("$.channel_payloads[0].payloads[0].payload");
-            if (payload == null)
-                throw new InternalErrorException(MakeErrorMessage("invalid response format"));
-
+        internal static byte[] ParseEnrollResponsePayload(JToken payload, byte[] privateKey)
+        {
             var messageType = payload.IntAt("message_type", -1);
             switch (messageType)
             {
-            case 1: // Accepted
+            // Accepted
+            case 1:
                 break;
 
-            case 3: // Denied
-                throw new BadMultiFactorException(MakeErrorMessage("enrollment request was denied"));
+            // Denied
+            case 3:
+                throw new BadMultiFactorException(MakeEnrollErrorMessage("enrollment request was denied"));
 
             default:
-                throw new InternalErrorException(MakeErrorMessage($"unknown message type {messageType}"));
+                throw new InternalErrorException(MakeEnrollErrorMessage($"unknown message type {messageType}"));
             }
 
             var sourceDevicePublicKey = payload.StringAt("source_device_public_key", null);
@@ -212,16 +261,16 @@ namespace PasswordManagerAccess.DropboxPasswords
             var nonce = payload.SelectToken("encrypted_user_key_bundle.nonce")?.ToString();
 
             if (sourceDevicePublicKey == null || encryptedData == null || nonce == null)
-                throw new InternalErrorException(MakeErrorMessage("invalid public/master key format"));
+                throw new InternalErrorException(MakeEnrollErrorMessage("invalid public/master key format"));
 
             // Decrypt the master key
             return CryptoBoxOpenEasy(encryptedData.Decode64(),
                                      nonce.Decode64(),
                                      privateKey,
                                      sourceDevicePublicKey.Decode64());
-
-            static string MakeErrorMessage(string message) => $"Failed to enroll the device: {message}";
         }
+
+        internal static string MakeEnrollErrorMessage(string message) => $"Failed to enroll the device: {message}";
 
         internal static string AcquireOAuthToken(IUi ui, IRestTransport transport)
         {
@@ -416,9 +465,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                                                Dictionary<string, string> headers,
                                                RestClient rest)
         {
-            var response = rest.PostJson(endpoint: endpoint,
-                                         parameters: parameters,
-                                         headers: headers);
+            var response = rest.PostJson(endpoint, parameters, headers);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -499,12 +546,18 @@ namespace PasswordManagerAccess.DropboxPasswords
         // Errors
         //
 
-        internal class TokenExpiredException: Exception
+        internal class TokenExpiredException: BaseException
         {
+            public TokenExpiredException(): base("Access token expired", null)
+            {
+            }
         }
 
-        internal static InternalErrorException MakeError(RestResponse<string> response)
+        internal static BaseException MakeError(RestResponse<string> response)
         {
+            if (response.IsNetworkError)
+                return new NetworkErrorException("Network error has occurred", response.Error);
+
             // Try to deserialize the error response first
             try
             {
