@@ -1,5 +1,10 @@
 # Changelog
 
+## 16.0.0
+  - Dropbox Passwords: added Client UI methods to allow the user to cancel and re-trigger the device
+    enrollment process
+  - Dropbox Passwords: improve enrollment process handling, allow longer enrollment sequences
+
 ## 15.0.0
   - Dropbox Passwords: added the device name configuration options, this name is displayed to
     the user during the login sequence
