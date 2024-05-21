@@ -12,7 +12,7 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         // Tell the user that the enrollment request is about to be sent to other enrolled devices.
         // Could be used to tell the user to prepare their devices, like opening the browser extension to make sure
-        // it is ready to receive the request. The list of devices is unfortunately is not available at this point.
+        // it is ready to receive the request. The list of devices is unfortunately not available at this point.
         void WillSendEnrollRequest();
 
         // Tell the user that the enrollment request has been sent to other enrolled devices.
