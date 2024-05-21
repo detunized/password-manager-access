@@ -8,22 +8,51 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using MockHttp;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ProtonPass;
 using Xunit;
+using static PasswordManagerAccess.Test.TestUtil;
 
 namespace PasswordManagerAccess.Test.ProtonPass
 {
     public class ClientTest: TestBase
     {
         [Fact]
+        public async void Open_returns_a_vault_with_a_valid_access_token()
+        {
+            // Arrange
+            var mockHttp = new MockHttpHandler();
+            mockHttp
+                .When(m => m
+                    .Method("GET")
+                    .RequestUri("*/pass/v1/invite")
+                    .Header("X-Pm-Appversion", "android-pass@1.19.0")
+                    .Header("X-Pm-Uid", "session-id")
+                    .Header("Authorization", "Bearer access-token")
+                    .Not.Header("X-Pm-Human-Verification-Token")
+                    .Not.Header("X-Pm-Human-Verification-Token-Type")
+                )
+                .Respond(w => w
+                    .StatusCode(200)
+                    .JsonText(GetFixture("sessions")));
+
+            // Act
+            await Swallow(() => Client.Open("username", "password", GetAsyncUi(), GetAsyncStorage(), mockHttp.ToConfig(), MakeToken()));
+
+            // Assert
+            mockHttp.VerifyAll();
+            mockHttp.VerifyNoOtherRequests();
+        }
+
+        [Fact]
         public async void RequestNewAuthSession_returns_a_session()
         {
             // Arrange
-            var flow = new RestFlow().Post(GetFixture("sessions"));
+            var rest = Serve(GetFixture("sessions"));
 
             // Act
-            var session = await Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
+            var session = await Client.RequestNewAuthSession(rest, MakeToken());
 
             // Assert
             session.Code.Should().Be(1000);
@@ -33,26 +62,32 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestNewAuthSession_makes_a_POST_request()
+        public async void RequestNewAuthSession_makes_POST_request()
         {
             // Arrange
-            var flow = new RestFlow()
-                .Post(GetFixture("sessions"))
-                    .ExpectUrl("/auth/v4/sessions")
-                    .ExpectContent("");
+            var mockHttp = new MockHttpHandler();
+            mockHttp
+                .When(w => w
+                    .Method("POST")
+                    .RequestUri("*/auth/v4/sessions")
+                    .WithoutBody())
+                .Respond(w => w.JsonText(GetFixture("sessions")));
 
-            // Act/assert
-            await Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
+            // Act
+            await Swallow(() => Client.RequestNewAuthSession(mockHttp.ToClient(), MakeToken()));
+
+            mockHttp.VerifyAll();
+            mockHttp.VerifyNoOtherRequests();
         }
 
         [Fact]
         public async void RequestNewAuthSession_fails_on_invalid_json()
         {
             // Arrange
-            var flow = new RestFlow().Post("}{");
+            var rest = Serve("}{");
 
             // Act
-            Func<Task> act = () => Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
+            Func<Task> act = () => Client.RequestNewAuthSession(rest, MakeToken());
 
             // Assert
             await act.Should()
@@ -64,25 +99,25 @@ namespace PasswordManagerAccess.Test.ProtonPass
         public async void RequestNewAuthSession_fails_on_error()
         {
             // Arrange
-            var flow = new RestFlow().Post("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}", HttpStatusCode.BadRequest);
+            var rest = Serve("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}", HttpStatusCode.BadRequest);
 
             // Act
-            Func<Task> act = () => Client.RequestNewAuthSession(flow, new CancellationTokenSource().Token);
+            Func<Task> act = () => Client.RequestNewAuthSession(rest, MakeToken());
 
             // Assert
             await act.Should()
                 .ThrowAsync<InternalErrorException>()
-                .WithMessage("Request to '' failed with HTTP status BadRequest and error 1001: 'Invalid credentials'");
+                .WithMessage("Request to '*' failed with HTTP status BadRequest and error 1001: 'Invalid credentials'");
         }
 
         [Fact]
         public async void RequestAuthInfo_returns_auth_info()
         {
             // Arrange
-            var flow = new RestFlow().Post(GetFixture("auth-info"));
+            var rest = Serve(GetFixture("auth-info"));
 
             // Act
-            var authInfo = await Client.RequestAuthInfo("username", flow, new CancellationTokenSource().Token);
+            var authInfo = await Client.RequestAuthInfo("username", rest, MakeToken());
 
             // Assert
             authInfo.Code.Should().Be(1000);
@@ -94,17 +129,53 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestAuthInfo_makes_a_POST_request()
+        public async void RequestAuthInfo_makes_POST_request()
         {
             // Arrange
-            var flow = new RestFlow()
-                .Post(GetFixture("auth-info"))
-                    .ExpectUrl("/auth/v4/info")
-                    .ExpectContent("{\"Username\":\"username\",\"Intent\":\"Proton\"}");
+            var mockHttp = new MockHttpHandler();
+            mockHttp
+                .When(w => w
+                    .Method("POST")
+                    .RequestUri("*/auth/v4/info")
+                    .JsonText("{\"Username\":\"username\",\"Intent\":\"Proton\"}"))
+                .Respond(w => w.JsonText(GetFixture("auth-info")));
 
             // Act/assert
-            await Client.RequestAuthInfo("username", flow, new CancellationTokenSource().Token);
+            await Swallow(() => Client.RequestAuthInfo("username", mockHttp.ToClient(), MakeToken()));
+
+            mockHttp.VerifyAll();
+            mockHttp.VerifyNoOtherRequests();
         }
 
+        //
+        // Helpers
+        //
+
+        class TestAsyncUi: IAsyncUi
+        {
+            public Task<IAsyncUi.Result> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken)
+            {
+                return Task.FromResult(new IAsyncUi.Result()
+                {
+                    Solved = true,
+                    Token = "ok-human-verification-token",
+                });
+            }
+        }
+
+        private static IAsyncUi GetAsyncUi()
+        {
+            return new TestAsyncUi();
+        }
+
+        private static IAsyncSecureStorage GetAsyncStorage()
+        {
+            return new MemoryStorage(new()
+            {
+                ["session-id"] = "session-id",
+                ["access-token"] = "access-token",
+                ["refresh-token"] = "refresh-token",
+            });
+        }
     }
 }

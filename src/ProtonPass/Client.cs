@@ -14,6 +14,7 @@ using RestClient = RestSharp.RestClient;
 
 namespace PasswordManagerAccess.ProtonPass
 {
+    // TODO: Move this out of here
     public interface IAsyncUi
     {
         public class Result
