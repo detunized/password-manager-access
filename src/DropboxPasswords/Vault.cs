@@ -8,29 +8,19 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.DropboxPasswords
 {
-    // TODO: Move this out of here!
-    public interface IUi
-    {
-        // Returns the redirect URL with the code. null if canceled or errored.
-        string PerformOAuthLogin(string url, string redirectUrl);
-
-        // Optional. Tell the user that the enrollment request has been sent to other enrolled devices.
-        void EnrollRequestSent(string[] deviceNames);
-    }
-
     public class Vault
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string deviceId, IUi ui, ISecureStorage storage)
+        public static Vault Open(ClientInfo clientInfo, IUi ui, ISecureStorage storage)
         {
-            return Open(deviceId, Array.Empty<string>(), ui, storage);
+            return Open(clientInfo, Array.Empty<string>(), ui, storage);
         }
 
-        public static Vault Open(string deviceId, string[] recoveryWords, IUi ui, ISecureStorage storage)
+        public static Vault Open(ClientInfo clientInfo, string[] recoveryWords, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVault(deviceId, recoveryWords, ui, storage, transport));
+            return new Vault(Client.OpenVault(clientInfo, recoveryWords, ui, storage, transport));
         }
 
         public static string GenerateRandomDeviceId()

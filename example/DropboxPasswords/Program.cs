@@ -60,11 +60,47 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
                 }).GetAwaiter().GetResult();
             }
 
+            public void WillSendEnrollRequest()
+            {
+                Util.WriteLine(
+                    "Sending the enrollment request. Please open your browser extension to receive the notification. And press ENTER when done.",
+                    ConsoleColor.Green);
+                Console.ReadLine();
+            }
+
             public void EnrollRequestSent(string[] deviceNames)
             {
-                Util.WriteLine("Please approve the enrollment request that has been sent to the following devices:", ConsoleColor.Green);
+                Util.WriteLine("Please approve the enrollment request that has been sent to the following devices:",
+                               ConsoleColor.Green);
+
                 foreach (var name in deviceNames)
                     Util.WriteLine($"  - {name}", ConsoleColor.Yellow);
+            }
+
+            public IUi.Action AskForNextAction()
+            {
+                while (true)
+                {
+                    Util.WriteLine("You need to approve the enrollment on one of your devices. Please choose:",
+                                   ConsoleColor.Green);
+                    Util.WriteLine("  1. Keep waiting", ConsoleColor.Yellow);
+                    Util.WriteLine("  2. Resend the request", ConsoleColor.Yellow);
+                    Util.WriteLine("  3. Cancel", ConsoleColor.Yellow);
+
+                    int choice;
+                    switch (int.TryParse(Console.ReadLine(), out choice) ? choice : 0)
+                    {
+                    case 1:
+                        return IUi.Action.KeepWaiting;
+                    case 2:
+                        return IUi.Action.ResendRequest;
+                    case 3:
+                        return IUi.Action.Cancel;
+                    default:
+                        Util.WriteLine("Huh?", ConsoleColor.Red);
+                        break;
+                    }
+                }
             }
         }
 
@@ -101,9 +137,11 @@ namespace PasswordManagerAccess.Example.DropboxPasswords
                     }
                 }
 
+                var clientInfo = new ClientInfo(config["device-id"], "PMA Dropbox Passwords Example");
+
                 var vault = words.Length > 0
-                    ? Vault.Open(config["device-id"], words, new TextUi(), new PlainStorage())
-                    : Vault.Open(config["device-id"], new TextUi(), new PlainStorage());
+                    ? Vault.Open(clientInfo, words, new TextUi(), new PlainStorage())
+                    : Vault.Open(clientInfo, new TextUi(), new PlainStorage());
 
                 var accounts = vault.Accounts;
                 for (var i = 0; i < accounts.Length; ++i)
