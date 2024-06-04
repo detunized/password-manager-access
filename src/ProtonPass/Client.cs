@@ -313,14 +313,6 @@ namespace PasswordManagerAccess.ProtonPass
 
         internal static async Task<string[]> DownloadVault(string password, RestClient rest, CancellationToken cancellationToken)
         {
-            {
-                var pp = DeriveKeyPassphrase("password", "THLGkSd2A/AmFaN04g6rjw==");
-                var pk = LoadPrivateKey("-----BEGIN PGP PRIVATE KEY BLOCK-----\nVersion: ProtonMail\n\nxYYEZejHGRYJKwYBBAHaRw8BAQdAiS2KHTi78lVAS3I3d/1OtNoP2FZSmuJM\ncQeqU3lHear+CQMIGCAFfWzd5UJg/ssjfUXOEc3GUtddpRrgKd8Dab9prXgG\nMAz7bm4bich9Mvsst1YLwuoRtSrDNjN2f4XA6V8eAXEbQQ8gbnFyZ5Qu7hHY\nAs07bm90X2Zvcl9lbWFpbF91c2VAZG9tYWluLnRsZCA8bm90X2Zvcl9lbWFp\nbF91c2VAZG9tYWluLnRsZD7CjAQQFgoAPgWCZejHGQQLCQcICZAWpsxwmp3y\nVgMVCAoEFgACAQIZAQKbAwIeARYhBPTG05NqI8sox+1X5RamzHCanfJWAADB\nZwEA482F+DEqZgZx4+FK3/ttu59oTJ2b4BBJv2MTIWGBPQ8A/jNeOlmzA+bY\nKpV/G6DUqxOzpLWOjwvznvtXuSjlFEsDx4sEZejHGRIKKwYBBAGXVQEFAQEH\nQGJoEwLO5pVZMwJT+2UvOwnSqEXq6Q3UX03jeqT5nR5cAwEIB/4JAwg+yowg\n3UrKjmAUtIt9xX1YYE/3OQxPNaLFIO3XlW+6HlZPtdkBZnp5760LEwP8YMvJ\nWSZLf2oh2UaFrIVkGMDjS3v/LuZq38i2p7vgxeBrwngEGBYKACoFgmXoxxkJ\nkBamzHCanfJWApsMFiEE9MbTk2ojyyjH7VflFqbMcJqd8lYAAIKfAQDIxgUS\nvwPS2IpN8iPgnprw7FRKCmdRmAx4NDSsdlhy+QD/YOaNqbBSxOmM77ZR8SlC\nkOaWnL5TnA8W/uTqYjQCFwU=\n=KPOy\n-----END PGP PRIVATE KEY BLOCK-----\n", pp);
-                ReadMessage2(
-                    "wV4DgtZhlRQlYpUSAQdAcA6jIoKp3PYC57vKICqzBzBZX9uD673qM3EoEj+eTmAw9wmW5x+8OSS2UWKwW4mzR3lODYOJPLTQPbaeaNU6QPFQqkXx36pM6wM57f8A2iHv0sAXATnvAazpdUY5467bpy/YI2CqkdG539DNNkP5P3CkV9I/NFXU5EYq6rGB8Dj8MN6L/jkBygU8SEdMX79VjLvNT/b/tQ2EoTAo2WeNh9qz3nu+um2F2RYX6FJVBC7MEFdlfrvbw+R9ZdUidRTNwxeaQNKCmmNNn0TZASKjLuGfKWklApZ7F8EEmSeD7uaWZ1zMnp9IAonLdkrRghR9Ws1Hm1ViCz+pmCVVYINtH4YPGV1HUGP5Ot+UJ1UqOhoAbrcN5SebIPNg5ZVb9ou1/rBBdGKRr+7HznQ=",
-                    "-----BEGIN PGP PRIVATE KEY BLOCK-----\nVersion: ProtonMail\n\nxYYEZejHGRYJKwYBBAHaRw8BAQdAiS2KHTi78lVAS3I3d/1OtNoP2FZSmuJM\ncQeqU3lHear+CQMIGCAFfWzd5UJg/ssjfUXOEc3GUtddpRrgKd8Dab9prXgG\nMAz7bm4bich9Mvsst1YLwuoRtSrDNjN2f4XA6V8eAXEbQQ8gbnFyZ5Qu7hHY\nAs07bm90X2Zvcl9lbWFpbF91c2VAZG9tYWluLnRsZCA8bm90X2Zvcl9lbWFp\nbF91c2VAZG9tYWluLnRsZD7CjAQQFgoAPgWCZejHGQQLCQcICZAWpsxwmp3y\nVgMVCAoEFgACAQIZAQKbAwIeARYhBPTG05NqI8sox+1X5RamzHCanfJWAADB\nZwEA482F+DEqZgZx4+FK3/ttu59oTJ2b4BBJv2MTIWGBPQ8A/jNeOlmzA+bY\nKpV/G6DUqxOzpLWOjwvznvtXuSjlFEsDx4sEZejHGRIKKwYBBAGXVQEFAQEH\nQGJoEwLO5pVZMwJT+2UvOwnSqEXq6Q3UX03jeqT5nR5cAwEIB/4JAwg+yowg\n3UrKjmAUtIt9xX1YYE/3OQxPNaLFIO3XlW+6HlZPtdkBZnp5760LEwP8YMvJ\nWSZLf2oh2UaFrIVkGMDjS3v/LuZq38i2p7vgxeBrwngEGBYKACoFgmXoxxkJ\nkBamzHCanfJWApsMFiEE9MbTk2ojyyjH7VflFqbMcJqd8lYAAIKfAQDIxgUS\nvwPS2IpN8iPgnprw7FRKCmdRmAx4NDSsdlhy+QD/YOaNqbBSxOmM77ZR8SlC\nkOaWnL5TnA8W/uTqYjQCFwU=\n=KPOy\n-----END PGP PRIVATE KEY BLOCK-----\n",
-                    pp);
-            }
             // 1. Get the key salts
             // At this point we're very likely to fail, so we do this first. It seems that when an access token is a bit old and is still good
             // for downloading some of the data, it's not good enough to get the salts. We need a fresh one.
@@ -346,7 +338,6 @@ namespace PasswordManagerAccess.ProtonPass
             // The salt seems to be optional in case of the older accounts. Not sure how to test this IRL.
             // When there's no salt, the master password is the key password.
             var keyPassphrase = DeriveKeyPassphrase(password, salts.FirstOrDefault(x => x.Id == primaryKey.Id)?.Salt);
-            var privateKey = LoadPrivateKey(primaryKey.PrivateKey, keyPassphrase);
 
             // 2. Get all the shares
             var r1 = await rest.ExecuteGetAsync<Model.ShareRoot>(new RestRequest("pass/v1/share"), cancellationToken).ConfigureAwait(false);
@@ -381,17 +372,30 @@ namespace PasswordManagerAccess.ProtonPass
             if (latestShareKey.UserKeyId != primaryKey.Id)
                 throw new InternalErrorException($"Share {share.Id} key {latestShareKey.UserKeyId} that doesn't match the user primary key");
 
-            ReadMessage(latestShareKey.Key, privateKey);
+            // 6. Decrypt the share key
+            var vaultKey = await DecryptMessage(latestShareKey.Key, primaryKey.PrivateKey, keyPassphrase).ConfigureAwait(false);
 
-            var r3 = await rest.ExecuteGetAsync<Model.ShareKeysRoot>(new RestRequest($"pass/v1/share/{share.Id}/item"), cancellationToken).ConfigureAwait(false);
+            // 7. Get the share content
+            var r3 = await rest.ExecuteGetAsync<Model.VaultResponse>(new RestRequest($"pass/v1/share/{share.Id}/item"), cancellationToken).ConfigureAwait(false);
+            if (!r3.IsSuccessful)
+                throw MakeError(r3);
 
-            //var response = await rest.ExecuteGetAsync<object>(new RestRequest("core/v4/users"), cancellationToken).ConfigureAwait(false);
-            //var response = await rest.ExecuteGetAsync<object>(new RestRequest("core/v4/events/latest"), cancellationToken).ConfigureAwait(false);
-            //var response = await rest.ExecuteGetAsync<Model.ShareRoot>(new RestRequest("pass/v1/share"), cancellationToken).ConfigureAwait(false);
-            var shareId = "5aauU0yxQf3R0tXrsxZJyV1uG_R29NAEjYGSM08vKy_T2j6bPVxFHdz7ELC1boGt7JHADHSSldG2v1Bluo3WvQ==";
-            var response = await rest.ExecuteGetAsync<Model.ShareRoot>(new RestRequest($"pass/v1/share/{shareId}/item"), cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessful)
-                throw MakeError(response);
+            var vault = r3.Data!.Items;
+            foreach (var item in vault.Items)
+            {
+                var encryptedKey = item.ItemKey.Decode64();
+                var key = OnePassword.AesGcm.Decrypt(key: vaultKey,
+                                                         ciphertext: encryptedKey.Sub(12, encryptedKey.Length - 12),
+                                                         iv: encryptedKey.Sub(0, 12),
+                                                         authData: "itemkey".ToBytes());
+
+                var encryptedContent = item.Content.Decode64();
+                var content = OnePassword.AesGcm.Decrypt(key: key,
+                                                         ciphertext: encryptedContent.Sub(12, encryptedContent.Length - 12),
+                                                         iv: encryptedContent.Sub(0, 12),
+                                                         authData: "itemcontent".ToBytes());
+                // TODO: Decode protobuf here!!!
+            }
 
             return Array.Empty<string>();
         }
@@ -431,117 +435,18 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
-        private static void ReadMessage2(string base64, string privateKey, string passphrase)
+        private static async Task<byte[]> DecryptMessage(string messageBase64, string privateKey, string passphrase)
         {
-            var pgp = new PGP(new EncryptionKeys(new[] { privateKey }, privateKey, passphrase));
+            return await DecryptMessage(messageBase64.Decode64(), privateKey, passphrase).ConfigureAwait(false);
+        }
+
+        private static async Task<byte[]> DecryptMessage(byte[] message, string privateKey, string passphrase)
+        {
+            using var pgp = new PGP(new EncryptionKeys(privateKey, passphrase));
+            using var inputStream = new MemoryStream(message);
             using var outputStream = new MemoryStream();
-            pgp.Decrypt(new MemoryStream(base64.Decode64()), outputStream);
-            var bytes = outputStream.ToArray();
-            var message = Encoding.UTF8.GetString(bytes);
-        }
-
-        private static void ReadMessage(string base64, PgpPrivateKey privateKey)
-        {
-            var m = new OpenPgpReader(privateKey).ReadMessage("", base64.Decode64());
-        }
-
-        public class OpenPgpReader
-        {
-            private readonly PgpPrivateKey _privateKey;
-
-            public OpenPgpReader(PgpPrivateKey privateKey)
-            {
-                _privateKey = privateKey;
-            }
-
-            public PgpMessage ReadMessage(string armoredMessage, byte[] binaryMessage)
-            {
-                if (string.IsNullOrEmpty(armoredMessage) && (binaryMessage == null || binaryMessage.Length == 0))
-                {
-                    throw new ArgumentException("Must provide either an armored message or a binary message.");
-                }
-
-                if (!string.IsNullOrEmpty(armoredMessage))
-                {
-                    return ReadArmoredMessage(armoredMessage);
-                }
-                else if (binaryMessage != null && binaryMessage.Length > 0)
-                {
-                    return ReadBinaryMessage(binaryMessage);
-                }
-                else
-                {
-                    throw new ArgumentException("Invalid message input.");
-                }
-            }
-
-            private PgpMessage ReadArmoredMessage(string armoredMessage)
-            {
-                using (Stream inputStream = new MemoryStream(Encoding.UTF8.GetBytes(armoredMessage)))
-                using (Stream decoderStream = PgpUtilities.GetDecoderStream(inputStream))
-                {
-                    return ParseMessage(decoderStream);
-                }
-            }
-
-            private PgpMessage ReadBinaryMessage(byte[] binaryMessage)
-            {
-                using (Stream inputStream = new MemoryStream(binaryMessage))
-                using (Stream decoderStream = PgpUtilities.GetDecoderStream(inputStream))
-                {
-                    return ParseMessage(decoderStream);
-                }
-            }
-
-            private PgpMessage ParseMessage(Stream inputStream)
-            {
-                PgpObjectFactory pgpFact = new PgpObjectFactory(inputStream);
-                PgpObject pgpObj = pgpFact.NextPgpObject();
-
-                if (pgpObj is PgpEncryptedDataList encryptedDataList)
-                {
-                    if (encryptedDataList[0] is PgpPublicKeyEncryptedData ed)
-                    {
-                        Stream dataStream = ed.GetDataStream(_privateKey);
-                        pgpFact = new PgpObjectFactory(dataStream);
-                        pgpObj = pgpFact.NextPgpObject();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Invalid encrypted data list.");
-                    }
-
-                    // Handle encrypted data (decrypt as needed)
-                    throw new NotImplementedException("Encrypted data handling not implemented.");
-                }
-                else if (pgpObj is PgpCompressedData compressedData)
-                {
-                    Stream compDataIn = compressedData.GetDataStream();
-                    PgpObjectFactory pgpFact2 = new PgpObjectFactory(compDataIn);
-                    pgpObj = pgpFact2.NextPgpObject();
-                }
-
-                if (pgpObj is PgpLiteralData literalData)
-                {
-                    StreamReader reader = new StreamReader(literalData.GetInputStream());
-                    string literalMessage = reader.ReadToEnd();
-                    return new PgpMessage(literalMessage);
-                }
-                else
-                {
-                    throw new ArgumentException("Unsupported PGP object type.");
-                }
-            }
-        }
-
-        public class PgpMessage
-        {
-            public string Content { get; }
-
-            public PgpMessage(string content)
-            {
-                Content = content;
-            }
+            await pgp.DecryptAsync(inputStream, outputStream).ConfigureAwait(false);
+            return outputStream.ToArray();
         }
 
         internal class TokenExpiredException: BaseException

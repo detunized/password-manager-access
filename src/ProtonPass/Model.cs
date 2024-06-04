@@ -306,6 +306,51 @@ namespace PasswordManagerAccess.ProtonPass
             public int CreateTime { get; set; }
         }
 
+        public class VaultResponse: Response
+        {
+            [JsonPropertyName("Items")]
+            [JsonRequired]
+            public VaultItems Items { get; set; } = new ();
+        }
 
+        public class VaultItems
+        {
+            [JsonPropertyName("RevisionsData")]
+            [JsonRequired]
+            public VaultItem[] Items { get; set; } = Array.Empty<VaultItem>();
+
+            [JsonPropertyName("Total")]
+            public int Total { get; set; }
+
+            [JsonPropertyName("LastToken")]
+            public string LastToken { get; set; } = "";
+        }
+
+        public class VaultItem
+        {
+            [JsonPropertyName("ItemID")]
+            [JsonRequired]
+            public string Id { get; set; } = "";
+
+            [JsonPropertyName("Revision")]
+            public int Revision { get; set; }
+
+            [JsonPropertyName("ContentFormatVersion")]
+            public int ContentFormatVersion { get; set; }
+
+            [JsonPropertyName("Flags")]
+            public int Flags { get; set; }
+
+            [JsonPropertyName("KeyRotation")]
+            public int KeyRotation { get; set; }
+
+            [JsonPropertyName("Content")]
+            [JsonRequired]
+            public string Content { get; set; } = "";
+
+            [JsonPropertyName("ItemKey")]
+            [JsonRequired]
+            public string ItemKey { get; set; } = "";
+        }
     }
 }
