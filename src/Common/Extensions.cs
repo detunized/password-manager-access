@@ -452,6 +452,14 @@ namespace PasswordManagerAccess.Common
             return String.Join(separator, e);
         }
 
+#if !NET6_0_OR_GREATER
+        public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
+            where TKey : IComparable<TKey>
+        {
+            return source.Aggregate((max, current) => keySelector(current).CompareTo(keySelector(max)) > 0 ? current : max);
+        }
+#endif
+
         //
         // BigInteger
         //
