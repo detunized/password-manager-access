@@ -13,12 +13,15 @@ namespace PasswordManagerAccess.ProtonPass
 {
     internal static class Model
     {
-        public class Error
+        public class Response
         {
             [JsonPropertyName("Code")]
             [JsonRequired]
             public int Code { get; set; }
+        }
 
+        public class Error: Response
+        {
             [JsonPropertyName("Error")]
             [JsonRequired]
             public string? Text { get; set; }
@@ -36,6 +39,9 @@ namespace PasswordManagerAccess.ProtonPass
             [JsonPropertyName("HumanVerificationMethods")]
             public string[]? HumanVerificationMethods { get; set; }
 
+            [JsonPropertyName("MissingScopes")]
+            public string[]? MissingScopes { get; set; }
+
             [JsonPropertyName("Direct")]
             public int Direct { get; set; }
 
@@ -52,12 +58,8 @@ namespace PasswordManagerAccess.ProtonPass
             public int ExpiresAt { get; set; }
         }
 
-        public class Session
+        public class Session: Response
         {
-            [JsonPropertyName("Code")]
-            [JsonRequired]
-            public int Code { get; set; }
-
             [JsonPropertyName("AccessToken")]
             [JsonRequired]
             public string AccessToken { get; set; } = "";
@@ -81,12 +83,8 @@ namespace PasswordManagerAccess.ProtonPass
             public int LocalId { get; set; }
         }
 
-        internal class AuthInfo
+        internal class AuthInfo: Response
         {
-            [JsonPropertyName("Code")]
-            [JsonRequired]
-            public int Code { get; set; }
-
             [JsonPropertyName("Modulus")]
             [JsonRequired]
             public string Modulus { get; set; } = "";
@@ -110,12 +108,8 @@ namespace PasswordManagerAccess.ProtonPass
             public string Username { get; set; } = "";
         }
 
-        public class Auth
+        public class Auth: Response
         {
-            [JsonPropertyName("Code")]
-            [JsonRequired]
-            public int Code { get; set; }
-
             [JsonPropertyName("LocalID")]
             public int LocalId { get; set; }
 
@@ -172,5 +166,146 @@ namespace PasswordManagerAccess.ProtonPass
             [JsonPropertyName("TOTP")]
             public int Totp { get; set; }
         }
+
+        public class UserResponse: Response
+        {
+            [JsonPropertyName("User")]
+            [JsonRequired]
+            public User User { get; set; } = new User();
+        }
+
+        public class User
+        {
+            [JsonPropertyName("ID")]
+            [JsonRequired]
+            public string Id { get; set; } = "";
+
+            [JsonPropertyName("Keys")]
+            [JsonRequired]
+            public UserKey[] Keys { get; set; } = Array.Empty<UserKey>();
+        }
+
+        public class UserKey
+        {
+            [JsonPropertyName("ID")]
+            [JsonRequired]
+            public string Id { get; set; } = "";
+
+            [JsonPropertyName("Version")]
+            public int Version { get; set; }
+
+            [JsonPropertyName("Primary")]
+            public int Primary { get; set; }
+
+            [JsonPropertyName("PrivateKey")]
+            public string PrivateKey { get; set; } = "";
+
+            [JsonPropertyName("Fingerprint")]
+            public string Fingerprint { get; set; } = "";
+
+            [JsonPropertyName("Active")]
+            public int Active { get; set; }
+        }
+
+        public class SaltsResponse: Response
+        {
+            [JsonPropertyName("KeySalts")]
+            [JsonRequired]
+            public KeySalt[] KeySalts { get; set; } = Array.Empty<KeySalt>();
+        }
+
+        public class KeySalt
+        {
+            [JsonPropertyName("ID")]
+            [JsonRequired]
+            public string Id { get; set; } = "";
+
+            [JsonPropertyName("KeySalt")]
+            public string? Salt { get; set; }
+        }
+
+        // TODO: Not the best name
+        public class ShareRoot: Response
+        {
+            [JsonPropertyName("Shares")]
+            public Share[] Shares { get; set; } = Array.Empty<Share>();
+        }
+
+        public class Share
+        {
+            [JsonPropertyName("ShareID")]
+            public string Id { get; set; } = "";
+
+            [JsonPropertyName("VaultID")]
+            public string VaultId { get; set; } = "";
+
+            [JsonPropertyName("AddressID")]
+            public string AddressId { get; set; } = "";
+
+            [JsonPropertyName("Primary")]
+            public bool Primary { get; set; }
+
+            [JsonPropertyName("Owner")]
+            public bool Owner { get; set; }
+
+            [JsonPropertyName("TargetType")]
+            public int TargetType { get; set; }
+
+            [JsonPropertyName("TargetID")]
+            public string TargetId { get; set; } = "";
+
+            [JsonPropertyName("TargetMembers")]
+            public int TargetMembers { get; set; }
+
+            [JsonPropertyName("TargetMaxMembers")]
+            public int TargetMaxMembers { get; set; }
+
+            [JsonPropertyName("Shared")]
+            public bool Shared { get; set; }
+
+            [JsonPropertyName("ShareRoleID")]
+            public string ShareRoleId { get; set; } = "";
+
+            [JsonPropertyName("Content")]
+            public string Content { get; set; } = "";
+
+            [JsonPropertyName("ContentKeyRotation")]
+            public int ContentKeyRotation { get; set; }
+
+            [JsonPropertyName("ContentFormatVersion")]
+            public int ContentFormatVersion { get; set; }
+        }
+
+        public class ShareKeysRoot: Response
+        {
+            [JsonPropertyName("ShareKeys")]
+            public ShareKeys ShareKeys { get; set; } = new ShareKeys();
+        }
+
+        public class ShareKeys
+        {
+            [JsonPropertyName("Keys")]
+            public ShareKey[] Keys { get; set; } = Array.Empty<ShareKey>();
+
+            [JsonPropertyName("Total")]
+            public int Total { get; set; }
+        }
+
+        public class ShareKey
+        {
+            [JsonPropertyName("KeyRotation")]
+            public int KeyRotation { get; set; }
+
+            [JsonPropertyName("Key")]
+            public string Key { get; set; } = "";
+
+            [JsonPropertyName("UserKeyID")]
+            public string UserKeyId { get; set; } = "";
+
+            [JsonPropertyName("CreateTime")]
+            public int CreateTime { get; set; }
+        }
+
+
     }
 }
