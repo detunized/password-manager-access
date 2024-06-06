@@ -6,10 +6,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Bcpg.OpenPgp;
 using PasswordManagerAccess.Common;
 using PgpCore;
 using RestSharp;
@@ -411,28 +409,6 @@ namespace PasswordManagerAccess.ProtonPass
         private static string DeriveKeyPassphrase(string password, byte[] salt)
         {
             return Srp.BCryptHashPassword(password, Srp.EncodeBase64(salt, 16)).Substring(29);
-        }
-
-        public static PgpPrivateKey LoadPrivateKey(string privateKeyBlock, string passphrase)
-        {
-            using (Stream privateKeyStream = new MemoryStream(Encoding.UTF8.GetBytes(privateKeyBlock)))
-            {
-                PgpSecretKeyRingBundle secretKeyRingBundle = new PgpSecretKeyRingBundle(PgpUtilities.GetDecoderStream(privateKeyStream));
-
-                foreach (PgpSecretKeyRing keyRing in secretKeyRingBundle.GetKeyRings())
-                {
-                    foreach (PgpSecretKey secretKey in keyRing.GetSecretKeys())
-                    {
-                        PgpPrivateKey privateKey = secretKey.ExtractPrivateKey(passphrase.ToCharArray());
-                        if (privateKey != null)
-                        {
-                            return privateKey;
-                        }
-                    }
-                }
-
-                throw new ArgumentException("No private key found in the provided key block.");
-            }
         }
 
         private static async Task<byte[]> DecryptMessage(string messageBase64, string privateKey, string passphrase)
