@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
@@ -39,6 +40,10 @@ namespace PasswordManagerAccess.Duo
 
             // 6. Get available devices and their methods
             var devices = GetDevices(sessionId, apiRest);
+
+            // There should be at least one device to continue
+            if (devices.Length == 0)
+                throw Util.MakeInvalidResponseError("no devices are registered for authentication");
 
             while (true)
             {
@@ -153,6 +158,9 @@ namespace PasswordManagerAccess.Duo
 
         internal static DuoDevice[] ParseDeviceData(R.Data data)
         {
+            if (data.Phones == null)
+                return Array.Empty<DuoDevice>();
+
             return data.Phones
                 .Select(x => new DuoDevice(id: x.Id, name: x.Name, GetDeviceFactors(x.Key, data.Methods)))
                 .ToArray();
@@ -282,7 +290,7 @@ namespace PasswordManagerAccess.Duo
         internal static string ExtractCode(string redirectUrl)
         {
             return Url.ExtractQueryParameter(redirectUrl, "duo_code") ??
-                   throw Util.MakeInvalidResponseError($"failed to find the 'duo_code' auth token");
+                throw Util.MakeInvalidResponseError("failed to find the 'duo_code' auth token");
         }
 
         //
