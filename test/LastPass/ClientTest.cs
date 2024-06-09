@@ -624,7 +624,7 @@ namespace PasswordManagerAccess.Test.LastPass
         [InlineData("duo_host")]
         [InlineData("duo_signature")]
         [InlineData("duo_bytes")]
-        public void ApproveOob_throws_on_missing_duo_parameters(string name)
+        public void ApproveOob_throws_on_missing_duo_v1_parameters(string name)
         {
             var parameters = new Dictionary<string, string>
             {
@@ -633,6 +633,25 @@ namespace PasswordManagerAccess.Test.LastPass
                 ["duo_host"] = "duo-host",
                 ["duo_signature"] = "duo-signature",
                 ["duo_bytes"] = "duo-bytes",
+            };
+            parameters.Remove(name);
+
+            Exceptions.AssertThrowsInternalError(() => Client.ApproveOob(Username, parameters, null, null),
+                                                 $"Invalid response: '{name}' parameter not found");
+        }
+
+        [Theory]
+        [InlineData("duo_session_token")]
+        [InlineData("duo_private_token")]
+        public void ApproveOob_throws_on_missing_duo_v4_parameters(string name)
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                ["outofbandtype"] = "duo",
+                ["preferduowebsdk"] = "1",
+                ["duo_authentication_url"] = "duo-authentication-url",
+                ["duo_session_token"] = "duo-session-token",
+                ["duo_private_token"] = "duo-private-token",
             };
             parameters.Remove(name);
 

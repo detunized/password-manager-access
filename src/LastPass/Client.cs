@@ -267,6 +267,9 @@ namespace PasswordManagerAccess.LastPass
         // This is used to pass the extra params along with the OOB result
         internal struct OobWithExtras
         {
+            // This is a special sentinel value to mark the Duo V4 to V1 redirect
+            public static readonly OobResult DuoV4ToV1Redirect = OobResult.ContinueWithPasscode("duo-v4-to-v1-redirect", false);
+
             public readonly OobResult Result;
             public readonly Dictionary<string, object> Extras;
 
@@ -320,12 +323,16 @@ namespace PasswordManagerAccess.LastPass
             // See if V4 is enabled
             if (parameters.TryGetValue("duo_authentication_url", out var url))
             {
-                return ApproveDuoWebSdkV4(username: username,
-                                          url: url,
-                                          sessionToken: GetParam("duo_session_token"),
-                                          privateToken: GetParam("duo_private_token"),
-                                          ui: ui,
-                                          rest: rest);
+                var result = ApproveDuoWebSdkV4(username: username,
+                                                url: url,
+                                                sessionToken: GetParam("duo_session_token"),
+                                                privateToken: GetParam("duo_private_token"),
+                                                ui: ui,
+                                                rest: rest);
+
+                // If we're not redirected to V1, we're done. Otherwise, fallthrough to V1.
+                if (result.Result != OobWithExtras.DuoV4ToV1Redirect)
+                    return result;
             }
 
             // Legacy Duo V1. Won't be available after September 2024.
@@ -370,7 +377,14 @@ namespace PasswordManagerAccess.LastPass
             if (result == null)
                 return new OobWithExtras(OobResult.Cancel);
 
-            // 2. Since LastPass is special we have to jump through some hoops to get this finalized
+            // 2. Detect if we need to redirect to V1. This happens when the traditional prompt is enabled in the Duo
+            //    admin panel. The Duo URL looks the same for both the traditional prompt and the new universal one.
+            //    So we have no way of knowing this in advance. This only becomes evident after the first request to
+            //    the Duo API.
+            if (result == Result.RedirectToV1)
+                return new OobWithExtras(OobWithExtras.DuoV4ToV1Redirect);
+
+            // 3. Since LastPass is special we have to jump through some hoops to get this finalized
             //    Even though Duo already returned us the code, we need to poll LastPass to get a
             //    custom one-time token to submit it with the login request later.
             var lmiRest = new RestClient(rest.Transport, "https://lastpass.com/lmiapi/duo");
