@@ -19,17 +19,21 @@ namespace PasswordManagerAccess.Duo
             // 1. First get the main page
             var (html, url, cookies) = GetMainHtml(authUrl, rest);
 
-            // 2. The main page contains the form that we need to POST to
+            // 2. Detect a redirect to V1
+            if (url.Contains("/frame/frameless/v3/auth"))
+                return Result.RedirectToV1;
+
+            // 3. The main page contains the form that we need to POST to
             string host;
             (host, cookies) = SubmitSystemProperties(html, url, cookies, rest);
 
-            // 3. Get `sid`
+            // 4. Get `sid`
             var sessionId = ExtractSessionId(url);
 
-            // 4. Extract `xsrf` token. It's used in some requests.
+            // 5. Extract `xsrf` token. It's used in some requests.
             var xsrf = ExtractXsrf(html);
 
-            // 5. New rest with the API host
+            // 6. New rest with the API host
             var apiRest = new RestClient(transport,
                                          $"https://{host}/frame/v4/",
                                          defaultHeaders: new Dictionary<string, string>
@@ -38,7 +42,7 @@ namespace PasswordManagerAccess.Duo
                                          },
                                          defaultCookies: cookies);
 
-            // 6. Get available devices and their methods
+            // 7. Get available devices and their methods
             var devices = GetDevices(sessionId, apiRest);
 
             // There should be at least one device to continue
