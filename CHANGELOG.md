@@ -1,5 +1,13 @@
 # Changelog
 
+## 16.1.0
+  - Bitwarden: added support for the Duo V4 and the universal prompt
+  - Bitwarden: fixed the interactive browser mode that only requires th username and the password
+    to log in
+  - LastPass: added support for the Duo V4 and the universal prompt
+  - Duo: added support for the traditional prompt detection
+  - Duo: added better error handling in the situations when no devices are added
+
 ## 16.0.0
   - Dropbox Passwords: added Client UI methods to allow the user to cancel and re-trigger the device
     enrollment process
