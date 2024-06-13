@@ -182,13 +182,32 @@ namespace PasswordManagerAccess.Bitwarden
             case R.SecondFactorMethod.Duo:
             case R.SecondFactorMethod.DuoOrg:
             {
-                var duo = DuoV1.Authenticate((string)extra["Host"] ?? "",
-                                             (string)extra["Signature"] ?? "",
-                                             ui,
-                                             apiRest.Transport);
+                // TODO: The logic here is a bit brittle. Remove it once Duo V1 is finally removed in October 2024.
 
-                if (duo != null)
-                    passcode = new Passcode(duo.Passcode, duo.RememberMe);
+                // It's a bit messy here. Normally when AuthUrl is present that means we should use V4.
+                // The problem with V4 that it could redirect to the traditional prompt with is handled by V1.
+                // So we try V4 first and if it redirects to V1 we try V1.
+                var needV1 = !extra.ContainsKey("AuthUrl");
+
+                if (!needV1)
+                {
+                    var v4 = DuoV4.Authenticate((string)extra["AuthUrl"], ui, apiRest.Transport);
+
+                    if (v4 == Result.RedirectToV1)
+                        needV1 = true; // Fallback to V1 below
+                    else if (v4 != null)
+                        passcode = new Passcode($"{v4.Code}|{v4.State}", v4.RememberMe);
+                }
+
+                if (needV1)
+                {
+                    var v1 = DuoV1.Authenticate((string)extra["Host"] ?? "",
+                                                (string)extra["Signature"] ?? "",
+                                                ui,
+                                                apiRest.Transport);
+                    if (v1 != null)
+                        passcode = new Passcode(v1.Code, v1.RememberMe);
+                }
 
                 break;
             }

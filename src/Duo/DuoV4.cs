@@ -73,14 +73,14 @@ namespace PasswordManagerAccess.Duo
                         return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(sessionId, xsrf, choice, passcode, ui, apiRest);
+                var result = SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
-                if (token.IsNullOrEmpty())
+                if (result == null)
                     continue;
 
                 // All good
-                return new Result(token, choice.RememberMe);
+                return new Result(result.Code, result.State, choice.RememberMe);
             }
         }
 
@@ -196,14 +196,26 @@ namespace PasswordManagerAccess.Duo
             return response.TransactionId ?? "";
         }
 
+        internal class CodeState
+        {
+            public string Code { get; }
+            public string State { get; }
+
+            public CodeState(string code, string state)
+            {
+                Code = code;
+                State = state;
+            }
+        }
+
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string SubmitFactorAndWaitForToken(string sid,
-                                                           string xsrf,
-                                                           DuoChoice choice,
-                                                           string passcode,
-                                                           IDuoUi ui,
-                                                           RestClient rest)
+        internal static CodeState SubmitFactorAndWaitForResult(string sid,
+                                                               string xsrf,
+                                                               DuoChoice choice,
+                                                               string passcode,
+                                                               IDuoUi ui,
+                                                               RestClient rest)
         {
             var txid = SubmitFactor(sid, choice, passcode, rest);
             if (txid.IsNullOrEmpty())
@@ -212,7 +224,7 @@ namespace PasswordManagerAccess.Duo
             if (!PollForResultUrl(sid, txid, ui, rest))
                 return null;
 
-            return FetchCode(sid, txid, xsrf, choice, rest);
+            return FetchResult(sid, txid, xsrf, choice, rest);
         }
 
         internal static bool PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
@@ -272,7 +284,7 @@ namespace PasswordManagerAccess.Duo
             return (status, response.Reason ?? response.Code ?? "");
         }
 
-        internal static string FetchCode(string sid, string txid, string xsrf, DuoChoice choice, RestClient rest)
+        internal static CodeState FetchResult(string sid, string txid, string xsrf, DuoChoice choice, RestClient rest)
         {
             var response = rest.PostForm("oidc/exit",
                                          new Dictionary<string, object>
@@ -288,13 +300,19 @@ namespace PasswordManagerAccess.Duo
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
-            return ExtractCode(response.RequestUri.AbsoluteUri);
+            return ExtractResult(response.RequestUri.AbsoluteUri);
         }
 
-        internal static string ExtractCode(string redirectUrl)
+        internal static CodeState ExtractResult(string redirectUrl)
         {
-            return Url.ExtractQueryParameter(redirectUrl, "duo_code") ??
-                throw Util.MakeInvalidResponseError("failed to find the 'duo_code' auth token");
+            var code = Url.ExtractQueryParameter(redirectUrl, "code") ??
+                       Url.ExtractQueryParameter(redirectUrl, "duo_code") ??
+                       throw Util.MakeInvalidResponseError("failed to find the 'duo_code' auth token");
+
+            var state = Url.ExtractQueryParameter(redirectUrl, "state") ?? "";
+
+            return new CodeState(code, state);
+
         }
 
         //

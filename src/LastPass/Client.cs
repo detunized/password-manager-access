@@ -358,7 +358,7 @@ namespace PasswordManagerAccess.LastPass
 
             // 2. Exchange the signature for a passcode
             var passcode = ExchangeDuoSignatureForPasscode(username: username,
-                                                           signature: result.Passcode,
+                                                           signature: result.Code,
                                                            salt: salt,
                                                            rest: rest);
 
