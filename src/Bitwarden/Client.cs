@@ -18,6 +18,8 @@ namespace PasswordManagerAccess.Bitwarden
 
     internal static class Client
     {
+        // This is so-called "browser" mode. It's not really trying to mimic a browser, but rather the CLI
+        // in the "browser" mode, where the username and the password and, possibly, 2FA are used to log in.
         public static (Account[], Collection[], Organization[], ParseError[]) OpenVaultBrowser(
             string username,
             string password,
@@ -48,6 +50,7 @@ namespace PasswordManagerAccess.Bitwarden
             return DecryptVault(encryptedVault, key);
         }
 
+        // This mode a true non-interactive CLI/API mode. The 2FA is not used in this mode.
         public static (Account[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
             string clientId,
             string clientSecret,
@@ -235,7 +238,7 @@ namespace PasswordManagerAccess.Bitwarden
                 { "grant_type", "client_credentials" },
                 { "scope", "api" },
                 { "deviceType", DeviceType },
-                { "deviceName", DeviceName },
+                { "deviceName", Platform },
                 { "deviceIdentifier", deviceId },
             };
 
@@ -425,7 +428,7 @@ namespace PasswordManagerAccess.Bitwarden
                 {"scope", "api offline_access"},
                 {"client_id", "cli"},
                 {"deviceType", DeviceType},
-                {"deviceName", DeviceName},
+                {"deviceName", Platform},
                 {"deviceIdentifier", deviceId},
             };
 
@@ -745,26 +748,24 @@ namespace PasswordManagerAccess.Bitwarden
 
         private const string RememberMeTokenKey = "remember-me-token";
 
-        private static readonly string DeviceName = GetPlatform();
-        private static readonly string DeviceType = DeviceName switch
+        private const string CliVersion = "2024.4.1";
+        private static readonly string Platform = GetPlatform();
+        private static readonly string UserAgent = $"Bitwarden_CLI/{CliVersion} ({Platform.ToUpper()})";
+
+        private static readonly string DeviceType = Platform switch
         {
-            "windows" => "6",
-            "macos" => "7",
-            "linux" => "8",
-            _ => throw new InternalErrorException($"Unexpected device name {DeviceName}")
-        };
-        private static readonly string UserAgent = DeviceName switch
-        {
-            "windows" => "Bitwarden_CLI/[object Promise] (WINDOWS)",
-            "macos" => "Bitwarden_CLI/[object Promise] (MACOS)",
-            "linux" => "Bitwarden_CLI/2023.1.0 (LINUX)",
-            _ => throw new InternalErrorException($"Unexpected device name {DeviceName}")
+            "windows" => "23",
+            "macos" => "24",
+            "linux" => "25",
+            _ => throw new InternalErrorException($"Unexpected device name {Platform}")
         };
 
         private static readonly Dictionary<string, string> DefaultRestHeaders = new Dictionary<string, string>
         {
             ["User-Agent"] = UserAgent,
             ["Device-Type"] = DeviceType,
+            ["Bitwarden-Client-Name"] = "cli",
+            ["Bitwarden-Client-Version"] = CliVersion,
         };
 
         private static readonly R.KdfInfo DefaultKdfInfo = new R.KdfInfo
