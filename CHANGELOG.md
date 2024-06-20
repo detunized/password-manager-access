@@ -1,5 +1,8 @@
 # Changelog
 
+## 16.2.0
+  - LastPass: added support for the URL field encryption
+
 ## 16.1.0
   - Bitwarden: added support for the Duo V4 and the universal prompt
   - Bitwarden: fixed the interactive browser mode that only requires th username and the password
