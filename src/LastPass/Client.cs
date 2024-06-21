@@ -222,16 +222,17 @@ namespace PasswordManagerAccess.LastPass
                                              IUi ui,
                                              RestClient rest)
         {
-            var answer = ApproveOob(username, parameters, ui, rest);
+            var oob = ApproveOob(username, parameters, ui, rest);
 
-            if (answer == OobResult.Cancel)
+            var result = oob.Result;
+            if (result == OobResult.Cancel)
                 throw new CanceledMultiFactorException("Out of band step is canceled by the user");
 
-            var extraParameters = new Dictionary<string, object>(1);
-            if (answer.WaitForOutOfBand)
+            var extraParameters = new Dictionary<string, object>(oob.Extras);
+            if (result.WaitForOutOfBand)
                 extraParameters["outofbandrequest"] = 1;
             else
-                extraParameters["otp"] = answer.Passcode;
+                extraParameters["otp"] = result.Passcode;
 
             Session session;
             for (;;)
@@ -257,43 +258,59 @@ namespace PasswordManagerAccess.LastPass
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
             }
 
-            if (answer.RememberMe)
+            if (result.RememberMe)
                 MarkDeviceAsTrusted(session, clientInfo, rest);
 
             return session;
         }
 
-        internal static OobResult ApproveOob(string username,
-                                             Dictionary<string, string> parameters,
-                                             IUi ui,
-                                             RestClient rest)
+        // This is used to pass the extra params along with the OOB result
+        internal struct OobWithExtras
+        {
+            // This is a special sentinel value to mark the Duo V4 to V1 redirect
+            public static readonly OobResult DuoV4ToV1Redirect = OobResult.ContinueWithPasscode("duo-v4-to-v1-redirect", false);
+
+            public readonly OobResult Result;
+            public readonly Dictionary<string, object> Extras;
+
+            public OobWithExtras(OobResult result, Dictionary<string, object> extras = null)
+            {
+                Result = result;
+                Extras = extras ?? new Dictionary<string, object>();
+            }
+        }
+
+        internal static OobWithExtras ApproveOob(string username,
+                                                 Dictionary<string, string> parameters,
+                                                 IUi ui,
+                                                 RestClient rest)
         {
             if (!parameters.TryGetValue("outofbandtype", out var method))
                 throw new InternalErrorException("Out of band method is not specified");
 
             return method switch
             {
-                "lastpassauth" => ui.ApproveLastPassAuth(),
+                "lastpassauth" => new OobWithExtras(ui.ApproveLastPassAuth()),
                 "duo" => ApproveDuo(username, parameters, ui, rest),
-                "salesforcehash" => ui.ApproveSalesforceAuth(),
+                "salesforcehash" => new OobWithExtras(ui.ApproveSalesforceAuth()),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported")
             };
         }
 
-        internal static OobResult ApproveDuo(string username,
-                                             Dictionary<string, string> parameters,
-                                             IUi ui,
-                                             RestClient rest)
+        internal static OobWithExtras ApproveDuo(string username,
+                                                 Dictionary<string, string> parameters,
+                                                 IUi ui,
+                                                 RestClient rest)
         {
             return parameters.GetOrDefault("preferduowebsdk", "") == "1"
                 ? ApproveDuoWebSdk(username, parameters, ui, rest)
-                : ui.ApproveDuo();
+                : new OobWithExtras(ui.ApproveDuo());
         }
 
-        internal static OobResult ApproveDuoWebSdk(string username,
-                                                   Dictionary<string, string> parameters,
-                                                   IUi ui,
-                                                   RestClient rest)
+        internal static OobWithExtras ApproveDuoWebSdk(string username,
+                                                       Dictionary<string, string> parameters,
+                                                       IUi ui,
+                                                       RestClient rest)
         {
             string GetParam(string name)
             {
@@ -303,20 +320,96 @@ namespace PasswordManagerAccess.LastPass
                 throw new InternalErrorException($"Invalid response: '{name}' parameter not found");
             }
 
-            var host = GetParam("duo_host");
-            var signature = GetParam("duo_signature");
-            var salt = GetParam("duo_bytes");
+            // See if V4 is enabled
+            if (parameters.TryGetValue("duo_authentication_url", out var url))
+            {
+                var result = ApproveDuoWebSdkV4(username: username,
+                                                url: url,
+                                                sessionToken: GetParam("duo_session_token"),
+                                                privateToken: GetParam("duo_private_token"),
+                                                ui: ui,
+                                                rest: rest);
 
-            // Returns: AUTH|ZGV...Tcx|545...07b:APP|ZGV...TAx|145...09e
+                // If we're not redirected to V1, we're done. Otherwise, fallthrough to V1.
+                if (result.Result != OobWithExtras.DuoV4ToV1Redirect)
+                    return result;
+            }
+
+            // Legacy Duo V1. Won't be available after September 2024.
+            return ApproveDuoWebSdkV1(username: username,
+                                      host: GetParam("duo_host"),
+                                      salt: GetParam("duo_bytes"),
+                                      signature: GetParam("duo_signature"),
+                                      ui: ui,
+                                      rest: rest);
+        }
+
+        private static OobWithExtras ApproveDuoWebSdkV1(string username,
+                                                        string host,
+                                                        string salt,
+                                                        string signature,
+                                                        IUi ui,
+                                                        RestClient rest)
+        {
+            // 1. Do a normal Duo V1 first
             var result = DuoV1.Authenticate(host, signature, ui, rest.Transport);
             if (result == null)
-                return OobResult.Cancel;
+                return new OobWithExtras(OobResult.Cancel);
 
+            // 2. Exchange the signature for a passcode
             var passcode = ExchangeDuoSignatureForPasscode(username: username,
-                                                           signature: result.Passcode,
+                                                           signature: result.Code,
                                                            salt: salt,
                                                            rest: rest);
-            return OobResult.ContinueWithPasscode(passcode, result.RememberMe);
+
+            return new OobWithExtras(OobResult.ContinueWithPasscode(passcode, result.RememberMe));
+        }
+
+        private static OobWithExtras ApproveDuoWebSdkV4(string username,
+                                                        string url,
+                                                        string sessionToken,
+                                                        string privateToken,
+                                                        IUi ui,
+                                                        RestClient rest)
+        {
+            // 1. Do a normal Duo V4 first
+            var result = DuoV4.Authenticate(url, ui, rest.Transport);
+            if (result == null)
+                return new OobWithExtras(OobResult.Cancel);
+
+            // 2. Detect if we need to redirect to V1. This happens when the traditional prompt is enabled in the Duo
+            //    admin panel. The Duo URL looks the same for both the traditional prompt and the new universal one.
+            //    So we have no way of knowing this in advance. This only becomes evident after the first request to
+            //    the Duo API.
+            if (result == Result.RedirectToV1)
+                return new OobWithExtras(OobWithExtras.DuoV4ToV1Redirect);
+
+            // 3. Since LastPass is special we have to jump through some hoops to get this finalized
+            //    Even though Duo already returned us the code, we need to poll LastPass to get a
+            //    custom one-time token to submit it with the login request later.
+            var lmiRest = new RestClient(rest.Transport, "https://lastpass.com/lmiapi/duo");
+            var response = lmiRest.PostJson<Model.DuoStatus>("status",
+                                                             new Dictionary<string, object>
+                                                             {
+                                                                 ["userName"] = username,
+                                                                 ["sessionToken"] = sessionToken,
+                                                                 ["privateToken"] = privateToken,
+                                                             });
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var status = response.Data;
+            if (status.Status == "allowed" && !status.OneTimeToken.IsNullOrEmpty())
+                return new OobWithExtras(OobResult.ContinueWithPasscode("duoWebSdkV4", result.RememberMe),
+                                         new Dictionary<string, object>
+                                         {
+                                            ["provider"] = "duo",
+                                            ["duoOneTimeToken"] = status.OneTimeToken,
+                                            ["duoSessionToken"] = sessionToken,
+                                            ["duoPrivateToken"] = privateToken,
+                                         });
+
+            throw new InternalErrorException("Failed to retrieve Duo one time token");
         }
 
         internal static string ExchangeDuoSignatureForPasscode(string username,

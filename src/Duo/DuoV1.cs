@@ -53,7 +53,7 @@ namespace PasswordManagerAccess.Duo
                     continue;
 
                 // All good
-                return new Result($"{token}:{app}", choice.RememberMe);
+                return new Result($"{token}:{app}", "", choice.RememberMe);
             }
         }
 

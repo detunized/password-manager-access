@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
@@ -18,17 +19,21 @@ namespace PasswordManagerAccess.Duo
             // 1. First get the main page
             var (html, url, cookies) = GetMainHtml(authUrl, rest);
 
-            // 2. The main page contains the form that we need to POST to
+            // 2. Detect a redirect to V1
+            if (url.Contains("/frame/frameless/v3/auth"))
+                return Result.RedirectToV1;
+
+            // 3. The main page contains the form that we need to POST to
             string host;
             (host, cookies) = SubmitSystemProperties(html, url, cookies, rest);
 
-            // 3. Get `sid`
+            // 4. Get `sid`
             var sessionId = ExtractSessionId(url);
 
-            // 4. Extract `xsrf` token. It's used in some requests.
+            // 5. Extract `xsrf` token. It's used in some requests.
             var xsrf = ExtractXsrf(html);
 
-            // 5. New rest with the API host
+            // 6. New rest with the API host
             var apiRest = new RestClient(transport,
                                          $"https://{host}/frame/v4/",
                                          defaultHeaders: new Dictionary<string, string>
@@ -37,8 +42,12 @@ namespace PasswordManagerAccess.Duo
                                          },
                                          defaultCookies: cookies);
 
-            // 6. Get available devices and their methods
+            // 7. Get available devices and their methods
             var devices = GetDevices(sessionId, apiRest);
+
+            // There should be at least one device to continue
+            if (devices.Length == 0)
+                throw Util.MakeInvalidResponseError("no devices are registered for authentication");
 
             while (true)
             {
@@ -64,14 +73,14 @@ namespace PasswordManagerAccess.Duo
                         return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(sessionId, xsrf, choice, passcode, ui, apiRest);
+                var result = SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
-                if (token.IsNullOrEmpty())
+                if (result == null)
                     continue;
 
                 // All good
-                return new Result(token, choice.RememberMe);
+                return new Result(result.Code, result.State, choice.RememberMe);
             }
         }
 
@@ -153,6 +162,9 @@ namespace PasswordManagerAccess.Duo
 
         internal static DuoDevice[] ParseDeviceData(R.Data data)
         {
+            if (data.Phones == null)
+                return Array.Empty<DuoDevice>();
+
             return data.Phones
                 .Select(x => new DuoDevice(id: x.Id, name: x.Name, GetDeviceFactors(x.Key, data.Methods)))
                 .ToArray();
@@ -184,14 +196,26 @@ namespace PasswordManagerAccess.Duo
             return response.TransactionId ?? "";
         }
 
+        internal class CodeState
+        {
+            public string Code { get; }
+            public string State { get; }
+
+            public CodeState(string code, string state)
+            {
+                Code = code;
+                State = state;
+            }
+        }
+
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string SubmitFactorAndWaitForToken(string sid,
-                                                           string xsrf,
-                                                           DuoChoice choice,
-                                                           string passcode,
-                                                           IDuoUi ui,
-                                                           RestClient rest)
+        internal static CodeState SubmitFactorAndWaitForResult(string sid,
+                                                               string xsrf,
+                                                               DuoChoice choice,
+                                                               string passcode,
+                                                               IDuoUi ui,
+                                                               RestClient rest)
         {
             var txid = SubmitFactor(sid, choice, passcode, rest);
             if (txid.IsNullOrEmpty())
@@ -200,7 +224,7 @@ namespace PasswordManagerAccess.Duo
             if (!PollForResultUrl(sid, txid, ui, rest))
                 return null;
 
-            return FetchCode(sid, txid, xsrf, choice, rest);
+            return FetchResult(sid, txid, xsrf, choice, rest);
         }
 
         internal static bool PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
@@ -260,7 +284,7 @@ namespace PasswordManagerAccess.Duo
             return (status, response.Reason ?? response.Code ?? "");
         }
 
-        internal static string FetchCode(string sid, string txid, string xsrf, DuoChoice choice, RestClient rest)
+        internal static CodeState FetchResult(string sid, string txid, string xsrf, DuoChoice choice, RestClient rest)
         {
             var response = rest.PostForm("oidc/exit",
                                          new Dictionary<string, object>
@@ -276,13 +300,19 @@ namespace PasswordManagerAccess.Duo
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
-            return ExtractCode(response.RequestUri.AbsoluteUri);
+            return ExtractResult(response.RequestUri.AbsoluteUri);
         }
 
-        internal static string ExtractCode(string redirectUrl)
+        internal static CodeState ExtractResult(string redirectUrl)
         {
-            return Url.ExtractQueryParameter(redirectUrl, "duo_code") ??
-                   throw Util.MakeInvalidResponseError($"failed to find the 'duo_code' auth token");
+            var code = Url.ExtractQueryParameter(redirectUrl, "code") ??
+                       Url.ExtractQueryParameter(redirectUrl, "duo_code") ??
+                       throw Util.MakeInvalidResponseError("failed to find the 'duo_code' auth token");
+
+            var state = Url.ExtractQueryParameter(redirectUrl, "state") ?? "";
+
+            return new CodeState(code, state);
+
         }
 
         //

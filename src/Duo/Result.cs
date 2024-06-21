@@ -5,13 +5,19 @@ namespace PasswordManagerAccess.Duo
 {
     internal class Result
     {
-        public readonly string Passcode;
+        // This is returned what the V4 URL returns a redirect to the V1 api. This could happen when the traditional
+        // prompt is enabled in the Duo admin panel.
+        public static readonly Result RedirectToV1 = new Result("redirect-to-v1", "redirect-to-v1", false);
+
+        public readonly string Code;
+        public readonly string State;
         public readonly bool RememberMe;
 
-        public Result(string passcode, bool rememberMe)
+        public Result(string code, string state, bool rememberMe)
         {
-            Passcode = passcode;
+            Code = code;
             RememberMe = rememberMe;
+            State = state;
         }
     }
 }

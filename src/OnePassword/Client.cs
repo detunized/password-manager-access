@@ -617,7 +617,7 @@ namespace PasswordManagerAccess.OnePassword
 
             var key = isV1 ? "sigResponse" : "code";
             var note = isV1 ? "v1" : "v4";
-            return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Passcode },
+            return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Code },
                                            result.RememberMe,
                                            note);
         }
