@@ -18,6 +18,7 @@ The following services are supported by this library:
   - [Dropbox Passwords](https://www.dropbox.com/features/security/passwords)
   - [Kaspersky Password Manager (work in progress)](https://www.kaspersky.com/password-manager)
   - [LastPass](https://lastpass.com)
+  - [ProtonPass](https://proton.me/pass)
   - [RoboForm](https://roboform.com)
   - [Sticky Password](https://www.stickypassword.com)
   - [True Key](https://www.truekey.com)
