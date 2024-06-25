@@ -1,5 +1,16 @@
 # Changelog
 
+## 17.0.0-preview
+  - ProtonPass: added support for the ProtonPass password manager. This is a preview release and the
+    API is subject to change. Currently only the basic features are supported: single vault, no
+    sharing, no MFA. This is the first async module in the library.
+  - All: new dependency: RestSharp 110.2.0
+  - All: new dependency: BCrypt.Net-Next 4.0.3
+  - All: new dependency: PgpCore 6.4.1
+  - All: new dependency: Google.Protobuf 3.27.1
+  - All: upgraded BouncyCastle.Cryptography to 2.4.0
+  - All: fixed all warnings in the code
+
 ## 16.2.0
   - LastPass: added support for the URL field encryption
 
