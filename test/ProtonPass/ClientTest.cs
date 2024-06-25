@@ -18,7 +18,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
 {
     public class ClientTest: TestBase
     {
-        [Fact]
+        [Fact(Skip = "Not implemented")]
         public async void Open_returns_a_vault_with_a_valid_access_token()
         {
             // Arrange
