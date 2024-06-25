@@ -121,6 +121,42 @@ namespace PasswordManagerAccess.Example.ProtonPass
                                        config["password"],
                                        new AsyncTextUi(),
                                        new AsyncPlainStorage()).GetAwaiter().GetResult();
+
+                Console.WriteLine("Vault: {0}\n" +
+                                  "Description: {1}\n" +
+                                  "Accounts: ({2})\n",
+                                  vault.Name,
+                                  vault.Description,
+                                  vault.Accounts.Length);
+
+                for (var i = 0; i < vault.Accounts.Length; ++i)
+                {
+                    var account = vault.Accounts[i];
+
+                    Console.WriteLine("\n" +
+                                      "{0}:\n" +
+                                      "          id: {1}\n" +
+                                      "        name: {2}\n" +
+                                      "       email: {3}\n" +
+                                      "    username: {4}\n" +
+                                      "    password: {5}\n" +
+                                      "        totp: {6}\n" +
+                                      "        note: {7}\n" +
+                                      "        urls: ({8})",
+                                      i + 1,
+                                      account.Id,
+                                      account.Name,
+                                      account.Email,
+                                      account.Username,
+                                      account.Password,
+                                      account.Totp,
+                                      account.Note,
+                                      account.Urls.Length);
+
+                    for (var j = 0; j < account.Urls.Length; ++j)
+                        Console.WriteLine("           {0}: {1}", j + 1, account.Urls[j]);
+                }
+
             }
             catch (BaseException e)
             {
