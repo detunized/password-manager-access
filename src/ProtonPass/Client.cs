@@ -4,11 +4,13 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.ProtonPass.Protobuf;
 using PgpCore;
 using RestSharp;
 using RestSharp.Authenticators.OAuth2;
@@ -16,27 +18,15 @@ using RestClient = RestSharp.RestClient;
 
 namespace PasswordManagerAccess.ProtonPass
 {
-    // TODO: Move this out of here
-    public interface IAsyncUi
-    {
-        public class Result
-        {
-            public bool Solved { get; set; }
-            public string Token { get; set; } = "";
-        }
-
-        Task<Result> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken);
-    }
-
     internal static class Client
     {
         // TODO: Refactor this function once done with the logic!
-        public static async Task Open(string username,
-                                      string password,
-                                      IAsyncUi ui,
-                                      IAsyncSecureStorage storage,
-                                      RestAsync.Config config,
-                                      CancellationToken cancellationToken)
+        public static async Task<Vault> Open(string username,
+                                             string password,
+                                             IAsyncUi ui,
+                                             IAsyncSecureStorage storage,
+                                             RestAsync.Config config,
+                                             CancellationToken cancellationToken)
         {
             var rest = RestAsync.Create(BaseUrl, config);
             rest.AddOrUpdateDefaultHeader("X-Pm-Appversion", AppVersion);
@@ -85,8 +75,7 @@ namespace PasswordManagerAccess.ProtonPass
             {
                 try
                 {
-                    await DownloadVault(password, rest, cancellationToken).ConfigureAwait(false);
-                    return;
+                    return await DownloadVault(password, rest, cancellationToken).ConfigureAwait(false);
                 }
                 catch (TokenExpiredException)
                 {
@@ -103,6 +92,8 @@ namespace PasswordManagerAccess.ProtonPass
                     await LoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 }
             }
+
+            throw new InternalErrorException("Failed to download the vault");
         }
 
         //
@@ -221,8 +212,6 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
-
-
         internal static async Task StoreSession(string? sessionId,
                                                 string? accessToken,
                                                 string? refreshToken,
@@ -309,23 +298,75 @@ namespace PasswordManagerAccess.ProtonPass
             return response.Data!;
         }
 
-        internal static async Task<string[]> DownloadVault(string password, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Vault> DownloadVault(string password, RestClient rest, CancellationToken cancellationToken)
         {
             // 1. Get the key salts
             // At this point we're very likely to fail, so we do this first. It seems that when an access token is a bit old and is still good
             // for downloading some of the data, it's not good enough to get the salts. We need a fresh one.
-            var r = await rest.ExecuteGetAsync<Model.SaltsResponse>(new RestRequest("core/v4/keys/salts"), cancellationToken).ConfigureAwait(false);
-            if (!r.IsSuccessful)
-                throw MakeError(r);
-
-            var salts = r.Data!.KeySalts;
+            var salts = await RequestKeySalts(rest, cancellationToken);
 
             // 2. Get the user info that contains the user keys
-            var r0 = await rest.ExecuteGetAsync<Model.UserResponse>(new RestRequest("core/v4/users"), cancellationToken).ConfigureAwait(false);
-            if (!r0.IsSuccessful)
-                throw MakeError(r0);
+            var primaryKey = await RequestUserPrimaryKey(rest, cancellationToken);
 
-            var user = r0.Data!.User;
+            // 3. Derive the key passphrase
+            // The salt seems to be optional in case of the older accounts. Not sure how to test this IRL.
+            // When there's no salt, the master password is the key password.
+            var keyPassphrase = DeriveKeyPassphrase(password, salts.FirstOrDefault(x => x.Id == primaryKey.Id)?.Salt);
+
+            // 4. Get the main share
+            // TODO: Multiple shares are not supported yet
+            var vaultShare = await RequestMainVaultShare(rest, cancellationToken);
+
+            // 5. Get the keys for the share
+            var latestShareKey = await RequestShareKey(rest, cancellationToken, vaultShare);
+
+            // 6. Make sure the user has a matching key
+            if (latestShareKey.UserKeyId != primaryKey.Id)
+                throw new InternalErrorException($"Share {vaultShare.Id} key {latestShareKey.UserKeyId} that doesn't match the user primary key");
+
+            // 7. Decrypt the share key
+            var vaultKey = await DecryptMessage(latestShareKey.Key, primaryKey.PrivateKey, keyPassphrase).ConfigureAwait(false);
+
+            // 8. Decrypt vault info
+            var vaultInfo = DecryptVaultInfo(vaultShare, vaultKey);
+
+            var accounts = new List<Account>();
+            var nextBatchMarker = "";
+
+            // 9. Get all the vault items in batches
+            do
+            {
+                // One batch at a time
+                nextBatchMarker = await GetVaultNextItems(vaultShare.Id, vaultKey, nextBatchMarker, accounts, rest, cancellationToken).ConfigureAwait(false);
+            } while (nextBatchMarker != "");
+
+            // 10. Done
+            return new Vault
+            {
+                Name = vaultInfo.Name,
+                Description = vaultInfo.Description,
+                Accounts = accounts.ToArray(),
+            };
+        }
+
+        internal static async Task<Model.KeySalt[]> RequestKeySalts(RestClient rest, CancellationToken cancellationToken)
+        {
+            var response = await rest.ExecuteGetAsync<Model.SaltsResponse>(new RestRequest("core/v4/keys/salts"), cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data!.KeySalts;
+        }
+
+        internal static async Task<Model.UserKey> RequestUserPrimaryKey(RestClient rest, CancellationToken cancellationToken)
+        {
+            var response = await rest.ExecuteGetAsync<Model.UserResponse>(new RestRequest("core/v4/users"), cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var user = response.Data!.User;
             if (user.Keys.Length == 0)
                 throw new InternalErrorException("Expected at least one user key");
 
@@ -333,16 +374,17 @@ namespace PasswordManagerAccess.ProtonPass
             if (primaryKey == null)
                 throw new InternalErrorException("Expected a primary key");
 
-            // The salt seems to be optional in case of the older accounts. Not sure how to test this IRL.
-            // When there's no salt, the master password is the key password.
-            var keyPassphrase = DeriveKeyPassphrase(password, salts.FirstOrDefault(x => x.Id == primaryKey.Id)?.Salt);
+            return primaryKey;
+        }
 
-            // 2. Get all the shares
-            var r1 = await rest.ExecuteGetAsync<Model.ShareRoot>(new RestRequest("pass/v1/share"), cancellationToken).ConfigureAwait(false);
-            if (!r1.IsSuccessful)
-                throw MakeError(r1);
+        internal static async Task<Model.Share> RequestMainVaultShare(RestClient rest, CancellationToken cancellationToken)
+        {
+            var response = await rest.ExecuteGetAsync<Model.ShareRoot>(new RestRequest("pass/v1/share"), cancellationToken).ConfigureAwait(false);
 
-            var shares = r1.Data!.Shares;
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var shares = response.Data!.Shares;
             if (shares.Length == 0)
                 throw new InternalErrorException("Expected at least one share");
 
@@ -354,31 +396,61 @@ namespace PasswordManagerAccess.ProtonPass
             if (share.TargetType != 1)
                 throw new UnsupportedFeatureException("Only vault shares are supported");
 
-            // 3. Get the keys for the share
-            var r2 = await rest.ExecuteGetAsync<Model.ShareKeysRoot>(new RestRequest($"pass/v1/share/{share.Id}/key"), cancellationToken).ConfigureAwait(false);
-            var shareKeys = r2.Data!.ShareKeys.Keys;
+            return share;
+        }
 
+        internal static async Task<Model.ShareKey> RequestShareKey(RestClient rest, CancellationToken cancellationToken, Model.Share vaultShare)
+        {
+            var response = await rest.ExecuteGetAsync<Model.ShareKeysRoot>(new RestRequest($"pass/v1/share/{vaultShare.Id}/key"), cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var shareKeys = response.Data!.ShareKeys.Keys;
             if (shareKeys.Length == 0)
                 throw new InternalErrorException("Expected at least one share key");
 
-            // 4. Get the latest key
+            // Find the latest key
             var latestShareKey = shareKeys.MaxBy(x => x.KeyRotation);
             if (latestShareKey == null)
                 throw new InternalErrorException("Expected at least one share key");
 
-            // 5. Make sure the user has a matching key
-            if (latestShareKey.UserKeyId != primaryKey.Id)
-                throw new InternalErrorException($"Share {share.Id} key {latestShareKey.UserKeyId} that doesn't match the user primary key");
+            return latestShareKey;
+        }
 
-            // 6. Decrypt the share key
-            var vaultKey = await DecryptMessage(latestShareKey.Key, primaryKey.PrivateKey, keyPassphrase).ConfigureAwait(false);
+        internal static Protobuf.Vault DecryptVaultInfo(Model.Share vaultShare, byte[] vaultKey)
+        {
+            // The content is encoded with Protobuf and then encrypted with AES-GCM
+            var encryptedShareInfo = vaultShare.Content.Decode64();
+            var shareInfoProto = OnePassword.AesGcm.Decrypt(key: vaultKey,
+                                                            ciphertext: encryptedShareInfo.Sub(12, encryptedShareInfo.Length - 12),
+                                                            iv: encryptedShareInfo.Sub(0, 12),
+                                                            authData: "vaultcontent".ToBytes());
+            return Protobuf.Vault.Parser.ParseFrom(shareInfoProto);
+        }
 
-            // 7. Get the share content
-            var r3 = await rest.ExecuteGetAsync<Model.VaultResponse>(new RestRequest($"pass/v1/share/{share.Id}/item"), cancellationToken).ConfigureAwait(false);
+        // Appends the account to the list and returns the next batch marker
+        internal static async Task<string> GetVaultNextItems(string shareId,
+                                                             byte[] vaultKey,
+                                                             string nextBatchMarker,
+                                                             List<Account> accounts,
+                                                             RestClient rest,
+                                                             CancellationToken cancellationToken)
+        {
+            var url = $"pass/v1/share/{shareId}/item";
+            if (nextBatchMarker != "")
+                url += $"?Since={nextBatchMarker}";
+
+            var r3 = await rest.ExecuteGetAsync<Model.VaultResponse>(new RestRequest(url), cancellationToken).ConfigureAwait(false);
             if (!r3.IsSuccessful)
                 throw MakeError(r3);
 
             var vault = r3.Data!.Items;
+
+            // Reserve space
+            accounts.Capacity = Math.Max(accounts.Capacity, accounts.Count + vault.Items.Length);
+
             foreach (var item in vault.Items)
             {
                 var encryptedKey = item.ItemKey.Decode64();
@@ -392,10 +464,29 @@ namespace PasswordManagerAccess.ProtonPass
                                                          ciphertext: encryptedContent.Sub(12, encryptedContent.Length - 12),
                                                          iv: encryptedContent.Sub(0, 12),
                                                          authData: "itemcontent".ToBytes());
-                // TODO: Decode protobuf here!!!
+
+                var parsedItem = Item.Parser.ParseFrom(content);
+
+                if (parsedItem.Content.ContentCase != Content.ContentOneofCase.Login)
+                    continue;
+
+                var metadata = parsedItem.Metadata;
+                var login = parsedItem.Content.Login;
+
+                accounts.Add(new Account
+                {
+                    Id = metadata.ItemUuid ?? "",
+                    Name = metadata.Name ?? "",
+                    Email = login.ItemEmail ?? "",
+                    Username = login.ItemUsername ?? "",
+                    Password = login.Password ?? "",
+                    Urls = login.Urls?.ToArray() ?? Array.Empty<string>(),
+                    Totp = login.TotpUri ?? "",
+                    Note = metadata.Note,
+                });
             }
 
-            return Array.Empty<string>();
+            return vault.LastToken ?? "";
         }
 
         private static string DeriveKeyPassphrase(string password, string? saltBase64)
@@ -495,10 +586,6 @@ namespace PasswordManagerAccess.ProtonPass
         //
         // Data
         //
-
-        // Web protocol
-        // public const string BaseUrl = "https://account.proton.me/api";
-        // public const string AppVersion = "web-account@5.0.99.0";
 
         // Android protocol
         internal const string BaseUrl = "https://pass-api.proton.me";

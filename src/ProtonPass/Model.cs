@@ -323,7 +323,7 @@ namespace PasswordManagerAccess.ProtonPass
             public int Total { get; set; }
 
             [JsonPropertyName("LastToken")]
-            public string LastToken { get; set; } = "";
+            public string? LastToken { get; set; }
         }
 
         public class VaultItem

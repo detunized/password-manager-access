@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
@@ -11,6 +12,10 @@ namespace PasswordManagerAccess.ProtonPass
 {
     public class Vault
     {
+        public string Name { get; internal set; } = "";
+        public string Description { get; internal set; } = "";
+        public Account[] Accounts { get; internal set; } = Array.Empty<Account>();
+
         // TODO: Consider removing the = default on the cancellation token
         public static async Task<Vault> Open(string username,
                                              string password,
@@ -32,8 +37,7 @@ namespace PasswordManagerAccess.ProtonPass
                                                RestAsync.Config config,
                                                CancellationToken cancellationToken)
         {
-            await Client.Open(username, password, ui, storage, config, cancellationToken);
-            return new Vault();
+            return await Client.Open(username, password, ui, storage, config, cancellationToken);
         }
     }
 }
