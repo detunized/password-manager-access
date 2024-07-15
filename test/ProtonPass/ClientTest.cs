@@ -38,7 +38,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
                     .JsonText(GetFixture("sessions")));
 
             // Act
-            await Swallow(() => Client.Open("username", "password", GetAsyncUi(), GetAsyncStorage(), mockHttp.ToConfig(), MakeToken()));
+            await Swallow(() => Client.OpenAll("username", "password", GetAsyncUi(), GetAsyncStorage(), mockHttp.ToConfig(), MakeToken()));
 
             // Assert
             mockHttp.VerifyAll();

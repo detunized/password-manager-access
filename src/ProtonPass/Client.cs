@@ -21,12 +21,12 @@ namespace PasswordManagerAccess.ProtonPass
     internal static class Client
     {
         // TODO: Refactor this function once done with the logic!
-        public static async Task<Vault> Open(string username,
-                                             string password,
-                                             IAsyncUi ui,
-                                             IAsyncSecureStorage storage,
-                                             RestAsync.Config config,
-                                             CancellationToken cancellationToken)
+        public static async Task<Vault[]> OpenAll(string username,
+                                                  string password,
+                                                  IAsyncUi ui,
+                                                  IAsyncSecureStorage storage,
+                                                  RestAsync.Config config,
+                                                  CancellationToken cancellationToken)
         {
             var rest = RestAsync.Create(BaseUrl, config);
             rest.AddOrUpdateDefaultHeader("X-Pm-Appversion", AppVersion);
@@ -75,7 +75,7 @@ namespace PasswordManagerAccess.ProtonPass
             {
                 try
                 {
-                    return await DownloadVault(password, rest, cancellationToken).ConfigureAwait(false);
+                    return await DownloadAllVault(password, rest, cancellationToken).ConfigureAwait(false);
                 }
                 catch (TokenExpiredException)
                 {
@@ -298,7 +298,7 @@ namespace PasswordManagerAccess.ProtonPass
             return response.Data!;
         }
 
-        internal static async Task<Vault> DownloadVault(string password, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Vault[]> DownloadAllVault(string password, RestClient rest, CancellationToken cancellationToken)
         {
             // 1. Get the key salts
             // At this point we're very likely to fail, so we do this first. It seems that when an access token is a bit old and is still good
@@ -318,10 +318,11 @@ namespace PasswordManagerAccess.ProtonPass
             if (vaultShares.Length == 0)
                 throw new InternalErrorException("Expected at least one share");
 
-            var vaultShare = vaultShares[0];
+            // 5. Initiate the parallel downloads
+            var downloads = vaultShares.Select(share => DownloadVaultContent(share, primaryKey, keyPassphrase, rest, cancellationToken)).ToArray();
 
-            // 4. Download and decrypt the vault content
-            return await DownloadVaultContent(vaultShare, primaryKey, keyPassphrase, rest, cancellationToken);
+            // 6. Wait for all the downloads to finish
+            return await Task.WhenAll(downloads).ConfigureAwait(false);
         }
 
         private static async Task<Vault> DownloadVaultContent(Model.Share vaultShare,

@@ -17,27 +17,27 @@ namespace PasswordManagerAccess.ProtonPass
         public Account[] Accounts { get; internal set; } = Array.Empty<Account>();
 
         // TODO: Consider removing the = default on the cancellation token
-        public static async Task<Vault> Open(string username,
-                                             string password,
-                                             IAsyncUi ui,
-                                             IAsyncSecureStorage storage,
-                                             CancellationToken cancellationToken = default)
+        public static async Task<Vault[]> OpenAll(string username,
+                                                  string password,
+                                                  IAsyncUi ui,
+                                                  IAsyncSecureStorage storage,
+                                                  CancellationToken cancellationToken = default)
         {
-            return await Open(username, password, ui, storage, new RestAsync.Config(), cancellationToken);
+            return await OpenAll(username, password, ui, storage, new RestAsync.Config(), cancellationToken);
         }
 
         //
         // Internal
         //
 
-        internal static async Task<Vault> Open(string username,
-                                               string password,
-                                               IAsyncUi ui,
-                                               IAsyncSecureStorage storage,
-                                               RestAsync.Config config,
-                                               CancellationToken cancellationToken)
+        internal static async Task<Vault[]> OpenAll(string username,
+                                                    string password,
+                                                    IAsyncUi ui,
+                                                    IAsyncSecureStorage storage,
+                                                    RestAsync.Config config,
+                                                    CancellationToken cancellationToken)
         {
-            return await Client.Open(username, password, ui, storage, config, cancellationToken);
+            return await Client.OpenAll(username, password, ui, storage, config, cancellationToken);
         }
     }
 }

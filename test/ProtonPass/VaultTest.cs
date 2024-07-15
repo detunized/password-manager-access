@@ -13,13 +13,13 @@ namespace PasswordManagerAccess.Test.ProtonPass
         [Fact(Skip = "TODO: need to add a flow of requests")]
         public async void Open_returns_a_vault()
         {
-            var vault = await Vault.Open("username",
-                                         "password",
-                                         null!,
-                                         null!,
-                                         new RestFlow(),
-                                         new CancellationTokenSource().Token);
-            vault.Should().NotBeNull();
+            var vaults = await Vault.OpenAll("username",
+                                             "password",
+                                             null!,
+                                             null!,
+                                             new RestFlow(),
+                                             new CancellationTokenSource().Token);
+            vaults.Should().NotBeEmpty();
         }
     }
 }
