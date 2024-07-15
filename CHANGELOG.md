@@ -1,5 +1,8 @@
 # Changelog
 
+## 17.0.0-preview.2
+  - ProtonPass: added support for multiple vaults (Vault.Open -> Vault.OpenAll)
+
 ## 17.0.0-preview
   - ProtonPass: added support for the ProtonPass password manager. This is a preview release and the
     API is subject to change. Currently only the basic features are supported: single vault, no
