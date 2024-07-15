@@ -313,34 +313,52 @@ namespace PasswordManagerAccess.ProtonPass
             // When there's no salt, the master password is the key password.
             var keyPassphrase = DeriveKeyPassphrase(password, salts.FirstOrDefault(x => x.Id == primaryKey.Id)?.Salt);
 
-            // 4. Get the main share
-            // TODO: Multiple shares are not supported yet
-            var vaultShare = await RequestMainVaultShare(rest, cancellationToken);
+            // 4. Get all vault shares info
+            var vaultShares = await RequestAllVaultShares(rest, cancellationToken);
+            if (vaultShares.Length == 0)
+                throw new InternalErrorException("Expected at least one share");
 
-            // 5. Get the keys for the share
-            var latestShareKey = await RequestShareKey(rest, cancellationToken, vaultShare);
+            var vaultShare = vaultShares[0];
 
-            // 6. Make sure the user has a matching key
+            // 4. Download and decrypt the vault content
+            return await DownloadVaultContent(vaultShare, primaryKey, keyPassphrase, rest, cancellationToken);
+        }
+
+        private static async Task<Vault> DownloadVaultContent(Model.Share vaultShare,
+                                                              Model.UserKey primaryKey,
+                                                              string keyPassphrase,
+                                                              RestClient rest,
+                                                              CancellationToken cancellationToken)
+        {
+            // 1. Get the keys for the share
+            var latestShareKey = await RequestShareKey(vaultShare, rest, cancellationToken);
+
+            // 2. Make sure the user has a matching key
             if (latestShareKey.UserKeyId != primaryKey.Id)
                 throw new InternalErrorException($"Share {vaultShare.Id} key {latestShareKey.UserKeyId} that doesn't match the user primary key");
 
-            // 7. Decrypt the share key
+            // 3. Decrypt the share key
             var vaultKey = await DecryptMessage(latestShareKey.Key, primaryKey.PrivateKey, keyPassphrase).ConfigureAwait(false);
 
-            // 8. Decrypt vault info
+            // 4. Decrypt vault info
             var vaultInfo = DecryptVaultInfo(vaultShare, vaultKey);
 
             var accounts = new List<Account>();
             var nextBatchMarker = "";
 
-            // 9. Get all the vault items in batches
+            // 5. Get all the vault items in batches
             do
             {
                 // One batch at a time
-                nextBatchMarker = await GetVaultNextItems(vaultShare.Id, vaultKey, nextBatchMarker, accounts, rest, cancellationToken).ConfigureAwait(false);
+                nextBatchMarker = await GetVaultNextItems(vaultShare.Id,
+                                                          vaultKey,
+                                                          nextBatchMarker,
+                                                          accounts,
+                                                          rest,
+                                                          cancellationToken).ConfigureAwait(false);
             } while (nextBatchMarker != "");
 
-            // 10. Done
+            // 6. Done
             return new Vault
             {
                 Name = vaultInfo.Name,
@@ -377,7 +395,7 @@ namespace PasswordManagerAccess.ProtonPass
             return primaryKey;
         }
 
-        internal static async Task<Model.Share> RequestMainVaultShare(RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Model.Share[]> RequestAllVaultShares(RestClient rest, CancellationToken cancellationToken)
         {
             var response = await rest.ExecuteGetAsync<Model.ShareRoot>(new RestRequest("pass/v1/share"), cancellationToken).ConfigureAwait(false);
 
@@ -385,21 +403,12 @@ namespace PasswordManagerAccess.ProtonPass
                 throw MakeError(response);
 
             var shares = response.Data!.Shares;
-            if (shares.Length == 0)
-                throw new InternalErrorException("Expected at least one share");
 
-            // TODO: Decide what to do with multiple shares
-            if (shares.Length > 1)
-                throw new UnsupportedFeatureException("Multiple shares are not supported yet");
-
-            var share = shares[0];
-            if (share.TargetType != 1)
-                throw new UnsupportedFeatureException("Only vault shares are supported");
-
-            return share;
+            // Filter out only the vault shares
+            return shares.Where(x => x.TargetType == 1).ToArray();
         }
 
-        internal static async Task<Model.ShareKey> RequestShareKey(RestClient rest, CancellationToken cancellationToken, Model.Share vaultShare)
+        internal static async Task<Model.ShareKey> RequestShareKey(Model.Share vaultShare, RestClient rest, CancellationToken cancellationToken)
         {
             var response = await rest.ExecuteGetAsync<Model.ShareKeysRoot>(new RestRequest($"pass/v1/share/{vaultShare.Id}/key"), cancellationToken)
                 .ConfigureAwait(false);
