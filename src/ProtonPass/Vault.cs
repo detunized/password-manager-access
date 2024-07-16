@@ -12,6 +12,7 @@ namespace PasswordManagerAccess.ProtonPass
 {
     public class Vault
     {
+        public string Id { get; internal set; } = "";
         public string Name { get; internal set; } = "";
         public string Description { get; internal set; } = "";
         public Account[] Accounts { get; internal set; } = Array.Empty<Account>();

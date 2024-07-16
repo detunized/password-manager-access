@@ -362,6 +362,7 @@ namespace PasswordManagerAccess.ProtonPass
             // 6. Done
             return new Vault
             {
+                Id = vaultShare.Id, // TODO: Should we use VaultId instead? What's the difference?
                 Name = vaultInfo.Name,
                 Description = vaultInfo.Description,
                 Accounts = accounts.ToArray(),

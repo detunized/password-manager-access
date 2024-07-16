@@ -126,9 +126,11 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 {
                     Console.WriteLine("Vault: {0}\n" +
                                       "Description: {1}\n" +
-                                      "Accounts: ({2})\n",
+                                      "ID: {2}\n" +
+                                      "Accounts: ({3})\n",
                                       vault.Name,
                                       vault.Description,
+                                      vault.Id,
                                       vault.Accounts.Length);
 
                     for (var i = 0; i < vault.Accounts.Length; ++i)
