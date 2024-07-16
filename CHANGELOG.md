@@ -1,5 +1,9 @@
 # Changelog
 
+## 17.0.0-preview.3
+  - ProtonPass: added vault ID (see Vault.Id)
+  - ProtonPass: trashed items are now ignored
+
 ## 17.0.0-preview.2
   - ProtonPass: added support for multiple vaults (Vault.Open -> Vault.OpenAll)
 
