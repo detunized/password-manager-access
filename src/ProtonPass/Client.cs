@@ -464,11 +464,15 @@ namespace PasswordManagerAccess.ProtonPass
 
             foreach (var item in vault.Items)
             {
+                // Skip trashed items
+                if (item.State != ItemStateRegular)
+                    continue;
+
                 var encryptedKey = item.ItemKey.Decode64();
                 var key = OnePassword.AesGcm.Decrypt(key: vaultKey,
-                                                         ciphertext: encryptedKey.Sub(12, encryptedKey.Length - 12),
-                                                         iv: encryptedKey.Sub(0, 12),
-                                                         authData: "itemkey".ToBytes());
+                                                     ciphertext: encryptedKey.Sub(12, encryptedKey.Length - 12),
+                                                     iv: encryptedKey.Sub(0, 12),
+                                                     authData: "itemkey".ToBytes());
 
                 var encryptedContent = item.Content.Decode64();
                 var content = OnePassword.AesGcm.Decrypt(key: key,
@@ -601,5 +605,7 @@ namespace PasswordManagerAccess.ProtonPass
         // Android protocol
         internal const string BaseUrl = "https://pass-api.proton.me";
         internal const string AppVersion = "android-pass@1.19.0";
+
+        internal const int ItemStateRegular = 1;
     }
 }

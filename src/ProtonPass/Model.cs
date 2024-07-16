@@ -351,6 +351,9 @@ namespace PasswordManagerAccess.ProtonPass
             [JsonPropertyName("ItemKey")]
             [JsonRequired]
             public string ItemKey { get; set; } = "";
+
+            [JsonPropertyName("State")]
+            public int State { get; set; }
         }
     }
 }
