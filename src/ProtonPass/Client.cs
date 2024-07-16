@@ -75,7 +75,7 @@ namespace PasswordManagerAccess.ProtonPass
             {
                 try
                 {
-                    return await DownloadAllVault(password, rest, cancellationToken).ConfigureAwait(false);
+                    return await DownloadAllVaults(password, rest, cancellationToken).ConfigureAwait(false);
                 }
                 catch (TokenExpiredException)
                 {
@@ -298,7 +298,7 @@ namespace PasswordManagerAccess.ProtonPass
             return response.Data!;
         }
 
-        internal static async Task<Vault[]> DownloadAllVault(string password, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Vault[]> DownloadAllVaults(string password, RestClient rest, CancellationToken cancellationToken)
         {
             // 1. Get the key salts
             // At this point we're very likely to fail, so we do this first. It seems that when an access token is a bit old and is still good
