@@ -1,5 +1,9 @@
 # Changelog
 
+## 17.0.0
+  - ProtonPass: initial release (see preview releases for the changes)
+  - Bitwarden: added support for the new encryption scheme with individual keys for each item
+
 ## 17.0.0-preview.3
   - ProtonPass: added vault ID (see Vault.Id)
   - ProtonPass: trashed items are now ignored
