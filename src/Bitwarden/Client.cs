@@ -619,9 +619,14 @@ namespace PasswordManagerAccess.Bitwarden
                                                  Dictionary<string, string> folders,
                                                  Dictionary<string, Collection> collections)
         {
+            // The item is encrypted with either the vault key or the org key.
             var key = item.OrganizationId.IsNullOrEmpty()
                 ? vaultKey
                 : orgKeys[item.OrganizationId];
+
+            // Newer items (from approx. Aug 2024) have a unique item key attached.
+            if (!item.Key.IsNullOrEmpty())
+                key = DecryptToBytes(item.Key, key);
 
             var folder = item.FolderId != null && folders.ContainsKey(item.FolderId)
                 ? folders[item.FolderId]

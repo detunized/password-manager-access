@@ -155,7 +155,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 {
                     Console.WriteLine("Parse errors:");
                     foreach (var e in vault.ParseErrors)
-                        Console.WriteLine($"  - error: ${e.Description}");
+                        Console.WriteLine($"  - error: {e.Description}");
                 }
             }
             catch (BaseException e)

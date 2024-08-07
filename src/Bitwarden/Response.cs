@@ -142,16 +142,32 @@ namespace PasswordManagerAccess.Bitwarden.Response
 
     public struct Item
     {
-        [JsonProperty(Required = Required.Always)]
+        [JsonProperty("type", Required = Required.Always)]
         public ItemType Type;
 
+        [JsonProperty("id", Required = Required.Always)]
         public string Id;
+
+        [JsonProperty("name")]
         public string Name;
+
+        [JsonProperty("notes")]
         public string Notes;
+
+        [JsonProperty("folderId")]
         public string FolderId;
+
+        [JsonProperty("organizationId")]
         public string OrganizationId;
+
+        [JsonProperty("deletedDate")]
         public string DeletedDate;
+
+        [JsonProperty("collectionIds")]
         public string[] CollectionIds;
+
+        [JsonProperty("key")]
+        public string Key;
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public LoginInfo Login;
@@ -159,9 +175,16 @@ namespace PasswordManagerAccess.Bitwarden.Response
 
     public struct LoginInfo
     {
+        [JsonProperty("username")]
         public string Username;
+
+        [JsonProperty("password")]
         public string Password;
+
+        [JsonProperty("uri")]
         public string Uri;
+
+        [JsonProperty("totp")]
         public string Totp;
     }
 
