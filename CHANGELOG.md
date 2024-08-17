@@ -1,5 +1,8 @@
 # Changelog
 
+## 18.0.0
+  - ZohoVault: added cookie-based session storage to save on "full logins". See `ZohoVault.Settings`.
+
 ## 17.0.0
   - ProtonPass: initial release (see preview releases for the changes)
   - Bitwarden: added support for the new encryption scheme with individual keys for each item
