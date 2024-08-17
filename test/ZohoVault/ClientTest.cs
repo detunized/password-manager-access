@@ -299,26 +299,30 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Fact]
-        public void Authenticate_returns_key()
+        public void RequestAuthInfo_makes_GET_request_to_specific_url_and_returns_auth_info()
         {
             var flow = new RestFlow()
                 .Get(GetFixture("auth-info-response"))
                     .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN")
                     .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            var key = Client.Authenticate(TestData.Passphrase, LoginCookies, DefaultDomain, flow);
+            var info = Client.RequestAuthInfo(LoginCookies, DefaultDomain, flow);
 
-            Assert.Equal(TestData.Key, key);
+            Assert.Equal(1000, info.IterationCount);
+            Assert.Equal("f78e6ffce8e57501a02c9be303db2c68".ToBytes(), info.Salt);
+            Assert.Equal("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(), info.EncryptionCheck);
         }
 
         [Fact]
-        public void Authenticate_throws_on_incorrect_passphrase()
+        public void RequestAuthInfo_throws_on_unknown_kdf_method()
         {
             var flow = new RestFlow()
-                .Get(GetFixture("auth-info-response"));
+                .Get(GetFixture("auth-info-with-unknown-kdf-response"))
+                    .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN")
+                    .ExpectCookie(LoginCookieName, LoginCookieValue);
 
-            Exceptions.AssertThrowsBadCredentials(() => Client.Authenticate("Not really a passphrase", LoginCookies, DefaultDomain, flow),
-                                                  "Passphrase is incorrect");
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestAuthInfo(LoginCookies, DefaultDomain, flow),
+                                                     "KDF method 'UNKNOWN_KDF' is not supported");
         }
 
         [Fact]
@@ -331,6 +335,21 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var vault = Client.DownloadVault(LoginCookies, DefaultDomain, flow);
 
             Assert.NotEmpty(vault.Secrets);
+        }
+
+        [Fact]
+        public void DeriveAndVerifyVaultKey_returns_key()
+        {
+            var key = Client.DeriveAndVerifyVaultKey(TestData.Passphrase, TestData.AuthInfo);
+
+            Assert.Equal(TestData.Key, key);
+        }
+
+        [Fact]
+        public void Authenticate_throws_on_incorrect_passphrase()
+        {
+            Exceptions.AssertThrowsBadCredentials(() => Client.DeriveAndVerifyVaultKey("Not really a passphrase", TestData.AuthInfo),
+                                                  "Passphrase is incorrect");
         }
 
         [Fact]
@@ -369,21 +388,6 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("", account.Password);
             Assert.Equal("", account.Url);
             Assert.Equal("", account.Note);
-        }
-
-        [Fact]
-        public void GetAuthInfo_makes_GET_request_to_specific_url_and_returns_auth_info()
-        {
-            var flow = new RestFlow()
-                .Get(GetFixture("auth-info-response"))
-                    .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=GET_LOGIN")
-                    .ExpectCookie(LoginCookieName, LoginCookieValue);
-
-            var info = Client.GetAuthInfo(LoginCookies, DefaultDomain, flow);
-
-            Assert.Equal(1000, info.IterationCount);
-            Assert.Equal("f78e6ffce8e57501a02c9be303db2c68".ToBytes(), info.Salt);
-            Assert.Equal("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(), info.EncryptionCheck);
         }
 
         [Theory]

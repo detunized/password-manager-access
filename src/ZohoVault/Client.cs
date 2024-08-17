@@ -71,7 +71,8 @@ namespace PasswordManagerAccess.ZohoVault
 
                     try
                     {
-                        var vaultKey = Authenticate(credentials.Passphrase, cookies, userInfo.Domain, rest);
+                        var authInfo = RequestAuthInfo(cookies, userInfo.Domain, rest);
+                        var vaultKey = DeriveAndVerifyVaultKey(credentials.Passphrase, authInfo);
                         var vaultResponse = DownloadVault(cookies, userInfo.Domain, rest);
                         var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
 
@@ -361,24 +362,46 @@ namespace PasswordManagerAccess.ZohoVault
                 throw MakeErrorOnFailedRequest(response);
         }
 
-        // TODO: Rather return a session object or something like that
-        // Returns the encryption key
-        internal static byte[] Authenticate(string passphrase, HttpCookies cookies, string domain, RestClient rest)
+        internal readonly struct AuthInfo
         {
-            // Fetch key derivation parameters and some other stuff
-            var info = GetAuthInfo(cookies, domain, rest);
+            public readonly int IterationCount;
+            public readonly byte[] Salt;
+            public readonly byte[] EncryptionCheck;
 
+            public AuthInfo(int iterationCount, byte[] salt, byte[] encryptionCheck)
+            {
+                IterationCount = iterationCount;
+                Salt = salt;
+                EncryptionCheck = encryptionCheck;
+            }
+        }
+
+        internal static AuthInfo RequestAuthInfo(HttpCookies cookies, string domain, RestClient rest)
+        {
+            var info = GetWrapped<R.AuthInfo>(AuthInfoUrl(domain), cookies, rest);
+
+            if (info.KdfMethod != "PBKDF2_AES")
+                throw new UnsupportedFeatureException($"KDF method '{info.KdfMethod}' is not supported");
+
+            return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
+        }
+
+        internal static R.Vault DownloadVault(HttpCookies cookies, string domain, RestClient rest)
+        {
+            return GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
+        }
+
+        internal static byte[] DeriveAndVerifyVaultKey(string passphrase, AuthInfo authInfo)
+        {
             // Decryption key
-            var key = Util.ComputeKey(passphrase, info.Salt, info.IterationCount);
+            var key = Util.ComputeKey(passphrase, authInfo.Salt, authInfo.IterationCount);
 
             // Verify that the key is correct
             // AuthInfo.EncryptionCheck contains some encrypted JSON that could be
             // decrypted and parsed to check if the passphrase is correct. We have
             // to rely here on the encrypted JSON simply not parsing correctly and
             // producing some sort of error.
-            var decrypted = Util.Decrypt(info.EncryptionCheck, key).ToUtf8();
-
-            // TODO: See if ToUtf8 could throw something
+            var decrypted = Util.Decrypt(authInfo.EncryptionCheck, key).ToUtf8(); // TODO: See if ToUtf8 could throw something
 
             JToken parsed = null;
             try
@@ -394,35 +417,6 @@ namespace PasswordManagerAccess.ZohoVault
                 throw new BadCredentialsException("Passphrase is incorrect");
 
             return key;
-        }
-
-        internal readonly struct AuthInfo
-        {
-            public readonly int IterationCount;
-            public readonly byte[] Salt;
-            public readonly byte[] EncryptionCheck;
-
-            public AuthInfo(int iterationCount, byte[] salt, byte[] encryptionCheck)
-            {
-                IterationCount = iterationCount;
-                Salt = salt;
-                EncryptionCheck = encryptionCheck;
-            }
-        }
-
-        internal static AuthInfo GetAuthInfo(HttpCookies cookies, string domain, RestClient rest)
-        {
-            var info = GetWrapped<R.AuthInfo>(AuthInfoUrl(domain), cookies, rest);
-
-            if (info.KdfMethod != "PBKDF2_AES")
-                throw new UnsupportedFeatureException($"KDF method '{info.KdfMethod}' is not supported");
-
-            return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
-        }
-
-        internal static R.Vault DownloadVault(HttpCookies cookies, string domain, RestClient rest)
-        {
-            return GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
         }
 
         internal static byte[] DecryptSharingKey(R.Vault vaultResponse, byte[] key)
