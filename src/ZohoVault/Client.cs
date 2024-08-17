@@ -15,6 +15,8 @@ using R = PasswordManagerAccess.ZohoVault.Response;
 namespace PasswordManagerAccess.ZohoVault
 {
     using HttpCookies = Dictionary<string, string>;
+    using HttpHeaders = Dictionary<string, string>;
+    using PostParameters = Dictionary<string, object>;
 
     internal static class Client
     {
@@ -107,8 +109,7 @@ namespace PasswordManagerAccess.ZohoVault
             const string hostPrefix = "accounts.";
 
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.Host.StartsWith(hostPrefix))
-                throw new InternalErrorException(
-                    $"Expected a valid URL with a domain starting with '{hostPrefix}', got '{url}'");
+                throw new InternalErrorException($"Expected a valid URL with a domain starting with '{hostPrefix}', got '{url}'");
 
             // Everywhere in the code we use the main domain name, like zoho.com or zohocloud.ca.
             return uri.Host.Substring(hostPrefix.Length);
@@ -143,16 +144,15 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static UserInfo RequestUserInfo(string username, string token, string domain, RestClient rest)
         {
-            var response = rest.PostForm<R.Lookup>(
-                LookupUrl(domain, username),
-                new Dictionary<string, object>
-                {
-                    ["mode"] = "primary",
-                    ["cli_time"] = Os.UnixMilliseconds(),
-                    ["servicename"] = ServiceName,
-                },
-                headers: new Dictionary<string, string> {["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}"},
-                cookies: new Dictionary<string, string> {["iamcsr"] = token});
+            var response = rest.PostForm<R.Lookup>(LookupUrl(domain, username),
+                                                   new PostParameters
+                                                   {
+                                                       ["mode"] = "primary",
+                                                       ["cli_time"] = Os.UnixMilliseconds(),
+                                                       ["servicename"] = ServiceName,
+                                                   },
+                                                   headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}" },
+                                                   cookies: new HttpCookies { ["iamcsr"] = token });
 
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
@@ -179,6 +179,7 @@ namespace PasswordManagerAccess.ZohoVault
                     throw MakeInvalidResponseError("redirect info not found");
 
                 return RequestUserInfo(username, token, UrlToDomain(redirect.RedirectUrl), rest);
+
             // User doesn't exist
             case "U401":
                 throw new BadCredentialsException("The username is invalid");
@@ -187,14 +188,9 @@ namespace PasswordManagerAccess.ZohoVault
             throw MakeInvalidResponseError(status);
         }
 
-        internal static HttpCookies LogIn(UserInfo userInfo,
-                                          string password,
-                                          string token,
-                                          IUi ui,
-                                          ISecureStorage storage,
-                                          RestClient rest)
+        internal static HttpCookies LogIn(UserInfo userInfo, string password, string token, IUi ui, ISecureStorage storage, RestClient rest)
         {
-            var cookies = new Dictionary<string, string> {["iamcsr"] = token};
+            var cookies = new HttpCookies { ["iamcsr"] = token };
 
             // Check if we have a "remember me" token saved from one of the previous sessions
             var (rememberMeKey, rememberMeValue) = LoadRememberMeToken(storage);
@@ -203,17 +199,14 @@ namespace PasswordManagerAccess.ZohoVault
                 cookies[rememberMeKey] = rememberMeValue;
 
             var response = rest.PostJson<R.LogIn>(LogInUrl(userInfo, Os.UnixMilliseconds()),
-                                                  parameters: new Dictionary<string, object>
+                                                  parameters: new PostParameters
                                                   {
                                                       ["passwordauth"] = new Dictionary<string, string>
                                                       {
-                                                          ["password"] = password
+                                                          ["password"] = password,
                                                       },
                                                   },
-                                                  headers: new Dictionary<string, string>
-                                                  {
-                                                      ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}"
-                                                  },
+                                                  headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}" },
                                                   cookies: cookies);
 
             if (!response.IsSuccessful)
@@ -296,25 +289,22 @@ namespace PasswordManagerAccess.ZohoVault
             return cookies;
         }
 
-        internal static void SubmitTotp(UserInfo userInfo, Ui.Passcode passcode, string token, string mfaToken, RestClient rest)
+        internal static void SubmitTotp(UserInfo userInfo, Passcode passcode, string token, string mfaToken, RestClient rest)
         {
             var response = rest.PostJson<R.Totp>(TotpUrl(userInfo, Os.UnixMilliseconds()),
-                                                 parameters: new Dictionary<string, object>
+                                                 parameters: new PostParameters
                                                  {
                                                      ["totpsecauth"] = new Dictionary<string, string>
                                                      {
                                                          ["code"] = passcode.Code,
                                                      },
                                                  },
-                                                 headers: new Dictionary<string, string>
+                                                 headers: new HttpHeaders
                                                  {
                                                      ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}",
                                                      ["Z-Authorization"] = $"Zoho-ticket {mfaToken}",
                                                  },
-                                                 cookies: new Dictionary<string, string>
-                                                 {
-                                                     ["iamcsr"] = token
-                                                 });
+                                                 cookies: new HttpCookies { ["iamcsr"] = token });
 
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
@@ -332,26 +322,22 @@ namespace PasswordManagerAccess.ZohoVault
             throw MakeInvalidResponseError(status);
         }
 
-        internal static HttpCookies MarkDeviceTrusted(UserInfo userInfo,
-                                                      bool trust,
-                                                      string token,
-                                                      string mfaToken,
-                                                      RestClient rest)
+        internal static HttpCookies MarkDeviceTrusted(UserInfo userInfo, bool trust, string token, string mfaToken, RestClient rest)
         {
             var response = rest.PostJson<R.TrustMfa>(TrustUrl(userInfo),
-                                                     new Dictionary<string, object>
+                                                     new PostParameters
                                                      {
                                                          ["trustmfa"] = new Dictionary<string, object>
                                                          {
                                                              ["trust"] = trust
                                                          },
                                                      },
-                                                     headers: new Dictionary<string, string>
+                                                     headers: new HttpHeaders
                                                      {
                                                          ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}",
                                                          ["Z-Authorization"] = $"Zoho-ticket {mfaToken}",
                                                      },
-                                                     cookies: new Dictionary<string, string>
+                                                     cookies: new HttpCookies
                                                      {
                                                          ["iamcsr"] = token
                                                      });
@@ -448,7 +434,7 @@ namespace PasswordManagerAccess.ZohoVault
             if (privateKeyComponents.Length != 8)
                 throw new InternalErrorException("Invalid RSA key format");
 
-            var rsaKey = new RSAParameters()
+            var rsaKey = new RSAParameters
             {
                 Modulus = privateKeyComponents[0].DecodeHexLoose(),
                 Exponent = privateKeyComponents[1].ToBigInt().ToByteArray(),
@@ -496,7 +482,7 @@ namespace PasswordManagerAccess.ZohoVault
         internal static T GetWrapped<T>(string url, HttpCookies cookies, RestClient rest)
         {
             // GET
-            var response = rest.Get<R.ResponseEnvelope<T>>(url, Headers, cookies);
+            var response = rest.Get<R.ResponseEnvelope<T>>(url, headers: Headers, cookies: cookies);
             if (!IsSuccessful(response))
                 throw MakeErrorOnFailedRequest(response);
 
@@ -506,8 +492,8 @@ namespace PasswordManagerAccess.ZohoVault
         internal static R.StatusError GetError(R.Status status)
         {
             if (status.Errors == null || status.Errors.Length == 0)
-                throw MakeInvalidResponseError($"request failed with code '{status.StatusCode}/{status.Code}' " +
-                                               $"and message '{status.Message}' but error wasn't provided");
+                throw MakeInvalidResponseError(
+                    $"request failed with code '{status.StatusCode}/{status.Code}' and message '{status.Message}' but error wasn't provided");
 
             return status.Errors[0];
         }
@@ -632,11 +618,9 @@ namespace PasswordManagerAccess.ZohoVault
         private const string ServiceName = "ZohoVault";
         private const string OAuthScope = "ZohoVault.secrets.READ";
 
-        private static readonly string LoginPageUrl =
-            $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
+        private static readonly string LoginPageUrl = $"https://accounts.zoho.com/oauth/v2/auth?response_type=code&scope={OAuthScope}&prompt=consent";
 
-        private static string LookupUrl(string domain, string username) =>
-            $"https://accounts.{domain}/signin/v2/lookup/{username}";
+        private static string LookupUrl(string domain, string username) => $"https://accounts.{domain}/signin/v2/lookup/{username}";
 
         private static string LogInUrl(UserInfo user, long timestamp) =>
             $"https://accounts.{user.Domain}/signin/v2/primary/{user.Id}/password?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
@@ -644,19 +628,15 @@ namespace PasswordManagerAccess.ZohoVault
         private static string TotpUrl(UserInfo user, long timestamp) =>
             $"https://accounts.{user.Domain}/signin/v2/secondary/{user.Id}/totp?digest={user.Digest}&cli_time={timestamp}&servicename={ServiceName}";
 
-        private static string TrustUrl(UserInfo user) =>
-            $"https://accounts.{user.Domain}/signin/v2/secondary/{user.Id}/trust";
+        private static string TrustUrl(UserInfo user) => $"https://accounts.{user.Domain}/signin/v2/secondary/{user.Id}/trust";
 
-        private static string AuthInfoUrl(string domain) =>
-            $"https://vault.{domain}/api/json/login?OPERATION_NAME=GET_LOGIN";
+        private static string AuthInfoUrl(string domain) => $"https://vault.{domain}/api/json/login?OPERATION_NAME=GET_LOGIN";
 
-        private static string VaultUrl(string domain) =>
-            $"https://vault.{domain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1";
+        private static string VaultUrl(string domain) => $"https://vault.{domain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1";
 
         private static string LogoutUrl(string domain) => $"https://accounts.{domain}/logout?servicename=ZohoVault";
 
-        private const string UserAgent =
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
+        private const string UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
 
         private static readonly string[] SuccessErrorCodes = {"SI200", "SI300", "SI301", "SI302", "SI303", "SI304"};
 
