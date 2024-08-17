@@ -18,12 +18,7 @@ namespace PasswordManagerAccess.ZohoVault
 
     internal static class Client
     {
-        public static Account[] OpenVault(string username,
-                                          string password,
-                                          string passphrase,
-                                          IUi ui,
-                                          ISecureStorage storage,
-                                          IRestTransport transport)
+        public static Account[] OpenVault(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             var rest = new RestClient(transport);
 
@@ -32,27 +27,73 @@ namespace PasswordManagerAccess.ZohoVault
             var token = RequestToken(rest);
 
             // Each user is associated with a specific region. We get this in a form of a sign-in URL.
-            var userInfo = RequestUserInfo(username, token, DefaultDomain, rest);
+            var userInfo = RequestUserInfo(credentials.Username, token, DefaultDomain, rest);
 
-            // Perform the login dance that possibly involves the MFA steps. The cookies are later
-            // used by the subsequent requests.
-            //
-            // TODO: It would be ideal to figure out which cookies are needed for general
-            // cleanliness. It was too many of them and so they are now passed altogether a bundle
-            // between the requests.
-            var cookies = LogIn(userInfo, password, token, ui, storage, rest);
+            bool needLogin;
+            if (TryDeserializeJson<HttpCookies>(storage.LoadString(Cookies), out var cookies))
+            {
+                // We have the cookies from the previous session. We can try to use them to skip the login.
+                needLogin = false;
 
+                // The CSR token is stored in the cookies.
+                cookies["iamcsr"] = token;
+            }
+            else
+            {
+                needLogin = true;
+            }
+
+            var needLogout = false;
             try
             {
-                var vaultKey = Authenticate(passphrase, cookies, userInfo.Domain, rest);
-                var vaultResponse = DownloadVault(cookies, userInfo.Domain, rest);
-                var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
+                // Normally we allow two attempts. The first one to "test" the old cookies and the second one to log in and perform the download.
+                // In case we don't have any cookies stored, we only allow one attempt to log in and perform the download.
+                var maxAttempts = needLogin ? 1 : 2;
 
-                return ParseAccounts(vaultResponse, vaultKey, sharingKey);
+                for (var attempt = 0; attempt < maxAttempts; attempt++)
+                {
+                    if (needLogin)
+                    {
+                        // Perform the login dance that possibly involves the MFA steps. The cookies are later
+                        // used by the subsequent requests.
+                        //
+                        // TODO: It would be ideal to figure out which cookies are needed for general
+                        // cleanliness. It was too many of them and so they are now passed altogether a bundle
+                        // between the requests.
+                        cookies = LogIn(userInfo, credentials.Password, token, ui, storage, rest);
+
+                        // Save the cookies for the next time
+                        if (settings.KeepSession)
+                            SaveCookies(cookies, storage);
+                    }
+
+                    try
+                    {
+                        var vaultKey = Authenticate(credentials.Passphrase, cookies, userInfo.Domain, rest);
+                        var vaultResponse = DownloadVault(cookies, userInfo.Domain, rest);
+                        var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
+
+                        needLogout = !settings.KeepSession;
+
+                        return ParseAccounts(vaultResponse, vaultKey, sharingKey);
+                    }
+                    catch (InvalidTicketException)
+                    {
+                        // If the cookies have expired, we need to do a full login
+                        EraseCookies(storage);
+                        needLogin = true;
+                    }
+                }
+
+                throw new InternalErrorException("Logical error");
             }
             finally
             {
-                LogOut(cookies, userInfo.Domain, rest);
+                if (needLogout)
+                {
+                    EraseCookies(storage);
+                    LogOut(cookies, userInfo.Domain, rest);
+                }
             }
         }
 
@@ -86,11 +127,11 @@ namespace PasswordManagerAccess.ZohoVault
             return token;
         }
 
-        internal readonly ref struct UserInfo
+        internal class UserInfo
         {
-            public readonly string Id;
-            public readonly string Digest;
-            public readonly string Domain;
+            public string Id { get; }
+            public string Digest { get; }
+            public string Domain { get; }
 
             public UserInfo(string id, string digest, string domain)
             {
@@ -157,7 +198,7 @@ namespace PasswordManagerAccess.ZohoVault
 
             // Check if we have a "remember me" token saved from one of the previous sessions
             var (rememberMeKey, rememberMeValue) = LoadRememberMeToken(storage);
-            bool haveRememberMe = !rememberMeKey.IsNullOrEmpty() && !rememberMeValue.IsNullOrEmpty();
+            var haveRememberMe = !rememberMeKey.IsNullOrEmpty() && !rememberMeValue.IsNullOrEmpty();
             if (haveRememberMe)
                 cookies[rememberMeKey] = rememberMeValue;
 
@@ -456,15 +497,10 @@ namespace PasswordManagerAccess.ZohoVault
         {
             // GET
             var response = rest.Get<R.ResponseEnvelope<T>>(url, Headers, cookies);
-            if (!response.IsSuccessful)
+            if (!IsSuccessful(response))
                 throw MakeErrorOnFailedRequest(response);
 
-            // Check operation status
-            var envelope = response.Data;
-            if (envelope.Operation.Result.Status != "success")
-                throw MakeInvalidResponseError("operation failed");
-
-            return envelope.Payload;
+            return response.Data.Payload;
         }
 
         internal static R.StatusError GetError(R.Status status)
@@ -485,18 +521,58 @@ namespace PasswordManagerAccess.ZohoVault
             SaveRememberMeToken(name, cookies[name!], storage);
         }
 
+        internal static bool TryDeserializeJson<T>(string json, out T result)
+        {
+            try
+            {
+                result = JsonConvert.DeserializeObject<T>(json ?? "");
+                return result != null;
+            }
+            catch (JsonException)
+            {
+                result = default;
+                return false;
+            }
+        }
+
         //
         // Private
         //
 
+        private class InvalidTicketException: BaseException
+        {
+            public InvalidTicketException(string operation): base($"Operation '{operation}' failed", null)
+            {
+            }
+        }
+
+        private static bool IsSuccessful<T>(RestResponse<string, R.ResponseEnvelope<T>> response)
+        {
+            return response.IsSuccessful && response.Data?.Operation?.Result?.Status == "success";
+        }
+
         private static BaseException MakeErrorOnFailedRequest(RestResponse response)
         {
-            if (response.Error == null)
-                return new InternalErrorException(
-                    $"Request to {response.RequestUri} failed with HTTP status {(int)response.StatusCode}");
+            if (response.IsNetworkError)
+                return NetworkErrorError(response);
 
-            return new NetworkErrorException($"Request to {response.RequestUri} failed with a network error",
-                                             response.Error);
+            return new InternalErrorException($"Request to {response.RequestUri} failed with HTTP status {(int)response.StatusCode}", response.Error);
+        }
+
+        private static BaseException MakeErrorOnFailedRequest<T>(RestResponse<string, R.ResponseEnvelope<T>> response)
+        {
+            if (response.IsNetworkError)
+                return NetworkErrorError(response);
+
+            var operation = response.Data.Operation;
+            var result = operation.Result;
+
+            // This happens when the login cookies have expired.
+            if (result is { Status: "failed", ErrorCode: "INVALID_TICKET" })
+                return new InvalidTicketException(operation.Name);
+
+            return new InternalErrorException(
+                $"Operation '{operation.Name}' failed with status '{result.Status}', error code '{result.ErrorCode}' and message '{result.Message}'");
         }
 
         private static InternalErrorException MakeInvalidResponseError(string message, Exception original = null)
@@ -516,6 +592,11 @@ namespace PasswordManagerAccess.ZohoVault
             return MakeInvalidResponseError(message);
         }
 
+        private static NetworkErrorException NetworkErrorError(RestResponse response)
+        {
+            return new NetworkErrorException($"Request to {response.RequestUri} failed with a network error", response.Error);
+        }
+
         private static (string key, string value) LoadRememberMeToken(ISecureStorage storage)
         {
             return (storage.LoadString(RememberMeTokenKey), storage.LoadString(RememberMeTokenValue));
@@ -530,6 +611,16 @@ namespace PasswordManagerAccess.ZohoVault
         private static void EraseRememberMeToken(ISecureStorage storage)
         {
             SaveRememberMeToken(null, null, storage);
+        }
+
+        private static void SaveCookies(HttpCookies cookies, ISecureStorage storage)
+        {
+            storage.StoreString(Cookies, JsonConvert.SerializeObject(cookies));
+        }
+
+        private static void EraseCookies(ISecureStorage storage)
+        {
+            storage.StoreString(Cookies, null);
         }
 
         //
@@ -570,12 +661,12 @@ namespace PasswordManagerAccess.ZohoVault
         private static readonly string[] SuccessErrorCodes = {"SI200", "SI300", "SI301", "SI302", "SI303", "SI304"};
 
         // Important! Most of the requests fail without a valid User-Agent header
-        private static readonly Dictionary<string, string> Headers =
-            new Dictionary<string, string> { { "User-Agent", UserAgent } };
+        private static readonly Dictionary<string, string> Headers = new() { { "User-Agent", UserAgent } };
 
-        private static readonly Regex RememberMeCookieNamePattern = new Regex(@"^IAM.*TFATICKET_\d+$");
+        private static readonly Regex RememberMeCookieNamePattern = new(@"^IAM.*TFATICKET_\d+$");
 
         private const string RememberMeTokenKey = "remember-me-token-key";
         private const string RememberMeTokenValue = "remember-me-token-value";
+        private const string Cookies = "cookies";
     }
 }

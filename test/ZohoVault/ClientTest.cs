@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Net;
-using Moq;
+using FluentAssertions;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault;
@@ -19,16 +19,11 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [Fact]
         public void OpenVault_returns_accounts()
         {
-            var flow = new RestFlow()
-                .Get("", cookies: OAuthCookies)
-                .Post(GetFixture("lookup-success-response"))
-                .Post(GetFixture("login-success-response"), cookies: LoginCookies)
-                .Get(GetFixture("auth-info-response"))
-                .Get(GetFixture("vault-response"))
-                .Get(""); // Logout
-
-            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetStorage(), flow);
-            var accounts = vault.Accounts;
+            var accounts = Client.OpenVault(new Credentials(Username, Password, TestData.Passphrase),
+                                            new Settings(),
+                                            null,
+                                            GetStorage(),
+                                            MakeFullFlow());
 
             Assert.Equal(2, accounts.Length);
 
@@ -48,6 +43,32 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Fact]
+        public void OpenVault_saves_cookies_when_keep_session_is_enabled()
+        {
+            var storage = GetStorage();
+            Client.OpenVault(new Credentials(Username, Password, TestData.Passphrase),
+                             new Settings { KeepSession = true },
+                             null,
+                             storage,
+                             MakeFullFlow());
+
+            storage.Values["cookies"].Should().NotBeEmpty();
+        }
+
+        [Fact]
+        public void OpenVault_doe_not_save_cookies_when_keep_session_is_disabled()
+        {
+            var storage = GetStorage();
+            Client.OpenVault(new Credentials(Username, Password, TestData.Passphrase),
+                             new Settings { KeepSession = false },
+                             null,
+                             storage,
+                             MakeFullFlow());
+
+            storage.Values.Should().NotContainKey("cookies");
+        }
+
+        [Fact]
         public void OpenVault_returns_shared_accounts()
         {
             var flow = new RestFlow()
@@ -58,7 +79,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-with-shared-items-response"))
                 .Get(""); // Logout
 
-            var vault = Vault.Open(Username, Password, TestData.Passphrase, null, GetStorage(), flow);
+            var vault = Vault.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), flow);
             var accounts = vault.Accounts;
 
             Assert.Single(accounts);
@@ -448,6 +469,17 @@ namespace PasswordManagerAccess.Test.ZohoVault
             }
         }
 
+        private RestFlow MakeFullFlow()
+        {
+            return new RestFlow()
+                .Get("", cookies: OAuthCookies)
+                .Post(GetFixture("lookup-success-response"))
+                .Post(GetFixture("login-success-response"), cookies: LoginCookies)
+                .Get(GetFixture("auth-info-response"))
+                .Get(GetFixture("vault-response"))
+                .Get(""); // Logout
+        }
+
         //
         // Data
         //
@@ -467,12 +499,9 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
         private const string DefaultDomain = "zoho.com";
 
-        private Client.UserInfo UserInfo => new Client.UserInfo("id", "digest", DefaultDomain);
+        private Client.UserInfo UserInfo => new("id", "digest", DefaultDomain);
 
-        private static readonly Dictionary<string, string> OAuthCookies =
-            new Dictionary<string, string> { { OAuthCookieName, OAuthCookieValue } };
-
-        private static readonly Dictionary<string, string> LoginCookies =
-            new Dictionary<string, string> { { LoginCookieName, LoginCookieValue } };
+        private static readonly Dictionary<string, string> OAuthCookies = new() { { OAuthCookieName, OAuthCookieValue } };
+        private static readonly Dictionary<string, string> LoginCookies = new() { { LoginCookieName, LoginCookieValue } };
     }
 }

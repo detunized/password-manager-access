@@ -10,24 +10,19 @@ namespace PasswordManagerAccess.ZohoVault
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, string passphrase, IUi ui, ISecureStorage storage)
+        public static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return Open(username, password, passphrase, ui, storage, transport);
+            return Open(credentials, settings, ui, storage, transport);
         }
 
         //
         // Internal
         //
 
-        internal static Vault Open(string username,
-                                   string password,
-                                   string passphrase,
-                                   IUi ui,
-                                   ISecureStorage storage,
-                                   IRestTransport transport)
+        internal static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
-            return new Vault(Client.OpenVault(username, password, passphrase, ui, storage, transport));
+            return new Vault(Client.OpenVault(credentials, settings, ui, storage, transport));
         }
 
         internal Vault(Account[] accounts)
