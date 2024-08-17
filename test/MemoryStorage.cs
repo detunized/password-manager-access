@@ -28,7 +28,10 @@ namespace PasswordManagerAccess.Test
 
         void ISecureStorage.StoreString(string name, string value)
         {
-            Values[name] = value;
+            if (value == null)
+                Values.Remove(name);
+            else
+                Values[name] = value;
         }
 
         Task<string> IAsyncSecureStorage.LoadString(string name)
