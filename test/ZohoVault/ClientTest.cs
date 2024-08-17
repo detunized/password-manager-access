@@ -113,9 +113,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [InlineData("http:/accounts.zoho.com/login")]
         public void UrlToDomain_throws_on_invalid_domain(string url)
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Client.UrlToDomain(url),
-                $"Expected a valid URL with a domain starting with 'accounts.', got '{url}'");
+            Exceptions.AssertThrowsInternalError(() => Client.UrlToDomain(url),
+                                                 $"Expected a valid URL with a domain starting with 'accounts.', got '{url}'");
         }
 
         [Fact]
@@ -127,7 +126,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
             var token = Client.RequestToken(flow);
 
-            Assert.Equal(OAuthCookieValue, token);
+            Assert.Equal(CsrCookieValue, token);
         }
 
         [Fact]
@@ -135,8 +134,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow().Get("");
 
-            Exceptions.AssertThrowsInternalError(() => Client.RequestToken(flow),
-                                                 "cookie is not set by the server");
+            Exceptions.AssertThrowsInternalError(() => Client.RequestToken(flow), "cookie is not set by the server");
         }
 
         [Fact]
@@ -146,7 +144,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("lookup-success-response"))
                     .ExpectUrl($"https://accounts.zoho.xyz/signin/v2/lookup/{Username}");
 
-            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "zoho.xyz", flow);
+            var user = Client.RequestUserInfo(Username, CsrCookieValue, "zoho.xyz", flow);
 
             Assert.Equal("633590133", user.Id);
             Assert.StartsWith("5edfa5597c0acd2b", user.Digest);
@@ -162,7 +160,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("lookup-success-response"))
                     .ExpectUrl($"https://accounts.zoho.com/signin/v2/lookup/{Username}");
 
-            var user = Client.RequestUserInfo(Username, OAuthCookieValue, "zoho.eu", flow);
+            var user = Client.RequestUserInfo(Username, CsrCookieValue, "zoho.eu", flow);
 
             Assert.Equal("633590133", user.Id);
             Assert.StartsWith("5edfa5597c0acd2b", user.Digest);
@@ -175,9 +173,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Post(GetFixture("lookup-no-user-response"));
 
-            Exceptions.AssertThrowsBadCredentials(
-                () => Client.RequestUserInfo("unknown", OAuthCookieValue, DefaultDomain, flow),
-                "The username is invalid");
+            Exceptions.AssertThrowsBadCredentials(() => Client.RequestUserInfo("unknown", CsrCookieValue, DefaultDomain, flow),
+                                                  "The username is invalid");
         }
 
         [Fact]
@@ -186,9 +183,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Post(GetFixture("lookup-unknown-error-response"));
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.RequestUserInfo(Username, OAuthCookieValue, DefaultDomain, flow),
-                "Unexpected response: message: 'Unknown error', status code: '600/");
+            Exceptions.AssertThrowsInternalError(() => Client.RequestUserInfo(Username, CsrCookieValue, DefaultDomain, flow),
+                                                 "Unexpected response: message: 'Unknown error', status code: '600/");
         }
 
         [Fact]
@@ -198,9 +194,9 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                     .ExpectUrl($"https://accounts.zoho.com/signin/v2/primary/{UserInfo.Id}/password")
                     .ExpectContent($"{{\"passwordauth\":{{\"password\":\"{Password}\"}}}}")
-                    .ExpectCookie("iamcsr", OAuthCookieValue);
+                    .ExpectCookie("iamcsr", CsrCookieValue);
 
-            var cookies = Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow);
+            var cookies = Client.LogIn(UserInfo, Password, CsrCookieValue, null, GetStorage(), flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
@@ -212,10 +208,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                     .ExpectUrl("https://accounts.zoho.eu/signin/");
 
-            Client.LogIn(new Client.UserInfo("id", "digest", "zoho.eu"),
-                         Password,
-                         OAuthCookieValue,
-                         null, GetStorage(), flow);
+            Client.LogIn(new Client.UserInfo("id", "digest", "zoho.eu"), Password, CsrCookieValue, null, GetStorage(), flow);
         }
 
         [Fact]
@@ -224,9 +217,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Post(GetFixture("login-incorrect-password-response"));
 
-            Exceptions.AssertThrowsBadCredentials(
-                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow),
-                "The password is incorrect");
+            Exceptions.AssertThrowsBadCredentials(() => Client.LogIn(UserInfo, Password, CsrCookieValue, null, GetStorage(), flow),
+                                                  "The password is incorrect");
         }
 
         [Fact]
@@ -235,13 +227,9 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Post(GetFixture("login-mfa-required-response"));
 
-            Exceptions.AssertThrowsCanceledMultiFactor(() => Client.LogIn(UserInfo,
-                                                                          Password,
-                                                                          OAuthCookieValue,
-                                                                          new CancellingUi(),
-                                                                          GetStorage(),
-                                                                          flow),
-                                                       "is canceled by the user");
+            Exceptions.AssertThrowsCanceledMultiFactor(
+                () => Client.LogIn(UserInfo, Password, CsrCookieValue, new CancellingUi(), GetStorage(), flow),
+                "is canceled by the user");
         }
 
         [Fact]
@@ -250,9 +238,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Post(GetFixture("login-unknown-error-response"));
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow),
-                "Unexpected response: message: 'Unknown error', status code: '600/");
+            Exceptions.AssertThrowsInternalError(() => Client.LogIn(UserInfo, Password, CsrCookieValue, null, GetStorage(), flow),
+                                                 "Unexpected response: message: 'Unknown error', status code: '600/");
         }
 
         [Fact]
@@ -262,7 +249,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                     .ExpectCookie(RememberMeCookieName, RememberMeCookieValue);
 
-            Client.LogIn(UserInfo, Password, OAuthCookieValue, null, GetStorage(), flow);
+            Client.LogIn(UserInfo, Password, CsrCookieValue, null, GetStorage(), flow);
         }
 
         [Fact]
@@ -273,7 +260,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("mfa-success-response"))
                 .Post(GetFixture("trust-success-response"));
 
-            Client.LogIn(UserInfo, Password, OAuthCookieValue, new OtpProvidingUi(), GetEmptyStorage(), flow);
+            Client.LogIn(UserInfo, Password, CsrCookieValue, new OtpProvidingUi(), GetEmptyStorage(), flow);
         }
 
         [Fact]
@@ -286,12 +273,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("trust-success-response"), cookies: LoginCookies)
                     .ExpectContent("{\"trust\":true}");
 ;
-            var cookies = Client.LogIn(UserInfo,
-                                       Password,
-                                       OAuthCookieValue,
-                                       new OtpProvidingUi(),
-                                       GetStorage(),
-                                       flow);
+            var cookies = Client.LogIn(UserInfo, Password, CsrCookieValue, new OtpProvidingUi(), GetStorage(), flow);
 
             Assert.Equal(LoginCookieValue, cookies[LoginCookieName]);
         }
@@ -335,9 +317,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Get(GetFixture("auth-info-response"));
 
-            Exceptions.AssertThrowsBadCredentials(
-                () => Client.Authenticate("Not really a passphrase", LoginCookies, DefaultDomain, flow),
-                "Passphrase is incorrect");
+            Exceptions.AssertThrowsBadCredentials(() => Client.Authenticate("Not really a passphrase", LoginCookies, DefaultDomain, flow),
+                                                  "Passphrase is incorrect");
         }
 
         [Fact]
@@ -345,7 +326,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         {
             var flow = new RestFlow()
                 .Get(GetFixture("vault-response"))
-                .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT");
+                    .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT");
 
             var vault = Client.DownloadVault(LoginCookies, DefaultDomain, flow);
 
@@ -402,8 +383,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
             Assert.Equal(1000, info.IterationCount);
             Assert.Equal("f78e6ffce8e57501a02c9be303db2c68".ToBytes(), info.Salt);
-            Assert.Equal("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(),
-                         info.EncryptionCheck);
+            Assert.Equal("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(), info.EncryptionCheck);
         }
 
         [Theory]
@@ -487,9 +467,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
         private const string Username = "dude@lebowski.com";
         private const string Password = "logjammin";
 
-        // TODO: Rename to CSR
-        private const string OAuthCookieName = "iamcsr";
-        private const string OAuthCookieValue = "iamcsr-blah";
+        private const string CsrCookieName = "iamcsr";
+        private const string CsrCookieValue = "iamcsr-blah";
 
         private const string LoginCookieName = "login-cookie";
         private const string LoginCookieValue = "login-keks";
@@ -501,7 +480,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
 
         private Client.UserInfo UserInfo => new("id", "digest", DefaultDomain);
 
-        private static readonly Dictionary<string, string> OAuthCookies = new() { { OAuthCookieName, OAuthCookieValue } };
+        private static readonly Dictionary<string, string> OAuthCookies = new() { { CsrCookieName, CsrCookieValue } };
         private static readonly Dictionary<string, string> LoginCookies = new() { { LoginCookieName, LoginCookieValue } };
     }
 }
