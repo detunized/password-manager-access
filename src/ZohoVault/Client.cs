@@ -56,12 +56,7 @@ namespace PasswordManagerAccess.ZohoVault
                 {
                     if (needLogin)
                     {
-                        // Perform the login dance that possibly involves the MFA steps. The cookies are later
-                        // used by the subsequent requests.
-                        //
-                        // TODO: It would be ideal to figure out which cookies are needed for general
-                        // cleanliness. It was too many of them and so they are now passed altogether a bundle
-                        // between the requests.
+                        // Perform the login dance that possibly involves the MFA steps. The cookies are later used by the subsequent requests.
                         cookies = LogIn(userInfo, credentials.Password, token, ui, storage, rest);
 
                         // Save the cookies for the next time
@@ -250,9 +245,9 @@ namespace PasswordManagerAccess.ZohoVault
                                              ISecureStorage storage,
                                              RestClient rest)
         {
-            void CheckCancel(Ui.Passcode passcode)
+            void CheckCancel(Passcode passcode)
             {
-                if (passcode == Ui.Passcode.Cancel)
+                if (passcode == Passcode.Cancel)
                     throw new CanceledMultiFactorException("Second factor step is canceled by the user");
             }
 
@@ -260,7 +255,7 @@ namespace PasswordManagerAccess.ZohoVault
             if (methods == null)
                 throw MakeInvalidResponseError("allowed MFA methods not found");
 
-            Ui.Passcode code;
+            Passcode code;
 
             if (methods.Contains("totp"))
             {
@@ -270,8 +265,7 @@ namespace PasswordManagerAccess.ZohoVault
             }
             else if (methods.Contains("yubikey"))
             {
-                throw new UnsupportedFeatureException(
-                    $"Zoho removed support for the classic YubiKey. FIDO U2F is not supported yet.");
+                throw new UnsupportedFeatureException("Zoho removed support for the classic YubiKey. FIDO U2F is not supported yet.");
             }
             else
             {
