@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
     public class ClientTest: TestBase
     {
         [Fact(Skip = "Not implemented")]
-        public async void Open_returns_a_vault_with_a_valid_access_token()
+        public async Task Open_returns_a_vault_with_a_valid_access_token()
         {
             // Arrange
             var mockHttp = new MockHttpHandler();
@@ -46,7 +46,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestNewAuthSession_returns_a_session()
+        public async Task RequestNewAuthSession_returns_a_session()
         {
             // Arrange
             var rest = Serve(GetFixture("sessions"));
@@ -62,7 +62,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestNewAuthSession_makes_POST_request()
+        public async Task RequestNewAuthSession_makes_POST_request()
         {
             // Arrange
             var mockHttp = new MockHttpHandler();
@@ -81,7 +81,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestNewAuthSession_fails_on_invalid_json()
+        public async Task RequestNewAuthSession_fails_on_invalid_json()
         {
             // Arrange
             var rest = Serve("}{");
@@ -96,7 +96,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestNewAuthSession_fails_on_error()
+        public async Task RequestNewAuthSession_fails_on_error()
         {
             // Arrange
             var rest = Serve("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}", HttpStatusCode.BadRequest);
@@ -111,7 +111,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestAuthInfo_returns_auth_info()
+        public async Task RequestAuthInfo_returns_auth_info()
         {
             // Arrange
             var rest = Serve(GetFixture("auth-info"));
@@ -129,7 +129,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async void RequestAuthInfo_makes_POST_request()
+        public async Task RequestAuthInfo_makes_POST_request()
         {
             // Arrange
             var mockHttp = new MockHttpHandler();

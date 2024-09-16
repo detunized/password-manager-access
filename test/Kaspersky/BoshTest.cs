@@ -121,7 +121,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
         [InlineData("", null)]
         [InlineData("blah", null)]
         [InlineData("1337", null)]
-        internal void ParseOperation_returns_operation(string operation, Bosh.Operation? expected)
+        internal void ParseOperation_returns_operation(string? operation, Bosh.Operation? expected)
         {
             Assert.Equal(expected, Bosh.ParseOperation(operation));
         }
@@ -131,7 +131,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
         [InlineData("")]
         [InlineData("blah")]
         [InlineData("1337")]
-        internal void ParseOperation_returns_null(string operation)
+        internal void ParseOperation_returns_null(string? operation)
         {
             Assert.Null(Bosh.ParseOperation(operation));
         }

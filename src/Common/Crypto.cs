@@ -6,17 +6,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 
-#if NET48_OR_GREATER
-using System.Runtime.InteropServices;
-#endif
-
-#if NET48_OR_GREATER || NETSTANDARD2_0
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Crypto.Digests;
-using Org.BouncyCastle.Crypto.Encodings;
-using Org.BouncyCastle.Crypto.Engines;
-#endif
-
 namespace PasswordManagerAccess.Common
 {
     internal static class Crypto
@@ -28,12 +17,7 @@ namespace PasswordManagerAccess.Common
         public static byte[] RandomBytes(int size)
         {
             var bytes = new byte[size];
-#if NETFRAMEWORK || NETSTANDARD2_0
-            using var random = new RNGCryptoServiceProvider();
-            random.GetBytes(bytes);
-#else
             RandomNumberGenerator.Fill(bytes);
-#endif
             return bytes;
         }
 
@@ -432,25 +416,8 @@ namespace PasswordManagerAccess.Common
         {
             // OAEP-SHA256 support is very messy
 
-#if NET6_0_OR_GREATER
             // 1. The easiest case is .NET 6+. RSA.Create() supports this out of the box on all platforms.
             return DecryptRsaSystemCryptography(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA256);
-
-#elif NET48_OR_GREATER
-            // 2.1. .NET Framework supports this on Windows via RSACng
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                using var rsa = new RSACng();
-                return DecryptRsaSystemCryptography(ciphertext, rsa, privateKey, RSAEncryptionPadding.OaepSHA256);
-            }
-
-            // 2.2. We must be running in Mono.
-            return DecryptRsaOaepSha256BouncyCastle(ciphertext, privateKey);
-
-#elif NETSTANDARD2_0
-            // 3. Otherwise we have to use Bouncy Castle
-            return DecryptRsaOaepSha256BouncyCastle(ciphertext, privateKey);
-#endif
         }
 
         internal static byte[] DecryptRsaSystemCryptography(byte[] ciphertext,
@@ -475,18 +442,6 @@ namespace PasswordManagerAccess.Common
             {
                 throw new CryptoException("RSA decryption failed", e);
             }
-        }
-
-        internal static byte[] DecryptRsaOaepSha256BouncyCastle(byte[] ciphertext, RSAParameters privateKey)
-        {
-#if NET48_OR_GREATER || NETSTANDARD2_0
-            var keyPair = DotNetUtilities.GetRsaKeyPair(privateKey);
-            var rsaEngine = new OaepEncoding(new RsaEngine(), new Sha256Digest());
-            rsaEngine.Init(false, keyPair.Private);
-            return rsaEngine.ProcessBlock(ciphertext, 0, ciphertext.Length);
-#else
-            throw new InternalErrorException("This platform doesn't support Bouncy Castle");
-#endif
         }
 
         // Sometimes we see the numbers with too few bits, which is normal BTW. The .NET is very
