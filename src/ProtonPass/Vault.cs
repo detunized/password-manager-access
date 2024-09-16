@@ -24,7 +24,7 @@ namespace PasswordManagerAccess.ProtonPass
                                                   IAsyncSecureStorage storage,
                                                   CancellationToken cancellationToken = default)
         {
-            return await OpenAll(username, password, ui, storage, new RestAsync.Config(), cancellationToken);
+            return await OpenAll(username, password, ui, storage, new RestAsync.Config(), cancellationToken).ConfigureAwait(false);
         }
 
         //
@@ -38,7 +38,7 @@ namespace PasswordManagerAccess.ProtonPass
                                                     RestAsync.Config config,
                                                     CancellationToken cancellationToken)
         {
-            return await Client.OpenAll(username, password, ui, storage, config, cancellationToken);
+            return await Client.OpenAll(username, password, ui, storage, config, cancellationToken).ConfigureAwait(false);
         }
     }
 }
