@@ -159,7 +159,7 @@ namespace PasswordManagerAccess.Test
 
         public RestSharp.RestClient ToAsyncRest(string baseUrl = "https://does.not.matter")
         {
-            return RestAsync.Create(baseUrl, this);
+            return RestAsync.Create(baseUrl, (RestAsync.Config)this);
         }
 
         public static implicit operator RestSharp.RestClient(RestFlow flow)

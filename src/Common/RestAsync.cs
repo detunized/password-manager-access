@@ -4,8 +4,10 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using RestSharp;
 using RestSharp.Authenticators;
@@ -21,7 +23,7 @@ namespace PasswordManagerAccess.Common
     // TODO: Rename this to something more meaningful
     internal static class RestAsync
     {
-        internal class Config
+        public class Config
         {
             public string? UserAgent { get; set; } = null;
             public Func<HttpMessageHandler, HttpMessageHandler>? ConfigureMessageHandler { get; set; }
@@ -29,24 +31,33 @@ namespace PasswordManagerAccess.Common
 
         public static RestSharp.RestClient Create(string baseUrl, Config config)
         {
-            var options = new RestClientOptions(baseUrl)
-            {
-                UserAgent = config.UserAgent,
-                ConfigureMessageHandler = config.ConfigureMessageHandler,
-                // TODO: We need these for the tests, but don't need them for prod.
-                //ThrowOnAnyError = true,
-                //ThrowOnDeserializationError = true,
+            var options = baseUrl.IsNullOrEmpty() ? new RestClientOptions() : new RestClientOptions(baseUrl);
 
-                // There's no way to set the authenticator later. We use a delegating authenticator that by default
-                // does nothing. It could be updated to delegate to a different authenticator later.
-                Authenticator = new DelegatingAuthenticator(),
+            options.UserAgent = config.UserAgent;
+            options.ConfigureMessageHandler = config.ConfigureMessageHandler;
+
+            // TODO: We need these for the tests, but don't need them for prod.
+            //ThrowOnAnyError = true,
+            //ThrowOnDeserializationError = true,
+
+            // There's no way to set the authenticator later. We use a delegating authenticator that by default
+            // does nothing. It could be updated to delegate to a different authenticator later.
+            options.Authenticator = new DelegatingAuthenticator();
 
 #if MITM_PROXY
-                Proxy = new WebProxy("http://127.0.0.1:8888"),
+            options.Proxy = new WebProxy("http://127.0.0.1:8888");
 #endif
-            };
 
             return new RestSharp.RestClient(options, configureSerialization: ConfigureSerialization);
+        }
+
+        public static RestSharp.RestClient Create(string baseUrl, RestSharp.RestClient rest)
+        {
+            return Create(baseUrl, new Config
+            {
+                UserAgent = rest.Options.UserAgent,
+                ConfigureMessageHandler = rest.Options.ConfigureMessageHandler,
+            });
         }
 
         //
@@ -80,6 +91,178 @@ namespace PasswordManagerAccess.Common
 
             da.DelegateTo = authenticator;
             return rest;
+        }
+
+        //
+        // GET
+        //
+
+        internal static readonly Dictionary<string, object> NoParameters = new();
+        internal static readonly Dictionary<string, string> NoHeaders = new();
+        internal static readonly Dictionary<string, string> NoCookies = new();
+
+        //
+        // GET raw
+        //
+
+        internal static async Task<RestSharp.RestResponse> Get(this RestSharp.RestClient rest,
+                                                               string endpoint,
+                                                               CancellationToken cancellationToken)
+        {
+            return await Get(rest, endpoint, NoParameters, NoHeaders, NoCookies, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal static async Task<RestSharp.RestResponse> Get(this RestSharp.RestClient rest,
+                                                               string endpoint,
+                                                               Dictionary<string, object> parameters,
+                                                               CancellationToken cancellationToken)
+        {
+            return await Get(rest, endpoint, parameters, NoHeaders, NoCookies, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal static async Task<RestSharp.RestResponse> Get(this RestSharp.RestClient rest,
+                                                               string endpoint,
+                                                               Dictionary<string, object> parameters,
+                                                               Dictionary<string, string> headers,
+                                                               CancellationToken cancellationToken)
+        {
+            return await Get(rest, endpoint, parameters, headers, NoCookies, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal static async Task<RestSharp.RestResponse> Get(this RestSharp.RestClient rest,
+                                                               string endpoint,
+                                                               Dictionary<string, object> parameters,
+                                                               Dictionary<string, string> headers,
+                                                               Dictionary<string, string> cookies,
+                                                               CancellationToken cancellationToken)
+        {
+            var request = ConfigureRequest(Method.Get, endpoint, parameters, headers, cookies, rest);
+            return await rest.ExecuteGetAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        //
+        // GET typed
+        //
+
+        internal static async Task<RestSharp.RestResponse<T>> Get<T>(this RestSharp.RestClient rest,
+                                                                     string endpoint,
+                                                                     CancellationToken cancellationToken)
+        {
+            return await Get<T>(rest, endpoint, NoParameters, NoHeaders, NoCookies, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal static async Task<RestSharp.RestResponse<T>> Get<T>(this RestSharp.RestClient rest,
+                                                                     string endpoint,
+                                                                     Dictionary<string, object> parameters,
+                                                                     CancellationToken cancellationToken)
+        {
+            return await Get<T>(rest, endpoint, parameters, NoHeaders, NoCookies, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal static async Task<RestSharp.RestResponse<T>> Get<T>(this RestSharp.RestClient rest,
+                                                                     string endpoint,
+                                                                     Dictionary<string, object> parameters,
+                                                                     Dictionary<string, string> headers,
+                                                                     CancellationToken cancellationToken)
+        {
+            return await Get<T>(rest, endpoint, parameters, headers, NoCookies, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal static async Task<RestSharp.RestResponse<T>> Get<T>(this RestSharp.RestClient rest,
+                                                                     string endpoint,
+                                                                     Dictionary<string, object> parameters,
+                                                                     Dictionary<string, string> headers,
+                                                                     Dictionary<string, string> cookies,
+                                                                     CancellationToken cancellationToken)
+        {
+            var request = ConfigureRequest(Method.Get, endpoint, parameters, headers, cookies, rest);
+            return await rest.ExecuteGetAsync<T>(request, cancellationToken).ConfigureAwait(false);
+        }
+
+
+        //
+        // POST
+        //
+
+        // TODO: Add more overloads
+        // TODO: DRY up the code
+        internal static async Task<RestSharp.RestResponse> PostForm(this RestSharp.RestClient rest,
+                                                                    string endpoint,
+                                                                    Dictionary<string, object> parameters,
+                                                                    Dictionary<string, string> headers,
+                                                                    Dictionary<string, string> cookies,
+                                                                    CancellationToken cancellationToken)
+        {
+            var request = ConfigureRequest(Method.Post, endpoint, parameters, headers, cookies, rest)
+                .AddHeader("Content-Type", "application/x-www-form-urlencoded");
+
+            return await rest.ExecutePostAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        // TODO: Add more overloads
+        // TODO: DRY up the code
+        internal static async Task<RestSharp.RestResponse<T>> PostForm<T>(this RestSharp.RestClient rest,
+                                                                          string endpoint,
+                                                                          Dictionary<string, object> parameters,
+                                                                          Dictionary<string, string> headers,
+                                                                          Dictionary<string, string> cookies,
+                                                                          CancellationToken cancellationToken)
+        {
+            var request = ConfigureRequest(Method.Post, endpoint, parameters, headers, cookies, rest)
+                .AddHeader("Content-Type", "application/x-www-form-urlencoded");
+
+            return await rest.ExecutePostAsync<T>(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        // TODO: Add more overloads
+        // TODO: DRY up the code
+        internal static async Task<RestSharp.RestResponse<T>> PostJson<T>(this RestSharp.RestClient rest,
+                                                                          string endpoint,
+                                                                          Dictionary<string, object> parameters,
+                                                                          Dictionary<string, string> headers,
+                                                                          Dictionary<string, string> cookies,
+                                                                          CancellationToken cancellationToken)
+        {
+            var request = ConfigureRequest(Method.Post, endpoint, parameters, headers, cookies, rest)
+                .AddHeader("Content-Type", "application/json");
+
+            return await rest.ExecutePostAsync<T>(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        // TODO: Add more overloads
+        // TODO: DRY up the code
+        internal static async Task<RestSharp.RestResponse> PostJson(this RestSharp.RestClient rest,
+                                                                    string endpoint,
+                                                                    Dictionary<string, object> parameters,
+                                                                    Dictionary<string, string> headers,
+                                                                    Dictionary<string, string> cookies,
+                                                                    CancellationToken cancellationToken)
+        {
+            var request = ConfigureRequest(Method.Post, endpoint, parameters, headers, cookies, rest)
+                .AddHeader("Content-Type", "application/json");
+
+            return await rest.ExecutePostAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static RestRequest ConfigureRequest(Method method,
+                                                    string endpoint,
+                                                    Dictionary<string, object> parameters,
+                                                    Dictionary<string, string> headers,
+                                                    Dictionary<string, string> cookies,
+                                                    RestSharp.RestClient rest)
+        {
+            var request = new RestRequest(endpoint) { Method = method };
+
+            foreach (var kv in parameters)
+                request.AddParameter(kv.Key, kv.Value, ParameterType.GetOrPost);
+
+            foreach (var kv in headers)
+                request.AddHeader(kv.Key, kv.Value);
+
+            foreach (var kv in cookies)
+                request.AddCookie(kv.Key, kv.Value, "/", rest.Options.BaseUrl?.ToString() ?? endpoint);
+
+            return request;
         }
 
         //

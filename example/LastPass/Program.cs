@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Threading;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.LastPass;
@@ -87,7 +88,8 @@ namespace PasswordManagerAccess.Example.LastPass
                                        {
                                            // Set to true to parse "server" secure notes
                                            ParseSecureNotesToAccount = false,
-                                       });
+                                       },
+                                       CancellationToken.None).GetAwaiter().GetResult();
 
                 // Dump all the accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)

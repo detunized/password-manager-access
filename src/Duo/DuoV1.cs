@@ -3,6 +3,8 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using HtmlAgilityPack;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo.Response;
@@ -13,13 +15,36 @@ namespace PasswordManagerAccess.Duo
 {
     internal static class DuoV1
     {
+        //
+        // Async
+        //
+
+        public static async Task<Result> Authenticate(string host,
+                                                      string signature,
+                                                      IDuoUi ui,
+                                                      RestSharp.RestClient rest,
+                                                      CancellationToken cancellationToken)
+        {
+            var duoRest = RestAsync.Create($"https://{host}", rest);
+            return await DoAuthenticate(signature, ui, duoRest, cancellationToken).ConfigureAwait(false);
+        }
+
         // Returns the second factor token from Duo or null when canceled by the user.
         public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport)
         {
-            var rest = new RestClient(transport, $"https://{host}");
+            var rest = RestAsync.Create($"https://{host}", new RestAsync.Config
+            {
+                ConfigureMessageHandler = _ => new RestTransportToHttpMessageHandlerAdapter(transport),
+            });
 
+            return DoAuthenticate(signature, ui, rest, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        // Returns the second factor token from Duo or null when canceled by the user.
+        internal static async Task<Result> DoAuthenticate(string signature, IDuoUi ui, RestSharp.RestClient rest, CancellationToken cancellationToken)
+        {
             var (tx, app) = ParseSignature(signature);
-            var html = DownloadFrame(tx, rest);
+            var html = await DownloadFrame(tx, rest, cancellationToken).ConfigureAwait(false);
             var (sid, devices) = ParseFrame(html);
 
             while (true)
@@ -33,7 +58,7 @@ namespace PasswordManagerAccess.Duo
                 // a new batch of passcodes to the phone via SMS.
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
-                    SubmitFactor(sid, choice, "", rest);
+                    await SubmitFactor(sid, choice, "", rest, cancellationToken).ConfigureAwait(false);
                     choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -46,7 +71,7 @@ namespace PasswordManagerAccess.Duo
                         return null; // Canceled by user
                 }
 
-                var token = SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest);
+                var token = await SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest, cancellationToken).ConfigureAwait(false);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
@@ -71,21 +96,26 @@ namespace PasswordManagerAccess.Duo
             return (parts[0], parts[1]);
         }
 
-        internal static HtmlDocument DownloadFrame(string tx, RestClient rest)
+        internal static async Task<HtmlDocument> DownloadFrame(string tx, RestSharp.RestClient rest, CancellationToken cancellationToken)
         {
             const string parent = "https%3A%2F%2Fvault.bitwarden.com%2F%23%2F2fa";
             const string version = "2.6";
 
-            return Parse(Post($"frame/web/v1/auth?tx={tx}&parent={parent}&v={version}", rest));
+            var body = await Post($"frame/web/v1/auth?tx={tx}&parent={parent}&v={version}", rest, cancellationToken).ConfigureAwait(false);
+            return Parse(body);
         }
 
-        internal static string Post(string url, RestClient rest)
+        internal static async Task<string> Post(string endpoint, RestSharp.RestClient rest, CancellationToken cancellationToken)
         {
-            var response = rest.PostForm(url, new Dictionary<string, object>());
+            var response = await rest.PostForm(endpoint,
+                                               new Dictionary<string, object>(),
+                                               headers: new Dictionary<string, string>(),
+                                               cookies: new Dictionary<string, string>(),
+                                               cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessful)
                 return response.Content;
 
-            throw MakeSpecializedError(response);
+            throw MakeSpecializedError(response, rest);
         }
 
         internal static (string Sid, DuoDevice[] Devices) ParseFrame(HtmlDocument html)
@@ -115,7 +145,11 @@ namespace PasswordManagerAccess.Duo
         }
 
         // Returns the transaction id. In some cases it's blank, like with SMS, for example.
-        internal static string SubmitFactor(string sid, DuoChoice choice, string passcode, RestClient rest)
+        internal static async Task<string> SubmitFactor(string sid,
+                                                        DuoChoice choice,
+                                                        string passcode,
+                                                        RestSharp.RestClient rest,
+                                                        CancellationToken cancellationToken)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -127,32 +161,42 @@ namespace PasswordManagerAccess.Duo
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = PostForm<SubmitFactor>("frame/prompt", parameters, rest);
+            var response = await PostForm<SubmitFactor>("frame/prompt",
+                                                        parameters,
+                                                        headers: new Dictionary<string, string>(),
+                                                        cookies: new Dictionary<string, string>(),
+                                                        rest,
+                                                        cancellationToken).ConfigureAwait(false);
             return response.TransactionId ?? "";
         }
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string SubmitFactorAndWaitForToken(string sid,
-                                                           DuoChoice choice,
-                                                           string passcode,
-                                                           IDuoUi ui,
-                                                           RestClient rest)
+        internal static async Task<string> SubmitFactorAndWaitForToken(string sid,
+                                                                       DuoChoice choice,
+                                                                       string passcode,
+                                                                       IDuoUi ui,
+                                                                       RestSharp.RestClient rest,
+                                                                       CancellationToken cancellationToken)
         {
-            var txid = SubmitFactor(sid, choice, passcode, rest);
+            var txid = await SubmitFactor(sid, choice, passcode, rest, cancellationToken).ConfigureAwait(false);
             if (txid.IsNullOrEmpty())
                 throw MakeInvalidResponseError("transaction ID (txid) is expected but wasn't found");
 
-            var url = PollForResultUrl(sid, txid, ui, rest);
+            var url = await PollForResultUrl(sid, txid, ui, rest, cancellationToken).ConfigureAwait(false);
             if (url.IsNullOrEmpty())
                 return null;
 
-            return FetchToken(sid, url, ui, rest);
+            return await FetchToken(sid, url, ui, rest, cancellationToken).ConfigureAwait(false);
         }
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
+        internal static async Task<string> PollForResultUrl(string sid,
+                                                            string txid,
+                                                            IDuoUi ui,
+                                                            RestSharp.RestClient rest,
+                                                            CancellationToken cancellationToken)
         {
             const int maxPollAttempts = 100;
 
@@ -160,9 +204,16 @@ namespace PasswordManagerAccess.Duo
             // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
-                var response = PostForm<R.Poll>("frame/status",
-                                                new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
-                                                rest);
+                var response = await PostForm<R.Poll>("frame/status",
+                                                      new Dictionary<string, object>
+                                                      {
+                                                          ["sid"] = sid,
+                                                          ["txid"] = txid,
+                                                      },
+                                                      headers: new Dictionary<string, string>(),
+                                                      cookies: new Dictionary<string, string>(),
+                                                      rest,
+                                                      cancellationToken).ConfigureAwait(false);
 
                 var (status, text) = GetResponseStatus(response);
                 Util.UpdateUi(status, text, ui);
@@ -184,11 +235,18 @@ namespace PasswordManagerAccess.Duo
             throw MakeInvalidResponseError("expected to receive a valid result or error, got none of it");
         }
 
-        internal static string FetchToken(string sid, string url, IDuoUi ui, RestClient rest)
+        internal static async Task<string> FetchToken(string sid,
+                                                      string url,
+                                                      IDuoUi ui,
+                                                      RestSharp.RestClient rest,
+                                                      CancellationToken cancellationToken)
         {
-            var response = PostForm<R.FetchToken>(url,
-                                                  new Dictionary<string, object> { ["sid"] = sid },
-                                                  rest);
+            var response = await PostForm<R.FetchToken>(url,
+                                                        new Dictionary<string, object> { ["sid"] = sid },
+                                                        headers: new Dictionary<string, string>(),
+                                                        cookies: new Dictionary<string, string>(),
+                                                        rest,
+                                                        cancellationToken).ConfigureAwait(false);
 
             UpdateUi(response, ui);
 

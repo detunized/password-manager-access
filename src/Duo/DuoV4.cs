@@ -4,6 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using HtmlAgilityPack;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.Duo.ResponseV4;
@@ -12,38 +15,44 @@ namespace PasswordManagerAccess.Duo
 {
     internal static class DuoV4
     {
+        public static async Task<Result> Authenticate(string authUrl, IDuoUi ui, RestSharp.RestClient rest, CancellationToken cancellationToken)
+        {
+            var duoRest = RestAsync.Create("", rest);
+            return await DoAuthenticate(authUrl, ui, duoRest, cancellationToken).ConfigureAwait(false);
+        }
+
         public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport)
         {
-            var rest = new RestClient(transport);
+            throw new NotImplementedException();
+        }
 
+        //
+        // Internal
+        //
+        internal static async Task<Result> DoAuthenticate(string authUrl, IDuoUi ui, RestSharp.RestClient rest, CancellationToken cancellationToken)
+        {
             // 1. First get the main page
-            var (html, url, cookies) = GetMainHtml(authUrl, rest);
+            var html = await GetMainHtml(authUrl, rest, cancellationToken).ConfigureAwait(false);
 
             // 2. Detect a redirect to V1
-            if (url.Contains("/frame/frameless/v3/auth"))
+            if (html.RedirectUrl.Contains("/frame/frameless/v3/auth"))
                 return Result.RedirectToV1;
 
             // 3. The main page contains the form that we need to POST to
-            string host;
-            (host, cookies) = SubmitSystemProperties(html, url, cookies, rest);
+            var props = await SubmitSystemProperties(html.Html, html.RedirectUrl, html.Cookies, rest, cancellationToken).ConfigureAwait(false);
 
             // 4. Get `sid`
-            var sessionId = ExtractSessionId(url);
+            var sessionId = ExtractSessionId(html.RedirectUrl);
 
             // 5. Extract `xsrf` token. It's used in some requests.
-            var xsrf = ExtractXsrf(html);
+            var xsrf = ExtractXsrf(html.Html);
 
             // 6. New rest with the API host
-            var apiRest = new RestClient(transport,
-                                         $"https://{host}/frame/v4/",
-                                         defaultHeaders: new Dictionary<string, string>
-                                         {
-                                             ["X-Xsrftoken"] = xsrf,
-                                         },
-                                         defaultCookies: cookies);
+            var apiRest = RestAsync.Create($"https://{props.Host}/frame/v4/", rest);
+            apiRest.AddOrUpdateDefaultHeader("X-Xsrftoken", xsrf);
 
             // 7. Get available devices and their methods
-            var devices = GetDevices(sessionId, apiRest);
+            var devices = await GetDevices(sessionId, props.Cookies, apiRest, cancellationToken).ConfigureAwait(false);
 
             // There should be at least one device to continue
             if (devices.Length == 0)
@@ -60,7 +69,7 @@ namespace PasswordManagerAccess.Duo
                 // to the phone via SMS.
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
-                    _ = SubmitFactor(sessionId, choice, "", apiRest);
+                    _ = await SubmitFactor(sessionId, choice, "", props.Cookies, apiRest, cancellationToken).ConfigureAwait(false);
                     choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -73,7 +82,14 @@ namespace PasswordManagerAccess.Duo
                         return null; // Canceled by user
                 }
 
-                var result = SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest);
+                var result = await SubmitFactorAndWaitForResult(sessionId,
+                                                                xsrf,
+                                                                choice,
+                                                                passcode,
+                                                                ui,
+                                                                props.Cookies,
+                                                                apiRest,
+                                                                cancellationToken).ConfigureAwait(false);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (result == null)
@@ -88,22 +104,38 @@ namespace PasswordManagerAccess.Duo
         // Internal
         //
 
-        internal static (HtmlDocument Html, string RedirectUrl, Dictionary<string, string> Cookies) GetMainHtml(
-            string authUrl,
-            RestClient rest)
+        internal struct HtmlResult
         {
-            var response = rest.Get(authUrl);
-            if (!response.IsSuccessful)
-                throw Util.MakeSpecializedError(response);
-
-            return (Util.Parse(response.Content), response.RequestUri.AbsoluteUri, response.Cookies);
+            public HtmlDocument Html;
+            public string RedirectUrl;
+            public Dictionary<string, string> Cookies;
         }
 
-        internal static (string Host, Dictionary<string, string> Cookies) SubmitSystemProperties(
-            HtmlDocument html,
-            string url,
-            Dictionary<string, string> cookies,
-            RestClient rest)
+        internal static async Task<HtmlResult> GetMainHtml(string authUrl, RestSharp.RestClient rest, CancellationToken cancellationToken)
+        {
+            var response = await rest.Get(authUrl, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw Util.MakeSpecializedError(response, rest);
+
+            return new HtmlResult
+            {
+                Html = Util.Parse(response.Content),
+                RedirectUrl = response.ResponseUri!.AbsoluteUri,
+                Cookies = ConvertCookies(response.Cookies),
+            };
+        }
+
+        internal struct PropertiesResult
+        {
+            public string Host;
+            public Dictionary<string, string> Cookies;
+        }
+
+        internal static async Task<PropertiesResult> SubmitSystemProperties(HtmlDocument html,
+                                                                            string url,
+                                                                            Dictionary<string, string> cookies,
+                                                                            RestSharp.RestClient rest,
+                                                                            CancellationToken cancellationToken)
         {
             // Find the main form
             var form = html.DocumentNode.SelectSingleNode("//form[@id='plugin_form']");
@@ -126,11 +158,29 @@ namespace PasswordManagerAccess.Duo
                 properties[name] = value;
             }
 
-            var response = rest.PostForm(url, properties, cookies: cookies);
+            var response = await rest.PostForm<string>(url,
+                                                       properties,
+                                                       headers: new Dictionary<string, string>(),
+                                                       cookies: cookies,
+                                                       cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
-                throw Util.MakeSpecializedError(response);
+                throw Util.MakeSpecializedError(response, rest);
 
-            return (response.RequestUri.Host, response.Cookies);
+            return new PropertiesResult
+            {
+                Host = response.ResponseUri!.Host,
+                Cookies = ConvertCookies(response.Cookies),
+            };
+        }
+
+        internal static Dictionary<string, string> ConvertCookies(CookieCollection cookies)
+        {
+#if NET6_0_OR_GREATER
+            return cookies.ToDictionary<Cookie, string, string>(c => c.Name, c => c.Value);
+#else
+            // TODO: Get rid of this!
+            return cookies.Cast<Cookie>().ToDictionary(c => c.Name, c => c.Value);
+#endif
         }
 
         internal static string ExtractSessionId(string url)
@@ -151,11 +201,18 @@ namespace PasswordManagerAccess.Duo
             return xsrf;
         }
 
-        internal static DuoDevice[] GetDevices(string sessionId, RestClient rest)
+        internal static async Task<DuoDevice[]> GetDevices(string sessionId,
+                                                           Dictionary<string, string> cookies,
+                                                           RestSharp.RestClient rest,
+                                                           CancellationToken cancellationToken)
         {
-            var response = rest.Get<Response.Envelope<R.Data>>($"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}");
+            var response = await rest.Get<Response.Envelope<R.Data>>($"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}",
+                                                                     parameters: new Dictionary<string, object>(),
+                                                                     headers: new Dictionary<string, string>(),
+                                                                     cookies: cookies,
+                                                                     cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
-                throw Util.MakeSpecializedError(response);
+                throw Util.MakeSpecializedError(response, rest);
 
             return ParseDeviceData(response.Data.Payload);
         }
@@ -179,7 +236,12 @@ namespace PasswordManagerAccess.Duo
                 .ToArray();
         }
 
-        internal static string SubmitFactor(string sid, DuoChoice choice, string passcode, RestClient rest)
+        internal static async Task<string> SubmitFactor(string sid,
+                                                        DuoChoice choice,
+                                                        string passcode,
+                                                        Dictionary<string, string> cookies,
+                                                        RestSharp.RestClient rest,
+                                                        CancellationToken cancellationToken)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -192,7 +254,12 @@ namespace PasswordManagerAccess.Duo
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = Util.PostForm<Response.SubmitFactor>("prompt", parameters, rest);
+            var response = await Util.PostForm<Response.SubmitFactor>("prompt",
+                                                                      parameters,
+                                                                      headers: new Dictionary<string, string>(),
+                                                                      cookies: cookies,
+                                                                      rest,
+                                                                      cancellationToken).ConfigureAwait(false);
             return response.TransactionId ?? "";
         }
 
@@ -210,24 +277,31 @@ namespace PasswordManagerAccess.Duo
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static CodeState SubmitFactorAndWaitForResult(string sid,
-                                                               string xsrf,
-                                                               DuoChoice choice,
-                                                               string passcode,
-                                                               IDuoUi ui,
-                                                               RestClient rest)
+        internal static async Task<CodeState> SubmitFactorAndWaitForResult(string sid,
+                                                                           string xsrf,
+                                                                           DuoChoice choice,
+                                                                           string passcode,
+                                                                           IDuoUi ui,
+                                                                           Dictionary<string, string> cookies,
+                                                                           RestSharp.RestClient rest,
+                                                                           CancellationToken cancellationToken)
         {
-            var txid = SubmitFactor(sid, choice, passcode, rest);
+            var txid = await SubmitFactor(sid, choice, passcode, cookies, rest, cancellationToken).ConfigureAwait(false);
             if (txid.IsNullOrEmpty())
                 throw Util.MakeInvalidResponseError("transaction ID (txid) is expected but wasn't found");
 
-            if (!PollForResultUrl(sid, txid, ui, rest))
+            if (!await PollForResultUrl(sid, txid, ui, cookies, rest, cancellationToken).ConfigureAwait(false))
                 return null;
 
-            return FetchResult(sid, txid, xsrf, choice, rest);
+            return await FetchResult(sid, txid, xsrf, choice, cookies, rest, cancellationToken).ConfigureAwait(false);
         }
 
-        internal static bool PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
+        internal static async Task<bool> PollForResultUrl(string sid,
+                                                          string txid,
+                                                          IDuoUi ui,
+                                                          Dictionary<string, string> cookies,
+                                                          RestSharp.RestClient rest,
+                                                          CancellationToken cancellationToken)
         {
             const int maxPollAttempts = 100;
 
@@ -235,25 +309,27 @@ namespace PasswordManagerAccess.Duo
             // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
-                var response = Util.PostForm<R.Status>("status",
-                                                       new Dictionary<string, object>
-                                                       {
-                                                           ["sid"] = sid,
-                                                           ["txid"] = txid,
-                                                       },
-                                                       rest,
-                                                       new Dictionary<string, string>
-                                                       {
-                                                           ["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0",
-                                                           ["Accept"] = "*/*",
-                                                           ["Accept-Language"] = "en-US,en;q=0.5",
-                                                           ["Accept-Encoding"] = "gzip, deflate, br",
-                                                           // TODO: Fix host
-                                                           ["Referer"] = $"https://api-005dde75.duosecurity.com/frame/v4/auth/prompt?sid={sid}",
-                                                           ["Sec-Fetch-Dest"] = "empty",
-                                                           ["Sec-Fetch-Mode"] = "cors",
-                                                           ["Sec-Fetch-Site"] = "same-origin",
-                                                       });
+                var response = await Util.PostForm<R.Status>("status",
+                                                             new Dictionary<string, object>
+                                                             {
+                                                                 ["sid"] = sid,
+                                                                 ["txid"] = txid,
+                                                             },
+                                                             headers: new Dictionary<string, string>
+                                                             {
+                                                                 ["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0",
+                                                                 ["Accept"] = "*/*",
+                                                                 ["Accept-Language"] = "en-US,en;q=0.5",
+                                                                 ["Accept-Encoding"] = "gzip, deflate, br",
+                                                                 // TODO: Fix host
+                                                                 ["Referer"] = $"https://api-005dde75.duosecurity.com/frame/v4/auth/prompt?sid={sid}",
+                                                                 ["Sec-Fetch-Dest"] = "empty",
+                                                                 ["Sec-Fetch-Mode"] = "cors",
+                                                                 ["Sec-Fetch-Site"] = "same-origin",
+                                                             },
+                                                             cookies: cookies,
+                                                             rest,
+                                                             cancellationToken).ConfigureAwait(false);
 
                 var (status, text) = GetResponseStatus(response);
                 Util.UpdateUi(status, text, ui);
@@ -284,23 +360,32 @@ namespace PasswordManagerAccess.Duo
             return (status, response.Reason ?? response.Code ?? "");
         }
 
-        internal static CodeState FetchResult(string sid, string txid, string xsrf, DuoChoice choice, RestClient rest)
+        internal static async Task<CodeState> FetchResult(string sid,
+                                                          string txid,
+                                                          string xsrf,
+                                                          DuoChoice choice,
+                                                          Dictionary<string, string> cookies,
+                                                          RestSharp.RestClient rest,
+                                                          CancellationToken cancellationToken)
         {
-            var response = rest.PostForm("oidc/exit",
-                                         new Dictionary<string, object>
-                                         {
-                                             ["sid"] = sid,
-                                             ["txid"] = txid,
-                                             ["factor"] = Util.GetFactorParameterValue(choice.Factor),
-                                             ["device_key"] = choice.Device.Id,
-                                             ["_xsrf"] = xsrf,
-                                             ["dampen_choice"] = "false",
-                                         });
+            var response = await rest.PostForm<string>("oidc/exit",
+                                                       new Dictionary<string, object>
+                                                       {
+                                                           ["sid"] = sid,
+                                                           ["txid"] = txid,
+                                                           ["factor"] = Util.GetFactorParameterValue(choice.Factor),
+                                                           ["device_key"] = choice.Device.Id,
+                                                           ["_xsrf"] = xsrf,
+                                                           ["dampen_choice"] = "false",
+                                                       },
+                                                       headers: new Dictionary<string, string>(),
+                                                       cookies: cookies,
+                                                       cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessful)
-                throw Util.MakeSpecializedError(response);
+                throw Util.MakeSpecializedError(response, rest);
 
-            return ExtractResult(response.RequestUri.AbsoluteUri);
+            return ExtractResult(response.ResponseUri!.AbsoluteUri);
         }
 
         internal static CodeState ExtractResult(string redirectUrl)
@@ -319,7 +404,7 @@ namespace PasswordManagerAccess.Duo
         // Data
         //
 
-        private static readonly Dictionary<string, string> KnownSystemProperties = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> KnownSystemProperties = new()
         {
             ["screen_resolution_width"] = "2560",
             ["screen_resolution_height"] = "1440",
@@ -330,7 +415,7 @@ namespace PasswordManagerAccess.Duo
             ["react_support"] = "true",
         };
 
-        private static readonly Dictionary<string, DuoFactor> StringToFactor = new Dictionary<string, DuoFactor>
+        private static readonly Dictionary<string, DuoFactor> StringToFactor = new()
         {
             ["Duo Push"] = DuoFactor.Push,
             ["Duo Mobile Passcode"] = DuoFactor.Passcode,
