@@ -44,16 +44,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Restore dependencies
+        run: dotnet restore --property TargetFramework=${{ matrix.framework }}
+
       - name: Test ${{ matrix.framework }}
-        run: dotnet test --configuration Release --framework ${{ matrix.framework }} --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test --no-restore --configuration Release --framework ${{ matrix.framework }} --logger "trx;LogFileName=test-results.trx"
 
       - name: Test Report
         uses: dorny/test-reporter@v1
-        if: success() || failure()
+        if: always()
         with:
           name: Test (${{ matrix.os }}, ${{ matrix.framework }})
           path: test/TestResults/test-results.trx
           reporter: dotnet-trx
+          fail-on-error: true
 
   Release:
     needs: Build
