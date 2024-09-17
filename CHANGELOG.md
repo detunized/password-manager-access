@@ -1,5 +1,11 @@
 # Changelog
 
+## 19.0.0
+  - All: removed all the legacy .NET platforms namely .NET Framework 4.8, .NET Standard 2.0 and all
+    Mono based variants. Only .NET 6.0 and 8.0 are supported now.
+  - All: all dependencies are upgraded to the latest versions
+  - All: the assembly version is properly set now in the release DLLs
+
 ## 18.0.0
   - ZohoVault: added cookie-based session storage to save on "full logins". See `ZohoVault.Settings`.
 
