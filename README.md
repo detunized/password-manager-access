@@ -1,7 +1,8 @@
 # Password Manager Access for .NET in C#
 
 [![.NET build, test and release](https://github.com/detunized/password-manager-access/actions/workflows/ci.yaml/badge.svg)](https://github.com/detunized/password-manager-access/actions/workflows/ci.yaml)
-[![NuGet Badge](https://buildstats.info/nuget/PasswordManagerAccess)](https://www.nuget.org/packages/PasswordManagerAccess/)
+[![NuGet Badge](https://img.shields.io/nuget/v/PasswordManagerAccess)](https://www.nuget.org/packages/PasswordManagerAccess/)
+[![NuGet Badge](https://img.shields.io/nuget/dt/PasswordManagerAccess)](https://www.nuget.org/packages/PasswordManagerAccess/)
 
 Password Manager Access provides read only access API to various online
 password managers. This unified library is a successor to a bunch of
