@@ -135,6 +135,13 @@ namespace PasswordManagerAccess.Example.Bitwarden
                                       account.Url,
                                       account.Note,
                                       account.Folder);
+
+                    if (account.CustomFields.Length > 0)
+                    {
+                        Console.WriteLine("    Custom fields:");
+                        foreach (var f in account.CustomFields)
+                            Console.WriteLine($"      - {f.Name}: {f.Value}");
+                    }
                 }
 
                 if (vault.Collections.Length > 0)

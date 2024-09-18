@@ -169,8 +169,26 @@ namespace PasswordManagerAccess.Bitwarden.Response
         [JsonProperty("key")]
         public string Key;
 
+        [JsonProperty("fields")]
+        public Field[] Fields;
+
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public LoginInfo Login;
+    }
+
+    public class Field
+    {
+        [JsonProperty("type", Required = Required.Always)]
+        public int Type;
+
+        [JsonProperty("name")]
+        public string Name;
+
+        [JsonProperty("value")]
+        public string Value;
+
+        [JsonProperty("linkedId")]
+        public int? LinkedId;
     }
 
     public struct LoginInfo

@@ -641,12 +641,43 @@ namespace PasswordManagerAccess.Bitwarden
                                totp: DecryptToStringOrBlank(item.Login.Totp, key),
                                deletedDate: item.DeletedDate,
                                folder: folder,
-                               collectionIds: item.CollectionIds ?? Array.Empty<string>(),
-                               hidePassword: ResolveHidePassword(item.CollectionIds, collections));
+                               collectionIds: item.CollectionIds ?? [],
+                               hidePassword: ResolveHidePassword(item.CollectionIds, collections),
+                               customFields: ParseCustomFields(item, key));
         }
 
-        internal static bool ResolveHidePassword(string[] collectionIds,
-                                                 Dictionary<string, Collection> collections)
+        internal static CustomField[] ParseCustomFields(R.Item item, byte[] key)
+        {
+            return item.Fields?
+                .Select(x => ParseField(x, key, item))
+                .ToArray() ?? [];
+        }
+
+        internal static CustomField ParseField(R.Field field, byte[] key, R.Item item)
+        {
+            var name = DecryptToStringOrBlank(field.Name, key);
+            var value = DecryptToStringOrBlank(field.Value, key);
+
+            return field.Type switch
+            {
+                0 or 1 or 2 => new CustomField(name, value),
+                3 => new CustomField(name, ResolveLinkedField(field.LinkedId, key, item)),
+                _ => throw new UnsupportedFeatureException($"Custom field type {field.Type} is not supported")
+            };
+        }
+
+        internal static string ResolveLinkedField(int? fieldLinkedId, byte[] key, R.Item item)
+        {
+            return fieldLinkedId switch
+            {
+                null => "",
+                100 => DecryptToStringOrBlank(item.Login.Username, key),
+                101 => DecryptToStringOrBlank(item.Login.Password, key),
+                _ => throw new UnsupportedFeatureException($"Linked field ID {fieldLinkedId} is not supported"),
+            };
+        }
+
+        internal static bool ResolveHidePassword(string[] collectionIds, Dictionary<string, Collection> collections)
         {
             // Items that don't have any collections associated with them cannot hide their password.
             if (collectionIds.Length == 0)

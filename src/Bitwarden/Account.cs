@@ -16,6 +16,7 @@ namespace PasswordManagerAccess.Bitwarden
         public readonly string Folder;
         public readonly string[] CollectionIds;
         public readonly bool HidePassword;
+        public readonly CustomField[] CustomFields;
 
         public Account(string id,
                        string name,
@@ -27,7 +28,8 @@ namespace PasswordManagerAccess.Bitwarden
                        string deletedDate,
                        string folder,
                        string[] collectionIds,
-                       bool hidePassword)
+                       bool hidePassword,
+                       CustomField[] customFields)
         {
             Id = id;
             Name = name;
@@ -40,6 +42,11 @@ namespace PasswordManagerAccess.Bitwarden
             Folder = folder;
             CollectionIds = collectionIds;
             HidePassword = hidePassword;
+            CustomFields = customFields;
         }
+    }
+
+    public record CustomField(string Name, string Value)
+    {
     }
 }

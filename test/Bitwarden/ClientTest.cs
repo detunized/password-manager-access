@@ -10,6 +10,7 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Bitwarden.Ui;
 using R = PasswordManagerAccess.Bitwarden.Response;
+using FluentAssertions;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -489,6 +490,83 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void ParseAccountItemWithFields_returns_account()
+        {
+            var vault = LoadVaultFixture("vault-with-fields");
+            var folders = new Dictionary<string, string>
+            {
+                {"d0e9210c-610b-4427-a344-a99600d462d3", "folder1"},
+                {"94542f0a-d858-46ce-87a5-a99600d47732", "folder2"},
+            };
+            var account = Client.ParseAccountItem(vault.Ciphers[1], Key, null, folders, new Dictionary<string, Collection>());
+
+            Assert.Equal("e481381f-25ca-4245-845d-a981014d20a6", account.Id);
+            Assert.Equal("Google", account.Name);
+            Assert.Equal("larry", account.Username);
+            Assert.Equal("page", account.Password);
+            Assert.Equal("https://google.com", account.Url);
+            Assert.Equal("Yo, look at this!", account.Note);
+            Assert.Equal("", account.Folder);
+
+            Assert.Equal(10, account.CustomFields.Length);
+            Assert.Equal("text1", account.CustomFields[0].Name);
+            Assert.Equal("value1", account.CustomFields[0].Value);
+            Assert.Equal("hidden1", account.CustomFields[1].Name);
+            Assert.Equal("value2", account.CustomFields[1].Value);
+            Assert.Equal("boolean1", account.CustomFields[2].Name);
+            Assert.Equal("true", account.CustomFields[2].Value);
+            Assert.Equal("linked1", account.CustomFields[3].Name);
+            Assert.Equal("page", account.CustomFields[3].Value);
+            Assert.Equal("linked2", account.CustomFields[4].Name);
+            Assert.Equal("larry", account.CustomFields[4].Value);
+            Assert.Equal("", account.CustomFields[5].Name);
+            Assert.Equal("", account.CustomFields[5].Value);
+            Assert.Equal("", account.CustomFields[6].Name);
+            Assert.Equal("", account.CustomFields[6].Value);
+            Assert.Equal("", account.CustomFields[7].Name);
+            Assert.Equal("", account.CustomFields[7].Value);
+            Assert.Equal("", account.CustomFields[8].Name);
+            Assert.Equal("false", account.CustomFields[8].Value);
+            Assert.Equal("", account.CustomFields[9].Name);
+            Assert.Equal("page", account.CustomFields[9].Value);
+        }
+
+        [Fact]
+        public void ParseField_throws_on_invalid_type()
+        {
+            // Arrange
+            var field = new R.Field
+            {
+                Type = 4,
+                Name = null,
+                Value = null,
+            };
+
+            // Act/Assert
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ParseField(field, Key, LoginItem), "Custom field type 4");
+        }
+
+        [Theory]
+        [InlineData(null, "")]
+        [InlineData(100, "larry")] // username
+        [InlineData(101, "page")] // password
+        public void ResolveLinkedField_returns_mapped_value(int? linkedId, string expected)
+        {
+            // Arrange/Act
+            var value = Client.ResolveLinkedField(linkedId, Key, LoginItem);
+
+            // Assert
+            value.Should().Be(expected);
+        }
+
+        [Fact]
+        public void ResolveLinkedField_throws_on_unsupported_linked_id()
+        {
+            // Arrange/Act/Assert
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ResolveLinkedField(5, Key, LoginItem), "Linked field ID 5");
+        }
+
+        [Fact]
         public void DecryptToBytes_returns_decrypted_input()
         {
             var plaintext = Client.DecryptToBytes(EncryptedString, Key);
@@ -551,5 +629,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
         private const string EncryptedString = "2.8RPqQRT3z5dTQtNAE/2XWw==|cl1uG8jueR0kxPPklGjVJAGCJqaw+YwmDPyNJtIwsXg=|klc2vOsbPPZD5K1MDMf/nqSNLBrOMPVUNycgCgl6l44=";
         private const string Plaintext = "Hey, check this out!";
+
+        private static readonly R.Item LoginItem = new()
+        {
+            Login = new R.LoginInfo
+            {
+                Username = "2.VljekSAM8OlXrGeo3feg4g==|zWnkxbTOPwRhq8w549i94Q==|Un5VXCsoowbqBvIMHqxzF1As5LV6LVuZTXyoJGiNkrU=",
+                Password = "2.p/TTcAaZh3YdXjsUGv+UIA==|zzvBs2YffTZhK1GeWwncKQ==|84h3MIjJslUuOZkWJKdMkfRxOwDmKLsujnA7Q95jhF0=",
+            }
+        };
     }
 }
