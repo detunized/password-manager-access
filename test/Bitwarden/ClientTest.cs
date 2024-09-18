@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Net;
-using Moq;
 using Newtonsoft.Json;
 using Xunit;
 using PasswordManagerAccess.Common;
@@ -11,6 +10,7 @@ using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Bitwarden.Ui;
 using R = PasswordManagerAccess.Bitwarden.Response;
 using FluentAssertions;
+using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -137,6 +137,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void Login_asks_ui_to_choose_second_factor_method()
         {
+            // Arrange
             var apiRest = new RestFlow();
             var idRest = new RestFlow()
                 .Post(GetFixture("login-mfa"), HttpStatusCode.BadRequest)
@@ -144,14 +145,15 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .Post("{'token_type': 'Bearer', 'access_token': 'wa-wa-wee-wa'}")
                     .ExpectUrl(IdentityUrl + "/connect/token")
                 .ToRestClient(IdentityUrl);
+            var ui = new GoogleAuthProvidingUi();
 
-            var ui = new Mock<IUi>();
-            ui.Setup(x => x.ChooseMfaMethod(It.IsAny<MfaMethod[]>())).Returns(MfaMethod.GoogleAuth);
-            ui.Setup(x => x.ProvideGoogleAuthPasscode()).Returns(new Passcode("123456", false));
+            // Act
+            Client.Login(Username, PasswordHash, DeviceId, ui, SetupSecureStorage(null), apiRest, idRest);
 
-            Client.Login(Username, PasswordHash, DeviceId, ui.Object, SetupSecureStorage(null), apiRest, idRest);
-
-            ui.Verify(x => x.ChooseMfaMethod(It.IsAny<MfaMethod[]>()), Times.Once);
+            // Assert
+            ui.ChooseMfaMethodCalledTimes.Should().Be(1);
+            ui.ProvideGoogleAuthPasscodeCalledTimes.Should().Be(1);
+            ui.CloseCalledTimes.Should().Be(1);
         }
 
         [Fact]
@@ -598,11 +600,48 @@ namespace PasswordManagerAccess.Test.Bitwarden
         // Helpers
         //
 
-        private ISecureStorage SetupSecureStorage(string token)
+        private class FakeUi: IUi
         {
-            var mock = new Mock<ISecureStorage>();
-            mock.Setup(x => x.LoadString(It.IsAny<string>())).Returns(token);
-            return mock.Object;
+            public virtual DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw new System.NotImplementedException();
+            public virtual string ProvideDuoPasscode(DuoDevice device) => throw new System.NotImplementedException();
+            public virtual void UpdateDuoStatus(DuoStatus status, string text) => throw new System.NotImplementedException();
+            public virtual void Close() => throw new System.NotImplementedException();
+            public virtual MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods) => throw new System.NotImplementedException();
+            public virtual Passcode ProvideGoogleAuthPasscode() => throw new System.NotImplementedException();
+            public virtual Passcode ProvideEmailPasscode(string emailHint) => throw new System.NotImplementedException();
+            public virtual Passcode ProvideYubiKeyPasscode() => throw new System.NotImplementedException();
+        }
+
+        private class GoogleAuthProvidingUi: FakeUi
+        {
+            public int ChooseMfaMethodCalledTimes { get; private set; }
+            public int ProvideGoogleAuthPasscodeCalledTimes { get; private set; }
+            public int CloseCalledTimes { get; private set; }
+
+            public override MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
+            {
+                ChooseMfaMethodCalledTimes++;
+                return MfaMethod.GoogleAuth;
+            }
+
+            public override Passcode ProvideGoogleAuthPasscode()
+            {
+                ProvideGoogleAuthPasscodeCalledTimes++;
+                return new Passcode("123456", false);
+            }
+
+            public override void Close()
+            {
+                CloseCalledTimes++;
+            }
+        }
+
+        private static ISecureStorage SetupSecureStorage(string token)
+        {
+            return new MemoryStorage(new Dictionary<string, string>
+            {
+                ["remember-me-token"] = token,
+            });
         }
 
         private R.Vault LoadVaultFixture(string name = "vault")
