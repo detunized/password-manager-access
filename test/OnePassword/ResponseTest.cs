@@ -7,7 +7,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class ResponseTest: TestBase
+    public class ResponseTest : TestBase
     {
         [Fact]
         public void VaultItemDetails_parses_with_all_types_of_fields()

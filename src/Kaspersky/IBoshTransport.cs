@@ -8,7 +8,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kaspersky
 {
-    internal interface IBoshTransport: IDisposable
+    internal interface IBoshTransport : IDisposable
     {
         Exception? Connect(string url);
         Try<string> Request(string body, int expectedMessageCount);

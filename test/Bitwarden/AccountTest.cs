@@ -1,8 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Xunit;
 using PasswordManagerAccess.Bitwarden;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -24,18 +24,20 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var hidePassword = true;
             var customFields = new[] { new CustomField("name1", "value1"), new CustomField("name2", "value2") };
 
-            var account = new Account(id: id,
-                                      name: name,
-                                      username: username,
-                                      password: password,
-                                      url: url,
-                                      note: note,
-                                      totp: totp,
-                                      deletedDate: deletedDate,
-                                      folder: folder,
-                                      collectionIds: collections,
-                                      hidePassword: hidePassword,
-                                      customFields: customFields);
+            var account = new Account(
+                id: id,
+                name: name,
+                username: username,
+                password: password,
+                url: url,
+                note: note,
+                totp: totp,
+                deletedDate: deletedDate,
+                folder: folder,
+                collectionIds: collections,
+                hidePassword: hidePassword,
+                customFields: customFields
+            );
 
             Assert.Equal(id, account.Id);
             Assert.Equal(name, account.Name);

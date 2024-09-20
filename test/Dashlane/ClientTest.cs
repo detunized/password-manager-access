@@ -7,7 +7,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.Dashlane
 {
-    public class ClientTest: TestBase
+    public class ClientTest : TestBase
     {
         //
         // Fetch
@@ -25,8 +25,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             var rest = new RestFlow()
                 .Post(GetFixture("empty-vault"))
-                    .ExpectContent($"login={Username}", $"uki={Uki}")
-                    .ExpectContent(s => Assert.DoesNotContain("otp=", s));
+                .ExpectContent($"login={Username}", $"uki={Uki}")
+                .ExpectContent(s => Assert.DoesNotContain("otp=", s));
             Client.Fetch(Username, Uki, rest);
         }
 
@@ -36,8 +36,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("{}", error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Client.Fetch(Username, Uki, rest),
-                                                        "A network error occurred");
+            var e = Exceptions.AssertThrowsNetworkError(() => Client.Fetch(Username, Uki, rest), "A network error occurred");
             Assert.Equal(error, e.InnerException);
         }
 

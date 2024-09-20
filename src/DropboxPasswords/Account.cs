@@ -15,13 +15,7 @@ namespace PasswordManagerAccess.DropboxPasswords
         public readonly string Note;
         public readonly string Folder;
 
-        public Account(string id,
-                       string name,
-                       string username,
-                       string password,
-                       string url,
-                       string note,
-                       string folder)
+        public Account(string id, string name, string username, string password, string url, string note, string folder)
         {
             Id = id;
             Name = name;

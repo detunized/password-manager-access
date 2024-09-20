@@ -70,7 +70,7 @@ namespace PasswordManagerAccess.DropboxPasswords
             public readonly string Tag;
         }
 
-        public class EnrollStatus: Status
+        public class EnrollStatus : Status
         {
             [JsonProperty("device_requested")]
             public readonly DeviceInfo[] DeviceRequested;

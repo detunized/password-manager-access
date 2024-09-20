@@ -26,41 +26,45 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
-        public static Proofs GenerateProofs(int version,
-                                            string password,
-                                            string username,
-                                            byte[] saltBytes,
-                                            byte[] serverEphemeralBytes,
-                                            byte[] modulusBytes)
+        public static Proofs GenerateProofs(
+            int version,
+            string password,
+            string username,
+            byte[] saltBytes,
+            byte[] serverEphemeralBytes,
+            byte[] modulusBytes
+        )
         {
             return GenerateProofs(
                 bitLength: BitLength,
                 hashedPasswordBytes: HashPassword(version, password, username, saltBytes, modulusBytes),
                 serverEphemeralBytes: serverEphemeralBytes,
-                modulusBytes: modulusBytes);
+                modulusBytes: modulusBytes
+            );
         }
 
         //
         // Internal, exposed for testing purposes only
         //
 
-        internal static Proofs GenerateProofs(int bitLength,
-                                              byte[] hashedPasswordBytes,
-                                              byte[] serverEphemeralBytes,
-                                              byte[] modulusBytes)
+        internal static Proofs GenerateProofs(int bitLength, byte[] hashedPasswordBytes, byte[] serverEphemeralBytes, byte[] modulusBytes)
         {
-            return GenerateProofs(bitLength: bitLength,
-                                  hashedPasswordBytes: hashedPasswordBytes,
-                                  serverEphemeralBytes: serverEphemeralBytes,
-                                  modulusBytes: modulusBytes,
-                                  getRandomBigInt: GetRandomBigInteger);
+            return GenerateProofs(
+                bitLength: bitLength,
+                hashedPasswordBytes: hashedPasswordBytes,
+                serverEphemeralBytes: serverEphemeralBytes,
+                modulusBytes: modulusBytes,
+                getRandomBigInt: GetRandomBigInteger
+            );
         }
 
-        internal static Proofs GenerateProofs(int bitLength,
-                                              byte[] hashedPasswordBytes,
-                                              byte[] serverEphemeralBytes,
-                                              byte[] modulusBytes,
-                                              Func<BigInteger, BigInteger, BigInteger> getRandomBigInt)
+        internal static Proofs GenerateProofs(
+            int bitLength,
+            byte[] hashedPasswordBytes,
+            byte[] serverEphemeralBytes,
+            byte[] modulusBytes,
+            Func<BigInteger, BigInteger, BigInteger> getRandomBigInt
+        )
         {
             // This code is adapted from https://github.com/ProtonMail/go-srp/blob/master/srp.go
             // The original code is MIT licensed.
@@ -96,9 +100,7 @@ namespace PasswordManagerAccess.ProtonPass
         internal static byte[] ToBytes(BigInteger n)
         {
             var bytes = n.ToByteArray();
-            return bytes[bytes.Length - 1] == 0
-                ? bytes.Sub(0, bytes.Length - 1)
-                : bytes;
+            return bytes[bytes.Length - 1] == 0 ? bytes.Sub(0, bytes.Length - 1) : bytes;
         }
 
         internal static byte[] ToBytes(BigInteger n, int bitLength)
@@ -151,10 +153,7 @@ namespace PasswordManagerAccess.ProtonPass
             // Skip \n\n
             startIndex += 2;
 
-            return message
-                .Substring(startIndex, endIndex - startIndex)
-                .Trim()
-                .Decode64();
+            return message.Substring(startIndex, endIndex - startIndex).Trim().Decode64();
         }
 
         internal static byte[] HashPassword(int version, string password, string username, byte[] salt, byte[] modulus)
@@ -165,7 +164,7 @@ namespace PasswordManagerAccess.ProtonPass
                 1 => HashPasswordVersion1(password, username),
                 2 => HashPasswordVersion2(password, username),
                 3 or 4 => HashPasswordVersion3(password, salt),
-                _ => throw new InternalErrorException($"Unsupported SRP version: {version}")
+                _ => throw new InternalErrorException($"Unsupported SRP version: {version}"),
             };
 
             return ExpandHash(Concat(hash, modulus));
@@ -309,10 +308,70 @@ namespace PasswordManagerAccess.ProtonPass
 
         private static readonly char[] Base64Code =
         {
-            '.', '/', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-            'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
-            'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-            'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '.',
+            '/',
+            'A',
+            'B',
+            'C',
+            'D',
+            'E',
+            'F',
+            'G',
+            'H',
+            'I',
+            'J',
+            'K',
+            'L',
+            'M',
+            'N',
+            'O',
+            'P',
+            'Q',
+            'R',
+            'S',
+            'T',
+            'U',
+            'V',
+            'W',
+            'X',
+            'Y',
+            'Z',
+            'a',
+            'b',
+            'c',
+            'd',
+            'e',
+            'f',
+            'g',
+            'h',
+            'i',
+            'j',
+            'k',
+            'l',
+            'm',
+            'n',
+            'o',
+            'p',
+            'q',
+            'r',
+            's',
+            't',
+            'u',
+            'v',
+            'w',
+            'x',
+            'y',
+            'z',
+            '0',
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
         };
     }
 }

@@ -8,7 +8,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Test
 {
-    public class MemoryStorage: ISecureStorage, IAsyncSecureStorage
+    public class MemoryStorage : ISecureStorage, IAsyncSecureStorage
     {
         public Dictionary<string, string> Values { get; } = new();
         public Func<string, string> OnMissingValue { get; }

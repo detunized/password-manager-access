@@ -18,12 +18,7 @@ namespace PasswordManagerAccess.RoboForm
         public readonly int IterationCount;
         public readonly bool IsMd5;
 
-        public AuthInfo(string sid,
-                        string data,
-                        string nonce,
-                        byte[] salt,
-                        int iterationCount,
-                        bool isMd5)
+        public AuthInfo(string sid, string data, string nonce, byte[] salt, int iterationCount, bool isMd5)
         {
             Sid = sid;
             Data = data;
@@ -47,29 +42,25 @@ namespace PasswordManagerAccess.RoboForm
                 if (realm != "SibAuth")
                     throw MakeError($"Invalid auth info realm '{realm}'");
 
-                var parsedParameters = parameters
-                    .Split(',')
-                    .Select(ParseAuthInfoQuotedParam)
-                    .ToDictionary(i => i.Key, i => i.Value);
+                var parsedParameters = parameters.Split(',').Select(ParseAuthInfoQuotedParam).ToDictionary(i => i.Key, i => i.Value);
 
                 var sid = parsedParameters["sid"];
                 var data = parsedParameters["data"].Decode64().ToUtf8();
 
-                var parsedData = data
-                    .Split(',')
-                    .Select(ParseAuthInfoParam)
-                    .ToDictionary(i => i.Key, i => i.Value);
+                var parsedData = data.Split(',').Select(ParseAuthInfoParam).ToDictionary(i => i.Key, i => i.Value);
 
                 var isMd5 = false;
                 if (parsedData.ContainsKey("o"))
                     isMd5 = parsedData["o"].Contains("pwdMD5");
 
-                return new AuthInfo(sid: sid,
-                                    data: data,
-                                    nonce: parsedData["r"],
-                                    salt: parsedData["s"].Decode64(),
-                                    iterationCount: Int32.Parse(parsedData["i"]),
-                                    isMd5: isMd5);
+                return new AuthInfo(
+                    sid: sid,
+                    data: data,
+                    nonce: parsedData["r"],
+                    salt: parsedData["s"].Decode64(),
+                    iterationCount: Int32.Parse(parsedData["i"]),
+                    isMd5: isMd5
+                );
             }
             catch (KeyNotFoundException)
             {

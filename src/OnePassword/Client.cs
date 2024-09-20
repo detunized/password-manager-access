@@ -18,6 +18,7 @@ namespace PasswordManagerAccess.OnePassword
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
+
         // TODO: Even though the CLI version doesn't seem to get outdated as quickly as the web one,
         //       it's possible this needs to be updated every now and then. Keep an eye on this.
         public const string ClientVersion = "2190004";
@@ -85,11 +86,7 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
-        internal static Session LogIn(Credentials credentials,
-                                      AppInfo app,
-                                      IUi ui,
-                                      ISecureStorage storage,
-                                      IRestTransport transport)
+        internal static Session LogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
             var (sessionKey, sessionRest) = LogIn(credentials, app, ui, storage, rest);
@@ -118,8 +115,7 @@ namespace PasswordManagerAccess.OnePassword
             R.ServiceAccountToken parsed;
             try
             {
-                parsed = JsonConvert.DeserializeObject<R.ServiceAccountToken>(
-                    token.Substring(4).Decode64Loose().ToUtf8());
+                parsed = JsonConvert.DeserializeObject<R.ServiceAccountToken>(token.Substring(4).Decode64Loose().ToUtf8());
             }
             catch (JsonException e)
             {
@@ -140,10 +136,7 @@ namespace PasswordManagerAccess.OnePassword
             };
         }
 
-        internal static VaultInfo[] ListAllVaults(Credentials credentials,
-                                                  Keychain keychain,
-                                                  AesKey sessionKey,
-                                                  RestClient rest)
+        internal static VaultInfo[] ListAllVaults(Credentials credentials, Keychain keychain, AesKey sessionKey, RestClient rest)
         {
             // Step 1: Get account info. It contains users, keys, groups, vault info and other stuff.
             //         Not the actual vault data though. That is requested separately.
@@ -167,15 +160,9 @@ namespace PasswordManagerAccess.OnePassword
 
         // This is exception is used internally to trigger re-login from the depth of the call stack.
         // Possibly not the best design. TODO: Should this be done differently?
-        internal class RetryLoginException: Exception
-        {
-        }
+        internal class RetryLoginException : Exception { }
 
-        internal static (AesKey, RestClient) LogIn(Credentials credentials,
-                                                   AppInfo app,
-                                                   IUi ui,
-                                                   ISecureStorage storage,
-                                                   RestClient rest)
+        internal static (AesKey, RestClient) LogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage, RestClient rest)
         {
             while (true)
             {
@@ -183,17 +170,11 @@ namespace PasswordManagerAccess.OnePassword
                 {
                     return LoginAttempt(credentials, app, ui, storage, rest);
                 }
-                catch (RetryLoginException)
-                {
-                }
+                catch (RetryLoginException) { }
             }
         }
 
-        private static (AesKey, RestClient) LoginAttempt(Credentials credentials,
-                                                         AppInfo app,
-                                                         IUi ui,
-                                                         ISecureStorage storage,
-                                                         RestClient rest)
+        private static (AesKey, RestClient) LoginAttempt(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage, RestClient rest)
         {
             // Step 1: Request to initiate a new session
             var (sessionId, srpInfo) = StartNewSession(credentials, app, rest);
@@ -224,30 +205,24 @@ namespace PasswordManagerAccess.OnePassword
             return $"https://{domain}/api";
         }
 
-        internal static RestClient MakeRestClient(IRestTransport transport,
-                                                  string baseUrl,
-                                                  IRequestSigner signer = null,
-                                                  string sessionId = null)
+        internal static RestClient MakeRestClient(IRestTransport transport, string baseUrl, IRequestSigner signer = null, string sessionId = null)
         {
-            var headers = new Dictionary<string, string>(2) {["X-AgileBits-Client"] = ClientId};
+            var headers = new Dictionary<string, string>(2) { ["X-AgileBits-Client"] = ClientId };
             if (!sessionId.IsNullOrEmpty())
                 headers["X-AgileBits-Session-ID"] = sessionId;
 
             return new RestClient(transport, baseUrl, signer, headers);
         }
 
-        internal static RestClient MakeRestClient(RestClient rest,
-                                                  IRequestSigner signer = null,
-                                                  string sessionId = null)
+        internal static RestClient MakeRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
         {
             return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
         }
 
-        internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(Credentials credentials,
-                                                                            AppInfo app,
-                                                                            RestClient rest)
+        internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(Credentials credentials, AppInfo app, RestClient rest)
         {
-            var url = $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
+            var url =
+                $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
             var response = rest.Get<R.NewSession>(url);
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -256,26 +231,26 @@ namespace PasswordManagerAccess.OnePassword
             var status = info.Status;
             switch (status)
             {
-            case "ok":
-                if (info.KeyFormat != credentials.ParsedAccountKey.Format ||
-                    info.KeyUuid != credentials.ParsedAccountKey.Uuid)
-                    throw new BadCredentialsException("The account key is incorrect");
+                case "ok":
+                    if (info.KeyFormat != credentials.ParsedAccountKey.Format || info.KeyUuid != credentials.ParsedAccountKey.Uuid)
+                        throw new BadCredentialsException("The account key is incorrect");
 
-                var srpInfo = new SrpInfo(srpMethod: info.Auth.Method,
-                                          keyMethod: info.Auth.Algorithm,
-                                          iterations: info.Auth.Iterations,
-                                          salt: info.Auth.Salt.Decode64Loose());
+                    var srpInfo = new SrpInfo(
+                        srpMethod: info.Auth.Method,
+                        keyMethod: info.Auth.Algorithm,
+                        iterations: info.Auth.Iterations,
+                        salt: info.Auth.Salt.Decode64Loose()
+                    );
 
-                return (info.SessionId, srpInfo);
-            case "device-not-registered":
-                RegisterDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
-                break;
-            case "device-deleted":
-                ReauthorizeDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
-                break;
-            default:
-                throw new InternalErrorException(
-                    $"Failed to start a new session, unsupported response status '{status}'");
+                    return (info.SessionId, srpInfo);
+                case "device-not-registered":
+                    RegisterDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
+                    break;
+                case "device-deleted":
+                    ReauthorizeDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
+                    break;
+                default:
+                    throw new InternalErrorException($"Failed to start a new session, unsupported response status '{status}'");
             }
 
             return StartNewSession(credentials, app, rest);
@@ -283,16 +258,19 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static void RegisterDevice(string uuid, AppInfo app, RestClient rest)
         {
-            var response = rest.PostJson<R.SuccessStatus>("v1/device", new Dictionary<string, object>
-            {
-                ["uuid"] = uuid,
-                ["clientName"] = ClientName,
-                ["clientVersion"] = ClientVersion,
-                ["osName"] = GetOsName(),
-                ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that.
-                ["name"] = app.Name,
-                ["model"] = app.Version,
-            });
+            var response = rest.PostJson<R.SuccessStatus>(
+                "v1/device",
+                new Dictionary<string, object>
+                {
+                    ["uuid"] = uuid,
+                    ["clientName"] = ClientName,
+                    ["clientVersion"] = ClientVersion,
+                    ["osName"] = GetOsName(),
+                    ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that.
+                    ["name"] = app.Name,
+                    ["model"] = app.Version,
+                }
+            );
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -315,7 +293,7 @@ namespace PasswordManagerAccess.OnePassword
         internal enum VerifyStatus
         {
             Success,
-            SecondFactorRequired
+            SecondFactorRequired,
         }
 
         internal enum SecondFactorKind
@@ -343,9 +321,8 @@ namespace PasswordManagerAccess.OnePassword
             public readonly VerifyStatus Status;
             public readonly SecondFactor[] Factors;
 
-            public VerifyResult(VerifyStatus status) : this(status, new SecondFactor[0])
-            {
-            }
+            public VerifyResult(VerifyStatus status)
+                : this(status, new SecondFactor[0]) { }
 
             public VerifyResult(VerifyStatus status, SecondFactor[] factors)
             {
@@ -372,13 +349,14 @@ namespace PasswordManagerAccess.OnePassword
                         ["model"] = app.Version,
                         ["osName"] = GetOsName(),
                         ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET.
-                                            // Look into that.
+                        // Look into that.
                         ["userAgent"] = "", // TODO: The browser uses a user agent string here. We need to figure out
-                                            // what CLI sends. This is not trivial at all because of the E2E encryption.
+                        // what CLI sends. This is not trivial at all because of the E2E encryption.
                     },
                 },
                 sessionKey,
-                rest);
+                rest
+            );
 
             // TODO: 1P verifies if "serverVerifyHash" is valid. Do that.
             // We assume it's all good if we got HTTP 200.
@@ -412,12 +390,14 @@ namespace PasswordManagerAccess.OnePassword
             return factors.ToArray();
         }
 
-        internal static void PerformSecondFactorAuthentication(SecondFactor[] factors,
-                                                               Credentials credentials,
-                                                               AesKey sessionKey,
-                                                               IUi ui,
-                                                               ISecureStorage storage,
-                                                               RestClient rest)
+        internal static void PerformSecondFactorAuthentication(
+            SecondFactor[] factors,
+            Credentials credentials,
+            AesKey sessionKey,
+            IUi ui,
+            ISecureStorage storage,
+            RestClient rest
+        )
         {
             // Try "remember me" first. It's possible the server didn't allow it or
             // we don't have a valid token stored from one of the previous sessions.
@@ -427,8 +407,8 @@ namespace PasswordManagerAccess.OnePassword
             // TODO: Allow to choose 2FA method via UI like in Bitwarden
             var factor = ChooseInteractiveSecondFactor(factors);
 
-           var secondFactorResult = GetSecondFactorResult(factor, credentials, ui, rest);
-           if (secondFactorResult.Canceled)
+            var secondFactorResult = GetSecondFactorResult(factor, credentials, ui, rest);
+            if (secondFactorResult.Canceled)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
             var token = SubmitSecondFactorResult(factor.Kind, secondFactorResult, sessionKey, rest);
@@ -438,10 +418,7 @@ namespace PasswordManagerAccess.OnePassword
                 storage.StoreString(RememberMeTokenKey, token);
         }
 
-        internal static bool TrySubmitRememberMeToken(SecondFactor[] factors,
-                                                      AesKey sessionKey,
-                                                      ISecureStorage storage,
-                                                      RestClient rest)
+        internal static bool TrySubmitRememberMeToken(SecondFactor[] factors, AesKey sessionKey, ISecureStorage storage, RestClient rest)
         {
             if (factors.All(x => x.Kind != SecondFactorKind.RememberMeToken))
                 return false;
@@ -450,11 +427,10 @@ namespace PasswordManagerAccess.OnePassword
             if (string.IsNullOrEmpty(token))
                 return false;
 
-            var result = SecondFactorResult.Done(new Dictionary<string, string>
-                                                 {
-                                                     ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id)
-                                                 },
-                                                 true);
+            var result = SecondFactorResult.Done(
+                new Dictionary<string, string> { ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id) },
+                true
+            );
 
             try
             {
@@ -482,9 +458,9 @@ namespace PasswordManagerAccess.OnePassword
             // We have O(N^2) here, but it's ok, since it's at most just a handful of elements.
             // Converting them to a hash set would take longer.
             foreach (var i in SecondFactorPriority)
-                foreach (var f in factors)
-                    if (f.Kind == i)
-                        return f;
+            foreach (var f in factors)
+                if (f.Kind == i)
+                    return f;
 
             throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
         }
@@ -496,27 +472,17 @@ namespace PasswordManagerAccess.OnePassword
             public readonly bool Canceled;
             public readonly string Note; // Let the 2FA attach a note
 
-            public static SecondFactorResult Done(Dictionary<string, string> parameters,
-                                                  bool rememberMe,
-                                                  string note = "")
+            public static SecondFactorResult Done(Dictionary<string, string> parameters, bool rememberMe, string note = "")
             {
-                return new SecondFactorResult(parameters: parameters,
-                                              rememberMe: rememberMe,
-                                              canceled: false,
-                                              note: note);
+                return new SecondFactorResult(parameters: parameters, rememberMe: rememberMe, canceled: false, note: note);
             }
 
             public static SecondFactorResult Cancel()
             {
-                return new SecondFactorResult(parameters: null,
-                                              rememberMe: false,
-                                              canceled: true);
+                return new SecondFactorResult(parameters: null, rememberMe: false, canceled: true);
             }
 
-            private SecondFactorResult(Dictionary<string, string> parameters,
-                                       bool rememberMe,
-                                       bool canceled,
-                                       string note = "")
+            private SecondFactorResult(Dictionary<string, string> parameters, bool rememberMe, bool canceled, string note = "")
             {
                 Parameters = parameters;
                 RememberMe = rememberMe;
@@ -525,17 +491,14 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static SecondFactorResult GetSecondFactorResult(SecondFactor factor,
-                                                                 Credentials credentials,
-                                                                 IUi ui,
-                                                                 RestClient rest)
+        internal static SecondFactorResult GetSecondFactorResult(SecondFactor factor, Credentials credentials, IUi ui, RestClient rest)
         {
             return factor.Kind switch
             {
                 SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(ui),
                 SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, credentials, ui),
                 SecondFactorKind.Duo => AuthenticateWithDuo(factor, ui, rest),
-                _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here")
+                _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here"),
             };
         }
 
@@ -545,11 +508,7 @@ namespace PasswordManagerAccess.OnePassword
             if (passcode == Passcode.Cancel)
                 return SecondFactorResult.Cancel();
 
-            return SecondFactorResult.Done(new Dictionary<string, string>
-                                           {
-                                               ["code"] = passcode.Code,
-                                           },
-                                           passcode.RememberMe);
+            return SecondFactorResult.Done(new Dictionary<string, string> { ["code"] = passcode.Code }, passcode.RememberMe);
         }
 
         internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, Credentials credentials, IUi ui)
@@ -566,20 +525,24 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var assertion = WebAuthN.GetAssertion(appId: "1password.com",
-                                                      challenge: extra.Challenge,
-                                                      origin: $"https://{credentials.Domain}",
-                                                      crossOrigin: false,
-                                                      keyHandles: extra.KeyHandles);
+                var assertion = WebAuthN.GetAssertion(
+                    appId: "1password.com",
+                    challenge: extra.Challenge,
+                    origin: $"https://{credentials.Domain}",
+                    crossOrigin: false,
+                    keyHandles: extra.KeyHandles
+                );
 
-                return SecondFactorResult.Done(new Dictionary<string, string>
-                                               {
-                                                   ["keyHandle"] = assertion.KeyHandle,
-                                                   ["signature"] = assertion.Signature,
-                                                   ["authData"] = assertion.AuthData,
-                                                   ["clientData"] = assertion.ClientData,
-                                               },
-                                               rememberMe.RememberMe);
+                return SecondFactorResult.Done(
+                    new Dictionary<string, string>
+                    {
+                        ["keyHandle"] = assertion.KeyHandle,
+                        ["signature"] = assertion.Signature,
+                        ["authData"] = assertion.AuthData,
+                        ["clientData"] = assertion.ClientData,
+                    },
+                    rememberMe.RememberMe
+                );
             }
             catch (CanceledException)
             {
@@ -606,10 +569,7 @@ namespace PasswordManagerAccess.OnePassword
 
             var isV1 = extra.Url.IsNullOrEmpty();
             var result = isV1
-                ? DuoV1.Authenticate(CheckParam(extra.Host, "host"),
-                                     CheckParam(extra.Signature, "sigRequest"),
-                                     ui,
-                                     rest.Transport)
+                ? DuoV1.Authenticate(CheckParam(extra.Host, "host"), CheckParam(extra.Signature, "sigRequest"), ui, rest.Transport)
                 : DuoV4.Authenticate(extra.Url, ui, rest.Transport);
 
             if (result == null)
@@ -617,16 +577,11 @@ namespace PasswordManagerAccess.OnePassword
 
             var key = isV1 ? "sigResponse" : "code";
             var note = isV1 ? "v1" : "v4";
-            return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Code },
-                                           result.RememberMe,
-                                           note);
+            return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Code }, result.RememberMe, note);
         }
 
         // Returns "remember me" token when successful
-        internal static string SubmitSecondFactorResult(SecondFactorKind factor,
-                                                        SecondFactorResult result,
-                                                        AesKey sessionKey,
-                                                        RestClient rest)
+        internal static string SubmitSecondFactorResult(SecondFactorKind factor, SecondFactorResult result, AesKey sessionKey, RestClient rest)
         {
             var key = factor switch
             {
@@ -644,15 +599,17 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var response = PostEncryptedJson<R.Mfa>("v1/auth/mfa",
-                                                        new Dictionary<string, object>
-                                                        {
-                                                            ["sessionID"] = sessionKey.Id,
-                                                            ["client"] = ClientId,
-                                                            [key] = result.Parameters,
-                                                        },
-                                                        sessionKey,
-                                                        rest);
+                var response = PostEncryptedJson<R.Mfa>(
+                    "v1/auth/mfa",
+                    new Dictionary<string, object>
+                    {
+                        ["sessionID"] = sessionKey.Id,
+                        ["client"] = ClientId,
+                        [key] = result.Parameters,
+                    },
+                    sessionKey,
+                    rest
+                );
 
                 return response.RememberMeToken;
             }
@@ -668,7 +625,8 @@ namespace PasswordManagerAccess.OnePassword
             return GetEncryptedJson<R.AccountInfo>(
                 "v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
                 sessionKey,
-                rest);
+                rest
+            );
         }
 
         internal static R.KeysetsInfo GetKeysets(AesKey sessionKey, RestClient rest)
@@ -705,10 +663,7 @@ namespace PasswordManagerAccess.OnePassword
             return (acl & haveReadAccess) != 0;
         }
 
-        internal static Account[] GetVaultAccounts(string id,
-                                                   Keychain keychain,
-                                                   AesKey sessionKey,
-                                                   RestClient rest)
+        internal static Account[] GetVaultAccounts(string id, Keychain keychain, AesKey sessionKey, RestClient rest)
         {
             return EnumerateAccountsItemsInVault(id, sessionKey, rest)
                 .Where(ShouldKeepAccount)
@@ -718,9 +673,7 @@ namespace PasswordManagerAccess.OnePassword
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
         // Don't enumerate more than once. It's very slow since it makes network requests.
-        internal static IEnumerable<R.VaultItem> EnumerateAccountsItemsInVault(string id,
-                                                                               AesKey sessionKey,
-                                                                               RestClient rest)
+        internal static IEnumerable<R.VaultItem> EnumerateAccountsItemsInVault(string id, AesKey sessionKey, RestClient rest)
         {
             var batchId = 0;
             while (true)
@@ -766,10 +719,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static void DecryptKeysets(R.KeysetInfo[] keysets, Credentials credentials, Keychain keychain)
         {
             // Find the master keyset
-            var masterKeyset = keysets
-                .Where(x => x.EncryptedBy == MasterKeyId)
-                .OrderByDescending(x => x.SerialNumber)
-                .FirstOrDefault();
+            var masterKeyset = keysets.Where(x => x.EncryptedBy == MasterKeyId).OrderByDescending(x => x.SerialNumber).FirstOrDefault();
 
             if (masterKeyset is null)
                 throw new InternalErrorException("Master keyset not found");
@@ -778,10 +728,14 @@ namespace PasswordManagerAccess.OnePassword
             // In case we're logged in via a service account, we should have the master unlock key (MUK)
             // already provided by the token itself. It's passed in the credentials.
             var keyInfo = masterKeyset.KeyOrMasterKey;
-            var masterKey = credentials.Key ?? DeriveMasterKey(algorithm: keyInfo.Algorithm,
-                                                               iterations: keyInfo.Iterations,
-                                                               salt: keyInfo.Salt.Decode64Loose(),
-                                                               credentials: credentials);
+            var masterKey =
+                credentials.Key
+                ?? DeriveMasterKey(
+                    algorithm: keyInfo.Algorithm,
+                    iterations: keyInfo.Iterations,
+                    salt: keyInfo.Salt.Decode64Loose(),
+                    credentials: credentials
+                );
             keychain.Add(masterKey);
 
             // Build a topological map: key -> other keys encrypted by that key
@@ -805,9 +759,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static string GetEncryptedBy(R.KeysetInfo keyset)
         {
-            return keyset.EncryptedBy.IsNullOrEmpty()
-                ? keyset.KeyOrMasterKey.KeyId
-                : keyset.EncryptedBy;
+            return keyset.EncryptedBy.IsNullOrEmpty() ? keyset.KeyOrMasterKey.KeyId : keyset.EncryptedBy;
         }
 
         internal static void DecryptKeyset(R.KeysetInfo keyset, Keychain keychain)
@@ -816,10 +768,7 @@ namespace PasswordManagerAccess.OnePassword
             Util.DecryptRsaKey(keyset.PrivateKey, keychain);
         }
 
-        internal static AesKey DeriveMasterKey(string algorithm,
-                                               int iterations,
-                                               byte[] salt,
-                                               Credentials credentials)
+        internal static AesKey DeriveMasterKey(string algorithm, int iterations, byte[] salt, Credentials credentials)
         {
             // TODO: Check if the Unicode normalization is the correct one. This could be done
             //       by either trying to call the original JS functions in the browser console
@@ -845,9 +794,7 @@ namespace PasswordManagerAccess.OnePassword
             if (serverError != null)
                 return serverError;
 
-            return new InternalErrorException(
-                $"Invalid or unexpected response from the server (HTTP status: {response.StatusCode})",
-                response.Error);
+            return new InternalErrorException($"Invalid or unexpected response from the server (HTTP status: {response.StatusCode})", response.Error);
         }
 
         // Returns null when no error is found
@@ -858,11 +805,10 @@ namespace PasswordManagerAccess.OnePassword
                 var error = JsonConvert.DeserializeObject<R.Error>(response);
                 switch (error.Code)
                 {
-                case 102:
-                    return new BadCredentialsException("Username, password or account key is incorrect");
-                default:
-                    return new InternalErrorException(
-                        $"The server responded with the error code {error.Code} and the message '{error.Message}'");
+                    case 102:
+                        return new BadCredentialsException("Username, password or account key is incorrect");
+                    default:
+                        return new InternalErrorException($"The server responded with the error code {error.Code} and the message '{error.Message}'");
                 }
             }
             catch (JsonException)
@@ -884,9 +830,7 @@ namespace PasswordManagerAccess.OnePassword
             return null;
         }
 
-        internal static T GetEncryptedJson<T>(string endpoint,
-                                              AesKey sessionKey,
-                                              RestClient rest)
+        internal static T GetEncryptedJson<T>(string endpoint, AesKey sessionKey, RestClient rest)
         {
             var response = rest.Get<R.Encrypted>(endpoint);
             if (!response.IsSuccessful)
@@ -895,10 +839,7 @@ namespace PasswordManagerAccess.OnePassword
             return DecryptResponse<T>(response.Data, sessionKey);
         }
 
-        internal static T PostEncryptedJson<T>(string endpoint,
-                                               Dictionary<string, object> parameters,
-                                               AesKey sessionKey,
-                                               RestClient rest)
+        internal static T PostEncryptedJson<T>(string endpoint, Dictionary<string, object> parameters, AesKey sessionKey, RestClient rest)
         {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
@@ -917,7 +858,7 @@ namespace PasswordManagerAccess.OnePassword
             // First check for server errors. It's possible to deserialize the returned error object
             // into one of the target types by mistake when the type has no mandatory fields.
             // `Response.Mfa` would be one of those.
-            if (ParseServerError(plaintext) is {} serverError)
+            if (ParseServerError(plaintext) is { } serverError)
                 throw serverError;
 
             try
@@ -958,9 +899,7 @@ namespace PasswordManagerAccess.OnePassword
         private const string RememberMeTokenKey = "remember-me-token";
 
         private static SecondFactorKind[] SecondFactorPriority =>
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? SecondFactorPriorityWindows
-                : SecondFactorPriorityOtherPlatforms;
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? SecondFactorPriorityWindows : SecondFactorPriorityOtherPlatforms;
 
         private static readonly SecondFactorKind[] SecondFactorPriorityWindows =
         {

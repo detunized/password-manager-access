@@ -24,5 +24,4 @@ namespace PasswordManagerAccess.ZohoVault.Ui
             RememberMe = rememberMe;
         }
     }
-
 }

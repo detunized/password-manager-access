@@ -12,8 +12,7 @@ namespace PasswordManagerAccess.Test.OpVault
         [Fact]
         public void DeriveKek_returns_key()
         {
-            var expected = new KeyMac("a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzuf" +
-                                      "hnDVeB4cDrxnTsPFYMTvpHboE8MPGg==");
+            var expected = new KeyMac("a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzuf" + "hnDVeB4cDrxnTsPFYMTvpHboE8MPGg==");
             var kek = Util.DeriveKek("password".ToBytes(), "pzJ5y/CiCeU8Sbo8+k4/zg==".Decode64(), 40000);
 
             Assert.Equal(expected.Key, kek.Key);
@@ -24,9 +23,7 @@ namespace PasswordManagerAccess.Test.OpVault
         public void DecryptAes_returns_plaintext_without_padding()
         {
             // Generated with Ruby/openssl
-            var plaintext = Util.DecryptAes("yNVOKI5bgIJ0lPdVszvlEQ==".Decode64(),
-                                            "iviviviviviviviv".ToBytes(),
-                                            TestKey);
+            var plaintext = Util.DecryptAes("yNVOKI5bgIJ0lPdVszvlEQ==".Decode64(), "iviviviviviviviv".ToBytes(), TestKey);
 
             Assert.Equal("decrypted data!!".ToBytes(), plaintext);
         }
@@ -35,7 +32,6 @@ namespace PasswordManagerAccess.Test.OpVault
         // Data
         //
 
-        private static readonly KeyMac TestKey =
-            new KeyMac("key!key!key!key!key!key!key!key!saltsaltsaltsaltsaltsaltsaltsalt".ToBytes());
+        private static readonly KeyMac TestKey = new KeyMac("key!key!key!key!key!key!key!key!saltsaltsaltsaltsaltsaltsaltsalt".ToBytes());
     }
 }

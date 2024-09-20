@@ -9,17 +9,12 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.ProtonPass
 {
-    public class VaultTest: TestBase
+    public class VaultTest : TestBase
     {
         [Fact(Skip = "TODO: need to add a flow of requests")]
         public async Task Open_returns_a_vault()
         {
-            var vaults = await Vault.OpenAll("username",
-                                             "password",
-                                             null!,
-                                             null!,
-                                             new RestFlow(),
-                                             new CancellationTokenSource().Token);
+            var vaults = await Vault.OpenAll("username", "password", null!, null!, new RestFlow(), new CancellationTokenSource().Token);
             vaults.Should().NotBeEmpty();
         }
     }

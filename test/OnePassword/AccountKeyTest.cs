@@ -54,8 +54,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void CombineWith_returnes_hashed_key()
         {
-            Assert.Equal("Jz5asWNCDiVPjIaWKMmTUPtDZihClN8CwdZNMzWODsk".Decode64Loose(),
-                         Key.CombineWith("All your base are belong to us!!".ToBytes()));
+            Assert.Equal(
+                "Jz5asWNCDiVPjIaWKMmTUPtDZihClN8CwdZNMzWODsk".Decode64Loose(),
+                Key.CombineWith("All your base are belong to us!!".ToBytes())
+            );
         }
 
         [Theory]

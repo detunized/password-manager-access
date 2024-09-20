@@ -36,7 +36,8 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             Exceptions.AssertThrowsBadCredentials(
                 () => Parser.ParseAccounts(Db, "incorrect password", new DbProvider()),
-                "Password verification failed");
+                "Password verification failed"
+            );
         }
 
         [Fact]
@@ -44,7 +45,8 @@ namespace PasswordManagerAccess.Test.StickyPassword
         {
             Exceptions.AssertThrowsInternalError(
                 () => Parser.ParseAccounts(CorruptedDb, Password, new CorruptedDbProvider()),
-                "Failed to open the SQLite database");
+                "Failed to open the SQLite database"
+            );
         }
 
         [Fact]
@@ -70,9 +72,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 Assert.Equal(Db, db);
             }
 
-            public void Close()
-            {
-            }
+            public void Close() { }
 
             public IEnumerable<object[]> Query(string sql)
             {
@@ -80,12 +80,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 {
                     return new[]
                     {
-                        new object[]
-                        {
-                            1L,
-                            "ab3034fb5d428bda9292325e809b6c08".DecodeHex(),
-                            "c36129e96a29beec51da4b82f51ef85a".DecodeHex(),
-                        }
+                        new object[] { 1L, "ab3034fb5d428bda9292325e809b6c08".DecodeHex(), "c36129e96a29beec51da4b82f51ef85a".DecodeHex() },
                     };
                 }
 
@@ -99,7 +94,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                             "3424b5bf783f64d8588eaa8a6385a618".DecodeHex(),
                             "9a63cbee55039ec38737d6c7e80419a1594fc6bd633d188fb890a0747f84797af9398aee79020dbfd69400ce937c6062".DecodeHex(),
                             "4b8a3f8b336ac65a14d3376b2fc2ef7069f4cf8eb888f075f029e33060a4238d".DecodeHex(),
-                        }
+                        },
                     };
                 }
 
@@ -112,7 +107,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                             "20f61ca1ff49a53948e46d363db67331".DecodeHex(),
                             "ff8f18d2b0ff9013302bfe4e75d88af7".DecodeHex(),
                             "b384d316134d7caf90535d97ec5411a5".DecodeHex(),
-                        }
+                        },
                     };
                 }
 
@@ -128,9 +123,7 @@ namespace PasswordManagerAccess.Test.StickyPassword
                 throw new SqliteProviderError("Failed to open the database");
             }
 
-            public void Close()
-            {
-            }
+            public void Close() { }
 
             public IEnumerable<object[]> Query(string sql)
             {
@@ -152,17 +145,27 @@ namespace PasswordManagerAccess.Test.StickyPassword
         private static readonly byte[] CorruptedDb = "not an sqlite databate".ToBytes();
 
         // The actual bytes from the user database
-        private static readonly byte[] KeySalt =
-        {
-            0x63, 0x51, 0xee, 0x97, 0x8c, 0x6e, 0xe0, 0xd8,
-            0x1e, 0x66, 0xdf, 0x61, 0x90, 0x3a, 0x5a, 0x88
-        };
+        private static readonly byte[] KeySalt = { 0x63, 0x51, 0xee, 0x97, 0x8c, 0x6e, 0xe0, 0xd8, 0x1e, 0x66, 0xdf, 0x61, 0x90, 0x3a, 0x5a, 0x88 };
 
         // The actual bytes from the user database
         private static readonly byte[] KeyVerification =
         {
-            0x08, 0xbc, 0x5a, 0x27, 0x4d, 0x4b, 0xd6, 0x42,
-            0x9e, 0xf5, 0x9b, 0x95, 0x4d, 0xd1, 0x2b, 0xfd
+            0x08,
+            0xbc,
+            0x5a,
+            0x27,
+            0x4d,
+            0x4b,
+            0xd6,
+            0x42,
+            0x9e,
+            0xf5,
+            0x9b,
+            0x95,
+            0x4d,
+            0xd1,
+            0x2b,
+            0xfd,
         };
     }
 }

@@ -13,11 +13,13 @@ namespace PasswordManagerAccess.Kaspersky
     // TODO: The protocol is very poorly tested. Write more tests!
     internal static class Client
     {
-        public static Account[] OpenVault(string username,
-                                          string accountPassword,
-                                          string vaultPassword,
-                                          IRestTransport restTransport,
-                                          IBoshTransport boshTransport)
+        public static Account[] OpenVault(
+            string username,
+            string accountPassword,
+            string vaultPassword,
+            IRestTransport restTransport,
+            IBoshTransport boshTransport
+        )
         {
             var rest = new RestClient(restTransport);
 
@@ -52,8 +54,8 @@ namespace PasswordManagerAccess.Kaspersky
                 var dbInfoBlob = bosh.GetChanges(GetDatabaseInfoCommand, GetDatabaseInfoCommandId)
                     .Where(x => x.Type == "Database")
                     .Select(x => x.Data)
-                    .FirstOrDefault()?
-                    .Decode64();
+                    .FirstOrDefault()
+                    ?.Decode64();
 
                 if (dbInfoBlob == null)
                     throw MakeError("Database info is not found in the response");
@@ -85,9 +87,7 @@ namespace PasswordManagerAccess.Kaspersky
         // Internal
         //
 
-        internal static (string SessionCookie, Dictionary<string, string> AuthCookiess) Login(string username,
-                                                                                              string password,
-                                                                                              RestClient rest)
+        internal static (string SessionCookie, Dictionary<string, string> AuthCookiess) Login(string username, string password, RestClient rest)
         {
             // 1. Request login context token
             var context = RequestLoginContext(rest);
@@ -108,7 +108,8 @@ namespace PasswordManagerAccess.Kaspersky
         {
             var response = rest.PostJson<R.Start>(
                 "https://hq.uis.kaspersky.com/v3/logon/start",
-                new Dictionary<string, object> {["Realm"] = "https://center.kaspersky.com/"});
+                new Dictionary<string, object> { ["Realm"] = "https://center.kaspersky.com/" }
+            );
 
             if (response.IsSuccessful)
                 return response.Data.Context;
@@ -128,28 +129,26 @@ namespace PasswordManagerAccess.Kaspersky
                     ["locale"] = "en",
                     ["captchaType"] = "invisible_recaptcha",
                     ["captchaAnswer"] = "undefined",
-                });
+                }
+            );
 
             switch (response.Data.Status)
             {
-            case "Success":
-                if (response.IsSuccessful)
-                    return;
-                break;
+                case "Success":
+                    if (response.IsSuccessful)
+                        return;
+                    break;
 
-            case "InvalidRegistrationData":
-                if (response.IsHttpError)
-                    throw new BadCredentialsException("The username or password is incorrect");
-                break;
+                case "InvalidRegistrationData":
+                    if (response.IsHttpError)
+                        throw new BadCredentialsException("The username or password is incorrect");
+                    break;
             }
 
-            throw response.IsSuccessful
-                ? MakeError($"Unexpected response from {response.RequestUri}")
-                : MakeError(response);
+            throw response.IsSuccessful ? MakeError($"Unexpected response from {response.RequestUri}") : MakeError(response);
         }
 
-        internal static (string Token, string Cookie) RequestUserTokenAndSessionCookie(string loginContext,
-                                                                                       RestClient rest)
+        internal static (string Token, string Cookie) RequestUserTokenAndSessionCookie(string loginContext, RestClient rest)
         {
             var response = rest.PostJson<R.UserToken>(
                 "https://hq.uis.kaspersky.com/v3/logon/complete_active",
@@ -158,7 +157,8 @@ namespace PasswordManagerAccess.Kaspersky
                     ["logonContext"] = loginContext,
                     ["TokenType"] = "SamlDeflate",
                     ["RememberMe"] = false,
-                });
+                }
+            );
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -180,10 +180,8 @@ namespace PasswordManagerAccess.Kaspersky
                     ["rememberMe"] = false,
                     ["resendActivationLink"] = false,
                 },
-                headers: new Dictionary<string, string>
-                {
-                    ["x-requested-with"] = "XMLHttpRequest"
-                });
+                headers: new Dictionary<string, string> { ["x-requested-with"] = "XMLHttpRequest" }
+            );
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -210,26 +208,19 @@ namespace PasswordManagerAccess.Kaspersky
             // We disable the redirects and make a couple of requests manually. The HTTP
             // errors are ignored deliberately not to fail the whole vault fetching process.
 
-            rest.PostForm("https://my.kaspersky.com/SignIn/SignOutTo",
-                          RestClient.NoParameters,
-                          headers: new Dictionary<string, string>()
-                          {
-                              ["Accept"] = "*/*",
-                              ["Host"] = "my.kaspersky.com",
-                          },
-                          cookies: authCookies);
+            rest.PostForm(
+                "https://my.kaspersky.com/SignIn/SignOutTo",
+                RestClient.NoParameters,
+                headers: new Dictionary<string, string>() { ["Accept"] = "*/*", ["Host"] = "my.kaspersky.com" },
+                cookies: authCookies
+            );
 
-            rest.Get("https://hq.uis.kaspersky.com/v3/authenticate?wa=wsignout1.0",
-                     headers: new Dictionary<string, string>()
-                     {
-                         ["Accept"] = "*/*",
-                         ["Host"] = "hq.uis.kaspersky.com",
-                     },
-                     cookies: new Dictionary<string, string>
-                     {
-                         [SessionCookieName] = sessionCookie,
-                     },
-                     maxRedirects: 0);
+            rest.Get(
+                "https://hq.uis.kaspersky.com/v3/authenticate?wa=wsignout1.0",
+                headers: new Dictionary<string, string>() { ["Accept"] = "*/*", ["Host"] = "hq.uis.kaspersky.com" },
+                cookies: new Dictionary<string, string> { [SessionCookieName] = sessionCookie },
+                maxRedirects: 0
+            );
         }
 
         internal static R.XmppSettings GetXmppInfo(Dictionary<string, string> authCookies, RestClient rest)
@@ -355,7 +346,7 @@ namespace PasswordManagerAccess.Kaspersky
         //
 
         internal const string SessionCookieName = "AuthSession";
-        internal static readonly string[] AuthCookieNames = {"myk_sid", "myk_auth"};
+        internal static readonly string[] AuthCookieNames = { "myk_sid", "myk_auth" };
 
         internal const string DeviceKind = "browser";
         internal const int ServiceId = 5;
@@ -367,6 +358,6 @@ namespace PasswordManagerAccess.Kaspersky
         internal const string GetDatabaseCommand = "kpmgetserverchangecommand";
         internal const string GetDatabaseCommandId = "660529337";
 
-        internal static readonly int[] SupportedDbVersions = {Parser.Version8, Parser.Version9};
+        internal static readonly int[] SupportedDbVersions = { Parser.Version8, Parser.Version9 };
     }
 }

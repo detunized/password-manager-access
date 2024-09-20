@@ -7,10 +7,10 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class RsaKey: IDecryptor
+    internal class RsaKey : IDecryptor
     {
         public const string ContainerType = "b5+jwk+json";
-        public static readonly string[] EncryptionSchemes = {OaepSha1, OaepSha256};
+        public static readonly string[] EncryptionSchemes = { OaepSha1, OaepSha256 };
 
         public readonly string Id;
         public readonly RSAParameters Parameters;

@@ -164,9 +164,7 @@ namespace PasswordManagerAccess.RoboForm
                 throw ParseError("Content is too short");
 
             // Default is PKCS7 padding
-            var padding = extra.Length > 0 && (extra[0] & 1) != 0
-                ? PaddingMode.None
-                : PaddingMode.PKCS7;
+            var padding = extra.Length > 0 && (extra[0] & 1) != 0 ? PaddingMode.None : PaddingMode.PKCS7;
 
             // KDF produces both the key and IVs
             var keyIv = kdf(password.ToBytes(), salt, (int)iterations, 64);

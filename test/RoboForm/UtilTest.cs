@@ -27,8 +27,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         public void ComputeClientKey_returns_key()
         {
             // Generated with the original JavaScript code
-            Assert.Equal("8sbDhSTLwbl0FhiHAxFxGUQvQwcr4JIbpExO64+Jj8o=".Decode64(),
-                         Util.ComputeClientKey(TestData.Password, TestData.AuthInfo));
+            Assert.Equal("8sbDhSTLwbl0FhiHAxFxGUQvQwcr4JIbpExO64+Jj8o=".Decode64(), Util.ComputeClientKey(TestData.Password, TestData.AuthInfo));
         }
 
         [Fact]
@@ -37,8 +36,7 @@ namespace PasswordManagerAccess.Test.RoboForm
             // TODO: Generate a test case with MD5
 
             // Generated with the original JavaScript code
-            Assert.Equal("b+rd7TUt65+hdE7+lHCBPPWHjxbq6qs0y7zufYfqHto=".Decode64(),
-                         Util.HashPassword(TestData.Password, TestData.AuthInfo));
+            Assert.Equal("b+rd7TUt65+hdE7+lHCBPPWHjxbq6qs0y7zufYfqHto=".Decode64(), Util.HashPassword(TestData.Password, TestData.AuthInfo));
         }
     }
 }

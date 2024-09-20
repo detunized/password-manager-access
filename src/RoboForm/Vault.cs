@@ -15,9 +15,7 @@ namespace PasswordManagerAccess.RoboForm
         // not a good idea. See bellow.
         public static Vault Open(string username, string password, string deviceId, Ui ui)
         {
-            var clientInfo = new ClientInfo(username: username,
-                                            password: password,
-                                            deviceId: deviceId);
+            var clientInfo = new ClientInfo(username: username, password: password, deviceId: deviceId);
             using var transport = new RestTransport();
 
             return Open(clientInfo, ui, transport);

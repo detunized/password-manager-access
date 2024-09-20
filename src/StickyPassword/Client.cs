@@ -19,12 +19,7 @@ namespace PasswordManagerAccess.StickyPassword
     internal static class Client
     {
         // TODO: It's impossible to test this function because of the S3.* static calls.
-        public static byte[] OpenVaultDb(string username,
-                                         string password,
-                                         string deviceId,
-                                         string deviceName,
-                                         IUi ui,
-                                         IRestTransport transport)
+        public static byte[] OpenVaultDb(string username, string password, string deviceId, string deviceName, IUi ui, IRestTransport transport)
         {
             var rest = new RestClient(transport, "https://spcb.stickypassword.com/SPCClient/");
 
@@ -49,10 +44,12 @@ namespace PasswordManagerAccess.StickyPassword
         // Internal (accessed by the tests)
         //
 
-        internal static (byte[] EncryptedToken, string Passcode) GetEncryptedTokenAndPasscode(string username,
-                                                                                              string deviceId,
-                                                                                              IUi ui,
-                                                                                              RestClient rest)
+        internal static (byte[] EncryptedToken, string Passcode) GetEncryptedTokenAndPasscode(
+            string username,
+            string deviceId,
+            IUi ui,
+            RestClient rest
+        )
         {
             byte[] GetToken(string code) => GetEncryptedToken(username, deviceId, code, DateTime.Now, rest);
 
@@ -62,7 +59,7 @@ namespace PasswordManagerAccess.StickyPassword
                 return (encryptedToken, NoPasscode);
 
             // It's a new device, the email PIN is required
-            for (;;)
+            for (; ; )
             {
                 var passcode = ui.ProvideEmailPasscode();
                 if (passcode == Passcode.Cancel)
@@ -88,29 +85,25 @@ namespace PasswordManagerAccess.StickyPassword
         // master password. The user should decrypt it and supply with the subsequent POST
         // requests. If the password is incorrect, the following calls will be rejected with
         // the 401 code and the database with fail to download.
-        internal static byte[] GetEncryptedToken(string username,
-                                                 string deviceId,
-                                                 string passcode,
-                                                 DateTime timestamp,
-                                                 RestClient rest)
+        internal static byte[] GetEncryptedToken(string username, string deviceId, string passcode, DateTime timestamp, RestClient rest)
         {
-            var parameters = new Dictionary<string, object>(2) {["uaid"] = username};
+            var parameters = new Dictionary<string, object>(2) { ["uaid"] = username };
             if (!passcode.IsNullOrEmpty())
                 parameters["pin"] = passcode;
 
             var response = Post(rest, "GetCrpToken", deviceId, timestamp, parameters);
             switch (response.Status)
             {
-            case "0":
-                return response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken").Decode64();
-            case "1006":
-                throw new BadCredentialsException("Invalid username");
-            case "4002":
-                return EmailPasscodeRequired;
-            case "4003":
-                throw new BadMultiFactorException("Second factor code is not correct");
-            default:
-                throw CreateException("retrieve the encrypted token", response);
+                case "0":
+                    return response.Get("/SpcResponse/GetCrpTokenResponse/CrpToken").Decode64();
+                case "1006":
+                    throw new BadCredentialsException("Invalid username");
+                case "4002":
+                    return EmailPasscodeRequired;
+                case "4003":
+                    throw new BadMultiFactorException("Second factor code is not correct");
+                default:
+                    throw CreateException("retrieve the encrypted token", response);
             }
         }
 
@@ -119,51 +112,37 @@ namespace PasswordManagerAccess.StickyPassword
         // The name is the model of the device on Android. The device must be registered before
         // it could be used to download the database. It doesn't return any information back from
         // the server.
-        internal static void AuthorizeDevice(string username,
-                                             byte[] token,
-                                             string deviceId,
-                                             string deviceName,
-                                             string passcode,
-                                             DateTime timestamp,
-                                             RestClient rest)
+        internal static void AuthorizeDevice(
+            string username,
+            byte[] token,
+            string deviceId,
+            string deviceName,
+            string passcode,
+            DateTime timestamp,
+            RestClient rest
+        )
         {
-            var parameters = new Dictionary<string, object>(2) {["hid"] = deviceName};
+            var parameters = new Dictionary<string, object>(2) { ["hid"] = deviceName };
             if (!passcode.IsNullOrEmpty())
                 parameters["pin"] = passcode;
 
-            var response = Post(rest,
-                                "DevAuth",
-                                deviceId,
-                                timestamp,
-                                parameters,
-                                username,
-                                token);
+            var response = Post(rest, "DevAuth", deviceId, timestamp, parameters, username, token);
 
             switch (response.Status)
             {
-            case "0": // A new device just got registered
-            case "4005": // The device is known and has been registered in the past
-                return;
-            default:
-                throw CreateException("authorize the device", response);
+                case "0": // A new device just got registered
+                case "4005": // The device is known and has been registered in the past
+                    return;
+                default:
+                    throw CreateException("authorize the device", response);
             }
         }
 
         // This function requests the AWS S3 access token and some additional info that
         // is needed to download the database info and the database itself.
-        internal static S3Token GetS3Token(string username,
-                                           byte[] token,
-                                           string deviceId,
-                                           DateTime timestamp,
-                                           RestClient rest)
+        internal static S3Token GetS3Token(string username, byte[] token, string deviceId, DateTime timestamp, RestClient rest)
         {
-            var response = Post(rest,
-                                "GetS3Token",
-                                deviceId,
-                                timestamp,
-                                RestClient.NoParameters,
-                                username,
-                                token);
+            var response = Post(rest, "GetS3Token", deviceId, timestamp, RestClient.NoParameters, username, token);
 
             if (response.Status != "0")
                 throw CreateException("retrieve the S3 token", response);
@@ -253,13 +232,15 @@ namespace PasswordManagerAccess.StickyPassword
             private readonly XmlNamespaceManager _namespaceManager;
         }
 
-        internal static XmlResponse Post(RestClient rest,
-                                         string endpoint,
-                                         string deviceId,
-                                         DateTime timestamp,
-                                         Dictionary<string, object> parameters,
-                                         string username = null,
-                                         byte[] token = null)
+        internal static XmlResponse Post(
+            RestClient rest,
+            string endpoint,
+            string deviceId,
+            DateTime timestamp,
+            Dictionary<string, object> parameters,
+            string username = null,
+            byte[] token = null
+        )
         {
             var headers = new Dictionary<string, string>
             {
@@ -284,8 +265,7 @@ namespace PasswordManagerAccess.StickyPassword
             if (response.StatusCode == HttpStatusCode.Unauthorized)
                 throw new BadCredentialsException("The password is incorrect");
 
-            throw new InternalErrorException(
-                $"HTTP request to '{response.RequestUri}' failed with status {response.StatusCode}");
+            throw new InternalErrorException($"HTTP request to '{response.RequestUri}' failed with status {response.StatusCode}");
         }
 
         //
@@ -357,6 +337,6 @@ namespace PasswordManagerAccess.StickyPassword
         internal static readonly CultureInfo EnUs = new CultureInfo("en-US");
 
         internal const string NoPasscode = "";
-        internal static readonly byte[] EmailPasscodeRequired = {(byte)'P', (byte)'I', (byte)'N'};
+        internal static readonly byte[] EmailPasscodeRequired = { (byte)'P', (byte)'I', (byte)'N' };
     }
 }

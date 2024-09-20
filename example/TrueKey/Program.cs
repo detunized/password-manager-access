@@ -4,58 +4,59 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using PasswordManagerAccess.TrueKey;
 using PasswordManagerAccess.Example.Common;
+using PasswordManagerAccess.TrueKey;
 
 namespace PasswordManagerAccess.Example.TrueKey
 {
     public static class Program
     {
-        private class TextUi: Ui
+        private class TextUi : Ui
         {
             public override Answer AskToWaitForEmail(string email, Answer[] validAnswers)
             {
-                var answer = AskForAnswer($"A verification email is sent to '{email}'.\n" +
-                                          "Please check the inbox, confirm and then press enter.\n" +
-                                          $"Enter 'r' to resend the email to '{email}'.");
+                var answer = AskForAnswer(
+                    $"A verification email is sent to '{email}'.\n"
+                        + "Please check the inbox, confirm and then press enter.\n"
+                        + $"Enter 'r' to resend the email to '{email}'."
+                );
 
                 switch (answer.ToLowerInvariant())
                 {
-                case "r":
-                    return Answer.Resend;
-                default:
-                    return Answer.Check;
+                    case "r":
+                        return Answer.Resend;
+                    default:
+                        return Answer.Check;
                 }
             }
 
             public override Answer AskToWaitForOob(string name, string email, Answer[] validAnswers)
             {
-                var answer = AskForAnswer($"A push message is sent to '{name}'.\n" +
-                                          "Please check, confirm and then press enter.\n" +
-                                          $"Enter 'r' to resend the push message to '{name}'.\n" +
-                                          $"Enter 'e' to send a verification email to '{email}' instead.");
+                var answer = AskForAnswer(
+                    $"A push message is sent to '{name}'.\n"
+                        + "Please check, confirm and then press enter.\n"
+                        + $"Enter 'r' to resend the push message to '{name}'.\n"
+                        + $"Enter 'e' to send a verification email to '{email}' instead."
+                );
 
                 switch (answer.ToLowerInvariant())
                 {
-                case "r":
-                    return Answer.Resend;
-                case "e":
-                    return Answer.Email;
-                default:
-                    return Answer.Check;
+                    case "r":
+                        return Answer.Resend;
+                    case "e":
+                        return Answer.Email;
+                    default:
+                        return Answer.Check;
                 }
             }
 
             public override Answer AskToChooseOob(string[] names, string email, Answer[] validAnswers)
             {
-                var text = new List<string>(names.Length + 2)
-                {
-                    "Please choose the second factor method:"
-                };
+                var text = new List<string>(names.Length + 2) { "Please choose the second factor method:" };
                 text.AddRange(names.Select((name, index) => $" - {index + 1}: push message to '{name}'"));
                 text.Add($" - e: verification email to '{email}'");
 
-                for (;;)
+                for (; ; )
                 {
                     var answer = AskForAnswer(string.Join("\n", text));
 
@@ -94,20 +95,22 @@ namespace PasswordManagerAccess.Example.TrueKey
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];
-                    Console.WriteLine("{0}:\n" +
-                                      "          id: {1}\n" +
-                                      "        name: {2}\n" +
-                                      "    username: {3}\n" +
-                                      "    password: {4}\n" +
-                                      "         url: {5}\n" +
-                                      "        note: {6}\n",
-                                      i + 1,
-                                      account.Id,
-                                      account.Name,
-                                      account.Username,
-                                      account.Password,
-                                      account.Url,
-                                      account.Note);
+                    Console.WriteLine(
+                        "{0}:\n"
+                            + "          id: {1}\n"
+                            + "        name: {2}\n"
+                            + "    username: {3}\n"
+                            + "    password: {4}\n"
+                            + "         url: {5}\n"
+                            + "        note: {6}\n",
+                        i + 1,
+                        account.Id,
+                        account.Name,
+                        account.Username,
+                        account.Password,
+                        account.Url,
+                        account.Note
+                    );
                 }
             }
             catch (Exception e)

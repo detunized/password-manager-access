@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace PasswordManagerAccess.Common
 {
-    internal class ChaCha20CryptoTransform: ICryptoTransform
+    internal class ChaCha20CryptoTransform : ICryptoTransform
     {
         public int InputBlockSize => 1;
         public int OutputBlockSize => 1;
@@ -28,11 +28,7 @@ namespace PasswordManagerAccess.Common
             _engine = engine;
         }
 
-        public int TransformBlock(byte[] inputBuffer,
-                                  int inputOffset,
-                                  int inputCount,
-                                  byte[] outputBuffer,
-                                  int outputOffset)
+        public int TransformBlock(byte[] inputBuffer, int inputOffset, int inputCount, byte[] outputBuffer, int outputOffset)
         {
             _engine.ProcessBytes(inputBuffer, inputOffset, inputCount, outputBuffer, inputOffset);
             return inputCount;

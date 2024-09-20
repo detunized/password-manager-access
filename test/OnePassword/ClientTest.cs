@@ -16,7 +16,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class ClientTest: TestBase
+    public class ClientTest : TestBase
     {
         [Fact]
         public void ParseServiceAccountToken_returns_parsed_token()
@@ -40,16 +40,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         [InlineData("ops_e30")]
         public void ParseServiceAccountToken_throws_on_invalid_token(string token)
         {
-            Exceptions.AssertThrowsInternalError(() => Client.ParseServiceAccountToken(token),
-                                                 "Invalid service account token");
+            Exceptions.AssertThrowsInternalError(() => Client.ParseServiceAccountToken(token), "Invalid service account token");
         }
 
         [Fact]
         public void ListAllVaults_returns_vaults()
         {
-            var flow = new RestFlow()
-                .Get(EncryptFixture("get-account-info-response"))
-                .Get(EncryptFixture("get-keysets-response"));
+            var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).Get(EncryptFixture("get-keysets-response"));
             var vaults = Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow);
 
             Assert.NotEmpty(vaults);
@@ -71,10 +68,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void StartNewSession_makes_GET_request_to_specific_url()
         {
-            var flow = new RestFlow()
-                .Get(GetFixture("start-new-session-response"))
-                    .ExpectUrl("1password.com/api/v2/auth")
-                .ToRestClient(ApiUrl);
+            var flow = new RestFlow().Get(GetFixture("start-new-session-response")).ExpectUrl("1password.com/api/v2/auth").ToRestClient(ApiUrl);
 
             Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
         }
@@ -86,7 +80,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsInternalError(
                 () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow),
-                "Failed to start a new session, unsupported response status");
+                "Failed to start a new session, unsupported response status"
+            );
         }
 
         [Fact]
@@ -95,9 +90,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var error = new HttpRequestException("Network error");
             var flow = new RestFlow().Get(error);
 
-            var e = Exceptions.AssertThrowsNetworkError(
-                () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow),
-                "Network error");
+            var e = Exceptions.AssertThrowsNetworkError(() => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow), "Network error");
             Assert.Same(error, e.InnerException);
         }
 
@@ -108,7 +101,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsInternalError(
                 () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow),
-                "The server responded with the failure reason: 'deprecated'");
+                "The server responded with the failure reason: 'deprecated'"
+            );
         }
 
         [Fact]
@@ -118,7 +112,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsInternalError(
                 () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow),
-                "Invalid or unexpected response");
+                "Invalid or unexpected response"
+            );
         }
 
         [Fact]
@@ -132,10 +127,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void RegisterDevice_makes_POST_request_to_specific_url()
         {
-            var flow = new RestFlow()
-                .Post("{'success': 1}")
-                    .ExpectUrl("1password.com/api/v1/device")
-                .ToRestClient(ApiUrl);
+            var flow = new RestFlow().Post("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
 
             Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
         }
@@ -147,7 +139,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsInternalError(
                 () => Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow),
-                "Failed to register the device");
+                "Failed to register the device"
+            );
         }
 
         [Fact]
@@ -161,10 +154,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void ReauthorizeDevice_makes_PUT_request_to_specific_url()
         {
-            var flow = new RestFlow()
-                .Put("{'success': 1}")
-                    .ExpectUrl("1password.com/api/v1/device")
-                .ToRestClient(ApiUrl);
+            var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
 
             Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
         }
@@ -176,7 +166,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsInternalError(
                 () => Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow),
-                "Failed to reauthorize the device");
+                "Failed to reauthorize the device"
+            );
         }
 
         [Fact]
@@ -191,10 +182,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void VerifySessionKey_makes_POST_request_to_specific_url()
         {
-            var flow = new RestFlow()
-                .Post(EncryptFixture("verify-key-response"))
-                    .ExpectUrl("1password.com/api/v2/auth/verify")
-                .ToRestClient(ApiUrl);
+            var flow = new RestFlow().Post(EncryptFixture("verify-key-response")).ExpectUrl("1password.com/api/v2/auth/verify").ToRestClient(ApiUrl);
 
             Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
         }
@@ -215,7 +203,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             Exceptions.AssertThrowsBadCredentials(
                 () => Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow),
-                "Username, password or account key");
+                "Username, password or account key"
+            );
         }
 
         [Fact]
@@ -227,14 +216,10 @@ namespace PasswordManagerAccess.Test.OnePassword
                 Client.SecondFactorKind.RememberMeToken,
                 Client.SecondFactorKind.Duo,
             };
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{" +
-                                                               "'duo': {'enabled': true}, " +
-                                                               "'totp': {'enabled': true}, " +
-                                                               "'dsecret': {'enabled': true}" +
-                                                               "}");
-            var factors = Client.GetSecondFactors(mfa)
-                .Select(x => x.Kind)
-                .ToArray();
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+                "{" + "'duo': {'enabled': true}, " + "'totp': {'enabled': true}, " + "'dsecret': {'enabled': true}" + "}"
+            );
+            var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
 
             Assert.Equal(expected, factors);
         }
@@ -244,9 +229,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
             var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{'totp': {'enabled': true}}");
-            var factors = Client.GetSecondFactors(mfa)
-                .Select(x => x.Kind)
-                .ToArray();
+            var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
 
             Assert.Equal(expected, factors);
         }
@@ -255,14 +238,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetSecondFactors_ignores_disabled_factors()
         {
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{" +
-                                                               "'duo': {'enabled': false}, " +
-                                                               "'totp': {'enabled': true}, " +
-                                                               "'dsecret': {'enabled': false}" +
-                                                               "}");
-            var factors = Client.GetSecondFactors(mfa)
-                .Select(x => x.Kind)
-                .ToArray();
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+                "{" + "'duo': {'enabled': false}, " + "'totp': {'enabled': true}, " + "'dsecret': {'enabled': false}" + "}"
+            );
+            var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
 
             Assert.Equal(expected, factors);
         }
@@ -273,13 +252,9 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow();
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors,
-                                                               Credentials,
-                                                               TestData.SessionKey,
-                                                               new CancelingUi(),
-                                                               null,
-                                                               flow),
-                "Second factor step is canceled by the user");
+                () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors, Credentials, TestData.SessionKey, new CancelingUi(), null, flow),
+                "Second factor step is canceled by the user"
+            );
         }
 
         [Fact]
@@ -300,26 +275,23 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             Exceptions.AssertThrowsInternalError(
                 () => Client.ChooseInteractiveSecondFactor(new Client.SecondFactor[0]),
-                "The list of 2FA methods is empty");
+                "The list of 2FA methods is empty"
+            );
         }
 
         [Fact]
         public void ChooseInteractiveSecondFactor_throws_on_missing_factors()
         {
-            var factors = new[] {new Client.SecondFactor(Client.SecondFactorKind.RememberMeToken)};
+            var factors = new[] { new Client.SecondFactor(Client.SecondFactorKind.RememberMeToken) };
 
-            Exceptions.AssertThrowsInternalError(() => Client.ChooseInteractiveSecondFactor(factors),
-                                                 "doesn't contain any supported methods");
+            Exceptions.AssertThrowsInternalError(() => Client.ChooseInteractiveSecondFactor(factors), "doesn't contain any supported methods");
         }
 
         [Fact]
         public void SubmitSecondFactorCode_returns_remember_me_token()
         {
             var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
-            var token = Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
-                                                        GoogleAuthMfaResult,
-                                                        TestData.SessionKey,
-                                                        flow);
+            var token = Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
 
             Assert.Equal("gUhBItRHUI7vAc04TJNUkA", token);
         }
@@ -327,15 +299,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void SubmitSecondFactorCode_makes_POST_request_to_specific_url()
         {
-            var flow = new RestFlow()
-                .Post(EncryptFixture("mfa-response"))
-                    .ExpectUrl("1password.com/api/v1/auth/mfa")
-                .ToRestClient(ApiUrl);
+            var flow = new RestFlow().Post(EncryptFixture("mfa-response")).ExpectUrl("1password.com/api/v1/auth/mfa").ToRestClient(ApiUrl);
 
-            Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
-                                            GoogleAuthMfaResult,
-                                            TestData.SessionKey,
-                                            flow);
+            Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
         }
 
         [Fact]
@@ -344,11 +310,9 @@ namespace PasswordManagerAccess.Test.OnePassword
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator,
-                                                      GoogleAuthMfaResult,
-                                                      TestData.SessionKey,
-                                                      flow),
-                "Incorrect second factor code");
+                () => Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow),
+                "Incorrect second factor code"
+            );
         }
 
         [Fact]
@@ -362,10 +326,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void GetAccountInfo_makes_GET_request_to_specific_url()
         {
-            var flow = new RestFlow()
-                .Get(EncryptFixture("get-account-info-response"))
-                    .ExpectUrl("1password.com/api/v1/account")
-                .ToRestClient(ApiUrl);
+            var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).ExpectUrl("1password.com/api/v1/account").ToRestClient(ApiUrl);
 
             Client.GetAccountInfo(TestData.SessionKey, flow);
         }
@@ -383,7 +344,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow()
                 .Get(EncryptFixture("get-keysets-response"))
-                    .ExpectUrl("1password.com/api/v1/account/keysets")
+                .ExpectUrl("1password.com/api/v1/account/keysets")
                 .ToRestClient(ApiUrl);
 
             Client.GetKeysets(TestData.SessionKey, flow);
@@ -394,8 +355,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
             var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
-                                    "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
             var accounts = Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
@@ -407,8 +367,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
             var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
-                                    "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
             var accounts = Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
@@ -420,8 +379,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-server-secrets-response"));
             var keychain = new Keychain();
-            keychain.Add(new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e",
-                                    "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex()));
+            keychain.Add(new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e", "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex()));
 
             var accounts = Client.GetVaultAccounts("6xkojw55yh4uo4vtdewghr5boi", keychain, TestData.SessionKey, flow);
 
@@ -433,11 +391,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var flow = new RestFlow()
                 .Get(EncryptFixture("get-vault-accounts-ru74-response"))
-                    .ExpectUrl("1password.com/api/v1/vault")
+                .ExpectUrl("1password.com/api/v1/vault")
                 .ToRestClient(ApiUrl);
             var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
-                                    "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
             Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
         }
@@ -450,8 +407,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-2-response"))
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-3-response"));
             var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga",
-                                    "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
             var accounts = Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
@@ -469,10 +425,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void LogOut_makes_PUT_request_to_specific_url()
         {
-            var flow = new RestFlow()
-                .Put("{'success': 1}")
-                    .ExpectUrl("1password.com/api/v1/session/signout")
-                .ToRestClient(ApiUrl);
+            var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/session/signout").ToRestClient(ApiUrl);
 
             Client.LogOut(flow);
         }
@@ -514,10 +467,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void DeriveMasterKey_returns_master_key()
         {
             var expected = "09f6cf6acc4f64f2ac6af5d912427253c4dd5e1a48dfc6bfea21df8f6d3a701e".DecodeHex();
-            var key = Client.DeriveMasterKey("PBES2g-HS256",
-                                             100000,
-                                             "i2enf0xq-XPKCFFf5UZqNQ".Decode64Loose(),
-                                             TestData.Credentials);
+            var key = Client.DeriveMasterKey("PBES2g-HS256", 100000, "i2enf0xq-XPKCFFf5UZqNQ".Decode64Loose(), TestData.Credentials);
 
             Assert.Equal("mp", key.Id);
             Assert.Equal(expected, key.Key);
@@ -548,18 +498,23 @@ namespace PasswordManagerAccess.Test.OnePassword
         // Helpers
         //
 
-        private class NotImplementedUi: IUi
+        private class NotImplementedUi : IUi
         {
             public virtual Passcode ProvideGoogleAuthPasscode() => throw new NotImplementedException();
+
             public virtual Passcode ProvideWebAuthnRememberMe() => throw new NotImplementedException();
+
             public virtual DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw new NotImplementedException();
+
             public virtual string ProvideDuoPasscode(DuoDevice device) => throw new NotImplementedException();
+
             public virtual void UpdateDuoStatus(DuoStatus status, string text) => throw new NotImplementedException();
         }
 
-        private class CancelingUi: NotImplementedUi
+        private class CancelingUi : NotImplementedUi
         {
             public override Passcode ProvideGoogleAuthPasscode() => Passcode.Cancel;
+
             public override Passcode ProvideWebAuthnRememberMe() => Passcode.Cancel;
         }
 
@@ -580,17 +535,12 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         private const string ApiUrl = "https://my.1password.com/api";
 
-        private static readonly Client.SecondFactor[] GoogleAuthFactors =
-        {
-            new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator),
-        };
+        private static readonly Client.SecondFactor[] GoogleAuthFactors = { new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator) };
 
         private static readonly Client.SecondFactorResult GoogleAuthMfaResult = Client.SecondFactorResult.Done(
-            new Dictionary<string, string>
-            {
-                ["code"] = "123456",
-            },
-            false);
+            new Dictionary<string, string> { ["code"] = "123456" },
+            false
+        );
 
         // TODO: All the tests here use the data from this account. I don't care about the account
         //       or exposing its credentials, but I don't want to have inconsistent test data.
@@ -603,6 +553,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             AccountKey = "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
             DeviceUuid = "rz64r4uhyvgew672nm4ncaqonq",
             Domain = "my.1password.com",
-       };
+        };
     }
 }

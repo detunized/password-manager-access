@@ -33,16 +33,14 @@ namespace PasswordManagerAccess.Test.OpVault
         [InlineData(65)]
         public void KeyMac_ctor_throws_on_invalid_length(int length)
         {
-            Exceptions.AssertThrowsInternalError(() => new KeyMac("0".Repeat(length).ToBytes()),
-                                                 "Buffer must be exactly 64 bytes long");
+            Exceptions.AssertThrowsInternalError(() => new KeyMac("0".Repeat(length).ToBytes()), "Buffer must be exactly 64 bytes long");
         }
 
         //
         // Data
         //
 
-        private const string Buffer = "a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzuf" +
-                                      "hnDVeB4cDrxnTsPFYMTvpHboE8MPGg==";
+        private const string Buffer = "a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e13IOFMfmCJORzuf" + "hnDVeB4cDrxnTsPFYMTvpHboE8MPGg==";
         private const string Key = "a7HZUoTh0E9I7LCTF3AHDRQXGEbcnQuUMv6Vcvv7e10=";
         private const string MacKey = "yDhTH5giTkc7n4Zw1XgeHA68Z07DxWDE76R26BPDDxo=";
     }

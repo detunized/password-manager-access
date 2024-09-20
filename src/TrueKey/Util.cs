@@ -74,15 +74,17 @@ namespace PasswordManagerAccess.TrueKey
             public readonly byte[] HmacSeed;
             public readonly byte[] Iptmk;
 
-            public OtpInfo(int version,
-                           int otpAlgorithm,
-                           int otpLength,
-                           int hashAlgorithm,
-                           int timeStep,
-                           uint startTime,
-                           byte[] suite,
-                           byte[] hmacSeed,
-                           byte[] iptmk)
+            public OtpInfo(
+                int version,
+                int otpAlgorithm,
+                int otpLength,
+                int hashAlgorithm,
+                int timeStep,
+                uint startTime,
+                byte[] suite,
+                byte[] hmacSeed,
+                byte[] iptmk
+            )
             {
                 Version = version;
                 OtpAlgorithm = otpAlgorithm;
@@ -128,15 +130,17 @@ namespace PasswordManagerAccess.TrueKey
             var hmacSeedLength = tr.ReadUInt16BigEndian();
             var hmacSeed = tr.ReadBytes(hmacSeedLength);
 
-            return new OtpInfo(version : version,
-                               otpAlgorithm : otpAlgorithm,
-                               otpLength : otpLength,
-                               hashAlgorithm : hashAlgorithm,
-                               timeStep : timeStep,
-                               startTime : startTime,
-                               suite : suite,
-                               hmacSeed : hmacSeed,
-                               iptmk : iptmk);
+            return new OtpInfo(
+                version: version,
+                otpAlgorithm: otpAlgorithm,
+                otpLength: otpLength,
+                hashAlgorithm: hashAlgorithm,
+                timeStep: timeStep,
+                startTime: startTime,
+                suite: suite,
+                hmacSeed: hmacSeed,
+                iptmk: iptmk
+            );
         }
 
         // Checks that the OTP info is something we can work with. The Chrome
@@ -185,9 +189,7 @@ namespace PasswordManagerAccess.TrueKey
         {
             var challenge = Crypto.RandomBytes(ChallengeSize);
             var time = DateTime.UtcNow;
-            return new OtpChallenge(challenge,
-                                    time,
-                                    SignChallenge(otp, challenge, time.UnixSeconds()));
+            return new OtpChallenge(challenge, time, SignChallenge(otp, challenge, time.UnixSeconds()));
         }
 
         //

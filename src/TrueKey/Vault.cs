@@ -16,11 +16,7 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // TODO: Write a test that runs the whole sequence and checks the result.
-        internal static Vault Open(string username,
-                                   string password,
-                                   Ui ui,
-                                   ISecureStorage storage,
-                                   IRestTransport transport)
+        internal static Vault Open(string username, string password, Ui ui, ISecureStorage storage, IRestTransport transport)
         {
             return new Vault(Client.OpenVault(username, password, ui, storage, transport));
         }

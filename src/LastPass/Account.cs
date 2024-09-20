@@ -16,16 +16,18 @@ namespace PasswordManagerAccess.LastPass
         public readonly bool IsFavorite;
         public readonly bool IsShared;
 
-        public Account(string id,
-                       string name,
-                       string username,
-                       string password,
-                       string url,
-                       string path,
-                       string notes,
-                       string totp,
-                       bool isFavorite,
-                       bool isShared)
+        public Account(
+            string id,
+            string name,
+            string username,
+            string password,
+            string url,
+            string path,
+            string notes,
+            string totp,
+            bool isFavorite,
+            bool isShared
+        )
         {
             Id = id;
             Name = name;

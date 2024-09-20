@@ -13,22 +13,23 @@ namespace PasswordManagerAccess.Test.ZohoVault
         // From http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
         public readonly byte[] NistKey = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4".DecodeHex();
         public readonly byte[] NistCtr = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff".DecodeHex();
-        public readonly byte[] NistCiphertext = ("601ec313775789a5b7a7f504bbf3d228" +
-                                                 "f443e3ca4d62b59aca84e990cacaf5c5" +
-                                                 "2b0930daa23de94ce87017ba2d84988d" +
-                                                 "dfc9c58db67aada613c2dd08457941a6").DecodeHex();
-        public readonly byte[] NistPlaintext = ("6bc1bee22e409f96e93d7e117393172a" +
-                                                "ae2d8a571e03ac9c9eb76fac45af8e51" +
-                                                "30c81c46a35ce411e5fbc1191a0a52ef" +
-                                                "f69f2445df4f9b17ad2b417be66c3710").DecodeHex();
+        public readonly byte[] NistCiphertext = (
+            "601ec313775789a5b7a7f504bbf3d228"
+            + "f443e3ca4d62b59aca84e990cacaf5c5"
+            + "2b0930daa23de94ce87017ba2d84988d"
+            + "dfc9c58db67aada613c2dd08457941a6"
+        ).DecodeHex();
+        public readonly byte[] NistPlaintext = (
+            "6bc1bee22e409f96e93d7e117393172a"
+            + "ae2d8a571e03ac9c9eb76fac45af8e51"
+            + "30c81c46a35ce411e5fbc1191a0a52ef"
+            + "f69f2445df4f9b17ad2b417be66c3710"
+        ).DecodeHex();
 
         [Fact]
         public void ComputeKey_returns_key()
         {
-            var key = Util.ComputeKey(
-                TestData.Passphrase,
-                "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
-                1000);
+            var key = Util.ComputeKey(TestData.Passphrase, "f78e6ffce8e57501a02c9be303db2c68".ToBytes(), 1000);
             Assert.Equal(TestData.Key, key);
         }
 
@@ -36,12 +37,9 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public void Decrypt_returns_plaintext()
         {
             // Calculated with the original Js code
-            var plaintext = Util.Decrypt(
-                "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(),
-                TestData.Key).ToUtf8();
+            var plaintext = Util.Decrypt("awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64(), TestData.Key).ToUtf8();
             Assert.Equal("{\"date\":\"2016-08-30T15:05:42.874Z\"}", plaintext);
         }
-
 
         [Fact]
         public void ComputeAesCtrKey_returns_key()

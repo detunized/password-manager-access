@@ -22,16 +22,18 @@ namespace PasswordManagerAccess.Test.LastPass
             var isFavorite = true;
             var isShared = true;
 
-            var account = new Account(id: id,
-                                      name: name,
-                                      username: username,
-                                      password: password,
-                                      url: url,
-                                      path: path,
-                                      notes: notes,
-                                      totp: totp,
-                                      isFavorite: isFavorite,
-                                      isShared: isShared);
+            var account = new Account(
+                id: id,
+                name: name,
+                username: username,
+                password: password,
+                url: url,
+                path: path,
+                notes: notes,
+                totp: totp,
+                isFavorite: isFavorite,
+                isShared: isShared
+            );
 
             Assert.Equal(id, account.Id);
             Assert.Equal(name, account.Name);

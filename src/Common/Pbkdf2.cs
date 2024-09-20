@@ -11,35 +11,24 @@ namespace PasswordManagerAccess.Common
     // algorithm in PBKDF2. Remove this when no longer needed.
     internal static class Pbkdf2
     {
-        public static byte[] GenerateSha1(byte[] password,
-                                          byte[] salt,
-                                          int iterationCount,
-                                          int byteCount)
+        public static byte[] GenerateSha1(byte[] password, byte[] salt, int iterationCount, int byteCount)
         {
             return Generate<HMACSHA1>(password, salt, iterationCount, byteCount);
         }
 
-        public static byte[] GenerateSha256(byte[] password,
-                                            byte[] salt,
-                                            int iterationCount,
-                                            int byteCount)
+        public static byte[] GenerateSha256(byte[] password, byte[] salt, int iterationCount, int byteCount)
         {
             return Generate<HMACSHA256>(password, salt, iterationCount, byteCount);
         }
 
-        public static byte[] GenerateSha512(byte[] password,
-                                            byte[] salt,
-                                            int iterationCount,
-                                            int byteCount)
+        public static byte[] GenerateSha512(byte[] password, byte[] salt, int iterationCount, int byteCount)
         {
             return Generate<HMACSHA512>(password, salt, iterationCount, byteCount);
         }
 
         // TODO: Call to the native functions on the platforms where they are available
-        public static byte[] Generate<T>(byte[] password,
-                                         byte[] salt,
-                                         int iterationCount,
-                                         int byteCount) where T : HMAC, new()
+        public static byte[] Generate<T>(byte[] password, byte[] salt, int iterationCount, int byteCount)
+            where T : HMAC, new()
         {
             if (iterationCount <= 0)
                 throw new InternalErrorException("Iteration count should be positive");

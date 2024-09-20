@@ -36,7 +36,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             Exceptions.AssertThrowsUnsupportedFeature(
                 () => Util.DeriveKey(Username, Password, new R.KdfInfo { Kdf = (R.KdfMethod)13 }),
-                "KDF method");
+                "KDF method"
+            );
         }
 
         [Fact]
@@ -49,8 +50,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void HkdfExpand_returns_expected_result()
         {
-            Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(),
-                         Util.HkdfExpand("prk".ToBytes(), "info".ToBytes()));
+            Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(), Util.HkdfExpand("prk".ToBytes(), "info".ToBytes()));
         }
 
         [Fact]
@@ -69,11 +69,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string DerivedKeyPbkdf2 = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
         private const string DerivedKeyArgon2id = "qwJqLHT2PdOduAiV1cfA9bXk3iDCa0sVSJG1mWuKVEk=";
         private const string PasswordHash = "zhQ5ps7B3qN3/m2JVn+UckMTPH5dOI6K369pCiLL9wQ=";
-        private static readonly R.KdfInfo Pbkdf2KdfInfo = new R.KdfInfo
-        {
-            Kdf = R.KdfMethod.Pbkdf2Sha256,
-            Iterations = 100,
-        };
+        private static readonly R.KdfInfo Pbkdf2KdfInfo = new R.KdfInfo { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 100 };
         private static readonly R.KdfInfo Argon2idKdfInfo = new R.KdfInfo
         {
             Kdf = R.KdfMethod.Argon2id,

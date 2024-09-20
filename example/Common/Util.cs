@@ -31,7 +31,7 @@ namespace PasswordManagerAccess.Example.Common
             return File.ReadAllLines(filename)
                 .Select(line => line.Trim())
                 .Where(line => line.Length > 0 && !line.StartsWith("#"))
-                .Select(line => line.Split(new[] {':'}, 2))
+                .Select(line => line.Split(new[] { ':' }, 2))
                 .Where(parts => parts.Length == 2)
                 .ToDictionary(parts => parts[0].Trim(), parts => parts[1].Trim());
         }

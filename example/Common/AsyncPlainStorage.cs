@@ -6,15 +6,13 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Example.Common
 {
-    public class AsyncPlainStorage: IAsyncSecureStorage
+    public class AsyncPlainStorage : IAsyncSecureStorage
     {
-        public AsyncPlainStorage(): this(new PlainStorage())
-        {
-        }
+        public AsyncPlainStorage()
+            : this(new PlainStorage()) { }
 
-        public AsyncPlainStorage(string filename): this(new PlainStorage(filename))
-        {
-        }
+        public AsyncPlainStorage(string filename)
+            : this(new PlainStorage(filename)) { }
 
         public Task<string> LoadString(string name)
         {

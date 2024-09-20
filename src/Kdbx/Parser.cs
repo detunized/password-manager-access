@@ -57,7 +57,7 @@ namespace PasswordManagerAccess.Kdbx
         internal static byte[] ReadKeyfile(byte[] bytes)
         {
             // If the file parses as XML and has the valid structure, then it's an XML keyfile.
-            if (ReadXmlKeyfile(bytes) is {} xmlKeyfile)
+            if (ReadXmlKeyfile(bytes) is { } xmlKeyfile)
                 return xmlKeyfile;
 
             // Legacy binary precomputed hash key file
@@ -91,11 +91,7 @@ namespace PasswordManagerAccess.Kdbx
             // </KeyFile>
             try
             {
-                var key = XDocument
-                    .Parse(bytes.ToUtf8())
-                    .XPathSelectElement("/KeyFile/Key/Data")?
-                    .Value
-                    .Decode64();
+                var key = XDocument.Parse(bytes.ToUtf8()).XPathSelectElement("/KeyFile/Key/Data")?.Value.Decode64();
 
                 if (key?.Length == 32)
                     return key;
@@ -113,11 +109,14 @@ namespace PasswordManagerAccess.Kdbx
             // There's no way to say how long the header is until it's parsed fully.
             // We just assume that the header should fit in 64k.
             const int size = 65536;
-            return Rental.With(size, headerBytes =>
-            {
-                var read = input.Read(headerBytes, 0, size);
-                return ParseHeader(headerBytes.AsRoSpan(0, read), compositeKey);
-            });
+            return Rental.With(
+                size,
+                headerBytes =>
+                {
+                    var read = input.Read(headerBytes, 0, size);
+                    return ParseHeader(headerBytes.AsRoSpan(0, read), compositeKey);
+                }
+            );
         }
 
         internal static DatabaseInfo ParseHeader(ReadOnlySpan<byte> blob, byte[] compositeKey)
@@ -161,12 +160,14 @@ namespace PasswordManagerAccess.Kdbx
             if (!Crypto.AreEqual(storedHeaderMac, computedHeaderMac))
                 throw MakeInvalidFormatError("Header MAC doesn't match");
 
-            return new DatabaseInfo(headerSize: io.Position,
-                                    isCompressed: info.IsCompressed,
-                                    cipher: info.Cipher,
-                                    encryptionKey: encryptionKey,
-                                    iv: info.Iv,
-                                    hmacKey: hmacKey);
+            return new DatabaseInfo(
+                headerSize: io.Position,
+                isCompressed: info.IsCompressed,
+                cipher: info.Cipher,
+                encryptionKey: encryptionKey,
+                iv: info.Iv,
+                hmacKey: hmacKey
+            );
         }
 
         internal static EncryptionInfo ReadEncryptionInfo(ref SpanStream io)
@@ -183,79 +184,79 @@ namespace PasswordManagerAccess.Kdbx
                     throw MakeInvalidFormatError($"{name} not found in the header");
             }
 
-            for (;;)
+            for (; ; )
             {
                 var header = io.Read<FieldHeader>();
                 var payload = io.ReadBytes(header.Size);
 
                 switch (header.Id)
                 {
-                // Done (payload ignored)
-                case 0:
-                    CheckField(compressed, "compressed flag");
-                    CheckField(cipher, "cipher");
-                    CheckField(seed, "master seed");
-                    CheckField(iv, "master IV");
-                    CheckField(kdf, "KDF parameters");
-
-                    return new EncryptionInfo(compressed.Value, cipher.Value, seed, iv, kdf);
-
-                // Cipher
-                case 2:
-                    if (payload.Length != 16)
-                        throw MakeInvalidFormatError($"cipher field has incorrect size ({payload.Length})");
-
-                    if (payload.SequenceEqual(AesCipherId))
-                        cipher = Cipher.Aes;
-                    else if (payload.SequenceEqual(ChaCha20CipherId))
-                        cipher = Cipher.ChaCha20;
-                    else if (payload.SequenceEqual(TwofishCipherId))
-                        cipher = Cipher.Twofish;
-                    else
-                        throw MakeUnsupportedError($"Cipher '{payload.ToHex()}'");
-
-                    break;
-
-                // Compression method
-                case 3:
-                    if (payload.Length != 4)
-                        throw MakeInvalidFormatError($"compression method field has incorrect size ({payload.Length})");
-
-                    var compression = new SpanStream(payload).ReadUInt32();
-                    switch (compression)
-                    {
-                    // None
+                    // Done (payload ignored)
                     case 0:
-                        compressed = false;
+                        CheckField(compressed, "compressed flag");
+                        CheckField(cipher, "cipher");
+                        CheckField(seed, "master seed");
+                        CheckField(iv, "master IV");
+                        CheckField(kdf, "KDF parameters");
+
+                        return new EncryptionInfo(compressed.Value, cipher.Value, seed, iv, kdf);
+
+                    // Cipher
+                    case 2:
+                        if (payload.Length != 16)
+                            throw MakeInvalidFormatError($"cipher field has incorrect size ({payload.Length})");
+
+                        if (payload.SequenceEqual(AesCipherId))
+                            cipher = Cipher.Aes;
+                        else if (payload.SequenceEqual(ChaCha20CipherId))
+                            cipher = Cipher.ChaCha20;
+                        else if (payload.SequenceEqual(TwofishCipherId))
+                            cipher = Cipher.Twofish;
+                        else
+                            throw MakeUnsupportedError($"Cipher '{payload.ToHex()}'");
+
                         break;
 
-                    // GZip
-                    case 1:
-                        compressed = true;
+                    // Compression method
+                    case 3:
+                        if (payload.Length != 4)
+                            throw MakeInvalidFormatError($"compression method field has incorrect size ({payload.Length})");
+
+                        var compression = new SpanStream(payload).ReadUInt32();
+                        switch (compression)
+                        {
+                            // None
+                            case 0:
+                                compressed = false;
+                                break;
+
+                            // GZip
+                            case 1:
+                                compressed = true;
+                                break;
+
+                            // Unknown
+                            default:
+                                throw MakeUnsupportedError($"Compression method {compression}");
+                        }
                         break;
 
-                    // Unknown
-                    default:
-                        throw MakeUnsupportedError($"Compression method {compression}");
-                    }
-                    break;
+                    // Master seed
+                    case 4:
+                        seed = payload.ToArray();
+                        break;
 
-                // Master seed
-                case 4:
-                    seed = payload.ToArray();
-                    break;
+                    // Master IV
+                    case 7:
+                        iv = payload.ToArray();
+                        break;
 
-                // Master IV
-                case 7:
-                    iv = payload.ToArray();
-                    break;
+                    // KDF parameters
+                    case 11:
+                        kdf = ReadVariantDictionary(payload);
+                        break;
 
-                // KDF parameters
-                case 11:
-                    kdf = ReadVariantDictionary(payload);
-                    break;
-
-                // Other fields are ignored
+                    // Other fields are ignored
                 }
             }
         }
@@ -273,7 +274,7 @@ namespace PasswordManagerAccess.Kdbx
 
             var result = new Dictionary<string, object>();
 
-            for (;;)
+            for (; ; )
             {
                 var type = io.ReadByte();
                 if (type == 0)
@@ -376,11 +377,7 @@ namespace PasswordManagerAccess.Kdbx
 
         internal static Twofish CreateTwofish(in DatabaseInfo info)
         {
-            return new Twofish
-            {
-                Key = info.EncryptionKey,
-                IV = info.Iv
-            };
+            return new Twofish { Key = info.EncryptionKey, IV = info.Iv };
         }
 
         internal static RandomStream ParseInnerHeader(Stream input)
@@ -395,7 +392,7 @@ namespace PasswordManagerAccess.Kdbx
             int? randomStreamId = null;
             byte[] randomStreamKey = null;
 
-            for (;;)
+            for (; ; )
             {
                 // Each item starts with a byte ID and a 32 bit size
                 if (!input.TryReadExact(buffer, 0, 5))
@@ -407,55 +404,55 @@ namespace PasswordManagerAccess.Kdbx
 
                 switch (id)
                 {
-                // ID 0 marks the end of the inner header
-                case 0:
-                    if (size != 0)
-                        throw MakeError("ID 0 must contain no payload");
+                    // ID 0 marks the end of the inner header
+                    case 0:
+                        if (size != 0)
+                            throw MakeError("ID 0 must contain no payload");
 
-                    if (randomStreamId == null)
-                        throw MakeError("random stream ID not found");
+                        if (randomStreamId == null)
+                            throw MakeError("random stream ID not found");
 
-                    if (randomStreamKey == null)
-                        throw MakeError("random stream key not found");
+                        if (randomStreamKey == null)
+                            throw MakeError("random stream key not found");
 
-                    return new RandomStream(randomStreamId.Value, randomStreamKey);
+                        return new RandomStream(randomStreamId.Value, randomStreamKey);
 
-                // Random stream ID
-                case 1:
-                    if (size != 4)
-                        throw MakeError($"random stream ID must 4 bytes long, got {size}");
+                    // Random stream ID
+                    case 1:
+                        if (size != 4)
+                            throw MakeError($"random stream ID must 4 bytes long, got {size}");
 
-                    if (!input.TryReadExact(buffer, 0, size))
-                        throw MakeError("failed to read random stream ID");
+                        if (!input.TryReadExact(buffer, 0, size))
+                            throw MakeError("failed to read random stream ID");
 
-                    randomStreamId = new SpanStream(buffer, 0, size).ReadInt32();
-                    break;
+                        randomStreamId = new SpanStream(buffer, 0, size).ReadInt32();
+                        break;
 
-                // Random stream key
-                case 2:
-                    if (size != 64)
-                        throw MakeError($"random stream key must 64 bytes long, got {size}");
+                    // Random stream key
+                    case 2:
+                        if (size != 64)
+                            throw MakeError($"random stream key must 64 bytes long, got {size}");
 
-                    if (!input.TryReadExact(buffer, 0, size))
-                        throw MakeError("failed to read random stream key");
+                        if (!input.TryReadExact(buffer, 0, size))
+                            throw MakeError("failed to read random stream key");
 
-                    randomStreamKey = buffer.Sub(0, size);
-                    break;
+                        randomStreamKey = buffer.Sub(0, size);
+                        break;
 
-                // Binary attachment, just skip them
-                case 3:
-                    // Size has only 31 valid bits
-                    if (size < 0)
-                        throw MakeError($"size of binary attachment is invalid ({size})");
+                    // Binary attachment, just skip them
+                    case 3:
+                        // Size has only 31 valid bits
+                        if (size < 0)
+                            throw MakeError($"size of binary attachment is invalid ({size})");
 
-                    // Skip the payload
-                    if (!input.TrySkip(size, buffer))
-                        throw MakeError($"failed to skip item with ID {id}");
+                        // Skip the payload
+                        if (!input.TrySkip(size, buffer))
+                            throw MakeError($"failed to skip item with ID {id}");
 
-                    break;
+                        break;
 
-                default:
-                    throw MakeError($"invalid item ID {id}");
+                    default:
+                        throw MakeError($"invalid item ID {id}");
                 }
             }
         }
@@ -502,13 +499,13 @@ namespace PasswordManagerAccess.Kdbx
             {
                 switch (i.Name.LocalName)
                 {
-                case "Group":
-                    var name = i.Element("Name")?.Value ?? "-";
-                    ParseAccounts(i, path.IsNullOrEmpty() ? name : $"{path}/{name}", accounts);
-                    break;
-                case "Entry":
-                    accounts.Add(ParseAccount(i, path));
-                    break;
+                    case "Group":
+                        var name = i.Element("Name")?.Value ?? "-";
+                        ParseAccounts(i, path.IsNullOrEmpty() ? name : $"{path}/{name}", accounts);
+                        break;
+                    case "Entry":
+                        accounts.Add(ParseAccount(i, path));
+                        break;
                 }
             }
         }
@@ -529,39 +526,41 @@ namespace PasswordManagerAccess.Kdbx
                 var value = s.Element("Value")?.Value ?? "";
                 switch (key)
                 {
-                case "Title":
-                    name = value;
-                    break;
-                case "UserName":
-                    username = value;
-                    break;
-                case "Password":
-                    password = value;
-                    break;
-                case "URL":
-                    url = value;
-                    break;
-                case "Notes":
-                    note = value;
-                    break;
-                case "":
-                    // Ignore blank
-                    break;
-                default:
-                    custom ??= new Dictionary<string, string>();
-                    custom[key] = value;
-                    break;
+                    case "Title":
+                        name = value;
+                        break;
+                    case "UserName":
+                        username = value;
+                        break;
+                    case "Password":
+                        password = value;
+                        break;
+                    case "URL":
+                        url = value;
+                        break;
+                    case "Notes":
+                        note = value;
+                        break;
+                    case "":
+                        // Ignore blank
+                        break;
+                    default:
+                        custom ??= new Dictionary<string, string>();
+                        custom[key] = value;
+                        break;
                 }
             }
 
-            return new Account(id: id,
-                               name: name,
-                               username: username,
-                               password: password,
-                               url: url,
-                               note: note,
-                               path: path,
-                               fields: custom ?? Account.NoFields);
+            return new Account(
+                id: id,
+                name: name,
+                username: username,
+                password: password,
+                url: url,
+                note: note,
+                path: path,
+                fields: custom ?? Account.NoFields
+            );
         }
 
         internal static BaseException MakeInvalidFormatError(string message)
@@ -587,12 +586,7 @@ namespace PasswordManagerAccess.Kdbx
             public readonly byte[] Iv;
             public readonly byte[] HmacKey;
 
-            public DatabaseInfo(int headerSize,
-                                bool isCompressed,
-                                Cipher cipher,
-                                byte[] encryptionKey,
-                                byte[] iv,
-                                byte[] hmacKey)
+            public DatabaseInfo(int headerSize, bool isCompressed, Cipher cipher, byte[] encryptionKey, byte[] iv, byte[] hmacKey)
             {
                 HeaderSize = headerSize;
                 IsCompressed = isCompressed;
@@ -618,11 +612,7 @@ namespace PasswordManagerAccess.Kdbx
             public readonly byte[] Iv;
             public readonly Dictionary<string, object> Kdf;
 
-            public EncryptionInfo(bool isCompressed,
-                                  Cipher cipher,
-                                  byte[] seed,
-                                  byte[] iv,
-                                  Dictionary<string, object> kdf)
+            public EncryptionInfo(bool isCompressed, Cipher cipher, byte[] seed, byte[] iv, Dictionary<string, object> kdf)
             {
                 IsCompressed = isCompressed;
                 Cipher = cipher;
@@ -681,43 +671,127 @@ namespace PasswordManagerAccess.Kdbx
         //
 
         internal const uint Magic1 = 0x9aa2d903u;
-        internal static readonly uint[] Magic2 = {0xb54bfb66u, 0xb54bfb67u};
+        internal static readonly uint[] Magic2 = { 0xb54bfb66u, 0xb54bfb67u };
         internal const ushort Version4 = 4;
 
         internal static readonly byte[] AesCipherId =
         {
-            0x31, 0xC1, 0xF2, 0xE6, 0xBF, 0x71, 0x43, 0x50,
-            0xBE, 0x58, 0x05, 0x21, 0x6A, 0xFC, 0x5A, 0xFF,
+            0x31,
+            0xC1,
+            0xF2,
+            0xE6,
+            0xBF,
+            0x71,
+            0x43,
+            0x50,
+            0xBE,
+            0x58,
+            0x05,
+            0x21,
+            0x6A,
+            0xFC,
+            0x5A,
+            0xFF,
         };
 
         internal static readonly byte[] ChaCha20CipherId =
         {
-            0xD6, 0x03, 0x8A, 0x2B, 0x8B, 0x6F, 0x4C, 0xB5,
-            0xA5, 0x24, 0x33, 0x9A, 0x31, 0xDB, 0xB5, 0x9A,
+            0xD6,
+            0x03,
+            0x8A,
+            0x2B,
+            0x8B,
+            0x6F,
+            0x4C,
+            0xB5,
+            0xA5,
+            0x24,
+            0x33,
+            0x9A,
+            0x31,
+            0xDB,
+            0xB5,
+            0x9A,
         };
 
         internal static readonly byte[] TwofishCipherId =
         {
-            0xAD, 0x68, 0xF2, 0x9F, 0x57, 0x6F, 0x4B, 0xB9,
-            0xA3, 0x6A, 0xD4, 0x7A, 0xF9, 0x65, 0x34, 0x6C,
+            0xAD,
+            0x68,
+            0xF2,
+            0x9F,
+            0x57,
+            0x6F,
+            0x4B,
+            0xB9,
+            0xA3,
+            0x6A,
+            0xD4,
+            0x7A,
+            0xF9,
+            0x65,
+            0x34,
+            0x6C,
         };
 
         internal static readonly byte[] Aes3KdfId =
         {
-            0xC9, 0xD9, 0xF3, 0x9A, 0x62, 0x8A, 0x44, 0x60,
-            0xBF, 0x74, 0x0D, 0x08, 0xC1, 0x8A, 0x4F, 0xEA,
+            0xC9,
+            0xD9,
+            0xF3,
+            0x9A,
+            0x62,
+            0x8A,
+            0x44,
+            0x60,
+            0xBF,
+            0x74,
+            0x0D,
+            0x08,
+            0xC1,
+            0x8A,
+            0x4F,
+            0xEA,
         };
 
         internal static readonly byte[] Aes4KdfId =
         {
-            0x7C, 0x02, 0xBB, 0x82, 0x79, 0xA7, 0x4A, 0xC0,
-            0x92, 0x7D, 0x11, 0x4A, 0x00, 0x64, 0x82, 0x38,
+            0x7C,
+            0x02,
+            0xBB,
+            0x82,
+            0x79,
+            0xA7,
+            0x4A,
+            0xC0,
+            0x92,
+            0x7D,
+            0x11,
+            0x4A,
+            0x00,
+            0x64,
+            0x82,
+            0x38,
         };
 
         internal static readonly byte[] Argon2KdfId =
         {
-            0xEF, 0x63, 0x6D, 0xDF, 0x8C, 0x29, 0x44, 0x4B,
-            0x91, 0xF7, 0xA9, 0xA4, 0x03, 0xE3, 0x0A, 0x0C,
+            0xEF,
+            0x63,
+            0x6D,
+            0xDF,
+            0x8C,
+            0x29,
+            0x44,
+            0x4B,
+            0x91,
+            0xF7,
+            0xA9,
+            0xA4,
+            0x03,
+            0xE3,
+            0x0A,
+            0x0C,
         };
     }
 }

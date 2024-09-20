@@ -15,11 +15,7 @@ namespace PasswordManagerAccess.OnePassword
         internal readonly RestClient Rest;
         internal readonly IRestTransport Transport;
 
-        internal Session(Credentials credentials,
-                         Keychain keychain,
-                         AesKey key,
-                         RestClient rest,
-                         IRestTransport transport)
+        internal Session(Credentials credentials, Keychain keychain, AesKey key, RestClient rest, IRestTransport transport)
         {
             Credentials = credentials;
             Keychain = keychain;

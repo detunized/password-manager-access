@@ -23,9 +23,7 @@ namespace PasswordManagerAccess.LastPass
         public static byte[] DeriveKeyHash(string username, string password, int iterationCount)
         {
             var key = DeriveKey(username, password, iterationCount);
-            return iterationCount == 1
-                ? Crypto.Sha256(key.ToHex() + password)
-                : Pbkdf2.GenerateSha256(key, password.ToBytes(), 1, 32);
+            return iterationCount == 1 ? Crypto.Sha256(key.ToHex() + password) : Pbkdf2.GenerateSha256(key, password.ToBytes(), 1, 32);
         }
 
         public static string DecryptAes256Plain(byte[] data, byte[] encryptionKey, string defaultValue)
@@ -74,18 +72,17 @@ namespace PasswordManagerAccess.LastPass
 
         public static string DecryptAes256CbcPlain(byte[] data, byte[] encryptionKey)
         {
-            return DecryptAes256(data.Skip(17).ToArray(),
-                                 encryptionKey,
-                                 CipherMode.CBC,
-                                 data.Skip(1).Take(16).ToArray());
+            return DecryptAes256(data.Skip(17).ToArray(), encryptionKey, CipherMode.CBC, data.Skip(1).Take(16).ToArray());
         }
 
         public static string DecryptAes256CbcBase64(byte[] data, byte[] encryptionKey)
         {
-            return DecryptAes256(data.Skip(26).ToArray().ToUtf8().Decode64(),
-                                 encryptionKey,
-                                 CipherMode.CBC,
-                                 data.Skip(1).Take(24).ToArray().ToUtf8().Decode64());
+            return DecryptAes256(
+                data.Skip(26).ToArray().ToUtf8().Decode64(),
+                encryptionKey,
+                CipherMode.CBC,
+                data.Skip(1).Take(24).ToArray().ToUtf8().Decode64()
+            );
         }
 
         public static string DecryptAes256(byte[] data, byte[] encryptionKey, CipherMode mode)
@@ -101,10 +98,12 @@ namespace PasswordManagerAccess.LastPass
             return Crypto.DecryptAes256(data, iv, encryptionKey, mode, PaddingMode.PKCS7).ToUtf8();
         }
 
-        private static string DecryptAes256WithDefaultValue(byte[] data,
-                                                            byte[] encryptionKey,
-                                                            string defaultValue,
-                                                            Func<byte[], byte[], string> decrypt)
+        private static string DecryptAes256WithDefaultValue(
+            byte[] data,
+            byte[] encryptionKey,
+            string defaultValue,
+            Func<byte[], byte[], string> decrypt
+        )
         {
             try
             {

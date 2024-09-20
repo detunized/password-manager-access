@@ -20,7 +20,7 @@ namespace PasswordManagerAccess.ProtonPass
             public int Code { get; set; }
         }
 
-        public class Error: Response
+        public class Error : Response
         {
             [JsonPropertyName("Error")]
             [JsonRequired]
@@ -58,7 +58,7 @@ namespace PasswordManagerAccess.ProtonPass
             public int ExpiresAt { get; set; }
         }
 
-        public class Session: Response
+        public class Session : Response
         {
             [JsonPropertyName("AccessToken")]
             [JsonRequired]
@@ -83,7 +83,7 @@ namespace PasswordManagerAccess.ProtonPass
             public int LocalId { get; set; }
         }
 
-        internal class AuthInfo: Response
+        internal class AuthInfo : Response
         {
             [JsonPropertyName("Modulus")]
             [JsonRequired]
@@ -108,7 +108,7 @@ namespace PasswordManagerAccess.ProtonPass
             public string Username { get; set; } = "";
         }
 
-        public class Auth: Response
+        public class Auth : Response
         {
             [JsonPropertyName("LocalID")]
             public int LocalId { get; set; }
@@ -167,7 +167,7 @@ namespace PasswordManagerAccess.ProtonPass
             public int Totp { get; set; }
         }
 
-        public class UserResponse: Response
+        public class UserResponse : Response
         {
             [JsonPropertyName("User")]
             [JsonRequired]
@@ -207,7 +207,7 @@ namespace PasswordManagerAccess.ProtonPass
             public int Active { get; set; }
         }
 
-        public class SaltsResponse: Response
+        public class SaltsResponse : Response
         {
             [JsonPropertyName("KeySalts")]
             [JsonRequired]
@@ -225,7 +225,7 @@ namespace PasswordManagerAccess.ProtonPass
         }
 
         // TODO: Not the best name
-        public class ShareRoot: Response
+        public class ShareRoot : Response
         {
             [JsonPropertyName("Shares")]
             public Share[] Shares { get; set; } = Array.Empty<Share>();
@@ -276,7 +276,7 @@ namespace PasswordManagerAccess.ProtonPass
             public int ContentFormatVersion { get; set; }
         }
 
-        public class ShareKeysRoot: Response
+        public class ShareKeysRoot : Response
         {
             [JsonPropertyName("ShareKeys")]
             public ShareKeys ShareKeys { get; set; } = new ShareKeys();
@@ -306,11 +306,11 @@ namespace PasswordManagerAccess.ProtonPass
             public int CreateTime { get; set; }
         }
 
-        public class VaultResponse: Response
+        public class VaultResponse : Response
         {
             [JsonPropertyName("Items")]
             [JsonRequired]
-            public VaultItems Items { get; set; } = new ();
+            public VaultItems Items { get; set; } = new();
         }
 
         public class VaultItems

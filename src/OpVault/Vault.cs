@@ -46,9 +46,7 @@ namespace PasswordManagerAccess.OpVault
 
         internal static M.Folder[] LoadFolders(string path)
         {
-            var folders = LoadJsAsJson<Dictionary<string, M.Folder>>(MakeFilename(path, "folders.js"),
-                                                                     "loadFolders(",
-                                                                     ");");
+            var folders = LoadJsAsJson<Dictionary<string, M.Folder>>(MakeFilename(path, "folders.js"), "loadFolders(", ");");
             return folders.Values.ToArray();
         }
 
@@ -173,10 +171,7 @@ namespace PasswordManagerAccess.OpVault
             return folders;
         }
 
-        internal static Account[] DecryptAccounts(M.Item[] encryptedItems,
-                                                  KeyMac masterKey,
-                                                  KeyMac overviewKey,
-                                                  Dictionary<string, Folder> folders)
+        internal static Account[] DecryptAccounts(M.Item[] encryptedItems, KeyMac masterKey, KeyMac overviewKey, Dictionary<string, Folder> folders)
         {
             return encryptedItems
                 .Where(i => !i.Deleted)
@@ -191,22 +186,21 @@ namespace PasswordManagerAccess.OpVault
             return new Folder(folder.Id, overview.Title);
         }
 
-        internal static Account DecryptAccount(M.Item encryptedItem,
-                                               KeyMac masterKey,
-                                               KeyMac overviewKey,
-                                               Dictionary<string, Folder> folders)
+        internal static Account DecryptAccount(M.Item encryptedItem, KeyMac masterKey, KeyMac overviewKey, Dictionary<string, Folder> folders)
         {
             var overview = DecryptAccountOverview(encryptedItem, overviewKey);
             var accountKey = DecryptAccountKey(encryptedItem, masterKey);
             var details = DecryptAccountDetails(encryptedItem, accountKey);
 
-            return new Account(id: encryptedItem.Id,
-                               name: overview.Title ?? "",
-                               username: FindDetailField(details, "username"),
-                               password: FindDetailField(details, "password"),
-                               url: overview.Url ?? "",
-                               note: details.Notes ?? "",
-                               folder: folders.GetOrDefault(encryptedItem.FolderId ?? "", Folder.None));
+            return new Account(
+                id: encryptedItem.Id,
+                name: overview.Title ?? "",
+                username: FindDetailField(details, "username"),
+                password: FindDetailField(details, "password"),
+                url: overview.Url ?? "",
+                note: details.Notes ?? "",
+                folder: folders.GetOrDefault(encryptedItem.FolderId ?? "", Folder.None)
+            );
         }
 
         internal static M.ItemOverview DecryptAccountOverview(M.Item encryptedItem, KeyMac overviewKey)

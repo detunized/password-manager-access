@@ -1,8 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Xunit;
 using PasswordManagerAccess.OnePassword;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
@@ -11,7 +11,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void ParsedAccountKey_updated_when_account_key_changes()
         {
-            var credentials = new Credentials {AccountKey = "A3-ABCDEF-GGGGGG-HHHHH-IIIII-JJJJJ-KKKKK"};
+            var credentials = new Credentials { AccountKey = "A3-ABCDEF-GGGGGG-HHHHH-IIIII-JJJJJ-KKKKK" };
 
             Assert.Equal("A3", credentials.ParsedAccountKey.Format);
             Assert.Equal("ABCDEF", credentials.ParsedAccountKey.Uuid);

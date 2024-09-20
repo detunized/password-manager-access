@@ -9,7 +9,7 @@ namespace PasswordManagerAccess.Common
     // assigned to "using var" variable. It could be used to mix disposable and regular objects.
     // For example:
     // using IDisposable obj = isRegular ? new Indisposable<Regular>(new Regular()) : new Disposable();
-    internal readonly struct Indisposable<T>: IDisposable
+    internal readonly struct Indisposable<T> : IDisposable
     {
         public T Value { get; }
 

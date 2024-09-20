@@ -14,10 +14,7 @@ namespace PasswordManagerAccess.Bitwarden
         {
             return kdfInfo.Kdf switch
             {
-                R.KdfMethod.Pbkdf2Sha256 => Pbkdf2.GenerateSha256(password.ToBytes(),
-                                                                  username.ToLower().Trim().ToBytes(),
-                                                                  kdfInfo.Iterations,
-                                                                  32),
+                R.KdfMethod.Pbkdf2Sha256 => Pbkdf2.GenerateSha256(password.ToBytes(), username.ToLower().Trim().ToBytes(), kdfInfo.Iterations, 32),
 
                 R.KdfMethod.Argon2id => new Argon2id(password.ToBytes())
                 {
@@ -27,7 +24,7 @@ namespace PasswordManagerAccess.Bitwarden
                     DegreeOfParallelism = kdfInfo.Parallelism,
                 }.GetBytes(32),
 
-                _ => throw new UnsupportedFeatureException($"Unsupported KDF method: {kdfInfo.Kdf}")
+                _ => throw new UnsupportedFeatureException($"Unsupported KDF method: {kdfInfo.Kdf}"),
             };
         }
 
@@ -41,7 +38,7 @@ namespace PasswordManagerAccess.Bitwarden
         // See https://tools.ietf.org/html/rfc5869
         public static byte[] HkdfExpand(byte[] prk, byte[] info)
         {
-            return Crypto.HmacSha256(prk, info.Concat(new byte[] {1}).ToArray());
+            return Crypto.HmacSha256(prk, info.Concat(new byte[] { 1 }).ToArray());
         }
 
         public static byte[] ExpandKey(byte[] key)

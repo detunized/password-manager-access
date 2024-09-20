@@ -17,13 +17,7 @@ namespace PasswordManagerAccess.OpVault
         // Non-public
         //
 
-        internal Account(string id,
-                         string name,
-                         string username,
-                         string password,
-                         string url,
-                         string note,
-                         Folder folder)
+        internal Account(string id, string name, string username, string password, string url, string note, Folder folder)
         {
             Id = id;
             Name = name;

@@ -20,11 +20,13 @@ namespace PasswordManagerAccess.Kaspersky
         // Internal
         //
 
-        internal static Vault Open(string username,
-                                   string accountPassword,
-                                   string vaultPassword,
-                                   IRestTransport restTransport,
-                                   IBoshTransport boshTransport)
+        internal static Vault Open(
+            string username,
+            string accountPassword,
+            string vaultPassword,
+            IRestTransport restTransport,
+            IBoshTransport boshTransport
+        )
         {
             return new Vault(Client.OpenVault(username, accountPassword, vaultPassword, restTransport, boshTransport));
         }

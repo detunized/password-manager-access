@@ -13,13 +13,11 @@ namespace PasswordManagerAccess.Common
         public int Position => _offset;
         public bool IsEof => Position == Size;
 
-        public SpanStream(byte[] bytes): this(bytes.AsRoSpan())
-        {
-        }
+        public SpanStream(byte[] bytes)
+            : this(bytes.AsRoSpan()) { }
 
-        public SpanStream(byte[] bytes, int start, int size): this(bytes.AsRoSpan(start, size))
-        {
-        }
+        public SpanStream(byte[] bytes, int start, int size)
+            : this(bytes.AsRoSpan(start, size)) { }
 
         public SpanStream(ReadOnlySpan<byte> span)
         {
@@ -77,7 +75,8 @@ namespace PasswordManagerAccess.Common
             return _span.Slice(CheckAdvance(size), size);
         }
 
-        public T Read<T>() where T: struct
+        public T Read<T>()
+            where T : struct
         {
             var size = Unsafe.SizeOf<T>();
             var offset = CheckAdvance(size);

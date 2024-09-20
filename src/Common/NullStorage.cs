@@ -13,8 +13,6 @@ namespace PasswordManagerAccess.Common
             return null;
         }
 
-        public void StoreString(string name, string value)
-        {
-        }
+        public void StoreString(string name, string value) { }
     }
 }

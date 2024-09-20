@@ -57,16 +57,17 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
-        internal static void Crypt(byte[] key,
-                                   byte[] input,
-                                   int length,
-                                   byte[] iv,
-                                   byte[] authData,
-
-                                   // output
-                                   byte[] output,
-                                   byte[] hashKey,
-                                   byte[] hashSalt)
+        internal static void Crypt(
+            byte[] key,
+            byte[] input,
+            int length,
+            byte[] iv,
+            byte[] authData,
+            // output
+            byte[] output,
+            byte[] hashKey,
+            byte[] hashSalt
+        )
         {
             if (key.Length != 32)
                 throw new InternalErrorException("The key must be 32 bytes long");
@@ -105,11 +106,7 @@ namespace PasswordManagerAccess.OnePassword
             return aes;
         }
 
-        internal static byte[] ComputeTag(byte[] hashKey,
-                                          byte[] hashSalt,
-                                          byte[] authData,
-                                          byte[] ciphertext,
-                                          int ciphertextLength)
+        internal static byte[] ComputeTag(byte[] hashKey, byte[] hashSalt, byte[] authData, byte[] ciphertext, int ciphertextLength)
         {
             var tag = GHash(hashKey, authData, authData.Length, ciphertext, ciphertextLength);
 
@@ -130,17 +127,16 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static void IncrementCounter(byte[] counter)
         {
-            if (++counter[15] != 0) return;
-            if (++counter[14] != 0) return;
-            if (++counter[13] != 0) return;
+            if (++counter[15] != 0)
+                return;
+            if (++counter[14] != 0)
+                return;
+            if (++counter[13] != 0)
+                return;
             ++counter[12];
         }
 
-        internal static byte[] GHash(byte[] key,
-                                     byte[] authData,
-                                     int authDataLength,
-                                     byte[] ciphertext,
-                                     int ciphertextLength)
+        internal static byte[] GHash(byte[] key, byte[] authData, int authDataLength, byte[] ciphertext, int ciphertextLength)
         {
             if (key.Length != 16)
                 throw new InternalErrorException("The key must be 16 bytes long");

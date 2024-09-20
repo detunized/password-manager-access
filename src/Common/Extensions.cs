@@ -20,14 +20,16 @@ namespace PasswordManagerAccess.Common
 
         internal static byte ReverseBits(this byte b)
         {
-            return (byte)(((b & 0b0000_0001) << 7) |
-                          ((b & 0b0000_0010) << 5) |
-                          ((b & 0b0000_0100) << 3) |
-                          ((b & 0b0000_1000) << 1) |
-                          ((b & 0b0001_0000) >> 1) |
-                          ((b & 0b0010_0000) >> 3) |
-                          ((b & 0b0100_0000) >> 5) |
-                          ((b & 0b1000_0000) >> 7));
+            return (byte)(
+                ((b & 0b0000_0001) << 7)
+                | ((b & 0b0000_0010) << 5)
+                | ((b & 0b0000_0100) << 3)
+                | ((b & 0b0000_1000) << 1)
+                | ((b & 0b0001_0000) >> 1)
+                | ((b & 0b0010_0000) >> 3)
+                | ((b & 0b0100_0000) >> 5)
+                | ((b & 0b1000_0000) >> 7)
+            );
         }
 
         //
@@ -36,10 +38,10 @@ namespace PasswordManagerAccess.Common
 
         internal static uint ReverseBits(this uint u)
         {
-            return ((uint)ReverseBits((byte)(u & 0xFF)) << 24) |
-                   ((uint)ReverseBits((byte)((u >> 8) & 0xFF)) << 16) |
-                   ((uint)ReverseBits((byte)((u >> 16) & 0xFF)) << 8) |
-                   ReverseBits((byte)((u >> 24) & 0xFF));
+            return ((uint)ReverseBits((byte)(u & 0xFF)) << 24)
+                | ((uint)ReverseBits((byte)((u >> 8) & 0xFF)) << 16)
+                | ((uint)ReverseBits((byte)((u >> 16) & 0xFF)) << 8)
+                | ReverseBits((byte)((u >> 24) & 0xFF));
         }
 
         //
@@ -78,11 +80,31 @@ namespace PasswordManagerAccess.Common
 
             foreach (var c in s)
             {
-                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
-                    c == ';' || c == '/' || c == '?' || c == ':' || c == '@' || c == '&' ||
-                    c == '=' || c == '+' || c == '$' || c == ',' || c == '-' || c == '_' ||
-                    c == '.' || c == '!' || c == '~' || c == '*' || c == '\'' || c == '(' ||
-                    c == ')' || c == '#')
+                if (
+                    (c >= 'A' && c <= 'Z')
+                    || (c >= 'a' && c <= 'z')
+                    || (c >= '0' && c <= '9')
+                    || c == ';'
+                    || c == '/'
+                    || c == '?'
+                    || c == ':'
+                    || c == '@'
+                    || c == '&'
+                    || c == '='
+                    || c == '+'
+                    || c == '$'
+                    || c == ','
+                    || c == '-'
+                    || c == '_'
+                    || c == '.'
+                    || c == '!'
+                    || c == '~'
+                    || c == '*'
+                    || c == '\''
+                    || c == '('
+                    || c == ')'
+                    || c == '#'
+                )
                 {
                     encoded.Append(c);
                 }
@@ -167,7 +189,7 @@ namespace PasswordManagerAccess.Common
             int bitsReady = 0;
             int outputIndex = 0;
 
-            for (var i  = 0; i < length; i += 1)
+            for (var i = 0; i < length; i += 1)
             {
                 int c = Char.ToLower(s[i]);
                 if (c >= 'a' && c <= 'z')
@@ -215,12 +237,12 @@ namespace PasswordManagerAccess.Common
             var withPadding = withoutPadding;
             switch (withoutPadding.Length % 4)
             {
-            case 2:
-                withPadding += "==";
-                break;
-            case 3:
-                withPadding += "=";
-                break;
+                case 2:
+                    withPadding += "==";
+                    break;
+                case 3:
+                    withPadding += "=";
+                    break;
             }
 
             // Should be safe to call strict functions now
@@ -394,16 +416,12 @@ namespace PasswordManagerAccess.Common
         // Dictionary
         //
 
-        public static TValue GetOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary,
-                                                        TKey key,
-                                                        TValue defaultValue)
+        public static TValue GetOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue)
         {
             return dictionary.TryGetValue(key, out var v) ? v : defaultValue;
         }
 
-        public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary,
-                                                    TKey key,
-                                                    Func<TValue> lazyValue)
+        public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, Func<TValue> lazyValue)
         {
             if (!dictionary.TryGetValue(key, out var v))
             {
@@ -415,8 +433,10 @@ namespace PasswordManagerAccess.Common
         }
 
         // Always returns a copy
-        public static Dictionary<TKey, TValue> MergeCopy<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> self,
-                                                                       IReadOnlyDictionary<TKey, TValue> other)
+        public static Dictionary<TKey, TValue> MergeCopy<TKey, TValue>(
+            this IReadOnlyDictionary<TKey, TValue> self,
+            IReadOnlyDictionary<TKey, TValue> other
+        )
         {
             var merged = new Dictionary<TKey, TValue>(self.Count + other.Count);
 
@@ -432,7 +452,8 @@ namespace PasswordManagerAccess.Common
         // Only returns a copy when the merge is not trivial, otherwise returns either argument.
         public static IReadOnlyDictionary<TKey, TValue> Merge<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> self,
-            IReadOnlyDictionary<TKey, TValue> other)
+            IReadOnlyDictionary<TKey, TValue> other
+        )
         {
             if (other.Count == 0)
                 return self;
@@ -513,7 +534,7 @@ namespace PasswordManagerAccess.Common
                 throw new InternalErrorException("The buffer is too small");
 
             var read = 0;
-            for (;;)
+            for (; ; )
             {
                 var last = input.Read(buffer, start + read, size - read);
                 read += last;
@@ -576,10 +597,7 @@ namespace PasswordManagerAccess.Common
             var result = r.ReadUInt32();
 
             if (BitConverter.IsLittleEndian)
-                result = ((result & 0x000000FF) << 24) |
-                         ((result & 0x0000FF00) <<  8) |
-                         ((result & 0x00FF0000) >>  8) |
-                         ((result & 0xFF000000) >> 24);
+                result = ((result & 0x000000FF) << 24) | ((result & 0x0000FF00) << 8) | ((result & 0x00FF0000) >> 8) | ((result & 0xFF000000) >> 24);
 
             return result;
         }

@@ -47,19 +47,19 @@ namespace PasswordManagerAccess.Dashlane
 
                 switch (transaction.Action)
                 {
-                case "BACKUP_EDIT":
-                    var content = transaction.Content;
-                    if (!string.IsNullOrWhiteSpace(content))
-                        foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword, keyCache))
-                            accounts[i.Id] = i;
+                    case "BACKUP_EDIT":
+                        var content = transaction.Content;
+                        if (!string.IsNullOrWhiteSpace(content))
+                            foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword, keyCache))
+                                accounts[i.Id] = i;
 
-                    break;
-                case "BACKUP_REMOVE":
-                    var id = transaction.Id;
-                    if (id != null)
-                        accounts.Remove(id);
+                        break;
+                    case "BACKUP_REMOVE":
+                        var id = transaction.Id;
+                        if (id != null)
+                            accounts.Remove(id);
 
-                    break;
+                        break;
                 }
             }
 

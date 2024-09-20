@@ -16,11 +16,13 @@ namespace PasswordManagerAccess.OnePassword
 
         public static Encrypted Parse(Response.Encrypted json)
         {
-            return new Encrypted(keyId: json.KeyId,
-                                 scheme: json.Scheme,
-                                 container: json.Container,
-                                 iv: json.Iv?.Decode64Loose(), // This is optional
-                                 ciphertext: json.Ciphertext.Decode64Loose());
+            return new Encrypted(
+                keyId: json.KeyId,
+                scheme: json.Scheme,
+                container: json.Container,
+                iv: json.Iv?.Decode64Loose(), // This is optional
+                ciphertext: json.Ciphertext.Decode64Loose()
+            );
         }
 
         public Encrypted(string keyId, string scheme, string container, byte[] iv, byte[] ciphertext)
@@ -36,11 +38,11 @@ namespace PasswordManagerAccess.OnePassword
         {
             return new Dictionary<string, object>
             {
-                {"kid", KeyId},
-                {"enc", Scheme},
-                {"cty", Container},
-                {"iv", Iv.ToUrlSafeBase64NoPadding()},
-                {"data", Ciphertext.ToUrlSafeBase64NoPadding()},
+                { "kid", KeyId },
+                { "enc", Scheme },
+                { "cty", Container },
+                { "iv", Iv.ToUrlSafeBase64NoPadding() },
+                { "data", Ciphertext.ToUrlSafeBase64NoPadding() },
             };
         }
     }

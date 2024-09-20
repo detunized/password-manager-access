@@ -19,8 +19,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         [Fact]
         public void WordListEn_is_sorted()
         {
-            Assert.Equal(Util.WordListEn,
-                         Util.WordListEn.OrderBy(x => x).ToArray());
+            Assert.Equal(Util.WordListEn, Util.WordListEn.OrderBy(x => x).ToArray());
         }
 
         [Fact]
@@ -37,8 +36,10 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         [InlineData(13)]
         public void DeriveMasterKeyFromRecoveryWords_throws_on_invalid_number_of_words(int size)
         {
-            Exceptions.AssertThrowsInternalError(() => Util.DeriveMasterKeyFromRecoveryWords(new string[size]),
-                                                 "Exactly 12 recovery words must be provided");
+            Exceptions.AssertThrowsInternalError(
+                () => Util.DeriveMasterKeyFromRecoveryWords(new string[size]),
+                "Exactly 12 recovery words must be provided"
+            );
         }
 
         [Fact]
@@ -46,8 +47,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         {
             var words = RecoveryWords.Take(11).Append("blah-blah").ToArray();
 
-            Exceptions.AssertThrowsInternalError(() => Util.DeriveMasterKeyFromRecoveryWords(words),
-                                                 "Recovery word 'blah-blah' is invalid");
+            Exceptions.AssertThrowsInternalError(() => Util.DeriveMasterKeyFromRecoveryWords(words), "Recovery word 'blah-blah' is invalid");
         }
 
         [Fact]
@@ -72,12 +72,21 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
 
         internal static readonly string[] RecoveryWords =
         {
-            "foot", "wild", "noise", "behave", "plastic", "deny",
-            "differ", "feed", "glove", "upgrade", "hand", "rotate",
+            "foot",
+            "wild",
+            "noise",
+            "behave",
+            "plastic",
+            "deny",
+            "differ",
+            "feed",
+            "glove",
+            "upgrade",
+            "hand",
+            "rotate",
         };
 
         internal static readonly byte[] MasterKey = "5aff62570a3a60754f72a563bdd5a35e".DecodeHex();
-        internal static readonly byte[] KeysetEncryptionKey =
-            "4a0a046a2d4e2ee312c550a54fe96b573133e0d5b34f09b985c2b02876b98e6f".DecodeHex();
+        internal static readonly byte[] KeysetEncryptionKey = "4a0a046a2d4e2ee312c550a54fe96b573133e0d5b34f09b985c2b02876b98e6f".DecodeHex();
     }
 }

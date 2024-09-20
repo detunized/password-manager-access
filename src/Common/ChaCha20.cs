@@ -19,9 +19,8 @@ namespace PasswordManagerAccess.Common
         public const int KeySize = 32;
         public const int NonceSize = 12;
 
-        public ChaCha20(byte[] key, byte[] nonce): this(key.AsRoSpan(), nonce.AsRoSpan())
-        {
-        }
+        public ChaCha20(byte[] key, byte[] nonce)
+            : this(key.AsRoSpan(), nonce.AsRoSpan()) { }
 
         public ChaCha20(ReadOnlySpan<byte> key, ReadOnlySpan<byte> nonce)
         {
@@ -56,11 +55,7 @@ namespace PasswordManagerAccess.Common
             _engineState[15] = nonceU32[2];
         }
 
-        public void ProcessBytes(byte[] inputBuffer,
-                                 int inputOffset,
-                                 int inputCount,
-                                 byte[] outputBuffer,
-                                 int outputOffset)
+        public void ProcessBytes(byte[] inputBuffer, int inputOffset, int inputCount, byte[] outputBuffer, int outputOffset)
         {
             if ((uint)inputCount > inputBuffer.Length - (uint)inputOffset)
                 throw new InternalErrorException("Input buffer is too short");
@@ -229,10 +224,7 @@ namespace PasswordManagerAccess.Common
 
         internal static uint LE_To_UInt32(byte[] bs, int off)
         {
-            return bs[off]
-                   | (uint)bs[off + 1] << 8
-                   | (uint)bs[off + 2] << 16
-                   | (uint)bs[off + 3] << 24;
+            return bs[off] | (uint)bs[off + 1] << 8 | (uint)bs[off + 2] << 16 | (uint)bs[off + 3] << 24;
         }
 
         internal const int Rounds = 20;

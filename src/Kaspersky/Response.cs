@@ -11,7 +11,7 @@ namespace PasswordManagerAccess.Kaspersky.Response
         public readonly string Status;
     }
 
-    internal class Start: Result
+    internal class Start : Result
     {
         [JsonProperty("LogonContext", Required = Required.Always)]
         public readonly string Context;

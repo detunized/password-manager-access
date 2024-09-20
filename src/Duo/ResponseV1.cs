@@ -14,13 +14,13 @@ namespace PasswordManagerAccess.Duo.ResponseV1
         public string Message;
     }
 
-    public class FetchToken: Status
+    public class FetchToken : Status
     {
         [JsonProperty("cookie")]
         public string Cookie;
     }
 
-    public class Poll: Status
+    public class Poll : Status
     {
         [JsonProperty("result_url")]
         public string Url;

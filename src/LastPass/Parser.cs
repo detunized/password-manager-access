@@ -47,9 +47,10 @@ namespace PasswordManagerAccess.LastPass
                 // 3: url
                 // The is either hex encoded (legacy) or encrypted like the rest of the fields.
                 var urlEncoded = ReadItem(reader);
-                var url = urlEncoded.Length > 0 && urlEncoded[0] == '!'
-                    ? Util.DecryptAes256Plain(urlEncoded, encryptionKey, placeholder)
-                    : urlEncoded.ToUtf8().DecodeHexLoose().ToUtf8();
+                var url =
+                    urlEncoded.Length > 0 && urlEncoded[0] == '!'
+                        ? Util.DecryptAes256Plain(urlEncoded, encryptionKey, placeholder)
+                        : urlEncoded.ToUtf8().DecodeHexLoose().ToUtf8();
 
                 // Ignore "group" accounts. They have no credentials.
                 if (url == "http://group")
@@ -183,16 +184,18 @@ namespace PasswordManagerAccess.LastPass
                 // Adjust the path to include the group and the shared folder, if any.
                 var path = MakeAccountPath(group, folder);
 
-                return new Account(id: id,
-                                   name: name,
-                                   username: username,
-                                   password: password,
-                                   url: url,
-                                   path: path,
-                                   notes: notes,
-                                   totp: totp,
-                                   isFavorite: isFavorite,
-                                   isShared: folder != null);
+                return new Account(
+                    id: id,
+                    name: name,
+                    username: username,
+                    password: password,
+                    url: url,
+                    path: path,
+                    notes: notes,
+                    totp: totp,
+                    isFavorite: isFavorite,
+                    isShared: folder != null
+                );
             });
         }
 
@@ -205,9 +208,7 @@ namespace PasswordManagerAccess.LastPass
 
                 // Key
                 var rsaEncryptedFolderKey = ReadItem(reader);
-                var key = Crypto.DecryptRsaSha1(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), rsaKey)
-                    .ToUtf8()
-                    .DecodeHex();
+                var key = Crypto.DecryptRsaSha1(rsaEncryptedFolderKey.ToUtf8().DecodeHex(), rsaKey).ToUtf8().DecodeHex();
 
                 // Name
                 var encryptedName = ReadItem(reader);
@@ -219,10 +220,7 @@ namespace PasswordManagerAccess.LastPass
 
         public static RSAParameters ParseEncryptedPrivateKey(string encryptedPrivateKey, byte[] encryptionKey)
         {
-            var decrypted = Util.DecryptAes256(encryptedPrivateKey.DecodeHex(),
-                                               encryptionKey,
-                                               CipherMode.CBC,
-                                               encryptionKey.Take(16).ToArray());
+            var decrypted = Util.DecryptAes256(encryptedPrivateKey.DecodeHex(), encryptionKey, CipherMode.CBC, encryptionKey.Take(16).ToArray());
 
             const string header = "LastPassPrivateKey<";
             const string footer = ">LastPassPrivateKey";
@@ -230,38 +228,33 @@ namespace PasswordManagerAccess.LastPass
             if (!decrypted.StartsWith(header) || !decrypted.EndsWith(footer))
                 throw new InternalErrorException("Failed to decrypt private key");
 
-            var pkcs8 = decrypted.Substring(header.Length,
-                                            decrypted.Length - header.Length - footer.Length).DecodeHex();
+            var pkcs8 = decrypted.Substring(header.Length, decrypted.Length - header.Length - footer.Length).DecodeHex();
 
             return Pem.ParsePrivateKeyPkcs8(pkcs8);
         }
 
-        public static void ParseSecureNoteServer(string notes,
-                                                 ref string type,
-                                                 ref string url,
-                                                 ref string username,
-                                                 ref string password)
+        public static void ParseSecureNoteServer(string notes, ref string type, ref string url, ref string username, ref string password)
         {
             foreach (var i in notes.Split('\n'))
             {
-                var keyValue = i.Split(new[] {':'}, 2);
+                var keyValue = i.Split(new[] { ':' }, 2);
                 if (keyValue.Length < 2)
                     continue;
 
                 switch (keyValue[0])
                 {
-                case "NoteType":
-                    type = keyValue[1];
-                    break;
-                case "Hostname":
-                    url = keyValue[1];
-                    break;
-                case "Username":
-                    username = keyValue[1];
-                    break;
-                case "Password":
-                    password = keyValue[1];
-                    break;
+                    case "NoteType":
+                        type = keyValue[1];
+                        break;
+                    case "Hostname":
+                        url = keyValue[1];
+                        break;
+                    case "Username":
+                        username = keyValue[1];
+                        break;
+                    case "Password":
+                        password = keyValue[1];
+                        break;
                 }
             }
         }
@@ -300,8 +293,7 @@ namespace PasswordManagerAccess.LastPass
             //   0008: 0xDE 0xAD 0xBE 0xEF
             //   000C: --- Next chunk ---
 
-            return new Chunk(ReadId(reader),
-                             ReadPayload(reader, ReadSize(reader)));
+            return new Chunk(ReadId(reader), ReadPayload(reader, ReadSize(reader)));
         }
 
         public static byte[] ReadItem(BinaryReader reader)

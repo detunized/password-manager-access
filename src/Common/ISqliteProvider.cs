@@ -42,8 +42,7 @@ namespace PasswordManagerAccess.StickyPassword
     /// The only exception type expected to be thrown by the implementation of ISqliteProvider.
     public class SqliteProviderError : Exception
     {
-        public SqliteProviderError(string message, Exception innerException = null) : base(message, innerException)
-        {
-        }
+        public SqliteProviderError(string message, Exception innerException = null)
+            : base(message, innerException) { }
     }
 }

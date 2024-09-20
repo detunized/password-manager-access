@@ -7,7 +7,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class Keychain: IDecryptor
+    internal class Keychain : IDecryptor
     {
         public void Add(AesKey key)
         {

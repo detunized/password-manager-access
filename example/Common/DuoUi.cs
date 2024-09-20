@@ -6,7 +6,7 @@ using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.Example.Common
 {
-    public class DuoUi: BaseUi, IDuoUi
+    public class DuoUi : BaseUi, IDuoUi
     {
         public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
         {
@@ -55,12 +55,12 @@ namespace PasswordManagerAccess.Example.Common
         {
             switch (status)
             {
-            case DuoStatus.Success:
-                return ConsoleColor.Green;
-            case DuoStatus.Error:
-                return ConsoleColor.Red;
-            case DuoStatus.Info:
-                return ConsoleColor.Blue;
+                case DuoStatus.Success:
+                    return ConsoleColor.Green;
+                case DuoStatus.Error:
+                    return ConsoleColor.Red;
+                case DuoStatus.Info:
+                    return ConsoleColor.Blue;
             }
 
             throw new ArgumentException("Unknown status");

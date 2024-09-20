@@ -218,10 +218,7 @@ namespace PasswordManagerAccess.Common
         // ECB
         //
 
-        public static byte[] DecryptAes256Ecb(byte[] ciphertext,
-                                              byte[] iv,
-                                              byte[] key,
-                                              PaddingMode paddingMode = PaddingMode.PKCS7)
+        public static byte[] DecryptAes256Ecb(byte[] ciphertext, byte[] iv, byte[] key, PaddingMode paddingMode = PaddingMode.PKCS7)
         {
             return DecryptAes256(ciphertext, iv, key, CipherMode.ECB, paddingMode);
         }
@@ -231,10 +228,7 @@ namespace PasswordManagerAccess.Common
             return DecryptAes256Ecb(ciphertext, iv, key, PaddingMode.None);
         }
 
-        public static byte[] EncryptAes256Ecb(byte[] plaintext,
-                                              byte[] iv,
-                                              byte[] key,
-                                              PaddingMode padding = PaddingMode.PKCS7)
+        public static byte[] EncryptAes256Ecb(byte[] plaintext, byte[] iv, byte[] key, PaddingMode padding = PaddingMode.PKCS7)
         {
             return EncryptAes256(plaintext, iv, key, CipherMode.ECB, padding);
         }
@@ -248,10 +242,7 @@ namespace PasswordManagerAccess.Common
         // CBC
         //
 
-        public static byte[] DecryptAes256Cbc(byte[] ciphertext,
-                                              byte[] iv,
-                                              byte[] key,
-                                              PaddingMode padding = PaddingMode.PKCS7)
+        public static byte[] DecryptAes256Cbc(byte[] ciphertext, byte[] iv, byte[] key, PaddingMode padding = PaddingMode.PKCS7)
         {
             return DecryptAes256(ciphertext, iv, key, CipherMode.CBC, padding);
         }
@@ -261,10 +252,7 @@ namespace PasswordManagerAccess.Common
             return DecryptAes256Cbc(ciphertext, iv, key, PaddingMode.None);
         }
 
-        public static byte[] EncryptAes256Cbc(byte[] plaintext,
-                                              byte[] iv,
-                                              byte[] key,
-                                              PaddingMode padding = PaddingMode.PKCS7)
+        public static byte[] EncryptAes256Cbc(byte[] plaintext, byte[] iv, byte[] key, PaddingMode padding = PaddingMode.PKCS7)
         {
             return EncryptAes256(plaintext, iv, key, CipherMode.CBC, padding);
         }
@@ -278,30 +266,24 @@ namespace PasswordManagerAccess.Common
         // Generic
         //
 
-        public static byte[] DecryptAes256(byte[] ciphertext,
-                                           byte[] iv,
-                                           byte[] key,
-                                           CipherMode cipherMode,
-                                           PaddingMode padding)
+        public static byte[] DecryptAes256(byte[] ciphertext, byte[] iv, byte[] key, CipherMode cipherMode, PaddingMode padding)
         {
             return CryptAes256(ciphertext, iv, key, cipherMode, padding, aes => aes.CreateDecryptor());
         }
 
-        public static byte[] EncryptAes256(byte[] plaintext,
-                                           byte[] iv,
-                                           byte[] key,
-                                           CipherMode cipherMode,
-                                           PaddingMode padding)
+        public static byte[] EncryptAes256(byte[] plaintext, byte[] iv, byte[] key, CipherMode cipherMode, PaddingMode padding)
         {
             return CryptAes256(plaintext, iv, key, cipherMode, padding, aes => aes.CreateEncryptor());
         }
 
-        private static byte[] CryptAes256(byte[] text,
-                                          byte[] iv,
-                                          byte[] key,
-                                          CipherMode cipherMode,
-                                          PaddingMode padding,
-                                          Func<SymmetricAlgorithm, ICryptoTransform> createCryptor)
+        private static byte[] CryptAes256(
+            byte[] text,
+            byte[] iv,
+            byte[] key,
+            CipherMode cipherMode,
+            PaddingMode padding,
+            Func<SymmetricAlgorithm, ICryptoTransform> createCryptor
+        )
         {
             static CryptoException MakeError(Exception e) => new CryptoException("AES decryption failed", e);
 
@@ -420,18 +402,13 @@ namespace PasswordManagerAccess.Common
             return DecryptRsaSystemCryptography(ciphertext, privateKey, RSAEncryptionPadding.OaepSHA256);
         }
 
-        internal static byte[] DecryptRsaSystemCryptography(byte[] ciphertext,
-                                                            RSAParameters privateKey,
-                                                            RSAEncryptionPadding padding)
+        internal static byte[] DecryptRsaSystemCryptography(byte[] ciphertext, RSAParameters privateKey, RSAEncryptionPadding padding)
         {
             using var rsa = RSA.Create();
             return DecryptRsaSystemCryptography(ciphertext, rsa, privateKey, padding);
         }
 
-        internal static byte[] DecryptRsaSystemCryptography(byte[] ciphertext,
-                                                            RSA rsa,
-                                                            RSAParameters privateKey,
-                                                            RSAEncryptionPadding padding)
+        internal static byte[] DecryptRsaSystemCryptography(byte[] ciphertext, RSA rsa, RSAParameters privateKey, RSAEncryptionPadding padding)
         {
             try
             {
@@ -494,7 +471,8 @@ namespace PasswordManagerAccess.Common
             throw new InternalErrorException("The input array is too long to be padded");
         }
 
-        private static readonly int[] SupportedRsaBits = {1024, 2048, 4096};
+        private static readonly int[] SupportedRsaBits = { 1024, 2048, 4096 };
+
         //
         // Misc
         //

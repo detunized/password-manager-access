@@ -11,7 +11,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kaspersky
 {
-    internal class WebSocketBoshTransport: IBoshTransport
+    internal class WebSocketBoshTransport : IBoshTransport
     {
         public WebSocketBoshTransport()
         {
@@ -41,10 +41,7 @@ namespace PasswordManagerAccess.Kaspersky
             try
             {
                 using var sendTokenSource = new CancellationTokenSource(Timeout);
-                _webSocket.SendAsync(new ArraySegment<byte>(body.ToBytes()),
-                                     WebSocketMessageType.Text,
-                                     true,
-                                     sendTokenSource.Token);
+                _webSocket.SendAsync(new ArraySegment<byte>(body.ToBytes()), WebSocketMessageType.Text, true, sendTokenSource.Token);
 
                 _message.SetLength(0);
                 for (var i = 0; i < expectedMessageCount; ++i)

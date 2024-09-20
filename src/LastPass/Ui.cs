@@ -5,7 +5,7 @@ using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.LastPass.Ui
 {
-    public interface IUi: IDuoUi
+    public interface IUi : IDuoUi
     {
         // To cancel return OtpResult.Cancel, otherwise only valid data is expected.
         OtpResult ProvideGoogleAuthPasscode();

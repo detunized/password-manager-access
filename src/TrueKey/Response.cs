@@ -23,7 +23,7 @@ namespace PasswordManagerAccess.TrueKey.Response
         public readonly string ErrorDescription;
     }
 
-    internal class RegisterNewDevice: Status
+    internal class RegisterNewDevice : Status
     {
         [JsonProperty("clientToken", Required = Required.Always)]
         public readonly string ClientToken;
@@ -32,13 +32,13 @@ namespace PasswordManagerAccess.TrueKey.Response
         public readonly string DeviceId;
     }
 
-    internal class AuthStep1: Status
+    internal class AuthStep1 : Status
     {
         [JsonProperty("oAuthTransId", Required = Required.Always)]
         public readonly string TransactionId;
     }
 
-    internal class AuthStep2: Status
+    internal class AuthStep2 : Status
     {
         [JsonProperty("oAuthTransId", Required = Required.Always)]
         public readonly string TransactionId;
@@ -125,7 +125,7 @@ namespace PasswordManagerAccess.TrueKey.Response
         public readonly string EncryptedNote;
     }
 
-    internal class AuthCheck: Status
+    internal class AuthCheck : Status
     {
         [JsonProperty("nextStep", Required = Required.Always)]
         public readonly int NextStep;

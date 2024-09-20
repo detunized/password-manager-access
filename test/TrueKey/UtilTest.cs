@@ -15,8 +15,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void HashPassword_returns_hash_string()
         {
-            Assert.Equal("tk-v1-463d82f8e2378ed234ff98a84118636168b76a69cdac5fcb2b9594a0b18ad2ea",
-                         Util.HashPassword("username", "password"));
+            Assert.Equal("tk-v1-463d82f8e2378ed234ff98a84118636168b76a69cdac5fcb2b9594a0b18ad2ea", Util.HashPassword("username", "password"));
         }
 
         [Fact]
@@ -50,29 +49,25 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void Decrypt_throws_on_too_short_key()
         {
-            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(new byte[15], Ciphertext),
-                                                 "Encryption key should be at least 16 bytes long");
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(new byte[15], Ciphertext), "Encryption key should be at least 16 bytes long");
         }
 
         [Fact]
         public void Decrypt_throws_on_missing_format_byte()
         {
-            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "00".DecodeHex()),
-                                                 "Ciphertext is too short (version byte is missing)");
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "00".DecodeHex()), "Ciphertext is too short (version byte is missing)");
         }
 
         [Fact]
         public void Decrypt_throws_on_missing_iv()
         {
-            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0004".DecodeHex()),
-                                                 "Ciphertext is too short (IV is missing)");
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0004".DecodeHex()), "Ciphertext is too short (IV is missing)");
         }
 
         [Fact]
         public void Decrypt_throws_on_unsupported_version()
         {
-            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0005".DecodeHex()),
-                                                 "Unsupported cipher format version (5)");
+            Exceptions.AssertThrowsInternalError(() => Util.Decrypt(Key, "0005".DecodeHex()), "Unsupported cipher format version (5)");
         }
 
         // We don't test DecryptAes256Ccm extensively as it's well tested in SjclCcm.
@@ -104,23 +99,24 @@ namespace PasswordManagerAccess.Test.TrueKey
         [Fact]
         public void ValidateOtpInfo_throws_on_invalid_value()
         {
-            var otp = new Util.OtpInfo(version : 3,
-                                         otpAlgorithm : 1,
-                                         otpLength : 0,
-                                         hashAlgorithm : 2,
-                                         timeStep : 30,
-                                         startTime : 0,
-                                         suite : "OCRA-1:HOTP-SHA256-0:QA08".ToBytes(),
-                                         hmacSeed : "6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64(),
-                                         iptmk : "HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64());
+            var otp = new Util.OtpInfo(
+                version: 3,
+                otpAlgorithm: 1,
+                otpLength: 0,
+                hashAlgorithm: 2,
+                timeStep: 30,
+                startTime: 0,
+                suite: "OCRA-1:HOTP-SHA256-0:QA08".ToBytes(),
+                hmacSeed: "6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64(),
+                iptmk: "HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64()
+            );
 
             Action<string, object, string> check = (name, value, contains) =>
             {
                 // This is a bit ugly but gets the job done.
                 // We clone the valid object and modify one field to something invalid.
-                var clone = (Util.OtpInfo)otp.GetType()
-                    .GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .Invoke(otp, null);
+                var clone = (Util.OtpInfo)
+                    otp.GetType().GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(otp, null);
                 clone.GetType().GetField(name).SetValue(clone, value);
 
                 Exceptions.AssertThrowsInternalError(() => Util.ValidateOtpInfo(clone), contains);
@@ -156,8 +152,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         {
             var challenge = string.Join("", Enumerable.Repeat("0123456789abcdef", 8)).ToBytes();
 
-            Assert.Equal("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64(),
-                         Util.SignChallenge(OtpInfo, challenge, 1493456789));
+            Assert.Equal("x9vFwF7JWRvMGfckSAFr5PtHkqfo4AAw2YzzBlxFYDY=".Decode64(), Util.SignChallenge(OtpInfo, challenge, 1493456789));
         }
 
         [Theory]
@@ -170,8 +165,7 @@ namespace PasswordManagerAccess.Test.TrueKey
         public void SignChallenge_throws_on_invalid_challenge(int size)
         {
             //var challenge = Enumerable.Repeat((byte)0, size).ToArray();
-            Exceptions.AssertThrowsInternalError(() => Util.SignChallenge(OtpInfo, new byte[size], 1),
-                                                 "Challenge must be");
+            Exceptions.AssertThrowsInternalError(() => Util.SignChallenge(OtpInfo, new byte[size], 1), "Challenge must be");
         }
 
         //
@@ -186,12 +180,9 @@ namespace PasswordManagerAccess.Test.TrueKey
 
         // TODO: Remove copy paste
         private const string MasterPassword = "Password123";
-        private const string MasterKeySaltHex = "845864cf3692189757f5f276b37c2981bdceefea04905" +
-                                                "699685ad0541c4f9092";
-        private const string EncryptedMasterKeyBase64 = "AARZxaQ5EeiK9GlqAkz+BzTwb1cO+b8yMN+SC" +
-                                                        "t3bzQJO+Fyf4TnlA83Mbl1KrMI09iOd9VQJJl" +
-                                                        "u4ivWMwCYhMB6Mw3LOoyS/2UjqmCnxAUqo6MT" +
-                                                        "SnptgjlWO";
+        private const string MasterKeySaltHex = "845864cf3692189757f5f276b37c2981bdceefea04905" + "699685ad0541c4f9092";
+        private const string EncryptedMasterKeyBase64 =
+            "AARZxaQ5EeiK9GlqAkz+BzTwb1cO+b8yMN+SC" + "t3bzQJO+Fyf4TnlA83Mbl1KrMI09iOd9VQJJl" + "u4ivWMwCYhMB6Mw3LOoyS/2UjqmCnxAUqo6MT" + "SnptgjlWO";
         private const string MasterKeyBase64 = "EWQ91qe9SB9KSqp5L6PiZSTg/CD5phR6LekyBanDyIY=";
 
         private static readonly byte[] MasterKeySalt = MasterKeySaltHex.DecodeHex();
@@ -199,12 +190,13 @@ namespace PasswordManagerAccess.Test.TrueKey
         private static readonly byte[] MasterKey = MasterKeyBase64.Decode64();
 
         // TODO: Remove copy paste
-        private const string ClientToken = "AQCmAwEAAh4AAAAAWMajHQAAGU9DUkEtMTpIT1RQLVNIQTI1Ni" +
-                                           "0wOlFBMDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                                           "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                                           "AAAAAAAAAAAAAAAAAAAAAAAAAAIOiRfItpCTOkvq0ZfV2+GgvP" +
-                                           "83aF9SrTBfOuabZfcQr9AAAAAAgAIBwWTZpUTIn493Us/Jwczr" +
-                                           "K6O0+LH8FRidFaZkJ2AlTu";
+        private const string ClientToken =
+            "AQCmAwEAAh4AAAAAWMajHQAAGU9DUkEtMTpIT1RQLVNIQTI1Ni"
+            + "0wOlFBMDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            + "AAAAAAAAAAAAAAAAAAAAAAAAAAIOiRfItpCTOkvq0ZfV2+GgvP"
+            + "83aF9SrTBfOuabZfcQr9AAAAAAgAIBwWTZpUTIn493Us/Jwczr"
+            + "K6O0+LH8FRidFaZkJ2AlTu";
 
         // TODO: Remove copy paste
         private static readonly Util.OtpInfo OtpInfo = new Util.OtpInfo(
@@ -216,6 +208,7 @@ namespace PasswordManagerAccess.Test.TrueKey
             startTime: 0,
             suite: "OCRA-1:HOTP-SHA256-0:QA08".ToBytes(),
             hmacSeed: "6JF8i2kJM6S+rRl9Xb4aC8/zdoX1KtMF865ptl9xCv0=".Decode64(),
-            iptmk: "HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64());
+            iptmk: "HBZNmlRMifj3dSz8nBzOsro7T4sfwVGJ0VpmQnYCVO4=".Decode64()
+        );
     }
 }

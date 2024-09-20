@@ -5,7 +5,7 @@ using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.OnePassword.Ui
 {
-    public interface IUi: IDuoUi
+    public interface IUi : IDuoUi
     {
         // Return Passcode.Cancel to cancel
         Passcode ProvideGoogleAuthPasscode();

@@ -20,21 +20,19 @@ namespace PasswordManagerAccess.OnePassword
             var format = s.Substring(0, 2);
             switch (format)
             {
-            case "A2":
-                if (s.Length != 33)
-                    throw new InternalErrorException("Invalid account key: incorrect length for 'A2' format");
-                break;
-            case "A3":
-                if (s.Length != 34)
-                    throw new InternalErrorException("Invalid account key: incorrect length for 'A3' format");
-                break;
-            default:
-                throw new InternalErrorException($"Invalid account key: unknown format '{format}'");
+                case "A2":
+                    if (s.Length != 33)
+                        throw new InternalErrorException("Invalid account key: incorrect length for 'A2' format");
+                    break;
+                case "A3":
+                    if (s.Length != 34)
+                        throw new InternalErrorException("Invalid account key: incorrect length for 'A3' format");
+                    break;
+                default:
+                    throw new InternalErrorException($"Invalid account key: unknown format '{format}'");
             }
 
-            return new AccountKey(format: format,
-                                  uuid: s.Substring(2, 6),
-                                  key: s.Substring(8));
+            return new AccountKey(format: format, uuid: s.Substring(2, 6), key: s.Substring(8));
         }
 
         public AccountKey(string format, string uuid, string key)
@@ -46,9 +44,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public byte[] Hash()
         {
-            return Util.Hkdf(method: Format,
-                             ikm: Key.ToBytes(),
-                             salt: Uuid.ToBytes());
+            return Util.Hkdf(method: Format, ikm: Key.ToBytes(), salt: Uuid.ToBytes());
         }
 
         public byte[] CombineWith(byte[] bytes)

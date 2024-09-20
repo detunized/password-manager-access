@@ -82,9 +82,7 @@ namespace PasswordManagerAccess.RoboForm
                 }
                 else
                 {
-                    var account = ParseAccount(content: item.StringAt("b", "{}"),
-                                               name: info.StringAt("n", ""),
-                                               path: path);
+                    var account = ParseAccount(content: item.StringAt("b", "{}"), name: info.StringAt("n", ""), path: path);
                     accounts.Add(account);
                 }
             }
@@ -116,15 +114,15 @@ namespace PasswordManagerAccess.RoboForm
                 Account.FieldKind kind;
                 switch (field.IntAt("t", 1))
                 {
-                case 1:
-                    kind = Account.FieldKind.Text;
-                    break;
-                case 2:
-                    kind = Account.FieldKind.Password;
-                    break;
-                default:
-                    // Ignore all other types of fields like buttons and dropdowns.
-                    continue;
+                    case 1:
+                        kind = Account.FieldKind.Text;
+                        break;
+                    case 2:
+                        kind = Account.FieldKind.Password;
+                        break;
+                    default:
+                        // Ignore all other types of fields like buttons and dropdowns.
+                        continue;
                 }
 
                 // Ignore fields with default values
@@ -150,8 +148,7 @@ namespace PasswordManagerAccess.RoboForm
         internal static string GuessUsername(Account.Field[] fields)
         {
             // If there's only one text field with a special name then it's the username.
-            var username = fields.Where(i => i.Kind == Account.FieldKind.Text &&
-                                             UsernameFields.Contains(i.Name.ToLower())).ToArray();
+            var username = fields.Where(i => i.Kind == Account.FieldKind.Text && UsernameFields.Contains(i.Name.ToLower())).ToArray();
             if (username.Length == 1)
                 return username[0].Value;
 
@@ -184,22 +181,8 @@ namespace PasswordManagerAccess.RoboForm
             return null;
         }
 
-        private static readonly HashSet<string> UsernameFields = new HashSet<string>
-        {
-            "username",
-            "login",
-            "email",
-            "user",
-            "u",
-        };
+        private static readonly HashSet<string> UsernameFields = new HashSet<string> { "username", "login", "email", "user", "u" };
 
-        private static readonly HashSet<string> PasswordFields = new HashSet<string>
-        {
-            "password",
-            "passwd",
-            "pwd",
-            "pass",
-            "p",
-        };
+        private static readonly HashSet<string> PasswordFields = new HashSet<string> { "password", "passwd", "pwd", "pass", "p" };
     }
 }

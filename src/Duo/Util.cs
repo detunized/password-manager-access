@@ -19,10 +19,12 @@ namespace PasswordManagerAccess.Duo
             return doc;
         }
 
-        internal static T PostForm<T>(string endpoint,
-                                      Dictionary<string, object> parameters,
-                                      RestClient rest,
-                                      Dictionary<string, string> extraHeaders = null)
+        internal static T PostForm<T>(
+            string endpoint,
+            Dictionary<string, object> parameters,
+            RestClient rest,
+            Dictionary<string, string> extraHeaders = null
+        )
         {
             var response = rest.PostForm<Envelope<T>>(endpoint, parameters, headers: extraHeaders);
 
@@ -41,7 +43,7 @@ namespace PasswordManagerAccess.Duo
                 DuoFactor.Call => "Phone Call",
                 DuoFactor.Passcode => "Passcode",
                 DuoFactor.SendPasscodesBySms => "sms",
-                _ => ""
+                _ => "",
             };
         }
 

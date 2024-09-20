@@ -13,11 +13,10 @@ namespace PasswordManagerAccess.Example.Common
     // A primitive not-so-secure secure storage implementation. It stores a dictionary
     // as a list of strings in a text file. It could be JSON or something but we don't
     // want any extra dependencies.
-    public class PlainStorage: ISecureStorage
+    public class PlainStorage : ISecureStorage
     {
-        public PlainStorage(): this(FindFilename())
-        {
-        }
+        public PlainStorage()
+            : this(FindFilename()) { }
 
         public PlainStorage(string filename)
         {
@@ -52,8 +51,7 @@ namespace PasswordManagerAccess.Example.Common
             // Look in the same place as config.yaml
             var filename = Util.FindFile("config.yaml", 3);
             if (filename == null)
-                throw new InvalidOperationException("Couldn't find config.yaml, " +
-                                                    "wanted to put storage.yaml in the same directory");
+                throw new InvalidOperationException("Couldn't find config.yaml, " + "wanted to put storage.yaml in the same directory");
 
             return Path.GetDirectoryName(filename) + "/storage.yaml";
         }

@@ -14,9 +14,11 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public const string Passphrase = "passphrase123";
 
         // Based on "auth-info-response.json"
-        public static readonly Client.AuthInfo AuthInfo = new(
-            iterationCount: 1000,
-            salt: "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
-            encryptionCheck: "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64());
+        public static readonly Client.AuthInfo AuthInfo =
+            new(
+                iterationCount: 1000,
+                salt: "f78e6ffce8e57501a02c9be303db2c68".ToBytes(),
+                encryptionCheck: "awNZM8agxVecKpRoC821Oq6NlvVwm6KpPGW+cLdzRoc2Mg5vqPQzoONwww==".Decode64()
+            );
     }
 }

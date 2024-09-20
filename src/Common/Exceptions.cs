@@ -18,51 +18,58 @@ namespace PasswordManagerAccess.Common
     // features are needed and should be added in the future.
 
     // Don't want to be warned about missing constructors. We're not using them.
-    #pragma warning disable RCS1194
+#pragma warning disable RCS1194
 
-    public abstract class BaseException: Exception
+    public abstract class BaseException : Exception
     {
-        protected BaseException(string message, Exception inner) : base(message, inner) { }
+        protected BaseException(string message, Exception inner)
+            : base(message, inner) { }
     }
 
     // Bad credentials supplied by the user: email, username, password, etc.
-    public class BadCredentialsException: BaseException
+    public class BadCredentialsException : BaseException
     {
-        public BadCredentialsException(string message, Exception inner = null) : base(message, inner) { }
+        public BadCredentialsException(string message, Exception inner = null)
+            : base(message, inner) { }
     }
 
     // Bad 2FA/MFA code or whatever else is used in that particular 2FA/MFA method.
-    public class BadMultiFactorException: BaseException
+    public class BadMultiFactorException : BaseException
     {
-        public BadMultiFactorException(string message, Exception inner = null) : base(message, inner) { }
+        public BadMultiFactorException(string message, Exception inner = null)
+            : base(message, inner) { }
     }
 
     // The user canceled the 2FA/MFA sequence. This is more of a control flow exception, a deep return.
-    public class CanceledMultiFactorException: BaseException
+    public class CanceledMultiFactorException : BaseException
     {
-        public CanceledMultiFactorException(string message, Exception inner = null) : base(message, inner) { }
+        public CanceledMultiFactorException(string message, Exception inner = null)
+            : base(message, inner) { }
     }
 
     // Something went wrong with the network. Not an unexpected response, but rather a connectivity issue.
-    public class NetworkErrorException: BaseException
+    public class NetworkErrorException : BaseException
     {
-        public NetworkErrorException(string message, Exception inner = null) : base(message, inner) { }
+        public NetworkErrorException(string message, Exception inner = null)
+            : base(message, inner) { }
     }
 
     // Thrown when we know of a feature and it's known not to be supported. The opposite would be
     // an unsupported feature that is not known to us and then it would most likely end up being
     // thrown as an InternalErrorException.
-    public class UnsupportedFeatureException: BaseException
+    public class UnsupportedFeatureException : BaseException
     {
-        public UnsupportedFeatureException(string message, Exception inner = null) : base(message, inner) { }
+        public UnsupportedFeatureException(string message, Exception inner = null)
+            : base(message, inner) { }
     }
 
     // Pretty much all the other errors. There's nothing the application can do about those and thus
     // there's no need for any structured information like a failure reason or any additional info or
     // whatever.
-    public class InternalErrorException: BaseException
+    public class InternalErrorException : BaseException
     {
-        public InternalErrorException(string message, Exception inner = null) : base(message, inner) { }
+        public InternalErrorException(string message, Exception inner = null)
+            : base(message, inner) { }
     }
 
     //
@@ -72,8 +79,9 @@ namespace PasswordManagerAccess.Common
     // This is thrown by internal crypto code and should not leak outside. At least that the idea.
     // TODO: Evaluate if it's a good idea. Maybe we should just throw the internal error here.
     //       It's tedious to catch and rethrow all over the place.
-    internal class CryptoException: BaseException
+    internal class CryptoException : BaseException
     {
-        public CryptoException(string message, Exception inner = null) : base(message, inner) { }
+        public CryptoException(string message, Exception inner = null)
+            : base(message, inner) { }
     }
 }

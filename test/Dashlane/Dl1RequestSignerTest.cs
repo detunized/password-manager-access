@@ -15,18 +15,20 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         public void Sign_returns_headers()
         {
-            var headers = Dl1RequestSigner.Sign(new Uri("https://blah.blah"),
-                                                HttpMethod.Post,
-                                                new Dictionary<string, string>
-                                                {
-                                                    ["name1"] = "value1",
-                                                    ["name2"] = "value2",
-                                                    ["name3"] = "value3",
-                                                    ["User-Agent"] = "Browser",
-                                                    ["Content-Length"] = "1337",
-                                                },
-                                                MakeHttpContent(),
-                                                1234567890);
+            var headers = Dl1RequestSigner.Sign(
+                new Uri("https://blah.blah"),
+                HttpMethod.Post,
+                new Dictionary<string, string>
+                {
+                    ["name1"] = "value1",
+                    ["name2"] = "value2",
+                    ["name3"] = "value3",
+                    ["User-Agent"] = "Browser",
+                    ["Content-Length"] = "1337",
+                },
+                MakeHttpContent(),
+                1234567890
+            );
 
             var expected = new Dictionary<string, string>
             {
@@ -35,9 +37,10 @@ namespace PasswordManagerAccess.Test.Dashlane
                 ["name3"] = "value3",
                 ["User-Agent"] = "Browser",
                 ["Content-Length"] = "1337",
-                ["Authorization"] = "DL1-HMAC-SHA256 AppAccessKey=C4F8H4SEAMXNBQVSASVBWDDZNCVTESMY,Timestamp=1234567890,SignedHeaders=content-header-name;content-type;ignored-content-header-name;name1;name2;name3,Signature=c68d0658fe6707d0cbedafe24e6a845460ddb7e98baf1236815ed40ae30052ee",
+                ["Authorization"] =
+                    "DL1-HMAC-SHA256 AppAccessKey=C4F8H4SEAMXNBQVSASVBWDDZNCVTESMY,Timestamp=1234567890,SignedHeaders=content-header-name;content-type;ignored-content-header-name;name1;name2;name3,Signature=c68d0658fe6707d0cbedafe24e6a845460ddb7e98baf1236815ed40ae30052ee",
             };
-            
+
             Assert.Equal(expected, headers);
         }
 
@@ -45,8 +48,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         public void BuildAuthHeader_returns_header()
         {
             var header = Dl1RequestSigner.BuildAuthHeader(1234567890, new[] { "h1", "h2", "h3" }, "deadbeef");
-            var expected = "DL1-HMAC-SHA256 AppAccessKey=C4F8H4SEAMXNBQVSASVBWDDZNCVTESMY,Timestamp=1234567890,SignedHeaders=h1;h2;h3,Signature=deadbeef";
-            
+            var expected =
+                "DL1-HMAC-SHA256 AppAccessKey=C4F8H4SEAMXNBQVSASVBWDDZNCVTESMY,Timestamp=1234567890,SignedHeaders=h1;h2;h3,Signature=deadbeef";
+
             Assert.Equal(expected, header);
         }
 
@@ -65,15 +69,17 @@ namespace PasswordManagerAccess.Test.Dashlane
             content.Headers.Add("Content-Header", "content-header-value1");
             content.Headers.Add("Content-Header", "content-header-value2");
 
-            var headers = Dl1RequestSigner.FormatHeaderForSigning(new Dictionary<string, string>
-                                                                  {
-                                                                      ["name1"] = "value1",
-                                                                      ["name2"] = "value2",
-                                                                      ["name3"] = "value3",
-                                                                      ["User-Agent"] = "Browser",
-                                                                      ["Content-Length"] = "1337",
-                                                                  },
-                                                                  content);
+            var headers = Dl1RequestSigner.FormatHeaderForSigning(
+                new Dictionary<string, string>
+                {
+                    ["name1"] = "value1",
+                    ["name2"] = "value2",
+                    ["name3"] = "value3",
+                    ["User-Agent"] = "Browser",
+                    ["Content-Length"] = "1337",
+                },
+                content
+            );
 
             var expected = new Dictionary<string, string>
             {
@@ -82,25 +88,27 @@ namespace PasswordManagerAccess.Test.Dashlane
                 ["name3"] = "value3",
                 ["content-header"] = "content-header-value1, content-header-value2",
             };
-            
+
             Assert.Equal(expected, headers);
         }
 
         [Fact]
         public void BuildRequest_returns_request_string()
         {
-            var r = Dl1RequestSigner.BuildRequest(new Uri("https://blah.blah"),
-                                                  HttpMethod.Post,
-                                                  new Dictionary<string, string>
-                                                  {
-                                                      ["name3"] = "value3",
-                                                      ["ignored2"] = "ignored2",
-                                                      ["name2"] = "value2",
-                                                      ["ignored1"] = "ignored1",
-                                                      ["name1"] = "value1",
-                                                  },
-                                                  new[] { "name1", "name2", "name3" },
-                                                  MakeHttpContent());
+            var r = Dl1RequestSigner.BuildRequest(
+                new Uri("https://blah.blah"),
+                HttpMethod.Post,
+                new Dictionary<string, string>
+                {
+                    ["name3"] = "value3",
+                    ["ignored2"] = "ignored2",
+                    ["name2"] = "value2",
+                    ["ignored1"] = "ignored1",
+                    ["name1"] = "value1",
+                },
+                new[] { "name1", "name2", "name3" },
+                MakeHttpContent()
+            );
 
             var expected = new[]
             {
@@ -112,9 +120,9 @@ namespace PasswordManagerAccess.Test.Dashlane
                 "name3:value3",
                 "",
                 "name1;name2;name3",
-                ContentSha256
+                ContentSha256,
             }.JoinToString("\n");
-            
+
             Assert.Equal(expected, r);
         }
 
@@ -124,7 +132,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var material = Dl1RequestSigner.BuildAuthSigningMaterial(1234567890, "deadbeef");
             Assert.Equal("DL1-HMAC-SHA256\n1234567890\ndeadbeef", material);
         }
-        
+
         //
         // Helpers
         //

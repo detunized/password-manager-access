@@ -15,9 +15,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         public UInt128(byte[] bytes)
-            : this(bytes, 0, bytes.Length)
-        {
-        }
+            : this(bytes, 0, bytes.Length) { }
 
         public UInt128(byte[] bytes, int offset, int length)
         {

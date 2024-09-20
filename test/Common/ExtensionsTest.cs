@@ -114,9 +114,9 @@ namespace PasswordManagerAccess.Test.Common
         [Theory]
         [InlineData("", true)]
         [InlineData("deadbeef", true)]
-        [InlineData("0", false)]         // odd length
+        [InlineData("0", false)] // odd length
         [InlineData("badc0ffee", false)] // odd length
-        [InlineData("not hex!", false)]  // invalid characters
+        [InlineData("not hex!", false)] // invalid characters
         public void String_IsHex_returns_correct_result(string hex, bool expected)
         {
             Assert.Equal(expected, hex.IsHex());
@@ -127,11 +127,11 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("00", new byte[] { 0 })]
         [InlineData("00ff", new byte[] { 0, 255 })]
         [InlineData("00010203040506070809", new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 })]
-        [InlineData("000102030405060708090a0b0c0d0e0f",
-                    new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 })]
-        [InlineData("8af633933e96a3c3550c2734bd814195",
-                    new byte[] { 0x8A, 0xF6, 0x33, 0x93, 0x3E, 0x96, 0xA3, 0xC3,
-                                 0x55, 0x0C, 0x27, 0x34, 0xBD, 0x81, 0x41, 0x95 })]
+        [InlineData("000102030405060708090a0b0c0d0e0f", new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 })]
+        [InlineData(
+            "8af633933e96a3c3550c2734bd814195",
+            new byte[] { 0x8A, 0xF6, 0x33, 0x93, 0x3E, 0x96, 0xA3, 0xC3, 0x55, 0x0C, 0x27, 0x34, 0xBD, 0x81, 0x41, 0x95 }
+        )]
         public void String_DecodeHex(string hex, byte[] expected)
         {
             Assert.Equal(expected, hex.ToLower().DecodeHex());
@@ -338,9 +338,9 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Theory]
-        [InlineData(new byte[] {13})]
-        [InlineData(new byte[] {13, 37})]
-        [InlineData(new byte[] {1, 3, 3, 7})]
+        [InlineData(new byte[] { 13 })]
+        [InlineData(new byte[] { 13, 37 })]
+        [InlineData(new byte[] { 1, 3, 3, 7 })]
         public void ByteArray_IsNullOrEmpty_returns_false_for_non_empty_array(byte[] bytes)
         {
             Assert.False(bytes.IsNullOrEmpty());
@@ -385,8 +385,7 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("-w", new byte[] { 0xFB })]
         [InlineData("--8", new byte[] { 0xFB, 0xEF })]
         [InlineData("--__", new byte[] { 0xFB, 0xEF, 0xFF })]
-        public void ByteArray_ToUrlSafeBase64NoPadding_returns_urlsafe_base64_without_padding(string expected,
-                                                                                              byte[] bytes)
+        public void ByteArray_ToUrlSafeBase64NoPadding_returns_urlsafe_base64_without_padding(string expected, byte[] bytes)
         {
             Assert.Equal(expected, bytes.ToUrlSafeBase64NoPadding());
         }
@@ -405,7 +404,7 @@ namespace PasswordManagerAccess.Test.Common
         public void ByteArray_Open_provides_binary_read()
         {
             byte result = 0;
-            new byte[] {13}.Open(reader => result = reader.ReadByte());
+            new byte[] { 13 }.Open(reader => result = reader.ReadByte());
 
             Assert.Equal(13, result);
         }
@@ -413,7 +412,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void ByteArray_Open_returns_result()
         {
-            byte result = new byte[] {13}.Open(reader => reader.ReadByte());
+            byte result = new byte[] { 13 }.Open(reader => reader.ReadByte());
 
             Assert.Equal(13, result);
         }
@@ -468,8 +467,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void ByteArray_Sub_throws_on_negative_length()
         {
-            Exceptions.AssertThrowsInternalError(() => new byte[] { }.Sub(0, -1337),
-                                                 "length should not be negative");
+            Exceptions.AssertThrowsInternalError(() => new byte[] { }.Sub(0, -1337), "length should not be negative");
         }
 
         //
@@ -558,7 +556,13 @@ namespace PasswordManagerAccess.Test.Common
         {
             var d1 = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" } };
             var d2 = new Dictionary<string, string>() { { "three", "3" }, { "four", "4" } };
-            var r = new Dictionary<string, string>() { { "one", "1" }, { "two", "2" }, { "three", "3" }, { "four", "4" } };
+            var r = new Dictionary<string, string>()
+            {
+                { "one", "1" },
+                { "two", "2" },
+                { "three", "3" },
+                { "four", "4" },
+            };
 
             Assert.Equal(r, d1.MergeCopy(d2));
             Assert.Equal(r, d2.MergeCopy(d1));
@@ -625,9 +629,7 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("a", "-", "a")]
         [InlineData("a-b", "-", "a", "b")]
         [InlineData("1-2", "-", 1, 2)]
-        public void IEnumerable_JoinToString_returns_joined_string(string expected,
-                                                                   string separator,
-                                                                   params object[] objects)
+        public void IEnumerable_JoinToString_returns_joined_string(string expected, string separator, params object[] objects)
         {
             Assert.Equal(expected, objects.JoinToString(separator));
         }
@@ -664,8 +666,7 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(594327, -1337, 19, 1000000)]
         public void BigInteger_ModExp_returns_positive_result(int result, int b, int e, int m)
         {
-            Assert.Equal(new BigInteger(result),
-                         new BigInteger(b).ModExp(new BigInteger(e), new BigInteger(m)));
+            Assert.Equal(new BigInteger(result), new BigInteger(b).ModExp(new BigInteger(e), new BigInteger(m)));
         }
 
         //
@@ -680,17 +681,7 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(new byte[] { 1, 2, 3, 4 })]
         public void Stream_ReadAll_reads_all_bytes_from_stream(byte[] bytes)
         {
-            var bufferSizes = new int[]
-            {
-                1,
-                2,
-                3,
-                4,
-                100,
-                1024,
-                1337,
-                65536,
-            };
+            var bufferSizes = new int[] { 1, 2, 3, 4, 100, 1024, 1337, 65536 };
 
             // Default buffer
             Assert.Equal(bytes, new MemoryStream(bytes).ReadAll());
@@ -706,8 +697,7 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(-1337)]
         public void Stream_ReadAll_throws_on_zero_buffer_size(int size)
         {
-            Exceptions.AssertThrowsInternalError(() => new MemoryStream().ReadAll(size),
-                                                 "Buffer size must be positive");
+            Exceptions.AssertThrowsInternalError(() => new MemoryStream().ReadAll(size), "Buffer size must be positive");
         }
 
         [Theory]
@@ -801,7 +791,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void BinaryReader_ReadUInt16BigEndian_reads_ushort()
         {
-            var bytes = new byte[] {0xDE, 0xAD, 0xBE, 0xEF};
+            var bytes = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF };
             using var s = new MemoryStream(bytes);
             using var r = new BinaryReader(s);
 
@@ -812,7 +802,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void BinaryReader_ReadUInt32BigEndian_reads_uint()
         {
-            var bytes = new byte[] {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED, 0xF0, 0x0D};
+            var bytes = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED, 0xF0, 0x0D };
             using var s = new MemoryStream(bytes);
             using var r = new BinaryReader(s);
 
@@ -831,11 +821,13 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_StringAt_returns_string()
         {
-            var j = JObject.Parse(@"{
+            var j = JObject.Parse(
+                @"{
                 'k1': 'v1',
                 'k2': 'v2',
                 'k3': 'v3'
-            }");
+            }"
+            );
 
             Assert.Equal("v1", j.StringAt("k1", ""));
             Assert.Equal("v2", j.StringAt("k2", ""));
@@ -877,11 +869,13 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_IntAt_returns_int()
         {
-            var j = JObject.Parse(@"{
+            var j = JObject.Parse(
+                @"{
                 'k1': 13,
                 'k2': 17,
                 'k3': 19
-            }");
+            }"
+            );
 
             Assert.Equal(13, j.IntAt("k1", 0));
             Assert.Equal(17, j.IntAt("k2", 0));
@@ -923,11 +917,13 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_BoolAt_returns_bools()
         {
-            var j = JObject.Parse(@"{
+            var j = JObject.Parse(
+                @"{
                 'k1': true,
                 'k2': false,
                 'k3': true
-            }");
+            }"
+            );
 
             Assert.True(j.BoolAt("k1", false));
             Assert.False(j.BoolAt("k2", true));
@@ -1074,11 +1070,13 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_At_functions_work_on_nested_objects()
         {
-            var j = JObject.Parse(@"{
+            var j = JObject.Parse(
+                @"{
                 'k1': 'v1',
                 'k2': {'k22': 1337},
                 'k3': {'k33': {'k333': false}},
-            }");
+            }"
+            );
 
             Assert.Equal("yo", j["not-a-key"].StringAt("key", "yo"));
             Assert.Equal(1337, j["k2"].IntAt("k22", 0));
@@ -1110,7 +1108,7 @@ namespace PasswordManagerAccess.Test.Common
         // Helpers
         //
 
-        private class TrickleStream: Stream
+        private class TrickleStream : Stream
         {
             public override bool CanRead => true;
             public override bool CanSeek => false;
@@ -1134,16 +1132,20 @@ namespace PasswordManagerAccess.Test.Common
             }
 
             public override void Flush() => throw new NotImplementedException();
+
             public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
+
             public override void SetLength(long value) => throw new NotImplementedException();
+
             public override void Write(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+
             public override long Length => throw new NotImplementedException();
 
             private int _portion;
             private int _length;
         }
 
-        private class SeekOnlyStream: Stream
+        private class SeekOnlyStream : Stream
         {
             public override bool CanRead => false;
             public override bool CanSeek => true;
@@ -1160,8 +1162,11 @@ namespace PasswordManagerAccess.Test.Common
             }
 
             public override void Flush() => throw new NotImplementedException();
+
             public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+
             public override void SetLength(long value) => throw new NotImplementedException();
+
             public override void Write(byte[] buffer, int offset, int count) => throw new NotImplementedException();
 
             public override long Length => throw new NotImplementedException();
@@ -1176,8 +1181,36 @@ namespace PasswordManagerAccess.Test.Common
 
         private static readonly byte[] TestBytes =
         {
-            65, 108, 108, 32, 121, 111, 117, 114, 32, 98, 97, 115, 101, 32, 97,
-            114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32, 117, 115
+            65,
+            108,
+            108,
+            32,
+            121,
+            111,
+            117,
+            114,
+            32,
+            98,
+            97,
+            115,
+            101,
+            32,
+            97,
+            114,
+            101,
+            32,
+            98,
+            101,
+            108,
+            111,
+            110,
+            103,
+            32,
+            116,
+            111,
+            32,
+            117,
+            115,
         };
     }
 }

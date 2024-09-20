@@ -10,7 +10,7 @@ namespace PasswordManagerAccess.Example.RoboForm
 {
     public static class Program
     {
-        private class TextUi: Ui
+        private class TextUi : Ui
         {
             private const string ToCancel = "or just press ENTER to cancel";
 

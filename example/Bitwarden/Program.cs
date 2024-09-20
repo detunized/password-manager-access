@@ -14,18 +14,15 @@ namespace PasswordManagerAccess.Example.Bitwarden
 {
     public static class Program
     {
-        private class TextUi: DuoUi, IUi
+        private class TextUi : DuoUi, IUi
         {
-            public void Close()
-            {
-            }
+            public void Close() { }
 
             public MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
             {
                 var methods = availableMethods.Where(m => m != MfaMethod.Cancel).OrderBy(m => m).ToArray();
                 var lines = methods.Select((m, i) => $"{i + 1} {m}");
-                var prompt = $"Please choose the second factor method {PressEnterToCancel}\n\n" +
-                             string.Join("\n", lines);
+                var prompt = $"Please choose the second factor method {PressEnterToCancel}\n\n" + string.Join("\n", lines);
 
                 while (true)
                 {
@@ -83,8 +80,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             if (string.IsNullOrEmpty(deviceId))
             {
                 deviceId = Vault.GenerateRandomDeviceId();
-                Console.WriteLine($"Your newly generated device ID is {deviceId}. " +
-                                  "Store it and use it for subsequent runs.");
+                Console.WriteLine($"Your newly generated device ID is {deviceId}. " + "Store it and use it for subsequent runs.");
             }
 
             // This one is optional
@@ -99,43 +95,49 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 {
                     // Fully non-interactive CLI/API mode
                     Console.WriteLine("Using the CLI/API mode");
-                    vault = Vault.Open(new ClientInfoCliApi(clientId: clientId,
-                                                            clientSecret: config["client-secret"],
-                                                            password: config["password"],
-                                                            deviceId: deviceId),
-                                       baseUrl);
+                    vault = Vault.Open(
+                        new ClientInfoCliApi(
+                            clientId: clientId,
+                            clientSecret: config["client-secret"],
+                            password: config["password"],
+                            deviceId: deviceId
+                        ),
+                        baseUrl
+                    );
                 }
                 else
                 {
                     // Possibly interactive browser mode
                     Console.WriteLine("Using the browser mode");
-                    vault = Vault.Open(new ClientInfoBrowser(username: config["username"],
-                                                             password: config["password"],
-                                                             deviceId: deviceId),
-                                       baseUrl: baseUrl,
-                                       ui: new TextUi(),
-                                       storage: new PlainStorage());
+                    vault = Vault.Open(
+                        new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
+                        baseUrl: baseUrl,
+                        ui: new TextUi(),
+                        storage: new PlainStorage()
+                    );
                 }
 
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];
-                    Console.WriteLine("{0}:\n" +
-                                      "          id: {1}\n" +
-                                      "        name: {2}\n" +
-                                      "    username: {3}\n" +
-                                      "    password: {4}\n" +
-                                      "         url: {5}\n" +
-                                      "        note: {6}\n" +
-                                      "      folder: {7}\n",
-                                      i + 1,
-                                      account.Id,
-                                      account.Name,
-                                      account.Username,
-                                      account.Password,
-                                      account.Url,
-                                      account.Note,
-                                      account.Folder);
+                    Console.WriteLine(
+                        "{0}:\n"
+                            + "          id: {1}\n"
+                            + "        name: {2}\n"
+                            + "    username: {3}\n"
+                            + "    password: {4}\n"
+                            + "         url: {5}\n"
+                            + "        note: {6}\n"
+                            + "      folder: {7}\n",
+                        i + 1,
+                        account.Id,
+                        account.Name,
+                        account.Username,
+                        account.Password,
+                        account.Url,
+                        account.Note,
+                        account.Folder
+                    );
 
                     if (account.CustomFields.Length > 0)
                     {

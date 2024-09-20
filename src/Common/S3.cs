@@ -37,11 +37,7 @@ namespace PasswordManagerAccess.Common
         // Internal
         //
 
-        internal static byte[] GetObject(string bucket,
-                                         string path,
-                                         Credentials credentials,
-                                         DateTime timestamp,
-                                         RestClient rest)
+        internal static byte[] GetObject(string bucket, string path, Credentials credentials, DateTime timestamp, RestClient rest)
         {
             var host = $"{bucket}.s3.amazonaws.com";
             var rootPath = path.StartsWith("/") ? path : '/' + path;
@@ -54,10 +50,7 @@ namespace PasswordManagerAccess.Common
             throw new InternalErrorException("Failed to get an S3 object", response.Error);
         }
 
-        internal static Dictionary<string, string> MakeHeaders(string host,
-                                                               string rootPath,
-                                                               Credentials credentials,
-                                                               DateTime timestamp)
+        internal static Dictionary<string, string> MakeHeaders(string host, string rootPath, Credentials credentials, DateTime timestamp)
         {
             var timestampUtc = timestamp.ToUniversalTime();
             var dateIso8601 = timestampUtc.ToString("yyyyMMdd");
@@ -111,13 +104,7 @@ namespace PasswordManagerAccess.Common
 
         internal static string MakeStringToSign(string scope, string timestamp, string canonicalRequest)
         {
-            return new[]
-            {
-                "AWS4-HMAC-SHA256",
-                timestamp,
-                scope,
-                Crypto.Sha256(canonicalRequest).ToHex(),
-            }.JoinToString("\n");
+            return new[] { "AWS4-HMAC-SHA256", timestamp, scope, Crypto.Sha256(canonicalRequest).ToHex() }.JoinToString("\n");
         }
 
         internal static byte[] MakeSigningKey(string scope, Credentials credentials)
@@ -134,7 +121,8 @@ namespace PasswordManagerAccess.Common
         //
 
         private const string Region = "us-east-1";
-        private const string UserAgent = "aws-sdk-dotnet-45/3.3.110.30 aws-sdk-dotnet-core/3.3.104.32 .NET_Runtime/4.0 .NET_Framework/4.0 OS/Microsoft_Windows_NT_6.2.9200.0 ClientAsync";
+        private const string UserAgent =
+            "aws-sdk-dotnet-45/3.3.110.30 aws-sdk-dotnet-core/3.3.104.32 .NET_Runtime/4.0 .NET_Framework/4.0 OS/Microsoft_Windows_NT_6.2.9200.0 ClientAsync";
 
         // SHA256("")
         private const string Sha256OfBlank = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";

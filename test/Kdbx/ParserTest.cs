@@ -10,7 +10,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.Kdbx
 {
-    public class ParserTest: TestBase
+    public class ParserTest : TestBase
     {
         [Theory]
         [InlineData("kdbx4-aes-aes")]
@@ -86,10 +86,12 @@ namespace PasswordManagerAccess.Test.Kdbx
             AssertAccountWithFields(0, "00 - With 0 fields", 0, "");
             AssertAccountWithFields(1, "01 - With 3 fields", 3, "key1=value1,key2=value2,key3=value3");
             AssertAccountWithFields(2, "02 - With 3 protected fields", 3, "key1=value1,key2=value2,key3=value3");
-            AssertAccountWithFields(3,
-                                    "03 - With 3 regular and 3 protected fields",
-                                    6,
-                                    "key1=value1,key2=value2,key3=value3,key4=value4,key5=value5,key6=value6");
+            AssertAccountWithFields(
+                3,
+                "03 - With 3 regular and 3 protected fields",
+                6,
+                "key1=value1,key2=value2,key3=value3,key4=value4,key5=value5,key6=value6"
+            );
         }
 
         [Fact]

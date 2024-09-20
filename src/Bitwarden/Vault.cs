@@ -36,13 +36,15 @@ namespace PasswordManagerAccess.Bitwarden
         public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            var (accounts, collections, organizations, errors) = Client.OpenVaultBrowser(username: clientInfo.Username,
-                                                                                         password: clientInfo.Password,
-                                                                                         deviceId: clientInfo.DeviceId,
-                                                                                         baseUrl: baseUrl,
-                                                                                         ui: ui,
-                                                                                         storage: storage,
-                                                                                         transport: transport);
+            var (accounts, collections, organizations, errors) = Client.OpenVaultBrowser(
+                username: clientInfo.Username,
+                password: clientInfo.Password,
+                deviceId: clientInfo.DeviceId,
+                baseUrl: baseUrl,
+                ui: ui,
+                storage: storage,
+                transport: transport
+            );
 
             return new Vault(accounts, collections, organizations, errors);
         }
@@ -65,7 +67,8 @@ namespace PasswordManagerAccess.Bitwarden
                 password: clientInfo.Password,
                 deviceId: clientInfo.DeviceId,
                 baseUrl: baseUrl,
-                transport: transport);
+                transport: transport
+            );
 
             return new Vault(accounts, collections, organizations, errors);
         }
@@ -77,19 +80,9 @@ namespace PasswordManagerAccess.Bitwarden
         }
 
         [Obsolete("Please use the overloads with either ClientInfoBrowser or ClientInfoCliApi")]
-        public static Vault Open(string username,
-                                 string password,
-                                 string deviceId,
-                                 string baseUrl,
-                                 IUi ui,
-                                 ISecureStorage storage)
+        public static Vault Open(string username, string password, string deviceId, string baseUrl, IUi ui, ISecureStorage storage)
         {
-            return Open(new ClientInfoBrowser(username: username,
-                                              password: password,
-                                              deviceId: deviceId),
-                        baseUrl,
-                        ui,
-                        storage);
+            return Open(new ClientInfoBrowser(username: username, password: password, deviceId: deviceId), baseUrl, ui, storage);
         }
 
         public static string GenerateRandomDeviceId()
@@ -101,10 +94,7 @@ namespace PasswordManagerAccess.Bitwarden
         // Private
         //
 
-        private Vault(Account[] accounts,
-                      Collection[] collections,
-                      Organization[] organizations,
-                      ParseError[] parseErrors)
+        private Vault(Account[] accounts, Collection[] collections, Organization[] organizations, ParseError[] parseErrors)
         {
             Accounts = accounts;
             Collections = collections;

@@ -9,11 +9,10 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class MacRequestSigner: IRequestSigner
+    internal class MacRequestSigner : IRequestSigner
     {
-        public MacRequestSigner(AesKey sessionKey): this(sessionKey, Crypto.RandomUInt32())
-        {
-        }
+        public MacRequestSigner(AesKey sessionKey)
+            : this(sessionKey, Crypto.RandomUInt32()) { }
 
         public MacRequestSigner(AesKey sessionKey, uint seed)
         {
@@ -26,10 +25,7 @@ namespace PasswordManagerAccess.OnePassword
         // RequestId is bumped every time the message is signed. Thus
         // calling this function again on the same request would yield
         // a different result.
-        public IReadOnlyDictionary<string, string> Sign(Uri uri,
-                                                        HttpMethod method,
-                                                        IReadOnlyDictionary<string, string> headers,
-                                                        HttpContent content)
+        public IReadOnlyDictionary<string, string> Sign(Uri uri, HttpMethod method, IReadOnlyDictionary<string, string> headers, HttpContent content)
         {
             var id = _requestId;
             _requestId += 1;
@@ -45,13 +41,15 @@ namespace PasswordManagerAccess.OnePassword
         internal string CalculateAuthMessage(string url, string method, uint requestId)
         {
             var uri = new Uri(url);
-            return string.Format("{0}|{1}|{2}/{3}?{4}|v1|{5}",
-                                 _sessionId,
-                                 method.ToUpperInvariant(),
-                                 uri.Host,
-                                 uri.AbsolutePath.TrimStart('/'),
-                                 uri.Query.TrimStart('?'),
-                                 requestId);
+            return string.Format(
+                "{0}|{1}|{2}/{3}?{4}|v1|{5}",
+                _sessionId,
+                method.ToUpperInvariant(),
+                uri.Host,
+                uri.AbsolutePath.TrimStart('/'),
+                uri.Query.TrimStart('?'),
+                requestId
+            );
         }
 
         internal string CalculateAuthSignature(string authMessage, uint requestId)

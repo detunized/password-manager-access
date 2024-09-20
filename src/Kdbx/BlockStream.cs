@@ -8,7 +8,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Kdbx
 {
-    internal class BlockStream: Stream
+    internal class BlockStream : Stream
     {
         public BlockStream(Stream baseStream, byte[] hmacKey, int bufferSize = 4096)
         {
@@ -84,12 +84,12 @@ namespace PasswordManagerAccess.Kdbx
             return toCopy;
         }
 
-        public override void Flush()
-        {
-        }
+        public override void Flush() { }
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
+
         public override void SetLength(long value) => throw new NotImplementedException();
+
         public override void Write(byte[] buffer, int offset, int count) => throw new NotImplementedException();
 
         public override bool CanRead => true;

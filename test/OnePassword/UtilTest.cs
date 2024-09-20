@@ -6,13 +6,13 @@ using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
-using R = PasswordManagerAccess.OnePassword.Response;
 using Xunit;
+using R = PasswordManagerAccess.OnePassword.Response;
 using Util = PasswordManagerAccess.OnePassword.Util;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class UtilTest: TestBase
+    public class UtilTest : TestBase
     {
         [Fact]
         public void RandomUuid_returns_string_of_26_characters()
@@ -23,24 +23,29 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void Hkdf_returns_derived_key()
         {
-            Assert.Equal("UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64Loose(),
-                         Util.Hkdf("PBES2g-HS256", "ikm".ToBytes(), "salt".ToBytes()));
+            Assert.Equal("UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64Loose(), Util.Hkdf("PBES2g-HS256", "ikm".ToBytes(), "salt".ToBytes()));
         }
 
         [Fact]
         public void Pbes2_returns_derived_key()
         {
-            Assert.Equal("B-aZcYDPfxKQTwQQDUBdNIiP32KvbVBqDswjsZb-mdg".Decode64Loose(),
-                         Util.Pbes2("PBES2g-HS256", "password", "salt".ToBytes(), 100));
-            Assert.Equal("_vcnaxBwQKCnE7y-yf0-GRzGFTJJ4kWj4aIgh9vmFgY".
-                         Decode64Loose(), Util.Pbes2("PBES2g-HS512", "password", "salt".ToBytes(), 100));
+            Assert.Equal(
+                "B-aZcYDPfxKQTwQQDUBdNIiP32KvbVBqDswjsZb-mdg".Decode64Loose(),
+                Util.Pbes2("PBES2g-HS256", "password", "salt".ToBytes(), 100)
+            );
+            Assert.Equal(
+                "_vcnaxBwQKCnE7y-yf0-GRzGFTJJ4kWj4aIgh9vmFgY".Decode64Loose(),
+                Util.Pbes2("PBES2g-HS512", "password", "salt".ToBytes(), 100)
+            );
         }
 
         [Fact]
         public void Pbes2_throws_on_unsupported_method()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(() => Util.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
-                                                      "Method 'Unknown' is not supported");
+            Exceptions.AssertThrowsUnsupportedFeature(
+                () => Util.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
+                "Method 'Unknown' is not supported"
+            );
         }
 
         [Fact]
@@ -55,15 +60,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void CalculateClientHash_returns_hash()
         {
-            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA",
-                         Util.CalculateClientHash("RTN9SA", "TOZVTFIFBZGFDFNE5KSZFY7EZY"));
+            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Util.CalculateClientHash("RTN9SA", "TOZVTFIFBZGFDFNE5KSZFY7EZY"));
         }
 
         [Fact]
         public void HashRememberMeToken_returns_hash()
         {
-            Assert.Equal("oNk_XW_e",
-                         Util.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"));
+            Assert.Equal("oNk_XW_e", Util.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"));
         }
 
         [Fact]
@@ -71,8 +74,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var encrypted = JsonConvert.DeserializeObject<R.Encrypted>(GetFixture("encrypted-aes-key"));
             var keychain = new Keychain();
-            keychain.Add(new AesKey("mp",
-                                    "44c38e8fedb84a1ab5ba74ed98dde931f6500ae39c1d9c85e20a7268ab2074f0".DecodeHex()));
+            keychain.Add(new AesKey("mp", "44c38e8fedb84a1ab5ba74ed98dde931f6500ae39c1d9c85e20a7268ab2074f0".DecodeHex()));
 
             Util.DecryptAesKey(encrypted, keychain);
             var k = keychain.GetAes("szerdhg2ww2ahjo4ilz57x7cce").Key.ToHex();
@@ -85,8 +87,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var encrypted = JsonConvert.DeserializeObject<R.Encrypted>(GetFixture("encrypted-rsa-key"));
             var keychain = new Keychain();
-            keychain.Add(new AesKey("szerdhg2ww2ahjo4ilz57x7cce",
-                                    "bba932f6032dc4dffaa9b8f03c9fd4b810127b89a49408db7b914a131690c091".DecodeHex()));
+            keychain.Add(new AesKey("szerdhg2ww2ahjo4ilz57x7cce", "bba932f6032dc4dffaa9b8f03c9fd4b810127b89a49408db7b914a131690c091".DecodeHex()));
 
             Util.DecryptRsaKey(encrypted, keychain);
 

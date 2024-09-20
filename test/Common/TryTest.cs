@@ -96,10 +96,9 @@ namespace PasswordManagerAccess.Test.Common
         }
     }
 
-    internal class TryTestException: Exception
+    internal class TryTestException : Exception
     {
-        public TryTestException(string message): base(message)
-        {
-        }
+        public TryTestException(string message)
+            : base(message) { }
     }
 }

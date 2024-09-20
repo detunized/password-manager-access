@@ -16,8 +16,7 @@ namespace PasswordManagerAccess.Test.Kaspersky
                 .Post("{'Status':'', 'LogonContext': 'blah'}")
                 .Post("{'Status': 'InvalidRegistrationData'}", HttpStatusCode.Unauthorized);
 
-            Exceptions.AssertThrowsBadCredentials(() => Client.Login("username", "password", flow),
-                                                  "username or password is incorrect");
+            Exceptions.AssertThrowsBadCredentials(() => Client.Login("username", "password", flow), "username or password is incorrect");
         }
 
         [Fact]

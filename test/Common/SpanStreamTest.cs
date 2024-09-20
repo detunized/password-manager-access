@@ -72,12 +72,14 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(int.MaxValue)]
         public void Skip_throws_at_end(int skip)
         {
-            Exceptions.AssertThrowsInternalError(() =>
-                                                 {
-                                                     var s = DeadBeef();
-                                                     s.Skip(skip);
-                                                 },
-                                                 "Reading past the end of stream");
+            Exceptions.AssertThrowsInternalError(
+                () =>
+                {
+                    var s = DeadBeef();
+                    s.Skip(skip);
+                },
+                "Reading past the end of stream"
+            );
         }
 
         [Fact]
@@ -95,13 +97,15 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void ReadByte_throws_at_end()
         {
-            Exceptions.AssertThrowsInternalError(() =>
-                                                 {
-                                                     var s = DeadBeef();
-                                                     s.Skip(4);
-                                                     s.ReadByte();
-                                                 },
-                                                 "Reading past the end of stream");
+            Exceptions.AssertThrowsInternalError(
+                () =>
+                {
+                    var s = DeadBeef();
+                    s.Skip(4);
+                    s.ReadByte();
+                },
+                "Reading past the end of stream"
+            );
         }
 
         [Fact]
@@ -129,13 +133,15 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(4)]
         public void ReadUInt16_throws_at_end(int skip)
         {
-            Exceptions.AssertThrowsInternalError(() =>
-                                                 {
-                                                     var s = DeadBeef();
-                                                     s.Skip(skip);
-                                                     s.ReadUInt16();
-                                                 },
-                                                 "Reading past the end of stream");
+            Exceptions.AssertThrowsInternalError(
+                () =>
+                {
+                    var s = DeadBeef();
+                    s.Skip(skip);
+                    s.ReadUInt16();
+                },
+                "Reading past the end of stream"
+            );
         }
 
         [Fact]
@@ -161,13 +167,15 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(4)]
         public void ReadUInt32_throws_at_end(int skip)
         {
-            Exceptions.AssertThrowsInternalError(() =>
-                                                 {
-                                                     var s = DeadBeef();
-                                                     s.Skip(skip);
-                                                     s.ReadUInt32();
-                                                 },
-                                                 "Reading past the end of stream");
+            Exceptions.AssertThrowsInternalError(
+                () =>
+                {
+                    var s = DeadBeef();
+                    s.Skip(skip);
+                    s.ReadUInt32();
+                },
+                "Reading past the end of stream"
+            );
         }
 
         [Fact]
@@ -197,13 +205,15 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(8)]
         public void ReadUInt64_throws_at_end(int skip)
         {
-            Exceptions.AssertThrowsInternalError(() =>
-                                                 {
-                                                     var s = DeadBeefX2();
-                                                     s.Skip(skip);
-                                                     s.ReadUInt64();
-                                                 },
-                                                 "Reading past the end of stream");
+            Exceptions.AssertThrowsInternalError(
+                () =>
+                {
+                    var s = DeadBeefX2();
+                    s.Skip(skip);
+                    s.ReadUInt64();
+                },
+                "Reading past the end of stream"
+            );
         }
 
         [Theory]
@@ -232,13 +242,15 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(4, 1337)]
         public void ReadBytes_throws_at_end(int skip, int read)
         {
-            Exceptions.AssertThrowsInternalError(() =>
-                                                 {
-                                                     var s = DeadBeef();
-                                                     s.Skip(skip);
-                                                     s.ReadBytes(read);
-                                                 },
-                                                 "Reading past the end of stream");
+            Exceptions.AssertThrowsInternalError(
+                () =>
+                {
+                    var s = DeadBeef();
+                    s.Skip(skip);
+                    s.ReadBytes(read);
+                },
+                "Reading past the end of stream"
+            );
         }
 
         [Fact]
@@ -263,13 +275,15 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData(15)]
         public void ReadT_throws_at_end(int skip)
         {
-            Exceptions.AssertThrowsInternalError(() =>
-                                                 {
-                                                     var s = Hex("42" + "3713" + "efbeadde" + "efbeadde0df0edfe");
-                                                     s.Skip(skip);
-                                                     s.Read<TestStruct>();
-                                                 },
-                                                 "Reading past the end of stream");
+            Exceptions.AssertThrowsInternalError(
+                () =>
+                {
+                    var s = Hex("42" + "3713" + "efbeadde" + "efbeadde0df0edfe");
+                    s.Skip(skip);
+                    s.Read<TestStruct>();
+                },
+                "Reading past the end of stream"
+            );
         }
 
         //
@@ -286,7 +300,9 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         internal static SpanStream DeadBeef() => Hex("deadbeef");
+
         internal static SpanStream DeadBeefX2() => Hex("deadbeefdeadbeef");
+
         internal static SpanStream Hex(string hex) => hex.DecodeHex().AsRoSpan().ToStream();
     }
 }

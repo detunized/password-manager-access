@@ -25,7 +25,7 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly Result Result;
     }
 
-    internal class Operation<T>: OperationStatus
+    internal class Operation<T> : OperationStatus
     {
         [JsonProperty("details")]
         public readonly T Details;
@@ -126,7 +126,7 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly string Message;
     }
 
-    internal class Lookup: Status
+    internal class Lookup : Status
     {
         [JsonProperty("lookup")]
         public readonly LookupResult Result;
@@ -164,7 +164,7 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly string DataCenter;
     }
 
-    internal class LogIn: Status
+    internal class LogIn : Status
     {
         [JsonProperty("passwordauth")]
         public readonly LogInResult Result;
@@ -194,9 +194,7 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly MfaYubikey Yubikey;
     }
 
-    internal class MfaTotp
-    {
-    }
+    internal class MfaTotp { }
 
     internal class MfaYubikey
     {
@@ -204,7 +202,7 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly string Name;
     }
 
-    internal class Totp: Status
+    internal class Totp : Status
     {
         [JsonProperty("totpsecauth")]
         public readonly TotpResult Result;
@@ -216,7 +214,7 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly string Status;
     }
 
-    internal class TrustMfa: Status
+    internal class TrustMfa : Status
     {
         [JsonProperty("trustmfa")]
         public readonly TrustMfaResult Result;

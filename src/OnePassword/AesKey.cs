@@ -5,7 +5,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class AesKey: IDecryptor
+    internal class AesKey : IDecryptor
     {
         public const string ContainerType = "b5+jwk+json";
         public const string EncryptionScheme = "A256GCM";
@@ -31,11 +31,13 @@ namespace PasswordManagerAccess.OnePassword
 
         public Encrypted Encrypt(byte[] plaintext, byte[] iv)
         {
-            return new Encrypted(keyId: Id,
-                                 scheme: EncryptionScheme,
-                                 container: ContainerType,
-                                 iv: iv,
-                                 ciphertext: AesGcm.Encrypt(Key, plaintext, iv, new byte[0]));
+            return new Encrypted(
+                keyId: Id,
+                scheme: EncryptionScheme,
+                container: ContainerType,
+                iv: iv,
+                ciphertext: AesGcm.Encrypt(Key, plaintext, iv, new byte[0])
+            );
         }
 
         public byte[] Decrypt(Encrypted e)
@@ -44,8 +46,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException("Mismatching key id");
 
             if (e.Scheme != EncryptionScheme)
-                throw new InternalErrorException(
-                    $"Invalid encryption scheme '{e.Scheme}', expected '{EncryptionScheme}'");
+                throw new InternalErrorException($"Invalid encryption scheme '{e.Scheme}', expected '{EncryptionScheme}'");
 
             return AesGcm.Decrypt(Key, e.Ciphertext, e.Iv, new byte[0]);
         }

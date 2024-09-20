@@ -9,9 +9,7 @@ namespace PasswordManagerAccess.TrueKey
         public readonly byte[] EncryptedMasterKey;
         public readonly EncryptedAccount[] EncryptedAccounts;
 
-        public EncryptedVault(byte[] masterKeySalt,
-                              byte[] encryptedMasterKey,
-                              EncryptedAccount[] encryptedAccounts)
+        public EncryptedVault(byte[] masterKeySalt, byte[] encryptedMasterKey, EncryptedAccount[] encryptedAccounts)
         {
             MasterKeySalt = masterKeySalt;
             EncryptedMasterKey = encryptedMasterKey;

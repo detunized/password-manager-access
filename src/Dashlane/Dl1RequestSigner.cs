@@ -14,25 +14,24 @@ namespace PasswordManagerAccess.Dashlane
     // The new web protocol doesn't seem to be fully implemented by Dashlane. They fall back
     // to ws1.dashlane.com calls all the time. Some features are not supported by the
     // web/extension clients. It's been put on ice for now.
-    internal class Dl1RequestSigner: IRequestSigner
+    internal class Dl1RequestSigner : IRequestSigner
     {
-        public IReadOnlyDictionary<string, string> Sign(Uri uri,
-                                                        HttpMethod method,
-                                                        IReadOnlyDictionary<string, string> headers,
-                                                        HttpContent content)
+        public IReadOnlyDictionary<string, string> Sign(Uri uri, HttpMethod method, IReadOnlyDictionary<string, string> headers, HttpContent content)
         {
             return Sign(uri, method, headers, content, Os.UnixSeconds());
         }
-        
+
         //
         // Internal
         //
 
-        internal static IReadOnlyDictionary<string, string> Sign(Uri uri,
-                                                                 HttpMethod method,
-                                                                 IReadOnlyDictionary<string, string> headers,
-                                                                 HttpContent content,
-                                                                 uint timestamp)
+        internal static IReadOnlyDictionary<string, string> Sign(
+            Uri uri,
+            HttpMethod method,
+            IReadOnlyDictionary<string, string> headers,
+            HttpContent content,
+            uint timestamp
+        )
         {
             var headersToSign = FormatHeaderForSigning(headers, content);
             var headerOrder = headersToSign.Keys.OrderBy(x => x).ToArray();
@@ -40,10 +39,7 @@ namespace PasswordManagerAccess.Dashlane
             var requestHashHex = Crypto.Sha256(request).ToHex();
             var signingMaterial = BuildAuthSigningMaterial(timestamp, requestHashHex);
             var signature = Crypto.HmacSha256(AppAccessSecret, signingMaterial).ToHex();
-            var extraHeaders = new Dictionary<string, string>
-            {
-                ["Authorization"] = BuildAuthHeader(timestamp, headerOrder, signature),
-            };
+            var extraHeaders = new Dictionary<string, string> { ["Authorization"] = BuildAuthHeader(timestamp, headerOrder, signature) };
 
             return headers.Merge(extraHeaders);
         }
@@ -60,8 +56,7 @@ namespace PasswordManagerAccess.Dashlane
             return Crypto.Sha256(body).ToHex();
         }
 
-        internal static Dictionary<string, string> FormatHeaderForSigning(IReadOnlyDictionary<string, string> headers,
-                                                                          HttpContent content)
+        internal static Dictionary<string, string> FormatHeaderForSigning(IReadOnlyDictionary<string, string> headers, HttpContent content)
         {
             var formattedHeaders = new Dictionary<string, string>();
 
@@ -86,11 +81,13 @@ namespace PasswordManagerAccess.Dashlane
             return formattedHeaders;
         }
 
-        internal static string BuildRequest(Uri uri,
-                                            HttpMethod method,
-                                            Dictionary<string, string> headersToSign,
-                                            string[] headerOrder,
-                                            HttpContent content)
+        internal static string BuildRequest(
+            Uri uri,
+            HttpMethod method,
+            Dictionary<string, string> headersToSign,
+            string[] headerOrder,
+            HttpContent content
+        )
         {
             var request = new StringBuilder();
             request.AppendLineLf(method.ToString());
@@ -115,10 +112,6 @@ namespace PasswordManagerAccess.Dashlane
         private const string AppAccessKey = "C4F8H4SEAMXNBQVSASVBWDDZNCVTESMY";
         private static readonly byte[] AppAccessSecret = "Na9Dz3WcmjMZ5pdYU1AmC5TdYkeWAOzvOK6PkbU4QjfjPQTSaXY8pjPwrvHfVH14".ToBytes();
 
-        private static readonly HashSet<string> ExcludeHeadersLowerCase = new HashSet<string>
-        {
-            "content-length",
-            "user-agent",
-        };
+        private static readonly HashSet<string> ExcludeHeadersLowerCase = new HashSet<string> { "content-length", "user-agent" };
     }
 }

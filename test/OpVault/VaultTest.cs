@@ -45,8 +45,7 @@ namespace PasswordManagerAccess.Test.OpVault
         [Fact]
         public void Open_throws_on_incorrect_password()
         {
-            Exceptions.AssertThrowsBadCredentials(() => Vault.Open(TestVaultPath, "incorrect password"),
-                                                  "password is incorrect");
+            Exceptions.AssertThrowsBadCredentials(() => Vault.Open(TestVaultPath, "incorrect password"), "password is incorrect");
         }
 
         [Fact]
@@ -78,9 +77,8 @@ namespace PasswordManagerAccess.Test.OpVault
             WithTempVault(
                 "profile.js",
                 $"var profile={json};",
-                path => Exceptions.AssertThrowsInternalError(
-                    () => Vault.LoadProfile(path),
-                    "Invalid JSON schema for Profile"));
+                path => Exceptions.AssertThrowsInternalError(() => Vault.LoadProfile(path), "Invalid JSON schema for Profile")
+            );
         }
 
         [Fact]
@@ -101,14 +99,15 @@ namespace PasswordManagerAccess.Test.OpVault
                     var folders = Vault.LoadFolders(path);
                     Assert.Single(folders);
                     Assert.False(folders[0].Deleted);
-                });
+                }
+            );
         }
 
         [Theory]
         [InlineData("{'a': {}}")]
         [InlineData("{'a': {'overview': ''}}")] // 'uuid' is missing
-        [InlineData("{'a': {'uuid': 'a'}}")]  // 'overview' is missing
-        [InlineData("{'a': {'uuid': null, 'overview': ''}}")]  // 'uuid' is null
+        [InlineData("{'a': {'uuid': 'a'}}")] // 'overview' is missing
+        [InlineData("{'a': {'uuid': null, 'overview': ''}}")] // 'uuid' is null
         [InlineData("{'a': {'uuid': 'a', 'overview': null}}")] // 'overview' is null
         [InlineData("{'a': {'uuid': 'a', 'overview': '', trashed: null}}")] // 'trashed' is null
         public void LoadFolders_throws_on_invalid_json_schema(string json)
@@ -116,9 +115,8 @@ namespace PasswordManagerAccess.Test.OpVault
             WithTempVault(
                 "folders.js",
                 $"loadFolders({json});",
-                path => Exceptions.AssertThrowsInternalError(
-                    () => Vault.LoadFolders(path),
-                    "Invalid JSON schema for Dictionary`2")); // TODO: Non-descriptive generic name
+                path => Exceptions.AssertThrowsInternalError(() => Vault.LoadFolders(path), "Invalid JSON schema for Dictionary`2")
+            ); // TODO: Non-descriptive generic name
         }
 
         [Fact]
@@ -139,7 +137,8 @@ namespace PasswordManagerAccess.Test.OpVault
                     var items = Vault.LoadItems(path);
                     Assert.Single(items);
                     Assert.False(items[0].Deleted);
-                });
+                }
+            );
         }
 
         [Theory]
@@ -158,9 +157,8 @@ namespace PasswordManagerAccess.Test.OpVault
             WithTempVault(
                 "band_7.js",
                 $"ld({json});",
-                path => Exceptions.AssertThrowsInternalError(
-                    () => Vault.LoadItems(path),
-                    "Invalid JSON schema for Dictionary`2")); // TODO: Non-descriptive generic name
+                path => Exceptions.AssertThrowsInternalError(() => Vault.LoadItems(path), "Invalid JSON schema for Dictionary`2")
+            ); // TODO: Non-descriptive generic name
         }
 
         [Fact]
@@ -174,10 +172,7 @@ namespace PasswordManagerAccess.Test.OpVault
         public void LoadJsAsJsonFromString_returns_parsed_json_object()
         {
             var expected = new KeyValuePair<string, string>("key", "value");
-            var json = Vault.LoadJsAsJsonFromString<KeyValuePair<string, string>>(
-                "var j = {'Key': 'key', 'Value': 'value'};",
-                "var j = ",
-                ";");
+            var json = Vault.LoadJsAsJsonFromString<KeyValuePair<string, string>>("var j = {'Key': 'key', 'Value': 'value'};", "var j = ", ";");
 
             Assert.Equal(expected, json);
         }
@@ -185,25 +180,19 @@ namespace PasswordManagerAccess.Test.OpVault
         [Fact]
         public void LoadJsAsJsonFromString_throws_on_too_short_input()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Vault.LoadJsAsJsonFromString<object>("-", "var j = ", ";"),
-                "too short");
+            Exceptions.AssertThrowsInternalError(() => Vault.LoadJsAsJsonFromString<object>("-", "var j = ", ";"), "too short");
         }
 
         [Fact]
         public void LoadJsAsJsonFromString_throws_on_missing_prefix()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Vault.LoadJsAsJsonFromString<object>("var j = {};", "-", ";"),
-                "prefix is not found");
+            Exceptions.AssertThrowsInternalError(() => Vault.LoadJsAsJsonFromString<object>("var j = {};", "-", ";"), "prefix is not found");
         }
 
         [Fact]
         public void LoadJsAsJsonFromString_throws_on_missing_suffix()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Vault.LoadJsAsJsonFromString<object>("var j = {};", "var j =", "-"),
-                "suffix is not found");
+            Exceptions.AssertThrowsInternalError(() => Vault.LoadJsAsJsonFromString<object>("var j = {};", "var j =", "-"), "suffix is not found");
         }
 
         [Fact]
@@ -274,7 +263,8 @@ namespace PasswordManagerAccess.Test.OpVault
             // We need to use a type here with some required properties that are missing in the encrypted data
             Exceptions.AssertThrowsInternalError(
                 () => Vault.DecryptJson<M.Item>(EncryptedItemOverview, ItemOverviewKey),
-                "JSON: Invalid JSON schema for Item");
+                "JSON: Invalid JSON schema for Item"
+            );
         }
 
         //
@@ -312,12 +302,13 @@ namespace PasswordManagerAccess.Test.OpVault
         private const string OfficialTestVaultPath = FixturePath + "onepassword_data";
         private const string OfficialTestPassword = "freddy";
 
-        private const string EncryptedItemOverview = "b3BkYXRhMDFvAAAAAAAAAABUfMSKAQo2xA4jIxRdDsuUSk9uQmJouYHJ5CT6CIg" +
-                                                     "Y3DZd7qrc2VejvzfkMLVTaZI9DRHdgS75LG16kL8xaUmVtGk2ZqnVWJ2UA8y4S6" +
-                                                     "QPdjoWzJLJbiYvGhYicNYgK5A2WzFTrCXPT2vQfHzZeh2gJohM4ZI5wmpHPN5Xc" +
-                                                     "hepRpyIptYTjkyg0ssLjSISul9j/4vuP4FDwH9W6Vr31JQ=";
-        private static readonly KeyMac ItemOverviewKey = new KeyMac("oMDgYulnpl83PKSEycLJg1fqkvxqU3bo4MliEGlN12i4" +
-                                                                    "eUt7qRdl06zVKKbxRLAnra3TvKz0LDdZnV/hlQkjBQ==");
-
+        private const string EncryptedItemOverview =
+            "b3BkYXRhMDFvAAAAAAAAAABUfMSKAQo2xA4jIxRdDsuUSk9uQmJouYHJ5CT6CIg"
+            + "Y3DZd7qrc2VejvzfkMLVTaZI9DRHdgS75LG16kL8xaUmVtGk2ZqnVWJ2UA8y4S6"
+            + "QPdjoWzJLJbiYvGhYicNYgK5A2WzFTrCXPT2vQfHzZeh2gJohM4ZI5wmpHPN5Xc"
+            + "hepRpyIptYTjkyg0ssLjSISul9j/4vuP4FDwH9W6Vr31JQ=";
+        private static readonly KeyMac ItemOverviewKey = new KeyMac(
+            "oMDgYulnpl83PKSEycLJg1fqkvxqU3bo4MliEGlN12i4" + "eUt7qRdl06zVKKbxRLAnra3TvKz0LDdZnV/hlQkjBQ=="
+        );
     }
 }

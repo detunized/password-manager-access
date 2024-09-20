@@ -17,14 +17,16 @@ namespace PasswordManagerAccess.Kdbx
         public readonly string Path;
         public readonly IReadOnlyDictionary<string, string> Fields;
 
-        public Account(string id,
-                       string name,
-                       string username,
-                       string password,
-                       string url,
-                       string note,
-                       string path,
-                       IReadOnlyDictionary<string, string> fields)
+        public Account(
+            string id,
+            string name,
+            string username,
+            string password,
+            string url,
+            string note,
+            string path,
+            IReadOnlyDictionary<string, string> fields
+        )
         {
             Id = id;
             Name = name;
@@ -36,7 +38,8 @@ namespace PasswordManagerAccess.Kdbx
             Fields = fields;
         }
 
-        internal static readonly IReadOnlyDictionary<string, string> NoFields =
-            new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(0));
+        internal static readonly IReadOnlyDictionary<string, string> NoFields = new ReadOnlyDictionary<string, string>(
+            new Dictionary<string, string>(0)
+        );
     }
 }

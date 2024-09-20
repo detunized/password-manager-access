@@ -69,10 +69,8 @@ namespace PasswordManagerAccess.RoboForm
                 Nonce = nonce;
             }
 
-            public Credentials(ClientInfo clientInfo, string nonce):
-                this(clientInfo.Username, clientInfo.Password, clientInfo.DeviceId, nonce)
-            {
-            }
+            public Credentials(ClientInfo clientInfo, string nonce)
+                : this(clientInfo.Username, clientInfo.Password, clientInfo.DeviceId, nonce) { }
         }
 
         internal class OtpOptions
@@ -116,9 +114,7 @@ namespace PasswordManagerAccess.RoboForm
             var otp = ui.ProvideSecondFactorPassword(otpChannel);
 
             // Step 3: Send the OTP.
-            var shouldBeSession = PerformScramSequence(credentials,
-                                                       new OtpOptions(otpChannel, otp.Password, otp.RememberDevice),
-                                                       rest);
+            var shouldBeSession = PerformScramSequence(credentials, new OtpOptions(otpChannel, otp.Password, otp.RememberDevice), rest);
 
             // We should be really logged in this time.
             if (shouldBeSession.Session != null)
@@ -153,9 +149,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static void Logout(Session session, RestClient rest)
         {
-            var response = rest.PostForm("?logout",
-                                         new Dictionary<string, object>(),
-                                         cookies: session.Cookies);
+            var response = rest.PostForm("?logout", new Dictionary<string, object>(), cookies: session.Cookies);
             // TODO: Do we want to abort on the failed logout? If we got here it means we
             //       have a parsed vault and aborting at this stage is gonna prevent the
             //       user from getting it. On the other hand this will help to catch
@@ -166,20 +160,19 @@ namespace PasswordManagerAccess.RoboForm
                 throw MakeError(response);
         }
 
-        internal static (List<Account> Accounts, RSAParameters? PrivateKey) OpenFolder(Session session,
-                                                                                       string password,
-                                                                                       string parentPath,
-                                                                                       RestClient rest)
+        internal static (List<Account> Accounts, RSAParameters? PrivateKey) OpenFolder(
+            Session session,
+            string password,
+            string parentPath,
+            RestClient rest
+        )
         {
             var blob = GetBlob(session, rest);
             var json = OneFile.Parse(blob, password);
             return VaultParser.Parse(json, parentPath);
         }
 
-        internal static List<Account> OpenSharedFolder(R.SharedFolderInfo info,
-                                                       Session session,
-                                                       RSAParameters privateKey,
-                                                       IRestTransport transport)
+        internal static List<Account> OpenSharedFolder(R.SharedFolderInfo info, Session session, RSAParameters privateKey, IRestTransport transport)
         {
             if (!info.Accepted)
                 return new List<Account>(0);
@@ -191,10 +184,7 @@ namespace PasswordManagerAccess.RoboForm
             var password = Crypto.DecryptRsaPkcs1(encryptedKey.Decode64(), privateKey).ToUtf8();
 
             // Each shared folder is like an independent vault with its own password
-            return OpenFolder(session,
-                              password,
-                              info.Name ?? "-",
-                              new RestClient(transport, ApiBaseUrl(info.Id))).Accounts;
+            return OpenFolder(session, password, info.Name ?? "-", new RestClient(transport, ApiBaseUrl(info.Id))).Accounts;
         }
 
         internal static byte[] GetBlob(Session session, RestClient rest)
@@ -217,11 +207,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static Dictionary<string, string> ScramHeaders(string authorization, OtpOptions otp)
         {
-            var headers = new Dictionary<string, string>
-            {
-                ["Authorization"] = authorization,
-                ["x-sib-auth-alt-channel"] = otp.Channel ?? "-",
-            };
+            var headers = new Dictionary<string, string> { ["Authorization"] = authorization, ["x-sib-auth-alt-channel"] = otp.Channel ?? "-" };
 
             if (otp.Password != null)
             {
@@ -234,15 +220,17 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static Dictionary<string, string> ScramCookies(string deviceId)
         {
-            return new Dictionary<string, string> {["sib-deviceid"] = deviceId};
+            return new Dictionary<string, string> { ["sib-deviceid"] = deviceId };
         }
 
         internal static string Step1(Credentials credentials, OtpOptions otp, RestClient rest)
         {
-            var response = rest.PostForm("?login",
-                                         new Dictionary<string, object>(),
-                                         ScramHeaders(Step1AuthorizationHeader(credentials), otp),
-                                         ScramCookies(credentials.DeviceId));
+            var response = rest.PostForm(
+                "?login",
+                new Dictionary<string, object>(),
+                ScramHeaders(Step1AuthorizationHeader(credentials), otp),
+                ScramCookies(credentials.DeviceId)
+            );
 
             // First check for any errors that might have happened during the request
             if (response.HasError)
@@ -250,8 +238,7 @@ namespace PasswordManagerAccess.RoboForm
 
             // 401 is expected as the only valid response at this point
             if (response.StatusCode != HttpStatusCode.Unauthorized)
-                throw new InternalErrorException(
-                    $"Unauthorized (401) is expected in the response, got {(int)response.StatusCode} instead");
+                throw new InternalErrorException($"Unauthorized (401) is expected in the response, got {(int)response.StatusCode} instead");
 
             // WWW-Authenticate has the result of this step.
             var header = response.Headers.GetOrDefault("WWW-Authenticate", "");
@@ -263,10 +250,12 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static ScramResult Step2(Credentials credentials, OtpOptions otp, AuthInfo authInfo, RestClient rest)
         {
-            var response = rest.PostForm("?login",
-                                         new Dictionary<string, object>(),
-                                         ScramHeaders(Step2AuthorizationHeader(credentials, authInfo), otp),
-                                         ScramCookies(credentials.DeviceId));
+            var response = rest.PostForm(
+                "?login",
+                new Dictionary<string, object>(),
+                ScramHeaders(Step2AuthorizationHeader(credentials, authInfo), otp),
+                ScramCookies(credentials.DeviceId)
+            );
 
             // First check for any errors that might have happened during the request
             if (response.HasError)
@@ -308,9 +297,7 @@ namespace PasswordManagerAccess.RoboForm
 
         internal static string Step1AuthorizationHeader(Credentials credentials)
         {
-            var data = string.Format("n,,n={0},r={1}",
-                                     credentials.Username.EncodeUri(),
-                                     credentials.Nonce).ToBase64();
+            var data = string.Format("n,,n={0},r={1}", credentials.Username.EncodeUri(), credentials.Nonce).ToBase64();
             return $"SibAuth realm=\"RoboForm Online Server\",data=\"{data}\"";
         }
 
@@ -319,11 +306,13 @@ namespace PasswordManagerAccess.RoboForm
             var clientKey = Util.ComputeClientKey(credentials.Password, authInfo);
             var clientHash = Crypto.Sha256(clientKey);
 
-            var hashingMaterial = string.Format("n={0},r={1},{2},c=biws,r={3}",
-                                                credentials.Username.EncodeUri(),
-                                                credentials.Nonce,
-                                                authInfo.Data,
-                                                authInfo.Nonce);
+            var hashingMaterial = string.Format(
+                "n={0},r={1},{2},c=biws,r={3}",
+                credentials.Username.EncodeUri(),
+                credentials.Nonce,
+                authInfo.Data,
+                authInfo.Nonce
+            );
 
             var hashed = Crypto.HmacSha256(clientHash, hashingMaterial.ToBytes());
             var proof = clientKey.Zip(hashed, (a, b) => (byte)(a ^ b)).ToArray().ToBase64();

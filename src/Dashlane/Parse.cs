@@ -23,13 +23,15 @@ namespace PasswordManagerAccess.Dashlane
             new Pbkdf2Config(Pbkdf2Config.HashMethodType.Sha1, 10204, 32),
             CryptoConfig.CipherModeType.Cbc,
             CryptoConfig.IvGenerationModeType.EvpByteToKey,
-            CryptoConfig.SignatureModeType.None);
+            CryptoConfig.SignatureModeType.None
+        );
 
         private static readonly CryptoConfig Kwc5Config = new CryptoConfig(
             new NoKdfConfig(),
             CryptoConfig.CipherModeType.CbcHmac,
             CryptoConfig.IvGenerationModeType.Data,
-            CryptoConfig.SignatureModeType.HmacSha256);
+            CryptoConfig.SignatureModeType.HmacSha256
+        );
 
         public interface IKdfConfig
         {
@@ -40,7 +42,7 @@ namespace PasswordManagerAccess.Dashlane
             byte[] Derive(byte[] password, byte[] salt);
         }
 
-        public class Argon2dConfig: IKdfConfig
+        public class Argon2dConfig : IKdfConfig
         {
             public readonly int MemoryCost;
             public readonly int TimeCost;
@@ -77,7 +79,7 @@ namespace PasswordManagerAccess.Dashlane
             }
         }
 
-        public class Pbkdf2Config: IKdfConfig
+        public class Pbkdf2Config : IKdfConfig
         {
             public enum HashMethodType
             {
@@ -107,17 +109,17 @@ namespace PasswordManagerAccess.Dashlane
             {
                 switch (HashMethod)
                 {
-                case HashMethodType.Sha1:
-                    return Pbkdf2.GenerateSha1(password, salt, Iterations, 32);
-                case HashMethodType.Sha256:
-                    return Pbkdf2.GenerateSha256(password, salt, Iterations, 32);
+                    case HashMethodType.Sha1:
+                        return Pbkdf2.GenerateSha1(password, salt, Iterations, 32);
+                    case HashMethodType.Sha256:
+                        return Pbkdf2.GenerateSha256(password, salt, Iterations, 32);
                 }
 
                 throw new InternalErrorException($"Unknown hash method {HashMethod}");
             }
         }
 
-        public class NoKdfConfig: IKdfConfig
+        public class NoKdfConfig : IKdfConfig
         {
             public string Name => "none";
             public int SaltLength => 0;
@@ -159,10 +161,12 @@ namespace PasswordManagerAccess.Dashlane
             public readonly IvGenerationModeType IvGenerationMode;
             public readonly SignatureModeType SignatureMode;
 
-            public CryptoConfig(IKdfConfig kdfConfig,
-                                CipherModeType cipherMode,
-                                IvGenerationModeType ivGenerationMode,
-                                SignatureModeType signatureMode)
+            public CryptoConfig(
+                IKdfConfig kdfConfig,
+                CipherModeType cipherMode,
+                IvGenerationModeType ivGenerationMode,
+                SignatureModeType signatureMode
+            )
             {
                 KdfConfig = kdfConfig;
                 CipherMode = cipherMode;
@@ -221,11 +225,13 @@ namespace PasswordManagerAccess.Dashlane
             var version = blob.Sub(saltLength, versionLength);
 
             if (version.SequenceEqual(Kwc3))
-                return new Blob(ciphertext: blob.Sub(saltLength + versionLength, int.MaxValue),
-                                salt: salt,
-                                iv: NoBytes,
-                                hash: NoBytes,
-                                cryptoConfig: Kwc3Config);
+                return new Blob(
+                    ciphertext: blob.Sub(saltLength + versionLength, int.MaxValue),
+                    salt: salt,
+                    iv: NoBytes,
+                    hash: NoBytes,
+                    cryptoConfig: Kwc3Config
+                );
 
             if (version.SequenceEqual(Kwc5))
                 throw new UnsupportedFeatureException("KWC5 encryption scheme is not supported");
@@ -288,44 +294,39 @@ namespace PasswordManagerAccess.Dashlane
             var method = GetNextComponent(blob, ref offset);
             switch (method)
             {
-            case "argon2d":
-                {
-                    var saltLength = int.Parse(GetNextComponent(blob, ref offset));
-                    var timeCost = int.Parse(GetNextComponent(blob, ref offset));
-                    var memoryCost = int.Parse(GetNextComponent(blob, ref offset));
-                    var parallelism = int.Parse(GetNextComponent(blob, ref offset));
-                    kdfConfig = new Argon2dConfig(memoryCost: memoryCost,
-                                                  timeCost: timeCost,
-                                                  parallelism: parallelism,
-                                                  saltLength: saltLength);
-                }
-                break;
-            case "pbkdf2":
-                {
-                    var saltLength = int.Parse(GetNextComponent(blob, ref offset));
-                    var iterations = int.Parse(GetNextComponent(blob, ref offset));
-
-                    Pbkdf2Config.HashMethodType hashMethod;
-                    string hashMethodStr = GetNextComponent(blob, ref offset);
-                    switch (hashMethodStr)
+                case "argon2d":
                     {
-                    case "sha1":
-                        hashMethod = Pbkdf2Config.HashMethodType.Sha1;
-                        break;
-                    case "sha256":
-                        hashMethod = Pbkdf2Config.HashMethodType.Sha256;
-                        break;
-                    default:
-                        throw new InternalErrorException($"Unknown PBKDF2 hashing method: {hashMethodStr}");
+                        var saltLength = int.Parse(GetNextComponent(blob, ref offset));
+                        var timeCost = int.Parse(GetNextComponent(blob, ref offset));
+                        var memoryCost = int.Parse(GetNextComponent(blob, ref offset));
+                        var parallelism = int.Parse(GetNextComponent(blob, ref offset));
+                        kdfConfig = new Argon2dConfig(memoryCost: memoryCost, timeCost: timeCost, parallelism: parallelism, saltLength: saltLength);
                     }
+                    break;
+                case "pbkdf2":
+                    {
+                        var saltLength = int.Parse(GetNextComponent(blob, ref offset));
+                        var iterations = int.Parse(GetNextComponent(blob, ref offset));
 
-                    kdfConfig = new Pbkdf2Config(hashMethod: hashMethod,
-                                                 iterations: iterations,
-                                                 saltLength: saltLength);
-                }
-                break;
-            default:
-                throw new InternalErrorException($"Unexpected hashing method: {method}");
+                        Pbkdf2Config.HashMethodType hashMethod;
+                        string hashMethodStr = GetNextComponent(blob, ref offset);
+                        switch (hashMethodStr)
+                        {
+                            case "sha1":
+                                hashMethod = Pbkdf2Config.HashMethodType.Sha1;
+                                break;
+                            case "sha256":
+                                hashMethod = Pbkdf2Config.HashMethodType.Sha256;
+                                break;
+                            default:
+                                throw new InternalErrorException($"Unknown PBKDF2 hashing method: {hashMethodStr}");
+                        }
+
+                        kdfConfig = new Pbkdf2Config(hashMethod: hashMethod, iterations: iterations, saltLength: saltLength);
+                    }
+                    break;
+                default:
+                    throw new InternalErrorException($"Unexpected hashing method: {method}");
             }
 
             var cipher = GetNextComponent(blob, ref offset);
@@ -336,23 +337,25 @@ namespace PasswordManagerAccess.Dashlane
             var cipherModeStr = GetNextComponent(blob, ref offset);
             switch (cipherModeStr)
             {
-            case "cbc":
-                cipherMode = CryptoConfig.CipherModeType.Cbc;
-                break;
-            case "cbchmac":
-                cipherMode = CryptoConfig.CipherModeType.CbcHmac;
-                break;
-            case "gcm":
-                cipherMode = CryptoConfig.CipherModeType.Gcm;
-                break;
-            default:
-                throw new InternalErrorException($"Unknown cipher mode: {cipherModeStr}");
+                case "cbc":
+                    cipherMode = CryptoConfig.CipherModeType.Cbc;
+                    break;
+                case "cbchmac":
+                    cipherMode = CryptoConfig.CipherModeType.CbcHmac;
+                    break;
+                case "gcm":
+                    cipherMode = CryptoConfig.CipherModeType.Gcm;
+                    break;
+                default:
+                    throw new InternalErrorException($"Unknown cipher mode: {cipherModeStr}");
             }
 
-            var cryptoConfig = new CryptoConfig(kdfConfig,
-                                                cipherMode,
-                                                CryptoConfig.IvGenerationModeType.Data,
-                                                CryptoConfig.SignatureModeType.HmacSha256);
+            var cryptoConfig = new CryptoConfig(
+                kdfConfig,
+                cipherMode,
+                CryptoConfig.IvGenerationModeType.Data,
+                CryptoConfig.SignatureModeType.HmacSha256
+            );
 
             var ivLength = int.Parse(GetNextComponent(blob, ref offset));
 
@@ -411,8 +414,7 @@ namespace PasswordManagerAccess.Dashlane
 
             // 4. Check the MAC
             if (!DoesHashMatch(parsed, iv, hmacKey))
-                throw new BadCredentialsException(
-                    "The password is incorrect or the data in the vault is corrupted (MAC doesn't match)");
+                throw new BadCredentialsException("The password is incorrect or the data in the vault is corrupted (MAC doesn't match)");
 
             // 5. Decrypt
             var plaintext = Decrypt(parsed.Ciphertext, iv, encryptionKey);
@@ -421,10 +423,7 @@ namespace PasswordManagerAccess.Dashlane
             return Inflate(plaintext.Sub(6, int.MaxValue));
         }
 
-        public static byte[] ComputeEncryptionKey(byte[] password,
-                                                  byte[] salt,
-                                                  CryptoConfig config,
-                                                  DerivedKeyCache cache)
+        public static byte[] ComputeEncryptionKey(byte[] password, byte[] salt, CryptoConfig config, DerivedKeyCache cache)
         {
             return cache.GetOrDerive(password, salt, config.KdfConfig);
         }
@@ -443,11 +442,11 @@ namespace PasswordManagerAccess.Dashlane
         {
             switch (blob.CryptoConfig.IvGenerationMode)
             {
-            case CryptoConfig.IvGenerationModeType.Data:
-                return blob.Iv;
-            case CryptoConfig.IvGenerationModeType.EvpByteToKey:
-                // The key part of this is only used in KWC5 which is not support ATM
-                return DeriveEncryptionKeyAndIv(key, blob.Salt).Iv;
+                case CryptoConfig.IvGenerationModeType.Data:
+                    return blob.Iv;
+                case CryptoConfig.IvGenerationModeType.EvpByteToKey:
+                    // The key part of this is only used in KWC5 which is not support ATM
+                    return DeriveEncryptionKeyAndIv(key, blob.Salt).Iv;
             }
 
             throw new InternalErrorException($"Unexpected IV generation mode {blob.CryptoConfig.IvGenerationMode}");
@@ -477,20 +476,18 @@ namespace PasswordManagerAccess.Dashlane
                 joined = joined.Concat(last);
             }
 
-            return new KeyIvPair(
-                key: joined.Take(32).ToArray(),
-                iv: joined.Skip(32).Take(16).ToArray());
+            return new KeyIvPair(key: joined.Take(32).ToArray(), iv: joined.Skip(32).Take(16).ToArray());
         }
 
         public static Tuple<byte[], byte[]> DeriveKeyAndHmacKey(byte[] key, CryptoConfig config)
         {
             switch (config.SignatureMode)
             {
-            case CryptoConfig.SignatureModeType.None:
-                return new Tuple<byte[], byte[]>(key, NoBytes);
-            case CryptoConfig.SignatureModeType.HmacSha256:
-                var keys = Crypto.Sha512(key);
-                return new Tuple<byte[], byte[]>(keys.Sub(0, 32), keys.Sub(32, 32));
+                case CryptoConfig.SignatureModeType.None:
+                    return new Tuple<byte[], byte[]>(key, NoBytes);
+                case CryptoConfig.SignatureModeType.HmacSha256:
+                    var keys = Crypto.Sha512(key);
+                    return new Tuple<byte[], byte[]>(keys.Sub(0, 32), keys.Sub(32, 32));
             }
 
             throw new InternalErrorException($"Unexpected signature mode {config.SignatureMode}");
@@ -500,11 +497,11 @@ namespace PasswordManagerAccess.Dashlane
         {
             switch (blob.CryptoConfig.SignatureMode)
             {
-            case CryptoConfig.SignatureModeType.None:
-                return true;
-            case CryptoConfig.SignatureModeType.HmacSha256:
-                var hash = Crypto.HmacSha256(hmacKey, iv.Concat(blob.Ciphertext).ToArray());
-                return hash.SequenceEqual(blob.Hash);
+                case CryptoConfig.SignatureModeType.None:
+                    return true;
+                case CryptoConfig.SignatureModeType.HmacSha256:
+                    var hash = Crypto.HmacSha256(hmacKey, iv.Concat(blob.Ciphertext).ToArray());
+                    return hash.SequenceEqual(blob.Hash);
             }
 
             throw new InternalErrorException($"Unexpected signature mode {blob.CryptoConfig.SignatureMode}");
@@ -531,10 +528,7 @@ namespace PasswordManagerAccess.Dashlane
 
         public static Account[] ExtractAccountsFromXml(string xml)
         {
-            return XDocument.Parse(xml)
-                .Descendants("KWAuthentifiant")
-                .Select(ParseAccount)
-                .ToArray();
+            return XDocument.Parse(xml).Descendants("KWAuthentifiant").Select(ParseAccount).ToArray();
         }
 
         public static Account ParseAccount(XElement e)
@@ -545,7 +539,8 @@ namespace PasswordManagerAccess.Dashlane
                 GetValueForKeyOrDefault(e, "Login"),
                 GetValueForKeyOrDefault(e, "Password"),
                 GetValueForKeyOrDefault(e, "Url"),
-                GetValueForKeyOrDefault(e, "Note"));
+                GetValueForKeyOrDefault(e, "Note")
+            );
         }
 
         public static string GetValueForKeyOrDefault(XElement e, string key, string defaultValue = "")

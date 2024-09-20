@@ -5,7 +5,7 @@ using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.Bitwarden.Ui
 {
-    public interface IUi: IDuoUi
+    public interface IUi : IDuoUi
     {
         // The UI will no longer be used and could be closed
         public abstract void Close();

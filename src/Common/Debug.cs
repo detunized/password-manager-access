@@ -15,11 +15,14 @@ namespace PasswordManagerAccess.Common
         public static void Measure(string name, Action f)
         {
 #if PROFILE_ENABLED
-            Measure(name, () =>
-            {
-                f();
-                return 0;
-            });
+            Measure(
+                name,
+                () =>
+                {
+                    f();
+                    return 0;
+                }
+            );
 #else
             f();
 #endif

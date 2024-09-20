@@ -44,7 +44,8 @@ namespace PasswordManagerAccess.Test
             return AssertThrows<CryptoException>(action, message);
         }
 
-        private static T AssertThrows<T>(Action action, string message) where T: BaseException
+        private static T AssertThrows<T>(Action action, string message)
+            where T : BaseException
         {
             var e = Assert.Throws<T>(action);
             Assert.NotNull(e.Message);

@@ -11,17 +11,12 @@ namespace PasswordManagerAccess.StickyPassword
         public readonly string BucketName;
         public readonly string ObjectPrefix;
 
-        public S3Token(string accessKeyId,
-                       string secretAccessKey,
-                       string securityToken,
-                       string bucketName,
-                       string objectPrefix) : this(new S3.Credentials(accessKeyId: accessKeyId,
-                                                                      secretAccessKey: secretAccessKey,
-                                                                      securityToken: securityToken),
-                                                   bucketName,
-                                                   objectPrefix)
-        {
-        }
+        public S3Token(string accessKeyId, string secretAccessKey, string securityToken, string bucketName, string objectPrefix)
+            : this(
+                new S3.Credentials(accessKeyId: accessKeyId, secretAccessKey: secretAccessKey, securityToken: securityToken),
+                bucketName,
+                objectPrefix
+            ) { }
 
         public S3Token(S3.Credentials credentials, string bucketName, string objectPrefix)
         {

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    public class VaultParserTest: TestBase
+    public class VaultParserTest : TestBase
     {
         [Theory]
         [InlineData("blob")]
@@ -83,8 +83,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         [InlineData("{'i': {'F': false}, 'c': []}")]
         public void Parse_throws_when_top_level_folder_is_invalid(string json)
         {
-            Exceptions.AssertThrowsInternalError(() => VaultParser.Parse(JObject.Parse(json)),
-                                                 "Invalid format: top level folder not found");
+            Exceptions.AssertThrowsInternalError(() => VaultParser.Parse(JObject.Parse(json)), "Invalid format: top level folder not found");
         }
 
         [Theory]
@@ -92,8 +91,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         [InlineData("{'i': {'F': true}, 'c': [{'i': {'F': true, 'n': 'blah'}}]}")]
         public void Parse_throws_when_root_folder_is_invalid(string json)
         {
-            Exceptions.AssertThrowsInternalError(() => VaultParser.Parse(JObject.Parse(json)),
-                                                 "Invalid format: root folder not found");
+            Exceptions.AssertThrowsInternalError(() => VaultParser.Parse(JObject.Parse(json)), "Invalid format: root folder not found");
         }
 
         [Theory]
@@ -105,8 +103,10 @@ namespace PasswordManagerAccess.Test.RoboForm
         [InlineData("{'b': ''}")]
         public void Parse_throws_when_item_info_block_is_invalid(string json)
         {
-            Exceptions.AssertThrowsInternalError(() => VaultParser.Parse(JObject.Parse(RootPrefix + json + RootSuffix)),
-                                                 "Invalid format: item info block not found");
+            Exceptions.AssertThrowsInternalError(
+                () => VaultParser.Parse(JObject.Parse(RootPrefix + json + RootSuffix)),
+                "Invalid format: item info block not found"
+            );
         }
 
         [Theory]
@@ -175,7 +175,8 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void ParseAccount_returns_parsed_account()
         {
-            var json = "{\"p\":true,\"pwd\":\"passw0rd\",\"n\":\"\",\"g\":\"https://app.asana.com/\",\"m\":\"https://app.asana.com/\",\"f\":[{\"n\":\"e\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"dude@lebowski.com\",\"id\":\"email_input\"},{\"n\":\"p\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":2,\"v\":\"faroutman\",\"id\":\"password_input\"},{\"n\":\"Submit$\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":0,\"v\":\"555:692:login::0:Log In\\n\",\"id\":\"\"}]}";
+            var json =
+                "{\"p\":true,\"pwd\":\"passw0rd\",\"n\":\"\",\"g\":\"https://app.asana.com/\",\"m\":\"https://app.asana.com/\",\"f\":[{\"n\":\"e\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":1,\"v\":\"dude@lebowski.com\",\"id\":\"email_input\"},{\"n\":\"p\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":2,\"v\":\"faroutman\",\"id\":\"password_input\"},{\"n\":\"Submit$\",\"c\":\"\",\"d\":false,\"i\":0,\"t\":0,\"v\":\"555:692:login::0:Log In\\n\",\"id\":\"\"}]}";
             var account = VaultParser.ParseAccount(json, "blah", "blah-blah");
             Assert.Equal("blah", account.Name);
             Assert.Equal("blah-blah", account.Path);

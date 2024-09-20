@@ -11,7 +11,6 @@ using RestSharp;
 using RestSharp.Authenticators;
 using RestSharp.Serializers;
 using RestSharp.Serializers.Json;
-
 #if MITM_PROXY
 using System.Net;
 #endif
@@ -58,10 +57,7 @@ namespace PasswordManagerAccess.Common
             config.UseSystemTextJson(KeepCaseJsonOptions);
         }
 
-        private static readonly JsonSerializerOptions KeepCaseJsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = null,
-        };
+        private static readonly JsonSerializerOptions KeepCaseJsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = null };
 
         //
         // RestSharp.RestClient extensions
@@ -92,17 +88,17 @@ namespace PasswordManagerAccess.Common
         public static bool IsNetworkError(this RestSharp.RestResponse response) =>
             response is { StatusCode: 0, ErrorException: HttpRequestException { InnerException: not null } };
 
-        public static bool IsJsonError(this RestSharp.RestResponse response) =>
-            response.ErrorException is JsonException _;
+        public static bool IsJsonError(this RestSharp.RestResponse response) => response.ErrorException is JsonException _;
 
         //
         // JsonSerializer extensions
         //
 
-        public static bool TryDeserialize<T>(string json, out T? result) where T: class
-            => TryDeserialize(json, out result, out _);
+        public static bool TryDeserialize<T>(string json, out T? result)
+            where T : class => TryDeserialize(json, out result, out _);
 
-        public static bool TryDeserialize<T>(string json, out T? result, out JsonException? error) where T: class
+        public static bool TryDeserialize<T>(string json, out T? result, out JsonException? error)
+            where T : class
         {
             try
             {
@@ -121,7 +117,7 @@ namespace PasswordManagerAccess.Common
     }
 
     // TODO: Move out of here
-    internal class DelegatingAuthenticator: IAuthenticator
+    internal class DelegatingAuthenticator : IAuthenticator
     {
         public IAuthenticator? DelegateTo { get; set; }
 
@@ -130,7 +126,6 @@ namespace PasswordManagerAccess.Common
             DelegateTo = delegateTo;
         }
 
-        public ValueTask Authenticate(IRestClient client, RestRequest request) =>
-            DelegateTo?.Authenticate(client, request) ?? new ValueTask();
+        public ValueTask Authenticate(IRestClient client, RestRequest request) => DelegateTo?.Authenticate(client, request) ?? new ValueTask();
     }
 }

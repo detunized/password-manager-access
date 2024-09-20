@@ -3,4 +3,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly:InternalsVisibleTo("PasswordManagerAccess.Test")]
+[assembly: InternalsVisibleTo("PasswordManagerAccess.Test")]

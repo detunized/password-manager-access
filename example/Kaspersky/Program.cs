@@ -20,24 +20,12 @@ namespace PasswordManagerAccess.Example.Kaspersky
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];
-                    Console.WriteLine("{0}: {1} {2} {3} {4} {5}",
-                                      i + 1,
-                                      a.Id,
-                                      a.Name,
-                                      a.Url,
-                                      a.Notes,
-                                      a.Folder);
+                    Console.WriteLine("{0}: {1} {2} {3} {4} {5}", i + 1, a.Id, a.Name, a.Url, a.Notes, a.Folder);
 
                     for (var j = 0; j < a.Credentials.Length; ++j)
                     {
                         var c = a.Credentials[j];
-                        Console.WriteLine("  - {0}: {1} {2} {3}:{4} ({5})",
-                                          j + 1,
-                                          c.Id,
-                                          c.Name,
-                                          c.Username,
-                                          c.Password,
-                                          c.Notes);
+                        Console.WriteLine("  - {0}: {1} {2} {3}:{4} ({5})", j + 1, c.Id, c.Name, c.Username, c.Password, c.Notes);
                     }
                 }
             }

@@ -35,8 +35,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void Asn1_ParseItem_throws_on_invalid_tag()
         {
-            Exceptions.AssertThrowsInternalError(() => Asn1.ParseItem("0D04DEADBEEF".DecodeHex()),
-                                                 "Unknown ASN.1 tag 13");
+            Exceptions.AssertThrowsInternalError(() => Asn1.ParseItem("0D04DEADBEEF".DecodeHex()), "Unknown ASN.1 tag 13");
         }
 
         [Fact]
@@ -71,7 +70,7 @@ namespace PasswordManagerAccess.Test.Common
             var item = Asn1.ParseItem($"{tag:X2}04DEADBEEF".DecodeHex());
 
             Assert.Equal(kind, item.Key);
-            Assert.Equal(new byte[] {0xDE, 0xAD, 0xBE, 0xEF}, item.Value);
+            Assert.Equal(new byte[] { 0xDE, 0xAD, 0xBE, 0xEF }, item.Value);
         }
     }
 }

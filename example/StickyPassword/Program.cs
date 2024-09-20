@@ -12,7 +12,7 @@ using SQLitePCL;
 
 namespace PasswordManagerAccess.Example.StickyPassword
 {
-    internal class TextUi: IUi
+    internal class TextUi : IUi
     {
         private const string ToCancel = "or just press ENTER to cancel";
 
@@ -21,13 +21,13 @@ namespace PasswordManagerAccess.Example.StickyPassword
             var passcode = GetAnswer($"Enter one-time PIN sent to your email address, 'r' to resend {ToCancel}");
             switch (passcode)
             {
-            case "":
-                return Passcode.Cancel;
-            case "r":
-            case "R":
-                return Passcode.Resend;
-            default:
-                return new Passcode(passcode);
+                case "":
+                    return Passcode.Cancel;
+                case "r":
+                case "R":
+                    return Passcode.Resend;
+                default:
+                    return new Passcode(passcode);
             }
         }
 
@@ -123,23 +123,23 @@ namespace PasswordManagerAccess.Example.StickyPassword
                     {
                         switch (raw.sqlite3_column_type(statement, i))
                         {
-                        case raw.SQLITE_INTEGER:
-                            row.Add(raw.sqlite3_column_int64(statement, i));
-                            break;
-                        case raw.SQLITE_FLOAT:
-                            row.Add(raw.sqlite3_column_double(statement, i));
-                            break;
-                        case raw.SQLITE_TEXT:
-                            row.Add(raw.sqlite3_column_text(statement, i).utf8_to_string());
-                            break;
-                        case raw.SQLITE_BLOB:
-                            row.Add(raw.sqlite3_column_blob(statement, i).ToArray());
-                            break;
-                        case raw.SQLITE_NULL:
-                            row.Add(null);
-                            break;
-                        default:
-                            throw new SqliteProviderError("Failed to query the database");
+                            case raw.SQLITE_INTEGER:
+                                row.Add(raw.sqlite3_column_int64(statement, i));
+                                break;
+                            case raw.SQLITE_FLOAT:
+                                row.Add(raw.sqlite3_column_double(statement, i));
+                                break;
+                            case raw.SQLITE_TEXT:
+                                row.Add(raw.sqlite3_column_text(statement, i).utf8_to_string());
+                                break;
+                            case raw.SQLITE_BLOB:
+                                row.Add(raw.sqlite3_column_blob(statement, i).ToArray());
+                                break;
+                            case raw.SQLITE_NULL:
+                                row.Add(null);
+                                break;
+                            default:
+                                throw new SqliteProviderError("Failed to query the database");
                         }
                     }
 
@@ -159,9 +159,7 @@ namespace PasswordManagerAccess.Example.StickyPassword
         {
             var config = Util.ReadConfig();
 
-            var deviceId = config.ContainsKey("device-id")
-                ? config["device-id"]
-                : null;
+            var deviceId = config.ContainsKey("device-id") ? config["device-id"] : null;
 
             if (deviceId == null)
             {
@@ -170,37 +168,21 @@ namespace PasswordManagerAccess.Example.StickyPassword
                 Console.WriteLine("Please save this ID and reuse on subsequent calls from this device");
             }
 
-            var deviceName = config.ContainsKey("device-name")
-                ? config["device-name"]
-                : "password-manager-access-stickypassword-example";
+            var deviceName = config.ContainsKey("device-name") ? config["device-name"] : "password-manager-access-stickypassword-example";
 
             try
             {
-                var vault = Vault.Open(config["username"],
-                                       config["password"],
-                                       deviceId,
-                                       deviceName,
-                                       new TextUi(),
-                                       new SqliteProvider());
+                var vault = Vault.Open(config["username"], config["password"], deviceId, deviceName, new TextUi(), new SqliteProvider());
 
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var a = vault.Accounts[i];
-                    Console.WriteLine("{0}: {1} {2} {3} {4}",
-                                      i + 1,
-                                      a.Id,
-                                      a.Name,
-                                      a.Url,
-                                      a.Notes);
+                    Console.WriteLine("{0}: {1} {2} {3} {4}", i + 1, a.Id, a.Name, a.Url, a.Notes);
 
                     for (var j = 0; j < a.Credentials.Length; ++j)
                     {
                         var c = a.Credentials[j];
-                        Console.WriteLine("  - {0}: {1}:{2} ({3})",
-                                          j + 1,
-                                          c.Username,
-                                          c.Password,
-                                          c.Description);
+                        Console.WriteLine("  - {0}: {1}:{2} ({3})", j + 1, c.Username, c.Password, c.Description);
                     }
                 }
             }

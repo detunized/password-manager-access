@@ -27,28 +27,19 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] Hkdf(string method, byte[] ikm, byte[] salt)
         {
-            return Common.Hkdf.Generate(ikm: ikm,
-                                        salt: salt,
-                                        info: method.ToBytes(),
-                                        byteCount: 32);
+            return Common.Hkdf.Generate(ikm: ikm, salt: salt, info: method.ToBytes(), byteCount: 32);
         }
 
         public static byte[] Pbes2(string method, string password, byte[] salt, int iterations)
         {
             switch (method)
             {
-            case "PBES2-HS256":
-            case "PBES2g-HS256":
-                return Crypto.Pbkdf2Sha256(password: password,
-                                           salt: salt,
-                                           iterations: iterations,
-                                           byteCount: 32);
-            case "PBES2-HS512":
-            case "PBES2g-HS512":
-                return Crypto.Pbkdf2Sha512(password: password,
-                                           salt: salt,
-                                           iterations: iterations,
-                                           byteCount: 32);
+                case "PBES2-HS256":
+                case "PBES2g-HS256":
+                    return Crypto.Pbkdf2Sha256(password: password, salt: salt, iterations: iterations, byteCount: 32);
+                case "PBES2-HS512":
+                case "PBES2g-HS512":
+                    return Crypto.Pbkdf2Sha512(password: password, salt: salt, iterations: iterations, byteCount: 32);
             }
 
             throw new UnsupportedFeatureException($"Method '{method}' is not supported");
@@ -68,23 +59,26 @@ namespace PasswordManagerAccess.OnePassword
 
         public static string HashRememberMeToken(string token, string sessionId)
         {
-            return Crypto.HmacSha256(token.Decode64Loose(), sessionId.Decode32())
-                .ToUrlSafeBase64NoPadding()
-                .Substring(0, 8);
+            return Crypto.HmacSha256(token.Decode64Loose(), sessionId.Decode32()).ToUrlSafeBase64NoPadding().Substring(0, 8);
         }
 
-        public class ThrowUi: IUi
+        public class ThrowUi : IUi
         {
             public DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw MakeLogicError();
+
             public string ProvideDuoPasscode(DuoDevice device) => throw MakeLogicError();
+
             public void UpdateDuoStatus(DuoStatus status, string text) => throw MakeLogicError();
+
             public Passcode ProvideGoogleAuthPasscode() => throw MakeLogicError();
+
             public Passcode ProvideWebAuthnRememberMe() => throw MakeLogicError();
         }
 
-        public class ThrowStorage: ISecureStorage
+        public class ThrowStorage : ISecureStorage
         {
             public string LoadString(string name) => throw MakeLogicError();
+
             public void StoreString(string name, string value) => throw MakeLogicError();
         }
 

@@ -27,11 +27,7 @@ namespace PasswordManagerAccess.TrueKey
             public readonly OobDevice[] Devices;
             public readonly string OAuthToken;
 
-            public Settings(Step initialStep,
-                            string transactionId,
-                            string email,
-                            OobDevice[] devices,
-                            string oAuthToken)
+            public Settings(Step initialStep, string transactionId, string email, OobDevice[] devices, string oAuthToken)
             {
                 InitialStep = initialStep;
                 TransactionId = transactionId;
@@ -75,14 +71,12 @@ namespace PasswordManagerAccess.TrueKey
             // TODO: Shared code for most states. It's not really good that it's in the base class.
             protected State Check(TwoFactorAuth owner)
             {
-                var result = Client.AuthCheck(owner._clientInfo,
-                                              owner._settings.TransactionId,
-                                              owner._rest);
+                var result = Client.AuthCheck(owner._clientInfo, owner._settings.TransactionId, owner._rest);
                 return new Done(result);
             }
         }
 
-        private class Done: State
+        private class Done : State
         {
             public Done(string oAuthToken)
             {
@@ -98,19 +92,16 @@ namespace PasswordManagerAccess.TrueKey
             private readonly string _oAuthToken;
         }
 
-        private class SendEmail: State
+        private class SendEmail : State
         {
             public override State Advance(TwoFactorAuth owner)
             {
-                Client.AuthSendEmail(owner._clientInfo,
-                                     owner._settings.Email,
-                                     owner._settings.TransactionId,
-                                     owner._rest);
+                Client.AuthSendEmail(owner._clientInfo, owner._settings.Email, owner._settings.TransactionId, owner._rest);
                 return new WaitForEmail();
             }
         }
 
-        private class SendPush: State
+        private class SendPush : State
         {
             public SendPush(int deviceIndex)
             {
@@ -119,39 +110,33 @@ namespace PasswordManagerAccess.TrueKey
 
             public override State Advance(TwoFactorAuth owner)
             {
-                Client.AuthSendPush(owner._clientInfo,
-                                    owner._settings.Devices[_deviceIndex].Id,
-                                    owner._settings.TransactionId,
-                                    owner._rest);
+                Client.AuthSendPush(owner._clientInfo, owner._settings.Devices[_deviceIndex].Id, owner._settings.TransactionId, owner._rest);
                 return new WaitForOob(_deviceIndex);
             }
 
             private readonly int _deviceIndex;
         }
 
-        private class WaitForEmail: State
+        private class WaitForEmail : State
         {
             public override State Advance(TwoFactorAuth owner)
             {
-                var validAnswers = new[] {Ui.Answer.Check, Ui.Answer.Resend};
+                var validAnswers = new[] { Ui.Answer.Check, Ui.Answer.Resend };
                 var answer = owner._ui.AskToWaitForEmail(owner._settings.Email, validAnswers);
                 switch (answer)
                 {
-                case Ui.Answer.Check:
-                    return Check(owner);
-                case Ui.Answer.Resend:
-                    Client.AuthSendEmail(owner._clientInfo,
-                                         owner._settings.Email,
-                                         owner._settings.TransactionId,
-                                         owner._rest);
-                    return this;
+                    case Ui.Answer.Check:
+                        return Check(owner);
+                    case Ui.Answer.Resend:
+                        Client.AuthSendEmail(owner._clientInfo, owner._settings.Email, owner._settings.TransactionId, owner._rest);
+                        return this;
                 }
 
                 throw new InternalErrorException($"Invalid answer '{answer}'");
             }
         }
 
-        private class WaitForOob: State
+        private class WaitForOob : State
         {
             public WaitForOob(int deviceIndex)
             {
@@ -160,26 +145,18 @@ namespace PasswordManagerAccess.TrueKey
 
             public override State Advance(TwoFactorAuth owner)
             {
-                var validAnswers = new[] {Ui.Answer.Check, Ui.Answer.Resend, Ui.Answer.Email};
-                var answer = owner._ui.AskToWaitForOob(owner._settings.Devices[_deviceIndex].Name,
-                                                   owner._settings.Email,
-                                                   validAnswers);
+                var validAnswers = new[] { Ui.Answer.Check, Ui.Answer.Resend, Ui.Answer.Email };
+                var answer = owner._ui.AskToWaitForOob(owner._settings.Devices[_deviceIndex].Name, owner._settings.Email, validAnswers);
                 switch (answer)
                 {
-                case Ui.Answer.Check:
-                    return Check(owner);
-                case Ui.Answer.Resend:
-                    Client.AuthSendPush(owner._clientInfo,
-                                        owner._settings.Devices[_deviceIndex].Id,
-                                        owner._settings.TransactionId,
-                                        owner._rest);
-                    return this;
-                case Ui.Answer.Email:
-                    Client.AuthSendEmail(owner._clientInfo,
-                                         owner._settings.Email,
-                                         owner._settings.TransactionId,
-                                         owner._rest);
-                    return new WaitForEmail();
+                    case Ui.Answer.Check:
+                        return Check(owner);
+                    case Ui.Answer.Resend:
+                        Client.AuthSendPush(owner._clientInfo, owner._settings.Devices[_deviceIndex].Id, owner._settings.TransactionId, owner._rest);
+                        return this;
+                    case Ui.Answer.Email:
+                        Client.AuthSendEmail(owner._clientInfo, owner._settings.Email, owner._settings.TransactionId, owner._rest);
+                        return new WaitForEmail();
                 }
 
                 throw new InternalErrorException($"Invalid answer '{answer}'");
@@ -188,12 +165,13 @@ namespace PasswordManagerAccess.TrueKey
             private readonly int _deviceIndex;
         }
 
-        private class ChooseOob: State
+        private class ChooseOob : State
         {
             public override State Advance(TwoFactorAuth owner)
             {
                 var names = owner._settings.Devices.Select(i => i.Name).ToArray();
-                var validAnswers = Enumerable.Range(0, owner._settings.Devices.Length)
+                var validAnswers = Enumerable
+                    .Range(0, owner._settings.Devices.Length)
                     .Select(i => Ui.Answer.Device0 + i)
                     .Concat(new[] { Ui.Answer.Email })
                     .ToArray();
@@ -201,20 +179,14 @@ namespace PasswordManagerAccess.TrueKey
 
                 if (answer == Ui.Answer.Email)
                 {
-                    Client.AuthSendEmail(owner._clientInfo,
-                                         owner._settings.Email,
-                                         owner._settings.TransactionId,
-                                         owner._rest);
+                    Client.AuthSendEmail(owner._clientInfo, owner._settings.Email, owner._settings.TransactionId, owner._rest);
                     return new WaitForEmail();
                 }
 
                 var deviceIndex = answer - Ui.Answer.Device0;
                 if (deviceIndex >= 0 && deviceIndex < owner._settings.Devices.Length)
                 {
-                    Client.AuthSendPush(owner._clientInfo,
-                                        owner._settings.Devices[deviceIndex].Id,
-                                        owner._settings.TransactionId,
-                                        owner._rest);
+                    Client.AuthSendPush(owner._clientInfo, owner._settings.Devices[deviceIndex].Id, owner._settings.TransactionId, owner._rest);
                     return new WaitForOob(deviceIndex);
                 }
 
@@ -246,30 +218,30 @@ namespace PasswordManagerAccess.TrueKey
         {
             switch (step)
             {
-            case Step.Done:
-                return new Done(_settings.OAuthToken);
-            case Step.WaitForEmail:
-                return new WaitForEmail();
-            case Step.WaitForOob:
-                if (_settings.Devices.Length > 1)
+                case Step.Done:
+                    return new Done(_settings.OAuthToken);
+                case Step.WaitForEmail:
+                    return new WaitForEmail();
+                case Step.WaitForOob:
+                    if (_settings.Devices.Length > 1)
+                        return new ChooseOob();
+                    return new WaitForOob(0);
+                case Step.ChooseOob:
                     return new ChooseOob();
-                return new WaitForOob(0);
-            case Step.ChooseOob:
-                return new ChooseOob();
-            case Step.Face:
-            case Step.Fingerprint:
-                // Face and fingerprint are not really supported but the server sometimes
-                // sends those as a valid next step. The Chrome extension silently ignores
-                // at least some of them. So we here fall back to push or email.
-                switch (_settings.Devices.Length)
-                {
-                case 0:
-                    return new SendEmail();
-                case 1:
-                    return new SendPush(0);
-                default:
-                    return new ChooseOob();
-                }
+                case Step.Face:
+                case Step.Fingerprint:
+                    // Face and fingerprint are not really supported but the server sometimes
+                    // sends those as a valid next step. The Chrome extension silently ignores
+                    // at least some of them. So we here fall back to push or email.
+                    switch (_settings.Devices.Length)
+                    {
+                        case 0:
+                            return new SendEmail();
+                        case 1:
+                            return new SendPush(0);
+                        default:
+                            return new ChooseOob();
+                    }
             }
 
             throw new InternalErrorException($"Two factor auth step {step} is not supported");

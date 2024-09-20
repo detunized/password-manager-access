@@ -239,7 +239,7 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly bool Enabled;
     }
 
-    internal class WebAuthnMfa: BasicMfa
+    internal class WebAuthnMfa : BasicMfa
     {
         [JsonProperty("keyHandles")]
         public readonly string[] KeyHandles;
@@ -248,7 +248,7 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly string Challenge;
     }
 
-    internal class DuoMfa: BasicMfa
+    internal class DuoMfa : BasicMfa
     {
         // Cannot make these fields required in case they are not sent when Duo is disabled.
         // Need to check for validity later where they are being used.
@@ -406,24 +406,19 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     // The "v" value could be practically anything. We are only interested in the string values.
     // The rest is simply converted to JSON as a fallback.
-    internal class VaultItemSectionFieldValueConverter: JsonConverter<string>
+    internal class VaultItemSectionFieldValueConverter : JsonConverter<string>
     {
-        public override string ReadJson(JsonReader reader,
-                                        Type objectType,
-                                        string existingValue,
-                                        bool hasExistingValue,
-                                        JsonSerializer serializer)
+        public override string ReadJson(JsonReader reader, Type objectType, string existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
             var token = JToken.Load(reader);
             return token.Type switch
             {
                 JTokenType.String => token.Value<string>(),
-                _ => token.ToString(Formatting.None)
+                _ => token.ToString(Formatting.None),
             };
         }
 
-        public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer) =>
-            throw new NotImplementedException();
+        public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer) => throw new NotImplementedException();
     }
 
     internal class AForB

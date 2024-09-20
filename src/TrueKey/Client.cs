@@ -13,11 +13,7 @@ namespace PasswordManagerAccess.TrueKey
 
     internal static class Client
     {
-        public static Account[] OpenVault(string username,
-                                          string password,
-                                          Ui ui,
-                                          ISecureStorage storage,
-                                          IRestTransport transport)
+        public static Account[] OpenVault(string username, string password, Ui ui, ISecureStorage storage, IRestTransport transport)
         {
             var rest = new RestClient(transport);
 
@@ -60,19 +56,18 @@ namespace PasswordManagerAccess.TrueKey
             var encryptedVault = GetVault(oauthToken, rest);
 
             // Step 9: Compute the master key.
-            var masterKey = Util.DecryptMasterKey(password,
-                                                  encryptedVault.MasterKeySalt,
-                                                  encryptedVault.EncryptedMasterKey);
+            var masterKey = Util.DecryptMasterKey(password, encryptedVault.MasterKeySalt, encryptedVault.EncryptedMasterKey);
 
             // Step 10: Decrypt the accounts.
             var accounts = encryptedVault
-                .EncryptedAccounts
-                .Select(i => new Account(id: i.Id,
-                                         name: i.Name,
-                                         username: i.Username,
-                                         password: Util.Decrypt(masterKey, i.EncryptedPassword).ToUtf8(),
-                                         url: i.Url,
-                                         note: Util.Decrypt(masterKey, i.EncryptedNote).ToUtf8()))
+                .EncryptedAccounts.Select(i => new Account(
+                    id: i.Id,
+                    name: i.Name,
+                    username: i.Username,
+                    password: Util.Decrypt(masterKey, i.EncryptedPassword).ToUtf8(),
+                    url: i.Url,
+                    note: Util.Decrypt(masterKey, i.EncryptedNote).ToUtf8()
+                ))
                 .ToArray();
 
             return accounts;
@@ -119,17 +114,19 @@ namespace PasswordManagerAccess.TrueKey
         // For example 'Chrome' or 'Nexus 5'.
         internal static DeviceInfo RegisterNewDevice(string deviceName, RestClient rest)
         {
-            var response = Post<R.RegisterNewDevice>("https://id-api.truekey.com/sp/pabe/v2/so",
-                                                     new Dictionary<string, object>
-                                                     {
-                                                         {"clientUDID", "truekey-sharp"},
-                                                         {"deviceName", deviceName},
-                                                         {"devicePlatformID", 7},
-                                                         {"deviceType", 5},
-                                                         {"oSName", "Unknown"},
-                                                         {"oathTokenType", 1},
-                                                     },
-                                                     rest);
+            var response = Post<R.RegisterNewDevice>(
+                "https://id-api.truekey.com/sp/pabe/v2/so",
+                new Dictionary<string, object>
+                {
+                    { "clientUDID", "truekey-sharp" },
+                    { "deviceName", deviceName },
+                    { "devicePlatformID", 7 },
+                    { "deviceType", 5 },
+                    { "oSName", "Unknown" },
+                    { "oathTokenType", 1 },
+                },
+                rest
+            );
 
             return new DeviceInfo(response.ClientToken, response.DeviceId);
         }
@@ -153,32 +150,36 @@ namespace PasswordManagerAccess.TrueKey
         // Returns OAuth transaction id that is used in the next step
         internal static string AuthStep1(ClientInfo clientInfo, RestClient rest)
         {
-            var response = Post<R.AuthStep1>("https://id-api.truekey.com/session/auth",
-                                             MakeCommonRequest(clientInfo, "session_id_token"),
-                                             rest);
+            var response = Post<R.AuthStep1>("https://id-api.truekey.com/session/auth", MakeCommonRequest(clientInfo, "session_id_token"), rest);
 
             return response.TransactionId;
         }
 
         // Returns instructions on what to do next
-        internal static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo,
-                                                         string password,
-                                                         string transactionId,
-                                                         RestClient rest)
+        internal static TwoFactorAuth.Settings AuthStep2(ClientInfo clientInfo, string password, string transactionId, RestClient rest)
         {
-            var parameters = new Dictionary<string, object> {
-                {"userData", new Dictionary<string, object> {
-                    {"email", clientInfo.Username},
-                    {"oAuthTransId", transactionId},
-                    {"pwd", Util.HashPassword(clientInfo.Username, password)},
-                }},
-                {"deviceData", new Dictionary<string, object> {
-                    {"deviceId", clientInfo.DeviceInfo.Id},
-                    {"deviceType", "mac"},
-                    {"devicePlatformType", "macos"},
-                    {"otpData", RandomOtpChallngeAsDictionary(clientInfo.OtpInfo)},
-                }},
-                {"policyVersion", 1},
+            var parameters = new Dictionary<string, object>
+            {
+                {
+                    "userData",
+                    new Dictionary<string, object>
+                    {
+                        { "email", clientInfo.Username },
+                        { "oAuthTransId", transactionId },
+                        { "pwd", Util.HashPassword(clientInfo.Username, password) },
+                    }
+                },
+                {
+                    "deviceData",
+                    new Dictionary<string, object>
+                    {
+                        { "deviceId", clientInfo.DeviceInfo.Id },
+                        { "deviceType", "mac" },
+                        { "devicePlatformType", "macos" },
+                        { "otpData", RandomOtpChallngeAsDictionary(clientInfo.OtpInfo) },
+                    }
+                },
+                { "policyVersion", 1 },
             };
 
             var response = Post<R.AuthStep2>("https://id-api.truekey.com/mp/auth", parameters, rest);
@@ -187,30 +188,34 @@ namespace PasswordManagerAccess.TrueKey
 
         // Saves the device as trusted. Trusted devices do not need to perform the two
         // factor authentication and log in non-interactively.
-        internal static void SaveDeviceAsTrusted(ClientInfo clientInfo,
-                                                 string transactionId,
-                                                 string oauthToken,
-                                                 RestClient rest)
+        internal static void SaveDeviceAsTrusted(ClientInfo clientInfo, string transactionId, string oauthToken, RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
-            ((Dictionary<string, object>) parameters["data"])["dashboardData"] = new Dictionary<string, object>
+            ((Dictionary<string, object>)parameters["data"])["dashboardData"] = new Dictionary<string, object>
             {
-                {"deviceData", new Dictionary<string, object> {{"isTrusted", true}}},
+                {
+                    "deviceData",
+                    new Dictionary<string, object> { { "isTrusted", true } }
+                },
             };
 
-            Post<R.Status>("https://id-api.truekey.com/sp/dashboard/v2/udt",
-                           parameters,
-                           new Dictionary<string, string> {{"x-idToken", oauthToken}},
-                           rest);
+            Post<R.Status>(
+                "https://id-api.truekey.com/sp/dashboard/v2/udt",
+                parameters,
+                new Dictionary<string, string> { { "x-idToken", oauthToken } },
+                rest
+            );
         }
 
         // Check if the second factor has been completed by the user.
         // On success returns a valid OAuth token.
         internal static string AuthCheck(ClientInfo clientInfo, string transactionId, RestClient rest)
         {
-            var response = Post<R.AuthCheck>("https://id-api.truekey.com/sp/profile/v1/gls",
-                                             MakeCommonRequest(clientInfo, "code", transactionId),
-                                             rest);
+            var response = Post<R.AuthCheck>(
+                "https://id-api.truekey.com/sp/profile/v1/gls",
+                MakeCommonRequest(clientInfo, "code", transactionId),
+                rest
+            );
             if (response.NextStep != 10)
                 throw MakeError("Invalid response in AuthCheck, expected an OAuth token");
 
@@ -222,32 +227,26 @@ namespace PasswordManagerAccess.TrueKey
         }
 
         // Send a verification email as a second factor action.
-        internal static void AuthSendEmail(ClientInfo clientInfo,
-                                           string email,
-                                           string transactionId,
-                                           RestClient rest)
+        internal static void AuthSendEmail(ClientInfo clientInfo, string email, string transactionId, RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"] = new Dictionary<string, object>
             {
-                {"NotificationType", 1},
-                {"RecipientId", email},
+                { "NotificationType", 1 },
+                { "RecipientId", email },
             };
 
             Post<R.Status>("https://id-api.truekey.com/sp/oob/v1/son", parameters, rest);
         }
 
         // Send a push message to a device as a second factor action.
-        internal static void AuthSendPush(ClientInfo clientInfo,
-                                          string deviceId,
-                                          string transactionId,
-                                          RestClient rest)
+        internal static void AuthSendPush(ClientInfo clientInfo, string deviceId, string transactionId, RestClient rest)
         {
             var parameters = MakeCommonRequest(clientInfo, "code", transactionId);
             ((Dictionary<string, object>)parameters["data"])["notificationData"] = new Dictionary<string, object>
             {
-                {"NotificationType", 2},
-                {"RecipientId", deviceId},
+                { "NotificationType", 2 },
+                { "RecipientId", deviceId },
             };
 
             Post<R.Status>("https://id-api.truekey.com/sp/oob/v1/son", parameters, rest);
@@ -256,17 +255,19 @@ namespace PasswordManagerAccess.TrueKey
         // Fetches the vault data, parses and returns in the encrypted form.
         internal static EncryptedVault GetVault(string oauthToken, RestClient rest)
         {
-            var response = Get<R.Vault>("https://pm-api.truekey.com/data",
-                                        new Dictionary<string, string>
-                                        {
-                                            {"Authorization", "Bearer " + oauthToken},
-                                            {"Accept", "application/vnd.tk-pm-api.v1+json"},
-                                            {"X-TK-Client-API", "TK-API-1.1"},
-                                            {"X-TK-Client-Version", "2.6.3820"},
-                                            {"X-TK-Client-Language", "en-US"},
-                                            {"X-TK-Client-Context", "crx-mac"},
-                                        },
-                                        rest);
+            var response = Get<R.Vault>(
+                "https://pm-api.truekey.com/data",
+                new Dictionary<string, string>
+                {
+                    { "Authorization", "Bearer " + oauthToken },
+                    { "Accept", "application/vnd.tk-pm-api.v1+json" },
+                    { "X-TK-Client-API", "TK-API-1.1" },
+                    { "X-TK-Client-Version", "2.6.3820" },
+                    { "X-TK-Client-Language", "en-US" },
+                    { "X-TK-Client-Context", "crx-mac" },
+                },
+                rest
+            );
             return ParseGetVaultResponse(response);
         }
 
@@ -277,26 +278,28 @@ namespace PasswordManagerAccess.TrueKey
 
             // Special case: done
             if (nextStep == 10)
-                return new TwoFactorAuth.Settings(initialStep: TwoFactorAuth.Step.Done,
-                                                  transactionId: "",
-                                                  email: "",
-                                                  devices: new TwoFactorAuth.OobDevice[0],
-                                                  oAuthToken: response.OAuthToken ?? "");
+                return new TwoFactorAuth.Settings(
+                    initialStep: TwoFactorAuth.Step.Done,
+                    transactionId: "",
+                    email: "",
+                    devices: new TwoFactorAuth.OobDevice[0],
+                    oAuthToken: response.OAuthToken ?? ""
+                );
 
             var transactionId = response.TransactionId;
             var email = data.VerificationEmail ?? "";
 
             // Special case: email doesn't need OOB devices
             if (nextStep == 14)
-                return new TwoFactorAuth.Settings(TwoFactorAuth.Step.WaitForEmail,
-                                                  transactionId: transactionId,
-                                                  email: email,
-                                                  devices: new TwoFactorAuth.OobDevice[0],
-                                                  oAuthToken: "");
+                return new TwoFactorAuth.Settings(
+                    TwoFactorAuth.Step.WaitForEmail,
+                    transactionId: transactionId,
+                    email: email,
+                    devices: new TwoFactorAuth.OobDevice[0],
+                    oAuthToken: ""
+                );
 
-            var devices = (data.OobDevices ?? new R.OobDevice[0])
-                .Select(x => new TwoFactorAuth.OobDevice(name: x.Name, id: x.Id))
-                .ToArray();
+            var devices = (data.OobDevices ?? new R.OobDevice[0]).Select(x => new TwoFactorAuth.OobDevice(name: x.Name, id: x.Id)).ToArray();
 
             if (devices.Length < 1)
                 throw MakeError("At least one OOB device is expected");
@@ -304,27 +307,23 @@ namespace PasswordManagerAccess.TrueKey
             TwoFactorAuth.Step step;
             switch (nextStep)
             {
-            case 8:
-                step = TwoFactorAuth.Step.Face;
-                break;
-            case 12:
-                step = TwoFactorAuth.Step.WaitForOob;
-                break;
-            case 13:
-                step = TwoFactorAuth.Step.ChooseOob;
-                break;
-            case 15:
-                step = TwoFactorAuth.Step.Fingerprint;
-                break;
-            default:
-                throw MakeError($"Next two factor step {nextStep} is not supported");
+                case 8:
+                    step = TwoFactorAuth.Step.Face;
+                    break;
+                case 12:
+                    step = TwoFactorAuth.Step.WaitForOob;
+                    break;
+                case 13:
+                    step = TwoFactorAuth.Step.ChooseOob;
+                    break;
+                case 15:
+                    step = TwoFactorAuth.Step.Fingerprint;
+                    break;
+                default:
+                    throw MakeError($"Next two factor step {nextStep} is not supported");
             }
 
-            return new TwoFactorAuth.Settings(step,
-                                              transactionId: transactionId,
-                                              email: email,
-                                              devices: devices,
-                                              oAuthToken: "");
+            return new TwoFactorAuth.Settings(step, transactionId: transactionId, email: email, devices: devices, oAuthToken: "");
         }
 
         internal static EncryptedVault ParseGetVaultResponse(R.Vault response)
@@ -333,76 +332,93 @@ namespace PasswordManagerAccess.TrueKey
             var key = response.Customer.Kek.Decode64();
 
             var accounts = response
-                .Accounts
-                .Select(i => new EncryptedAccount(id: i.Id,
-                                                  name: i.Name ?? "",
-                                                  username: i.Username ?? "",
-                                                  encryptedPassword: (i.EncryptedPassword ?? "").Decode64(),
-                                                  url: i.Url ?? "",
-                                                  encryptedNote: (i.EncryptedNote ?? "").Decode64()))
+                .Accounts.Select(i => new EncryptedAccount(
+                    id: i.Id,
+                    name: i.Name ?? "",
+                    username: i.Username ?? "",
+                    encryptedPassword: (i.EncryptedPassword ?? "").Decode64(),
+                    url: i.Url ?? "",
+                    encryptedNote: (i.EncryptedNote ?? "").Decode64()
+                ))
                 .ToArray();
 
             return new EncryptedVault(salt, key, accounts);
         }
 
-        internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo,
-                                                                     string responseType,
-                                                                     string oAuthTransactionId = "")
+        internal static Dictionary<string, object> MakeCommonRequest(ClientInfo clientInfo, string responseType, string oAuthTransactionId = "")
         {
-            return new Dictionary<string, object> {
-                {"data", new Dictionary<string, object> {
-                    {"contextData", new Dictionary<string, object> {
-                        {"deviceInfo", new Dictionary<string, object> {
-                            {"deviceName", clientInfo.Name},
-                            {"devicePlatformID", 7}, // MacOS (see DevicePlatformType)
-                            {"deviceType", 5}, // Mac (see DeviceType)
-                        }}
-                    }},
-                    {"rpData", new Dictionary<string, object> {
-                        {"clientId", "42a01655e65147c3b03721df36b45195"},
-                        {"response_type", responseType},
-                        {"culture", "en-US"},
-                    }},
-                    {"userData", new Dictionary<string, object> {
-                        {"email", clientInfo.Username},
-                        {"oTransId", oAuthTransactionId},
-                    }},
-                    {"ysvcData", new Dictionary<string, object> {
-                        {"deviceId", clientInfo.DeviceInfo.Id},
-                    }},
-                    {"policyVersion", 1},
-                }},
+            return new Dictionary<string, object>
+            {
+                {
+                    "data",
+                    new Dictionary<string, object>
+                    {
+                        {
+                            "contextData",
+                            new Dictionary<string, object>
+                            {
+                                {
+                                    "deviceInfo",
+                                    new Dictionary<string, object>
+                                    {
+                                        { "deviceName", clientInfo.Name },
+                                        { "devicePlatformID", 7 }, // MacOS (see DevicePlatformType)
+                                        { "deviceType", 5 }, // Mac (see DeviceType)
+                                    }
+                                },
+                            }
+                        },
+                        {
+                            "rpData",
+                            new Dictionary<string, object>
+                            {
+                                { "clientId", "42a01655e65147c3b03721df36b45195" },
+                                { "response_type", responseType },
+                                { "culture", "en-US" },
+                            }
+                        },
+                        {
+                            "userData",
+                            new Dictionary<string, object> { { "email", clientInfo.Username }, { "oTransId", oAuthTransactionId } }
+                        },
+                        {
+                            "ysvcData",
+                            new Dictionary<string, object> { { "deviceId", clientInfo.DeviceInfo.Id } }
+                        },
+                        { "policyVersion", 1 },
+                    }
+                },
             };
         }
 
         internal static Dictionary<string, object> RandomOtpChallngeAsDictionary(Util.OtpInfo otp)
         {
             var challenge = Util.GenerateRandomOtpChallenge(otp);
-            return new Dictionary<string, object> {
-                {"qn", challenge.Challenge.ToBase64()},
-                {"otpType", "time"},
-                {"otp", challenge.Signature.ToBase64()},
+            return new Dictionary<string, object>
+            {
+                { "qn", challenge.Challenge.ToBase64() },
+                { "otpType", "time" },
+                { "otp", challenge.Signature.ToBase64() },
             };
         }
 
-       internal static T Get<T>(string url, Dictionary<string, string> headers, RestClient rest)
-       {
-           var response = rest.Get<T>(url, headers);
-           if (response.IsSuccessful)
-               return response.Data;
+        internal static T Get<T>(string url, Dictionary<string, string> headers, RestClient rest)
+        {
+            var response = rest.Get<T>(url, headers);
+            if (response.IsSuccessful)
+                return response.Data;
 
-           throw MakeNetworkError(response);
-       }
+            throw MakeNetworkError(response);
+        }
 
-        internal static T Post<T>(string url, Dictionary<string, object> parameters, RestClient rest) where T : R.Status
+        internal static T Post<T>(string url, Dictionary<string, object> parameters, RestClient rest)
+            where T : R.Status
         {
             return Post<T>(url, parameters, RestClient.NoHeaders, rest);
         }
 
-        internal static T Post<T>(string url,
-                                  Dictionary<string, object> parameters,
-                                  Dictionary<string, string> headers,
-                                  RestClient rest) where T : R.Status
+        internal static T Post<T>(string url, Dictionary<string, object> parameters, Dictionary<string, string> headers, RestClient rest)
+            where T : R.Status
         {
             var response = rest.PostJson<T>(url, parameters, headers);
             if (!response.IsSuccessful)
@@ -430,12 +446,14 @@ namespace PasswordManagerAccess.TrueKey
             if ((int)response.StatusCode == 422)
                 return new BadCredentialsException(
                     $"HTTP request to '{response.RequestUri}' failed, most likely username/password are incorrect",
-                    response.Error);
+                    response.Error
+                );
 
             if (response.StatusCode != HttpStatusCode.OK)
                 return new InternalErrorException(
                     $"Request to '{response.RequestUri}' failed with HTTP status {(int)response.StatusCode}",
-                    response.Error);
+                    response.Error
+                );
 
             return new InternalErrorException($"Request to '{response.RequestUri}' failed", response.Error);
         }

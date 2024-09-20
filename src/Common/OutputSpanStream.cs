@@ -13,9 +13,8 @@ namespace PasswordManagerAccess.Common
         public int Position => _offset;
         public bool IsEof => Position == Size;
 
-        public OutputSpanStream(byte[] bytes): this(bytes.AsSpan())
-        {
-        }
+        public OutputSpanStream(byte[] bytes)
+            : this(bytes.AsSpan()) { }
 
         public OutputSpanStream(Span<byte> span)
         {

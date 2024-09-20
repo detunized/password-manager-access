@@ -11,22 +11,18 @@ namespace Example
 {
     public static class Program
     {
-        private class TextUi: DuoUi, IUi
+        private class TextUi : DuoUi, IUi
         {
             public Passcode ProvideGoogleAuthPasscode()
             {
                 var passcode = GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}");
-                return string.IsNullOrWhiteSpace(passcode)
-                    ? Passcode.Cancel
-                    : new Passcode(passcode, GetRememberMe());
+                return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
             }
 
             public Passcode ProvideWebAuthnRememberMe()
             {
                 var yesNo = GetAnswer($"Remember this device? {PressEnterToCancel}").ToLower();
-                return string.IsNullOrWhiteSpace(yesNo)
-                    ? Passcode.Cancel
-                    : new Passcode("", yesNo == "y" || yesNo == "yes");
+                return string.IsNullOrWhiteSpace(yesNo) ? Passcode.Cancel : new Passcode("", yesNo == "y" || yesNo == "yes");
             }
         }
 
@@ -47,12 +43,14 @@ namespace Example
 
             try
             {
-                DumpAllVaults(config["username"],
-                              config["password"],
-                              config["account-key"],
-                              config["domain"],
-                              config["device-id"],
-                              serviceAccountToken ?? "");
+                DumpAllVaults(
+                    config["username"],
+                    config["password"],
+                    config["account-key"],
+                    config["domain"],
+                    config["device-id"],
+                    serviceAccountToken ?? ""
+                );
             }
             catch (BaseException e)
             {
@@ -60,36 +58,25 @@ namespace Example
             }
         }
 
-        private static void DumpAllVaults(string username,
-                                          string password,
-                                          string accountKey,
-                                          string domain,
-                                          string uuid,
-                                          string serviceAccountToken)
+        private static void DumpAllVaults(string username, string password, string accountKey, string domain, string uuid, string serviceAccountToken)
         {
-            var device = new AppInfo
-            {
-                Name = "PMA 1Password example",
-                Version = "1.0.0",
-            };
+            var device = new AppInfo { Name = "PMA 1Password example", Version = "1.0.0" };
 
             var session = string.IsNullOrEmpty(serviceAccountToken)
-                ? Client.LogIn(new Credentials
-                               {
-                                   Username = username,
-                                   Password = password,
-                                   AccountKey = accountKey,
-                                   Domain = domain,
-                                   DeviceUuid = uuid,
-                               },
-                               device,
-                               new TextUi(),
-                               new PlainStorage())
-                : Client.LogIn(new ServiceAccount
-                               {
-                                   Token = serviceAccountToken
-                               },
-                               device);
+                ? Client.LogIn(
+                    new Credentials
+                    {
+                        Username = username,
+                        Password = password,
+                        AccountKey = accountKey,
+                        Domain = domain,
+                        DeviceUuid = uuid,
+                    },
+                    device,
+                    new TextUi(),
+                    new PlainStorage()
+                )
+                : Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
 
             try
             {
@@ -112,20 +99,22 @@ namespace Example
             for (var i = 0; i < vault.Accounts.Length; ++i)
             {
                 var account = vault.Accounts[i];
-                Console.WriteLine("  {0}:\n" +
-                                  "          id: {1}\n" +
-                                  "        name: {2}\n" +
-                                  "    username: {3}\n" +
-                                  "    password: {4}\n" +
-                                  "         url: {5}\n" +
-                                  "        note: {6}\n",
-                                  i + 1,
-                                  account.Id,
-                                  account.Name,
-                                  account.Username,
-                                  account.Password,
-                                  account.MainUrl,
-                                  account.Note);
+                Console.WriteLine(
+                    "  {0}:\n"
+                        + "          id: {1}\n"
+                        + "        name: {2}\n"
+                        + "    username: {3}\n"
+                        + "    password: {4}\n"
+                        + "         url: {5}\n"
+                        + "        note: {6}\n",
+                    i + 1,
+                    account.Id,
+                    account.Name,
+                    account.Username,
+                    account.Password,
+                    account.MainUrl,
+                    account.Note
+                );
 
                 foreach (var otp in account.Otps)
                     Console.WriteLine("         otp: {0}: {1} (section: {2})", otp.Name, otp.Secret, otp.Section);

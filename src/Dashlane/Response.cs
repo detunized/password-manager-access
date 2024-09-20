@@ -14,9 +14,7 @@ namespace PasswordManagerAccess.Dashlane.Response
         public readonly T Data;
     }
 
-    internal class Blank
-    {
-    }
+    internal class Blank { }
 
     internal readonly struct VerificationMethods
     {

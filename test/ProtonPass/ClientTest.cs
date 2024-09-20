@@ -16,7 +16,7 @@ using static PasswordManagerAccess.Test.TestUtil;
 
 namespace PasswordManagerAccess.Test.ProtonPass
 {
-    public class ClientTest: TestBase
+    public class ClientTest : TestBase
     {
         [Fact(Skip = "Not implemented")]
         public async Task Open_returns_a_vault_with_a_valid_access_token()
@@ -24,18 +24,16 @@ namespace PasswordManagerAccess.Test.ProtonPass
             // Arrange
             var mockHttp = new MockHttpHandler();
             mockHttp
-                .When(m => m
-                    .Method("GET")
-                    .RequestUri("*/pass/v1/invite")
-                    .Header("X-Pm-Appversion", "android-pass@1.19.0")
-                    .Header("X-Pm-Uid", "session-id")
-                    .Header("Authorization", "Bearer access-token")
-                    .Not.Header("X-Pm-Human-Verification-Token")
-                    .Not.Header("X-Pm-Human-Verification-Token-Type")
+                .When(m =>
+                    m.Method("GET")
+                        .RequestUri("*/pass/v1/invite")
+                        .Header("X-Pm-Appversion", "android-pass@1.19.0")
+                        .Header("X-Pm-Uid", "session-id")
+                        .Header("Authorization", "Bearer access-token")
+                        .Not.Header("X-Pm-Human-Verification-Token")
+                        .Not.Header("X-Pm-Human-Verification-Token-Type")
                 )
-                .Respond(w => w
-                    .StatusCode(200)
-                    .JsonText(GetFixture("sessions")));
+                .Respond(w => w.StatusCode(200).JsonText(GetFixture("sessions")));
 
             // Act
             await Swallow(() => Client.OpenAll("username", "password", GetAsyncUi(), GetAsyncStorage(), mockHttp.ToConfig(), MakeToken()));
@@ -66,12 +64,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
         {
             // Arrange
             var mockHttp = new MockHttpHandler();
-            mockHttp
-                .When(w => w
-                    .Method("POST")
-                    .RequestUri("*/auth/v4/sessions")
-                    .WithoutBody())
-                .Respond(w => w.JsonText(GetFixture("sessions")));
+            mockHttp.When(w => w.Method("POST").RequestUri("*/auth/v4/sessions").WithoutBody()).Respond(w => w.JsonText(GetFixture("sessions")));
 
             // Act
             await Swallow(() => Client.RequestNewAuthSession(mockHttp.ToClient(), MakeToken()));
@@ -90,9 +83,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             Func<Task> act = () => Client.RequestNewAuthSession(rest, MakeToken());
 
             // Assert
-            await act.Should()
-                .ThrowAsync<InternalErrorException>()
-                .WithMessage("Failed to parse the response JSON");
+            await act.Should().ThrowAsync<InternalErrorException>().WithMessage("Failed to parse the response JSON");
         }
 
         [Fact]
@@ -134,10 +125,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             // Arrange
             var mockHttp = new MockHttpHandler();
             mockHttp
-                .When(w => w
-                    .Method("POST")
-                    .RequestUri("*/auth/v4/info")
-                    .JsonText("{\"Username\":\"username\",\"Intent\":\"Proton\"}"))
+                .When(w => w.Method("POST").RequestUri("*/auth/v4/info").JsonText("{\"Username\":\"username\",\"Intent\":\"Proton\"}"))
                 .Respond(w => w.JsonText(GetFixture("auth-info")));
 
             // Act/assert
@@ -151,15 +139,11 @@ namespace PasswordManagerAccess.Test.ProtonPass
         // Helpers
         //
 
-        class TestAsyncUi: IAsyncUi
+        class TestAsyncUi : IAsyncUi
         {
             public Task<IAsyncUi.Result> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken)
             {
-                return Task.FromResult(new IAsyncUi.Result()
-                {
-                    Solved = true,
-                    Token = "ok-human-verification-token",
-                });
+                return Task.FromResult(new IAsyncUi.Result() { Solved = true, Token = "ok-human-verification-token" });
             }
         }
 
@@ -170,12 +154,14 @@ namespace PasswordManagerAccess.Test.ProtonPass
 
         private static IAsyncSecureStorage GetAsyncStorage()
         {
-            return new MemoryStorage(new()
-            {
-                ["session-id"] = "session-id",
-                ["access-token"] = "access-token",
-                ["refresh-token"] = "refresh-token",
-            });
+            return new MemoryStorage(
+                new()
+                {
+                    ["session-id"] = "session-id",
+                    ["access-token"] = "access-token",
+                    ["refresh-token"] = "refresh-token",
+                }
+            );
         }
     }
 }

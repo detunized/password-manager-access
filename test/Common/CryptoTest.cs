@@ -186,8 +186,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void HmacSha256_byte_range_returns_mac()
         {
-            Assert.Equal(MessageHmacSha256,
-                         Crypto.HmacSha256("key".ToBytes(), MessageBlahBytes, MessageStart, MessageLength));
+            Assert.Equal(MessageHmacSha256, Crypto.HmacSha256("key".ToBytes(), MessageBlahBytes, MessageStart, MessageLength));
         }
 
         [Fact]
@@ -309,13 +308,9 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("too long too long", "iviviviviviviviv", "key key key key key key key key!")]
         public void DecryptAes256_throws_on_invalid_input(string ciphertext, string iv, string key)
         {
-            foreach (var cipherMode in new[] {CipherMode.ECB, CipherMode.CBC})
-            foreach (var padding in new[] {PaddingMode.None, PaddingMode.PKCS7})
-                Exceptions.AssertThrowsCrypto(() => Crypto.DecryptAes256(ciphertext.ToBytes(),
-                                                                         iv.ToBytes(),
-                                                                         key.ToBytes(),
-                                                                         cipherMode,
-                                                                         padding));
+            foreach (var cipherMode in new[] { CipherMode.ECB, CipherMode.CBC })
+            foreach (var padding in new[] { PaddingMode.None, PaddingMode.PKCS7 })
+                Exceptions.AssertThrowsCrypto(() => Crypto.DecryptAes256(ciphertext.ToBytes(), iv.ToBytes(), key.ToBytes(), cipherMode, padding));
         }
 
         //
@@ -330,7 +325,8 @@ namespace PasswordManagerAccess.Test.Common
         {
             Exceptions.AssertThrowsInternalError(
                 () => Crypto.DecryptXChaCha20Poly1305(new byte[size], new byte[24], new byte[32]),
-                "Ciphertext must be at least 16 bytes long");
+                "Ciphertext must be at least 16 bytes long"
+            );
         }
 
         [Theory]
@@ -356,8 +352,10 @@ namespace PasswordManagerAccess.Test.Common
 
             static void Check(byte[] ciphertext, byte[] nonce, byte[] key)
             {
-                Exceptions.AssertThrowsCrypto(() => Crypto.DecryptXChaCha20Poly1305(ciphertext, nonce, key),
-                                              "Tag doesn't match, the data is corrupted or the key is incorrect");
+                Exceptions.AssertThrowsCrypto(
+                    () => Crypto.DecryptXChaCha20Poly1305(ciphertext, nonce, key),
+                    "Tag doesn't match, the data is corrupted or the key is incorrect"
+                );
             }
 
             static byte[] Corrupt(byte[] original)
@@ -474,7 +472,8 @@ namespace PasswordManagerAccess.Test.Common
         {
             Exceptions.AssertThrowsUnsupportedFeature(
                 () => Crypto.GuessKeyBitLength(new RSAParameters() { Modulus = new byte[bits / 8] }),
-                "not supported");
+                "not supported"
+            );
         }
 
         [Fact]
@@ -551,7 +550,8 @@ namespace PasswordManagerAccess.Test.Common
         private static readonly byte[] MessageSha256 = "q1MKE+RZFJgrefm34/uplM/R8/si9xzqGvvwK0YMbR0=".Decode64();
 
         // $ echo -n message | openssl dgst -sha512 -binary | openssl base64 -A
-        private static readonly byte[] MessageSha512 = "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==".Decode64();
+        private static readonly byte[] MessageSha512 =
+            "+Nr1ejNHzE1rnVdbMf5gd+LLSH9gqWIzwIy0edvzFTjMkV7G1IvbqpbdwaFttPT5bzcnbPyzUQuCRiQXcNWVLA==".Decode64();
 
         // $ echo -n message | openssl dgst -sha256 -hmac "key" -binary | openssl base64 -A
         private static readonly byte[] MessageHmacSha256 = "bp7ym3X//Ft6uuUn1Y/a2y/kLnIZARl2kXNDBl9Y7Uo=".Decode64();
@@ -590,8 +590,9 @@ namespace PasswordManagerAccess.Test.Common
         // XChaCha20Poly1305
         //
 
-        public static readonly IEnumerable<object[]> XChaCha20Poly1305TestCases =
-            TestBase.ToMemberData(CryptoTestVectors.XChaCha20Poly1305TestVectors);
+        public static readonly IEnumerable<object[]> XChaCha20Poly1305TestCases = TestBase.ToMemberData(
+            CryptoTestVectors.XChaCha20Poly1305TestVectors
+        );
 
         //
         // RSA
@@ -599,39 +600,53 @@ namespace PasswordManagerAccess.Test.Common
 
         private static readonly RSAParameters RsaKey = new RSAParameters()
         {
-            Modulus = ("snUkaje/g2JTLP6J/3LrA7EL6Zd4tZ72zsFtT1OPLcyUCN9EEGbiYnFtIrUuPGv8AhpfZm6i" +
-                       "rAXq12uChvW9QVWWKrHAiYz1WF/rXgL7TI1ta5EPCojImh/XJqe4U8ETMVZqa2+gbSeKV+zG" +
-                       "vhP/Z941z3LFM/h5w4ib+H4utQPaeu6kQ39SIQ0tC/+SKYCQO66KrYy/FhQOgdk3YqqD1bOi" +
-                       "v4il4+lUrheqk8i/q7RHshhHSCmd1FXymGiiJsBlAq7Ge91f/amsaRcRwBl7toYbz1eNbSqX" +
-                       "dhdieLGM1hTVxEubBtEroCHecQGlojbwLqYuiT7EhLuti3M2S8Lk5Q==").Decode64(),
+            Modulus = (
+                "snUkaje/g2JTLP6J/3LrA7EL6Zd4tZ72zsFtT1OPLcyUCN9EEGbiYnFtIrUuPGv8AhpfZm6i"
+                + "rAXq12uChvW9QVWWKrHAiYz1WF/rXgL7TI1ta5EPCojImh/XJqe4U8ETMVZqa2+gbSeKV+zG"
+                + "vhP/Z941z3LFM/h5w4ib+H4utQPaeu6kQ39SIQ0tC/+SKYCQO66KrYy/FhQOgdk3YqqD1bOi"
+                + "v4il4+lUrheqk8i/q7RHshhHSCmd1FXymGiiJsBlAq7Ge91f/amsaRcRwBl7toYbz1eNbSqX"
+                + "dhdieLGM1hTVxEubBtEroCHecQGlojbwLqYuiT7EhLuti3M2S8Lk5Q=="
+            ).Decode64(),
 
             Exponent = "AQAB".Decode64(),
 
-            D = ("eDRPgvxqE6V3QSdy7I4Ln0DyNTXCKRQaSsofRv+Rwde7Hv7EagfjFUwxpt9DdY+HACOjfuumxxh1Rw" +
-                 "UztpRwFkIAFGIGvqAj4pM5humbO8VHntzmtMHN3YL0+SSgFEpJE0KSDCv0c5HerbrfY8k0kFItDL7R" +
-                 "9l+4JO0vogHclDATdtE96R7jLo4ws9XuLf0dFO2GadbQX1r3k8kRa/s0Gp6Scs3qf5eO4Ar7T/weAO" +
-                 "ETA3+hA0/noRnCvsxsdE6bL9ca02yEzYdAcBUK/PbROKAIsx4gAvkeYQ+BwpbTtzO9Rvrx2om0bmHf" +
-                 "3gqJfnEO7jpRdR50UbsMpOIAoYDTQQ==").Decode64(),
+            D = (
+                "eDRPgvxqE6V3QSdy7I4Ln0DyNTXCKRQaSsofRv+Rwde7Hv7EagfjFUwxpt9DdY+HACOjfuumxxh1Rw"
+                + "UztpRwFkIAFGIGvqAj4pM5humbO8VHntzmtMHN3YL0+SSgFEpJE0KSDCv0c5HerbrfY8k0kFItDL7R"
+                + "9l+4JO0vogHclDATdtE96R7jLo4ws9XuLf0dFO2GadbQX1r3k8kRa/s0Gp6Scs3qf5eO4Ar7T/weAO"
+                + "ETA3+hA0/noRnCvsxsdE6bL9ca02yEzYdAcBUK/PbROKAIsx4gAvkeYQ+BwpbTtzO9Rvrx2om0bmHf"
+                + "3gqJfnEO7jpRdR50UbsMpOIAoYDTQQ=="
+            ).Decode64(),
 
-            P = ("xaqDLBwDTaas+Q6ZqdZ4UgM9uklrFDzrWOS39rY4buMXv9icCADR2OikOL1aWMoex8d7DYqAzXfrFo" +
-                 "rAFFohdoj274S6ZI0h/1g1cP7Nm4TiZoa6AggBN4gPPLZWakDVP3KFpzSrR0ZAVmePIjmVdVJ1hqsj" +
-                 "qPR6yBlfQ9WhZnM=").Decode64(),
+            P = (
+                "xaqDLBwDTaas+Q6ZqdZ4UgM9uklrFDzrWOS39rY4buMXv9icCADR2OikOL1aWMoex8d7DYqAzXfrFo"
+                + "rAFFohdoj274S6ZI0h/1g1cP7Nm4TiZoa6AggBN4gPPLZWakDVP3KFpzSrR0ZAVmePIjmVdVJ1hqsj"
+                + "qPR6yBlfQ9WhZnM="
+            ).Decode64(),
 
-            Q = ("5x9yfmdXM9B5cg2BLN8TUDWYdhECngIDLuTZxrjOT9V1Tcjzryjy12aodAA8NzS6CQeMZ6dK2YqGTW" +
-                 "PFES6KPjBPZGelHW8pOvzme0Hjl+p24lwnaIAz2hJS6uuA9Kos0XSdEyaz9Iq+SErlD9YmvNYDMRpr" +
-                 "CRkGiuK6vyE42Uc=").Decode64(),
+            Q = (
+                "5x9yfmdXM9B5cg2BLN8TUDWYdhECngIDLuTZxrjOT9V1Tcjzryjy12aodAA8NzS6CQeMZ6dK2YqGTW"
+                + "PFES6KPjBPZGelHW8pOvzme0Hjl+p24lwnaIAz2hJS6uuA9Kos0XSdEyaz9Iq+SErlD9YmvNYDMRpr"
+                + "CRkGiuK6vyE42Uc="
+            ).Decode64(),
 
-            DP = ("B5qEizjUo7MKqlX2cUMPw8/eGwFh/hhN0VCTBwmBaDqSGk4hymkFqXthfdFC3XGA95xjzmSKidzYD" +
-                  "TjvJJlG+kFQhmwro1yOdz0UaTFUBWx6LQl3tEZMja9NLr+w2Ut/KH6mR4VOJWK9bNV0+xMN/cJbRP" +
-                  "/mUkR9SJ85O+nG2KM=").Decode64(),
+            DP = (
+                "B5qEizjUo7MKqlX2cUMPw8/eGwFh/hhN0VCTBwmBaDqSGk4hymkFqXthfdFC3XGA95xjzmSKidzYD"
+                + "TjvJJlG+kFQhmwro1yOdz0UaTFUBWx6LQl3tEZMja9NLr+w2Ut/KH6mR4VOJWK9bNV0+xMN/cJbRP"
+                + "/mUkR9SJ85O+nG2KM="
+            ).Decode64(),
 
-            DQ = ("2fNz2vPE7h3IiN9nU1NCOT9xeNVtrGelbNFu9NFN7UcUibfY5PMuniY28L1QC5dzYBR4OT8vfJn/M" +
-                  "HfHXP6QazjPhZWfxXQQY4oeJ1npMFdwqOHSX9+WBi2Fd/eB8jeQcC0R+v9icFduPWozPI3sleMTu3" +
-                  "h4O2oYG1zYUmkX3P0=").Decode64(),
+            DQ = (
+                "2fNz2vPE7h3IiN9nU1NCOT9xeNVtrGelbNFu9NFN7UcUibfY5PMuniY28L1QC5dzYBR4OT8vfJn/M"
+                + "HfHXP6QazjPhZWfxXQQY4oeJ1npMFdwqOHSX9+WBi2Fd/eB8jeQcC0R+v9icFduPWozPI3sleMTu3"
+                + "h4O2oYG1zYUmkX3P0="
+            ).Decode64(),
 
-            InverseQ = ("DQuR3VAvBwjMjADJhmekTbU/BbofAxrIGcu+GpUU7Zz0GWnoJ+CGUc9l0ZaTslbhNOA5HOu" +
-                        "ma437eKruLiKaop9eTG1M/6YqDQguBZ1fAg9wpYBNMuzCAJnPUVCa4YqxFV3QAf39VkM33v" +
-                        "ifzU7j2+i8Mho6p67EQLOUZTVqE60=").Decode64(),
+            InverseQ = (
+                "DQuR3VAvBwjMjADJhmekTbU/BbofAxrIGcu+GpUU7Zz0GWnoJ+CGUc9l0ZaTslbhNOA5HOu"
+                + "ma437eKruLiKaop9eTG1M/6YqDQguBZ1fAg9wpYBNMuzCAJnPUVCa4YqxFV3QAf39VkM33v"
+                + "ifzU7j2+i8Mho6p67EQLOUZTVqE60="
+            ).Decode64(),
         };
 
         public class RsaTestCase
@@ -650,26 +665,29 @@ namespace PasswordManagerAccess.Test.Common
 
         private static readonly RsaTestCase RsaPkcs1 = new RsaTestCase(
             RSAEncryptionPadding.Pkcs1,
-            "BgHvJEsjMEFMMaEirQkWNrAn/eyfkyahZHUCVTuU0/w9xwkJuA1YKXsBI3lUptu2G8U+PtwyMqTTJAee2WX" +
-            "aC37EJImUryPVFJxAed7z0HWMfwwaGIpDex3OiXCnzZZ8pIX1T0NE9qeUcO9aqF2EuN3fp+PDhXW/VhPnwi" +
-            "INI7kkVw1PQiMgpEfNAvFj1SJA9yPYQeqSQ3HdT6/+Wxd/NamRonaQRAURElokh8xSBu3QCUzCps/8rUklX" +
-            "NbIZf48mnTKZYHa1oCDZBH2rj0EVoRmPRXj0gX3y4TryqRtYdeOKUtKVZKJH6e55lxhSw+U2EBA/jn2crnZ" +
-            "rWsOBjM9uQ==");
+            "BgHvJEsjMEFMMaEirQkWNrAn/eyfkyahZHUCVTuU0/w9xwkJuA1YKXsBI3lUptu2G8U+PtwyMqTTJAee2WX"
+                + "aC37EJImUryPVFJxAed7z0HWMfwwaGIpDex3OiXCnzZZ8pIX1T0NE9qeUcO9aqF2EuN3fp+PDhXW/VhPnwi"
+                + "INI7kkVw1PQiMgpEfNAvFj1SJA9yPYQeqSQ3HdT6/+Wxd/NamRonaQRAURElokh8xSBu3QCUzCps/8rUklX"
+                + "NbIZf48mnTKZYHa1oCDZBH2rj0EVoRmPRXj0gX3y4TryqRtYdeOKUtKVZKJH6e55lxhSw+U2EBA/jn2crnZ"
+                + "rWsOBjM9uQ=="
+        );
 
         private static readonly RsaTestCase RsaSha1 = new RsaTestCase(
             RSAEncryptionPadding.OaepSHA1,
-            "o70rRrBsZZmmRgWGCqUPQj1LoxObFP6D9X9X8VsAxd9RolqHRjRzzIy7aQBgJyIiwfxCEBwZO3r+B8vUY61" +
-            "rmOQpvhosi1nN8efgKm//YfL5GwWMZ7yEzk5KSPm+uP/renOwHITbpuzlFeJWI1j6PJomAXxLvJvEx0n7pY" +
-            "wKFS0Ny79pa7aqwtxKftokLM/ckztZyKQG5svqUAyKQIteduOvi6xg88K5+93a6/hOHc/E/Kn8L6xSVOXBp" +
-            "lRokZGYVqhiFk364eyT8X1ZualO4TfTxNeZPCfJADVB6lVWXAIXVhL2wdupX2KsThAYmjPKKGlcOdPnR8ZZ" +
-            "WD1F7stgIw==");
+            "o70rRrBsZZmmRgWGCqUPQj1LoxObFP6D9X9X8VsAxd9RolqHRjRzzIy7aQBgJyIiwfxCEBwZO3r+B8vUY61"
+                + "rmOQpvhosi1nN8efgKm//YfL5GwWMZ7yEzk5KSPm+uP/renOwHITbpuzlFeJWI1j6PJomAXxLvJvEx0n7pY"
+                + "wKFS0Ny79pa7aqwtxKftokLM/ckztZyKQG5svqUAyKQIteduOvi6xg88K5+93a6/hOHc/E/Kn8L6xSVOXBp"
+                + "lRokZGYVqhiFk364eyT8X1ZualO4TfTxNeZPCfJADVB6lVWXAIXVhL2wdupX2KsThAYmjPKKGlcOdPnR8ZZ"
+                + "WD1F7stgIw=="
+        );
 
         private static readonly RsaTestCase RsaSha256 = new RsaTestCase(
             RSAEncryptionPadding.OaepSHA256,
-            "Ap0o4nz8O86QfK2USakYCIPbaQTpXVHo70bDYyNwdCzp61P7kUPMRXcdcmtZzSjUoRkDhuoRpXxxzojLdHt" +
-            "XBsvo2/L6/h0sdo7kGHD1nIhBVyda/7akWyCgm5uVUhsZcl/xTsfTLREh/DRKrhyXOBBO5A4raUVmtP/dj1" +
-            "GJmSsEdkltPMRpNl2KQptxDROsQ0/I63wEH4Qt1e7Lu1yf+yCP0pN+2i1OaL5RUUYmvzwSbZ5sTgRbtqLO3" +
-            "8fJdUgkunM+0An6OpFKXJx1bQNenwe8Cd9qGytgh6FSwTQv77LO/ug3/QpR6GxfCY0hNZTe7J0uticAtthx" +
-            "tpGYxyej5Q==");
+            "Ap0o4nz8O86QfK2USakYCIPbaQTpXVHo70bDYyNwdCzp61P7kUPMRXcdcmtZzSjUoRkDhuoRpXxxzojLdHt"
+                + "XBsvo2/L6/h0sdo7kGHD1nIhBVyda/7akWyCgm5uVUhsZcl/xTsfTLREh/DRKrhyXOBBO5A4raUVmtP/dj1"
+                + "GJmSsEdkltPMRpNl2KQptxDROsQ0/I63wEH4Qt1e7Lu1yf+yCP0pN+2i1OaL5RUUYmvzwSbZ5sTgRbtqLO3"
+                + "8fJdUgkunM+0An6OpFKXJx1bQNenwe8Cd9qGytgh6FSwTQv77LO/ug3/QpR6GxfCY0hNZTe7J0uticAtthx"
+                + "tpGYxyej5Q=="
+        );
     }
 }

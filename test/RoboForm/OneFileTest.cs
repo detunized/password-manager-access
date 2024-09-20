@@ -8,7 +8,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.RoboForm
 {
-    public class OneFileTest: TestBase
+    public class OneFileTest : TestBase
     {
         [Fact]
         public void Parse_returns_parsed_object()
@@ -33,7 +33,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void Parse_throws_unencrypted_content()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(() => ParsePad("onefile1"+ "\x05"), "Unencrypted");
+            Exceptions.AssertThrowsUnsupportedFeature(() => ParsePad("onefile1" + "\x05"), "Unencrypted");
         }
 
         [Fact]
@@ -45,27 +45,21 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void Parse_throws_on_invalid_content_length()
         {
-            var lengths = new[] {new byte[] {0, 0, 0, 0x80}, new byte[] {0xFF, 0xFF, 0xFF, 0xFF}};
+            var lengths = new[] { new byte[] { 0, 0, 0, 0x80 }, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF } };
             foreach (var i in lengths)
-                Exceptions.AssertThrowsInternalError(
-                    () => ParsePad("onefile1\x07\x01".ToBytes().Concat(i).ToArray()),
-                    "negative");
+                Exceptions.AssertThrowsInternalError(() => ParsePad("onefile1\x07\x01".ToBytes().Concat(i).ToArray()), "negative");
         }
 
         [Fact]
         public void Parse_throws_on_invalid_checksum()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => ParsePad("onefile1\x07\x01\x01\x00\x00\x00" + "invalid checksum" + "!"),
-                "Checksum");
+            Exceptions.AssertThrowsInternalError(() => ParsePad("onefile1\x07\x01\x01\x00\x00\x00" + "invalid checksum" + "!"), "Checksum");
         }
 
         [Fact]
         public void Parse_throws_on_too_short_content()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => ParsePad("onefile1\x07\x01\x02\x00\x00\x00" + "invalid checksum" + "!"),
-                "too short");
+            Exceptions.AssertThrowsInternalError(() => ParsePad("onefile1\x07\x01\x02\x00\x00\x00" + "invalid checksum" + "!"), "too short");
         }
 
         [Fact]
@@ -95,27 +89,21 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void Decrypt_throws_on_invalid_iteration_count()
         {
-            var iterations = new[] {new byte[] {0, 0, 0, 0}, new byte[] {0, 0x08, 0, 1}};
+            var iterations = new[] { new byte[] { 0, 0, 0, 0 }, new byte[] { 0, 0x08, 0, 1 } };
             foreach (var i in iterations)
-                Exceptions.AssertThrowsInternalError(
-                    () => DecryptPad("gsencst1\x00\x02".ToBytes().Concat(i).ToArray()),
-                    "iteration count");
+                Exceptions.AssertThrowsInternalError(() => DecryptPad("gsencst1\x00\x02".ToBytes().Concat(i).ToArray()), "iteration count");
         }
 
         [Fact]
         public void Decrypt_throws_on_too_short_salt()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => DecryptPad("gsencst1\x00\x02\x00\x10\x00\x00\x10" + "salt..."),
-                "too short");
+            Exceptions.AssertThrowsInternalError(() => DecryptPad("gsencst1\x00\x02\x00\x10\x00\x00\x10" + "salt..."), "too short");
         }
 
         [Fact]
         public void Decrypt_throws_on_too_short_extra()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => DecryptPad("gsencst1\x10\x02\x00\x10\x00\x00\x10saltsaltsaltsalt" + "extra..."),
-                "too short");
+            Exceptions.AssertThrowsInternalError(() => DecryptPad("gsencst1\x10\x02\x00\x10\x00\x00\x10saltsaltsaltsalt" + "extra..."), "too short");
         }
 
         [Fact]
@@ -123,8 +111,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         {
             // Generated with bash
             // $ echo -n decompressed | gzip -c - | base64
-            Assert.Equal("decompressed".ToBytes(),
-                         OneFile.Decompress("H4sIANRVH1oAA0tJTc7PLShKLS5OTQEACojeBQwAAAA=".Decode64()));
+            Assert.Equal("decompressed".ToBytes(), OneFile.Decompress("H4sIANRVH1oAA0tJTc7PLShKLS5OTQEACojeBQwAAAA=".Decode64()));
         }
 
         [Fact]

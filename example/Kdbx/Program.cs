@@ -22,17 +22,18 @@ namespace PasswordManagerAccess.Example.Kdbx
                 for (var i = 0; i < accounts.Length; ++i)
                 {
                     var account = accounts[i];
-                    Console.WriteLine("  - {0}: {1} {2} {3} {4} {5} {6} {7} {{{8}}}",
-                                      i + 1,
-                                      account.Id,
-                                      account.Name,
-                                      account.Username,
-                                      account.Password,
-                                      account.Url,
-                                      account.Note,
-                                      account.Path,
-                                      string.Join(", ", account.Fields.Select(x => $"{x.Key}={x.Value}")));
-
+                    Console.WriteLine(
+                        "  - {0}: {1} {2} {3} {4} {5} {6} {7} {{{8}}}",
+                        i + 1,
+                        account.Id,
+                        account.Name,
+                        account.Username,
+                        account.Password,
+                        account.Url,
+                        account.Note,
+                        account.Path,
+                        string.Join(", ", account.Fields.Select(x => $"{x.Key}={x.Value}"))
+                    );
                 }
             }
             catch (BaseException e)

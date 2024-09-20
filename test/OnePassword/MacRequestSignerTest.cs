@@ -25,7 +25,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var signature = Sign(
                 "https://my.1password.com/api/v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
-                HttpMethod.Get);
+                HttpMethod.Get
+            );
 
             Assert.Equal("v1|842346063|UyjKq0HAmjB5j7kF", signature);
         }
@@ -60,8 +61,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         private static MacRequestSigner MakeSigner()
         {
             // The test data is generated with the actual web page JS.
-            var key = new AesKey("PBXONDZUWVCJFAV25C7XR7IYDQ",
-                                 "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
+            var key = new AesKey("PBXONDZUWVCJFAV25C7XR7IYDQ", "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
             var seed = 842346063u;
 
             return new MacRequestSigner(key, seed);

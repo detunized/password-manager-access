@@ -36,24 +36,30 @@ namespace PasswordManagerAccess.Test.Common
         public void Generate_throws_on_zero_iterationCount()
         {
             foreach (var generate in Generators)
-                Exceptions.AssertThrowsInternalError(() => generate("password".ToBytes(), "salt".ToBytes(), 0, 32),
-                                                     "Iteration count should be positive");
+                Exceptions.AssertThrowsInternalError(
+                    () => generate("password".ToBytes(), "salt".ToBytes(), 0, 32),
+                    "Iteration count should be positive"
+                );
         }
 
         [Fact]
         public void Generate_throws_on_negative_iterationCount()
         {
             foreach (var generate in Generators)
-                Exceptions.AssertThrowsInternalError(() => generate("password".ToBytes(), "salt".ToBytes(), -1, 32),
-                                                     "Iteration count should be positive");
+                Exceptions.AssertThrowsInternalError(
+                    () => generate("password".ToBytes(), "salt".ToBytes(), -1, 32),
+                    "Iteration count should be positive"
+                );
         }
 
         [Fact]
         public void Generate_throws_on_negative_byteCount()
         {
             foreach (var generate in Generators)
-                Exceptions.AssertThrowsInternalError(() => generate("password".ToBytes(), "salt".ToBytes(), 1, -1),
-                                                     "Byte count should be nonnegative");
+                Exceptions.AssertThrowsInternalError(
+                    () => generate("password".ToBytes(), "salt".ToBytes(), 1, -1),
+                    "Byte count should be nonnegative"
+                );
         }
 
         //
@@ -151,8 +157,7 @@ namespace PasswordManagerAccess.Test.Common
         // Helpers
         //
 
-        private static void VerifyGenerator(Func<byte[], byte[], int, int, byte[]> generate,
-                                            string[] expectedResults)
+        private static void VerifyGenerator(Func<byte[], byte[], int, int, byte[]> generate, string[] expectedResults)
         {
             Assert.Equal(expectedResults.Length, TestCases.Length);
 

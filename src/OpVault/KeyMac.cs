@@ -21,8 +21,7 @@ namespace PasswordManagerAccess.OpVault
             MacKey = buffer.Sub(32, 32);
         }
 
-        public KeyMac(string base64): this(base64.Decode64())
-        {
-        }
+        public KeyMac(string base64)
+            : this(base64.Decode64()) { }
     }
 }

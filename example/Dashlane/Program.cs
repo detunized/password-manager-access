@@ -8,7 +8,7 @@ using PasswordManagerAccess.Example.Common;
 
 namespace PasswordManagerAccess.Example.Dashlane
 {
-    class TextUi: Ui
+    class TextUi : Ui
     {
         public override Passcode ProvideGoogleAuthPasscode(int attempt)
         {
@@ -23,16 +23,15 @@ namespace PasswordManagerAccess.Example.Dashlane
             if (attempt > 0)
                 Bad("Email security token is invalid, try again");
 
-            var passcode = GetPasscode($"Please check your email and enter the security token {ToCancel} " +
-                                       "or 'r' to resend the token");
+            var passcode = GetPasscode($"Please check your email and enter the security token {ToCancel} " + "or 'r' to resend the token");
 
             switch (passcode.Code)
             {
-            case "r":
-            case "R":
-                return Passcode.Resend;
-            default:
-                return passcode;
+                case "r":
+                case "R":
+                    return Passcode.Resend;
+                default:
+                    return passcode;
             }
         }
 
@@ -96,14 +95,7 @@ namespace PasswordManagerAccess.Example.Dashlane
                 for (var i = 0; i < vault.Accounts.Length; i++)
                 {
                     var account = vault.Accounts[i];
-                    Console.WriteLine(
-                        "{0}: {1} {2} {3} {4} {5}",
-                        i + 1,
-                        account.Name,
-                        account.Username,
-                        account.Password,
-                        account.Url,
-                        account.Note);
+                    Console.WriteLine("{0}: {1} {2} {3} {4} {5}", i + 1, account.Name, account.Username, account.Password, account.Url, account.Note);
                 }
             }
             catch (BaseException e)

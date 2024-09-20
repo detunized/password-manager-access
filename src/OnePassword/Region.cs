@@ -9,7 +9,7 @@ namespace PasswordManagerAccess.OnePassword
     {
         Global,
         Europe,
-        Canada
+        Canada,
     }
 
     public static class Extensions
@@ -21,7 +21,7 @@ namespace PasswordManagerAccess.OnePassword
                 Region.Global => "my.1password.com",
                 Region.Europe => "my.1password.eu",
                 Region.Canada => "my.1password.ca",
-                _ => throw new InternalErrorException("The region is not valid")
+                _ => throw new InternalErrorException("The region is not valid"),
             };
         }
     }

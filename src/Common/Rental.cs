@@ -6,12 +6,14 @@ using System.Buffers;
 
 namespace PasswordManagerAccess.Common
 {
-    internal readonly struct Rental: IDisposable
+    internal readonly struct Rental : IDisposable
     {
         public byte[] Buffer { get; }
 
         public static Rental Rent(int size) => new Rental(ArrayPool<byte>.Shared.Rent(size));
+
         public static implicit operator byte[](Rental r) => r.Buffer;
+
         public static implicit operator ReadOnlySpan<byte>(Rental r) => r.Buffer.AsRoSpan();
 
         public static T With<T>(int size, Func<byte[], T> f)

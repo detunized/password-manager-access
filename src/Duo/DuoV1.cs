@@ -108,10 +108,7 @@ namespace PasswordManagerAccess.Duo
         // All the info is the frame is stored in input fields <input name="name" value="value">
         internal static string GetInputValue(HtmlNode form, string name)
         {
-            return form
-                .SelectSingleNode($"./input[@name='{name}']")?
-                .Attributes["value"]?
-                .DeEntitizeValue;
+            return form.SelectSingleNode($"./input[@name='{name}']")?.Attributes["value"]?.DeEntitizeValue;
         }
 
         // Returns the transaction id. In some cases it's blank, like with SMS, for example.
@@ -119,9 +116,9 @@ namespace PasswordManagerAccess.Duo
         {
             var parameters = new Dictionary<string, object>
             {
-                {"sid", sid},
-                {"device", choice.Device.Id},
-                {"factor", GetFactorParameterValue(choice.Factor)},
+                { "sid", sid },
+                { "device", choice.Device.Id },
+                { "factor", GetFactorParameterValue(choice.Factor) },
             };
 
             if (!passcode.IsNullOrEmpty())
@@ -133,11 +130,7 @@ namespace PasswordManagerAccess.Duo
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static string SubmitFactorAndWaitForToken(string sid,
-                                                           DuoChoice choice,
-                                                           string passcode,
-                                                           IDuoUi ui,
-                                                           RestClient rest)
+        internal static string SubmitFactorAndWaitForToken(string sid, DuoChoice choice, string passcode, IDuoUi ui, RestClient rest)
         {
             var txid = SubmitFactor(sid, choice, passcode, rest);
             if (txid.IsNullOrEmpty())
@@ -160,24 +153,22 @@ namespace PasswordManagerAccess.Duo
             // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
-                var response = PostForm<R.Poll>("frame/status",
-                                                new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
-                                                rest);
+                var response = PostForm<R.Poll>("frame/status", new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid }, rest);
 
                 var (status, text) = GetResponseStatus(response);
                 Util.UpdateUi(status, text, ui);
 
                 switch (status)
                 {
-                case DuoStatus.Success:
-                    var url = response.Url;
-                    if (url.IsNullOrEmpty())
-                        throw MakeInvalidResponseError("result URL (result_url) was expected but wasn't found");
+                    case DuoStatus.Success:
+                        var url = response.Url;
+                        if (url.IsNullOrEmpty())
+                            throw MakeInvalidResponseError("result URL (result_url) was expected but wasn't found");
 
-                    // Done
-                    return url;
-                case DuoStatus.Error:
-                    return null; // TODO: Use something better than null
+                        // Done
+                        return url;
+                    case DuoStatus.Error:
+                        return null; // TODO: Use something better than null
                 }
             }
 
@@ -186,9 +177,7 @@ namespace PasswordManagerAccess.Duo
 
         internal static string FetchToken(string sid, string url, IDuoUi ui, RestClient rest)
         {
-            var response = PostForm<R.FetchToken>(url,
-                                                  new Dictionary<string, object> { ["sid"] = sid },
-                                                  rest);
+            var response = PostForm<R.FetchToken>(url, new Dictionary<string, object> { ["sid"] = sid }, rest);
 
             UpdateUi(response, ui);
 
@@ -211,7 +200,7 @@ namespace PasswordManagerAccess.Duo
             {
                 "SUCCESS" => DuoStatus.Success,
                 "FAILURE" => DuoStatus.Error,
-                _ => DuoStatus.Info
+                _ => DuoStatus.Info,
             };
 
             return (status, response.Message ?? "");
@@ -221,45 +210,36 @@ namespace PasswordManagerAccess.Duo
         // Devices with no supported methods are ignored.
         internal static DuoDevice[] GetDevices(HtmlNode form)
         {
-            var devices = form
-                .SelectNodes("//select[@name='device']/option")?
-                .Select(x => (Id: x.Attributes["value"]?.DeEntitizeValue,
-                              Name: HtmlEntity.DeEntitize(x.InnerText ?? "")))
+            var devices = form.SelectNodes("//select[@name='device']/option")
+                ?.Select(x => (Id: x.Attributes["value"]?.DeEntitizeValue, Name: HtmlEntity.DeEntitize(x.InnerText ?? "")))
                 .ToArray();
 
             if (devices == null || devices.Any(x => x.Id == null || x.Name == null))
                 return null;
 
-            return devices
-                .Select(x => new DuoDevice(x.Id, x.Name, GetDeviceFactors(form, x.Id)))
-                .Where(x => x.Factors.Length > 0)
-                .ToArray();
+            return devices.Select(x => new DuoDevice(x.Id, x.Name, GetDeviceFactors(form, x.Id))).Where(x => x.Factors.Length > 0).ToArray();
         }
 
         // Extracts all the second factor methods supported by the device.
         // Unsupported methods are ignored.
         internal static DuoFactor[] GetDeviceFactors(HtmlNode form, string deviceId)
         {
-            var sms = CanSendSmsToDevice(form, deviceId)
-                ? new[] {DuoFactor.SendPasscodesBySms}
-                : new DuoFactor[0];
+            var sms = CanSendSmsToDevice(form, deviceId) ? new[] { DuoFactor.SendPasscodesBySms } : new DuoFactor[0];
 
-            return form
-                .SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")?
-                .SelectNodes(".//input[@name='factor']")?
-                .Select(x => x.Attributes["value"]?.DeEntitizeValue)?
-                .Select(x => ParseFactor(x))?
-                .Where(x => x != null)?
-                .Select(x => x.Value)?
-                .Concat(sms)?
-                .ToArray() ?? new DuoFactor[0];
+            return form.SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")
+                    ?.SelectNodes(".//input[@name='factor']")
+                    ?.Select(x => x.Attributes["value"]?.DeEntitizeValue)
+                    ?.Select(x => ParseFactor(x))
+                    ?.Where(x => x != null)
+                    ?.Select(x => x.Value)
+                    ?.Concat(sms)
+                    ?.ToArray() ?? new DuoFactor[0];
         }
 
         internal static bool CanSendSmsToDevice(HtmlNode form, string deviceId)
         {
-            return form
-                .SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")?
-                .SelectSingleNode(".//input[@name='phone-smsable' and (@value='true' or @value='True')]") != null;
+            return form.SelectSingleNode($".//fieldset[@data-device-index='{deviceId}']")
+                    ?.SelectSingleNode(".//input[@name='phone-smsable' and (@value='true' or @value='True')]") != null;
         }
 
         internal static DuoFactor? ParseFactor(string factor)
@@ -269,7 +249,7 @@ namespace PasswordManagerAccess.Duo
                 "Duo Push" => DuoFactor.Push,
                 "Phone Call" => DuoFactor.Call,
                 "Passcode" => DuoFactor.Passcode,
-                _ => null
+                _ => null,
             };
         }
     }

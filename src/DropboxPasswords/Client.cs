@@ -20,11 +20,7 @@ namespace PasswordManagerAccess.DropboxPasswords
         // TODO: Add error handling everywhere!
         // The `recoveryWords` parameter is optional (could be empty, no nulls please). If it's provided we don't use
         // the master key request and don't store it. It's too involved to create multiple overloads for that.
-        public static Account[] OpenVault(ClientInfo clientInfo,
-                                          string[] recoveryWords,
-                                          IUi ui,
-                                          ISecureStorage storage,
-                                          IRestTransport transport)
+        public static Account[] OpenVault(ClientInfo clientInfo, string[] recoveryWords, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             try
             {
@@ -43,11 +39,13 @@ namespace PasswordManagerAccess.DropboxPasswords
         // Internal
         //
 
-        internal static Account[] OpenVaultAttempt(ClientInfo clientInfo,
-                                                   string[] recoveryWords,
-                                                   IUi ui,
-                                                   ISecureStorage storage,
-                                                   IRestTransport transport)
+        internal static Account[] OpenVaultAttempt(
+            ClientInfo clientInfo,
+            string[] recoveryWords,
+            IUi ui,
+            ISecureStorage storage,
+            IRestTransport transport
+        )
         {
             var oauthToken = storage.LoadString(OAuthTokenKey);
             if (oauthToken.IsNullOrEmpty())
@@ -56,13 +54,15 @@ namespace PasswordManagerAccess.DropboxPasswords
                 storage.StoreString(OAuthTokenKey, oauthToken);
             }
 
-            var apiRest = new RestClient(transport,
-                                         "https://api.dropboxapi.com/2",
-                                         defaultHeaders: new Dictionary<string, string>
-                                         {
-                                             ["Authorization"] = $"Bearer {oauthToken}",
-                                             ["Origin"] = "chrome-extension://bmhejbnmpamgfnomlahkonpanlkcfabg",
-                                         });
+            var apiRest = new RestClient(
+                transport,
+                "https://api.dropboxapi.com/2",
+                defaultHeaders: new Dictionary<string, string>
+                {
+                    ["Authorization"] = $"Bearer {oauthToken}",
+                    ["Origin"] = "chrome-extension://bmhejbnmpamgfnomlahkonpanlkcfabg",
+                }
+            );
 
             // Normally we would use the master key to decrypt the vault. In case we don't have it, we need to enroll
             // a new device and receive the key form one of the devices enrolled previously. To do that we send the
@@ -70,9 +70,7 @@ namespace PasswordManagerAccess.DropboxPasswords
             // end sends it back to us. We need to to all of that unless the master key is provided in a form of the
             // recovery words. In that case we don't store anything.
             // TODO: Consider storing the master key in the secure storage based on the user's settings.
-            var masterKey = recoveryWords.Length > 0
-                ? Util.DeriveMasterKeyFromRecoveryWords(recoveryWords)
-                : LoadMasterKey(storage);
+            var masterKey = recoveryWords.Length > 0 ? Util.DeriveMasterKeyFromRecoveryWords(recoveryWords) : LoadMasterKey(storage);
             if (masterKey == null)
             {
                 masterKey = EnrollNewDevice(clientInfo, ui, transport, apiRest);
@@ -80,32 +78,36 @@ namespace PasswordManagerAccess.DropboxPasswords
             }
 
             // 1. Get account info
-            var accountInfo = Post<R.AccountInfo>("users/get_current_account",
-                                                  RestClient.JsonNull, // Important to send null!
-                                                  RestClient.NoHeaders,
-                                                  apiRest);
+            var accountInfo = Post<R.AccountInfo>(
+                "users/get_current_account",
+                RestClient.JsonNull, // Important to send null!
+                RestClient.NoHeaders,
+                apiRest
+            );
             if (accountInfo.Disabled)
                 throw new InternalErrorException("The account is disabled");
 
             // 2. Get features
-            var features = Post<R.Features>("passwords/get_features_v2",
-                                            RestClient.JsonNull, // Important to send null!
-                                            RestClient.NoHeaders,
-                                            apiRest);
+            var features = Post<R.Features>(
+                "passwords/get_features_v2",
+                RestClient.JsonNull, // Important to send null!
+                RestClient.NoHeaders,
+                apiRest
+            );
             if (features.Eligibility.Tag != "enabled")
                 throw new InternalErrorException("Dropbox Passwords is not enabled on this account");
 
             // 3. List the root folder
             // TODO: Very long folders are not supported. See "has_more" and "cursor".
-            var rootFolder = Post<R.RootFolder>("files/list_folder",
-                                                new Dictionary<string, object> { ["path"] = "" },
-                                                MakeRootPathHeaders(features.Eligibility.RootPath),
-                                                apiRest);
+            var rootFolder = Post<R.RootFolder>(
+                "files/list_folder",
+                new Dictionary<string, object> { ["path"] = "" },
+                MakeRootPathHeaders(features.Eligibility.RootPath),
+                apiRest
+            );
 
             // 4. Get all entries
-            var contentRest = new RestClient(apiRest.Transport,
-                                             "https://content.dropboxapi.com/2",
-                                             defaultHeaders: apiRest.DefaultHeaders);
+            var contentRest = new RestClient(apiRest.Transport, "https://content.dropboxapi.com/2", defaultHeaders: apiRest.DefaultHeaders);
             var entries = DownloadAllEntries(rootFolder, features.Eligibility.RootPath, contentRest);
 
             // 5. Try to find all keysets that decrypt (normally there's only one).
@@ -138,39 +140,34 @@ namespace PasswordManagerAccess.DropboxPasswords
 
                 // 2. Get Bolt credentials that are used to subscribe to a Bolt channel to receive the master key.
                 //    We need to do this only once. It doesn't change from long poll to long poll.
-                boltInfo ??= Post<R.BoltInfo>("passwords/get_bolt_info",
-                                              new Dictionary<string, object>
-                                              {
-                                                  ["device_id"] = clientInfo.DeviceId,
-                                              },
-                                              RestClient.NoHeaders,
-                                              apiRest);
+                boltInfo ??= Post<R.BoltInfo>(
+                    "passwords/get_bolt_info",
+                    new Dictionary<string, object> { ["device_id"] = clientInfo.DeviceId },
+                    RestClient.NoHeaders,
+                    apiRest
+                );
 
-                thunderRest ??= new RestClient(transport,
-                                               "https://thunder.dropbox.com/2",
-                                               defaultHeaders: apiRest.DefaultHeaders);
+                thunderRest ??= new RestClient(transport, "https://thunder.dropbox.com/2", defaultHeaders: apiRest.DefaultHeaders);
 
                 // 3. Subscribe to a Bolt channel to receive the encrypted master key.
                 //    This is a long poll request that times out in around 50 seconds.
-                var keys = PostDynamicJson("payloads/subscribe",
-                                           new Dictionary<string, object>
-                                           {
-                                               ["channel_states"] = new[]
-                                               {
-                                                   new Dictionary<string, object>
-                                                   {
-                                                       ["channel_id"] = new Dictionary<string, object>
-                                                       {
-                                                           ["app_id"] = "passwords_bolt",
-                                                           ["unique_id"] = boltInfo.UniqueId,
-                                                       },
-                                                       ["revision"] = boltInfo.Revision,
-                                                       ["token"] = boltInfo.Token,
-                                                   }
-                                               }
-                                           },
-                                           RestClient.NoHeaders,
-                                           thunderRest);
+                var keys = PostDynamicJson(
+                    "payloads/subscribe",
+                    new Dictionary<string, object>
+                    {
+                        ["channel_states"] = new[]
+                        {
+                            new Dictionary<string, object>
+                            {
+                                ["channel_id"] = new Dictionary<string, object> { ["app_id"] = "passwords_bolt", ["unique_id"] = boltInfo.UniqueId },
+                                ["revision"] = boltInfo.Revision,
+                                ["token"] = boltInfo.Token,
+                            },
+                        },
+                    },
+                    RestClient.NoHeaders,
+                    thunderRest
+                );
 
                 // When the long poll times out we just get "{}" back. Otherwise we get the payload.
                 var payload = keys.SelectToken("$.channel_payloads[0].payloads[0].payload");
@@ -180,22 +177,22 @@ namespace PasswordManagerAccess.DropboxPasswords
                 // Ask the user what to do next
                 switch (ui.AskForNextAction())
                 {
-                // Do another long poll to continue waiting
-                case IUi.Action.KeepWaiting:
-                    shouldSendRequest = false;
-                    continue;
+                    // Do another long poll to continue waiting
+                    case IUi.Action.KeepWaiting:
+                        shouldSendRequest = false;
+                        continue;
 
-                // Ask the server to resend the request
-                case IUi.Action.ResendRequest:
-                    shouldSendRequest = true;
-                    continue;
+                    // Ask the server to resend the request
+                    case IUi.Action.ResendRequest:
+                        shouldSendRequest = true;
+                        continue;
 
-                // Abort the enrollment
-                case IUi.Action.Cancel:
-                    throw new CanceledMultiFactorException("Enrollment request was canceled by the user");
+                    // Abort the enrollment
+                    case IUi.Action.Cancel:
+                        throw new CanceledMultiFactorException("Enrollment request was canceled by the user");
 
-                default:
-                    throw new InternalErrorException("Logical error");
+                    default:
+                        throw new InternalErrorException("Logical error");
                 }
             }
         }
@@ -206,35 +203,28 @@ namespace PasswordManagerAccess.DropboxPasswords
             ui.WillSendEnrollRequest();
 
             // 1. Initial enrollment request which sends the notification to other devices to prompt the user to approve
-            var enrollInfo = Post<R.EnrollDevice>("passwords/enroll_device",
-                                                  new Dictionary<string, object>
-                                                  {
-                                                      ["device_id"] = clientInfo.DeviceId,
-                                                      ["device_public_key"] = publicKey.ToBase64(),
-                                                      ["client_ts_ms_utc"] = Os.UnixSeconds(),
-                                                      ["app_version"] = "3.23.1",
-                                                      ["platform"] = "chrome",
-                                                      ["platform_version"] = "Chrome 115.0.0.0",
-                                                      ["device_name"] = clientInfo.DeviceName,
-                                                      ["enroll_action"] = new Dictionary<string, string>
-                                                      {
-                                                          [".tag"] = "enroll_device"
-                                                      },
-                                                      ["build_channel"] = new Dictionary<string, string>
-                                                      {
-                                                          [".tag"] = "external"
-                                                      }
-                                                  },
-                                                  RestClient.NoHeaders,
-                                                  apiRest);
+            var enrollInfo = Post<R.EnrollDevice>(
+                "passwords/enroll_device",
+                new Dictionary<string, object>
+                {
+                    ["device_id"] = clientInfo.DeviceId,
+                    ["device_public_key"] = publicKey.ToBase64(),
+                    ["client_ts_ms_utc"] = Os.UnixSeconds(),
+                    ["app_version"] = "3.23.1",
+                    ["platform"] = "chrome",
+                    ["platform_version"] = "Chrome 115.0.0.0",
+                    ["device_name"] = clientInfo.DeviceName,
+                    ["enroll_action"] = new Dictionary<string, string> { [".tag"] = "enroll_device" },
+                    ["build_channel"] = new Dictionary<string, string> { [".tag"] = "external" },
+                },
+                RestClient.NoHeaders,
+                apiRest
+            );
 
             if (enrollInfo.Status.Tag != "device_requested")
-                throw new InternalErrorException(
-                    MakeEnrollErrorMessage($"expected status 'device_requested', got '{enrollInfo.Status.Tag}'"));
+                throw new InternalErrorException(MakeEnrollErrorMessage($"expected status 'device_requested', got '{enrollInfo.Status.Tag}'"));
 
-            var deviceNames = enrollInfo.Status.DeviceRequested
-                .Select(x => x.Name.IsNullOrEmpty() ? "Unknown" : x.Name)
-                .ToArray();
+            var deviceNames = enrollInfo.Status.DeviceRequested.Select(x => x.Name.IsNullOrEmpty() ? "Unknown" : x.Name).ToArray();
 
             ui.EnrollRequestSent(deviceNames);
         }
@@ -244,16 +234,16 @@ namespace PasswordManagerAccess.DropboxPasswords
             var messageType = payload.IntAt("message_type", -1);
             switch (messageType)
             {
-            // Accepted
-            case 1:
-                break;
+                // Accepted
+                case 1:
+                    break;
 
-            // Denied
-            case 3:
-                throw new BadMultiFactorException(MakeEnrollErrorMessage("enrollment request was denied"));
+                // Denied
+                case 3:
+                    throw new BadMultiFactorException(MakeEnrollErrorMessage("enrollment request was denied"));
 
-            default:
-                throw new InternalErrorException(MakeEnrollErrorMessage($"unknown message type {messageType}"));
+                default:
+                    throw new InternalErrorException(MakeEnrollErrorMessage($"unknown message type {messageType}"));
             }
 
             var sourceDevicePublicKey = payload.StringAt("source_device_public_key", null);
@@ -264,10 +254,7 @@ namespace PasswordManagerAccess.DropboxPasswords
                 throw new InternalErrorException(MakeEnrollErrorMessage("invalid public/master key format"));
 
             // Decrypt the master key
-            return CryptoBoxOpenEasy(encryptedData.Decode64(),
-                                     nonce.Decode64(),
-                                     privateKey,
-                                     sourceDevicePublicKey.Decode64());
+            return CryptoBoxOpenEasy(encryptedData.Decode64(), nonce.Decode64(), privateKey, sourceDevicePublicKey.Decode64());
         }
 
         internal static string MakeEnrollErrorMessage(string message) => $"Failed to enroll the device: {message}";
@@ -279,8 +266,10 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             // 2. Perform OAuth2 login. On success the browser will be redirected to a URL with a code. Example:
             //    https://www.dropbox.com/passwords_extension/auth_redirect?code=QTyFLnr4PfgAAAAAAAAAwFlYxU9pqEhQ6dMUo7nAju0
-            var redirectUrl = ui.PerformOAuthLogin(GenerateOAuth2AuthenticationUrl(challenge),
-                                                   "https://www.dropbox.com/passwords_extension/auth_redirect");
+            var redirectUrl = ui.PerformOAuthLogin(
+                GenerateOAuth2AuthenticationUrl(challenge),
+                "https://www.dropbox.com/passwords_extension/auth_redirect"
+            );
             if (redirectUrl.IsNullOrEmpty())
                 throw new InternalErrorException("Failed to perform OAuth2 login");
 
@@ -291,16 +280,18 @@ namespace PasswordManagerAccess.DropboxPasswords
 
             // 3. Exchange the code for an OAuth2 token via a POST to:
             var rest = new RestClient(transport, "https://api.dropboxapi.com/oauth2");
-            var response = rest.PostForm<R.OAuth2Token>("token",
-                                                        new Dictionary<string, object>
-                                                        {
-                                                            ["grant_type"] = "authorization_code",
-                                                            ["code"] = code,
-                                                            ["client_id"] = ClientId,
-                                                            ["code_verifier"] = verifier,
-                                                            ["redirect_uri"] = "https://www.dropbox.com/passwords_extension/auth_redirect",
-                                                        },
-                                                        RestClient.NoHeaders);
+            var response = rest.PostForm<R.OAuth2Token>(
+                "token",
+                new Dictionary<string, object>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["code"] = code,
+                    ["client_id"] = ClientId,
+                    ["code_verifier"] = verifier,
+                    ["redirect_uri"] = "https://www.dropbox.com/passwords_extension/auth_redirect",
+                },
+                RestClient.NoHeaders
+            );
 
             if (!response.IsSuccessful)
                 throw new InternalErrorException("Failed to exchange auth code for an OAuth2 token");
@@ -328,14 +319,14 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         internal static string GenerateOAuth2AuthenticationUrl(string challenge)
         {
-            return "https://dropbox.com/oauth2/authorize?" +
-                   "response_type=code&" +
-                   $"client_id={ClientId}&" +
-                   "redirect_uri=https://www.dropbox.com/passwords_extension/auth_redirect&" +
-                   "token_access_type=legacy&" +
-                   "code_challenge_method=S256&" +
-                   $"code_challenge={challenge}&" +
-                   "locale=en";
+            return "https://dropbox.com/oauth2/authorize?"
+                + "response_type=code&"
+                + $"client_id={ClientId}&"
+                + "redirect_uri=https://www.dropbox.com/passwords_extension/auth_redirect&"
+                + "token_access_type=legacy&"
+                + "code_challenge_method=S256&"
+                + $"code_challenge={challenge}&"
+                + "locale=en";
         }
 
         internal static (string Verifier, string Challenge) GenerateOAuth2PkceValues()
@@ -345,41 +336,29 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         internal static (string Verifier, string Challenge) GenerateOAuth2PkceValues(byte[] entropy)
         {
-            var verifier = entropy.Select(x => x.ToString("D"))
-                .JoinToString(",")
-                .ToUrlSafeBase64NoPadding()
-                .Substring(0, 128);
-            var challenge = Crypto.Sha256(verifier)
-                .ToUrlSafeBase64NoPadding();
+            var verifier = entropy.Select(x => x.ToString("D")).JoinToString(",").ToUrlSafeBase64NoPadding().Substring(0, 128);
+            var challenge = Crypto.Sha256(verifier).ToUrlSafeBase64NoPadding();
 
             return (verifier, challenge);
         }
 
-        internal static R.EncryptedEntry[] DownloadAllEntries(R.RootFolder rootFolder,
-                                                              string rootPath,
-                                                              RestClient contentRest)
+        internal static R.EncryptedEntry[] DownloadAllEntries(R.RootFolder rootFolder, string rootPath, RestClient contentRest)
         {
-            return rootFolder.Entries
-                .Where(e => e.IsDownloadable && e.Tag == "file")
+            return rootFolder
+                .Entries.Where(e => e.IsDownloadable && e.Tag == "file")
                 .Select(e => DownloadFolderEntry(e.Path, rootPath, contentRest))
                 .ToArray(); // This will force the actual download
         }
 
         internal static R.Keyset[] FindAndDecryptAllKeysets(R.EncryptedEntry[] entries, byte[] masterKey)
         {
-            return entries
-                .Where(e => e.Type == "keyset")
-                .Select(e => DecryptKeyset(e, masterKey))
-                .ToArray();
+            return entries.Where(e => e.Type == "keyset").Select(e => DecryptKeyset(e, masterKey)).ToArray();
         }
 
         internal static Account[] FindAndDecryptAllAccounts(R.EncryptedEntry[] entries, R.Keyset[] keysets)
         {
             var keys = ExtractAllKeys(keysets);
-            return entries
-                .Where(e => e.Type == "password")
-                .SelectMany(e => DecryptAccounts(e, keys))
-                .ToArray();
+            return entries.Where(e => e.Type == "password").SelectMany(e => DecryptAccounts(e, keys)).ToArray();
         }
 
         internal static IEnumerable<Account> DecryptAccounts(R.EncryptedEntry entry, Dictionary<string, byte[]> keys)
@@ -389,15 +368,17 @@ namespace PasswordManagerAccess.DropboxPasswords
                 return Array.Empty<Account>();
 
             var folder = DecryptVaultFolder(entry, key);
-            return folder.Items
-                .Where(x => !x.IsDeleted)
-                .Select(x => new Account(id: x.Id ?? "",
-                                         name: x.Name ?? "",
-                                         username: x.Username ?? "",
-                                         password: x.Password ?? "",
-                                         url: x.Url ?? "",
-                                         note: x.Note ?? "",
-                                         folder: folder.Name ?? ""));
+            return folder
+                .Items.Where(x => !x.IsDeleted)
+                .Select(x => new Account(
+                    id: x.Id ?? "",
+                    name: x.Name ?? "",
+                    username: x.Username ?? "",
+                    password: x.Password ?? "",
+                    url: x.Url ?? "",
+                    note: x.Note ?? "",
+                    folder: folder.Name ?? ""
+                ));
         }
 
         internal static Dictionary<string, byte[]> ExtractAllKeys(R.Keyset[] keysets)
@@ -425,33 +406,26 @@ namespace PasswordManagerAccess.DropboxPasswords
         {
             return new Dictionary<string, string>
             {
-                ["Dropbox-API-Path-Root"] = JsonConvert.SerializeObject(new Dictionary<string, string>
-                {
-                    [".tag"] = "namespace_id",
-                    ["namespace_id"] = rootPath,
-                }),
+                ["Dropbox-API-Path-Root"] = JsonConvert.SerializeObject(
+                    new Dictionary<string, string> { [".tag"] = "namespace_id", ["namespace_id"] = rootPath }
+                ),
             };
         }
 
         internal static Dictionary<string, string> MakePathHeaders(string path, string rootPath)
         {
-            return MakeRootPathHeaders(rootPath).MergeCopy(new Dictionary<string, string>
-            {
-                ["Dropbox-API-Arg"] = JsonConvert.SerializeObject(new Dictionary<string, string>
-                {
-                    ["path"] = path,
-                }),
-            });
+            return MakeRootPathHeaders(rootPath)
+                .MergeCopy(
+                    new Dictionary<string, string>
+                    {
+                        ["Dropbox-API-Arg"] = JsonConvert.SerializeObject(new Dictionary<string, string> { ["path"] = path }),
+                    }
+                );
         }
 
-        internal static T Post<T>(string endpoint,
-                                  Dictionary<string, object> parameters,
-                                  Dictionary<string, string> headers,
-                                  RestClient rest)
+        internal static T Post<T>(string endpoint, Dictionary<string, object> parameters, Dictionary<string, string> headers, RestClient rest)
         {
-            var response = rest.PostJson<T>(endpoint: endpoint,
-                                            parameters: parameters,
-                                            headers: headers);
+            var response = rest.PostJson<T>(endpoint: endpoint, parameters: parameters, headers: headers);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -460,10 +434,12 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         // This returns a parsed JSON response in a form suitable for dynamic querying via
         // SelectToken or JToken.*At functions.
-        internal static JToken PostDynamicJson(string endpoint,
-                                               Dictionary<string, object> parameters,
-                                               Dictionary<string, string> headers,
-                                               RestClient rest)
+        internal static JToken PostDynamicJson(
+            string endpoint,
+            Dictionary<string, object> parameters,
+            Dictionary<string, string> headers,
+            RestClient rest
+        )
         {
             var response = rest.PostJson(endpoint, parameters, headers);
             if (!response.IsSuccessful)
@@ -492,10 +468,7 @@ namespace PasswordManagerAccess.DropboxPasswords
             return (publicKey, privateKey);
         }
 
-        internal static byte[] CryptoBoxOpenEasy(byte[] ciphertext,
-                                                 byte[] nonce,
-                                                 byte[] ourPrivateKey,
-                                                 byte[] theirPublicKey)
+        internal static byte[] CryptoBoxOpenEasy(byte[] ciphertext, byte[] nonce, byte[] ourPrivateKey, byte[] theirPublicKey)
         {
             var plain = new byte[ciphertext.Length - XSalsa20Poly1305.TagLength];
             if (new Curve25519XSalsa20Poly1305(ourPrivateKey, theirPublicKey).TryDecrypt(plain, ciphertext, nonce))
@@ -516,9 +489,7 @@ namespace PasswordManagerAccess.DropboxPasswords
 
         internal static byte[] Decrypt(R.EncryptedBundle encrypted, byte[] key)
         {
-            return Crypto.DecryptXChaCha20Poly1305(encrypted.CiphertextBase64.Decode64(),
-                                                   encrypted.NonceBase64.Decode64(),
-                                                   key);
+            return Crypto.DecryptXChaCha20Poly1305(encrypted.CiphertextBase64.Decode64(), encrypted.NonceBase64.Decode64(), key);
         }
 
         //
@@ -546,11 +517,10 @@ namespace PasswordManagerAccess.DropboxPasswords
         // Errors
         //
 
-        internal class TokenExpiredException: BaseException
+        internal class TokenExpiredException : BaseException
         {
-            public TokenExpiredException(): base("Access token expired", null)
-            {
-            }
+            public TokenExpiredException()
+                : base("Access token expired", null) { }
         }
 
         internal static BaseException MakeError(RestResponse<string> response)

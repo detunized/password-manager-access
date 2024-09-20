@@ -38,36 +38,31 @@ namespace PasswordManagerAccess.Test.RoboForm
         [Fact]
         public void ParseAuthInfo_throws_on_missing_parts()
         {
-            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth"),
-                                                 "Invalid auth info format");
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth"), "Invalid auth info format");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_invalid_realm()
         {
-            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("Realm sid=\"\",data=\"\""),
-                                                 "Invalid auth info realm");
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("Realm sid=\"\",data=\"\""), "Invalid auth info realm");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_invalid_parameters_format()
         {
-            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth sid=,data="),
-                                                 "Invalid auth info parameter format");
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth sid=,data="), "Invalid auth info parameter format");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_missing_sid()
         {
-            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth data=\"\""),
-                                                 "Invalid auth info");
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth data=\"\""), "Invalid auth info");
         }
 
         [Fact]
         public void ParseAuthInfo_throws_on_missing_data()
         {
-            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth sid=\"\""),
-                                                 "Invalid auth info");
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse("SibAuth sid=\"\""), "Invalid auth info");
         }
 
         [Theory]
@@ -78,9 +73,7 @@ namespace PasswordManagerAccess.Test.RoboForm
         [InlineData("r=nonce,s=c2FsdA==")]
         public void ParseAuthInfo_throws_on_invalid_data(string data)
         {
-            Exceptions.AssertThrowsInternalError(
-                () => AuthInfo.Parse($"SibAuth sid=\"sid\",data=\"{data.ToBase64()}\""),
-                "Invalid auth info");
+            Exceptions.AssertThrowsInternalError(() => AuthInfo.Parse($"SibAuth sid=\"sid\",data=\"{data.ToBase64()}\""), "Invalid auth info");
         }
 
         [Fact]

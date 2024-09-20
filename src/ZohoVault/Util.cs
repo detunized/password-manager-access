@@ -24,9 +24,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         public static string DecryptStringLoose(string ctrCiphertextBase64, byte[] key)
         {
-            return ctrCiphertextBase64.IsNullOrEmpty()
-                ? ""
-                : DecryptString(ctrCiphertextBase64, key);
+            return ctrCiphertextBase64.IsNullOrEmpty() ? "" : DecryptString(ctrCiphertextBase64, key);
         }
 
         public static string DecryptString(string ctrCiphertextBase64, byte[] key)
@@ -44,7 +42,7 @@ namespace PasswordManagerAccess.ZohoVault
         public static byte[] Decrypt(byte[] ctrCiphertext, byte[] key)
         {
             if (ctrCiphertext.Length < 8 + 1)
-                return new byte[] {};
+                return new byte[] { };
 
             // First 8 bytes of the ciphertext is the ctr initial value. Has to be padded with zeros.
             var ctr = ctrCiphertext.Take(8).Concat(new byte[8]).ToArray();
@@ -117,7 +115,7 @@ namespace PasswordManagerAccess.ZohoVault
             {
                 var index = n - 1 - i;
                 int inc = counter[index] + carry;
-                counter[index] = (byte) (inc & 0xff);
+                counter[index] = (byte)(inc & 0xff);
                 carry = inc >> 8;
             }
         }

@@ -8,7 +8,7 @@ namespace PasswordManagerAccess.RoboForm
         public enum FieldKind
         {
             Text,
-            Password
+            Password,
         }
 
         public struct Field
@@ -35,12 +35,7 @@ namespace PasswordManagerAccess.RoboForm
         public readonly string GuessedUsername;
         public readonly string GuessedPassword;
 
-        public Account(string name,
-                       string path,
-                       string url,
-                       Field[] fields,
-                       string guessedUsername,
-                       string guessedPassword)
+        public Account(string name, string path, string url, Field[] fields, string guessedUsername, string guessedPassword)
         {
             Name = name;
             Path = path;

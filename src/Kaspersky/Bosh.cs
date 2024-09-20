@@ -32,7 +32,10 @@ namespace PasswordManagerAccess.Kaspersky
             // 2. Initialize
             //
 
-            var response = Request($"<stream:stream to='{_jid.Host}' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>", 2);
+            var response = Request(
+                $"<stream:stream to='{_jid.Host}' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>",
+                2
+            );
             if (!response.Contains("<mechanism>PLAIN</mechanism>"))
                 throw MakeError("PLAIN auth method is not supported by the server");
 
@@ -49,7 +52,10 @@ namespace PasswordManagerAccess.Kaspersky
             // 4. Restart
             //
 
-            response = Request($"<stream:stream to='{_jid.Host}' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>", 2);
+            response = Request(
+                $"<stream:stream to='{_jid.Host}' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>",
+                2
+            );
             if (!response.Contains("<bind xmlns='") || !response.Contains("<session xmlns='"))
                 throw MakeError("Restart failed");
 
@@ -57,7 +63,9 @@ namespace PasswordManagerAccess.Kaspersky
             // 5. Bind resource
             //
 
-            var xml = RequestXml($"<iq type='set' id='_bind_auth_2' xmlns='jabber:client'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>{_jid.Resource}</resource></bind></iq>");
+            var xml = RequestXml(
+                $"<iq type='set' id='_bind_auth_2' xmlns='jabber:client'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>{_jid.Resource}</resource></bind></iq>"
+            );
             var xJid = GetChild(xml, "iq/bind/jid");
             if (xJid == null || xJid.Value != _jid.Full)
                 throw MakeError("Resource bind failed");
@@ -97,18 +105,14 @@ namespace PasswordManagerAccess.Kaspersky
 
         public IEnumerable<Change> GetChanges(string command, string commandId, string authKey = "")
         {
-            Exception InvalidResponse(string reason) =>
-                MakeError($"Invalid response for XMPP command '{command}': {reason}");
+            Exception InvalidResponse(string reason) => MakeError($"Invalid response for XMPP command '{command}': {reason}");
 
             IEnumerable<Change> allChanges = Array.Empty<Change>();
             var serverBlob = "";
 
             while (true)
             {
-                var xml = SendCommand(command: command,
-                                      commandId: commandId,
-                                      serverBlob: serverBlob,
-                                      authKey: authKey);
+                var xml = SendCommand(command: command, commandId: commandId, serverBlob: serverBlob, authKey: authKey);
 
                 var root = GetChild(xml, "message/root");
                 if (root == null)
@@ -118,15 +122,13 @@ namespace PasswordManagerAccess.Kaspersky
                 if (changes == null)
                     throw InvalidResponse("changes not found");
 
-                var batch = from e in changes.Elements()
+                var batch =
+                    from e in changes.Elements()
                     let id = e.Attribute("id")?.Value
                     where id != null
                     let operation = ParseOperation(e.Attribute("unique_id")?.Value)
                     where operation != null
-                    select new Change(id,
-                                      operation.Value,
-                                      e.Attribute("type")?.Value ?? "",
-                                      e.Attribute("dataInBase64")?.Value ?? "");
+                    select new Change(id, operation.Value, e.Attribute("type")?.Value ?? "", e.Attribute("dataInBase64")?.Value ?? "");
 
                 allChanges = allChanges.Concat(batch);
 
@@ -151,7 +153,9 @@ namespace PasswordManagerAccess.Kaspersky
             var id = $"{command}-{Client.DeviceKind}-{Client.ServiceId}-{timestamp}";
             var auth = authKey.IsNullOrEmpty() ? "" : $"MPAuthKeyValueInBase64='{authKey}' ";
 
-            return RequestXml($"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'><body/><root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' serverBlob='{serverBlob}' {auth}/></message>");
+            return RequestXml(
+                $"<message xmlns='jabber:client' id='{id}' to='kpm-sync@{_jid.Host}' from='{_jid.Bare}'><body/><root unique_id='{commandId}' productVersion='' protocolVersion='' projectVersion='9.2.0.1' deviceType='0' osType='0' serverBlob='{serverBlob}' {auth}/></message>"
+            );
         }
 
         internal static string GetPlainAuthString(Jid jid, string password)
@@ -187,14 +191,15 @@ namespace PasswordManagerAccess.Kaspersky
             return (XElement)current;
         }
 
-        internal static Operation? ParseOperation(string operation) => operation switch
-        {
-            "1203265602" => Operation.Changed,
-            "3122616881" => Operation.Removed,
-            "1570712235" => Operation.Inactive,
-            "33200760" => Operation.Deprecated,
-            _ => null
-        };
+        internal static Operation? ParseOperation(string operation) =>
+            operation switch
+            {
+                "1203265602" => Operation.Changed,
+                "3122616881" => Operation.Removed,
+                "1570712235" => Operation.Inactive,
+                "33200760" => Operation.Deprecated,
+                _ => null,
+            };
 
         internal static BaseException MakeError(string message, Exception inner = null)
         {

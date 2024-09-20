@@ -5,13 +5,12 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using PasswordManagerAccess.Common;
-using PasswordManagerAccess.Example.Common;
-using PasswordManagerAccess.ProtonPass;
-
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Example.Common;
+using PasswordManagerAccess.ProtonPass;
 
 namespace PasswordManagerAccess.Example.ProtonPass
 {
@@ -45,17 +44,20 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 {
                     driver.Navigate().GoToUrl(url);
 
-                    new WebDriverWait(driver, TimeSpan.FromSeconds(30)).Until(
-                        d => ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").Equals("complete"));
+                    new WebDriverWait(driver, TimeSpan.FromSeconds(30)).Until(d =>
+                        ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").Equals("complete")
+                    );
 
                     // JavaScript to inject to intercept postMessage calls and fetch the messages later
                     var vm = (IJavaScriptExecutor)driver;
-                    vm.ExecuteScript(@"
+                    vm.ExecuteScript(
+                        @"
                         window.receivedMessages = window.parent.receivedMessages = [];
                         window.postMessage = window.parent.postMessage = function (m) {
                             window.receivedMessages.push(m);
                         }
-                    ");
+                    "
+                    );
 
                     const int captchaVerificationTimeoutSec = 60;
                     const int checkEveryMs = 250;
@@ -63,7 +65,9 @@ namespace PasswordManagerAccess.Example.ProtonPass
                     // Wait for 60 seconds, checking for messages every 250ms
                     for (var i = 0; i < captchaVerificationTimeoutSec * 1000 / checkEveryMs; i++)
                     {
-                        var r = vm.ExecuteScript(@"
+                        var r =
+                            vm.ExecuteScript(
+                                @"
                             return (function () {
                                 try {
                                     return JSON.stringify(window.receivedMessages);
@@ -71,7 +75,8 @@ namespace PasswordManagerAccess.Example.ProtonPass
                                     return JSON.stringify({error: e.toString()});
                                 }
                             })();
-                        ") as string;
+                        "
+                            ) as string;
 
                         if (r != null && r.Contains("HUMAN_VERIFICATION_SUCCESS"))
                         {
@@ -87,7 +92,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
                                     if (parsed.Type == "HUMAN_VERIFICATION_SUCCESS" && !string.IsNullOrEmpty(parsed.Payload.Token))
                                     {
                                         Console.WriteLine("Captcha solved!");
-                                        return new IAsyncUi.Result { Solved = true, Token = parsed.Payload.Token } ;
+                                        return new IAsyncUi.Result { Solved = true, Token = parsed.Payload.Token };
                                     }
                                 }
                                 catch (JsonException)
@@ -117,45 +122,46 @@ namespace PasswordManagerAccess.Example.ProtonPass
 
             try
             {
-                var vaults = Vault.OpenAll(config["username"],
-                                           config["password"],
-                                           new AsyncTextUi(),
-                                           new AsyncPlainStorage()).GetAwaiter().GetResult();
+                var vaults = Vault
+                    .OpenAll(config["username"], config["password"], new AsyncTextUi(), new AsyncPlainStorage())
+                    .GetAwaiter()
+                    .GetResult();
 
                 foreach (var vault in vaults)
                 {
-                    Console.WriteLine("Vault: {0}\n" +
-                                      "Description: {1}\n" +
-                                      "ID: {2}\n" +
-                                      "Accounts: ({3})\n",
-                                      vault.Name,
-                                      vault.Description,
-                                      vault.Id,
-                                      vault.Accounts.Length);
+                    Console.WriteLine(
+                        "Vault: {0}\n" + "Description: {1}\n" + "ID: {2}\n" + "Accounts: ({3})\n",
+                        vault.Name,
+                        vault.Description,
+                        vault.Id,
+                        vault.Accounts.Length
+                    );
 
                     for (var i = 0; i < vault.Accounts.Length; ++i)
                     {
                         var account = vault.Accounts[i];
 
-                        Console.WriteLine("\n" +
-                                          "{0}:\n" +
-                                          "          id: {1}\n" +
-                                          "        name: {2}\n" +
-                                          "       email: {3}\n" +
-                                          "    username: {4}\n" +
-                                          "    password: {5}\n" +
-                                          "        totp: {6}\n" +
-                                          "        note: {7}\n" +
-                                          "        urls: ({8})",
-                                          i + 1,
-                                          account.Id,
-                                          account.Name,
-                                          account.Email,
-                                          account.Username,
-                                          account.Password,
-                                          account.Totp,
-                                          account.Note,
-                                          account.Urls.Length);
+                        Console.WriteLine(
+                            "\n"
+                                + "{0}:\n"
+                                + "          id: {1}\n"
+                                + "        name: {2}\n"
+                                + "       email: {3}\n"
+                                + "    username: {4}\n"
+                                + "    password: {5}\n"
+                                + "        totp: {6}\n"
+                                + "        note: {7}\n"
+                                + "        urls: ({8})",
+                            i + 1,
+                            account.Id,
+                            account.Name,
+                            account.Email,
+                            account.Username,
+                            account.Password,
+                            account.Totp,
+                            account.Note,
+                            account.Urls.Length
+                        );
 
                         for (var j = 0; j < account.Urls.Length; ++j)
                             Console.WriteLine("           {0}: {1}", j + 1, account.Urls[j]);

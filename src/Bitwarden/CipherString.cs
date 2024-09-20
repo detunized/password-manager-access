@@ -37,16 +37,16 @@ namespace PasswordManagerAccess.Bitwarden
             var onDot = encoded.Split('.');
             switch (onDot.Length)
             {
-            case 1:
-                onPipe = onDot[0].Split('|');
-                mode = onPipe.Length == 3 ? CipherMode.Aes128CbcHmacSha256 : CipherMode.Aes256Cbc;
-                break;
-            case 2:
-                onPipe = onDot[1].Split('|');
-                mode = ParseCipherMode(onDot[0]);
-                break;
-            default:
-                throw MakeError("Invalid/unsupported cipher string format");
+                case 1:
+                    onPipe = onDot[0].Split('|');
+                    mode = onPipe.Length == 3 ? CipherMode.Aes128CbcHmacSha256 : CipherMode.Aes256Cbc;
+                    break;
+                case 2:
+                    onPipe = onDot[1].Split('|');
+                    mode = ParseCipherMode(onDot[0]);
+                    break;
+                default:
+                    throw MakeError("Invalid/unsupported cipher string format");
             }
 
             string iv = "";
@@ -55,20 +55,20 @@ namespace PasswordManagerAccess.Bitwarden
 
             switch (onPipe.Length)
             {
-            case 1:
-                ciphertext = onPipe[0];
-                break;
-            case 2:
-                iv = onPipe[0];
-                ciphertext = onPipe[1];
-                break;
-            case 3:
-                iv = onPipe[0];
-                ciphertext = onPipe[1];
-                mac = onPipe[2];
-                break;
-            default:
-                throw MakeError("Invalid/unsupported cipher string format");
+                case 1:
+                    ciphertext = onPipe[0];
+                    break;
+                case 2:
+                    iv = onPipe[0];
+                    ciphertext = onPipe[1];
+                    break;
+                case 3:
+                    iv = onPipe[0];
+                    ciphertext = onPipe[1];
+                    mac = onPipe[2];
+                    break;
+                default:
+                    throw MakeError("Invalid/unsupported cipher string format");
             }
 
             return new CipherString(mode, iv.Decode64(), ciphertext.Decode64(), mac.Decode64());
@@ -85,16 +85,16 @@ namespace PasswordManagerAccess.Bitwarden
             var onDot = encoded.Split('.');
             switch (onDot.Length)
             {
-            case 1:
-                mode = CipherMode.Rsa2048OaepSha256;
-                ciphertext = onDot[0];
-                break;
-            case 2:
-                mode = ParseCipherMode(onDot[0]);
-                ciphertext = onDot[1].Split('|')[0];
-                break;
-            default:
-                throw MakeError("Invalid/unsupported cipher string format");
+                case 1:
+                    mode = CipherMode.Rsa2048OaepSha256;
+                    ciphertext = onDot[0];
+                    break;
+                case 2:
+                    mode = ParseCipherMode(onDot[0]);
+                    ciphertext = onDot[1].Split('|')[0];
+                    break;
+                default:
+                    throw MakeError("Invalid/unsupported cipher string format");
             }
 
             // The mac is ignored in the original implementation and we only keep it to pass the validation.
@@ -104,7 +104,7 @@ namespace PasswordManagerAccess.Bitwarden
                 CipherMode.Rsa2048OaepSha1 => new byte[0],
                 CipherMode.Rsa2048OaepSha256HmacSha256 => new byte[32],
                 CipherMode.Rsa2048OaepSha1HmacSha256 => new byte[32],
-                _ => throw MakeError("Invalid RSA cipher string format")
+                _ => throw MakeError("Invalid RSA cipher string format"),
             };
 
             return new CipherString(mode, new byte[0], ciphertext.Decode64(), mac);
@@ -131,7 +131,7 @@ namespace PasswordManagerAccess.Bitwarden
                 CipherMode.Rsa2048OaepSha1 => DecryptRsa2048OaepSha1(key),
                 CipherMode.Rsa2048OaepSha256HmacSha256 => DecryptRsa2048OaepSha256HmacSha256(key),
                 CipherMode.Rsa2048OaepSha1HmacSha256 => DecryptRsa2048OaepSha1HmacSha256(key),
-                _ => throw MakeError($"Invalid cipher mode: {Mode}")
+                _ => throw MakeError($"Invalid cipher mode: {Mode}"),
             };
         }
 
@@ -150,7 +150,7 @@ namespace PasswordManagerAccess.Bitwarden
                 "4" => CipherMode.Rsa2048OaepSha1,
                 "5" => CipherMode.Rsa2048OaepSha256HmacSha256,
                 "6" => CipherMode.Rsa2048OaepSha1HmacSha256,
-                _ => throw MakeError($"Invalid/unsupported cipher mode: {s}")
+                _ => throw MakeError($"Invalid/unsupported cipher mode: {s}"),
             };
         }
 
@@ -161,37 +161,37 @@ namespace PasswordManagerAccess.Bitwarden
 
             switch (mode)
             {
-            case CipherMode.Aes256Cbc:
-                ValidateAesIv(iv);
-                if (mac.Length != 0)
-                    throw MakeError("MAC is not supported in AES-256-CBC mode");
-                break;
-            case CipherMode.Aes128CbcHmacSha256:
-            case CipherMode.Aes256CbcHmacSha256:
-                ValidateAesIv(iv);
-                if (mac.Length != 32)
-                    throw MakeError($"MAC must be 32 bytes long, got {mac.Length}");
-                break;
-            case CipherMode.Rsa2048OaepSha256:
-            case CipherMode.Rsa2048OaepSha1:
-                if (iv.Length != 0)
-                    throw MakeError("IV is not supported in RSA modes");
-                if (ciphertext.Length != 256)
-                    throw MakeError($"Ciphertext must be 256 bytes long, got {ciphertext.Length}");
-                if (mac.Length != 0)
-                    throw MakeError("MAC is not supported in unsigned RSA modes");
-                break;
-            case CipherMode.Rsa2048OaepSha256HmacSha256:
-            case CipherMode.Rsa2048OaepSha1HmacSha256:
-                if (iv.Length != 0)
-                    throw MakeError("IV is not supported in RSA modes");
-                if (ciphertext.Length != 256)
-                    throw MakeError($"Ciphertext must be 256 bytes long, got {ciphertext.Length}");
-                if (mac.Length != 32)
-                    throw MakeError($"MAC must be 32 bytes long, got {mac.Length}");
-                break;
-            default:
-                throw MakeError("Invalid cipher mode");
+                case CipherMode.Aes256Cbc:
+                    ValidateAesIv(iv);
+                    if (mac.Length != 0)
+                        throw MakeError("MAC is not supported in AES-256-CBC mode");
+                    break;
+                case CipherMode.Aes128CbcHmacSha256:
+                case CipherMode.Aes256CbcHmacSha256:
+                    ValidateAesIv(iv);
+                    if (mac.Length != 32)
+                        throw MakeError($"MAC must be 32 bytes long, got {mac.Length}");
+                    break;
+                case CipherMode.Rsa2048OaepSha256:
+                case CipherMode.Rsa2048OaepSha1:
+                    if (iv.Length != 0)
+                        throw MakeError("IV is not supported in RSA modes");
+                    if (ciphertext.Length != 256)
+                        throw MakeError($"Ciphertext must be 256 bytes long, got {ciphertext.Length}");
+                    if (mac.Length != 0)
+                        throw MakeError("MAC is not supported in unsigned RSA modes");
+                    break;
+                case CipherMode.Rsa2048OaepSha256HmacSha256:
+                case CipherMode.Rsa2048OaepSha1HmacSha256:
+                    if (iv.Length != 0)
+                        throw MakeError("IV is not supported in RSA modes");
+                    if (ciphertext.Length != 256)
+                        throw MakeError($"Ciphertext must be 256 bytes long, got {ciphertext.Length}");
+                    if (mac.Length != 32)
+                        throw MakeError($"MAC must be 32 bytes long, got {mac.Length}");
+                    break;
+                default:
+                    throw MakeError("Invalid cipher mode");
             }
         }
 

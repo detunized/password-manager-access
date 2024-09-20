@@ -30,9 +30,7 @@ namespace PasswordManagerAccess.Test.LastPass
         [InlineData(-1337)]
         public void MakeKey_throws_on_invalid_iteration_count(int iterations)
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Util.DeriveKey(Username, Password, iterations),
-                "Iteration count should be positive");
+            Exceptions.AssertThrowsInternalError(() => Util.DeriveKey(Username, Password, iterations), "Iteration count should be positive");
         }
 
         [Theory]
@@ -55,18 +53,14 @@ namespace PasswordManagerAccess.Test.LastPass
         [InlineData(-1337)]
         public void MakeHash_throws_on_invalid_iteration_count(int iterations)
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Util.DeriveKeyHash(Username, Password, iterations),
-                "Iteration count should be positive");
+            Exceptions.AssertThrowsInternalError(() => Util.DeriveKeyHash(Username, Password, iterations), "Iteration count should be positive");
         }
 
         [Fact]
         public void DecryptAes256Plain_with_default_value()
         {
             var defVal = "ohai!";
-            var plaintext = Util.DecryptAes256Plain("not a valid ciphertext".ToBytes(),
-                                                    EncryptionKey,
-                                                    defVal);
+            var plaintext = Util.DecryptAes256Plain("not a valid ciphertext".ToBytes(), EncryptionKey, defVal);
 
             Assert.Equal(defVal, plaintext);
         }
@@ -75,9 +69,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void DecryptAes256Base64_with_default_value()
         {
             var defVal = "ohai!";
-            var plaintext = Util.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(),
-                                                     EncryptionKey,
-                                                     defVal);
+            var plaintext = Util.DecryptAes256Base64("bm90IGEgdmFsaWQgY2lwaGVydGV4dA==".ToBytes(), EncryptionKey, defVal);
             Assert.Equal(defVal, plaintext);
         }
 
@@ -143,6 +135,5 @@ namespace PasswordManagerAccess.Test.LastPass
         private const string Password = "pl1234567890";
 
         private static readonly byte[] EncryptionKey = "OfOUvVnQzB4v49sNh4+PdwIFb9Fr5+jVfWRTf+E2Ghg=".Decode64();
-
     }
 }

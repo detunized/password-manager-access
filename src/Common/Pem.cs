@@ -24,7 +24,8 @@ namespace PasswordManagerAccess.Common
         {
             // See: https://tools.ietf.org/html/rfc5208
             var privateKeyInfo = ExtractAsn1Item(asn1, Asn1.Kind.Sequence);
-            var privateKey = privateKeyInfo.Open(reader => {
+            var privateKey = privateKeyInfo.Open(reader =>
+            {
                 ExtractAsn1Item(reader, Asn1.Kind.Integer); // Discard the version
                 ExtractAsn1Item(reader, Asn1.Kind.Sequence); // Discard the algorithm
 
@@ -55,7 +56,7 @@ namespace PasswordManagerAccess.Common
                     Q = ReadInteger(),
                     DP = ReadInteger(),
                     DQ = ReadInteger(),
-                    InverseQ = ReadInteger()
+                    InverseQ = ReadInteger(),
                 };
             });
         }

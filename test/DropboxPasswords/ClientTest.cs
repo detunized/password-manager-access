@@ -6,13 +6,13 @@ using System.Collections.Generic;
 using System.Net;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
-using Xunit;
 using PasswordManagerAccess.DropboxPasswords;
+using Xunit;
 using R = PasswordManagerAccess.DropboxPasswords.Response;
 
 namespace PasswordManagerAccess.Test.DropboxPasswords
 {
-    public class ClientTest: TestBase
+    public class ClientTest : TestBase
     {
         [Fact]
         public void CryptoBoxOpenEasy_decrypts_ciphertext()
@@ -21,7 +21,8 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
                 ciphertext: "kDZmVHrS3ZRNZUnUcaKQ6z5KqR5XYY6ymmJLAZhNVJk=".Decode64(),
                 nonce: "nSgGUq0+wgk6FuTonn/gLX3tMRYyDEsP".Decode64(),
                 ourPrivateKey: "EDrBprqwud8YbZ10T0/7JmDcQY1tKWDmUFNqV8bw5k0=".Decode64(),
-                theirPublicKey: "1YPKexhpTXpqx9WQC2rfQ19qg1SD27jKkv8Iu2CqZU4=".Decode64());
+                theirPublicKey: "1YPKexhpTXpqx9WQC2rfQ19qg1SD27jKkv8Iu2CqZU4=".Decode64()
+            );
 
             Assert.Equal("043edb6f0d6da92fe4dca929684dadcf".DecodeHex(), plaintext);
         }
@@ -43,7 +44,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         [Fact]
         public void OpenVault_throws_on_server_errors_at_any_step()
         {
-            var fixtures = new[] {"account-info", "features", "root-folder", "entry-keyset", "entry-vault"};
+            var fixtures = new[] { "account-info", "features", "root-folder", "entry-keyset", "entry-vault" };
             foreach (var failOnFixture in fixtures)
             {
                 var flow = new RestFlow();
@@ -60,7 +61,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         [Fact]
         public void OpenVault_restarts_on_expired_token_at_any_step_performs_oauth_and_sets_new_token()
         {
-            var fixtures = new[] {"account-info", "features", "root-folder", "entry-keyset", "entry-vault"};
+            var fixtures = new[] { "account-info", "features", "root-folder", "entry-keyset", "entry-vault" };
             foreach (var failOnFixture in fixtures)
             {
                 var flow = new RestFlow();
@@ -124,9 +125,18 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
 
             var words = new string[]
             {
-                "aerobic", "walnut", "swift", "bracket", "surround",
-                "obey", "nature", "news", "city", "draw",
-                "hidden", "paper"
+                "aerobic",
+                "walnut",
+                "swift",
+                "bracket",
+                "surround",
+                "obey",
+                "nature",
+                "news",
+                "city",
+                "draw",
+                "hidden",
+                "paper",
             };
 
             var accounts = Client.OpenVault(ClientInfo, UtilTest.RecoveryWords, GetUi(), GetStorage(), flow);
@@ -165,7 +175,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         // Helpers
         //
 
-        private class OAuthPerformingUi: IUi
+        private class OAuthPerformingUi : IUi
         {
             public string PerformOAuthLogin(string url, string redirectUrl)
             {
@@ -198,11 +208,9 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
 
         private static MemoryStorage GetStorage()
         {
-            return new MemoryStorage(new Dictionary<string, string>
-            {
-                ["oauth-token"] = "oauth-token",
-                ["master-key"] = UtilTest.MasterKey.ToBase64(),
-            });
+            return new MemoryStorage(
+                new Dictionary<string, string> { ["oauth-token"] = "oauth-token", ["master-key"] = UtilTest.MasterKey.ToBase64() }
+            );
         }
 
         //
@@ -210,8 +218,7 @@ namespace PasswordManagerAccess.Test.DropboxPasswords
         //
 
         // TODO: Share with UtilTest
-        private static readonly byte[] MasterKey =
-            "4a0a046a2d4e2ee312c550a54fe96b573133e0d5b34f09b985c2b02876b98e6f".DecodeHex();
+        private static readonly byte[] MasterKey = "4a0a046a2d4e2ee312c550a54fe96b573133e0d5b34f09b985c2b02876b98e6f".DecodeHex();
 
         private const string OAuthToken = "SpEDMQTeZlUAAAAAAAAAAVWWS95lD7vRptHu5Prl9NA02kM5PsdBhY--QBpOexA8";
 

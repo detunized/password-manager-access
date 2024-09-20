@@ -21,10 +21,7 @@ namespace PasswordManagerAccess.Test
     {
         public static RestAsync.Config ToConfig(this MockHttpHandler mockHttp)
         {
-            return new RestAsync.Config
-            {
-                ConfigureMessageHandler = _ => mockHttp,
-            };
+            return new RestAsync.Config { ConfigureMessageHandler = _ => mockHttp };
         }
 
         public static RestClient ToClient(this MockHttpHandler mockHttp, string baseUrl = "http://does.not.matter")
@@ -51,9 +48,7 @@ namespace PasswordManagerAccess.Test
         public static RestClient Serve(string body, HttpStatusCode statusCode = HttpStatusCode.OK)
         {
             var mockHttp = new MockHttpHandler();
-            mockHttp
-                .When(w => { })
-                .Respond(w => w.StatusCode(statusCode).Body(body));
+            mockHttp.When(w => { }).Respond(w => w.StatusCode(statusCode).Body(body));
             return mockHttp.ToClient();
         }
 

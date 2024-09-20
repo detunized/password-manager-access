@@ -272,8 +272,7 @@ namespace PasswordManagerAccess.Common
             var w2 = t >> 32;
             w1 += x0 * y1;
 
-            return new UInt128(lo: x * y,
-                               hi: x1 * y1 + w2 + (w1 >> 32));
+            return new UInt128(lo: x * y, hi: x1 * y1 + w2 + (w1 >> 32));
         }
 
         // State holds numbers in saturated 64-bit little-endian limbs. That is,
@@ -282,10 +281,14 @@ namespace PasswordManagerAccess.Common
         // h is the main accumulator. It is to be interpreted modulo 2^130 - 5, but
         // can grow larger during and after rounds. It must, however, remain below
         // 2 * (2^130 - 5).
-        private ulong _h0, _h1, _h2;
+        private ulong _h0,
+            _h1,
+            _h2;
 
         // r and s are the private key components.
-        private readonly ulong _r0, _r1;
-        private readonly ulong _s0, _s1;
+        private readonly ulong _r0,
+            _r1;
+        private readonly ulong _s0,
+            _s1;
     }
 }

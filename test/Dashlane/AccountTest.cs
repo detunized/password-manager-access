@@ -1,8 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using Xunit;
 using PasswordManagerAccess.Dashlane;
+using Xunit;
 
 namespace PasswordManagerAccess.Test.Dashlane
 {

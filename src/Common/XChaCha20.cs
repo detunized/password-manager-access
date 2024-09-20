@@ -11,9 +11,8 @@ namespace PasswordManagerAccess.Common
         public const int KeySize = ChaCha20.KeySize;
         public const int NonceSize = 24;
 
-        public XChaCha20(byte[] key, byte[] nonce): this(key.AsRoSpan(), nonce.AsRoSpan())
-        {
-        }
+        public XChaCha20(byte[] key, byte[] nonce)
+            : this(key.AsRoSpan(), nonce.AsRoSpan()) { }
 
         public XChaCha20(ReadOnlySpan<byte> key, ReadOnlySpan<byte> nonce)
         {
@@ -40,11 +39,7 @@ namespace PasswordManagerAccess.Common
             _engine = new ChaCha20(chaCha20Key, chaCha20Nonce);
         }
 
-        public void ProcessBytes(byte[] inputBuffer,
-                                 int inputOffset,
-                                 int inputCount,
-                                 byte[] outputBuffer,
-                                 int outputOffset)
+        public void ProcessBytes(byte[] inputBuffer, int inputOffset, int inputCount, byte[] outputBuffer, int outputOffset)
         {
             _engine.ProcessBytes(inputBuffer, inputOffset, inputCount, outputBuffer, outputOffset);
         }

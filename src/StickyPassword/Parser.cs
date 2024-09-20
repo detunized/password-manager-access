@@ -79,9 +79,8 @@ namespace PasswordManagerAccess.StickyPassword
             // "6400..." is "default\0" in UTF-16
             var result = provider.Query(
                 // .....0........1....2.......
-                "select USER_ID, KEY, PASSWORD " +
-                "from USER " +
-                "where DATE_DELETED = 1 and USERNAME = x'640065006600610075006c0074000000'");
+                "select USER_ID, KEY, PASSWORD " + "from USER " + "where DATE_DELETED = 1 and USERNAME = x'640065006600610075006c0074000000'"
+            );
 
             foreach (var row in result)
             {
@@ -100,38 +99,44 @@ namespace PasswordManagerAccess.StickyPassword
         {
             var result = provider.Query(
                 // .....0.........1...............2........3.........
-                "select ENTRY_ID, UDC_ENTRY_NAME, UDC_URL, UD_COMMENT " +
-                "from ACC_ACCOUNT " +
-                $"where DATE_DELETED = 1 and USER_ID = {user.Id} and GROUP_TYPE = 2 " +
-                "order by ENTRY_ID");
+                "select ENTRY_ID, UDC_ENTRY_NAME, UDC_URL, UD_COMMENT "
+                    + "from ACC_ACCOUNT "
+                    + $"where DATE_DELETED = 1 and USER_ID = {user.Id} and GROUP_TYPE = 2 "
+                    + "order by ENTRY_ID"
+            );
 
-            return result.Select(row =>
-            {
-                var id = GetColumn<long>(row, 0);
-                return new Account(id: id,
-                                   name: DecryptTextField(GetColumn<byte[]>(row, 1), key),
-                                   url: DecryptTextField(GetColumn<byte[]>(row, 2), key),
-                                   notes: DecryptTextField(GetColumn<byte[]>(row, 3), key),
-                                   credentials: GetCredentialsForAccount(user, id, key, provider));
-            }).ToArray();
+            return result
+                .Select(row =>
+                {
+                    var id = GetColumn<long>(row, 0);
+                    return new Account(
+                        id: id,
+                        name: DecryptTextField(GetColumn<byte[]>(row, 1), key),
+                        url: DecryptTextField(GetColumn<byte[]>(row, 2), key),
+                        notes: DecryptTextField(GetColumn<byte[]>(row, 3), key),
+                        credentials: GetCredentialsForAccount(user, id, key, provider)
+                    );
+                })
+                .ToArray();
         }
 
-        private static Credentials[] GetCredentialsForAccount(User user,
-                                                              long accountId,
-                                                              byte[] key,
-                                                              ISqliteProvider provider)
+        private static Credentials[] GetCredentialsForAccount(User user, long accountId, byte[] key, ISqliteProvider provider)
         {
             var result = provider.Query(
                 // .....0.................1................2..................
-                "select LOG.UDC_USERNAME, LOG.UD_PASSWORD, LOG.UDC_DESCRIPTION " +
-                "from ACC_LOGIN LOG, ACC_LINK LINK " +
-                $"where LINK.DATE_DELETED = 1 and LINK.USER_ID = {user.Id} and " +
-                $"LINK.ENTRY_ID = {accountId} and LOG.LOGIN_ID = LINK.LOGIN_ID " +
-                "order by LINK.LOGIN_ID");
+                "select LOG.UDC_USERNAME, LOG.UD_PASSWORD, LOG.UDC_DESCRIPTION "
+                    + "from ACC_LOGIN LOG, ACC_LINK LINK "
+                    + $"where LINK.DATE_DELETED = 1 and LINK.USER_ID = {user.Id} and "
+                    + $"LINK.ENTRY_ID = {accountId} and LOG.LOGIN_ID = LINK.LOGIN_ID "
+                    + "order by LINK.LOGIN_ID"
+            );
 
-            return result.Select(row => new Credentials(username: DecryptTextField(GetColumn<byte[]>(row, 0), key),
-                                                        password: DecryptTextField(GetColumn<byte[]>(row, 1), key),
-                                                        description: DecryptTextField(GetColumn<byte[]>(row, 2), key)))
+            return result
+                .Select(row => new Credentials(
+                    username: DecryptTextField(GetColumn<byte[]>(row, 0), key),
+                    password: DecryptTextField(GetColumn<byte[]>(row, 1), key),
+                    description: DecryptTextField(GetColumn<byte[]>(row, 2), key)
+                ))
                 .ToArray();
         }
 
@@ -140,8 +145,7 @@ namespace PasswordManagerAccess.StickyPassword
             if (row[index] is T x)
                 return x;
 
-            throw new InternalErrorException(
-                $"Unexpected type in query response (expected {typeof(T)}, got {row[index].GetType()})");
+            throw new InternalErrorException($"Unexpected type in query response (expected {typeof(T)}, got {row[index].GetType()})");
         }
 
         private static string DecryptTextField(byte[] encrypted, byte[] key)

@@ -140,15 +140,17 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static UserInfo RequestUserInfo(string username, string token, string domain, RestClient rest)
         {
-            var response = rest.PostForm<R.Lookup>(LookupUrl(domain, username),
-                                                   new PostParameters
-                                                   {
-                                                       ["mode"] = "primary",
-                                                       ["cli_time"] = Os.UnixMilliseconds(),
-                                                       ["servicename"] = ServiceName,
-                                                   },
-                                                   headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}" },
-                                                   cookies: new HttpCookies { ["iamcsr"] = token });
+            var response = rest.PostForm<R.Lookup>(
+                LookupUrl(domain, username),
+                new PostParameters
+                {
+                    ["mode"] = "primary",
+                    ["cli_time"] = Os.UnixMilliseconds(),
+                    ["servicename"] = ServiceName,
+                },
+                headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}" },
+                cookies: new HttpCookies { ["iamcsr"] = token }
+            );
 
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
@@ -168,17 +170,17 @@ namespace PasswordManagerAccess.ZohoVault
             var error = GetError(status);
             switch (error.Code)
             {
-            // User exists in another data center
-            case "U400":
-                var redirect = status.Redirect;
-                if (redirect == null)
-                    throw MakeInvalidResponseError("redirect info not found");
+                // User exists in another data center
+                case "U400":
+                    var redirect = status.Redirect;
+                    if (redirect == null)
+                        throw MakeInvalidResponseError("redirect info not found");
 
-                return RequestUserInfo(username, token, UrlToDomain(redirect.RedirectUrl), rest);
+                    return RequestUserInfo(username, token, UrlToDomain(redirect.RedirectUrl), rest);
 
-            // User doesn't exist
-            case "U401":
-                throw new BadCredentialsException("The username is invalid");
+                // User doesn't exist
+                case "U401":
+                    throw new BadCredentialsException("The username is invalid");
             }
 
             throw MakeInvalidResponseError(status);
@@ -194,16 +196,12 @@ namespace PasswordManagerAccess.ZohoVault
             if (haveRememberMe)
                 cookies[rememberMeKey] = rememberMeValue;
 
-            var response = rest.PostJson<R.LogIn>(LogInUrl(userInfo, Os.UnixMilliseconds()),
-                                                  parameters: new PostParameters
-                                                  {
-                                                      ["passwordauth"] = new Dictionary<string, string>
-                                                      {
-                                                          ["password"] = password,
-                                                      },
-                                                  },
-                                                  headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}" },
-                                                  cookies: cookies);
+            var response = rest.PostJson<R.LogIn>(
+                LogInUrl(userInfo, Os.UnixMilliseconds()),
+                parameters: new PostParameters { ["passwordauth"] = new Dictionary<string, string> { ["password"] = password } },
+                headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}" },
+                cookies: cookies
+            );
 
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
@@ -225,25 +223,27 @@ namespace PasswordManagerAccess.ZohoVault
             var error = GetError(status);
             switch (error.Code)
             {
-            // Bad password
-            case "IN102":
-                throw new BadCredentialsException("The password is incorrect");
-            // Captcha
-            case "IN107":
-            case "IN108":
-                throw new UnsupportedFeatureException("Captcha is not supported");
+                // Bad password
+                case "IN102":
+                    throw new BadCredentialsException("The password is incorrect");
+                // Captcha
+                case "IN107":
+                case "IN108":
+                    throw new UnsupportedFeatureException("Captcha is not supported");
             }
 
             // Some other error
             throw MakeInvalidResponseError(status);
         }
 
-        internal static HttpCookies LogInMfa(UserInfo userInfo,
-                                             R.LogInResult logInResult,
-                                             string token,
-                                             IUi ui,
-                                             ISecureStorage storage,
-                                             RestClient rest)
+        internal static HttpCookies LogInMfa(
+            UserInfo userInfo,
+            R.LogInResult logInResult,
+            string token,
+            IUi ui,
+            ISecureStorage storage,
+            RestClient rest
+        )
         {
             void CheckCancel(Passcode passcode)
             {
@@ -286,20 +286,12 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static void SubmitTotp(UserInfo userInfo, Passcode passcode, string token, string mfaToken, RestClient rest)
         {
-            var response = rest.PostJson<R.Totp>(TotpUrl(userInfo, Os.UnixMilliseconds()),
-                                                 parameters: new PostParameters
-                                                 {
-                                                     ["totpsecauth"] = new Dictionary<string, string>
-                                                     {
-                                                         ["code"] = passcode.Code,
-                                                     },
-                                                 },
-                                                 headers: new HttpHeaders
-                                                 {
-                                                     ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}",
-                                                     ["Z-Authorization"] = $"Zoho-ticket {mfaToken}",
-                                                 },
-                                                 cookies: new HttpCookies { ["iamcsr"] = token });
+            var response = rest.PostJson<R.Totp>(
+                TotpUrl(userInfo, Os.UnixMilliseconds()),
+                parameters: new PostParameters { ["totpsecauth"] = new Dictionary<string, string> { ["code"] = passcode.Code } },
+                headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}", ["Z-Authorization"] = $"Zoho-ticket {mfaToken}" },
+                cookies: new HttpCookies { ["iamcsr"] = token }
+            );
 
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
@@ -319,23 +311,12 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static HttpCookies MarkDeviceTrusted(UserInfo userInfo, bool trust, string token, string mfaToken, RestClient rest)
         {
-            var response = rest.PostJson<R.TrustMfa>(TrustUrl(userInfo),
-                                                     new PostParameters
-                                                     {
-                                                         ["trustmfa"] = new Dictionary<string, object>
-                                                         {
-                                                             ["trust"] = trust
-                                                         },
-                                                     },
-                                                     headers: new HttpHeaders
-                                                     {
-                                                         ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}",
-                                                         ["Z-Authorization"] = $"Zoho-ticket {mfaToken}",
-                                                     },
-                                                     cookies: new HttpCookies
-                                                     {
-                                                         ["iamcsr"] = token
-                                                     });
+            var response = rest.PostJson<R.TrustMfa>(
+                TrustUrl(userInfo),
+                new PostParameters { ["trustmfa"] = new Dictionary<string, object> { ["trust"] = trust } },
+                headers: new HttpHeaders { ["X-ZCSRF-TOKEN"] = $"iamcsrcoo={token}", ["Z-Authorization"] = $"Zoho-ticket {mfaToken}" },
+                cookies: new HttpCookies { ["iamcsr"] = token }
+            );
 
             if (!response.IsSuccessful)
                 throw MakeErrorOnFailedRequest(response);
@@ -402,9 +383,7 @@ namespace PasswordManagerAccess.ZohoVault
             {
                 parsed = JToken.Parse(decrypted);
             }
-            catch (JsonException)
-            {
-            }
+            catch (JsonException) { }
 
             // This would be null in case of JSON exception or if Parse returned null (would it?)
             if (parsed == null)
@@ -441,10 +420,7 @@ namespace PasswordManagerAccess.ZohoVault
         {
             // TODO: Test on non account type secrets!
             // TODO: Test on accounts with missing fields!
-            return vaultResponse.Secrets
-                .Select(x => ParseAccount(x, x.IsShared == "YES" ? sharingKey : vaultKey))
-                .Where(x => x != null)
-                .ToArray();
+            return vaultResponse.Secrets.Select(x => ParseAccount(x, x.IsShared == "YES" ? sharingKey : vaultKey)).Where(x => x != null).ToArray();
         }
 
         // Returns null on accounts that don't parse
@@ -453,12 +429,14 @@ namespace PasswordManagerAccess.ZohoVault
             try
             {
                 var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data ?? "{}");
-                return new Account(secret.Id,
-                                   secret.Name ?? "",
-                                   Util.DecryptStringLoose(data.Username, key),
-                                   Util.DecryptStringLoose(data.Password, key),
-                                   secret.Url ?? "",
-                                   Util.DecryptStringLoose(secret.Note, key));
+                return new Account(
+                    secret.Id,
+                    secret.Name ?? "",
+                    Util.DecryptStringLoose(data.Username, key),
+                    Util.DecryptStringLoose(data.Password, key),
+                    secret.Url ?? "",
+                    Util.DecryptStringLoose(secret.Note, key)
+                );
             }
             catch (JsonException)
             {
@@ -481,7 +459,8 @@ namespace PasswordManagerAccess.ZohoVault
         {
             if (status.Errors == null || status.Errors.Length == 0)
                 throw MakeInvalidResponseError(
-                    $"request failed with code '{status.StatusCode}/{status.Code}' and message '{status.Message}' but error wasn't provided");
+                    $"request failed with code '{status.StatusCode}/{status.Code}' and message '{status.Message}' but error wasn't provided"
+                );
 
             return status.Errors[0];
         }
@@ -513,11 +492,10 @@ namespace PasswordManagerAccess.ZohoVault
         // Private
         //
 
-        private class InvalidTicketException: BaseException
+        private class InvalidTicketException : BaseException
         {
-            public InvalidTicketException(string operation): base($"Operation '{operation}' failed", null)
-            {
-            }
+            public InvalidTicketException(string operation)
+                : base($"Operation '{operation}' failed", null) { }
         }
 
         private static bool IsSuccessful<T>(RestResponse<string, R.ResponseEnvelope<T>> response)
@@ -546,7 +524,8 @@ namespace PasswordManagerAccess.ZohoVault
                 return new InvalidTicketException(operation.Name);
 
             return new InternalErrorException(
-                $"Operation '{operation.Name}' failed with status '{result.Status}', error code '{result.ErrorCode}' and message '{result.Message}'");
+                $"Operation '{operation.Name}' failed with status '{result.Status}', error code '{result.ErrorCode}' and message '{result.Message}'"
+            );
         }
 
         private static InternalErrorException MakeInvalidResponseError(string message, Exception original = null)
@@ -626,7 +605,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         private const string UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
 
-        private static readonly string[] SuccessErrorCodes = {"SI200", "SI300", "SI301", "SI302", "SI303", "SI304"};
+        private static readonly string[] SuccessErrorCodes = { "SI200", "SI300", "SI301", "SI302", "SI303", "SI304" };
 
         // Important! Most of the requests fail without a valid User-Agent header
         private static readonly Dictionary<string, string> Headers = new() { { "User-Agent", UserAgent } };

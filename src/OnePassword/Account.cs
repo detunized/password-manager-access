@@ -127,9 +127,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal Url[] AssignUrls()
         {
-            _urls = Overview.Urls?
-                .Select(x => new Url(name: x.Name, value: x.Url))
-                .ToArray() ?? Array.Empty<Url>();
+            _urls = Overview.Urls?.Select(x => new Url(name: x.Name, value: x.Url)).ToArray() ?? Array.Empty<Url>();
             return _urls;
         }
 
@@ -183,10 +181,6 @@ namespace PasswordManagerAccess.OnePassword
         internal const string LoginTemplateId = "001";
         internal const string ServerTemplateId = "110";
 
-        internal static readonly HashSet<string> SupportedTemplateIds = new HashSet<string>
-        {
-            LoginTemplateId,
-            ServerTemplateId
-        };
+        internal static readonly HashSet<string> SupportedTemplateIds = new HashSet<string> { LoginTemplateId, ServerTemplateId };
     }
 }

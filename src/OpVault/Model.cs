@@ -32,9 +32,7 @@ namespace PasswordManagerAccess.OpVault.Model
         [JsonProperty("overview", Required = Required.Always)]
         public readonly string Overview;
 
-        [JsonProperty("trashed",
-                      Required = Required.DisallowNull,
-                      DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty("trashed", Required = Required.DisallowNull, DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
         public readonly bool Deleted;
     }
@@ -65,9 +63,7 @@ namespace PasswordManagerAccess.OpVault.Model
         [JsonProperty("d", Required = Required.Always)]
         public readonly string Details;
 
-        [JsonProperty("trashed",
-                      Required = Required.DisallowNull,
-                      DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty("trashed", Required = Required.DisallowNull, DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
         public readonly bool Deleted;
     }

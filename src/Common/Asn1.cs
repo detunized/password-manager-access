@@ -40,7 +40,7 @@ namespace PasswordManagerAccess.Common
                 4 => Kind.Bytes,
                 5 => Kind.Null,
                 16 => Kind.Sequence,
-                _ => throw new InternalErrorException($"Unknown ASN.1 tag {tag}")
+                _ => throw new InternalErrorException($"Unknown ASN.1 tag {tag}"),
             };
 
             var size = (int)reader.ReadByte();

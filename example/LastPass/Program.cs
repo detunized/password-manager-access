@@ -13,7 +13,7 @@ namespace PasswordManagerAccess.Example.LastPass
     {
         // Very simple text based user interface that demonstrates how to respond to
         // to Vault UI requests.
-        private class TextUi: DuoUi, IUi
+        private class TextUi : DuoUi, IUi
         {
             public OtpResult ProvideGoogleAuthPasscode()
             {
@@ -64,9 +64,7 @@ namespace PasswordManagerAccess.Example.LastPass
                     return OobResult.Cancel;
 
                 var rememberMe = GetRememberMe();
-                return answer.Length == 0
-                    ? OobResult.WaitForApproval(rememberMe)
-                    : OobResult.ContinueWithPasscode(answer, rememberMe);
+                return answer.Length == 0 ? OobResult.WaitForApproval(rememberMe) : OobResult.ContinueWithPasscode(answer, rememberMe);
             }
         }
 
@@ -77,44 +75,46 @@ namespace PasswordManagerAccess.Example.LastPass
             try
             {
                 // Fetch and create the vault from LastPass
-                var vault = Vault.Open(config["username"],
-                                       config["password"],
-                                       new ClientInfo(Platform.Desktop,
-                                                      config["client-id"],
-                                                      config["client-description"]),
-                                       new TextUi(),
-                                       new ParserOptions
-                                       {
-                                           // Set to true to parse "server" secure notes
-                                           ParseSecureNotesToAccount = false,
-                                       });
+                var vault = Vault.Open(
+                    config["username"],
+                    config["password"],
+                    new ClientInfo(Platform.Desktop, config["client-id"], config["client-description"]),
+                    new TextUi(),
+                    new ParserOptions
+                    {
+                        // Set to true to parse "server" secure notes
+                        ParseSecureNotesToAccount = false,
+                    }
+                );
 
                 // Dump all the accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)
                 {
                     var account = vault.Accounts[i];
-                    Console.WriteLine("{0}:\n" +
-                                      "        id: {1}\n" +
-                                      "      name: {2}\n" +
-                                      "  username: {3}\n" +
-                                      "  password: {4}\n" +
-                                      "       url: {5}\n" +
-                                      "      path: {6}\n" +
-                                      "     notes: {7}\n" +
-                                      "      totp: {8}\n" +
-                                      "  favorite: {9}\n" +
-                                      "    shared: {10}\n",
-                                      i + 1,
-                                      account.Id,
-                                      account.Name,
-                                      account.Username,
-                                      account.Password,
-                                      account.Url,
-                                      account.Path,
-                                      account.Notes,
-                                      account.Totp,
-                                      account.IsFavorite,
-                                      account.IsShared);
+                    Console.WriteLine(
+                        "{0}:\n"
+                            + "        id: {1}\n"
+                            + "      name: {2}\n"
+                            + "  username: {3}\n"
+                            + "  password: {4}\n"
+                            + "       url: {5}\n"
+                            + "      path: {6}\n"
+                            + "     notes: {7}\n"
+                            + "      totp: {8}\n"
+                            + "  favorite: {9}\n"
+                            + "    shared: {10}\n",
+                        i + 1,
+                        account.Id,
+                        account.Name,
+                        account.Username,
+                        account.Password,
+                        account.Url,
+                        account.Path,
+                        account.Notes,
+                        account.Totp,
+                        account.IsFavorite,
+                        account.IsShared
+                    );
                 }
             }
             catch (BaseException e)
