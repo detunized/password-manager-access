@@ -324,6 +324,21 @@ namespace PasswordManagerAccess.Test
                 MakeRequestLocked(uri, method, content, headers, cookies, maxRedirectCount, allocatedResult);
         }
 
+        public async Task MakeRequestAsync<TContent>(
+            Uri uri,
+            HttpMethod method,
+            HttpContent content,
+            IReadOnlyDictionary<string, string> headers,
+            IReadOnlyDictionary<string, string> cookies,
+            int maxRedirectCount,
+            RestResponse<TContent> allocatedResult,
+            CancellationToken cancellationToken
+        )
+        {
+            // TODO: Implement this properly
+            MakeRequest(uri, method, content, headers, cookies, maxRedirectCount, allocatedResult);
+        }
+
         //
         // HttpMessageHandler implementation
         //

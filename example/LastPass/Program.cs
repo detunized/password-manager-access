@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.LastPass;
@@ -68,14 +70,14 @@ namespace PasswordManagerAccess.Example.LastPass
             }
         }
 
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var config = Util.ReadConfig();
 
             try
             {
                 // Fetch and create the vault from LastPass
-                var vault = Vault.Open(
+                var vault = await Vault.Open(
                     config["username"],
                     config["password"],
                     new ClientInfo(Platform.Desktop, config["client-id"], config["client-description"]),
@@ -85,7 +87,9 @@ namespace PasswordManagerAccess.Example.LastPass
                         // Set to true to parse "server" secure notes
                         ParseSecureNotesToAccount = false,
                         LoggingEnabled = true,
-                    }
+                    },
+                    null,
+                    CancellationToken.None
                 );
 
                 // Dump all the accounts

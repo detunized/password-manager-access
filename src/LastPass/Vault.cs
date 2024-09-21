@@ -3,6 +3,8 @@
 
 #nullable enable
 
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.LastPass.Ui;
 
@@ -12,19 +14,23 @@ namespace PasswordManagerAccess.LastPass
     {
         public readonly Account[] Accounts;
 
-        public static Vault Open(string username, string password, ClientInfo clientInfo, IUi ui, ISecureLogger? logger = null) =>
-            Open(username, password, clientInfo, ui, ParserOptions.Default, logger);
-
-        public static Vault Open(string username, string password, ClientInfo clientInfo, IUi ui, ParserOptions options, ISecureLogger? logger = null)
+        public static async Task<Vault> Open(
+            string username,
+            string password,
+            ClientInfo clientInfo,
+            IUi ui,
+            ParserOptions options,
+            ISecureLogger? logger,
+            CancellationToken cancellationToken
+        )
         {
             using var transport = new RestTransport();
-            return new Vault(Client.OpenVault(username, password, clientInfo, ui, transport, options, logger));
+            return new Vault(
+                await Client.OpenVault(username, password, clientInfo, ui, transport, options, logger, cancellationToken).ConfigureAwait(false)
+            );
         }
 
-        public static string GenerateRandomClientId()
-        {
-            return Crypto.RandomHex(32);
-        }
+        public static string GenerateRandomClientId() => Crypto.RandomHex(32);
 
         //
         // Private

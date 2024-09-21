@@ -1,8 +1,11 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using HtmlAgilityPack;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo.Response;
@@ -13,6 +16,19 @@ namespace PasswordManagerAccess.Duo
 {
     internal static class DuoV1
     {
+        public static async Task<Result> AuthenticateAsync(
+            string host,
+            string signature,
+            IDuoUi ui,
+            IRestTransport transport,
+            ISimpleLogger logger,
+            CancellationToken cancellationToken
+        )
+        {
+            // TODO: Implement this properly
+            return Authenticate(host, signature, ui, transport, logger);
+        }
+
         // Returns the second factor token from Duo or null when canceled by the user.
         public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {

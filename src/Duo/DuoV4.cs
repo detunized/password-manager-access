@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using HtmlAgilityPack;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.Duo.ResponseV4;
@@ -12,6 +14,18 @@ namespace PasswordManagerAccess.Duo
 {
     internal static class DuoV4
     {
+        public static async Task<Result> AuthenticateAsync(
+            string authUrl,
+            IDuoUi ui,
+            IRestTransport transport,
+            ISimpleLogger logger,
+            CancellationToken cancellationToken
+        )
+        {
+            // TODO: Implement this properly
+            return Authenticate(authUrl, ui, transport);
+        }
+
         public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {
             var rest = new RestClient(transport, logger: logger);
