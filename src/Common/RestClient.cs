@@ -97,6 +97,17 @@ namespace PasswordManagerAccess.Common
             int maxRedirectCount,
             RestResponse<TContent> allocatedResult
         );
+
+        Task MakeRequestAsync<TContent>(
+            Uri uri,
+            HttpMethod method,
+            HttpContent content,
+            ReadOnlyHttpHeaders headers,
+            ReadOnlyHttpCookies cookies,
+            int maxRedirectCount,
+            RestResponse<TContent> allocatedResult,
+            CancellationToken cancellationToken
+        );
     }
 
     //
@@ -186,11 +197,88 @@ namespace PasswordManagerAccess.Common
             }
         }
 
+        // TODO: Refactor to share the code with the non-async version
+        public async Task MakeRequestAsync<TContent>(
+            Uri uri,
+            HttpMethod method,
+            HttpContent content,
+            ReadOnlyHttpHeaders headers,
+            ReadOnlyHttpCookies cookies,
+            int maxRedirectCount,
+            RestResponse<TContent> allocatedResult,
+            CancellationToken cancellationToken
+        )
+        {
+            allocatedResult.RequestUri = uri;
+
+            try
+            {
+                // TODO: Dispose this
+                var request = new HttpRequestMessage(method, uri) { Content = content };
+
+                // Set headers
+                foreach (var h in headers)
+                    request.Headers.TryAddWithoutValidation(h.Key, h.Value);
+
+                // Set cookies
+                if (cookies.Count > 0)
+                {
+                    var cookieHeaderValue = string.Join("; ", cookies.Select(x => $"{x.Key}={x.Value}"));
+                    request.Headers.TryAddWithoutValidation("Cookie", cookieHeaderValue);
+                }
+
+                // Don't use .Result here but rather .GetAwaiter().GetResult()
+                // It produces a nicer call stack and no AggregateException nonsense
+                // https://stackoverflow.com/a/36427080/362938
+                // TODO: Dispose this?
+                var response = _http.SendAsync(request).GetAwaiter().GetResult();
+
+                var responseCookies = ParseResponseCookies(response, uri);
+                var allCookies = cookies.MergeCopy(responseCookies);
+
+                // Redirect if still possible (HTTP Status 3XX)
+                if ((int)response.StatusCode / 100 == 3 && maxRedirectCount > 0)
+                {
+                    // Uri ctor should take care of both absolute and relative redirects. There have
+                    // been problems with Android in the past.
+                    // (see https://github.com/detunized/password-manager-access/issues/21)
+                    var newUri = new Uri(uri, response.Headers.Location);
+
+                    // Redirect always does a GET with no content
+                    MakeRequest(newUri, HttpMethod.Get, null, headers, allCookies, maxRedirectCount - 1, allocatedResult);
+                    return;
+                }
+
+                // Set up the result
+                allocatedResult.StatusCode = response.StatusCode;
+                allocatedResult.Cookies = allCookies;
+
+                switch (allocatedResult)
+                {
+                    case RestResponse<string> text:
+                        text.Content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        break;
+                    case RestResponse<byte[]> binary:
+                        binary.Content = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new InternalErrorException($"Unsupported content type {typeof(TContent)}");
+                }
+
+                // TODO: Here we're ignoring possible duplicated headers. See if we need to preserve those!
+                allocatedResult.Headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault() ?? "");
+            }
+            catch (HttpRequestException e)
+            {
+                allocatedResult.Error = e;
+            }
+        }
+
         //
         // Private
         //
 
-        private static Dictionary<string, string> ParseResponseCookies(HttpResponseMessage response, Uri uri)
+        private static HttpCookies ParseResponseCookies(HttpResponseMessage response, Uri uri)
         {
             // Parse cookies
             var jar = new CookieContainer();
@@ -313,7 +401,7 @@ namespace PasswordManagerAccess.Common
 
     // This class tries to be immutable, it's easier to keep track of state and test that way. When
     // the settings have to be changed, the new instance should be created.
-    internal class RestClient
+    internal partial class RestClient
     {
         // TODO: Make these readonly dictionaries
         public static readonly HttpHeaders NoHeaders = new HttpHeaders();
