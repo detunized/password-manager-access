@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -354,6 +355,7 @@ internal partial class RestClient
         return response;
     }
 
+    // TODO: Merge the code with MakeRequest sync version
     private async Task<TResponse> MakeRequestAsync<TResponse, TContent>(
         string endpoint,
         HttpMethod method,
@@ -367,16 +369,45 @@ internal partial class RestClient
         where TResponse : RestResponse<TContent>
     {
         var uri = MakeAbsoluteUri(endpoint);
-        await Transport.MakeRequestAsync(
-            uri,
-            method,
-            content,
-            Signer.Sign(uri, method, DefaultHeaders.Merge(headers), content),
-            DefaultCookies.Merge(cookies),
-            maxRedirects,
-            allocatedResult,
-            cancellationToken
-        );
+        var allHeaders = Signer.Sign(uri, method, DefaultHeaders.Merge(headers), content);
+        var allCookies = DefaultCookies.Merge(cookies);
+
+        StringBuilder logBuilder = null;
+        if (Logger != null)
+        {
+            logBuilder = new StringBuilder();
+            logBuilder.AppendLine($"Request: {method} {uri}");
+            foreach (var (k, v) in allHeaders)
+                logBuilder.AppendLine($"Header: {k}: {v}");
+            // TODO: Enable when needed
+            if (WarningFree.AlwaysFalse)
+                foreach (var (k, v) in allCookies)
+                    logBuilder.AppendLine($"Cookie: {k}: {v}");
+            if (content != null)
+                logBuilder.AppendLine($"Content: {content.ReadAsStringAsync().GetAwaiter().GetResult()}");
+            logBuilder.AppendLine($"Max redirects: {maxRedirects}");
+            Logger.Log(logBuilder.ToString());
+        }
+
+        await Transport
+            .MakeRequestAsync(uri, method, content, allHeaders, allCookies, maxRedirects, allocatedResult, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (Logger != null)
+        {
+            logBuilder!.Clear();
+            logBuilder.AppendLine($"Response: {allocatedResult.StatusCode} {allocatedResult.Error?.Message}");
+            if (allocatedResult.Headers != null)
+                foreach (var (k, v) in allocatedResult.Headers)
+                    logBuilder.AppendLine($"Header: {k}: {v}");
+            // TODO: Enable when needed
+            if (WarningFree.AlwaysFalse)
+                if (allocatedResult.Cookies != null)
+                    foreach (var (k, v) in allocatedResult.Cookies)
+                        logBuilder.AppendLine($"Cookie: {k}: {v}");
+            logBuilder.AppendLine($"Content: {allocatedResult.Content}");
+            Logger.Log(logBuilder.ToString());
+        }
 
         return allocatedResult;
     }
