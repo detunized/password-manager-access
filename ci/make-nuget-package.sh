@@ -21,4 +21,5 @@ fi
 VERSION=$(echo $GIT_TAG | cut -c 2-)
 
 # Build the NuGet package
+cd src
 dotnet pack --configuration Release --include-source --include-symbols -property:Version=$VERSION

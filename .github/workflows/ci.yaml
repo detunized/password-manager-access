@@ -76,9 +76,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install MAUI workflow
-        run: dotnet workload install maui-tizen
-
       - name: Build
         run: ci/make-nuget-package.sh ${{ github.ref_name }}
 
