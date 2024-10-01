@@ -227,14 +227,24 @@ namespace PasswordManagerAccess.Common
 
         private static HttpClient MakeDefaultHttpClient()
         {
-            var handler = new HttpClientHandler
+            var handler = new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false };
+
+            // On mobile .NET 8 which is based on Mono the native HTTP handler behaves differently
+            // than on desktop .NET. We need to enable cookies explicitly, otherwise the Set-Cookie
+            // headers are discarded from the response headers.
+            // TODO: This potentially has some negative side effects that we need to investigate!
+            if (OperatingSystem.IsIOS() || OperatingSystem.IsAndroid())
             {
-                UseCookies = false,
-                AllowAutoRedirect = false,
+                handler.UseCookies = true;
+            }
+            else
+            {
+                // Mobile .NET 8 doesn't support proxies yet
 #if MITM_PROXY
-                Proxy = new WebProxy("http://127.0.0.1:8888"),
+                handler.Proxy = new WebProxy("http://127.0.0.1:8888");
 #endif
-            };
+            }
+
             return new HttpClient(handler, true);
         }
 

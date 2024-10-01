@@ -22,7 +22,7 @@ namespace PasswordManagerAccess.ZohoVault
     {
         public static Account[] OpenVault(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
-            var rest = new RestClient(transport);
+            var rest = new RestClient(transport, defaultHeaders: Headers);
 
             // This token is needed to access other pages of the login flow. It's sent via headers,
             // cookies and in the request data.
@@ -113,7 +113,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static string RequestToken(RestClient rest)
         {
-            var loginPage = rest.Get(LoginPageUrl, Headers);
+            var loginPage = rest.Get(LoginPageUrl);
             if (!loginPage.IsSuccessful)
                 throw MakeErrorOnFailedRequest(loginPage);
 
@@ -332,7 +332,7 @@ namespace PasswordManagerAccess.ZohoVault
         {
             // It's ok to have 2XX or 3XX HTTP status. Sometimes the server sends a redirect.
             // There's no need to follow it to complete a logout.
-            var response = rest.Get(LogoutUrl(domain), Headers, cookies, maxRedirects: 0);
+            var response = rest.Get(LogoutUrl(domain), cookies: cookies, maxRedirects: 0);
             if (response.HasError || (int)response.StatusCode / 100 > 3)
                 throw MakeErrorOnFailedRequest(response);
         }
@@ -448,7 +448,7 @@ namespace PasswordManagerAccess.ZohoVault
         internal static T GetWrapped<T>(string url, HttpCookies cookies, RestClient rest)
         {
             // GET
-            var response = rest.Get<R.ResponseEnvelope<T>>(url, headers: Headers, cookies: cookies);
+            var response = rest.Get<R.ResponseEnvelope<T>>(url, cookies: cookies);
             if (!IsSuccessful(response))
                 throw MakeErrorOnFailedRequest(response);
 
