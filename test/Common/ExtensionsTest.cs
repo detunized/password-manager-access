@@ -822,11 +822,13 @@ namespace PasswordManagerAccess.Test.Common
         public void JToken_StringAt_returns_string()
         {
             var j = JObject.Parse(
-                @"{
-                'k1': 'v1',
-                'k2': 'v2',
-                'k3': 'v3'
-            }"
+                """
+                {
+                    "k1": "v1",
+                    "k2": "v2",
+                    "k3": "v3"
+                }
+                """
             );
 
             Assert.Equal("v1", j.StringAt("k1", ""));
@@ -843,7 +845,7 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("{}")]
         public void JToken_StringAt_returns_default_value_on_non_string(string value)
         {
-            var j = JObject.Parse($"{{'key': {value}}}");
+            var j = JObject.Parse($$"""{"key": {{value}}}""");
 
             Assert.Equal("yo", j.StringAt("key", "yo"));
         }
@@ -851,7 +853,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_StringAt_returns_default_value_when_field_does_not_exist()
         {
-            var j = JObject.Parse("{'key': 'value'}");
+            var j = JObject.Parse("""{"key": "value"}""");
 
             Assert.Equal("yo", j.StringAt("not-a-key", "yo"));
         }
@@ -870,11 +872,13 @@ namespace PasswordManagerAccess.Test.Common
         public void JToken_IntAt_returns_int()
         {
             var j = JObject.Parse(
-                @"{
-                'k1': 13,
-                'k2': 17,
-                'k3': 19
-            }"
+                """
+                {
+                    "k1": 13,
+                    "k2": 17,
+                    "k3": 19
+                }
+                """
             );
 
             Assert.Equal(13, j.IntAt("k1", 0));
@@ -885,13 +889,13 @@ namespace PasswordManagerAccess.Test.Common
         [Theory]
         [InlineData("null")]
         [InlineData("true")]
-        [InlineData("'10'")]
+        [InlineData("\"10\"")]
         [InlineData("10.0")]
         [InlineData("[]")]
         [InlineData("{}")]
         public void JToken_IntAt_returns_default_value_on_non_ints(string value)
         {
-            var j = JObject.Parse($"{{'key': {value}}}");
+            var j = JObject.Parse($$"""{"key": {{value}}}""");
 
             Assert.Equal(1337, j.IntAt("key", 1337));
         }
@@ -899,7 +903,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_IntAt_returns_default_value_when_field_does_not_exist()
         {
-            var j = JObject.Parse("{'key': 'value'}");
+            var j = JObject.Parse("""{"key": "value"}""");
 
             Assert.Equal(1337, j.IntAt("not-a-key", 1337));
         }
@@ -918,11 +922,13 @@ namespace PasswordManagerAccess.Test.Common
         public void JToken_BoolAt_returns_bools()
         {
             var j = JObject.Parse(
-                @"{
-                'k1': true,
-                'k2': false,
-                'k3': true
-            }"
+                """
+                {
+                    "k1": true,
+                    "k2": false,
+                    "k3": true
+                }
+                """
             );
 
             Assert.True(j.BoolAt("k1", false));
@@ -932,14 +938,14 @@ namespace PasswordManagerAccess.Test.Common
 
         [Theory]
         [InlineData("null")]
-        [InlineData("'true'")]
+        [InlineData("\"true\"")]
         [InlineData("10")]
         [InlineData("10.0")]
         [InlineData("[]")]
         [InlineData("{}")]
         public void JToken_BoolAt_returns_default_value_on_non_bools(string value)
         {
-            var j = JObject.Parse($"{{'key': {value}}}");
+            var j = JObject.Parse($$"""{"key": {{value}}}""");
 
             Assert.False(j.BoolAt("key", false));
             Assert.True(j.BoolAt("key", true));
@@ -948,7 +954,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_BoolAt_returns_default_value_when_field_does_not_exist()
         {
-            var j = JObject.Parse("{'key': 'value'}");
+            var j = JObject.Parse("""{"key": "value"}""");
 
             Assert.False(j.BoolAt("not-a-key", false));
             Assert.True(j.BoolAt("not-a-key", true));
@@ -968,7 +974,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_ArrayAt_returns_array()
         {
-            var j = JToken.Parse("{'a': [1]}");
+            var j = JToken.Parse("""{"a": [1]}""");
 
             Assert.NotEmpty(j.ArrayAt("a", null));
             Assert.NotEmpty(j.ArrayAtOrEmpty("a"));
@@ -979,11 +985,11 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("true")]
         [InlineData("10")]
         [InlineData("10.0")]
-        [InlineData("'[]'")]
+        [InlineData("\"[]\"")]
         [InlineData("{}")]
         public void JToken_ArrayAt_returns_default_value_on_non_arrays(string value)
         {
-            var j = JObject.Parse($"{{'key': {value}}}");
+            var j = JObject.Parse($$"""{"key": {{value}}}""");
             var a = JArray.Parse("[1, 2, 3]");
 
             Assert.Same(a, j.ArrayAt("key", a));
@@ -994,7 +1000,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_ArrayAt_returns_default_value_when_field_does_not_exist()
         {
-            var j = JObject.Parse("{'key': []}");
+            var j = JObject.Parse("""{"key": []}""");
             var a = JArray.Parse("[1, 2, 3]");
 
             Assert.Same(a, j.ArrayAt("not-a-key", a));
@@ -1019,7 +1025,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_ObjectAt_returns_object()
         {
-            var j = JToken.Parse("{'a': {'b': 1}}");
+            var j = JToken.Parse("""{"a": {"b": 1}}""");
 
             Assert.NotEmpty(j.ObjectAt("a", null));
             Assert.NotEmpty(j.ObjectAtOrEmpty("a"));
@@ -1031,11 +1037,11 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("10")]
         [InlineData("10.0")]
         [InlineData("[]")]
-        [InlineData("'{}'")]
+        [InlineData("\"{}\"")]
         public void JToken_ObjectAt_returns_default_value_on_non_objects(string value)
         {
-            var j = JObject.Parse($"{{'key': {value}}}");
-            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
+            var j = JObject.Parse($$"""{"key": {{value}}}""");
+            var o = JObject.Parse("""{"a": 1, "b": 2, "c": 3}""");
 
             Assert.Same(o, j.ObjectAt("key", o));
             Assert.Null(j.ObjectAt("key", null));
@@ -1045,8 +1051,8 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_ObjectAt_returns_default_value_when_field_does_not_exist()
         {
-            var j = JObject.Parse("{'key': {}}");
-            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
+            var j = JObject.Parse("""{"key": {}}""");
+            var o = JObject.Parse("""{"a": 1, "b": 2, "c": 3}""");
 
             Assert.Same(o, j.ObjectAt("not-a-key", o));
             Assert.Null(j.ObjectAt("not-a-key", null));
@@ -1056,7 +1062,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void JToken_ObjectAt_returns_default_value_when_token_is_null()
         {
-            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
+            var o = JObject.Parse("""{"a": 1, "b": 2, "c": 3}""");
 
             Assert.Same(o, ((JToken)null).ObjectAt("key", o));
             Assert.Null(((JToken)null).ObjectAt("key", null));
@@ -1071,11 +1077,13 @@ namespace PasswordManagerAccess.Test.Common
         public void JToken_At_functions_work_on_nested_objects()
         {
             var j = JObject.Parse(
-                @"{
-                'k1': 'v1',
-                'k2': {'k22': 1337},
-                'k3': {'k33': {'k333': false}},
-            }"
+                """
+                {
+                    "k1": "v1",
+                    "k2": {"k22": 1337},
+                    "k3": {"k33": {"k333": false}}
+                }
+                """
             );
 
             Assert.Equal("yo", j["not-a-key"].StringAt("key", "yo"));
@@ -1087,13 +1095,13 @@ namespace PasswordManagerAccess.Test.Common
         [InlineData("true")]
         [InlineData("10")]
         [InlineData("10.0")]
-        [InlineData("'string'")]
+        [InlineData("\"string\"")]
         [InlineData("[]")]
         public void JToken_At_functions_return_default_value_when_token_is_not_an_object(string json)
         {
             var j = JToken.Parse(json);
             var a = JArray.Parse("[1, 2, 3]");
-            var o = JObject.Parse("{'a': 1, 'b': 2, 'c': 3}");
+            var o = JObject.Parse("""{"a": 1, "b": 2, "c": 3}""");
 
             Assert.Equal("yo", j.StringAt("key", "yo"));
             Assert.Equal(1337, j.IntAt("key", 1337));
