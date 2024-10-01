@@ -1,5 +1,8 @@
 # Changelog
 
+## 19.1.1
+  - ZohoVault: fixed a problem with login that sometimes occured on iOS and Android .NET 8 platforms
+
 ## 19.1.0
   - Bitwarden: added support for custom fields in the vault accounts (see `Account.CustomFields`)
 
