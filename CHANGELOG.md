@@ -1,6 +1,6 @@
 # Changelog
 
-## 19.1.1
+## 19.1.2
   - ZohoVault: fixed a problem with login that sometimes occured on iOS and Android .NET 8 platforms
 
 ## 19.1.0
