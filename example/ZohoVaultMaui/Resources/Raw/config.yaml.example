@@ -1,0 +1,6 @@
+username: someone@gmail.com
+password: passw0rd!
+passphrase: pass-fraze!
+
+# Optional
+google-auth-totp-secret: ALNBLRLVX2FDMPSD

@@ -3,7 +3,7 @@
 /.vscode/
 /example/*/bin/
 /example/*/obj/
-/example/*/config.yaml
+/example/**/config.yaml
 /example/*/storage.yaml
 /scripts/
 /src/bin/
