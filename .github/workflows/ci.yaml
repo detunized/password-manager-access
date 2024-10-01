@@ -31,6 +31,10 @@ jobs:
             ${{ matrix.dotnet }}.x
             8.0.x
 
+      - name: Install MAUI workflow
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: dotnet workload install maui-tizen
+
       - name: .NET info
         run: |
           dotnet --info
