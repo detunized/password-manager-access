@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Numerics;
 using System.Text;
 using Newtonsoft.Json.Linq;
@@ -648,6 +649,20 @@ namespace PasswordManagerAccess.Common
                     return field.ToObject<T>();
 
             return defaultValue;
+        }
+
+        //
+        // CookieContainer
+        //
+
+        public static void Clear(this CookieContainer container)
+        {
+            foreach (var c in container.GetAllCookies().Cast<Cookie>())
+            {
+                // To remove a cookie it needs be re-added. What gives?
+                c.Expired = true;
+                container.Add(c);
+            }
         }
     }
 }

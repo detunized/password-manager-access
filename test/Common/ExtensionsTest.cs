@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Numerics;
 using System.Text;
+using FluentAssertions;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
 using Xunit;
@@ -1113,8 +1115,24 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
-        // Helpers
+        // CookieContainer
         //
+
+        [Fact]
+        public void CookieContainer_Clear_removes_all_cookies()
+        {
+            // Arrange
+            var c = new CookieContainer();
+            c.Add(new Uri("http://example1.com"), new Cookie("key1", "value1"));
+            c.Add(new Uri("http://example1.com"), new Cookie("key2", "value2"));
+            c.Add(new Uri("http://example2.com"), new Cookie("key3", "value3"));
+            c.Add(new Uri("http://example3.com"), new Cookie("key4", "value4"));
+
+            // Act/Assert
+            c.GetAllCookies().Should().HaveCount(4);
+            c.Clear();
+            c.GetAllCookies().Should().BeEmpty();
+        }
 
         private class TrickleStream : Stream
         {
