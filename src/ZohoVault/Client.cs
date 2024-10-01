@@ -520,7 +520,7 @@ namespace PasswordManagerAccess.ZohoVault
             var result = operation.Result;
 
             // This happens when the login cookies have expired.
-            if (result is { Status: "failed", ErrorCode: "INVALID_TICKET" })
+            if (result is { Status: "failed", ErrorCode: "INVALID_TICKET" or "Z223" })
                 return new InvalidTicketException(operation.Name);
 
             return new InternalErrorException(
