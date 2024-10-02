@@ -229,17 +229,19 @@ namespace PasswordManagerAccess.Common
         {
             var handler = new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false };
 
-            // On mobile .NET 8 which is based on Mono the native HTTP handler behaves differently
-            // than on desktop .NET. We need to enable cookies explicitly, otherwise the Set-Cookie
-            // headers are discarded from the response headers.
+            // On iOS .NET 8 which the native HTTP handler behaves differently than on desktop .NET.
+            // We need to enable cookies explicitly, otherwise the Set-Cookie headers are discarded
+            // from the response headers.
             // TODO: This potentially has some negative side effects that we need to investigate!
-            if (OperatingSystem.IsIOS() || OperatingSystem.IsAndroid())
+            if (OperatingSystem.IsIOS())
             {
                 handler.UseCookies = true;
             }
-            else
+            else if (!OperatingSystem.IsAndroid())
             {
                 // Mobile .NET 8 doesn't support proxies yet
+                // To use on the iOS Simulator just use the macOS proxy in Charles
+                // To use on Android add a proxy to the Wi-Fi settings and install the certificate from Charles
 #if MITM_PROXY
                 handler.Proxy = new WebProxy("http://127.0.0.1:8888");
 #endif
