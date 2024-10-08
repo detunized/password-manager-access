@@ -65,7 +65,13 @@ internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
     // ICensoredLogger implementation
     //
 
-    public void AddFilter(string filter) => Filters.Add(filter);
+    public void AddFilter(string filter)
+    {
+        if (filter.Length == 0)
+            return;
+
+        Filters.Add(filter);
+    }
 
     //
     // Internal
@@ -74,7 +80,18 @@ internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
     internal string Censor(string message)
     {
         foreach (var filter in Filters)
-            message = message.Replace(filter, new string('*', filter.Length));
+        {
+            var start = 0;
+            while (true)
+            {
+                var index = message.IndexOf(filter, start, StringComparison.OrdinalIgnoreCase);
+                if (index == -1)
+                    break;
+
+                message = message.Remove(index, filter.Length).Insert(index, new string('*', filter.Length));
+                start = index + filter.Length;
+            }
+        }
 
         return message;
     }

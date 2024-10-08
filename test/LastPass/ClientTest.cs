@@ -259,6 +259,93 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void OpenVault_logs_to_secure_logger()
+        {
+            // Arrange
+            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+            var logger = new FakeSecureLogger();
+
+            // Act
+            var e = Exceptions.AssertThrowsInternalError(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, new ParserOptions { LoggingEnabled = true }, logger),
+                "Blah"
+            );
+
+            // Assert
+            logger.Entries.Should().NotBeEmpty();
+            logger.Entries.Should().ContainSingle(x => x.Message.Contains("POST https://lastpass.com/login.php"));
+        }
+
+        [Fact]
+        public void OpenVault_does_not_log_to_secure_logger_when_logging_is_disabled()
+        {
+            // Arrange
+            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+            var logger = new FakeSecureLogger();
+
+            // Act
+            var e = Exceptions.AssertThrowsInternalError(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, new ParserOptions { LoggingEnabled = false }, logger),
+                "Blah"
+            );
+
+            // Assert
+            logger.Entries.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void OpenVault_attaches_log_to_exception()
+        {
+            // Arrange
+            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+
+            // Act
+            var e = Exceptions.AssertThrowsInternalError(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, new ParserOptions { LoggingEnabled = true }, null),
+                "Blah"
+            );
+
+            // Assert
+            e.Log.Should().NotBeEmpty();
+            e.Log.Should().ContainSingle(x => x.Message.Contains("POST https://lastpass.com/login.php"));
+        }
+
+        [Fact]
+        public void OpenVault_does_not_attach_log_when_logging_is_disabled()
+        {
+            // Arrange
+            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+
+            // Act
+            var e = Exceptions.AssertThrowsInternalError(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, new ParserOptions { LoggingEnabled = false }, null),
+                "Blah"
+            );
+
+            // Assert
+            e.Log.Should().BeEmpty();
+        }
+
+        [Theory]
+        [InlineData("blahblah")]
+        [InlineData("BlahBlah")]
+        [InlineData("BLAHBLAH")]
+        public void OpenVault_censors_username_in_logs(string username)
+        {
+            // Arrange
+            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+
+            // Act
+            var e = Exceptions.AssertThrowsInternalError(
+                () => Client.OpenVault(username, Password, ClientInfo, null, flow, new ParserOptions { LoggingEnabled = true }, null),
+                "Blah"
+            );
+
+            // Assert
+            e.Log.Should().ContainSingle(x => x.Message.Contains("&username=********&"));
+        }
+
+        [Fact]
         public void Login_returns_session_and_rest_client()
         {
             var flow = new RestFlow().Post(OkResponse);
@@ -879,6 +966,13 @@ namespace PasswordManagerAccess.Test.LastPass
         //
         // Helpers
         //
+
+        private class FakeSecureLogger : ISecureLogger
+        {
+            public List<LogEntry> Entries { get; } = [];
+
+            public void Log(LogEntry entry) => Entries.Add(entry);
+        }
 
         private class FakeUi(OtpResult otp, OobResult oob) : IUi
         {
