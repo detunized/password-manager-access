@@ -1,5 +1,9 @@
 # Changelog
 
+## 19.2.0
+  - LastPass: added a logging facility via ISecureLogger interface. In addition to that the log is
+    attached to the exception in case of a failure. Controlled by `ParserOptions.EnabledLogging`.
+
 ## 19.1.5
   - ZohoVault: fixed a different problem with login on Android
 
