@@ -84,6 +84,7 @@ namespace PasswordManagerAccess.Example.LastPass
                     {
                         // Set to true to parse "server" secure notes
                         ParseSecureNotesToAccount = false,
+                        LoggingEnabled = true,
                     }
                 );
 

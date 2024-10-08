@@ -336,13 +336,15 @@ namespace PasswordManagerAccess.Common
         public readonly IRequestSigner Signer;
         public readonly ReadOnlyHttpCookies DefaultHeaders;
         public readonly ReadOnlyHttpCookies DefaultCookies;
+        public readonly ISimpleLogger Logger;
 
         public RestClient(
             IRestTransport transport,
             string baseUrl = "",
             IRequestSigner signer = null,
             ReadOnlyHttpHeaders defaultHeaders = null,
-            ReadOnlyHttpCookies defaultCookies = null
+            ReadOnlyHttpCookies defaultCookies = null,
+            ISimpleLogger logger = null
         )
         {
             Transport = transport;
@@ -350,6 +352,7 @@ namespace PasswordManagerAccess.Common
             Signer = signer ?? new UnitRequestSigner();
             DefaultHeaders = defaultHeaders ?? new ReadOnlyDictionary<string, string>(NoHeaders);
             DefaultCookies = defaultCookies ?? new ReadOnlyDictionary<string, string>(NoCookies);
+            Logger = logger;
         }
 
         //
@@ -590,15 +593,39 @@ namespace PasswordManagerAccess.Common
             where TResponse : RestResponse<TContent>
         {
             var uri = MakeAbsoluteUri(endpoint);
-            Transport.MakeRequest(
-                uri,
-                method,
-                content,
-                Signer.Sign(uri, method, DefaultHeaders.Merge(headers), content),
-                DefaultCookies.Merge(cookies),
-                maxRedirects,
-                allocatedResult
-            );
+            var allHeaders = Signer.Sign(uri, method, DefaultHeaders.Merge(headers), content);
+            var allCookies = DefaultCookies.Merge(cookies);
+
+            StringBuilder logBuilder = null;
+            if (Logger != null)
+            {
+                logBuilder = new StringBuilder();
+                logBuilder.AppendLine($"Request: {method} {uri}");
+                foreach (var (k, v) in allHeaders)
+                    logBuilder.AppendLine($"Header: {k}: {v}");
+                foreach (var (k, v) in allCookies)
+                    logBuilder.AppendLine($"Cookie: {k}: {v}");
+                if (content != null)
+                    logBuilder.AppendLine($"Content: {content.ReadAsStringAsync().GetAwaiter().GetResult()}");
+                logBuilder.AppendLine($"Max redirects: {maxRedirects}");
+                Logger.Log(logBuilder.ToString());
+            }
+
+            Transport.MakeRequest(uri, method, content, allHeaders, allCookies, maxRedirects, allocatedResult);
+
+            if (Logger != null)
+            {
+                logBuilder!.Clear();
+                logBuilder.AppendLine($"Response: {allocatedResult.StatusCode} {allocatedResult.Error?.Message}");
+                if (allocatedResult.Headers != null)
+                    foreach (var (k, v) in allocatedResult.Headers)
+                        logBuilder.AppendLine($"Header: {k}: {v}");
+                if (allocatedResult.Cookies != null)
+                    foreach (var (k, v) in allocatedResult.Cookies)
+                        logBuilder.AppendLine($"Cookie: {k}: {v}");
+                logBuilder.AppendLine($"Content: {allocatedResult.Content}");
+                Logger.Log(logBuilder.ToString());
+            }
 
             return allocatedResult;
         }

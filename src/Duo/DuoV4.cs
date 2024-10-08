@@ -12,9 +12,9 @@ namespace PasswordManagerAccess.Duo
 {
     internal static class DuoV4
     {
-        public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport)
+        public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {
-            var rest = new RestClient(transport);
+            var rest = new RestClient(transport, logger: logger);
 
             // 1. First get the main page
             var (html, url, cookies) = GetMainHtml(authUrl, rest);
@@ -38,7 +38,8 @@ namespace PasswordManagerAccess.Duo
                 transport,
                 $"https://{host}/frame/v4/",
                 defaultHeaders: new Dictionary<string, string> { ["X-Xsrftoken"] = xsrf },
-                defaultCookies: cookies
+                defaultCookies: cookies,
+                logger: logger
             );
 
             // 7. Get available devices and their methods

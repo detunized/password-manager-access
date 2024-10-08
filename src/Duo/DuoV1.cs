@@ -14,9 +14,9 @@ namespace PasswordManagerAccess.Duo
     internal static class DuoV1
     {
         // Returns the second factor token from Duo or null when canceled by the user.
-        public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport)
+        public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {
-            var rest = new RestClient(transport, $"https://{host}");
+            var rest = new RestClient(transport, $"https://{host}", logger: logger);
 
             var (tx, app) = ParseSignature(signature);
             var html = DownloadFrame(tx, rest);

@@ -32,7 +32,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -51,7 +51,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -73,7 +73,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, ParserOptions.Default);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -97,7 +97,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetOtpProvidingWithRememberMeUi(), flow, ParserOptions.Default);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetOtpProvidingWithRememberMeUi(), flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -124,7 +124,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -153,7 +153,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectUrl("/logout.php");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobWithRememberMeUi(), flow, ParserOptions.Default);
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobWithRememberMeUi(), flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -172,7 +172,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("");
 
             // TODO: Decryption fails here because of the incorrect password
-            var accounts = Client.OpenVault(Username.ToUpperInvariant(), Password, ClientInfo, null, flow, ParserOptions.Default);
+            var accounts = Client.OpenVault(Username.ToUpperInvariant(), Password, ClientInfo, null, flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -183,7 +183,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post("<response><error cause='unknownemail' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default),
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null),
                 "Invalid username"
             );
         }
@@ -194,7 +194,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post("<response><error cause='unknownpassword' /></response>");
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default),
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null),
                 "Invalid password"
             );
         }
@@ -205,7 +205,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post(OtpRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, GetCancelingUi(), flow, ParserOptions.Default),
+                () => Client.OpenVault(Username, Password, ClientInfo, GetCancelingUi(), flow, ParserOptions.Default, null),
                 "Second factor step is canceled by the user"
             );
         }
@@ -216,7 +216,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post(OtpRequiredResponse).Post("<response><error cause='googleauthfailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, ParserOptions.Default),
+                () => Client.OpenVault(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, ParserOptions.Default, null),
                 "Second factor code is incorrect"
             );
         }
@@ -227,7 +227,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post(OobRequiredResponse);
 
             Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, GetCancelingUi(), flow, ParserOptions.Default),
+                () => Client.OpenVault(Username, Password, ClientInfo, GetCancelingUi(), flow, ParserOptions.Default, null),
                 "Out of band step is canceled by the user"
             );
         }
@@ -238,7 +238,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Post(OobRequiredResponse).Post("<response><error cause='multifactorresponsefailed' /></response>");
 
             Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default),
+                () => Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, null),
                 "Out of band authentication failed"
             );
         }
@@ -252,7 +252,10 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var flow = new RestFlow().Post(response);
 
-            Exceptions.AssertThrowsInternalError(() => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default), expected);
+            Exceptions.AssertThrowsInternalError(
+                () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null),
+                expected
+            );
         }
 
         [Fact]
@@ -260,7 +263,7 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var flow = new RestFlow().Post(OkResponse);
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow, null);
 
             Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -273,7 +276,7 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var flow = new RestFlow().Post(IterationResponse).Post(OkResponse);
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow, null);
 
             Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -286,7 +289,7 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             var flow = new RestFlow().Post(ServerResponse).ExpectUrl(BaseUrl).Post(OkResponse).ExpectUrl(AlternativeBaseUrl);
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow, null);
 
             Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -305,7 +308,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse)
                 .ExpectUrl(AlternativeBaseUrl);
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, null, flow, null);
 
             Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -321,7 +324,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse) // 2. login with otp
                 .Post(""); // 3. save trusted device
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, null);
 
             Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -338,7 +341,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse) // 3. login with otp
                 .Post(""); // 4. save trusted device
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, null);
 
             Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -354,7 +357,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse) // 2. check oob
                 .Post(""); // 3. save trusted device
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, null);
 
             Assert.Equal(DefaultKeyIterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -371,7 +374,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post(OkResponse) // 3. check oob
                 .Post(""); // 4. save trusted device
 
-            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow);
+            var (session, rest) = Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, null);
 
             Assert.Equal(IterationCount, session.KeyIterationCount);
             AssertSessionWithPrivateKey(session);
@@ -462,7 +465,8 @@ namespace PasswordManagerAccess.Test.LastPass
                 LastPassAuthOobParameters,
                 ClientInfo,
                 GetWaitingForOobUi(),
-                flow
+                flow,
+                null
             );
 
             AssertSessionWithPrivateKey(session);
@@ -484,7 +488,8 @@ namespace PasswordManagerAccess.Test.LastPass
                 LastPassAuthOobParameters,
                 ClientInfo,
                 GetWaitingForOobUi(),
-                flow
+                flow,
+                null
             );
 
             AssertSessionWithPrivateKey(session);
@@ -502,7 +507,8 @@ namespace PasswordManagerAccess.Test.LastPass
                 LastPassAuthOobParameters,
                 ClientInfo,
                 GetPasscodeProvidingOobUi(),
-                flow
+                flow,
+                null
             );
 
             AssertSessionWithPrivateKey(session);
@@ -520,7 +526,8 @@ namespace PasswordManagerAccess.Test.LastPass
                 LastPassAuthOobParameters,
                 ClientInfo,
                 GetWaitingForOobWithRememberMeUi(),
-                flow
+                flow,
+                null
             );
         }
 
@@ -531,7 +538,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var ui = GetCancelingUi();
 
             // Act
-            Client.ApproveOob(Username, LastPassAuthOobParameters, ui, null);
+            Client.ApproveOob(Username, LastPassAuthOobParameters, ui, null, null);
 
             // Assert
             ui.ApproveLastPassAuthCalledTimes.Should().Be(1);
@@ -544,7 +551,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var ui = GetCancelingUi();
 
             // Act
-            Client.ApproveOob(Username, DuoOobParameters, ui, null);
+            Client.ApproveOob(Username, DuoOobParameters, ui, null, null);
 
             // Assert
             ui.ApproveDuoCalledTimes.Should().Be(1);
@@ -557,7 +564,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var ui = GetCancelingUi();
 
             // Act
-            Client.ApproveOob(Username, SalesforceAuthOobParameters, ui, null);
+            Client.ApproveOob(Username, SalesforceAuthOobParameters, ui, null, null);
 
             // Assert
             ui.ApproveSalesforceAuthCalledTimes.Should().Be(1);
@@ -573,7 +580,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ApproveOob_throws_on_missing_method()
         {
             Exceptions.AssertThrowsInternalError(
-                () => Client.ApproveOob(Username, new Dictionary<string, string>(), null, null),
+                () => Client.ApproveOob(Username, new Dictionary<string, string>(), null, null, null),
                 "Out of band method is not specified"
             );
         }
@@ -582,7 +589,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void ApproveOob_throws_on_unknown_method()
         {
             Exceptions.AssertThrowsUnsupportedFeature(
-                () => Client.ApproveOob(Username, new Dictionary<string, string> { ["outofbandtype"] = "blah" }, null, null),
+                () => Client.ApproveOob(Username, new Dictionary<string, string> { ["outofbandtype"] = "blah" }, null, null, null),
                 "Out of band method 'blah' is not supported"
             );
         }
@@ -604,7 +611,7 @@ namespace PasswordManagerAccess.Test.LastPass
             parameters.Remove(name);
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.ApproveOob(Username, parameters, null, null),
+                () => Client.ApproveOob(Username, parameters, null, null, null),
                 $"Invalid response: '{name}' parameter not found"
             );
         }
@@ -625,7 +632,7 @@ namespace PasswordManagerAccess.Test.LastPass
             parameters.Remove(name);
 
             Exceptions.AssertThrowsInternalError(
-                () => Client.ApproveOob(Username, parameters, null, null),
+                () => Client.ApproveOob(Username, parameters, null, null, null),
                 $"Invalid response: '{name}' parameter not found"
             );
         }

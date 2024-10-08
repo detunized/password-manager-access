@@ -22,25 +22,50 @@ namespace PasswordManagerAccess.LastPass
             ClientInfo clientInfo,
             IUi ui,
             IRestTransport transport,
-            ParserOptions options
+            ParserOptions options,
+            ISecureLogger logger // can be null
         )
         {
-            var lowerCaseUsername = username.ToLowerInvariant();
-            var (session, rest) = Login(lowerCaseUsername, password, clientInfo, ui, transport);
+            // We allow the logger to be null for optimization purposes
+            var tagLog = options.LoggingEnabled ? new TaggedLogger("LastPass", logger ?? new NullLogger()) : null;
+
+            if (tagLog != null)
+            {
+                tagLog.AddFilter(username);
+                tagLog.AddFilter(username.EncodeUri());
+                tagLog.AddFilter(username.EncodeUriData());
+                tagLog.AddFilter(password);
+                tagLog.AddFilter(password.EncodeUri());
+                tagLog.AddFilter(password.EncodeUriData());
+                tagLog.AddFilter(clientInfo.Id);
+            }
+
             try
             {
-                var blob = DownloadVault(session, rest);
-                var key = Util.DeriveKey(lowerCaseUsername, password, session.KeyIterationCount);
+                var lowerCaseUsername = username.ToLowerInvariant();
+                var (session, rest) = Login(lowerCaseUsername, password, clientInfo, ui, transport, tagLog);
+                try
+                {
+                    var blob = DownloadVault(session, rest);
+                    var key = Util.DeriveKey(lowerCaseUsername, password, session.KeyIterationCount);
 
-                var privateKey = new RSAParameters();
-                if (!session.EncryptedPrivateKey.IsNullOrEmpty())
-                    privateKey = Parser.ParseEncryptedPrivateKey(session.EncryptedPrivateKey, key);
+                    var privateKey = new RSAParameters();
+                    if (!session.EncryptedPrivateKey.IsNullOrEmpty())
+                        privateKey = Parser.ParseEncryptedPrivateKey(session.EncryptedPrivateKey, key);
 
-                return ParseVault(blob, key, privateKey, options);
+                    return ParseVault(blob, key, privateKey, options);
+                }
+                finally
+                {
+                    Logout(session, rest);
+                }
             }
-            finally
+            catch (BaseException e)
             {
-                Logout(session, rest);
+                if (tagLog != null)
+                    e.Log = tagLog.Entries;
+
+                throw;
             }
         }
 
@@ -48,9 +73,16 @@ namespace PasswordManagerAccess.LastPass
         // Internal
         //
 
-        internal static (Session, RestClient) Login(string username, string password, ClientInfo clientInfo, IUi ui, IRestTransport transport)
+        internal static (Session, RestClient) Login(
+            string username,
+            string password,
+            ClientInfo clientInfo,
+            IUi ui,
+            IRestTransport transport,
+            ISimpleLogger logger
+        )
         {
-            var rest = new RestClient(transport, "https://lastpass.com");
+            var rest = new RestClient(transport, "https://lastpass.com", logger: logger);
 
             // 1. First we need to request PBKDF2 key iteration count.
             //
@@ -109,7 +141,7 @@ namespace PasswordManagerAccess.LastPass
             // 3.2. Some out-of-bound authentication is enabled. This does not require any
             //      additional input from the user.
             else if (cause == "outofbandrequired")
-                session = LoginWithOob(username, password, keyIterationCount, GetAllErrorAttributes(response), clientInfo, ui, rest);
+                session = LoginWithOob(username, password, keyIterationCount, GetAllErrorAttributes(response), clientInfo, ui, rest, logger);
 
             // Nothing worked
             if (session == null)
@@ -207,10 +239,11 @@ namespace PasswordManagerAccess.LastPass
             Dictionary<string, string> parameters,
             ClientInfo clientInfo,
             IUi ui,
-            RestClient rest
+            RestClient rest,
+            ISimpleLogger logger
         )
         {
-            var oob = ApproveOob(username, parameters, ui, rest);
+            var oob = ApproveOob(username, parameters, ui, rest, logger);
 
             var result = oob.Result;
             if (result == OobResult.Cancel)
@@ -248,22 +281,22 @@ namespace PasswordManagerAccess.LastPass
         }
 
         // This is used to pass the extra params along with the OOB result
-        internal struct OobWithExtras
+        internal struct OobWithExtras(OobResult result, Dictionary<string, object> extras = null)
         {
             // This is a special sentinel value to mark the Duo V4 to V1 redirect
             public static readonly OobResult DuoV4ToV1Redirect = OobResult.ContinueWithPasscode("duo-v4-to-v1-redirect", false);
 
-            public readonly OobResult Result;
-            public readonly Dictionary<string, object> Extras;
-
-            public OobWithExtras(OobResult result, Dictionary<string, object> extras = null)
-            {
-                Result = result;
-                Extras = extras ?? new Dictionary<string, object>();
-            }
+            public readonly OobResult Result = result;
+            public readonly Dictionary<string, object> Extras = extras ?? new Dictionary<string, object>();
         }
 
-        internal static OobWithExtras ApproveOob(string username, Dictionary<string, string> parameters, IUi ui, RestClient rest)
+        internal static OobWithExtras ApproveOob(
+            string username,
+            Dictionary<string, string> parameters,
+            IUi ui,
+            RestClient rest,
+            ISimpleLogger logger
+        )
         {
             if (!parameters.TryGetValue("outofbandtype", out var method))
                 throw new InternalErrorException("Out of band method is not specified");
@@ -271,20 +304,32 @@ namespace PasswordManagerAccess.LastPass
             return method switch
             {
                 "lastpassauth" => new OobWithExtras(ui.ApproveLastPassAuth()),
-                "duo" => ApproveDuo(username, parameters, ui, rest),
+                "duo" => ApproveDuo(username, parameters, ui, rest, logger),
                 "salesforcehash" => new OobWithExtras(ui.ApproveSalesforceAuth()),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
             };
         }
 
-        internal static OobWithExtras ApproveDuo(string username, Dictionary<string, string> parameters, IUi ui, RestClient rest)
+        internal static OobWithExtras ApproveDuo(
+            string username,
+            Dictionary<string, string> parameters,
+            IUi ui,
+            RestClient rest,
+            ISimpleLogger logger
+        )
         {
             return parameters.GetOrDefault("preferduowebsdk", "") == "1"
-                ? ApproveDuoWebSdk(username, parameters, ui, rest)
+                ? ApproveDuoWebSdk(username, parameters, ui, rest, logger)
                 : new OobWithExtras(ui.ApproveDuo());
         }
 
-        internal static OobWithExtras ApproveDuoWebSdk(string username, Dictionary<string, string> parameters, IUi ui, RestClient rest)
+        internal static OobWithExtras ApproveDuoWebSdk(
+            string username,
+            Dictionary<string, string> parameters,
+            IUi ui,
+            RestClient rest,
+            ISimpleLogger logger
+        )
         {
             string GetParam(string name)
             {
@@ -303,7 +348,8 @@ namespace PasswordManagerAccess.LastPass
                     sessionToken: GetParam("duo_session_token"),
                     privateToken: GetParam("duo_private_token"),
                     ui: ui,
-                    rest: rest
+                    rest: rest,
+                    logger: logger
                 );
 
                 // If we're not redirected to V1, we're done. Otherwise, fallthrough to V1.
@@ -318,14 +364,23 @@ namespace PasswordManagerAccess.LastPass
                 salt: GetParam("duo_bytes"),
                 signature: GetParam("duo_signature"),
                 ui: ui,
-                rest: rest
+                rest: rest,
+                logger: logger
             );
         }
 
-        private static OobWithExtras ApproveDuoWebSdkV1(string username, string host, string salt, string signature, IUi ui, RestClient rest)
+        private static OobWithExtras ApproveDuoWebSdkV1(
+            string username,
+            string host,
+            string salt,
+            string signature,
+            IUi ui,
+            RestClient rest,
+            ISimpleLogger logger
+        )
         {
             // 1. Do a normal Duo V1 first
-            var result = DuoV1.Authenticate(host, signature, ui, rest.Transport);
+            var result = DuoV1.Authenticate(host, signature, ui, rest.Transport, new TaggedLogger($"LastPass.DuoV1", logger));
             if (result == null)
                 return new OobWithExtras(OobResult.Cancel);
 
@@ -341,11 +396,12 @@ namespace PasswordManagerAccess.LastPass
             string sessionToken,
             string privateToken,
             IUi ui,
-            RestClient rest
+            RestClient rest,
+            ISimpleLogger logger
         )
         {
             // 1. Do a normal Duo V4 first
-            var result = DuoV4.Authenticate(url, ui, rest.Transport);
+            var result = DuoV4.Authenticate(url, ui, rest.Transport, new TaggedLogger($"LastPass.DuoV4", logger));
             if (result == null)
                 return new OobWithExtras(OobResult.Cancel);
 
