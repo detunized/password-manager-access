@@ -1,5 +1,8 @@
 # Changelog
 
+## 19.2.1
+  - LastPass: added more filters to remove sensitive information from the log
+
 ## 19.2.0
   - LastPass: added a logging facility via ISecureLogger interface. In addition to that the log is
     attached to the exception in case of a failure. Controlled by `ParserOptions.EnabledLogging`.
