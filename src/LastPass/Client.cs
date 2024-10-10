@@ -39,6 +39,7 @@ namespace PasswordManagerAccess.LastPass
                 tagLog.AddFilter(password.EncodeUri());
                 tagLog.AddFilter(password.EncodeUriData());
                 tagLog.AddFilter(clientInfo.Id);
+                tagLog.AddRegexFilter(@"(?<=hash=)[a-z0-9]+");
                 tagLog.AddRegexFilter(@"(?<=PHPSESSID=)[a-z0-9]+");
                 tagLog.AddRegexFilter(@"(?<=sessionid=)"".*?""");
 
