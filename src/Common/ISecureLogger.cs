@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace PasswordManagerAccess.Common;
 
@@ -37,10 +38,10 @@ internal class NullLogger : ISecureLogger
 internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
 {
     public string Tag { get; } = tag;
-
-    public List<string> Filters { get; } = [];
-
     public List<LogEntry> Entries { get; } = [];
+
+    private readonly HashSet<string> _textFilters = [];
+    private readonly HashSet<Regex> _regexFilters = [];
 
     public void Clear() => Entries.Clear();
 
@@ -70,8 +71,18 @@ internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
         if (filter.Length == 0)
             return;
 
-        Filters.Add(filter);
+        _textFilters.Add(filter);
     }
+
+    public void AddFilter(Regex filter)
+    {
+        if (filter.IsMatch(""))
+            return;
+
+        _regexFilters.Add(filter);
+    }
+
+    public void AddRegexFilter(string filter) => AddFilter(new Regex(filter, RegexOptions.IgnoreCase));
 
     //
     // Internal
@@ -79,7 +90,7 @@ internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
 
     internal string Censor(string message)
     {
-        foreach (var filter in Filters)
+        foreach (var filter in _textFilters)
         {
             var start = 0;
             while (true)
@@ -92,6 +103,9 @@ internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
                 start = index + filter.Length;
             }
         }
+
+        foreach (var filter in _regexFilters)
+            message = filter.Replace(message, m => new string('*', m.Length));
 
         return message;
     }

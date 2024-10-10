@@ -603,8 +603,10 @@ namespace PasswordManagerAccess.Common
                 logBuilder.AppendLine($"Request: {method} {uri}");
                 foreach (var (k, v) in allHeaders)
                     logBuilder.AppendLine($"Header: {k}: {v}");
-                foreach (var (k, v) in allCookies)
-                    logBuilder.AppendLine($"Cookie: {k}: {v}");
+                // TODO: Enable when needed
+                if (false)
+                    foreach (var (k, v) in allCookies)
+                        logBuilder.AppendLine($"Cookie: {k}: {v}");
                 if (content != null)
                     logBuilder.AppendLine($"Content: {content.ReadAsStringAsync().GetAwaiter().GetResult()}");
                 logBuilder.AppendLine($"Max redirects: {maxRedirects}");
@@ -620,9 +622,11 @@ namespace PasswordManagerAccess.Common
                 if (allocatedResult.Headers != null)
                     foreach (var (k, v) in allocatedResult.Headers)
                         logBuilder.AppendLine($"Header: {k}: {v}");
-                if (allocatedResult.Cookies != null)
-                    foreach (var (k, v) in allocatedResult.Cookies)
-                        logBuilder.AppendLine($"Cookie: {k}: {v}");
+                // TODO: Enable when needed
+                if (false)
+                    if (allocatedResult.Cookies != null)
+                        foreach (var (k, v) in allocatedResult.Cookies)
+                            logBuilder.AppendLine($"Cookie: {k}: {v}");
                 logBuilder.AppendLine($"Content: {allocatedResult.Content}");
                 Logger.Log(logBuilder.ToString());
             }

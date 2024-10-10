@@ -29,6 +29,7 @@ namespace PasswordManagerAccess.LastPass
             // We allow the logger to be null for optimization purposes
             var tagLog = options.LoggingEnabled ? new TaggedLogger("LastPass", logger ?? new NullLogger()) : null;
 
+            // Add filters to the log
             if (tagLog != null)
             {
                 tagLog.AddFilter(username);
@@ -38,6 +39,15 @@ namespace PasswordManagerAccess.LastPass
                 tagLog.AddFilter(password.EncodeUri());
                 tagLog.AddFilter(password.EncodeUriData());
                 tagLog.AddFilter(clientInfo.Id);
+                tagLog.AddRegexFilter(@"(?<=PHPSESSID=)[a-z0-9]+");
+                tagLog.AddRegexFilter(@"(?<=sessionid=)"".*?""");
+
+                // TODO: Move to Duo
+                tagLog.AddRegexFilter(@"(?<=duo_(session|private)_token=)"".*?""");
+                tagLog.AddRegexFilter(@"(?<=Cookie: sid\|)[a-z0-9-]="".*?""");
+                tagLog.AddRegexFilter(@"(?<=\bsid=)[a-z0-9%-]+");
+                tagLog.AddRegexFilter(@"(?<=TX\|)[a-z0-9|:-]+");
+                tagLog.AddRegexFilter(@"(?<=eyJ0eXAiOiJKV1QiL.*?\.)[a-z0-9.%_/+-]+"); // JWT tokens
             }
 
             try
