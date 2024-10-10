@@ -1,5 +1,8 @@
 # Changelog
 
+## 19.2.2
+  - LastPass: added even more filters to remove sensitive information from the log
+
 ## 19.2.1
   - LastPass: added more filters to remove sensitive information from the log
 
