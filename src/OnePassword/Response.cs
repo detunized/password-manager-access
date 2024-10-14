@@ -323,12 +323,13 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     internal class VaultItemOverview
     {
-        [JsonProperty("title", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue("")]
+        [JsonProperty("title")]
         public readonly string Title;
 
-        [JsonProperty("url", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue("")]
+        [JsonProperty("ainfo")]
+        public readonly string AdditionalInfo;
+
+        [JsonProperty("url")]
         public readonly string Url;
 
         [JsonProperty("URLs")]
@@ -402,6 +403,42 @@ namespace PasswordManagerAccess.OnePassword.Response
 
         [JsonProperty("k")]
         public readonly string Kind;
+
+        [JsonProperty("a")]
+        public readonly VaultItemFieldAttributes Attributes;
+    }
+
+    internal class VaultItemFieldAttributes
+    {
+        [JsonProperty("guarded")]
+        public readonly string Guarded;
+
+        [JsonProperty("sshKeyAttributes")]
+        public readonly SshKeyAttributes SshKey;
+    }
+
+    internal class SshKeyAttributes
+    {
+        [JsonProperty("privateKey")]
+        public readonly string PrivateKey;
+
+        [JsonProperty("publicKey")]
+        public readonly string PublicKey;
+
+        [JsonProperty("fingerprint")]
+        public readonly string Fingerprint;
+
+        [JsonProperty("keyType")]
+        public readonly SshKeyType KeyType;
+    }
+
+    internal class SshKeyType
+    {
+        [JsonProperty("t")]
+        public readonly string Type;
+
+        [JsonProperty("c")]
+        public readonly int Bits;
     }
 
     // The "v" value could be practically anything. We are only interested in the string values.

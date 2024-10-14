@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 #nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
+    // TODO: Inherit from VaultItem!
     public class Account
     {
         public string Id => _itemInfo.Id;
@@ -65,8 +67,11 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         //
-        // Non public
+        // Internal
         //
+
+        internal const string LoginTemplateId = "001";
+        internal const string ServerTemplateId = "110";
 
         internal Account(R.VaultItem itemInfo, Keychain keychain)
         {
@@ -163,6 +168,10 @@ namespace PasswordManagerAccess.OnePassword
             _fields = fields.ToArray();
         }
 
+        //
+        // Private
+        //
+
         private readonly R.VaultItem _itemInfo;
         private readonly Keychain _keychain;
 
@@ -177,10 +186,5 @@ namespace PasswordManagerAccess.OnePassword
         private Url[]? _urls;
         private Otp[]? _otps;
         private Field[]? _fields;
-
-        internal const string LoginTemplateId = "001";
-        internal const string ServerTemplateId = "110";
-
-        internal static readonly HashSet<string> SupportedTemplateIds = new HashSet<string> { LoginTemplateId, ServerTemplateId };
     }
 }

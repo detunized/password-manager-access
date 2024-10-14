@@ -72,8 +72,8 @@ namespace PasswordManagerAccess.OnePassword
             // is negligibly quick compared to the account retrieval, so we could do that upfront.
             info.DecryptKeyIntoKeychain();
 
-            var accounts = GetVaultAccounts(info.Id, session.Keychain, session.Key, session.Rest);
-            return new Vault(info, accounts);
+            var (accounts, sshKeys) = GetVaultItems(info.Id, session.Keychain, session.Key, session.Rest);
+            return new Vault(info, accounts, sshKeys);
         }
 
         // Use this function to generate a unique random identifier for each new client.
@@ -663,12 +663,30 @@ namespace PasswordManagerAccess.OnePassword
             return (acl & haveReadAccess) != 0;
         }
 
-        internal static Account[] GetVaultAccounts(string id, Keychain keychain, AesKey sessionKey, RestClient rest)
+        // TODO: Add a test to verify the deleted accounts are ignored
+        internal static (Account[], SshKey[]) GetVaultItems(string id, Keychain keychain, AesKey sessionKey, RestClient rest)
         {
-            return EnumerateAccountsItemsInVault(id, sessionKey, rest)
-                .Where(ShouldKeepAccount)
-                .Select(itemInfo => new Account(itemInfo, keychain))
-                .ToArray();
+            var accounts = new List<Account>();
+            var sshKeys = new List<SshKey>();
+
+            foreach (var item in EnumerateAccountsItemsInVault(id, sessionKey, rest))
+            {
+                if (item.Deleted == "Y")
+                    continue;
+
+                switch (item.TemplateId)
+                {
+                    case Account.LoginTemplateId:
+                    case Account.ServerTemplateId:
+                        accounts.Add(new Account(item, keychain));
+                        break;
+                    case SshKey.SshKeyTemplateId:
+                        sshKeys.Add(new SshKey(item, keychain));
+                        break;
+                }
+            }
+
+            return (accounts.ToArray(), sshKeys.ToArray());
         }
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
@@ -689,20 +707,6 @@ namespace PasswordManagerAccess.OnePassword
 
                 batchId = batch.Version;
             }
-        }
-
-        // TODO: Add a test to verify the deleted accounts are ignored
-        internal static bool ShouldKeepAccount(R.VaultItem account)
-        {
-            // Reject everything but accounts/logins
-            if (!Account.SupportedTemplateIds.Contains(account.TemplateId))
-                return false;
-
-            // Reject deleted accounts (be conservative, throw only explicitly marked as "Y")
-            if (account.Deleted == "Y")
-                return false;
-
-            return true;
         }
 
         internal static void LogOut(RestClient rest)

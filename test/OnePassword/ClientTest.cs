@@ -357,7 +357,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            var accounts = Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
             Assert.NotEmpty(accounts);
         }
@@ -369,7 +369,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            var accounts = Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
             Assert.Empty(accounts);
         }
@@ -381,7 +381,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain();
             keychain.Add(new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e", "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex()));
 
-            var accounts = Client.GetVaultAccounts("6xkojw55yh4uo4vtdewghr5boi", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = Client.GetVaultItems("6xkojw55yh4uo4vtdewghr5boi", keychain, TestData.SessionKey, flow);
 
             Assert.Contains(accounts, x => x.Name == "server-test");
         }
@@ -396,7 +396,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
         }
 
         [Fact]
@@ -409,7 +409,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain();
             keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
 
-            var accounts = Client.GetVaultAccounts("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
             Assert.Equal(3, accounts.Length);
         }

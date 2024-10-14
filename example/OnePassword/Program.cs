@@ -96,6 +96,8 @@ namespace Example
             Console.WriteLine("{0}: '{1}', '{2}':", index + 1, vaultInfo.Id, vaultInfo.Name);
 
             var vault = Client.OpenVault(vaultInfo, session);
+
+            // Dump accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
             {
                 var account = vault.Accounts[i];
@@ -120,6 +122,25 @@ namespace Example
                     Console.WriteLine("         otp: {0}: {1} (section: {2})", otp.Name, otp.Secret, otp.Section);
                 foreach (var field in account.Fields)
                     Console.WriteLine("       field: {0}: {1} (section: {2})", field.Name, field.Value, field.Section);
+            }
+
+            // Dump SSH keys
+            for (var i = 0; i < vault.SshKeys.Length; ++i)
+            {
+                var sshKey = vault.SshKeys[i];
+                Console.WriteLine(
+                    $"""
+                    {i + 1}:
+                                 name: {sshKey.Name}
+                          description: {sshKey.Description}
+                                  key: {sshKey.Key}
+                          private key: {sshKey.PrivateKey}
+                           public key: {sshKey.PublicKey}
+                          fingerprint: {sshKey.Fingerprint}
+                             key type: {sshKey.KeyType}
+                                 note: {sshKey.Note}
+                    """
+                );
             }
         }
     }
