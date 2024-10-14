@@ -1,5 +1,8 @@
 # Changelog
 
+## 19.3.0
+  - 1Password: added support for SSH keys stored in the vault (see `Vault.SshKeys`)
+
 ## 19.2.2
   - LastPass: added even more filters to remove sensitive information from the log
 
