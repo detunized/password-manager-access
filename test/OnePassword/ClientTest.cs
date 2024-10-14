@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using FluentAssertions;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
@@ -351,7 +352,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_work()
+        public void GetVaultAccounts_returns_accounts()
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
             var keychain = new Keychain();
@@ -360,6 +361,31 @@ namespace PasswordManagerAccess.Test.OnePassword
             var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
             Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void GetVaultAccounts_returns_ssh_keys()
+        {
+            // Arrange
+            var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ixsi-response"));
+            var keychain = new Keychain();
+            keychain.Add(new AesKey("i32wahdpkpvhog37mtsnqzy4bm", "91bbd5df47ba0de2437a8ed1fbb9064cc9d3ad78ea472516fb5192263ec46e7d".DecodeHex()));
+
+            // Act
+            var (_, sshKeys) = Client.GetVaultItems("ixsi7ub55tanrwgvbyvn7cjpha", keychain, TestData.SessionKey, flow);
+
+            // Assert
+            sshKeys.Should().HaveCount(4);
+            sshKeys.Should().ContainSingle(x => x.Name == "ssh-key-1");
+
+            var key = sshKeys.First(x => x.Name == "ssh-key-1");
+            key.Description.Should().Be("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");
+            key.Note.Should().Be("blah-blah notes");
+            key.Key.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAACFwAAAAdzc2gtcn");
+            key.PrivateKey.Should().StartWith("-----BEGIN PRIVATE KEY-----\nMIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQDaUFtI3U5Zq4gQ");
+            key.PublicKey.Should().StartWith("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDaUFtI3");
+            key.Fingerprint.Should().Be("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");
+            key.KeyType.Should().Be("rsa-4096");
         }
 
         [Fact]
