@@ -604,7 +604,7 @@ namespace PasswordManagerAccess.Common
                 foreach (var (k, v) in allHeaders)
                     logBuilder.AppendLine($"Header: {k}: {v}");
                 // TODO: Enable when needed
-                if (false)
+                if (WarningFree.AlwaysFalse)
                     foreach (var (k, v) in allCookies)
                         logBuilder.AppendLine($"Cookie: {k}: {v}");
                 if (content != null)
@@ -623,7 +623,7 @@ namespace PasswordManagerAccess.Common
                     foreach (var (k, v) in allocatedResult.Headers)
                         logBuilder.AppendLine($"Header: {k}: {v}");
                 // TODO: Enable when needed
-                if (false)
+                if (WarningFree.AlwaysFalse)
                     if (allocatedResult.Cookies != null)
                         foreach (var (k, v) in allocatedResult.Cookies)
                             logBuilder.AppendLine($"Cookie: {k}: {v}");
