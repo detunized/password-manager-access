@@ -118,10 +118,14 @@ namespace Example
                     account.Note
                 );
 
+                foreach (var url in account.Urls)
+                    Console.WriteLine($"         url: {url.Name}: {url.Value}");
+
                 foreach (var otp in account.Otps)
-                    Console.WriteLine("         otp: {0}: {1} (section: {2})", otp.Name, otp.Secret, otp.Section);
+                    Console.WriteLine($"         otp: {otp.Name}: {otp.Secret} (section: {otp.Section})");
+
                 foreach (var field in account.Fields)
-                    Console.WriteLine("       field: {0}: {1} (section: {2})", field.Name, field.Value, field.Section);
+                    Console.WriteLine($"       field: {field.Name}: {field.Value} (section: {field.Section})");
             }
 
             // Dump SSH keys
@@ -141,6 +145,9 @@ namespace Example
                                  note: {sshKey.Note}
                     """
                 );
+
+                foreach (var field in sshKey.Fields)
+                    Console.WriteLine($"       field: {field.Name}: {field.Value} (section: {field.Section})");
             }
         }
     }
