@@ -384,7 +384,10 @@ internal partial class RestClient
                 foreach (var (k, v) in allCookies)
                     logBuilder.AppendLine($"Cookie: {k}: {v}");
             if (content != null)
-                logBuilder.AppendLine($"Content: {content.ReadAsStringAsync().GetAwaiter().GetResult()}");
+            {
+                var contentStr = await content.ReadAsStringAsync(cancellationToken);
+                logBuilder.AppendLine($"Content: {contentStr}");
+            }
             logBuilder.AppendLine($"Max redirects: {maxRedirects}");
             Logger.Log(logBuilder.ToString());
         }
