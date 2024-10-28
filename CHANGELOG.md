@@ -1,5 +1,10 @@
 # Changelog
 
+## 20.0.0
+  - 1Password: added GetPrivateKey method to convert between different formats of private keys
+    (OpenSSH, PKCS#8, PKCS#1 are supported)
+  - 1Password: SshKey.Key removed as it was confusing
+
 ## 19.3.0
   - 1Password: added support for SSH keys stored in the vault (see `Vault.SshKeys`)
 
