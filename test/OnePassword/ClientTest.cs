@@ -381,7 +381,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             var key = sshKeys.First(x => x.Name == "ssh-key-1");
             key.Description.Should().Be("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");
             key.Note.Should().Be("blah-blah notes");
-            key.Key.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAACFwAAAAdzc2gtcn");
             key.PrivateKey.Should().StartWith("-----BEGIN PRIVATE KEY-----\nMIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQDaUFtI3U5Zq4gQ");
             key.PublicKey.Should().StartWith("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDaUFtI3");
             key.Fingerprint.Should().Be("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");

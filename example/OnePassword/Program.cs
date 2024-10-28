@@ -137,17 +137,29 @@ namespace Example
                     {i + 1}:
                                  name: {sshKey.Name}
                           description: {sshKey.Description}
-                                  key: {sshKey.Key}
-                          private key: {sshKey.PrivateKey}
-                           public key: {sshKey.PublicKey}
+                          private key: {Shorten(sshKey.PrivateKey)}
+                           public key: {Shorten(sshKey.PublicKey)}
                           fingerprint: {sshKey.Fingerprint}
                              key type: {sshKey.KeyType}
                                  note: {sshKey.Note}
+                             original: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Original))}
+                              OpenSSH: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.OpenSsh))}
+                               PKCS#8: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Pkcs8))}
+                               PKCS#1: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Pkcs1))}
                     """
                 );
 
                 foreach (var field in sshKey.Fields)
-                    Console.WriteLine($"       field: {field.Name}: {field.Value} (section: {field.Section})");
+                    Console.WriteLine($"       field: '{field.Name}' = '{Shorten(field.Value)}' (section: '{field.Section}')");
+            }
+
+            static string Shorten(string s, int length = 80)
+            {
+                s = s.Replace("\n", "").Replace("\r", "");
+                if (s.Length < length)
+                    return s;
+
+                return s.Substring(0, length - 3) + "...";
             }
         }
     }
