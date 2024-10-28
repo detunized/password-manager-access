@@ -16,7 +16,10 @@ public class SshKeyTest
     [InlineData(Ed25519Pkcs8)]
     public void ConvertToOpenSsh_returns_openssh_key(string pkcs8Key)
     {
+        // Arrange/Act
         var key = SshKey.ConvertToOpenSsh(pkcs8Key);
+
+        // Assert
         key.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
     }
 
@@ -26,7 +29,10 @@ public class SshKeyTest
     [InlineData(Rsa4096Pkcs8)]
     public void ConvertToPkcs1_returns_pkcs1_key(string pkcs8Key)
     {
+        // Arrange/Act
         var key = SshKey.ConvertToPkcs1(pkcs8Key);
+
+        // Assert
         key.Should().StartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
     }
 

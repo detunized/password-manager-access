@@ -3,11 +3,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using FluentAssertions;
+using FluentAssertions.Execution;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Crypto.Utilities;
+using Org.BouncyCastle.OpenSsl;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
@@ -388,6 +394,118 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
+        public void GetVaultAccounts_returns_converts_ssh_keys()
+        {
+            // Arrange
+            var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-saiw-response"));
+            var keychain = new Keychain();
+            keychain.Add(new AesKey("3hhlvfccmm4253ou43jfrgty3m", "b357079312198b155764b4e6aa7709df357cf3779973d7451abda5f15d90379c".DecodeHex()));
+
+            // Act
+            var (_, sshKeys) = Client.GetVaultItems("3hhlvfccmm4253ou43jfrgty3m", keychain, TestData.SessionKey, flow);
+
+            // Assert
+            foreach (var sshKey in sshKeys)
+            {
+                // Use BouncyCastle to parse and compare the key parameters
+                switch (sshKey.KeyType)
+                {
+                    case "rsa-2048":
+                    case "rsa-3072":
+                    case "rsa-4096":
+                    {
+                        var openSshKey = sshKey.GetPrivateKey(SshKeyFormat.OpenSsh);
+                        openSshKey.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
+
+                        var pkcs8Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs8);
+                        pkcs8Key.Should().StartWith("-----BEGIN PRIVATE KEY-----\nMII");
+
+                        var pkcs1Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs1);
+                        pkcs1Key.Should().StartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
+
+                        var openSsh = ParseOpenSshPrivateKey(openSshKey);
+
+                        var pkcs8 = ParsePkcs8PrivateKey(pkcs8Key);
+                        pkcs8.Should().BeOfType<RsaPrivateCrtKeyParameters>();
+
+                        var pkcs1 = ParsePkcs1PrivateKey(pkcs1Key);
+                        pkcs1.Should().BeOfType<RsaPrivateCrtKeyParameters>();
+
+                        var rsaSsh = (RsaPrivateCrtKeyParameters)openSsh;
+                        var rsa8 = (RsaPrivateCrtKeyParameters)pkcs8;
+                        var rsa1 = (RsaPrivateCrtKeyParameters)pkcs1;
+
+                        rsaSsh.Modulus.Should().Be(rsa8.Modulus);
+                        rsaSsh.Modulus.Should().Be(rsa1.Modulus);
+
+                        rsaSsh.PublicExponent.Should().Be(rsa8.PublicExponent);
+                        rsaSsh.PublicExponent.Should().Be(rsa1.PublicExponent);
+
+                        rsaSsh.Exponent.Should().Be(rsa8.Exponent);
+                        rsaSsh.Exponent.Should().Be(rsa1.Exponent);
+
+                        rsaSsh.P.Should().Be(rsa8.P);
+                        rsaSsh.P.Should().Be(rsa1.P);
+
+                        rsaSsh.Q.Should().Be(rsa8.Q);
+                        rsaSsh.Q.Should().Be(rsa1.Q);
+
+                        rsaSsh.DP.Should().Be(rsa8.DP);
+                        rsaSsh.DP.Should().Be(rsa1.DP);
+
+                        rsaSsh.DQ.Should().Be(rsa8.DQ);
+                        rsaSsh.DQ.Should().Be(rsa1.DQ);
+
+                        rsaSsh.QInv.Should().Be(rsa8.QInv);
+                        rsaSsh.QInv.Should().Be(rsa1.QInv);
+
+                        break;
+                    }
+
+                    case "ed25519":
+                    {
+                        var openSshKey = sshKey.GetPrivateKey(SshKeyFormat.OpenSsh);
+                        openSshKey.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
+
+                        var pkcs8Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs8);
+                        pkcs8Key.Should().StartWith("-----BEGIN PRIVATE KEY-----\nM");
+
+                        var pkcs1Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs1);
+                        pkcs1Key.Should().Be("");
+
+                        var openSsh = ParseOpenSshPrivateKey(openSshKey);
+                        openSsh.Should().BeOfType<Ed25519PrivateKeyParameters>();
+
+                        var pkcs8 = ParsePkcs8PrivateKey(pkcs8Key);
+                        pkcs8.Should().BeOfType<Ed25519PrivateKeyParameters>();
+
+                        var edSsh = (Ed25519PrivateKeyParameters)openSsh;
+                        var ed8 = (Ed25519PrivateKeyParameters)pkcs8;
+
+                        edSsh.GetEncoded().Should().BeEquivalentTo(ed8.GetEncoded());
+                        edSsh.GetEncoded().Should().HaveCount(32);
+
+                        break;
+                    }
+
+                    default:
+                    {
+                        Execute.Assertion.FailWith($"Unknown SSH key type: {sshKey.KeyType}");
+                        break;
+                    }
+                }
+
+                // Verify the original keys are in the right format
+                if (sshKey.Name.Contains("openssh imported"))
+                    sshKey.GetPrivateKey(SshKeyFormat.Original).Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl");
+                else if (sshKey.Name.Contains("pkcs8 imported"))
+                    sshKey.GetPrivateKey(SshKeyFormat.Original).Should().StartWith("-----BEGIN PRIVATE KEY-----\nM");
+                else if (sshKey.Name.Contains("pkcs1 imported"))
+                    sshKey.GetPrivateKey(SshKeyFormat.Original).Should().StartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
+            }
+        }
+
+        [Fact]
         public void GetVaultAccounts_with_no_items_work()
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
@@ -552,6 +670,24 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var encrypted = TestData.SessionKey.Encrypt(bytes);
             return JsonConvert.SerializeObject(encrypted.ToDictionary());
+        }
+
+        private static AsymmetricKeyParameter ParseOpenSshPrivateKey(string privateKey)
+        {
+            using var pemReader = new PemReader(new StringReader(privateKey));
+            return OpenSshPrivateKeyUtilities.ParsePrivateKeyBlob(pemReader.ReadPemObject().Content);
+        }
+
+        private static AsymmetricKeyParameter ParsePkcs8PrivateKey(string privateKey)
+        {
+            using var pemReader = new PemReader(new StringReader(privateKey));
+            return (AsymmetricKeyParameter)pemReader.ReadObject();
+        }
+
+        private static AsymmetricKeyParameter ParsePkcs1PrivateKey(string privateKey)
+        {
+            using var pemReader = new PemReader(new StringReader(privateKey));
+            return ((AsymmetricCipherKeyPair)pemReader.ReadObject()).Private;
         }
 
         //
