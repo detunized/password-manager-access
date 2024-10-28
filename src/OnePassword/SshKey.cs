@@ -140,7 +140,10 @@ public class SshKey : VaultItem
         using var textWriter = new StringWriter();
         using var pemWriter = new PemWriter(textWriter);
         pemWriter.WriteObject(pemObject);
-        return textWriter.ToString();
+
+        // It seems BC returns \r\n on Windows. We don't want this at this point.
+        // If the user needs \r\n, they will be added when saved to a file.
+        return textWriter.ToString().ReplaceLineEndings("\n");
     }
 
     internal static byte[] EncodeRsaToOpenSsh(RsaPrivateCrtKeyParameters rsa)
