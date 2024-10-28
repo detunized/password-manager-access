@@ -68,6 +68,32 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(0xDE, s.Span[pad + 3]);
         }
 
+        [Fact]
+        public void WriteUInt32_writes_uint()
+        {
+            var s = Stream(4);
+            s.WriteUInt32(0xDEADBEEF);
+
+            Assert.True(s.IsEof);
+            Assert.Equal(0xEF, s.Span[0]);
+            Assert.Equal(0xBE, s.Span[1]);
+            Assert.Equal(0xAD, s.Span[2]);
+            Assert.Equal(0xDE, s.Span[3]);
+        }
+
+        [Fact]
+        public void WriteUInt32BigEndian_writes_uint_big_endian()
+        {
+            var s = Stream(4);
+            s.WriteUInt32BigEndian(0xDEADBEEF);
+
+            Assert.True(s.IsEof);
+            Assert.Equal(0xDE, s.Span[0]);
+            Assert.Equal(0xAD, s.Span[1]);
+            Assert.Equal(0xBE, s.Span[2]);
+            Assert.Equal(0xEF, s.Span[3]);
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(13)]
