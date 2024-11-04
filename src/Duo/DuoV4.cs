@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,6 +13,11 @@ namespace PasswordManagerAccess.Duo
 {
     internal static class DuoV4
     {
+        public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
+        {
+            return AuthenticateAsync(authUrl, ui, transport, logger, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
         public static async Task<Result> AuthenticateAsync(
             string authUrl,
             IDuoUi ui,
@@ -22,16 +26,10 @@ namespace PasswordManagerAccess.Duo
             CancellationToken cancellationToken
         )
         {
-            // TODO: Implement this properly
-            return Authenticate(authUrl, ui, transport);
-        }
-
-        public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
-        {
             var rest = new RestClient(transport, logger: logger);
 
             // 1. First get the main page
-            var (html, url, cookies) = GetMainHtml(authUrl, rest);
+            var (html, url, cookies) = await GetMainHtml(authUrl, rest, cancellationToken);
 
             // 2. Detect a redirect to V1
             if (url.Contains("/frame/frameless/v3/auth"))
@@ -39,7 +37,7 @@ namespace PasswordManagerAccess.Duo
 
             // 3. The main page contains the form that we need to POST to
             string host;
-            (host, cookies) = SubmitSystemProperties(html, url, cookies, rest);
+            (host, cookies) = await SubmitSystemProperties(html, url, cookies, rest, cancellationToken);
 
             // 4. Get `sid`
             var sessionId = ExtractSessionId(url);
@@ -57,7 +55,7 @@ namespace PasswordManagerAccess.Duo
             );
 
             // 7. Get available devices and their methods
-            var devices = GetDevices(sessionId, apiRest);
+            var devices = await GetDevices(sessionId, apiRest, cancellationToken);
 
             // There should be at least one device to continue
             if (devices.Length == 0)
@@ -74,7 +72,7 @@ namespace PasswordManagerAccess.Duo
                 // to the phone via SMS.
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
-                    _ = SubmitFactor(sessionId, choice, "", apiRest);
+                    _ = await SubmitFactor(sessionId, choice, "", apiRest, cancellationToken);
                     choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -87,13 +85,14 @@ namespace PasswordManagerAccess.Duo
                         return null; // Canceled by user
                 }
 
-                var result = SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest);
+                var maybeResult = await SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest, cancellationToken);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
-                if (result == null)
+                if (maybeResult == null)
                     continue;
 
                 // All good
+                var result = maybeResult.Value;
                 return new Result(result.Code, result.State, choice.RememberMe);
             }
         }
@@ -102,20 +101,25 @@ namespace PasswordManagerAccess.Duo
         // Internal
         //
 
-        internal static (HtmlDocument Html, string RedirectUrl, Dictionary<string, string> Cookies) GetMainHtml(string authUrl, RestClient rest)
+        internal record struct MainHtml(HtmlDocument Html, string RedirectUrl, Dictionary<string, string> Cookies);
+
+        internal static async Task<MainHtml> GetMainHtml(string authUrl, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = rest.Get(authUrl);
+            var response = await rest.GetAsync(authUrl, cancellationToken);
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
-            return (Util.Parse(response.Content), response.RequestUri.AbsoluteUri, response.Cookies);
+            return new MainHtml(Util.Parse(response.Content), response.RequestUri.AbsoluteUri, response.Cookies);
         }
 
-        internal static (string Host, Dictionary<string, string> Cookies) SubmitSystemProperties(
+        internal record struct HostCookies(string Host, Dictionary<string, string> Cookies);
+
+        internal static async Task<HostCookies> SubmitSystemProperties(
             HtmlDocument html,
             string url,
             Dictionary<string, string> cookies,
-            RestClient rest
+            RestClient rest,
+            CancellationToken cancellationToken
         )
         {
             // Find the main form
@@ -139,11 +143,11 @@ namespace PasswordManagerAccess.Duo
                 properties[name] = value;
             }
 
-            var response = rest.PostForm(url, properties, cookies: cookies);
+            var response = await rest.PostFormAsync(url, properties, [], cookies, cancellationToken);
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
-            return (response.RequestUri.Host, response.Cookies);
+            return new HostCookies(response.RequestUri.Host, response.Cookies);
         }
 
         internal static string ExtractSessionId(string url)
@@ -161,9 +165,12 @@ namespace PasswordManagerAccess.Duo
             return xsrf;
         }
 
-        internal static DuoDevice[] GetDevices(string sessionId, RestClient rest)
+        internal static async Task<DuoDevice[]> GetDevices(string sessionId, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = rest.Get<Response.Envelope<R.Data>>($"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}");
+            var response = await rest.GetAsync<Response.Envelope<R.Data>>(
+                $"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}",
+                cancellationToken
+            );
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
@@ -173,7 +180,7 @@ namespace PasswordManagerAccess.Duo
         internal static DuoDevice[] ParseDeviceData(R.Data data)
         {
             if (data.Phones == null)
-                return Array.Empty<DuoDevice>();
+                return [];
 
             return data.Phones.Select(x => new DuoDevice(id: x.Id, name: x.Name, GetDeviceFactors(x.Key, data.Methods))).ToArray();
         }
@@ -187,7 +194,13 @@ namespace PasswordManagerAccess.Duo
                 .ToArray();
         }
 
-        internal static string SubmitFactor(string sid, DuoChoice choice, string passcode, RestClient rest)
+        internal static async Task<string> SubmitFactor(
+            string sid,
+            DuoChoice choice,
+            string passcode,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             var parameters = new Dictionary<string, object>
             {
@@ -200,37 +213,35 @@ namespace PasswordManagerAccess.Duo
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = Util.PostForm<Response.SubmitFactor>("prompt", parameters, rest);
+            var response = await Util.PostForm<Response.SubmitFactor>("prompt", parameters, rest, cancellationToken);
             return response.TransactionId ?? "";
         }
 
-        internal class CodeState
-        {
-            public string Code { get; }
-            public string State { get; }
-
-            public CodeState(string code, string state)
-            {
-                Code = code;
-                State = state;
-            }
-        }
+        internal record struct CodeState(string Code, string State);
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static CodeState SubmitFactorAndWaitForResult(string sid, string xsrf, DuoChoice choice, string passcode, IDuoUi ui, RestClient rest)
+        internal static async Task<CodeState?> SubmitFactorAndWaitForResult(
+            string sid,
+            string xsrf,
+            DuoChoice choice,
+            string passcode,
+            IDuoUi ui,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            var txid = SubmitFactor(sid, choice, passcode, rest);
+            var txid = await SubmitFactor(sid, choice, passcode, rest, cancellationToken);
             if (txid.IsNullOrEmpty())
                 throw Util.MakeInvalidResponseError("transaction ID (txid) is expected but wasn't found");
 
-            if (!PollForResultUrl(sid, txid, ui, rest))
+            if (!await PollForResultUrl(sid, txid, ui, rest, cancellationToken))
                 return null;
 
             return FetchResult(sid, txid, xsrf, choice, rest);
         }
 
-        internal static bool PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest)
+        internal static async Task<bool> PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest, CancellationToken cancellationToken)
         {
             const int maxPollAttempts = 100;
 
@@ -238,10 +249,9 @@ namespace PasswordManagerAccess.Duo
             // returns the result. This number here just to prevent an infinite loop, which is never a good idea.
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
-                var response = Util.PostForm<R.Status>(
+                var response = await Util.PostForm<R.Status>(
                     "status",
                     new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
-                    rest,
                     new Dictionary<string, string>
                     {
                         ["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0",
@@ -253,7 +263,9 @@ namespace PasswordManagerAccess.Duo
                         ["Sec-Fetch-Dest"] = "empty",
                         ["Sec-Fetch-Mode"] = "cors",
                         ["Sec-Fetch-Site"] = "same-origin",
-                    }
+                    },
+                    rest,
+                    cancellationToken
                 );
 
                 var (status, text) = GetResponseStatus(response);
@@ -322,23 +334,25 @@ namespace PasswordManagerAccess.Duo
         // Data
         //
 
-        private static readonly Dictionary<string, string> KnownSystemProperties = new Dictionary<string, string>
-        {
-            ["screen_resolution_width"] = "2560",
-            ["screen_resolution_height"] = "1440",
-            ["color_depth"] = "30",
-            ["is_cef_browser"] = "false",
-            ["is_ipad_os"] = "false",
-            ["is_user_verifying_platform_authenticator_available"] = "false",
-            ["react_support"] = "true",
-        };
+        private static readonly Dictionary<string, string> KnownSystemProperties =
+            new()
+            {
+                ["screen_resolution_width"] = "2560",
+                ["screen_resolution_height"] = "1440",
+                ["color_depth"] = "30",
+                ["is_cef_browser"] = "false",
+                ["is_ipad_os"] = "false",
+                ["is_user_verifying_platform_authenticator_available"] = "false",
+                ["react_support"] = "true",
+            };
 
-        private static readonly Dictionary<string, DuoFactor> StringToFactor = new Dictionary<string, DuoFactor>
-        {
-            ["Duo Push"] = DuoFactor.Push,
-            ["Duo Mobile Passcode"] = DuoFactor.Passcode,
-            ["SMS Passcode"] = DuoFactor.SendPasscodesBySms,
-            ["Phone Call"] = DuoFactor.Call,
-        };
+        private static readonly Dictionary<string, DuoFactor> StringToFactor =
+            new()
+            {
+                ["Duo Push"] = DuoFactor.Push,
+                ["Duo Mobile Passcode"] = DuoFactor.Passcode,
+                ["SMS Passcode"] = DuoFactor.SendPasscodesBySms,
+                ["Phone Call"] = DuoFactor.Call,
+            };
     }
 }

@@ -2,6 +2,10 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using Xunit;
 
@@ -12,10 +16,12 @@ namespace PasswordManagerAccess.Test.Duo
         [Fact]
         public void ParseSignature_returns_parts()
         {
+            // Arrange/Act
             var (tx, app) = DuoV1.ParseSignature("tx:app");
 
-            Assert.Equal("tx", tx);
-            Assert.Equal("app", app);
+            // Assert
+            tx.Should().Be("tx");
+            app.Should().Be("app");
         }
 
         [Theory]
@@ -24,24 +30,37 @@ namespace PasswordManagerAccess.Test.Duo
         [InlineData("tx:app:other")]
         public void ParseSignature_throws_on_invalid_signature(string invalid)
         {
-            Exceptions.AssertThrowsInternalError(() => DuoV1.ParseSignature(invalid), "signature is invalid");
+            // Arrange/Act
+            var act = () => DuoV1.ParseSignature(invalid);
+
+            // Assert
+            act.Should().Throw<InternalErrorException>().WithMessage("*signature is invalid*");
         }
 
         [Fact]
-        public void DownloadFrame_returns_html_document()
+        public async Task DownloadFrame_returns_html_document()
         {
+            // Arrange
             var flow = new RestFlow().Post("<html></html>");
-            var html = DuoV1.DownloadFrame("tx", flow);
 
-            Assert.Equal("<html></html>", html.DocumentNode.InnerHtml);
+            // Act
+            var html = await DuoV1.DownloadFrame("tx", flow, CancellationToken.None);
+
+            // Assert
+            html.DocumentNode.InnerHtml.Should().Be("<html></html>");
         }
 
         [Fact]
-        public void DownloadFrame_throws_on_network_error()
+        public async Task DownloadFrame_throws_on_network_error()
         {
+            // Arrange
             var flow = new RestFlow().Post("", HttpStatusCode.BadRequest);
 
-            Exceptions.AssertThrowsInternalError(() => DuoV1.DownloadFrame("tx", flow));
+            // Act
+            var act = () => DuoV1.DownloadFrame("tx", flow, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<InternalErrorException>();
         }
 
         //

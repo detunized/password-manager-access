@@ -211,27 +211,42 @@ internal partial class RestClient
     // POST form with deserialization
     //
 
-    public async Task<RestResponse<string, T>> PostFormAsync<T>(
+    public Task<RestResponse<string, T>> PostFormAsync<T>(string endpoint, PostParameters parameters, CancellationToken cancellationToken) =>
+        PostFormAsync<T>(endpoint, parameters, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PostFormAsync<T>(
         string endpoint,
         PostParameters parameters,
-        HttpHeaders headers = null,
-        HttpCookies cookies = null,
-        int maxRedirects = MaxRedirects,
-        CancellationToken cancellationToken = default
-    )
-    {
-        return await MakeRequestAsync<string, T>(
-                endpoint,
-                HttpMethod.Post,
-                ToFormContent(parameters),
-                headers ?? NoHeaders,
-                cookies ?? NoCookies,
-                MaxRedirects,
-                JsonConvert.DeserializeObject<T>,
-                cancellationToken
-            )
-            .ConfigureAwait(false);
-    }
+        HttpHeaders headers,
+        CancellationToken cancellationToken
+    ) => PostFormAsync<T>(endpoint, parameters, headers, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PostFormAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => PostFormAsync<T>(endpoint, parameters, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PostFormAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
+    ) =>
+        MakeRequestAsync<string, T>(
+            endpoint,
+            HttpMethod.Post,
+            ToFormContent(parameters),
+            headers ?? NoHeaders,
+            cookies ?? NoCookies,
+            maxRedirects,
+            JsonConvert.DeserializeObject<T>,
+            cancellationToken
+        );
 
     //
     // POST raw
