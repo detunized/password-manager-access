@@ -252,77 +252,59 @@ internal partial class RestClient
     // POST raw
     //
 
-    public async Task<RestResponse<string>> PostRawAsync(
+    public Task<RestResponse<string>> PostRawAsync(
         string endpoint,
         string content,
         HttpHeaders headers = null,
         HttpCookies cookies = null,
         int maxRedirects = MaxRedirects,
         CancellationToken cancellationToken = default
-    )
-    {
-        return await MakeRequestAsync<string>(
-                endpoint,
-                HttpMethod.Post,
-                new StringContent(content),
-                headers ?? NoHeaders,
-                cookies ?? NoCookies,
-                MaxRedirects,
-                cancellationToken
-            )
-            .ConfigureAwait(false);
-    }
+    ) =>
+        MakeRequestAsync<string>(
+            endpoint,
+            HttpMethod.Post,
+            new StringContent(content),
+            headers ?? NoHeaders,
+            cookies ?? NoCookies,
+            maxRedirects,
+            cancellationToken
+        );
 
     //
     // PUT
     //
 
-    public async Task<RestResponse<string>> PutAsync(
+    public Task<RestResponse<string>> PutAsync(
         string endpoint,
         HttpHeaders headers = null,
         HttpCookies cookies = null,
         int maxRedirects = MaxRedirects,
         CancellationToken cancellationToken = default
-    )
-    {
-        return await MakeRequestAsync<string>(
-                endpoint,
-                HttpMethod.Put,
-                null,
-                headers ?? NoHeaders,
-                cookies ?? NoCookies,
-                MaxRedirects,
-                cancellationToken
-            )
-            .ConfigureAwait(false);
-    }
+    ) => MakeRequestAsync<string>(endpoint, HttpMethod.Put, null, headers ?? NoHeaders, cookies ?? NoCookies, maxRedirects, cancellationToken);
 
-    public async Task<RestResponse<string, T>> PutAsync<T>(
+    public Task<RestResponse<string, T>> PutAsync<T>(
         string endpoint,
         HttpHeaders headers = null,
         HttpCookies cookies = null,
         int maxRedirects = MaxRedirects,
         CancellationToken cancellationToken = default
-    )
-    {
-        return await MakeRequestAsync<string, T>(
-                endpoint,
-                HttpMethod.Put,
-                null,
-                headers ?? NoHeaders,
-                cookies ?? NoCookies,
-                MaxRedirects,
-                JsonConvert.DeserializeObject<T>,
-                cancellationToken
-            )
-            .ConfigureAwait(false);
-    }
+    ) =>
+        MakeRequestAsync<string, T>(
+            endpoint,
+            HttpMethod.Put,
+            null,
+            headers ?? NoHeaders,
+            cookies ?? NoCookies,
+            maxRedirects,
+            JsonConvert.DeserializeObject<T>,
+            cancellationToken
+        );
 
     //
     // Private
     //
 
-    private async Task<RestResponse<TContent>> MakeRequestAsync<TContent>(
+    private Task<RestResponse<TContent>> MakeRequestAsync<TContent>(
         string endpoint,
         HttpMethod method,
         HttpContent content,
@@ -330,20 +312,17 @@ internal partial class RestClient
         HttpCookies cookies,
         int maxRedirects,
         CancellationToken cancellationToken
-    )
-    {
-        return await MakeRequestAsync<RestResponse<TContent>, TContent>(
-                endpoint,
-                method,
-                content,
-                headers,
-                cookies,
-                maxRedirects,
-                new RestResponse<TContent>(),
-                cancellationToken
-            )
-            .ConfigureAwait(false);
-    }
+    ) =>
+        MakeRequestAsync<RestResponse<TContent>, TContent>(
+            endpoint,
+            method,
+            content,
+            headers,
+            cookies,
+            maxRedirects,
+            new RestResponse<TContent>(),
+            cancellationToken
+        );
 
     private async Task<RestResponse<TContent, TData>> MakeRequestAsync<TContent, TData>(
         string endpoint,
@@ -413,7 +392,7 @@ internal partial class RestClient
                     logBuilder.AppendLine($"Cookie: {k}: {v}");
             if (content != null)
             {
-                var contentStr = await content.ReadAsStringAsync(cancellationToken);
+                var contentStr = await content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 logBuilder.AppendLine($"Content: {contentStr}");
             }
             logBuilder.AppendLine($"Max redirects: {maxRedirects}");
