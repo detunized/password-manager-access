@@ -35,7 +35,7 @@ namespace PasswordManagerAccess.Duo
             CancellationToken cancellationToken
         )
         {
-            var response = await rest.PostFormAsync<Envelope<T>>(endpoint, parameters, headers, cancellationToken);
+            var response = await rest.PostFormAsync<Envelope<T>>(endpoint, parameters, headers, cancellationToken).ConfigureAwait(false);
 
             // All good
             if (response.IsSuccessful && response.Data.Status == "OK" && response.Data.Payload != null)
