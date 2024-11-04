@@ -1,8 +1,9 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using HtmlAgilityPack;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo.Response;
@@ -19,14 +20,22 @@ namespace PasswordManagerAccess.Duo
             return doc;
         }
 
-        internal static T PostForm<T>(
+        internal static Task<T> PostForm<T>(
             string endpoint,
             Dictionary<string, object> parameters,
             RestClient rest,
-            Dictionary<string, string> extraHeaders = null
+            CancellationToken cancellationToken
+        ) => PostForm<T>(endpoint, parameters, [], rest, cancellationToken);
+
+        internal static async Task<T> PostForm<T>(
+            string endpoint,
+            Dictionary<string, object> parameters,
+            Dictionary<string, string> headers,
+            RestClient rest,
+            CancellationToken cancellationToken
         )
         {
-            var response = rest.PostForm<Envelope<T>>(endpoint, parameters, headers: extraHeaders);
+            var response = await rest.PostFormAsync<Envelope<T>>(endpoint, parameters, headers, cancellationToken);
 
             // All good
             if (response.IsSuccessful && response.Data.Status == "OK" && response.Data.Payload != null)

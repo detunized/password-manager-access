@@ -121,15 +121,7 @@ namespace PasswordManagerAccess.LastPass
             {
                 // 2. Knowing the iterations count we can hash the password and log in.
                 //    On the first attempt simply with the username and password.
-                response = await PerformSingleLoginRequest(
-                        username,
-                        password,
-                        keyIterationCount,
-                        new Dictionary<string, object>(),
-                        clientInfo,
-                        rest,
-                        cancellationToken
-                    )
+                response = await PerformSingleLoginRequest(username, password, keyIterationCount, [], clientInfo, rest, cancellationToken)
                     .ConfigureAwait(false);
 
                 session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
