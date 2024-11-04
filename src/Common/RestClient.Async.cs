@@ -67,12 +67,25 @@ internal partial class RestClient
     // GET string with deserialization
     //
 
+    public Task<RestResponse<string, T>> GetAsync<T>(string endpoint, CancellationToken cancellationToken) =>
+        GetAsync<T>(endpoint, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> GetAsync<T>(string endpoint, HttpHeaders headers, CancellationToken cancellationToken) =>
+        GetAsync<T>(endpoint, headers, NoCookies, MaxRedirects, cancellationToken);
+
     public Task<RestResponse<string, T>> GetAsync<T>(
         string endpoint,
-        HttpHeaders headers = null,
-        HttpCookies cookies = null,
-        int maxRedirects = MaxRedirects,
-        CancellationToken cancellationToken = default
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => GetAsync<T>(endpoint, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> GetAsync<T>(
+        string endpoint,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
     ) =>
         MakeRequestAsync<string, T>(
             endpoint,
