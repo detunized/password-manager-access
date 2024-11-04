@@ -29,7 +29,7 @@ namespace PasswordManagerAccess.Duo
             var rest = new RestClient(transport, logger: logger);
 
             // 1. First get the main page
-            var (html, url, cookies) = await GetMainHtml(authUrl, rest, cancellationToken);
+            var (html, url, cookies) = await GetMainHtml(authUrl, rest, cancellationToken).ConfigureAwait(false);
 
             // 2. Detect a redirect to V1
             if (url.Contains("/frame/frameless/v3/auth"))
@@ -37,7 +37,7 @@ namespace PasswordManagerAccess.Duo
 
             // 3. The main page contains the form that we need to POST to
             string host;
-            (host, cookies) = await SubmitSystemProperties(html, url, cookies, rest, cancellationToken);
+            (host, cookies) = await SubmitSystemProperties(html, url, cookies, rest, cancellationToken).ConfigureAwait(false);
 
             // 4. Get `sid`
             var sessionId = ExtractSessionId(url);
@@ -55,7 +55,7 @@ namespace PasswordManagerAccess.Duo
             );
 
             // 7. Get available devices and their methods
-            var devices = await GetDevices(sessionId, apiRest, cancellationToken);
+            var devices = await GetDevices(sessionId, apiRest, cancellationToken).ConfigureAwait(false);
 
             // There should be at least one device to continue
             if (devices.Length == 0)
@@ -72,7 +72,7 @@ namespace PasswordManagerAccess.Duo
                 // to the phone via SMS.
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
-                    _ = await SubmitFactor(sessionId, choice, "", apiRest, cancellationToken);
+                    _ = await SubmitFactor(sessionId, choice, "", apiRest, cancellationToken).ConfigureAwait(false);
                     choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -85,7 +85,8 @@ namespace PasswordManagerAccess.Duo
                         return null; // Canceled by user
                 }
 
-                var maybeResult = await SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest, cancellationToken);
+                var maybeResult = await SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest, cancellationToken)
+                    .ConfigureAwait(false);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (maybeResult == null)
@@ -105,7 +106,7 @@ namespace PasswordManagerAccess.Duo
 
         internal static async Task<MainHtml> GetMainHtml(string authUrl, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.GetAsync(authUrl, cancellationToken);
+            var response = await rest.GetAsync(authUrl, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
@@ -143,7 +144,7 @@ namespace PasswordManagerAccess.Duo
                 properties[name] = value;
             }
 
-            var response = await rest.PostFormAsync(url, properties, [], cookies, cancellationToken);
+            var response = await rest.PostFormAsync(url, properties, [], cookies, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
@@ -168,9 +169,11 @@ namespace PasswordManagerAccess.Duo
         internal static async Task<DuoDevice[]> GetDevices(string sessionId, RestClient rest, CancellationToken cancellationToken)
         {
             var response = await rest.GetAsync<Response.Envelope<R.Data>>(
-                $"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}",
-                cancellationToken
-            );
+                    $"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}",
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+
             if (!response.IsSuccessful)
                 throw Util.MakeSpecializedError(response);
 
@@ -213,7 +216,7 @@ namespace PasswordManagerAccess.Duo
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = await Util.PostForm<Response.SubmitFactor>("prompt", parameters, rest, cancellationToken);
+            var response = await Util.PostForm<Response.SubmitFactor>("prompt", parameters, rest, cancellationToken).ConfigureAwait(false);
             return response.TransactionId ?? "";
         }
 
@@ -231,11 +234,11 @@ namespace PasswordManagerAccess.Duo
             CancellationToken cancellationToken
         )
         {
-            var txid = await SubmitFactor(sid, choice, passcode, rest, cancellationToken);
+            var txid = await SubmitFactor(sid, choice, passcode, rest, cancellationToken).ConfigureAwait(false);
             if (txid.IsNullOrEmpty())
                 throw Util.MakeInvalidResponseError("transaction ID (txid) is expected but wasn't found");
 
-            if (!await PollForResultUrl(sid, txid, ui, rest, cancellationToken))
+            if (!await PollForResultUrl(sid, txid, ui, rest, cancellationToken).ConfigureAwait(false))
                 return null;
 
             return FetchResult(sid, txid, xsrf, choice, rest);
@@ -250,23 +253,24 @@ namespace PasswordManagerAccess.Duo
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
                 var response = await Util.PostForm<R.Status>(
-                    "status",
-                    new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
-                    new Dictionary<string, string>
-                    {
-                        ["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0",
-                        ["Accept"] = "*/*",
-                        ["Accept-Language"] = "en-US,en;q=0.5",
-                        ["Accept-Encoding"] = "gzip, deflate, br",
-                        // TODO: Fix host
-                        ["Referer"] = $"https://api-005dde75.duosecurity.com/frame/v4/auth/prompt?sid={sid}",
-                        ["Sec-Fetch-Dest"] = "empty",
-                        ["Sec-Fetch-Mode"] = "cors",
-                        ["Sec-Fetch-Site"] = "same-origin",
-                    },
-                    rest,
-                    cancellationToken
-                );
+                        "status",
+                        new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
+                        new Dictionary<string, string>
+                        {
+                            ["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0",
+                            ["Accept"] = "*/*",
+                            ["Accept-Language"] = "en-US,en;q=0.5",
+                            ["Accept-Encoding"] = "gzip, deflate, br",
+                            // TODO: Fix host
+                            ["Referer"] = $"https://api-005dde75.duosecurity.com/frame/v4/auth/prompt?sid={sid}",
+                            ["Sec-Fetch-Dest"] = "empty",
+                            ["Sec-Fetch-Mode"] = "cors",
+                            ["Sec-Fetch-Site"] = "same-origin",
+                        },
+                        rest,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
 
                 var (status, text) = GetResponseStatus(response);
                 Util.UpdateUi(status, text, ui);

@@ -33,7 +33,7 @@ namespace PasswordManagerAccess.Duo
             var rest = new RestClient(transport, $"https://{host}", logger: logger);
 
             var (tx, app) = ParseSignature(signature);
-            var html = await DownloadFrame(tx, rest, cancellationToken);
+            var html = await DownloadFrame(tx, rest, cancellationToken).ConfigureAwait(false);
             var (sid, devices) = ParseFrame(html);
 
             while (true)
@@ -47,7 +47,7 @@ namespace PasswordManagerAccess.Duo
                 // a new batch of passcodes to the phone via SMS.
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
-                    await SubmitFactor(sid, choice, "", rest, cancellationToken);
+                    await SubmitFactor(sid, choice, "", rest, cancellationToken).ConfigureAwait(false);
                     choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
                 }
 
@@ -60,7 +60,7 @@ namespace PasswordManagerAccess.Duo
                         return null; // Canceled by user
                 }
 
-                var token = await SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest, cancellationToken);
+                var token = await SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest, cancellationToken).ConfigureAwait(false);
 
                 // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
                 if (token.IsNullOrEmpty())
@@ -90,12 +90,13 @@ namespace PasswordManagerAccess.Duo
             const string parent = "https%3A%2F%2Fvault.bitwarden.com%2F%23%2F2fa";
             const string version = "2.6";
 
-            return Util.Parse(await Post($"frame/web/v1/auth?tx={tx}&parent={parent}&v={version}", rest, cancellationToken));
+            string html = await Post($"frame/web/v1/auth?tx={tx}&parent={parent}&v={version}", rest, cancellationToken).ConfigureAwait(false);
+            return Util.Parse(html);
         }
 
         internal static async Task<string> Post(string url, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.PostFormAsync(url, [], cancellationToken);
+            var response = await rest.PostFormAsync(url, [], cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessful)
                 return response.Content;
 
@@ -144,7 +145,7 @@ namespace PasswordManagerAccess.Duo
             if (!passcode.IsNullOrEmpty())
                 parameters["passcode"] = passcode;
 
-            var response = await Util.PostForm<SubmitFactor>("frame/prompt", parameters, rest, cancellationToken);
+            var response = await Util.PostForm<SubmitFactor>("frame/prompt", parameters, rest, cancellationToken).ConfigureAwait(false);
             return response.TransactionId ?? "";
         }
 
@@ -159,15 +160,15 @@ namespace PasswordManagerAccess.Duo
             CancellationToken cancellationToken
         )
         {
-            var txid = await SubmitFactor(sid, choice, passcode, rest, cancellationToken);
+            var txid = await SubmitFactor(sid, choice, passcode, rest, cancellationToken).ConfigureAwait(false);
             if (txid.IsNullOrEmpty())
                 throw Util.MakeInvalidResponseError("transaction ID (txid) is expected but wasn't found");
 
-            var url = await PollForResultUrl(sid, txid, ui, rest, cancellationToken);
+            var url = await PollForResultUrl(sid, txid, ui, rest, cancellationToken).ConfigureAwait(false);
             if (url.IsNullOrEmpty())
                 return null;
 
-            return await FetchToken(sid, url, ui, rest, cancellationToken);
+            return await FetchToken(sid, url, ui, rest, cancellationToken).ConfigureAwait(false);
         }
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
@@ -181,11 +182,12 @@ namespace PasswordManagerAccess.Duo
             for (var i = 0; i < maxPollAttempts; i += 1)
             {
                 var response = await Util.PostForm<R.Poll>(
-                    "frame/status",
-                    new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
-                    rest,
-                    cancellationToken
-                );
+                        "frame/status",
+                        new Dictionary<string, object> { ["sid"] = sid, ["txid"] = txid },
+                        rest,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
 
                 var (status, text) = GetResponseStatus(response);
                 Util.UpdateUi(status, text, ui);
@@ -209,7 +211,8 @@ namespace PasswordManagerAccess.Duo
 
         internal static async Task<string> FetchToken(string sid, string url, IDuoUi ui, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await Util.PostForm<R.FetchToken>(url, new Dictionary<string, object> { ["sid"] = sid }, rest, cancellationToken);
+            var response = await Util.PostForm<R.FetchToken>(url, new Dictionary<string, object> { ["sid"] = sid }, rest, cancellationToken)
+                .ConfigureAwait(false);
 
             UpdateUi(response, ui);
 
