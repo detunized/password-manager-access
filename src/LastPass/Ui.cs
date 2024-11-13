@@ -1,10 +1,23 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.LastPass.Ui
 {
+    public interface IAsyncUi
+    {
+        Task<OtpResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken);
+        Task<OtpResult> ProvideMicrosoftAuthPasscode(CancellationToken cancellationToken);
+        Task<OtpResult> ProvideYubikeyPasscode(CancellationToken cancellationToken);
+
+        Task<OobResult> ApproveLastPassAuth(CancellationToken cancellationToken);
+        Task<OobResult> ApproveDuo(CancellationToken cancellationToken);
+        Task<OobResult> ApproveSalesforceAuth(CancellationToken cancellationToken);
+    }
+
     public interface IUi : IDuoUi
     {
         // To cancel return OtpResult.Cancel, otherwise only valid data is expected.

@@ -1,9 +1,24 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace PasswordManagerAccess.Duo
 {
     // Adds Duo functionality to the module-specific Ui class.
+    public interface IDuoAsyncUi
+    {
+        // To cancel return null
+        Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices, CancellationToken cancellationToken);
+
+        // To cancel return null or blank
+        Task<string> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken);
+
+        // This updates the UI with the messages from the server.
+        Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken);
+    }
+
     public interface IDuoUi
     {
         // To cancel return null

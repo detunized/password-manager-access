@@ -18,7 +18,7 @@ namespace PasswordManagerAccess.LastPass
             string username,
             string password,
             ClientInfo clientInfo,
-            IUi ui,
+            IAsyncUi ui,
             ParserOptions options,
             ISecureLogger? logger,
             CancellationToken cancellationToken

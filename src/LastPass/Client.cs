@@ -22,7 +22,7 @@ namespace PasswordManagerAccess.LastPass
             string username,
             string password,
             ClientInfo clientInfo,
-            IUi ui,
+            IAsyncUi ui,
             IRestTransport transport,
             ParserOptions options,
             ISecureLogger logger, // can be null
@@ -92,7 +92,7 @@ namespace PasswordManagerAccess.LastPass
             string username,
             string password,
             ClientInfo clientInfo,
-            IUi ui,
+            IAsyncUi ui,
             IRestTransport transport,
             ISimpleLogger logger,
             CancellationToken cancellationToken
@@ -227,16 +227,16 @@ namespace PasswordManagerAccess.LastPass
             int keyIterationCount,
             OtpMethod method,
             ClientInfo clientInfo,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
         {
             var passcode = method switch
             {
-                OtpMethod.GoogleAuth => ui.ProvideGoogleAuthPasscode(),
-                OtpMethod.MicrosoftAuth => ui.ProvideMicrosoftAuthPasscode(),
-                OtpMethod.Yubikey => ui.ProvideYubikeyPasscode(),
+                OtpMethod.GoogleAuth => await ui.ProvideGoogleAuthPasscode(cancellationToken).ConfigureAwait(false),
+                OtpMethod.MicrosoftAuth => await ui.ProvideMicrosoftAuthPasscode(cancellationToken).ConfigureAwait(false),
+                OtpMethod.Yubikey => await ui.ProvideYubikeyPasscode(cancellationToken).ConfigureAwait(false),
                 _ => throw new InternalErrorException("Invalid OTP method"),
             };
 
@@ -271,7 +271,7 @@ namespace PasswordManagerAccess.LastPass
             int keyIterationCount,
             Dictionary<string, string> parameters,
             ClientInfo clientInfo,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
             CancellationToken cancellationToken
@@ -336,22 +336,25 @@ namespace PasswordManagerAccess.LastPass
         internal static async Task<OobWithExtras> ApproveOob(
             string username,
             Dictionary<string, string> parameters,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
             CancellationToken cancellationToken
         )
         {
-            if (!parameters.TryGetValue("outofbandtype", out var method))
-                throw new InternalErrorException("Out of band method is not specified");
+            await Task.CompletedTask;
+            throw new NotImplementedException("OOB is not supported yet");
 
-            return method switch
-            {
-                "lastpassauth" => new OobWithExtras(ui.ApproveLastPassAuth()),
-                "duo" => await ApproveDuo(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false),
-                "salesforcehash" => new OobWithExtras(ui.ApproveSalesforceAuth()),
-                _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
-            };
+            // if (!parameters.TryGetValue("outofbandtype", out var method))
+            //     throw new InternalErrorException("Out of band method is not specified");
+
+            // return method switch
+            // {
+            //     "lastpassauth" => new OobWithExtras(ui.ApproveLastPassAuth()),
+            //     "duo" => await ApproveDuo(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false),
+            //     "salesforcehash" => new OobWithExtras(ui.ApproveSalesforceAuth()),
+            //     _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
+            // };
         }
 
         internal static async Task<OobWithExtras> ApproveDuo(

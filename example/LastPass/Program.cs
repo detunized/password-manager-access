@@ -15,36 +15,36 @@ namespace PasswordManagerAccess.Example.LastPass
     {
         // Very simple text based user interface that demonstrates how to respond to
         // to Vault UI requests.
-        private class TextUi : DuoUi, IUi
+        private class TextUi : DuoUi, IAsyncUi
         {
-            public OtpResult ProvideGoogleAuthPasscode()
+            public Task<OtpResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
             {
-                return ProvideOtpPasscode("Google Authenticator");
+                return Task.FromResult(ProvideOtpPasscode("Google Authenticator"));
             }
 
-            public OtpResult ProvideMicrosoftAuthPasscode()
+            public Task<OtpResult> ProvideMicrosoftAuthPasscode(CancellationToken cancellationToken)
             {
-                return ProvideOtpPasscode("Microsoft Authenticator");
+                return Task.FromResult(ProvideOtpPasscode("Microsoft Authenticator"));
             }
 
-            public OtpResult ProvideYubikeyPasscode()
+            public Task<OtpResult> ProvideYubikeyPasscode(CancellationToken cancellationToken)
             {
-                return ProvideOtpPasscode("Yubikey");
+                return Task.FromResult(ProvideOtpPasscode("Yubikey"));
             }
 
-            public OobResult ApproveLastPassAuth()
+            public Task<OobResult> ApproveLastPassAuth(CancellationToken cancellationToken)
             {
-                return ApproveOutOfBand("LastPass Authenticator");
+                return Task.FromResult(ApproveOutOfBand("LastPass Authenticator"));
             }
 
-            public OobResult ApproveDuo()
+            public Task<OobResult> ApproveDuo(CancellationToken cancellationToken)
             {
-                return ApproveOutOfBand("Duo Security");
+                return Task.FromResult(ApproveOutOfBand("Duo Security"));
             }
 
-            public OobResult ApproveSalesforceAuth()
+            public Task<OobResult> ApproveSalesforceAuth(CancellationToken cancellationToken)
             {
-                return ApproveOutOfBand("Salesforce Authenticator");
+                return Task.FromResult(ApproveOutOfBand("Salesforce Authenticator"));
             }
 
             //

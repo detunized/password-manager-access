@@ -1326,7 +1326,7 @@ namespace PasswordManagerAccess.Test.LastPass
             public void Log(LogEntry entry) => Entries.Add(entry);
         }
 
-        private class FakeUi(OtpResult otp, OobResult oob) : IUi
+        private class FakeUi(OtpResult otp, OobResult oob) : IAsyncUi
         {
             public int ProvideGoogleAuthPasscodeCalledTimes { get; private set; }
             public int ProvideMicrosoftAuthPasscodeCalledTimes { get; private set; }
@@ -1338,40 +1338,40 @@ namespace PasswordManagerAccess.Test.LastPass
             public int ProvideDuoPasscodeCalledTimes { get; set; }
             public int UpdateDuoStatusCalledTimes { get; set; }
 
-            public OtpResult ProvideGoogleAuthPasscode()
+            public Task<OtpResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
             {
                 ProvideGoogleAuthPasscodeCalledTimes++;
-                return otp;
+                return Task.FromResult(otp);
             }
 
-            public OtpResult ProvideMicrosoftAuthPasscode()
+            public Task<OtpResult> ProvideMicrosoftAuthPasscode(CancellationToken cancellationToken)
             {
                 ProvideMicrosoftAuthPasscodeCalledTimes++;
-                return otp;
+                return Task.FromResult(otp);
             }
 
-            public OtpResult ProvideYubikeyPasscode()
+            public Task<OtpResult> ProvideYubikeyPasscode(CancellationToken cancellationToken)
             {
                 ProvideYubikeyPasscodeCalledTimes++;
-                return otp;
+                return Task.FromResult(otp);
             }
 
-            public OobResult ApproveLastPassAuth()
+            public Task<OobResult> ApproveLastPassAuth(CancellationToken cancellationToken)
             {
                 ApproveLastPassAuthCalledTimes++;
-                return oob;
+                return Task.FromResult(oob);
             }
 
-            public OobResult ApproveDuo()
+            public Task<OobResult> ApproveDuo(CancellationToken cancellationToken)
             {
                 ApproveDuoCalledTimes++;
-                return oob;
+                return Task.FromResult(oob);
             }
 
-            public OobResult ApproveSalesforceAuth()
+            public Task<OobResult> ApproveSalesforceAuth(CancellationToken cancellationToken)
             {
                 ApproveSalesforceAuthCalledTimes++;
-                return oob;
+                return Task.FromResult(oob);
             }
 
             public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
