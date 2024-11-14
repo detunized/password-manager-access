@@ -1,5 +1,8 @@
 # Changelog
 
+## 20.0.1
+  - LastPass: fixed a problem with the new logging feature that was causing a crash in some situations
+
 ## 20.0.0
   - 1Password: added GetPrivateKey method to convert between different formats of private keys
     (OpenSSH, PKCS#8, PKCS#1 are supported)
