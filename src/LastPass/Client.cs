@@ -391,7 +391,10 @@ namespace PasswordManagerAccess.LastPass
         )
         {
             // 1. Do a normal Duo V1 first
-            var result = DuoV1.Authenticate(host, signature, ui, rest.Transport, new TaggedLogger($"LastPass.DuoV1", logger));
+            // Allow the logger to be null for optimization purposes (saved a bunch of work in the RestClient code)
+            // Allow the logger to be null for optimization purposes (saved a bunch of work in the RestClient code)
+            var duoLogger = logger == null ? null : new TaggedLogger("LastPass.DuoV1", logger);
+            var result = DuoV1.Authenticate(host, signature, ui, rest.Transport, duoLogger);
             if (result == null)
                 return new OobWithExtras(OobResult.Cancel);
 
@@ -412,7 +415,9 @@ namespace PasswordManagerAccess.LastPass
         )
         {
             // 1. Do a normal Duo V4 first
-            var result = DuoV4.Authenticate(url, ui, rest.Transport, new TaggedLogger($"LastPass.DuoV4", logger));
+            // Allow the logger to be null for optimization purposes (saved a bunch of work in the RestClient code)
+            var duoLogger = logger == null ? null : new TaggedLogger("LastPass.DuoV4", logger);
+            var result = DuoV4.Authenticate(url, ui, rest.Transport, duoLogger);
             if (result == null)
                 return new OobWithExtras(OobResult.Cancel);
 

@@ -79,7 +79,7 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void OpenVault_returns_accounts_with_otp_and_rememeber_me()
+        public void OpenVault_returns_accounts_with_otp_and_remember_me()
         {
             var flow = new RestFlow()
                 .Post(IterationResponse)
@@ -130,7 +130,7 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void OpenVault_returns_accounts_with_oob_and_rememeber_me()
+        public void OpenVault_returns_accounts_with_oob_and_remember_me()
         {
             var flow = new RestFlow()
                 .Post(IterationResponse)
@@ -154,6 +154,26 @@ namespace PasswordManagerAccess.Test.LastPass
 
             // TODO: Decryption fails here because of the incorrect password
             var accounts = Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobWithRememberMeUi(), flow, ParserOptions.Default, null);
+
+            Assert.NotEmpty(accounts);
+        }
+
+        [Fact]
+        public void OpenVault_returns_accounts_with_duo_v4()
+        {
+            var flow = new RestFlow()
+                .Post(IterationResponse)
+                .ExpectUrl("/login.php")
+                .Post(DuoV4RequiredResponse)
+                .ExpectUrl("/login.php")
+                .LastPassDuo()
+                .Post(OkResponseValidPrivateKey)
+                .Get(BlobBase64)
+                .ExpectUrl("/getaccts.php?")
+                .Post("")
+                .ExpectUrl("/logout.php");
+
+            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, null);
 
             Assert.NotEmpty(accounts);
         }
@@ -291,6 +311,52 @@ namespace PasswordManagerAccess.Test.LastPass
 
             // Assert
             logger.Entries.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void OpenVault_with_duo_v4_does_not_log_to_secure_logger_when_logging_is_disabled()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Post(IterationResponse)
+                .ExpectUrl("/login.php")
+                .Post(DuoV4RequiredResponse)
+                .ExpectUrl("/login.php")
+                .LastPassDuo()
+                .Post(OkResponseValidPrivateKey)
+                .Get(BlobBase64)
+                .ExpectUrl("/getaccts.php?")
+                .Post("")
+                .ExpectUrl("/logout.php");
+            var logger = new FakeSecureLogger();
+
+            // Act
+            Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, logger);
+
+            // Assert
+            logger.Entries.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void OpenVault_with_duo_v4_does_not_log_to_secure_logger_when_logger_is_null()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Post(IterationResponse)
+                .ExpectUrl("/login.php")
+                .Post(DuoV4RequiredResponse)
+                .ExpectUrl("/login.php")
+                .LastPassDuo()
+                .Post(OkResponseValidPrivateKey)
+                .Get(BlobBase64)
+                .ExpectUrl("/getaccts.php?")
+                .Post("")
+                .ExpectUrl("/logout.php");
+
+            // Act
+            Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, null);
+
+            // Nothing to assert. We expect no exceptions.
         }
 
         [Fact]
@@ -1114,11 +1180,119 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private const string OobRequiredResponse = "<response>" + "<error cause='outofbandrequired' outofbandtype='lastpassauth' />" + "</response>";
 
+        private const string DuoV4RequiredResponse = """
+            <response>
+                <error cause="outofbandrequired"
+                       outofbandtype="duo"
+                       preferduowebsdk="1"
+                       duo_authentication_url="https://duo.url?sid=duo_sid"
+                       duo_session_token="session_token"
+                       duo_private_token="private_token"
+                />
+            </response>
+            """;
+
         private const string OobRetryResponse = "<response>" + "<error cause='outofbandrequired' retryid='retry-id' />" + "</response>";
 
         private static readonly string IterationResponse = "<response>" + $"<error iterations='{IterationCount}' />" + "</response>";
 
         private const string ServerResponse =
             "<response>" + "<error server='lastpass.eu' message='our princess is in another castle' />" + "</response>";
+    }
+
+    internal static class RestFlowDuoExtensions
+    {
+        // TODO: Move this part to DuoV4Test
+        public static RestFlow Duo(this RestFlow flow)
+        {
+            return flow.Get(DuoMainHtmlResponse) // Duo: main frame
+                .Post("") // Duo: submit system parameters
+                .Get(DuoDevicesResponse) // Duo: get devices
+                .Post(DuoSubmitFactorResponse) // Duo:
+                .Post(DuoStatusSuccessResponse)
+                .Post("", responseUrl: "https://duo.done?code=duo_code&state=duo_state");
+        }
+
+        public static RestFlow LastPassDuo(this RestFlow flow)
+        {
+            return flow.Duo().Post(LmiapiDuoResponse);
+        }
+
+        private const string DuoMainHtmlResponse = """
+            <html>
+                <body>
+                    <form id="plugin_form">
+                        <input name="_xsrf" value="duo_xsrf" />
+                    </form>
+                </body>
+            </html>
+            """;
+
+        private const string DuoDevicesResponse = """
+            {
+                "stat": "OK",
+                "response": {
+                    "phones": [
+                        {
+                            "key": "PHONE1",
+                            "name": "Phone 1",
+                            "sms_batch_size": 10,
+                            "next_passcode": "1",
+                            "index": "phone1",
+                            "requires_compliance_text": true,
+                            "keypress_confirm": "",
+                            "end_of_number": "1111",
+                            "mobile_otpable": true
+                        },
+                        {
+                            "key": "PHONE2",
+                            "name": "Phone 2",
+                            "sms_batch_size": 10,
+                            "next_passcode": "1",
+                            "index": "phone2",
+                            "requires_compliance_text": true,
+                            "keypress_confirm": "",
+                            "end_of_number": "2222",
+                            "mobile_otpable": true
+                        }
+                    ],
+                    "auth_method_order": [
+                        { "deviceKey": "PHONE1", "factor": "Duo Push" },
+                        { "deviceKey": "PHONE2", "factor": "Duo Push" },
+                        { "deviceKey": "PHONE1", "factor": "SMS Passcode" },
+                        { "deviceKey": "PHONE2", "factor": "SMS Passcode" },
+                        { "deviceKey": "PHONE1", "factor": "Phone Call" },
+                        { "deviceKey": "PHONE2", "factor": "Phone Call" }
+                    ]
+                }
+            }
+            """;
+
+        private const string DuoSubmitFactorResponse = """
+            {
+                "stat": "OK",
+                "response": {
+                    "txid": "duo_txid"
+                }
+            }
+            """;
+
+        private const string DuoStatusSuccessResponse = """
+            {
+                "stat": "OK",
+                "response": {
+                    "status_code": "allow",
+                    "result": "SUCCESS",
+                    "reason": "User approved",
+                }
+            }
+            """;
+
+        private const string LmiapiDuoResponse = """
+            {
+                "status": "allowed",
+                "oneTimeToken": "duo_one_time_token"
+            }
+            """;
     }
 }

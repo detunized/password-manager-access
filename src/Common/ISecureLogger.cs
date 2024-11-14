@@ -38,12 +38,11 @@ internal class NullLogger : ISecureLogger
 internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
 {
     public string Tag { get; } = tag;
+    public ISecureLogger Logger { get; } = logger;
     public List<LogEntry> Entries { get; } = [];
 
     private readonly HashSet<string> _textFilters = [];
     private readonly HashSet<Regex> _regexFilters = [];
-
-    public void Clear() => Entries.Clear();
 
     //
     // ISecureLogger implementation
@@ -53,7 +52,7 @@ internal class TaggedLogger(string tag, ISecureLogger logger) : ICensoredLogger
     {
         var censored = entry with { Message = Censor(entry.Message) };
         Entries.Add(censored);
-        logger.Log(censored);
+        Logger.Log(censored);
     }
 
     //

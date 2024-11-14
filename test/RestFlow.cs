@@ -49,6 +49,7 @@ namespace PasswordManagerAccess.Test
             HttpStatusCode status = HttpStatusCode.OK,
             Dictionary<string, string> headers = null,
             Dictionary<string, string> cookies = null,
+            string responseUrl = null,
             Exception error = null
         )
         {
@@ -59,6 +60,7 @@ namespace PasswordManagerAccess.Test
                     status: status,
                     headers: headers ?? NoHeaders,
                     cookies: cookies ?? NoCookies,
+                    responseUrl: responseUrl,
                     error: error
                 )
             );
@@ -67,7 +69,7 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Get(ResponseContent response, Exception error)
         {
-            return Get(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
+            return Get(response, HttpStatusCode.OK, NoHeaders, NoCookies, NoResponseUrl, error);
         }
 
         public RestFlow Get(Exception error)
@@ -84,6 +86,7 @@ namespace PasswordManagerAccess.Test
             HttpStatusCode status = HttpStatusCode.OK,
             Dictionary<string, string> headers = null,
             Dictionary<string, string> cookies = null,
+            string responseUrl = null,
             Exception error = null
         )
         {
@@ -94,6 +97,7 @@ namespace PasswordManagerAccess.Test
                     status: status,
                     headers: headers ?? NoHeaders,
                     cookies: cookies ?? NoCookies,
+                    responseUrl: responseUrl,
                     error: error
                 )
             );
@@ -102,7 +106,7 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Post(ResponseContent response, Exception error)
         {
-            return Post(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
+            return Post(response, HttpStatusCode.OK, NoHeaders, NoCookies, NoResponseUrl, error);
         }
 
         public RestFlow Post(Exception error)
@@ -119,6 +123,7 @@ namespace PasswordManagerAccess.Test
             HttpStatusCode status = HttpStatusCode.OK,
             Dictionary<string, string> headers = null,
             Dictionary<string, string> cookies = null,
+            string responseUrl = null,
             Exception error = null
         )
         {
@@ -129,6 +134,7 @@ namespace PasswordManagerAccess.Test
                     status: status,
                     headers: headers ?? NoHeaders,
                     cookies: cookies ?? NoCookies,
+                    responseUrl: responseUrl,
                     error: error
                 )
             );
@@ -137,7 +143,7 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Put(ResponseContent response, Exception error)
         {
-            return Put(response, HttpStatusCode.OK, NoHeaders, NoCookies, error);
+            return Put(response, HttpStatusCode.OK, NoHeaders, NoCookies, NoResponseUrl, error);
         }
 
         public RestFlow Put(Exception error)
@@ -259,6 +265,7 @@ namespace PasswordManagerAccess.Test
             public readonly HttpStatusCode Status;
             public readonly Dictionary<string, string> Headers;
             public readonly Dictionary<string, string> Cookies;
+            public readonly string ResponseUrl;
             public readonly Exception Error;
 
             // Expected to be received from the caller
@@ -270,6 +277,7 @@ namespace PasswordManagerAccess.Test
                 HttpStatusCode status,
                 Dictionary<string, string> headers,
                 Dictionary<string, string> cookies,
+                string responseUrl,
                 Exception error
             )
             {
@@ -277,6 +285,7 @@ namespace PasswordManagerAccess.Test
                 Status = status;
                 Headers = headers;
                 Cookies = cookies;
+                ResponseUrl = responseUrl;
                 Error = error;
                 Expected = new Expected(method);
             }
@@ -407,7 +416,7 @@ namespace PasswordManagerAccess.Test
             allocatedResult.Headers = r.Headers;
             allocatedResult.Error = r.Error;
             allocatedResult.Cookies = r.Cookies;
-            allocatedResult.RequestUri = uri;
+            allocatedResult.RequestUri = r.ResponseUrl == null ? uri : new Uri(r.ResponseUrl);
 
             switch (allocatedResult)
             {
@@ -431,6 +440,7 @@ namespace PasswordManagerAccess.Test
         private static readonly string[] NoFragments = new string[0];
         private static readonly Dictionary<string, string> NoHeaders = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> NoCookies = new Dictionary<string, string>();
+        private const string NoResponseUrl = null;
 
         private int _currentIndex = 0;
         private readonly List<Response> _responses = new List<Response>();
