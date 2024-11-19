@@ -23,7 +23,7 @@ namespace PasswordManagerAccess.Common
     // Don't want to be warned about missing constructors. We're not using them.
 #pragma warning disable RCS1194
 
-    public abstract class BaseException(string message, Exception? inner) : Exception(message, inner)
+    public abstract class BaseException(string message, Exception? inner = null) : Exception(message, inner)
     {
         public IEnumerable<LogEntry> Log { get; set; } = [];
     }
