@@ -661,35 +661,25 @@ namespace PasswordManagerAccess.ProtonPass
                     errorText = error.Text ?? "";
                 }
 
-                // TODO: Make a switch
-
-                if (errorCode == 401 && errorText == "Invalid access token")
-                    return new TokenExpiredException();
-
-                if (errorCode == 10013 && errorText == "Invalid refresh token")
-                    return new TokenExpiredException();
-
-                // TODO: Check what kind of other human verification methods are there
-                if (errorCode == 9001 && error!.Details is { } captchaDetails && captchaDetails.HumanVerificationMethods?.Contains("captcha") == true)
+                return errorCode switch
+                {
+                    401 or 10013 => new TokenExpiredException(),
+                    // TODO: Check what kind of other human verification methods are there
                     // TODO: Verify that the url and the token are set
-                    return new NeedCaptchaException(captchaDetails.Url!, captchaDetails.HumanVerificationToken!);
-
-                // Handle "locked" first, in case there are both "locked" and "pass"
-                if (errorCode == 9101 && error!.Details is { } lockedDetails && lockedDetails.MissingScopes?.Contains("locked") == true)
-                    return new MissingLockedScopeException();
-
-                if (errorCode == 9100 && error!.Details is { } passDetails && passDetails.MissingScopes?.Contains("pass") == true)
-                    return new MissingPassScopeException();
-
-                if (errorCode == 2011)
-                    return new InvalidExtraPasswordException();
-
-                if (errorCode == 2026)
-                    return new TooManyInvalidExtraPasswordAttemptsException();
-
-                return new InternalErrorException(
-                    $"Request to '{response.ResponseUri}' failed with HTTP status {response.StatusCode} and error {errorCode}: '{errorText}'"
-                );
+                    9001 when HasHumanVerificationMethod(error, "captcha") => new NeedCaptchaException(
+                        error!.Details!.Url!,
+                        error.Details.HumanVerificationToken!
+                    ),
+                    8002 => new BadCredentialsException("Invalid credentials"),
+                    // Handle "locked" first, in case there are both "locked" and "pass"
+                    9101 when HasMissingScope(error, "locked") => new MissingLockedScopeException(),
+                    9100 when HasMissingScope(error, "pass") => new MissingPassScopeException(),
+                    2011 => new InvalidExtraPasswordException(),
+                    2026 => new TooManyInvalidExtraPasswordAttemptsException(),
+                    _ => new InternalErrorException(
+                        $"Request to '{response.ResponseUri}' failed with HTTP status {response.StatusCode} and error {errorCode}: '{errorText}'"
+                    ),
+                };
             }
 
             if (response.IsJsonError())
@@ -697,6 +687,11 @@ namespace PasswordManagerAccess.ProtonPass
 
             return new InternalErrorException($"Request to '{response.ResponseUri}' failed", response.ErrorException);
         }
+
+        internal static bool HasHumanVerificationMethod(Model.Error? error, string method) =>
+            error?.Details?.HumanVerificationMethods?.Contains(method) == true;
+
+        internal static bool HasMissingScope(Model.Error? error, string scope) => error?.Details?.MissingScopes?.Contains(scope) == true;
 
         //
         // Data
