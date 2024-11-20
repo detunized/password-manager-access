@@ -179,7 +179,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
                 return Task.FromResult(new IAsyncUi.Result() { Solved = true, Token = "ok-human-verification-token" });
             }
 
-            public Task<string> ProvideExtraPassword(CancellationToken cancellationToken)
+            public Task<string> ProvideExtraPassword(int attempt, CancellationToken cancellationToken)
             {
                 return Task.FromResult("extra-password");
             }

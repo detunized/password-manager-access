@@ -206,24 +206,44 @@ namespace PasswordManagerAccess.ProtonPass
             CancellationToken cancellationToken
         )
         {
-            // 1. Get the extra password from the user
-            var extraPassword = await ui.ProvideExtraPassword(cancellationToken).ConfigureAwait(false);
+            // TODO: Add cancellation token checks!
+            for (var attempt = 0; attempt < MaxExtraPasswordAttempts; attempt++)
+            {
+                // 1. Get the extra password from the user
+                var extraPassword = await ui.ProvideExtraPassword(attempt, cancellationToken).ConfigureAwait(false);
+                if (extraPassword.IsNullOrEmpty())
+                    throw new CanceledMultiFactorException("The extra password step cancelled by the user");
 
-            // 2. Request the auth info that contains the SRP challenge and related data
-            var srpData = await RequestExtraAuthInfo(username, rest, cancellationToken).ConfigureAwait(false);
+                // 2. Request the auth info that contains the SRP challenge and related data
+                var srpData = await RequestExtraAuthInfo(username, rest, cancellationToken).ConfigureAwait(false);
 
-            // 3. Generate the SRP challenge response
-            var proof = Srp.GenerateProofs(
-                version: srpData.Version,
-                password: extraPassword,
-                username: username,
-                saltBytes: srpData.Salt.Decode64(),
-                serverEphemeralBytes: srpData.ServerEphemeral.Decode64(),
-                modulusBytes: Srp.ParseModulus(srpData.Modulus)
-            );
+                // 3. Generate the SRP challenge response
+                var proof = Srp.GenerateProofs(
+                    version: srpData.Version,
+                    password: extraPassword,
+                    username: username,
+                    saltBytes: srpData.Salt.Decode64(),
+                    serverEphemeralBytes: srpData.ServerEphemeral.Decode64(),
+                    modulusBytes: Srp.ParseModulus(srpData.Modulus)
+                );
 
-            // 4. Submit the SRP proof to the server
-            await SubmitExtraSrpProof(srpData.SessionId, proof, rest, cancellationToken).ConfigureAwait(false);
+                // 4. Submit the SRP proof to the server
+                try
+                {
+                    await SubmitExtraSrpProof(srpData.SessionId, proof, rest, cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+                catch (InvalidExtraPasswordException)
+                {
+                    // Do nothing, retry.
+                }
+                catch (TooManyInvalidExtraPasswordAttemptsException)
+                {
+                    break;
+                }
+            }
+
+            throw new BadMultiFactorException("Too many failed attempts to provide the extra password");
         }
 
         // This function is full of side effects. It modifies the rest client and the storage.
@@ -615,6 +635,10 @@ namespace PasswordManagerAccess.ProtonPass
 
         internal class MissingPassScopeException() : BaseException("Missing pass scope");
 
+        internal class InvalidExtraPasswordException() : BaseException("Invalid extra password");
+
+        internal class TooManyInvalidExtraPasswordAttemptsException() : BaseException("Too many invalid extra password attempts");
+
         internal class NeedCaptchaException(string url, string humanVerificationToken) : BaseException("CAPTCHA verification required")
         {
             public string Url { get; } = url;
@@ -637,6 +661,8 @@ namespace PasswordManagerAccess.ProtonPass
                     errorText = error.Text ?? "";
                 }
 
+                // TODO: Make a switch
+
                 if (errorCode == 401 && errorText == "Invalid access token")
                     return new TokenExpiredException();
 
@@ -654,6 +680,12 @@ namespace PasswordManagerAccess.ProtonPass
 
                 if (errorCode == 9100 && error!.Details is { } passDetails && passDetails.MissingScopes?.Contains("pass") == true)
                     return new MissingPassScopeException();
+
+                if (errorCode == 2011)
+                    return new InvalidExtraPasswordException();
+
+                if (errorCode == 2026)
+                    return new TooManyInvalidExtraPasswordAttemptsException();
 
                 return new InternalErrorException(
                     $"Request to '{response.ResponseUri}' failed with HTTP status {response.StatusCode} and error {errorCode}: '{errorText}'"
@@ -674,6 +706,7 @@ namespace PasswordManagerAccess.ProtonPass
         internal const string BaseUrl = "https://pass-api.proton.me";
         internal const string AppVersion = "android-pass@1.27.1";
 
+        internal const int MaxExtraPasswordAttempts = 3;
         internal const int ItemStateRegular = 1;
     }
 }
