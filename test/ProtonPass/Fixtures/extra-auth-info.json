@@ -1,0 +1,10 @@
+{
+    "Code": 1000,
+    "SRPData": {
+        "Modulus": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n+5BPJAhzD2SxyIsOs2MF5TB+9ZSoaVoxY3s6fFBvxikVkBtT/WH3knz8R73kzqhudy6OsgKO2QqJM9qIrxHWM66B/2AWSSgIR1NQw6Jr3HiJafkXrCUTmhb450gWpeBPArbEcT//SXWx86CI4m8WTuKve/x5U6E1BSAPa2LNrljPK/5Mp3FVPPwYqoMirG41CZ8kyKiPTKtgcDIzcYbmFtFAj+uBTX2YjIjC7B5VA2MjYW6Pgr5rXPnWB1Egy6s2NYbYPPQJuuZ+HLoHqCc0jfpeXjdtGbZajIgiPNYVGFg3hBrIgJUS7vZYsRr4g3UBet7N1vT/YKjmEGIjFxVRsw==\n-----BEGIN PGP SIGNATURE-----\nVersion: ProtonMail\nComment: https://protonmail.com\n\nwl4EARYIABAFAlwB1jwJEDUFhcTpUY8mAACUJQEA6jHX4wxL1ldnP66eU5Dq\n8bFEdhy1xQQu8INbyv42wxYBAJMBTRNitq5vstCtIZC06HKwM0KvukTjsniM\nP+czfooI\n=KAKr\n-----END PGP SIGNATURE-----\n",
+        "ServerEphemeral": "cpOjTyrS/ZaDT1iuJmaevIlV3XcsNsk+gomM1PeAkKh7lPNdXi9E9O5yNRahoQqoLki29/2kkCZ9biiZe/zHwsy11j76kDlDl/YEUq9fHc8FTsAUjyXNZdQRhX5KXtNeLb/6qZEtqbSTMIM+lWMaYAx3bvLzfnDISc8q1k0l5DNpKxgMa0MD16zSnrGz9gRLtuXK33fgP8Xj2ARQvLHQoz6mJs32vzTh3v6jEqTWgYxhOtPZ6sHh+Y/x3sNVAaDIuDFBDyIaHRZzdsxMOJBAfgiCKnYA2y3xOczlgKtGFy+z+nLUvkZhaG2mnzA4S/bQQrKX0TneQPV5nTzBYJ+tUA==",
+        "SrpSessionID": "0621fe3601bdf366283bf99837e891d2",
+        "SrpSalt": "Rbr+rLgHibg/aA==",
+        "Version": 4
+    }
+}

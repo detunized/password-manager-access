@@ -95,6 +95,11 @@ namespace PasswordManagerAccess.ProtonPass
                     // We already have a session, so we don't need a full login, only the SRP part.
                     await LoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 }
+                catch (MissingPassScopeException)
+                {
+                    // The pass scope is missing. This means we need to provide the extra password.
+                    await DoAuthWithExtraPassword(username, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                }
             }
 
             throw new InternalErrorException("Failed to download the vault");
@@ -193,6 +198,34 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
+        internal static async Task DoAuthWithExtraPassword(
+            string username,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
+            // 1. Get the extra password from the user
+            var extraPassword = await ui.ProvideExtraPassword(cancellationToken).ConfigureAwait(false);
+
+            // 2. Request the auth info that contains the SRP challenge and related data
+            var srpData = await RequestExtraAuthInfo(username, rest, cancellationToken).ConfigureAwait(false);
+
+            // 3. Generate the SRP challenge response
+            var proof = Srp.GenerateProofs(
+                version: srpData.Version,
+                password: extraPassword,
+                username: username,
+                saltBytes: srpData.Salt.Decode64(),
+                serverEphemeralBytes: srpData.ServerEphemeral.Decode64(),
+                modulusBytes: Srp.ParseModulus(srpData.Modulus)
+            );
+
+            // 4. Submit the SRP proof to the server
+            await SubmitExtraSrpProof(srpData.SessionId, proof, rest, cancellationToken).ConfigureAwait(false);
+        }
+
         // This function is full of side effects. It modifies the rest client and the storage.
         internal static async Task<bool> TryRefreshAuthSessionAndUpdate(
             string sessionId,
@@ -283,6 +316,17 @@ namespace PasswordManagerAccess.ProtonPass
             return response.Data!;
         }
 
+        internal static async Task<Model.SrpData> RequestExtraAuthInfo(string username, RestClient rest, CancellationToken cancellationToken)
+        {
+            var request = new RestRequest("pass/v1/user/srp/info").AddJsonBody(new { Username = username, Intent = "Proton" });
+
+            var response = await rest.ExecuteGetAsync<Model.ExtraAuthInfo>(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data!.SrpData;
+        }
+
         private static async Task<Model.Auth> SubmitSrpProof(
             string username,
             string srpSession,
@@ -306,6 +350,22 @@ namespace PasswordManagerAccess.ProtonPass
                 throw MakeError(response);
 
             return response.Data!;
+        }
+
+        private static async Task SubmitExtraSrpProof(string srpSession, Srp.Proofs proof, RestClient rest, CancellationToken cancellationToken)
+        {
+            var request = new RestRequest("pass/v1/user/srp/auth").AddJsonBody(
+                new
+                {
+                    ClientEphemeral = proof.ClientEphemeral.ToBase64(),
+                    ClientProof = proof.ClientProof.ToBase64(),
+                    SrpSessionID = srpSession,
+                }
+            );
+
+            var response = await rest.ExecutePostAsync<Model.Response>(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
         }
 
         internal static async Task<Vault[]> DownloadAllVaults(string password, RestClient rest, CancellationToken cancellationToken)
@@ -549,29 +609,16 @@ namespace PasswordManagerAccess.ProtonPass
             return outputStream.ToArray();
         }
 
-        internal class TokenExpiredException : BaseException
-        {
-            public TokenExpiredException()
-                : base("Access token expired", null) { }
-        }
+        internal class TokenExpiredException() : BaseException("Access token expired");
 
-        internal class MissingLockedScopeException : BaseException
-        {
-            public MissingLockedScopeException()
-                : base("Missing locked scope", null) { }
-        }
+        internal class MissingLockedScopeException() : BaseException("Missing locked scope");
 
-        internal class NeedCaptchaException : BaseException
-        {
-            public string Url { get; }
-            public string HumanVerificationToken { get; }
+        internal class MissingPassScopeException() : BaseException("Missing pass scope");
 
-            public NeedCaptchaException(string url, string humanVerificationToken)
-                : base("CAPTCHA verification required", null)
-            {
-                Url = url;
-                HumanVerificationToken = humanVerificationToken;
-            }
+        internal class NeedCaptchaException(string url, string humanVerificationToken) : BaseException("CAPTCHA verification required")
+        {
+            public string Url { get; } = url;
+            public string HumanVerificationToken { get; } = humanVerificationToken;
         }
 
         internal static BaseException MakeError<T>(RestSharp.RestResponse<T> response)
@@ -596,13 +643,17 @@ namespace PasswordManagerAccess.ProtonPass
                 if (errorCode == 10013 && errorText == "Invalid refresh token")
                     return new TokenExpiredException();
 
-                if (errorCode == 9101 && error!.Details is { } scopeDetails && scopeDetails.MissingScopes?.Contains("locked") == true)
-                    return new MissingLockedScopeException();
-
                 // TODO: Check what kind of other human verification methods are there
                 if (errorCode == 9001 && error!.Details is { } captchaDetails && captchaDetails.HumanVerificationMethods?.Contains("captcha") == true)
                     // TODO: Verify that the url and the token are set
                     return new NeedCaptchaException(captchaDetails.Url!, captchaDetails.HumanVerificationToken!);
+
+                // Handle "locked" first, in case there are both "locked" and "pass"
+                if (errorCode == 9101 && error!.Details is { } lockedDetails && lockedDetails.MissingScopes?.Contains("locked") == true)
+                    return new MissingLockedScopeException();
+
+                if (errorCode == 9100 && error!.Details is { } passDetails && passDetails.MissingScopes?.Contains("pass") == true)
+                    return new MissingPassScopeException();
 
                 return new InternalErrorException(
                     $"Request to '{response.ResponseUri}' failed with HTTP status {response.StatusCode} and error {errorCode}: '{errorText}'"
@@ -621,7 +672,7 @@ namespace PasswordManagerAccess.ProtonPass
 
         // Android protocol
         internal const string BaseUrl = "https://pass-api.proton.me";
-        internal const string AppVersion = "android-pass@1.19.0";
+        internal const string AppVersion = "android-pass@1.27.1";
 
         internal const int ItemStateRegular = 1;
     }

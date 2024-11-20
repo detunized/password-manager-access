@@ -1,2 +1,5 @@
 username: account@example.com
 password: password123
+
+# Optional. When it's not set, the UI will ask for the extra password if needed
+extra-password: extra-password123

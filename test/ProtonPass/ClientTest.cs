@@ -135,6 +135,39 @@ namespace PasswordManagerAccess.Test.ProtonPass
             mockHttp.VerifyNoOtherRequests();
         }
 
+        [Fact]
+        public async Task RequestExtraAuthInfo_returns_SRP_data()
+        {
+            // Arrange
+            var rest = Serve(GetFixture("extra-auth-info"));
+
+            // Act
+            var srpData = await Client.RequestExtraAuthInfo("username", rest, MakeToken());
+
+            // Assert
+            srpData.Modulus.Should().StartWith("-----BEGIN PGP SIGNED MESSAGE-----");
+            srpData.ServerEphemeral.Should().StartWith("cpOjTyrS");
+            srpData.Version.Should().Be(4);
+            srpData.Salt.Should().Be("Rbr+rLgHibg/aA==");
+            srpData.SessionId.Should().Be("0621fe3601bdf366283bf99837e891d2");
+        }
+
+        [Fact]
+        public async Task RequestExtraAuthInfo_makes_GET_request()
+        {
+            // Arrange
+            var mockHttp = new MockHttpHandler();
+            mockHttp
+                .When(w => w.Method("GET").RequestUri("*/pass/v1/user/srp/info").JsonText("{\"Username\":\"username\",\"Intent\":\"Proton\"}"))
+                .Respond(w => w.JsonText(GetFixture("extra-auth-info")));
+
+            // Act/assert
+            await Swallow(() => Client.RequestExtraAuthInfo("username", mockHttp.ToClient(), MakeToken()));
+
+            mockHttp.VerifyAll();
+            mockHttp.VerifyNoOtherRequests();
+        }
+
         //
         // Helpers
         //
@@ -144,6 +177,11 @@ namespace PasswordManagerAccess.Test.ProtonPass
             public Task<IAsyncUi.Result> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken)
             {
                 return Task.FromResult(new IAsyncUi.Result() { Solved = true, Token = "ok-human-verification-token" });
+            }
+
+            public Task<string> ProvideExtraPassword(CancellationToken cancellationToken)
+            {
+                return Task.FromResult("extra-password");
             }
         }
 

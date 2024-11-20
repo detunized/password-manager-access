@@ -3,7 +3,6 @@
 
 #nullable enable
 
-using System;
 using System.Text.Json.Serialization;
 
 // All the models here are used in deserialization and are not supposed to be instantiated directly.
@@ -108,6 +107,35 @@ namespace PasswordManagerAccess.ProtonPass
             public string Username { get; set; } = "";
         }
 
+        internal class ExtraAuthInfo : Response
+        {
+            [JsonPropertyName("SRPData")]
+            [JsonRequired]
+            public SrpData SrpData { get; set; } = new();
+        }
+
+        internal class SrpData
+        {
+            [JsonPropertyName("Modulus")]
+            [JsonRequired]
+            public string Modulus { get; set; } = "";
+
+            [JsonPropertyName("ServerEphemeral")]
+            [JsonRequired]
+            public string ServerEphemeral { get; set; } = "";
+
+            [JsonPropertyName("SrpSessionID")]
+            [JsonRequired]
+            public string SessionId { get; set; } = "";
+
+            [JsonPropertyName("SrpSalt")]
+            [JsonRequired]
+            public string Salt { get; set; } = "";
+
+            [JsonPropertyName("Version")]
+            public int Version { get; set; }
+        }
+
         public class Auth : Response
         {
             [JsonPropertyName("LocalID")]
@@ -126,7 +154,7 @@ namespace PasswordManagerAccess.ProtonPass
             public string RefreshToken { get; set; } = "";
 
             [JsonPropertyName("Scopes")]
-            public string[] Scopes { get; set; } = Array.Empty<string>();
+            public string[] Scopes { get; set; } = [];
 
             [JsonPropertyName("UID")]
             [JsonRequired]
@@ -171,7 +199,7 @@ namespace PasswordManagerAccess.ProtonPass
         {
             [JsonPropertyName("User")]
             [JsonRequired]
-            public User User { get; set; } = new User();
+            public User User { get; set; } = new();
         }
 
         public class User
@@ -182,7 +210,7 @@ namespace PasswordManagerAccess.ProtonPass
 
             [JsonPropertyName("Keys")]
             [JsonRequired]
-            public UserKey[] Keys { get; set; } = Array.Empty<UserKey>();
+            public UserKey[] Keys { get; set; } = [];
         }
 
         public class UserKey
@@ -211,7 +239,7 @@ namespace PasswordManagerAccess.ProtonPass
         {
             [JsonPropertyName("KeySalts")]
             [JsonRequired]
-            public KeySalt[] KeySalts { get; set; } = Array.Empty<KeySalt>();
+            public KeySalt[] KeySalts { get; set; } = [];
         }
 
         public class KeySalt
@@ -228,7 +256,7 @@ namespace PasswordManagerAccess.ProtonPass
         public class ShareRoot : Response
         {
             [JsonPropertyName("Shares")]
-            public Share[] Shares { get; set; } = Array.Empty<Share>();
+            public Share[] Shares { get; set; } = [];
         }
 
         public class Share
@@ -279,13 +307,13 @@ namespace PasswordManagerAccess.ProtonPass
         public class ShareKeysRoot : Response
         {
             [JsonPropertyName("ShareKeys")]
-            public ShareKeys ShareKeys { get; set; } = new ShareKeys();
+            public ShareKeys ShareKeys { get; set; } = new();
         }
 
         public class ShareKeys
         {
             [JsonPropertyName("Keys")]
-            public ShareKey[] Keys { get; set; } = Array.Empty<ShareKey>();
+            public ShareKey[] Keys { get; set; } = [];
 
             [JsonPropertyName("Total")]
             public int Total { get; set; }
@@ -317,7 +345,7 @@ namespace PasswordManagerAccess.ProtonPass
         {
             [JsonPropertyName("RevisionsData")]
             [JsonRequired]
-            public VaultItem[] Items { get; set; } = Array.Empty<VaultItem>();
+            public VaultItem[] Items { get; set; } = [];
 
             [JsonPropertyName("Total")]
             public int Total { get; set; }

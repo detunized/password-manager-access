@@ -16,5 +16,8 @@ namespace PasswordManagerAccess.ProtonPass
         }
 
         Task<Result> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken);
+
+        // Return null or blank to cancel
+        Task<string> ProvideExtraPassword(CancellationToken cancellationToken);
     }
 }

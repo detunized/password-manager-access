@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -16,7 +17,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
 {
     public static class Program
     {
-        private class AsyncTextUi : IAsyncUi
+        private class AsyncTextUi(string extraPassword) : BaseUi, IAsyncUi
         {
             struct JsMessage
             {
@@ -114,16 +115,25 @@ namespace PasswordManagerAccess.Example.ProtonPass
 
                 return new IAsyncUi.Result { Solved = false };
             }
+
+            public Task<string> ProvideExtraPassword(CancellationToken cancellationToken)
+            {
+                if (!string.IsNullOrEmpty(extraPassword))
+                    return Task.FromResult(extraPassword);
+
+                return Task.FromResult(GetAnswer($"Enter the extra password {PressEnterToCancel}"));
+            }
         }
 
         public static void Main(string[] args)
         {
             var config = Util.ReadConfig();
+            var extraPassword = config.GetValueOrDefault("extra-password", "");
 
             try
             {
                 var vaults = Vault
-                    .OpenAll(config["username"], config["password"], new AsyncTextUi(), new AsyncPlainStorage())
+                    .OpenAll(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage())
                     .GetAwaiter()
                     .GetResult();
 
