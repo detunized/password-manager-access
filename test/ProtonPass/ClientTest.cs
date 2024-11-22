@@ -172,17 +172,16 @@ namespace PasswordManagerAccess.Test.ProtonPass
         // Helpers
         //
 
-        class TestAsyncUi : IAsyncUi
+        private class TestAsyncUi : IAsyncUi
         {
-            public Task<IAsyncUi.Result> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken)
-            {
-                return Task.FromResult(new IAsyncUi.Result() { Solved = true, Token = "ok-human-verification-token" });
-            }
+            public Task<IAsyncUi.CaptchaResult> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken) =>
+                Task.FromResult(new IAsyncUi.CaptchaResult(true, "ok-human-verification-token"));
 
-            public Task<string> ProvideExtraPassword(int attempt, CancellationToken cancellationToken)
-            {
-                return Task.FromResult("extra-password");
-            }
+            public Task<IAsyncUi.PasscodeResult> ProvideExtraPassword(int attempt, CancellationToken cancellationToken) =>
+                Task.FromResult(new IAsyncUi.PasscodeResult("extra-password"));
+
+            public Task<IAsyncUi.PasscodeResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) =>
+                Task.FromResult(new IAsyncUi.PasscodeResult("123456"));
         }
 
         private static IAsyncUi GetAsyncUi()

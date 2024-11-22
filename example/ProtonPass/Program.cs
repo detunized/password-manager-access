@@ -37,7 +37,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 public string Token { get; set; }
             }
 
-            public async Task<IAsyncUi.Result> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken)
+            public async Task<IAsyncUi.CaptchaResult> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken)
             {
                 Console.WriteLine($"Please solve the captcha at {url} and press ENTER");
 
@@ -93,7 +93,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
                                     if (parsed.Type == "HUMAN_VERIFICATION_SUCCESS" && !string.IsNullOrEmpty(parsed.Payload.Token))
                                     {
                                         Console.WriteLine("Captcha solved!");
-                                        return new IAsyncUi.Result { Solved = true, Token = parsed.Payload.Token };
+                                        return new IAsyncUi.CaptchaResult(true, parsed.Payload.Token);
                                     }
                                 }
                                 catch (JsonException)
@@ -104,7 +104,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
 
                             // We should not really get here. Something must be wrong with our code or the message structure.
                             Console.WriteLine("Captcha seems to be solved, but the result could not be parsed!");
-                            return new IAsyncUi.Result { Solved = false };
+                            return new IAsyncUi.CaptchaResult(false, "");
                         }
 
                         await Task.Delay(checkEveryMs, cancellationToken).ConfigureAwait(false);
@@ -113,15 +113,20 @@ namespace PasswordManagerAccess.Example.ProtonPass
                     Console.WriteLine("Timed out!");
                 }
 
-                return new IAsyncUi.Result { Solved = false };
+                return new IAsyncUi.CaptchaResult(false, "");
             }
 
-            public Task<string> ProvideExtraPassword(CancellationToken cancellationToken)
+            public Task<IAsyncUi.PasscodeResult> ProvideExtraPassword(int attempt, CancellationToken cancellationToken)
             {
                 if (!string.IsNullOrEmpty(extraPassword))
-                    return Task.FromResult(extraPassword);
+                    return Task.FromResult(new IAsyncUi.PasscodeResult(extraPassword));
 
-                return Task.FromResult(GetAnswer($"Enter the extra password {PressEnterToCancel}"));
+                return Task.FromResult(new IAsyncUi.PasscodeResult(GetAnswer($"Enter the extra password {PressEnterToCancel}")));
+            }
+
+            public Task<IAsyncUi.PasscodeResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
+            {
+                return Task.FromResult(new IAsyncUi.PasscodeResult(GetAnswer($"Enter the Google Authenticator passcode {PressEnterToCancel}")));
             }
         }
 

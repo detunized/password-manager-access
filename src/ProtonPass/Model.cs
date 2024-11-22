@@ -193,6 +193,63 @@ namespace PasswordManagerAccess.ProtonPass
 
             [JsonPropertyName("TOTP")]
             public int Totp { get; set; }
+
+            [JsonPropertyName("FIDO2")]
+            public Fido2 Fido2 { get; set; }
+        }
+
+        public struct Fido2
+        {
+            [JsonPropertyName("AuthenticationOptions")]
+            public Fido2Options AuthenticationOptions { get; set; }
+
+            [JsonPropertyName("RegisteredKeys")]
+            public Fido2Key[] RegisteredKeys { get; set; }
+        }
+
+        public struct Fido2Options
+        {
+            [JsonPropertyName("publicKey")]
+            public Fido2PublicKey PublicKey { get; set; }
+        }
+
+        public struct Fido2PublicKey
+        {
+            [JsonPropertyName("timeout")]
+            public int Timeout { get; set; }
+
+            [JsonPropertyName("challenge")]
+            public int[] Challenge { get; set; }
+
+            [JsonPropertyName("userVerification")]
+            public string UserVerification { get; set; }
+
+            [JsonPropertyName("rpId")]
+            public string RpId { get; set; }
+
+            [JsonPropertyName("allowCredentials")]
+            public Fido2Credentials[] AllowCredentials { get; set; }
+        }
+
+        public struct Fido2Credentials
+        {
+            [JsonPropertyName("id")]
+            public int[] Id { get; set; }
+
+            [JsonPropertyName("type")]
+            public string Type { get; set; }
+        }
+
+        public struct Fido2Key
+        {
+            [JsonPropertyName("Name")]
+            public string Name { get; set; }
+
+            [JsonPropertyName("AttestationFormat")]
+            public string AttestationFormat { get; set; }
+
+            [JsonPropertyName("CredentialID")]
+            public int[] CredentialId { get; set; }
         }
 
         public class UserResponse : Response

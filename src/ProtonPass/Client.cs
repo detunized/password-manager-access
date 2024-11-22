@@ -175,6 +175,12 @@ namespace PasswordManagerAccess.ProtonPass
                     rest.AddOrUpdateDefaultHeader("X-Pm-Uid", auth.SessionId);
                     rest.UpdateAuthenticator(new OAuth2AuthorizationRequestHeaderAuthenticator(auth.AccessToken, "Bearer"));
 
+                    // 4. Check if we need to provide 2FA
+                    if (auth.Mfa.Enabled != 0)
+                    {
+                        await DoMultiFactorAuth(auth.Mfa, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                    }
+
                     // Once the auth has been granted, the tokens returned by the server give full access to the vault.
                     // They need to be saved for the next sessions.
                     await StoreSession(auth.SessionId, auth.AccessToken, auth.RefreshToken, storage).ConfigureAwait(false);
@@ -187,8 +193,14 @@ namespace PasswordManagerAccess.ProtonPass
 
                     // TODO: Support other types of human verification
                     var result = await ui.SolveCaptcha(e.Url, e.HumanVerificationToken, cancellationToken).ConfigureAwait(false);
+
+                    // Explicitly cancelled
+                    if (result == IAsyncUi.CaptchaResult.Cancel)
+                        throw new CanceledMultiFactorException("CAPTCHA verification cancelled by the user");
+
+                    // Failed or something went wrong
                     if (!result.Solved)
-                        throw new InternalErrorException("CAPTCHA verification failed or was cancelled by the user");
+                        throw new InternalErrorException("CAPTCHA verification failed");
 
                     rest.AddOrUpdateDefaultHeader("X-Pm-Human-Verification-Token-Type", "captcha");
                     rest.AddOrUpdateDefaultHeader("X-Pm-Human-Verification-Token", result.Token);
@@ -196,6 +208,61 @@ namespace PasswordManagerAccess.ProtonPass
                     await StoreHumanVerificationToken("captcha", result.Token, storage).ConfigureAwait(false);
                 }
             }
+        }
+
+        private static async Task DoMultiFactorAuth(
+            Model.Mfa mfa,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
+            // TODO: Add a const for 0x01
+            if ((mfa.Enabled & 1) != 0)
+            {
+                await DoTotpMultiFactorAuth(mfa, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            // TODO: Add a const for 0x02
+            if ((mfa.Enabled & 2) != 0)
+            {
+                await DoFido2MultiFactorAuth(mfa, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            throw new InternalErrorException($"Unknown 2FA method {mfa.Enabled}");
+        }
+
+        private static async Task DoTotpMultiFactorAuth(
+            Model.Mfa mfa,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await ui.ProvideGoogleAuthPasscode(cancellationToken).ConfigureAwait(false);
+            if (result == IAsyncUi.PasscodeResult.Cancel)
+                throw new CanceledMultiFactorException("Google Authenticator 2FA step cancelled by the user");
+
+            var request = new RestRequest("auth/v4/2fa").AddJsonBody(new { TwoFactorCode = result.Passcode });
+
+            var response = await rest.ExecutePostAsync<Model.Response>(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+        }
+
+        private static async Task DoFido2MultiFactorAuth(
+            Model.Mfa mfa,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new UnsupportedFeatureException($"FIDO2 2FA is not supported yet");
         }
 
         internal static async Task DoAuthWithExtraPassword(
@@ -211,7 +278,7 @@ namespace PasswordManagerAccess.ProtonPass
             {
                 // 1. Get the extra password from the user
                 var extraPassword = await ui.ProvideExtraPassword(attempt, cancellationToken).ConfigureAwait(false);
-                if (extraPassword.IsNullOrEmpty())
+                if (extraPassword == IAsyncUi.PasscodeResult.Cancel)
                     throw new CanceledMultiFactorException("The extra password step cancelled by the user");
 
                 // 2. Request the auth info that contains the SRP challenge and related data
@@ -220,7 +287,7 @@ namespace PasswordManagerAccess.ProtonPass
                 // 3. Generate the SRP challenge response
                 var proof = Srp.GenerateProofs(
                     version: srpData.Version,
-                    password: extraPassword,
+                    password: extraPassword.Passcode,
                     username: username,
                     saltBytes: srpData.Salt.Decode64(),
                     serverEphemeralBytes: srpData.ServerEphemeral.Decode64(),
