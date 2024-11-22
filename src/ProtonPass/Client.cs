@@ -218,15 +218,15 @@ namespace PasswordManagerAccess.ProtonPass
             CancellationToken cancellationToken
         )
         {
-            // TODO: Add a const for 0x01
-            if ((mfa.Enabled & 1) != 0)
+            // TODO: Allow the user to choose the 2FA method when there are multiple enabled
+
+            if ((mfa.Enabled & MfaGoogleAuthEnabled) != 0)
             {
                 await DoTotpMultiFactorAuth(mfa, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            // TODO: Add a const for 0x02
-            if ((mfa.Enabled & 2) != 0)
+            if ((mfa.Enabled & MfaFido2Enabled) != 0)
             {
                 await DoFido2MultiFactorAuth(mfa, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 return;
@@ -243,15 +243,28 @@ namespace PasswordManagerAccess.ProtonPass
             CancellationToken cancellationToken
         )
         {
-            var result = await ui.ProvideGoogleAuthPasscode(cancellationToken).ConfigureAwait(false);
-            if (result == IAsyncUi.PasscodeResult.Cancel)
-                throw new CanceledMultiFactorException("Google Authenticator 2FA step cancelled by the user");
+            for (var attempt = 0; attempt < MaxGoogleAuthAttempts; attempt++)
+            {
+                var result = await ui.ProvideGoogleAuthPasscode(attempt, cancellationToken).ConfigureAwait(false);
+                if (result == IAsyncUi.PasscodeResult.Cancel)
+                    throw new CanceledMultiFactorException("Google Authenticator 2FA step cancelled by the user");
 
-            var request = new RestRequest("auth/v4/2fa").AddJsonBody(new { TwoFactorCode = result.Passcode });
+                var request = new RestRequest("auth/v4/2fa").AddJsonBody(new { TwoFactorCode = result.Passcode });
+                var response = await rest.ExecutePostAsync<Model.Response>(request, cancellationToken).ConfigureAwait(false);
+                if (response.IsSuccessful)
+                    return;
 
-            var response = await rest.ExecutePostAsync<Model.Response>(request, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessful)
-                throw MakeError(response);
+                var error = MakeError(response);
+                if (error is BadCredentialsException)
+                {
+                    if (attempt == MaxGoogleAuthAttempts - 1)
+                        throw new BadMultiFactorException("Too many failed attempts to provide the Google Authenticator passcode");
+                }
+                else
+                {
+                    throw error;
+                }
+            }
         }
 
         private static async Task DoFido2MultiFactorAuth(
@@ -770,5 +783,10 @@ namespace PasswordManagerAccess.ProtonPass
 
         internal const int MaxExtraPasswordAttempts = 3;
         internal const int ItemStateRegular = 1;
+
+        internal const int MfaGoogleAuthEnabled = 1;
+        internal const int MfaFido2Enabled = 2;
+
+        internal const int MaxGoogleAuthAttempts = 3;
     }
 }

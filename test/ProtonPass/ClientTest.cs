@@ -180,7 +180,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             public Task<IAsyncUi.PasscodeResult> ProvideExtraPassword(int attempt, CancellationToken cancellationToken) =>
                 Task.FromResult(new IAsyncUi.PasscodeResult("extra-password"));
 
-            public Task<IAsyncUi.PasscodeResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) =>
+            public Task<IAsyncUi.PasscodeResult> ProvideGoogleAuthPasscode(int attempt, CancellationToken cancellationToken) =>
                 Task.FromResult(new IAsyncUi.PasscodeResult("123456"));
         }
 

@@ -124,7 +124,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 return Task.FromResult(new IAsyncUi.PasscodeResult(GetAnswer($"Enter the extra password {PressEnterToCancel}")));
             }
 
-            public Task<IAsyncUi.PasscodeResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
+            public Task<IAsyncUi.PasscodeResult> ProvideGoogleAuthPasscode(int attempt, CancellationToken cancellationToken)
             {
                 return Task.FromResult(new IAsyncUi.PasscodeResult(GetAnswer($"Enter the Google Authenticator passcode {PressEnterToCancel}")));
             }

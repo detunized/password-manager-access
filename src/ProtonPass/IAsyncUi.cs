@@ -30,6 +30,6 @@ namespace PasswordManagerAccess.ProtonPass
         Task<PasscodeResult> ProvideExtraPassword(int attempt, CancellationToken cancellationToken);
 
         // Return OtpResult.Cancel to cancel
-        Task<PasscodeResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken);
+        Task<PasscodeResult> ProvideGoogleAuthPasscode(int attempt, CancellationToken cancellationToken);
     }
 }
