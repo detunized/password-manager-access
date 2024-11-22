@@ -1,5 +1,9 @@
 # Changelog
 
+## 21.0.0
+  - ProtonPass: added support for the extra password to unlock the vault
+  - ProtonPass: added support for the 2FA Google Authenticator (TOTP) method
+
 ## 20.0.1
   - LastPass: fixed a problem with the new logging feature that was causing a crash in some situations
 
