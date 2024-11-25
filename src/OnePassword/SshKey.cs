@@ -182,7 +182,7 @@ public class SshKey : VaultItem
         topLevel.WriteBytes("openssh-key-v1\0".ToBytes());
         topLevel.PutSshStr("none"); // Cipher name
         topLevel.PutSshStr("none"); // KDF name
-        topLevel.PutSshStr([]);
+        topLevel.PutSshStr(Array.Empty<byte>());
         topLevel.WriteUInt32BigEndian(1); // Number of keys
         topLevel.PutSshStr(publicKeyBytes.Span[..publicKeyBytes.Position].ToArray()); // TODO: Don't copy
         topLevel.PutSshStr(privateKeyBytes.Span[..privateKeyBytes.Position].ToArray()); // TODO: Don't copy
