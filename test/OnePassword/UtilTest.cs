@@ -94,6 +94,21 @@ namespace PasswordManagerAccess.Test.OnePassword
             Assert.NotNull(keychain.GetRsa("szerdhg2ww2ahjo4ilz57x7cce"));
         }
 
+        [Theory]
+        [InlineData("my.1password.com", "com")]
+        [InlineData("my.1password.eu", "eu")]
+        [InlineData("my.1password.ca", "ca")]
+        [InlineData(".1password.xyz", "xyz")]
+        [InlineData("1password.xyz", "xyz")]
+        [InlineData(".xyz", "xyz")]
+        [InlineData("xyz", "xyz")]
+        [InlineData(".", "")]
+        [InlineData("", "")]
+        public void GetTld_returns_tld(string domain, string expected)
+        {
+            Assert.Equal(expected, Util.GetTld(domain));
+        }
+
         [Fact]
         public void ThrowUi_throws_on_method_call()
         {

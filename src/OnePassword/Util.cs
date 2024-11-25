@@ -62,6 +62,12 @@ namespace PasswordManagerAccess.OnePassword
             return Crypto.HmacSha256(token.Decode64Loose(), sessionId.Decode32()).ToUrlSafeBase64NoPadding().Substring(0, 8);
         }
 
+        public static string GetTld(string domain)
+        {
+            var dot = domain.LastIndexOf('.');
+            return dot < 0 ? domain : domain.Substring(dot + 1);
+        }
+
         public class ThrowUi : IUi
         {
             public DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw MakeLogicError();

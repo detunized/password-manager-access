@@ -526,7 +526,7 @@ namespace PasswordManagerAccess.OnePassword
             try
             {
                 var assertion = WebAuthN.GetAssertion(
-                    appId: "1password.com",
+                    appId: "1password." + Util.GetTld(credentials.Domain),
                     challenge: extra.Challenge,
                     origin: $"https://{credentials.Domain}",
                     crossOrigin: false,
