@@ -1,5 +1,8 @@
 # Changelog
 
+## 21.0.1
+  - 1Password: fixed a bug with WebAuthn 2FA on non .com domains
+
 ## 21.0.0
   - ProtonPass: added support for the extra password to unlock the vault
   - ProtonPass: added support for the 2FA Google Authenticator (TOTP) method
