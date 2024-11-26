@@ -1,5 +1,8 @@
 # Changelog
 
+## 21.0.2
+  - ProtonPass: fixed a bug that occured sometimes while parsing the FIDO2 2FA settings
+
 ## 21.0.1
   - 1Password: fixed a bug with WebAuthn 2FA on non .com domains
 
