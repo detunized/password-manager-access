@@ -201,7 +201,7 @@ namespace PasswordManagerAccess.ProtonPass
         public struct Fido2
         {
             [JsonPropertyName("AuthenticationOptions")]
-            public Fido2Options AuthenticationOptions { get; set; }
+            public Fido2Options? AuthenticationOptions { get; set; }
 
             [JsonPropertyName("RegisteredKeys")]
             public Fido2Key[] RegisteredKeys { get; set; }
