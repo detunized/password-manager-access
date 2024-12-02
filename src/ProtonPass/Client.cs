@@ -52,19 +52,11 @@ namespace PasswordManagerAccess.ProtonPass
                 rest.AddOrUpdateDefaultHeader("X-Pm-Human-Verification-Token", humanVerificationToken!);
             }
 
-            // Normally we have up to 3 login attempts. The worst case scenario is when:
-            // 1. The access token expired. We need to refresh it and try again.
-            // 2. The token is valid but the locked scope is missing. We need to do a full login.
-            // 3. Download the vault.
-            var maxAttempts = 3;
-
             // Either it's the first time we're running or the storage is corrupted. We need to start from scratch.
             if (sessionId.IsNullOrEmpty() || accessToken.IsNullOrEmpty() || refreshToken.IsNullOrEmpty())
             {
+                // Get a fresh set of access tokens: access and refresh.
                 await FullLoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
-
-                // We just got a fresh set of access tokens. There shouldn't be any failures at this point.
-                maxAttempts = 1;
             }
             else
             {
@@ -73,7 +65,22 @@ namespace PasswordManagerAccess.ProtonPass
                 rest.UpdateAuthenticator(new OAuth2AuthorizationRequestHeaderAuthenticator(accessToken!, "Bearer"));
             }
 
-            for (var attempt = 0; attempt < maxAttempts; attempt++)
+            // The flow could go through the following steps:
+            // 1. The access token expired. We need to refresh it and try again.
+            // 2. 2FA is needed. We need to provide the 2FA passcode and try again.
+            // 3. The extra password is needed. We need to provide it and try again.
+            // 4. Download the vault.
+
+            // It's impossible to predict how many steps we need to go through exactly.
+            // Instead, we allow each of the following exceptions to happen only once.
+            // If they happen more than once that means there is some logic error in
+            // the client or the server is misbehaving.
+            var hadTokenExpired = false;
+            var hadLockedScope = false;
+            var hadPassScope = false;
+            var errorDetails = "";
+
+            while (true)
             {
                 try
                 {
@@ -81,6 +88,14 @@ namespace PasswordManagerAccess.ProtonPass
                 }
                 catch (TokenExpiredException)
                 {
+                    if (hadTokenExpired)
+                    {
+                        errorDetails = "multiple token expired exceptions";
+                        break;
+                    }
+
+                    hadTokenExpired = true;
+
                     if (
                         refreshToken.IsNullOrEmpty()
                         || !await TryRefreshAuthSessionAndUpdate(sessionId!, refreshToken!, storage, rest, cancellationToken).ConfigureAwait(false)
@@ -92,17 +107,33 @@ namespace PasswordManagerAccess.ProtonPass
                 }
                 catch (MissingLockedScopeException)
                 {
+                    if (hadLockedScope)
+                    {
+                        errorDetails = "multiple missing locked scope exceptions";
+                        break;
+                    }
+
+                    hadLockedScope = true;
+
                     // We already have a session, so we don't need a full login, only the SRP part.
                     await LoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 }
                 catch (MissingPassScopeException)
                 {
+                    if (hadPassScope)
+                    {
+                        errorDetails = "multiple missing pass scope exceptions";
+                        break;
+                    }
+
+                    hadPassScope = true;
+
                     // The pass scope is missing. This means we need to provide the extra password.
                     await DoAuthWithExtraPassword(username, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 }
             }
 
-            throw new InternalErrorException("Failed to download the vault");
+            throw new InternalErrorException($"Failed to download the vault: {errorDetails}");
         }
 
         //
@@ -250,6 +281,7 @@ namespace PasswordManagerAccess.ProtonPass
                     throw new CanceledMultiFactorException("Google Authenticator 2FA step cancelled by the user");
 
                 var request = new RestRequest("auth/v4/2fa").AddJsonBody(new { TwoFactorCode = result.Passcode });
+
                 var response = await rest.ExecutePostAsync<Model.Response>(request, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessful)
                     return;
