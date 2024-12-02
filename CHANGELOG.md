@@ -1,5 +1,9 @@
 # Changelog
 
+## 21.0.3
+  - ProtonPass: fixed a bug that occured when both 2FA and the extra password were used with no
+    stored access tokens
+
 ## 21.0.2
   - ProtonPass: fixed a bug that occured sometimes while parsing the FIDO2 2FA settings
 
