@@ -1,5 +1,8 @@
 # Changelog
 
+## 21.0.4
+  - Dashlane: bumped the client version to get rid of the "unsupported" error
+
 ## 21.0.3
   - ProtonPass: fixed a bug that occured when both 2FA and the extra password were used with no
     stored access tokens
