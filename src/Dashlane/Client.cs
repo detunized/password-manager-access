@@ -343,7 +343,7 @@ namespace PasswordManagerAccess.Dashlane
         private const string UserAgent =
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
         private const string DeviceUkiKey = "device-uki";
-        private const string AppVersion = "6.2350-prod-webapp-60cde8db";
+        private const string AppVersion = "6.2450-prod-webapp-92fd706a";
         private const string Platform = "server_leeloo";
         private const string ClientName = "Chrome - Mac OS (PMA)";
         private const int MaxMfaAttempts = 3;
