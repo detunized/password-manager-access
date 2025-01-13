@@ -215,7 +215,7 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void OpenVault_returns_accounts_with_duo_v4()
+        public async Task OpenVault_returns_accounts_with_duo_v4()
         {
             var flow = new RestFlow()
                 .Post(IterationResponse)
@@ -229,7 +229,16 @@ namespace PasswordManagerAccess.Test.LastPass
                 .Post("")
                 .ExpectUrl("/logout.php");
 
-            var accounts = Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, null);
+            var accounts = await Client.OpenVault(
+                Username,
+                Password,
+                ClientInfo,
+                GetWaitingForOobUi(),
+                flow,
+                ParserOptions.Default,
+                null,
+                CancellationToken.None
+            );
 
             Assert.NotEmpty(accounts);
         }
@@ -416,7 +425,7 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public void OpenVault_with_duo_v4_does_not_log_to_secure_logger_when_logging_is_disabled()
+        public async Task OpenVault_with_duo_v4_does_not_log_to_secure_logger_when_logging_is_disabled()
         {
             // Arrange
             var flow = new RestFlow()
@@ -433,14 +442,14 @@ namespace PasswordManagerAccess.Test.LastPass
             var logger = new FakeSecureLogger();
 
             // Act
-            Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, logger);
+            await Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, logger, CancellationToken.None);
 
             // Assert
             logger.Entries.Should().BeEmpty();
         }
 
         [Fact]
-        public void OpenVault_with_duo_v4_does_not_log_to_secure_logger_when_logger_is_null()
+        public async Task OpenVault_with_duo_v4_does_not_log_to_secure_logger_when_logger_is_null()
         {
             // Arrange
             var flow = new RestFlow()
@@ -456,7 +465,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectUrl("/logout.php");
 
             // Act
-            Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, null);
+            await Client.OpenVault(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, ParserOptions.Default, null, CancellationToken.None);
 
             // Nothing to assert. We expect no exceptions.
         }
