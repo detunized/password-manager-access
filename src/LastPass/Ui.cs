@@ -7,7 +7,7 @@ using PasswordManagerAccess.Duo;
 
 namespace PasswordManagerAccess.LastPass.Ui
 {
-    public interface IAsyncUi
+    public interface IAsyncUi : IDuoAsyncUi
     {
         Task<OtpResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken);
         Task<OtpResult> ProvideMicrosoftAuthPasscode(CancellationToken cancellationToken);

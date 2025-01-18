@@ -342,25 +342,22 @@ namespace PasswordManagerAccess.LastPass
             CancellationToken cancellationToken
         )
         {
-            await Task.CompletedTask;
-            throw new NotImplementedException("OOB is not supported yet");
+            if (!parameters.TryGetValue("outofbandtype", out var method))
+                throw new InternalErrorException("Out of band method is not specified");
 
-            // if (!parameters.TryGetValue("outofbandtype", out var method))
-            //     throw new InternalErrorException("Out of band method is not specified");
-
-            // return method switch
-            // {
-            //     "lastpassauth" => new OobWithExtras(ui.ApproveLastPassAuth()),
-            //     "duo" => await ApproveDuo(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false),
-            //     "salesforcehash" => new OobWithExtras(ui.ApproveSalesforceAuth()),
-            //     _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
-            // };
+            return method switch
+            {
+                "lastpassauth" => new OobWithExtras(await ui.ApproveLastPassAuth(cancellationToken).ConfigureAwait(false)),
+                "duo" => await ApproveDuo(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false),
+                "salesforcehash" => new OobWithExtras(await ui.ApproveSalesforceAuth(cancellationToken).ConfigureAwait(false)),
+                _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
+            };
         }
 
         internal static async Task<OobWithExtras> ApproveDuo(
             string username,
             Dictionary<string, string> parameters,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
             CancellationToken cancellationToken
@@ -368,13 +365,13 @@ namespace PasswordManagerAccess.LastPass
         {
             return parameters.GetOrDefault("preferduowebsdk", "") == "1"
                 ? await ApproveDuoWebSdk(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false)
-                : new OobWithExtras(ui.ApproveDuo());
+                : new OobWithExtras(await ui.ApproveDuo(cancellationToken).ConfigureAwait(false));
         }
 
         internal static async Task<OobWithExtras> ApproveDuoWebSdk(
             string username,
             Dictionary<string, string> parameters,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
             CancellationToken cancellationToken
@@ -427,7 +424,7 @@ namespace PasswordManagerAccess.LastPass
             string host,
             string salt,
             string signature,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
             CancellationToken cancellationToken
@@ -458,7 +455,7 @@ namespace PasswordManagerAccess.LastPass
             string url,
             string sessionToken,
             string privateToken,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
             CancellationToken cancellationToken

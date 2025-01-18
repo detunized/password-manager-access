@@ -56,12 +56,12 @@ namespace PasswordManagerAccess.Duo
             };
         }
 
-        internal static void UpdateUi(DuoStatus status, string text, IDuoUi ui)
+        internal static async Task UpdateUi(DuoStatus status, string text, IDuoAsyncUi ui, CancellationToken cancellationToken)
         {
             if (text.IsNullOrEmpty())
                 return;
 
-            ui.UpdateDuoStatus(status, text);
+            await ui.UpdateDuoStatus(status, text, cancellationToken).ConfigureAwait(false);
         }
 
         internal static InternalErrorException MakeInvalidResponseError(string message)

@@ -73,4 +73,28 @@ namespace PasswordManagerAccess.Duo
             Factors = factors;
         }
     }
+
+    //
+    // Internal
+    //
+
+    // TODO: Remove when done with the migration
+    internal class DuoUiToAsyncUiAdapter(IDuoUi ui) : IDuoAsyncUi
+    {
+        public Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(ui.ChooseDuoFactor(devices));
+        }
+
+        public Task<string> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(ui.ProvideDuoPasscode(device));
+        }
+
+        public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)
+        {
+            ui.UpdateDuoStatus(status, text);
+            return Task.CompletedTask;
+        }
+    }
 }

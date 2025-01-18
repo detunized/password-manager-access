@@ -15,57 +15,43 @@ namespace PasswordManagerAccess.Example.LastPass
     {
         // Very simple text based user interface that demonstrates how to respond to
         // to Vault UI requests.
-        private class TextUi : DuoUi, IAsyncUi
+        private class TextUi : DuoAsyncUi, IAsyncUi
         {
-            public Task<OtpResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
-            {
-                return Task.FromResult(ProvideOtpPasscode("Google Authenticator"));
-            }
+            public Task<OtpResult> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) =>
+                ProvideOtpPasscode("Google Authenticator", cancellationToken);
 
-            public Task<OtpResult> ProvideMicrosoftAuthPasscode(CancellationToken cancellationToken)
-            {
-                return Task.FromResult(ProvideOtpPasscode("Microsoft Authenticator"));
-            }
+            public Task<OtpResult> ProvideMicrosoftAuthPasscode(CancellationToken cancellationToken) =>
+                ProvideOtpPasscode("Microsoft Authenticator", cancellationToken);
 
-            public Task<OtpResult> ProvideYubikeyPasscode(CancellationToken cancellationToken)
-            {
-                return Task.FromResult(ProvideOtpPasscode("Yubikey"));
-            }
+            public Task<OtpResult> ProvideYubikeyPasscode(CancellationToken cancellationToken) => ProvideOtpPasscode("Yubikey", cancellationToken);
 
-            public Task<OobResult> ApproveLastPassAuth(CancellationToken cancellationToken)
-            {
-                return Task.FromResult(ApproveOutOfBand("LastPass Authenticator"));
-            }
+            public Task<OobResult> ApproveLastPassAuth(CancellationToken cancellationToken) =>
+                ApproveOutOfBand("LastPass Authenticator", cancellationToken);
 
-            public Task<OobResult> ApproveDuo(CancellationToken cancellationToken)
-            {
-                return Task.FromResult(ApproveOutOfBand("Duo Security"));
-            }
+            public Task<OobResult> ApproveDuo(CancellationToken cancellationToken) => ApproveOutOfBand("Duo Security", cancellationToken);
 
-            public Task<OobResult> ApproveSalesforceAuth(CancellationToken cancellationToken)
-            {
-                return Task.FromResult(ApproveOutOfBand("Salesforce Authenticator"));
-            }
+            public Task<OobResult> ApproveSalesforceAuth(CancellationToken cancellationToken) =>
+                ApproveOutOfBand("Salesforce Authenticator", cancellationToken);
 
             //
             // Private
             //
 
-            private static OtpResult ProvideOtpPasscode(string method)
+            private static async Task<OtpResult> ProvideOtpPasscode(string method, CancellationToken cancellationToken)
             {
-                var answer = GetAnswer($"Please enter {method} code {PressEnterToCancel}");
-                return answer == "" ? OtpResult.Cancel : new OtpResult(answer, GetRememberMe());
+                var answer = await GetAnswer($"Please enter {method} code {PressEnterToCancel}", cancellationToken);
+                return answer == "" ? OtpResult.Cancel : new OtpResult(answer, await GetRememberMe(cancellationToken));
             }
 
-            private static OobResult ApproveOutOfBand(string method)
+            private static async Task<OobResult> ApproveOutOfBand(string method, CancellationToken cancellationToken)
             {
                 Console.WriteLine($"> Please approve out-of-band via {method} and press ENTER");
-                var answer = GetAnswer($"Or enter the {method} passcode from the app or 'c' to cancel");
+                var answer = await GetAnswer($"Or enter the {method} passcode from the app or 'c' to cancel", cancellationToken);
 
                 if (answer.ToLower() == "c")
                     return OobResult.Cancel;
 
-                var rememberMe = GetRememberMe();
+                var rememberMe = await GetRememberMe(cancellationToken);
                 return answer.Length == 0 ? OobResult.WaitForApproval(rememberMe) : OobResult.ContinueWithPasscode(answer, rememberMe);
             }
         }

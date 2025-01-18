@@ -1383,21 +1383,22 @@ namespace PasswordManagerAccess.Test.LastPass
                 return Task.FromResult(oob);
             }
 
-            public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
+            public Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices, CancellationToken cancellationToken)
             {
                 ChooseDuoFactorCalledTimes++;
-                return new DuoChoice(new DuoDevice("id", "name", [DuoFactor.Push]), DuoFactor.Push, false);
+                return Task.FromResult(new DuoChoice(new DuoDevice("id", "name", [DuoFactor.Push]), DuoFactor.Push, false));
             }
 
-            public string ProvideDuoPasscode(DuoDevice device)
+            public Task<string> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken)
             {
                 ProvideDuoPasscodeCalledTimes++;
-                return "passcode";
+                return Task.FromResult("passcode");
             }
 
-            public void UpdateDuoStatus(DuoStatus status, string text)
+            public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)
             {
                 UpdateDuoStatusCalledTimes++;
+                return Task.CompletedTask;
             }
         }
 

@@ -17,14 +17,16 @@ namespace PasswordManagerAccess.Duo
     {
         public static Result Authenticate(string host, string signature, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {
-            return AuthenticateAsync(host, signature, ui, transport, logger, CancellationToken.None).GetAwaiter().GetResult();
+            return AuthenticateAsync(host, signature, new DuoUiToAsyncUiAdapter(ui), transport, logger, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
         }
 
         // Returns the second factor token from Duo or null when canceled by the user.
         public static async Task<Result> AuthenticateAsync(
             string host,
             string signature,
-            IDuoUi ui,
+            IDuoAsyncUi ui,
             IRestTransport transport,
             ISimpleLogger logger,
             CancellationToken cancellationToken
@@ -39,7 +41,7 @@ namespace PasswordManagerAccess.Duo
             while (true)
             {
                 // Ask the user to choose what to do
-                var choice = ui.ChooseDuoFactor(devices);
+                var choice = await ui.ChooseDuoFactor(devices, cancellationToken).ConfigureAwait(false);
                 if (choice == null)
                     return null; // Canceled by user
 
@@ -55,7 +57,7 @@ namespace PasswordManagerAccess.Duo
                 var passcode = "";
                 if (choice.Factor == DuoFactor.Passcode)
                 {
-                    passcode = ui.ProvideDuoPasscode(choice.Device);
+                    passcode = await ui.ProvideDuoPasscode(choice.Device, cancellationToken).ConfigureAwait(false);
                     if (passcode.IsNullOrEmpty())
                         return null; // Canceled by user
                 }
@@ -155,7 +157,7 @@ namespace PasswordManagerAccess.Duo
             string sid,
             DuoChoice choice,
             string passcode,
-            IDuoUi ui,
+            IDuoAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -173,7 +175,13 @@ namespace PasswordManagerAccess.Duo
 
         // Returns null when a recoverable flow error (like incorrect code or time out) happened
         // TODO: Don't return null, use something more obvious
-        internal static async Task<string> PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<string> PollForResultUrl(
+            string sid,
+            string txid,
+            IDuoAsyncUi ui,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             const int maxPollAttempts = 100;
 
@@ -190,7 +198,7 @@ namespace PasswordManagerAccess.Duo
                     .ConfigureAwait(false);
 
                 var (status, text) = GetResponseStatus(response);
-                Util.UpdateUi(status, text, ui);
+                await Util.UpdateUi(status, text, ui, cancellationToken).ConfigureAwait(false);
 
                 switch (status)
                 {
@@ -209,12 +217,12 @@ namespace PasswordManagerAccess.Duo
             throw Util.MakeInvalidResponseError("expected to receive a valid result or error, got none of it");
         }
 
-        internal static async Task<string> FetchToken(string sid, string url, IDuoUi ui, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<string> FetchToken(string sid, string url, IDuoAsyncUi ui, RestClient rest, CancellationToken cancellationToken)
         {
             var response = await Util.PostForm<R.FetchToken>(url, new Dictionary<string, object> { ["sid"] = sid }, rest, cancellationToken)
                 .ConfigureAwait(false);
 
-            UpdateUi(response, ui);
+            await UpdateUi(response, ui, cancellationToken).ConfigureAwait(false);
 
             var token = response.Cookie;
             if (token.IsNullOrEmpty())
@@ -223,10 +231,10 @@ namespace PasswordManagerAccess.Duo
             return token;
         }
 
-        internal static void UpdateUi(R.Status response, IDuoUi ui)
+        internal static async Task UpdateUi(R.Status response, IDuoAsyncUi ui, CancellationToken cancellationToken)
         {
             var (status, text) = GetResponseStatus(response);
-            Util.UpdateUi(status, text, ui);
+            await Util.UpdateUi(status, text, ui, cancellationToken).ConfigureAwait(false);
         }
 
         internal static (DuoStatus Status, string Text) GetResponseStatus(R.Status response)

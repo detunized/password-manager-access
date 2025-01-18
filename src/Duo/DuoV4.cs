@@ -15,12 +15,12 @@ namespace PasswordManagerAccess.Duo
     {
         public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {
-            return AuthenticateAsync(authUrl, ui, transport, logger, CancellationToken.None).GetAwaiter().GetResult();
+            return AuthenticateAsync(authUrl, new DuoUiToAsyncUiAdapter(ui), transport, logger, CancellationToken.None).GetAwaiter().GetResult();
         }
 
         public static async Task<Result> AuthenticateAsync(
             string authUrl,
-            IDuoUi ui,
+            IDuoAsyncUi ui,
             IRestTransport transport,
             ISimpleLogger logger,
             CancellationToken cancellationToken
@@ -64,7 +64,7 @@ namespace PasswordManagerAccess.Duo
             while (true)
             {
                 // Ask the user to choose what to do
-                var choice = ui.ChooseDuoFactor(devices);
+                var choice = await ui.ChooseDuoFactor(devices, cancellationToken).ConfigureAwait(false);
                 if (choice == null)
                     return null; // Canceled by user
 
@@ -80,7 +80,7 @@ namespace PasswordManagerAccess.Duo
                 var passcode = "";
                 if (choice.Factor == DuoFactor.Passcode)
                 {
-                    passcode = ui.ProvideDuoPasscode(choice.Device);
+                    passcode = await ui.ProvideDuoPasscode(choice.Device, cancellationToken).ConfigureAwait(false);
                     if (passcode.IsNullOrEmpty())
                         return null; // Canceled by user
                 }
@@ -229,7 +229,7 @@ namespace PasswordManagerAccess.Duo
             string xsrf,
             DuoChoice choice,
             string passcode,
-            IDuoUi ui,
+            IDuoAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -244,7 +244,13 @@ namespace PasswordManagerAccess.Duo
             return FetchResult(sid, txid, xsrf, choice, rest);
         }
 
-        internal static async Task<bool> PollForResultUrl(string sid, string txid, IDuoUi ui, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<bool> PollForResultUrl(
+            string sid,
+            string txid,
+            IDuoAsyncUi ui,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             const int maxPollAttempts = 100;
 
@@ -273,7 +279,7 @@ namespace PasswordManagerAccess.Duo
                     .ConfigureAwait(false);
 
                 var (status, text) = GetResponseStatus(response);
-                Util.UpdateUi(status, text, ui);
+                await Util.UpdateUi(status, text, ui, cancellationToken).ConfigureAwait(false);
 
                 switch (status)
                 {
