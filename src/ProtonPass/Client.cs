@@ -299,7 +299,7 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
-        private static async Task DoFido2MultiFactorAuth(
+        private static Task DoFido2MultiFactorAuth(
             Model.Mfa mfa,
             IAsyncUi ui,
             IAsyncSecureStorage storage,
