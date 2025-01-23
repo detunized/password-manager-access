@@ -76,9 +76,9 @@ namespace PasswordManagerAccess.OnePassword
 
             public void UpdateDuoStatus(DuoStatus status, string text) => throw MakeLogicError();
 
-            public Ui.Passcode ProvideGoogleAuthPasscode() => throw MakeLogicError();
+            public Passcode ProvideGoogleAuthPasscode() => throw MakeLogicError();
 
-            public Ui.Passcode ProvideWebAuthnRememberMe() => throw MakeLogicError();
+            public Passcode ProvideWebAuthnRememberMe() => throw MakeLogicError();
         }
 
         public class ThrowStorage : ISecureStorage

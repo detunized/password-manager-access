@@ -12,8 +12,8 @@ namespace PasswordManagerAccess.Example.Common
 {
     public class DuoAsyncUi : BaseAsyncUi, IDuoAsyncUi
     {
-        public async Task<OneOf<Choice, MfaMethod, Cancelled>> ChooseFactor(
-            Device[] devices,
+        public async Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
+            DuoDevice[] devices,
             MfaMethod[] otherMethods,
             CancellationToken cancellationToken
         )
@@ -49,13 +49,13 @@ namespace PasswordManagerAccess.Example.Common
             }
         }
 
-        public async Task<OneOf<Passcode, Cancelled>> ProvidePasscode(Device device, CancellationToken cancellationToken)
+        public async Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken)
         {
             var answer = await GetAnswer($"Enter the passcode for {device.Name} {PressEnterToCancel}", cancellationToken).ConfigureAwait(false);
             return answer == "" ? IDuoAsyncUi.CancelPasscode() : IDuoAsyncUi.Passcode(answer);
         }
 
-        public Task UpdateStatus(Status status, string text, CancellationToken cancellationToken)
+        public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)
         {
             WriteLine($"Duo {status}: {text}", StatusToColor(status));
             return Task.CompletedTask;
@@ -65,15 +65,15 @@ namespace PasswordManagerAccess.Example.Common
         // Private
         //
 
-        private static ConsoleColor StatusToColor(Status status)
+        private static ConsoleColor StatusToColor(DuoStatus status)
         {
             switch (status)
             {
-                case Status.Success:
+                case DuoStatus.Success:
                     return ConsoleColor.Green;
-                case Status.Error:
+                case DuoStatus.Error:
                     return ConsoleColor.Red;
-                case Status.Info:
+                case DuoStatus.Info:
                     return ConsoleColor.Blue;
             }
 
@@ -88,7 +88,7 @@ namespace PasswordManagerAccess.Example.Common
 
         public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
         {
-            var r = _asyncUi.ChooseFactor(devices.Select(ToDevice).ToArray(), [], CancellationToken.None).GetAwaiter().GetResult();
+            var r = _asyncUi.ChooseDuoFactor(devices, [], CancellationToken.None).GetAwaiter().GetResult();
 
             if (r.IsB)
                 throw new NotImplementedException("MFA selection is not supported");
@@ -96,59 +96,22 @@ namespace PasswordManagerAccess.Example.Common
             if (r.IsC)
                 return null;
 
-            return new DuoChoice(ToDuoDevice(r.A.Device), ToDuoFactor(r.A.Factor), r.A.RememberMe);
+            return new DuoChoice(r.A.Device, r.A.Factor, r.A.RememberMe);
         }
 
         public string ProvideDuoPasscode(DuoDevice device)
         {
-            var r = _asyncUi.ProvidePasscode(ToDevice(device), CancellationToken.None).GetAwaiter().GetResult();
+            var r = _asyncUi.ProvideDuoPasscode(device, CancellationToken.None).GetAwaiter().GetResult();
 
             if (r.IsB)
                 return null;
 
-            return r.A.Code;
+            return r.A.Passcode;
         }
 
         public void UpdateDuoStatus(DuoStatus status, string text)
         {
-            _asyncUi.UpdateStatus(ToStatus(status), text, CancellationToken.None).GetAwaiter().GetResult();
+            _asyncUi.UpdateDuoStatus(status, text, CancellationToken.None).GetAwaiter().GetResult();
         }
-
-        //
-        // Private
-        //
-
-        private static DuoFactor ToDuoFactor(Factor factor) =>
-            factor switch
-            {
-                Factor.Push => DuoFactor.Push,
-                Factor.Call => DuoFactor.Call,
-                Factor.Passcode => DuoFactor.Passcode,
-                Factor.SendPasscodesBySms => DuoFactor.SendPasscodesBySms,
-                _ => throw new ArgumentOutOfRangeException(nameof(factor), factor, "Unknown factor"),
-            };
-
-        private static DuoDevice ToDuoDevice(Device device) => new(device.Id, device.Name, device.Factors.Select(ToDuoFactor).ToArray());
-
-        private static Factor ToFactor(DuoFactor factor) =>
-            factor switch
-            {
-                DuoFactor.Push => Factor.Push,
-                DuoFactor.Call => Factor.Call,
-                DuoFactor.Passcode => Factor.Passcode,
-                DuoFactor.SendPasscodesBySms => Factor.SendPasscodesBySms,
-                _ => throw new ArgumentOutOfRangeException(nameof(factor), factor, "Unknown factor"),
-            };
-
-        private static Device ToDevice(DuoDevice device) => new(device.Id, device.Name, device.Factors.Select(ToFactor).ToArray());
-
-        private static Status ToStatus(DuoStatus status) =>
-            status switch
-            {
-                DuoStatus.Success => Status.Success,
-                DuoStatus.Error => Status.Error,
-                DuoStatus.Info => Status.Info,
-                _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown status"),
-            };
     }
 }

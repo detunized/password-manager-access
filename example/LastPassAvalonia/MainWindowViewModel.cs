@@ -17,7 +17,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     private string _username = "1";
     private string _password = "2";
     private string _status = "Press Login to continue";
-    private bool _isLoggingIn = false;
+    private bool _isLoggingIn;
 
     public string Username
     {
@@ -93,7 +93,38 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     // IAsyncUi
     //
 
-    public Task<OneOf<OtpResult, MfaMethod, PasswordManagerAccess.LastPass.Ui.Cancelled>> ProvideGoogleAuthPasscode(
+    public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveSalesforceAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
+        DuoDevice[] devices,
         MfaMethod[] otherMethods,
         CancellationToken cancellationToken
     )
@@ -101,61 +132,12 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<OtpResult, MfaMethod, PasswordManagerAccess.LastPass.Ui.Cancelled>> ProvideMicrosoftAuthPasscode(
-        MfaMethod[] otherMethods,
-        CancellationToken cancellationToken
-    )
+    public Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<OtpResult, MfaMethod, PasswordManagerAccess.LastPass.Ui.Cancelled>> ProvideYubikeyPasscode(
-        MfaMethod[] otherMethods,
-        CancellationToken cancellationToken
-    )
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<OneOf<OobResult, MfaMethod, PasswordManagerAccess.LastPass.Ui.Cancelled>> ApproveLastPassAuth(
-        MfaMethod[] otherMethods,
-        CancellationToken cancellationToken
-    )
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<OneOf<OobResult, MfaMethod, PasswordManagerAccess.LastPass.Ui.Cancelled>> ApproveDuo(
-        MfaMethod[] otherMethods,
-        CancellationToken cancellationToken
-    )
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<OneOf<OobResult, MfaMethod, PasswordManagerAccess.LastPass.Ui.Cancelled>> ApproveSalesforceAuth(
-        MfaMethod[] otherMethods,
-        CancellationToken cancellationToken
-    )
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<OneOf<Choice, MfaMethod, PasswordManagerAccess.Duo.Cancelled>> ChooseFactor(
-        Device[] devices,
-        MfaMethod[] otherMethods,
-        CancellationToken cancellationToken
-    )
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<OneOf<Passcode, PasswordManagerAccess.Duo.Cancelled>> ProvidePasscode(Device device, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task UpdateStatus(Status status, string text, CancellationToken cancellationToken)
+    public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

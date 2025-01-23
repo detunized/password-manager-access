@@ -44,24 +44,24 @@ namespace PasswordManagerAccess.Duo
             throw MakeSpecializedError(response);
         }
 
-        internal static string GetFactorParameterValue(Factor factor)
+        internal static string GetFactorParameterValue(DuoFactor factor)
         {
             return factor switch
             {
-                Factor.Push => "Duo Push",
-                Factor.Call => "Phone Call",
-                Factor.Passcode => "Passcode",
-                Factor.SendPasscodesBySms => "sms",
+                DuoFactor.Push => "Duo Push",
+                DuoFactor.Call => "Phone Call",
+                DuoFactor.Passcode => "Passcode",
+                DuoFactor.SendPasscodesBySms => "sms",
                 _ => "",
             };
         }
 
-        internal static async Task UpdateUi(Status status, string text, IDuoAsyncUi ui, CancellationToken cancellationToken)
+        internal static async Task UpdateUi(DuoStatus status, string text, IDuoAsyncUi ui, CancellationToken cancellationToken)
         {
             if (text.IsNullOrEmpty())
                 return;
 
-            await ui.UpdateStatus(status, text, cancellationToken).ConfigureAwait(false);
+            await ui.UpdateDuoStatus(status, text, cancellationToken).ConfigureAwait(false);
         }
 
         internal static InternalErrorException MakeInvalidResponseError(string message)

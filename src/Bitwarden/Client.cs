@@ -168,7 +168,7 @@ namespace PasswordManagerAccess.Bitwarden
 
             var method = ChooseSecondFactorMethod(secondFactor, ui);
             var extra = secondFactor.Methods[method];
-            Ui.Passcode passcode = null;
+            Passcode passcode = null;
 
             switch (method)
             {
@@ -200,14 +200,14 @@ namespace PasswordManagerAccess.Bitwarden
                         if (v4 == Result.RedirectToV1)
                             needV1 = true; // Fallback to V1 below
                         else if (v4 != null)
-                            passcode = new Ui.Passcode($"{v4.Code}|{v4.State}", v4.RememberMe);
+                            passcode = new Passcode($"{v4.Code}|{v4.State}", v4.RememberMe);
                     }
 
                     if (needV1)
                     {
                         var v1 = DuoV1.Authenticate((string)extra["Host"] ?? "", (string)extra["Signature"] ?? "", ui, apiRest.Transport);
                         if (v1 != null)
-                            passcode = new Ui.Passcode(v1.Code, v1.RememberMe);
+                            passcode = new Passcode(v1.Code, v1.RememberMe);
                     }
 
                     break;
@@ -297,7 +297,7 @@ namespace PasswordManagerAccess.Bitwarden
             storage.StoreString(RememberMeTokenKey, "");
         }
 
-        internal static Ui.Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
+        internal static Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
         {
             var appId = (string)u2fParams["appId"];
             var challenge = (string)u2fParams["challenge"];
@@ -328,7 +328,7 @@ namespace PasswordManagerAccess.Bitwarden
             );
 
             // TODO: Add support for remember-me.
-            return new Ui.Passcode(token, false);
+            return new Passcode(token, false);
         }
 
         internal static R.SecondFactorMethod ChooseSecondFactorMethod(R.SecondFactor secondFactor, IUi ui)

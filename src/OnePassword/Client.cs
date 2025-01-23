@@ -505,7 +505,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static SecondFactorResult AuthenticateWithGoogleAuth(IUi ui)
         {
             var passcode = ui.ProvideGoogleAuthPasscode();
-            if (passcode == Ui.Passcode.Cancel)
+            if (passcode == Passcode.Cancel)
                 return SecondFactorResult.Cancel();
 
             return SecondFactorResult.Done(new Dictionary<string, string> { ["code"] = passcode.Code }, passcode.RememberMe);
@@ -514,7 +514,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, Credentials credentials, IUi ui)
         {
             var rememberMe = ui.ProvideWebAuthnRememberMe();
-            if (rememberMe == Ui.Passcode.Cancel)
+            if (rememberMe == Passcode.Cancel)
                 return SecondFactorResult.Cancel();
 
             if (!(factor.Parameters is R.WebAuthnMfa extra))
