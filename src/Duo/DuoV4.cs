@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.Duo
 {
     internal static class DuoV4
     {
-        public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
+        public static DuoResult Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {
             return AuthenticateAsync(authUrl, [], new DuoUiToAsyncUiAdapter(ui), transport, logger, CancellationToken.None)
                 .GetAwaiter()
@@ -22,7 +22,7 @@ namespace PasswordManagerAccess.Duo
                 .AsT0;
         }
 
-        public static async Task<OneOf<Result, MfaMethod, DuoCancelled>> AuthenticateAsync(
+        public static async Task<OneOf<DuoResult, MfaMethod, DuoCancelled>> AuthenticateAsync(
             string authUrl,
             MfaMethod[] otherMethods,
             IDuoAsyncUi ui,
@@ -38,7 +38,7 @@ namespace PasswordManagerAccess.Duo
 
             // 2. Detect a redirect to V1
             if (url.Contains("/frame/frameless/v3/auth"))
-                return Result.RedirectToV1;
+                return DuoResult.RedirectToV1;
 
             // 3. The main page contains the form that we need to POST to
             string host;
@@ -71,13 +71,13 @@ namespace PasswordManagerAccess.Duo
                 // Ask the user to choose what to do
                 var factorResult = await ui.ChooseDuoFactor(devices, otherMethods, cancellationToken).ConfigureAwait(false);
 
-                // User chose a different MFA method
-                if (factorResult.IsT1)
-                    return factorResult.AsT1;
-
-                // User cancelled
-                if (factorResult.IsT2)
-                    return factorResult.AsT2;
+                switch (factorResult.Value)
+                {
+                    case MfaMethod mfa:
+                        return mfa;
+                    case DuoCancelled cancelled:
+                        return cancelled;
+                }
 
                 var choice = factorResult.AsT0;
 
@@ -86,7 +86,7 @@ namespace PasswordManagerAccess.Duo
                 if (choice.Factor == DuoFactor.SendPasscodesBySms)
                 {
                     _ = await SubmitFactor(sessionId, choice, "", apiRest, cancellationToken).ConfigureAwait(false);
-                    choice = new(choice.Device, DuoFactor.Passcode, choice.RememberMe);
+                    choice = choice with { Factor = DuoFactor.Passcode };
                 }
 
                 // Ask for the passcode
@@ -94,10 +94,14 @@ namespace PasswordManagerAccess.Duo
                 if (choice.Factor == DuoFactor.Passcode)
                 {
                     var passcodeResult = await ui.ProvideDuoPasscode(choice.Device, cancellationToken).ConfigureAwait(false);
-                    if (passcodeResult.IsT1)
-                        return passcodeResult.AsT1;
-
-                    passcode = passcodeResult.AsT0.Passcode;
+                    switch (passcodeResult.Value)
+                    {
+                        case DuoPasscode p:
+                            passcode = p.Passcode;
+                            break;
+                        case DuoCancelled cancelled:
+                            return cancelled;
+                    }
                 }
 
                 var maybeResult = await SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest, cancellationToken)
@@ -109,7 +113,7 @@ namespace PasswordManagerAccess.Duo
 
                 // All good
                 var result = maybeResult.Value;
-                return new Result($"{result.Code}:{result.State}", "", choice.RememberMe);
+                return new DuoResult($"{result.Code}:{result.State}", "", choice.RememberMe);
             }
         }
 

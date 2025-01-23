@@ -26,14 +26,18 @@ namespace PasswordManagerAccess.Example.LastPass
             public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
                 ProvideOtpPasscode("Yubikey", cancellationToken);
 
-            public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] methods, CancellationToken cancellationToken) =>
-                ApproveOutOfBand("LastPass Authenticator", cancellationToken);
+            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
+                MfaMethod[] methods,
+                CancellationToken cancellationToken
+            ) => ApproveOutOfBand("LastPass Authenticator", cancellationToken);
 
-            public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] methods, CancellationToken cancellationToken) =>
+            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] methods, CancellationToken cancellationToken) =>
                 ApproveOutOfBand("Duo Security", cancellationToken);
 
-            public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveSalesforceAuth(MfaMethod[] methods, CancellationToken cancellationToken) =>
-                ApproveOutOfBand("Salesforce Authenticator", cancellationToken);
+            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveSalesforceAuth(
+                MfaMethod[] methods,
+                CancellationToken cancellationToken
+            ) => ApproveOutOfBand("Salesforce Authenticator", cancellationToken);
 
             //
             // Private
@@ -45,7 +49,10 @@ namespace PasswordManagerAccess.Example.LastPass
                 return answer == "" ? new Cancelled("") : new Otp(answer, await GetRememberMe(cancellationToken));
             }
 
-            private static async Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveOutOfBand(string method, CancellationToken cancellationToken)
+            private static async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveOutOfBand(
+                string method,
+                CancellationToken cancellationToken
+            )
             {
                 Console.WriteLine($"> Please approve out-of-band via {method} and press ENTER");
                 var answer = await GetAnswer($"Or enter the {method} passcode from the app or 'c' to cancel", cancellationToken);
@@ -54,7 +61,7 @@ namespace PasswordManagerAccess.Example.LastPass
                     return new Cancelled("");
 
                 var rememberMe = await GetRememberMe(cancellationToken);
-                return answer.Length == 0 ? new OobResult(true, "", rememberMe) : new OobResult(false, answer, rememberMe);
+                return answer.Length == 0 ? new WaitForOutOfBand(rememberMe) : new Otp(answer, rememberMe);
             }
         }
 

@@ -109,17 +109,20 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveSalesforceAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveSalesforceAuth(
+        MfaMethod[] otherMethods,
+        CancellationToken cancellationToken
+    )
     {
         throw new NotImplementedException();
     }

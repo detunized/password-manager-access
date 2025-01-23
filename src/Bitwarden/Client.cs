@@ -197,7 +197,7 @@ namespace PasswordManagerAccess.Bitwarden
                     {
                         var v4 = DuoV4.Authenticate((string)extra["AuthUrl"], ui, apiRest.Transport);
 
-                        if (v4 == Result.RedirectToV1)
+                        if (v4 == DuoResult.RedirectToV1)
                             needV1 = true; // Fallback to V1 below
                         else if (v4 != null)
                             passcode = new Passcode($"{v4.Code}|{v4.State}", v4.RememberMe);
