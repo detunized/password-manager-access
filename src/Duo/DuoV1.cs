@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo.Response;
 using R = PasswordManagerAccess.Duo.ResponseV1;
@@ -21,7 +22,7 @@ namespace PasswordManagerAccess.Duo
             return AuthenticateAsync(host, signature, [], new DuoUiToAsyncUiAdapter(ui), transport, logger, CancellationToken.None)
                 .GetAwaiter()
                 .GetResult()
-                .A;
+                .AsT0;
         }
 
         // Returns the second factor token from Duo or null when canceled by the user.
@@ -47,14 +48,14 @@ namespace PasswordManagerAccess.Duo
                 var factorResult = await ui.ChooseDuoFactor(devices, otherMethods, cancellationToken).ConfigureAwait(false);
 
                 // User chose a different MFA method
-                if (factorResult.IsB)
-                    return OneOf<Result, MfaMethod, DuoCancelled>.FromB(factorResult.B);
+                if (factorResult.IsT1)
+                    return factorResult.AsT1;
 
                 // User cancelled
-                if (factorResult.IsC)
-                    return OneOf<Result, MfaMethod, DuoCancelled>.FromC(factorResult.C);
+                if (factorResult.IsT2)
+                    return factorResult.AsT2;
 
-                var choice = factorResult.A;
+                var choice = factorResult.AsT0;
 
                 // SMS is a special case: it doesn't submit any codes, it rather tells the server to send
                 // a new batch of passcodes to the phone via SMS.
@@ -69,10 +70,10 @@ namespace PasswordManagerAccess.Duo
                 if (choice.Factor == DuoFactor.Passcode)
                 {
                     var passcodeResult = await ui.ProvideDuoPasscode(choice.Device, cancellationToken).ConfigureAwait(false);
-                    if (passcodeResult.IsB)
-                        return OneOf<Result, MfaMethod, DuoCancelled>.FromC(passcodeResult.B);
+                    if (passcodeResult.IsT1)
+                        return passcodeResult.AsT1;
 
-                    passcode = passcodeResult.A.Passcode;
+                    passcode = passcodeResult.AsT0.Passcode;
                 }
 
                 var token = await SubmitFactorAndWaitForToken(sid, choice, passcode, ui, rest, cancellationToken).ConfigureAwait(false);
@@ -82,7 +83,7 @@ namespace PasswordManagerAccess.Duo
                     continue;
 
                 // All good
-                return OneOf<Result, MfaMethod, DuoCancelled>.FromA(new Result($"{token}:{app}", "", choice.RememberMe));
+                return new Result($"{token}:{app}", "", choice.RememberMe);
             }
         }
 

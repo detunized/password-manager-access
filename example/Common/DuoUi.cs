@@ -2,9 +2,9 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 
@@ -89,24 +89,17 @@ namespace PasswordManagerAccess.Example.Common
         public DuoChoice ChooseDuoFactor(DuoDevice[] devices)
         {
             var r = _asyncUi.ChooseDuoFactor(devices, [], CancellationToken.None).GetAwaiter().GetResult();
-
-            if (r.IsB)
-                throw new NotImplementedException("MFA selection is not supported");
-
-            if (r.IsC)
-                return null;
-
-            return new DuoChoice(r.A.Device, r.A.Factor, r.A.RememberMe);
+            return r.Match(
+                choice => new DuoChoice(choice.Device, choice.Factor, choice.RememberMe),
+                _ => throw new NotImplementedException("MFA selection is not supported"),
+                _ => null
+            );
         }
 
         public string ProvideDuoPasscode(DuoDevice device)
         {
             var r = _asyncUi.ProvideDuoPasscode(device, CancellationToken.None).GetAwaiter().GetResult();
-
-            if (r.IsB)
-                return null;
-
-            return r.A.Passcode;
+            return r.Match(passcode => passcode.Passcode, _ => null);
         }
 
         public void UpdateDuoStatus(DuoStatus status, string text)

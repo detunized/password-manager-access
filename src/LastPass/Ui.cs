@@ -3,6 +3,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 
@@ -25,19 +26,13 @@ namespace PasswordManagerAccess.LastPass.Ui
         // Result factory methods
         //
 
-        public static OneOf<OtpResult, MfaMethod, Cancelled> Otp(string passcode, bool rememberMe) =>
-            OneOf<OtpResult, MfaMethod, Cancelled>.FromA(new OtpResult(passcode, rememberMe));
-
-        public static OneOf<OobResult, MfaMethod, Cancelled> WaitForApproval(bool rememberMe) =>
-            OneOf<OobResult, MfaMethod, Cancelled>.FromA(new OobResult(true, "", rememberMe));
-
+        public static OneOf<OtpResult, MfaMethod, Cancelled> Otp(string passcode, bool rememberMe) => new OtpResult(passcode, rememberMe);
+        public static OneOf<OobResult, MfaMethod, Cancelled> WaitForApproval(bool rememberMe) => new OobResult(true, "", rememberMe);
         public static OneOf<OobResult, MfaMethod, Cancelled> ContinueWithPasscode(string passcode, bool rememberMe) =>
-            OneOf<OobResult, MfaMethod, Cancelled>.FromA(new OobResult(false, passcode, rememberMe));
-
-        public static OneOf<T, MfaMethod, Cancelled> SelectDifferentMethod<T>(MfaMethod method) => OneOf<T, MfaMethod, Cancelled>.FromB(method);
-
-        public static OneOf<OtpResult, MfaMethod, Cancelled> CancelOtp() => OneOf<OtpResult, MfaMethod, Cancelled>.FromC(new("User cancelled"));
-        public static OneOf<OobResult, MfaMethod, Cancelled> CancelOob() => OneOf<OobResult, MfaMethod, Cancelled>.FromC(new("User cancelled"));
+            new OobResult(false, passcode, rememberMe);
+        public static OneOf<T, MfaMethod, Cancelled> SelectDifferentMethod<T>(MfaMethod method) => method;
+        public static OneOf<OtpResult, MfaMethod, Cancelled> CancelOtp() => new Cancelled("User cancelled");
+        public static OneOf<OobResult, MfaMethod, Cancelled> CancelOob() => new Cancelled("User cancelled");
     }
 
     public interface IUi : IDuoUi

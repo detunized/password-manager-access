@@ -3,6 +3,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using OneOf;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Duo;
@@ -33,13 +34,12 @@ public interface IDuoAsyncUi
     //
 
     public static OneOf<DuoChoice, MfaMethod, DuoCancelled> Choice(DuoDevice device, DuoFactor factor, bool rememberMe) =>
-        OneOf<DuoChoice, MfaMethod, DuoCancelled>.FromA(new DuoChoice(device, factor, rememberMe));
-    public static OneOf<DuoChoice, MfaMethod, DuoCancelled> SelectDifferentMethod(MfaMethod method) =>
-        OneOf<DuoChoice, MfaMethod, DuoCancelled>.FromB(method);
-    public static OneOf<DuoChoice, MfaMethod, DuoCancelled> CancelChoice() => OneOf<DuoChoice, MfaMethod, DuoCancelled>.FromC(new("User cancelled"));
+        new DuoChoice(device, factor, rememberMe);
+    public static OneOf<DuoChoice, MfaMethod, DuoCancelled> SelectDifferentMethod(MfaMethod method) => method;
+    public static OneOf<DuoChoice, MfaMethod, DuoCancelled> CancelChoice() => new DuoCancelled("User cancelled");
 
-    public static OneOf<DuoPasscode, DuoCancelled> Passcode(string passcode) => OneOf<DuoPasscode, DuoCancelled>.FromA(new(passcode));
-    public static OneOf<DuoPasscode, DuoCancelled> CancelPasscode() => OneOf<DuoPasscode, DuoCancelled>.FromB(new("User cancelled"));
+    public static OneOf<DuoPasscode, DuoCancelled> Passcode(string passcode) => new DuoPasscode(passcode);
+    public static OneOf<DuoPasscode, DuoCancelled> CancelPasscode() => new DuoCancelled("User cancelled");
 }
 
 public enum DuoFactor
