@@ -13,27 +13,29 @@ namespace PasswordManagerAccess.LastPass.Ui
     public interface IAsyncUi : IDuoAsyncUi
     {
         // OTP (one-time passcode) methods
-        Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken);
-        Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken);
-        Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken);
+        // Each of these methods could return one of the following three options:
+        //   1. new Otp(...): the user provided a valid passcode
+        //   2. one of the MFA methods from `otherMethods`: the user chose a different MFA method
+        //   3. new Cancelled(...): the user cancelled the operation
+        Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken);
+        Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken);
+        Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken);
 
         // OOB (out-of-band) methods
         Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken);
         Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] otherMethods, CancellationToken cancellationToken);
         Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveSalesforceAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken);
-
-        //
-        // Result factory methods
-        //
-
-        public static OneOf<OtpResult, MfaMethod, Cancelled> Otp(string passcode, bool rememberMe) => new OtpResult(passcode, rememberMe);
-        public static OneOf<OobResult, MfaMethod, Cancelled> WaitForApproval(bool rememberMe) => new OobResult(true, "", rememberMe);
-        public static OneOf<OobResult, MfaMethod, Cancelled> ContinueWithPasscode(string passcode, bool rememberMe) =>
-            new OobResult(false, passcode, rememberMe);
-        public static OneOf<T, MfaMethod, Cancelled> SelectDifferentMethod<T>(MfaMethod method) => method;
-        public static OneOf<OtpResult, MfaMethod, Cancelled> CancelOtp() => new Cancelled("User cancelled");
-        public static OneOf<OobResult, MfaMethod, Cancelled> CancelOob() => new Cancelled("User cancelled");
     }
+
+    public record Otp(string Passcode, bool RememberMe);
+
+    public record WaitForOutOfBand(bool RememberMe);
+
+    public record Cancelled(string Reason);
+
+    //
+    // Legacy
+    //
 
     public interface IUi : IDuoUi
     {
@@ -63,6 +65,4 @@ namespace PasswordManagerAccess.LastPass.Ui
     public record OtpResult(string Passcode, bool RememberMe);
 
     public record OobResult(bool WaitForOutOfBand, string Passcode, bool RememberMe);
-
-    public record Cancelled(string Reason);
 }

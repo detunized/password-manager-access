@@ -94,17 +94,17 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     // IAsyncUi
     //
 
-    public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

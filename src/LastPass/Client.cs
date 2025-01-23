@@ -268,13 +268,14 @@ namespace PasswordManagerAccess.LastPass
             if (otpResult.IsT2)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
-            var passcode = otpResult.AsT0;
+            // User provided a passcode
+            var otp = otpResult.AsT0;
 
             var response = await PerformSingleLoginRequest(
                     username,
                     password,
                     keyIterationCount,
-                    new Dictionary<string, object> { ["otp"] = passcode.Passcode },
+                    new Dictionary<string, object> { ["otp"] = otp.Passcode },
                     clientInfo,
                     rest,
                     cancellationToken
@@ -285,7 +286,7 @@ namespace PasswordManagerAccess.LastPass
             if (session == null)
                 throw MakeLoginError(response);
 
-            if (passcode.RememberMe)
+            if (otp.RememberMe)
                 await MarkDeviceAsTrusted(session, clientInfo, rest, cancellationToken).ConfigureAwait(false);
 
             return session;

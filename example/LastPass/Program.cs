@@ -17,15 +17,13 @@ namespace PasswordManagerAccess.Example.LastPass
         // Very simple text based user interface that demonstrates how to respond to Vault UI requests.
         private class TextUi : DuoAsyncUi, IAsyncUi
         {
-            public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
+            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
                 ProvideOtpPasscode("Google Authenticator", cancellationToken);
 
-            public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(
-                MfaMethod[] methods,
-                CancellationToken cancellationToken
-            ) => ProvideOtpPasscode("Microsoft Authenticator", cancellationToken);
+            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
+                ProvideOtpPasscode("Microsoft Authenticator", cancellationToken);
 
-            public Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
+            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
                 ProvideOtpPasscode("Yubikey", cancellationToken);
 
             public Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] methods, CancellationToken cancellationToken) =>
@@ -41,10 +39,10 @@ namespace PasswordManagerAccess.Example.LastPass
             // Private
             //
 
-            private static async Task<OneOf<OtpResult, MfaMethod, Cancelled>> ProvideOtpPasscode(string method, CancellationToken cancellationToken)
+            private static async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideOtpPasscode(string method, CancellationToken cancellationToken)
             {
                 var answer = await GetAnswer($"Please enter {method} code {PressEnterToCancel}", cancellationToken);
-                return answer == "" ? IAsyncUi.CancelOtp() : IAsyncUi.Otp(answer, await GetRememberMe(cancellationToken));
+                return answer == "" ? new Cancelled("") : new Otp(answer, await GetRememberMe(cancellationToken));
             }
 
             private static async Task<OneOf<OobResult, MfaMethod, Cancelled>> ApproveOutOfBand(string method, CancellationToken cancellationToken)
@@ -53,10 +51,10 @@ namespace PasswordManagerAccess.Example.LastPass
                 var answer = await GetAnswer($"Or enter the {method} passcode from the app or 'c' to cancel", cancellationToken);
 
                 if (answer.ToLower() == "c")
-                    return IAsyncUi.CancelOob();
+                    return new Cancelled("");
 
                 var rememberMe = await GetRememberMe(cancellationToken);
-                return answer.Length == 0 ? IAsyncUi.WaitForApproval(rememberMe) : IAsyncUi.ContinueWithPasscode(answer, rememberMe);
+                return answer.Length == 0 ? new OobResult(true, "", rememberMe) : new OobResult(false, answer, rememberMe);
             }
         }
 
