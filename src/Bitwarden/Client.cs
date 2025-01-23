@@ -168,7 +168,7 @@ namespace PasswordManagerAccess.Bitwarden
 
             var method = ChooseSecondFactorMethod(secondFactor, ui);
             var extra = secondFactor.Methods[method];
-            Passcode passcode = null;
+            Ui.Passcode passcode = null;
 
             switch (method)
             {
@@ -200,14 +200,14 @@ namespace PasswordManagerAccess.Bitwarden
                         if (v4 == Result.RedirectToV1)
                             needV1 = true; // Fallback to V1 below
                         else if (v4 != null)
-                            passcode = new Passcode($"{v4.Code}|{v4.State}", v4.RememberMe);
+                            passcode = new Ui.Passcode($"{v4.Code}|{v4.State}", v4.RememberMe);
                     }
 
                     if (needV1)
                     {
                         var v1 = DuoV1.Authenticate((string)extra["Host"] ?? "", (string)extra["Signature"] ?? "", ui, apiRest.Transport);
                         if (v1 != null)
-                            passcode = new Passcode(v1.Code, v1.RememberMe);
+                            passcode = new Ui.Passcode(v1.Code, v1.RememberMe);
                     }
 
                     break;
@@ -297,7 +297,7 @@ namespace PasswordManagerAccess.Bitwarden
             storage.StoreString(RememberMeTokenKey, "");
         }
 
-        internal static Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
+        internal static Ui.Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
         {
             var appId = (string)u2fParams["appId"];
             var challenge = (string)u2fParams["challenge"];
@@ -328,7 +328,7 @@ namespace PasswordManagerAccess.Bitwarden
             );
 
             // TODO: Add support for remember-me.
-            return new Passcode(token, false);
+            return new Ui.Passcode(token, false);
         }
 
         internal static R.SecondFactorMethod ChooseSecondFactorMethod(R.SecondFactor secondFactor, IUi ui)
@@ -337,31 +337,31 @@ namespace PasswordManagerAccess.Bitwarden
             if (methods == null || methods.Count == 0)
                 throw new InternalErrorException("Logical error: should be called with non empty list of methods");
 
-            var availableMethods = new List<MfaMethod>();
+            var availableMethods = new List<Ui.MfaMethod>();
             foreach (var m in methods.Keys)
             {
                 switch (m)
                 {
                     case R.SecondFactorMethod.GoogleAuth:
-                        availableMethods.Add(MfaMethod.GoogleAuth);
+                        availableMethods.Add(Ui.MfaMethod.GoogleAuth);
                         break;
                     case R.SecondFactorMethod.Email:
-                        availableMethods.Add(MfaMethod.Email);
+                        availableMethods.Add(Ui.MfaMethod.Email);
                         break;
                     case R.SecondFactorMethod.Duo:
-                        availableMethods.Add(MfaMethod.Duo);
+                        availableMethods.Add(Ui.MfaMethod.Duo);
                         break;
                     case R.SecondFactorMethod.YubiKey:
-                        availableMethods.Add(MfaMethod.YubiKey);
+                        availableMethods.Add(Ui.MfaMethod.YubiKey);
                         break;
                     case R.SecondFactorMethod.U2f:
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            availableMethods.Add(MfaMethod.U2f);
+                            availableMethods.Add(Ui.MfaMethod.U2f);
                         break;
                     case R.SecondFactorMethod.RememberMe:
                         break;
                     case R.SecondFactorMethod.DuoOrg:
-                        availableMethods.Add(MfaMethod.DuoOrg);
+                        availableMethods.Add(Ui.MfaMethod.DuoOrg);
                         break;
                 }
             }
@@ -374,17 +374,17 @@ namespace PasswordManagerAccess.Bitwarden
             }
 
             // Cancel is always available
-            availableMethods.Add(MfaMethod.Cancel);
+            availableMethods.Add(Ui.MfaMethod.Cancel);
 
             return ui.ChooseMfaMethod(availableMethods.ToArray()) switch
             {
-                MfaMethod.Cancel => throw MakeCancelledMfaError(),
-                MfaMethod.GoogleAuth => R.SecondFactorMethod.GoogleAuth,
-                MfaMethod.Email => R.SecondFactorMethod.Email,
-                MfaMethod.Duo => R.SecondFactorMethod.Duo,
-                MfaMethod.YubiKey => R.SecondFactorMethod.YubiKey,
-                MfaMethod.U2f => R.SecondFactorMethod.U2f,
-                MfaMethod.DuoOrg => R.SecondFactorMethod.DuoOrg,
+                Ui.MfaMethod.Cancel => throw MakeCancelledMfaError(),
+                Ui.MfaMethod.GoogleAuth => R.SecondFactorMethod.GoogleAuth,
+                Ui.MfaMethod.Email => R.SecondFactorMethod.Email,
+                Ui.MfaMethod.Duo => R.SecondFactorMethod.Duo,
+                Ui.MfaMethod.YubiKey => R.SecondFactorMethod.YubiKey,
+                Ui.MfaMethod.U2f => R.SecondFactorMethod.U2f,
+                Ui.MfaMethod.DuoOrg => R.SecondFactorMethod.DuoOrg,
                 _ => throw new InternalErrorException("The user responded with invalid input"),
             };
         }

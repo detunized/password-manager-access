@@ -154,16 +154,35 @@ namespace PasswordManagerAccess.LastPass
 
             // 3.1. One-time-password is required
             if (KnownOtpMethods.TryGetValue(cause, out var otpMethod))
-                session = await LoginWithOtp(username, password, keyIterationCount, otpMethod, clientInfo, ui, rest, cancellationToken)
+            {
+                var otpResult = await LoginWithOtp(
+                        username,
+                        password,
+                        keyIterationCount,
+                        otpMethod,
+                        [], // TODO: Add other methods
+                        clientInfo,
+                        ui,
+                        rest,
+                        cancellationToken
+                    )
                     .ConfigureAwait(false);
+
+                if (otpResult.IsB)
+                    throw new NotImplementedException("MFA selection is not supported");
+
+                session = otpResult.A;
+            }
             // 3.2. Some out-of-bound authentication is enabled. This does not require any
             //      additional input from the user.
             else if (cause == "outofbandrequired")
-                session = await LoginWithOob(
+            {
+                var oobResult = await LoginWithOob(
                         username,
                         password,
                         keyIterationCount,
                         GetAllErrorAttributes(response),
+                        [], // TODO: Add other methods
                         clientInfo,
                         ui,
                         rest,
@@ -171,6 +190,12 @@ namespace PasswordManagerAccess.LastPass
                         cancellationToken
                     )
                     .ConfigureAwait(false);
+
+                if (oobResult.IsB)
+                    throw new NotImplementedException("MFA selection is not supported");
+
+                session = oobResult.A;
+            }
 
             // Nothing worked
             if (session == null)
@@ -213,35 +238,34 @@ namespace PasswordManagerAccess.LastPass
             throw MakeError(response);
         }
 
-        internal enum OtpMethod
-        {
-            GoogleAuth,
-            MicrosoftAuth,
-            Yubikey,
-        }
-
         // Returns a valid session or throws
-        internal static async Task<Session> LoginWithOtp(
+        internal static async Task<OneOf<Session, MfaMethod>> LoginWithOtp(
             string username,
             string password,
             int keyIterationCount,
-            OtpMethod method,
+            MfaMethod method,
+            MfaMethod[] otherMethods,
             ClientInfo clientInfo,
             IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
         {
-            var passcode = method switch
+            var otpResult = method switch
             {
-                OtpMethod.GoogleAuth => await ui.ProvideGoogleAuthPasscode(cancellationToken).ConfigureAwait(false),
-                OtpMethod.MicrosoftAuth => await ui.ProvideMicrosoftAuthPasscode(cancellationToken).ConfigureAwait(false),
-                OtpMethod.Yubikey => await ui.ProvideYubikeyPasscode(cancellationToken).ConfigureAwait(false),
+                MfaMethod.GoogleAuthenticator => await ui.ProvideGoogleAuthPasscode(otherMethods, cancellationToken).ConfigureAwait(false),
+                MfaMethod.MicrosoftAuthenticator => await ui.ProvideMicrosoftAuthPasscode(otherMethods, cancellationToken).ConfigureAwait(false),
+                MfaMethod.YubikeyOtp => await ui.ProvideYubikeyPasscode(otherMethods, cancellationToken).ConfigureAwait(false),
                 _ => throw new InternalErrorException("Invalid OTP method"),
             };
 
-            if (passcode == OtpResult.Cancel)
+            if (otpResult.IsB)
+                return OneOf<Session, MfaMethod>.FromB(otpResult.B);
+
+            if (otpResult.IsC)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+
+            var passcode = otpResult.A;
 
             var response = await PerformSingleLoginRequest(
                     username,
@@ -261,15 +285,16 @@ namespace PasswordManagerAccess.LastPass
             if (passcode.RememberMe)
                 await MarkDeviceAsTrusted(session, clientInfo, rest, cancellationToken).ConfigureAwait(false);
 
-            return session;
+            return OneOf<Session, MfaMethod>.FromA(session);
         }
 
         // Returns a valid session or throws
-        internal static async Task<Session> LoginWithOob(
+        internal static async Task<OneOf<Session, MfaMethod>> LoginWithOob(
             string username,
             string password,
             int keyIterationCount,
             Dictionary<string, string> parameters,
+            MfaMethod[] otherMethods,
             ClientInfo clientInfo,
             IAsyncUi ui,
             RestClient rest,
@@ -277,17 +302,19 @@ namespace PasswordManagerAccess.LastPass
             CancellationToken cancellationToken
         )
         {
-            var oob = await ApproveOob(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false);
+            var oobResult = await ApproveOob(username, parameters, otherMethods, ui, rest, logger, cancellationToken).ConfigureAwait(false);
 
-            var result = oob.Result;
-            if (result == OobResult.Cancel)
-                throw new CanceledMultiFactorException("Out of band step is canceled by the user");
+            // The user chose a different MFA method
+            if (oobResult.IsB)
+                return OneOf<Session, MfaMethod>.FromB(oobResult.B);
 
-            var extraParameters = new Dictionary<string, object>(oob.Extras);
-            if (result.WaitForOutOfBand)
+            var result = oobResult.A;
+
+            var extraParameters = new Dictionary<string, object>(result.Extras);
+            if (result.Result.WaitForOutOfBand)
                 extraParameters["outofbandrequest"] = 1;
             else
-                extraParameters["otp"] = result.Passcode;
+                extraParameters["otp"] = result.Result.Passcode;
 
             Session session;
             for (; ; )
@@ -317,25 +344,26 @@ namespace PasswordManagerAccess.LastPass
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
             }
 
-            if (result.RememberMe)
+            if (result.Result.RememberMe)
                 await MarkDeviceAsTrusted(session, clientInfo, rest, cancellationToken).ConfigureAwait(false);
 
-            return session;
+            return OneOf<Session, MfaMethod>.FromA(session);
         }
 
         // This is used to pass the extra params along with the OOB result
         internal struct OobWithExtras(OobResult result, Dictionary<string, object> extras = null)
         {
             // This is a special sentinel value to mark the Duo V4 to V1 redirect
-            public static readonly OobResult DuoV4ToV1Redirect = OobResult.ContinueWithPasscode("duo-v4-to-v1-redirect", false);
+            public static readonly OobResult DuoV4ToV1Redirect = new(false, "duo-v4-to-v1-redirect", false);
 
             public readonly OobResult Result = result;
-            public readonly Dictionary<string, object> Extras = extras ?? new Dictionary<string, object>();
+            public readonly Dictionary<string, object> Extras = extras ?? [];
         }
 
-        internal static async Task<OobWithExtras> ApproveOob(
+        internal static async Task<OneOf<OobWithExtras, MfaMethod>> ApproveOob(
             string username,
             Dictionary<string, string> parameters,
+            MfaMethod[] otherMethods,
             IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
@@ -345,32 +373,30 @@ namespace PasswordManagerAccess.LastPass
             if (!parameters.TryGetValue("outofbandtype", out var method))
                 throw new InternalErrorException("Out of band method is not specified");
 
-            return method switch
+            if (method == "duo" && parameters.GetOrDefault("preferduowebsdk", "") == "1")
+                return await ApproveDuoWebSdk(username, parameters, otherMethods, ui, rest, logger, cancellationToken).ConfigureAwait(false);
+
+            var oobResult = method switch
             {
-                "lastpassauth" => new OobWithExtras(await ui.ApproveLastPassAuth(cancellationToken).ConfigureAwait(false)),
-                "duo" => await ApproveDuo(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false),
-                "salesforcehash" => new OobWithExtras(await ui.ApproveSalesforceAuth(cancellationToken).ConfigureAwait(false)),
+                "lastpassauth" => await ui.ApproveLastPassAuth(otherMethods, cancellationToken).ConfigureAwait(false),
+                "duo" => await ui.ApproveDuo(otherMethods, cancellationToken).ConfigureAwait(false),
+                "salesforcehash" => await ui.ApproveSalesforceAuth(otherMethods, cancellationToken).ConfigureAwait(false),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
             };
+
+            if (oobResult.IsB)
+                return OneOf<OobWithExtras, MfaMethod>.FromB(oobResult.B);
+
+            if (oobResult.IsC)
+                throw new CanceledMultiFactorException("Out of band step is canceled by the user");
+
+            return OneOf<OobWithExtras, MfaMethod>.FromA(new(oobResult.A));
         }
 
-        internal static async Task<OobWithExtras> ApproveDuo(
+        internal static async Task<OneOf<OobWithExtras, MfaMethod>> ApproveDuoWebSdk(
             string username,
             Dictionary<string, string> parameters,
-            IAsyncUi ui,
-            RestClient rest,
-            ISimpleLogger logger,
-            CancellationToken cancellationToken
-        )
-        {
-            return parameters.GetOrDefault("preferduowebsdk", "") == "1"
-                ? await ApproveDuoWebSdk(username, parameters, ui, rest, logger, cancellationToken).ConfigureAwait(false)
-                : new OobWithExtras(await ui.ApproveDuo(cancellationToken).ConfigureAwait(false));
-        }
-
-        internal static async Task<OobWithExtras> ApproveDuoWebSdk(
-            string username,
-            Dictionary<string, string> parameters,
+            MfaMethod[] otherMethods,
             IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
@@ -388,11 +414,12 @@ namespace PasswordManagerAccess.LastPass
             // See if V4 is enabled
             if (parameters.TryGetValue("duo_authentication_url", out var url))
             {
-                var result = await ApproveDuoWebSdkV4(
+                var v4Result = await ApproveDuoWebSdkV4(
                         username: username,
                         url: url,
                         sessionToken: GetParam("duo_session_token"),
                         privateToken: GetParam("duo_private_token"),
+                        otherMethods: otherMethods,
                         ui: ui,
                         rest: rest,
                         logger: logger,
@@ -400,9 +427,13 @@ namespace PasswordManagerAccess.LastPass
                     )
                     .ConfigureAwait(false);
 
+                // The user chose a different MFA method
+                if (v4Result.IsB)
+                    return v4Result;
+
                 // If we're not redirected to V1, we're done. Otherwise, fallthrough to V1.
-                if (result.Result != OobWithExtras.DuoV4ToV1Redirect)
-                    return result;
+                if (v4Result.A.Result != OobWithExtras.DuoV4ToV1Redirect)
+                    return v4Result;
             }
 
             // Legacy Duo V1. Won't be available after September 2024.
@@ -411,6 +442,7 @@ namespace PasswordManagerAccess.LastPass
                     host: GetParam("duo_host"),
                     salt: GetParam("duo_bytes"),
                     signature: GetParam("duo_signature"),
+                    otherMethods: otherMethods,
                     ui: ui,
                     rest: rest,
                     logger: logger,
@@ -419,11 +451,12 @@ namespace PasswordManagerAccess.LastPass
                 .ConfigureAwait(false);
         }
 
-        private static async Task<OobWithExtras> ApproveDuoWebSdkV1(
+        private static async Task<OneOf<OobWithExtras, MfaMethod>> ApproveDuoWebSdkV1(
             string username,
             string host,
             string salt,
             string signature,
+            MfaMethod[] otherMethods,
             IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
@@ -433,9 +466,17 @@ namespace PasswordManagerAccess.LastPass
             // 1. Do a normal Duo V1 first
             // Allow the logger to be null for optimization purposes (saved a bunch of work in the RestClient code)
             var duoLogger = logger == null ? null : new TaggedLogger("LastPass.DuoV1", logger);
-            var result = await DuoV1.AuthenticateAsync(host, signature, ui, rest.Transport, duoLogger, cancellationToken).ConfigureAwait(false);
-            if (result == null)
-                return new OobWithExtras(OobResult.Cancel);
+            var duoResult = await DuoV1
+                .AuthenticateAsync(host, signature, otherMethods, ui, rest.Transport, duoLogger, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (duoResult.IsB)
+                return OneOf<OobWithExtras, MfaMethod>.FromB(duoResult.B);
+
+            if (duoResult.IsC)
+                throw new CanceledMultiFactorException("Duo V1 MFA step is canceled by the user");
+
+            var result = duoResult.A;
 
             // 2. Exchange the signature for a passcode
             var passcode = await ExchangeDuoSignatureForPasscode(
@@ -447,14 +488,15 @@ namespace PasswordManagerAccess.LastPass
                 )
                 .ConfigureAwait(false);
 
-            return new OobWithExtras(OobResult.ContinueWithPasscode(passcode, result.RememberMe));
+            return OneOf<OobWithExtras, MfaMethod>.FromA(new(new(false, passcode, result.RememberMe)));
         }
 
-        private static async Task<OobWithExtras> ApproveDuoWebSdkV4(
+        private static async Task<OneOf<OobWithExtras, MfaMethod>> ApproveDuoWebSdkV4(
             string username,
             string url,
             string sessionToken,
             string privateToken,
+            MfaMethod[] otherMethods,
             IAsyncUi ui,
             RestClient rest,
             ISimpleLogger logger,
@@ -464,16 +506,22 @@ namespace PasswordManagerAccess.LastPass
             // 1. Do a normal Duo V4 first
             // Allow the logger to be null for optimization purposes (saved a bunch of work in the RestClient code)
             var duoLogger = logger == null ? null : new TaggedLogger("LastPass.DuoV4", logger);
-            var result = await DuoV4.AuthenticateAsync(url, ui, rest.Transport, duoLogger, cancellationToken).ConfigureAwait(false);
-            if (result == null)
-                return new OobWithExtras(OobResult.Cancel);
+            var duoResult = await DuoV4.AuthenticateAsync(url, otherMethods, ui, rest.Transport, duoLogger, cancellationToken).ConfigureAwait(false);
+
+            if (duoResult.IsB)
+                return OneOf<OobWithExtras, MfaMethod>.FromB(duoResult.B);
+
+            if (duoResult.IsC)
+                throw new CanceledMultiFactorException("Duo V4 MFA step is canceled by the user");
+
+            var result = duoResult.A;
 
             // 2. Detect if we need to redirect to V1. This happens when the traditional prompt is enabled in the Duo
             //    admin panel. The Duo URL looks the same for both the traditional prompt and the new universal one.
             //    So we have no way of knowing this in advance. This only becomes evident after the first request to
             //    the Duo API.
             if (result == Result.RedirectToV1)
-                return new OobWithExtras(OobWithExtras.DuoV4ToV1Redirect);
+                return OneOf<OobWithExtras, MfaMethod>.FromA(new(OobWithExtras.DuoV4ToV1Redirect));
 
             // 3. Since LastPass is special we have to jump through some hoops to get this finalized
             //    Even though Duo already returned us the code, we need to poll LastPass to get a
@@ -496,15 +544,17 @@ namespace PasswordManagerAccess.LastPass
 
             var status = response.Data;
             if (status.Status == "allowed" && !status.OneTimeToken.IsNullOrEmpty())
-                return new OobWithExtras(
-                    OobResult.ContinueWithPasscode("duoWebSdkV4", result.RememberMe),
-                    new Dictionary<string, object>
-                    {
-                        ["provider"] = "duo",
-                        ["duoOneTimeToken"] = status.OneTimeToken,
-                        ["duoSessionToken"] = sessionToken,
-                        ["duoPrivateToken"] = privateToken,
-                    }
+                return OneOf<OobWithExtras, MfaMethod>.FromA(
+                    new(
+                        new(false, "duoWebSdkV4", result.RememberMe),
+                        new Dictionary<string, object>
+                        {
+                            ["provider"] = "duo",
+                            ["duoOneTimeToken"] = status.OneTimeToken,
+                            ["duoSessionToken"] = sessionToken,
+                            ["duoPrivateToken"] = privateToken,
+                        }
+                    )
                 );
 
             throw new InternalErrorException("Failed to retrieve Duo one time token");
@@ -778,11 +828,12 @@ namespace PasswordManagerAccess.LastPass
             [Platform.Mobile] = "android",
         };
 
-        private static readonly Dictionary<string, OtpMethod> KnownOtpMethods = new Dictionary<string, OtpMethod>
-        {
-            ["googleauthrequired"] = OtpMethod.GoogleAuth,
-            ["microsoftauthrequired"] = OtpMethod.MicrosoftAuth,
-            ["otprequired"] = OtpMethod.Yubikey,
-        };
+        private static readonly Dictionary<string, MfaMethod> KnownOtpMethods =
+            new()
+            {
+                ["googleauthrequired"] = MfaMethod.GoogleAuthenticator,
+                ["microsoftauthrequired"] = MfaMethod.MicrosoftAuthenticator,
+                ["otprequired"] = MfaMethod.YubikeyOtp,
+            };
     }
 }

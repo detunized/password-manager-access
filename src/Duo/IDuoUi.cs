@@ -1,23 +1,15 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Duo
 {
-    // Adds Duo functionality to the module-specific Ui class.
-    public interface IDuoAsyncUi
-    {
-        // To cancel return null
-        Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices, CancellationToken cancellationToken);
-
-        // To cancel return null or blank
-        Task<string> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken);
-
-        // This updates the UI with the messages from the server.
-        Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken);
-    }
+    // TODO: Remove all of these types when done with the migration
 
     public interface IDuoUi
     {
@@ -78,23 +70,60 @@ namespace PasswordManagerAccess.Duo
     // Internal
     //
 
-    // TODO: Remove when done with the migration
     internal class DuoUiToAsyncUiAdapter(IDuoUi ui) : IDuoAsyncUi
     {
-        public Task<DuoChoice> ChooseDuoFactor(DuoDevice[] devices, CancellationToken cancellationToken)
+        public Task<OneOf<Choice, MfaMethod, Cancelled>> ChooseFactor(Device[] devices, MfaMethod[] otherMethods, CancellationToken cancellationToken)
         {
-            return Task.FromResult(ui.ChooseDuoFactor(devices));
+            var duoDevices = devices.Select(ToDuoDevice).ToArray();
+            var choice = ui.ChooseDuoFactor(duoDevices);
+            return Task.FromResult(
+                choice == null ? IDuoAsyncUi.CancelChoice() : IDuoAsyncUi.Choice(ToDevice(choice.Device), ToFactor(choice.Factor), choice.RememberMe)
+            );
         }
 
-        public Task<string> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken)
+        public Task<OneOf<Passcode, Cancelled>> ProvidePasscode(Device device, CancellationToken cancellationToken)
         {
-            return Task.FromResult(ui.ProvideDuoPasscode(device));
+            var passcode = ui.ProvideDuoPasscode(ToDuoDevice(device));
+            return Task.FromResult(passcode.IsNullOrEmpty() ? IDuoAsyncUi.CancelPasscode() : IDuoAsyncUi.Passcode(passcode));
         }
 
-        public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)
+        public Task UpdateStatus(Status status, string text, CancellationToken cancellationToken)
         {
-            ui.UpdateDuoStatus(status, text);
+            ui.UpdateDuoStatus(ToDuoStatus(status), text);
             return Task.CompletedTask;
         }
+
+        private static DuoFactor ToDuoFactor(Factor factor) =>
+            factor switch
+            {
+                Factor.Push => DuoFactor.Push,
+                Factor.Call => DuoFactor.Call,
+                Factor.Passcode => DuoFactor.Passcode,
+                Factor.SendPasscodesBySms => DuoFactor.SendPasscodesBySms,
+                _ => throw new ArgumentOutOfRangeException(nameof(factor), factor, "Unknown factor"),
+            };
+
+        private static DuoDevice ToDuoDevice(Device device) => new(device.Id, device.Name, device.Factors.Select(ToDuoFactor).ToArray());
+
+        private static Factor ToFactor(DuoFactor factor) =>
+            factor switch
+            {
+                DuoFactor.Push => Factor.Push,
+                DuoFactor.Call => Factor.Call,
+                DuoFactor.Passcode => Factor.Passcode,
+                DuoFactor.SendPasscodesBySms => Factor.SendPasscodesBySms,
+                _ => throw new ArgumentOutOfRangeException(nameof(factor), factor, "Unknown factor"),
+            };
+
+        private static Device ToDevice(DuoDevice device) => new(device.Id, device.Name, device.Factors.Select(ToFactor).ToArray());
+
+        private static DuoStatus ToDuoStatus(Status status) =>
+            status switch
+            {
+                Status.Success => DuoStatus.Success,
+                Status.Error => DuoStatus.Error,
+                Status.Info => DuoStatus.Info,
+                _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown status"),
+            };
     }
 }

@@ -8,6 +8,7 @@ using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
+using MfaMethod = PasswordManagerAccess.Bitwarden.Ui.MfaMethod;
 
 // ReSharper disable once CheckNamespace
 namespace PasswordManagerAccess.Example.Bitwarden

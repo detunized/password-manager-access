@@ -15,11 +15,15 @@ namespace PasswordManagerAccess.Duo
     {
         public static Result Authenticate(string authUrl, IDuoUi ui, IRestTransport transport, ISimpleLogger logger = null)
         {
-            return AuthenticateAsync(authUrl, new DuoUiToAsyncUiAdapter(ui), transport, logger, CancellationToken.None).GetAwaiter().GetResult();
+            return AuthenticateAsync(authUrl, [], new DuoUiToAsyncUiAdapter(ui), transport, logger, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult()
+                .A;
         }
 
-        public static async Task<Result> AuthenticateAsync(
+        public static async Task<OneOf<Result, MfaMethod, Cancelled>> AuthenticateAsync(
             string authUrl,
+            MfaMethod[] otherMethods,
             IDuoAsyncUi ui,
             IRestTransport transport,
             ISimpleLogger logger,
@@ -33,7 +37,7 @@ namespace PasswordManagerAccess.Duo
 
             // 2. Detect a redirect to V1
             if (url.Contains("/frame/frameless/v3/auth"))
-                return Result.RedirectToV1;
+                return OneOf<Result, MfaMethod, Cancelled>.FromA(Result.RedirectToV1);
 
             // 3. The main page contains the form that we need to POST to
             string host;
@@ -64,25 +68,35 @@ namespace PasswordManagerAccess.Duo
             while (true)
             {
                 // Ask the user to choose what to do
-                var choice = await ui.ChooseDuoFactor(devices, cancellationToken).ConfigureAwait(false);
-                if (choice == null)
-                    return null; // Canceled by user
+                var factorResult = await ui.ChooseFactor(devices, otherMethods, cancellationToken).ConfigureAwait(false);
+
+                // User chose a different MFA method
+                if (factorResult.IsB)
+                    return OneOf<Result, MfaMethod, Cancelled>.FromB(factorResult.B);
+
+                // User cancelled
+                if (factorResult.IsC)
+                    return OneOf<Result, MfaMethod, Cancelled>.FromC(factorResult.C);
+
+                var choice = factorResult.A;
 
                 // SMS is a special case: it doesn't submit any codes, it rather tells the server to send a new code
                 // to the phone via SMS.
-                if (choice.Factor == DuoFactor.SendPasscodesBySms)
+                if (choice.Factor == Factor.SendPasscodesBySms)
                 {
                     _ = await SubmitFactor(sessionId, choice, "", apiRest, cancellationToken).ConfigureAwait(false);
-                    choice = new DuoChoice(choice.Device, DuoFactor.Passcode, choice.RememberMe);
+                    choice = new(choice.Device, Factor.Passcode, choice.RememberMe);
                 }
 
                 // Ask for the passcode
                 var passcode = "";
-                if (choice.Factor == DuoFactor.Passcode)
+                if (choice.Factor == Factor.Passcode)
                 {
-                    passcode = await ui.ProvideDuoPasscode(choice.Device, cancellationToken).ConfigureAwait(false);
-                    if (passcode.IsNullOrEmpty())
-                        return null; // Canceled by user
+                    var passcodeResult = await ui.ProvidePasscode(choice.Device, cancellationToken).ConfigureAwait(false);
+                    if (passcodeResult.IsB)
+                        return OneOf<Result, MfaMethod, Cancelled>.FromC(passcodeResult.B);
+
+                    passcode = passcodeResult.A.Code;
                 }
 
                 var maybeResult = await SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest, cancellationToken)
@@ -94,7 +108,7 @@ namespace PasswordManagerAccess.Duo
 
                 // All good
                 var result = maybeResult.Value;
-                return new Result(result.Code, result.State, choice.RememberMe);
+                return OneOf<Result, MfaMethod, Cancelled>.FromA(new(result.Code, result.State, choice.RememberMe));
             }
         }
 
@@ -166,7 +180,7 @@ namespace PasswordManagerAccess.Duo
             return xsrf;
         }
 
-        internal static async Task<DuoDevice[]> GetDevices(string sessionId, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Device[]> GetDevices(string sessionId, RestClient rest, CancellationToken cancellationToken)
         {
             var response = await rest.GetAsync<Response.Envelope<R.Data>>(
                     $"auth/prompt/data?post_auth_action=OIDC_EXIT&sid={sessionId}",
@@ -180,15 +194,15 @@ namespace PasswordManagerAccess.Duo
             return ParseDeviceData(response.Data.Payload);
         }
 
-        internal static DuoDevice[] ParseDeviceData(R.Data data)
+        internal static Device[] ParseDeviceData(R.Data data)
         {
             if (data.Phones == null)
                 return [];
 
-            return data.Phones.Select(x => new DuoDevice(id: x.Id, name: x.Name, GetDeviceFactors(x.Key, data.Methods))).ToArray();
+            return data.Phones.Select(x => new Device(x.Id, x.Name, GetDeviceFactors(x.Key, data.Methods))).ToArray();
         }
 
-        internal static DuoFactor[] GetDeviceFactors(string key, R.Method[] methods)
+        internal static Factor[] GetDeviceFactors(string key, R.Method[] methods)
         {
             return methods
                 .Where(x => x.DeviceKey == key || x.DeviceKey.IsNullOrEmpty())
@@ -199,7 +213,7 @@ namespace PasswordManagerAccess.Duo
 
         internal static async Task<string> SubmitFactor(
             string sid,
-            DuoChoice choice,
+            Choice choice,
             string passcode,
             RestClient rest,
             CancellationToken cancellationToken
@@ -227,7 +241,7 @@ namespace PasswordManagerAccess.Duo
         internal static async Task<CodeState?> SubmitFactorAndWaitForResult(
             string sid,
             string xsrf,
-            DuoChoice choice,
+            Choice choice,
             string passcode,
             IDuoAsyncUi ui,
             RestClient rest,
@@ -283,9 +297,9 @@ namespace PasswordManagerAccess.Duo
 
                 switch (status)
                 {
-                    case DuoStatus.Success:
+                    case Status.Success:
                         return true;
-                    case DuoStatus.Error:
+                    case Status.Error:
                         return false;
                 }
 
@@ -295,19 +309,19 @@ namespace PasswordManagerAccess.Duo
             throw Util.MakeInvalidResponseError("expected to receive a valid result or error, got none of it");
         }
 
-        internal static (DuoStatus Status, string Text) GetResponseStatus(R.Status response)
+        internal static (Status Status, string Text) GetResponseStatus(R.Status response)
         {
             var status = response.Result switch
             {
-                "SUCCESS" => DuoStatus.Success,
-                "FAILURE" => DuoStatus.Error,
-                _ => DuoStatus.Info,
+                "SUCCESS" => Status.Success,
+                "FAILURE" => Status.Error,
+                _ => Status.Info,
             };
 
             return (status, response.Reason ?? response.Code ?? "");
         }
 
-        internal static CodeState FetchResult(string sid, string txid, string xsrf, DuoChoice choice, RestClient rest)
+        internal static CodeState FetchResult(string sid, string txid, string xsrf, Choice choice, RestClient rest)
         {
             var response = rest.PostForm(
                 "oidc/exit",
@@ -356,13 +370,13 @@ namespace PasswordManagerAccess.Duo
                 ["react_support"] = "true",
             };
 
-        private static readonly Dictionary<string, DuoFactor> StringToFactor =
+        private static readonly Dictionary<string, Factor> StringToFactor =
             new()
             {
-                ["Duo Push"] = DuoFactor.Push,
-                ["Duo Mobile Passcode"] = DuoFactor.Passcode,
-                ["SMS Passcode"] = DuoFactor.SendPasscodesBySms,
-                ["Phone Call"] = DuoFactor.Call,
+                ["Duo Push"] = Factor.Push,
+                ["Duo Mobile Passcode"] = Factor.Passcode,
+                ["SMS Passcode"] = Factor.SendPasscodesBySms,
+                ["Phone Call"] = Factor.Call,
             };
     }
 }
