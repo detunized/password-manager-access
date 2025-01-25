@@ -18,50 +18,79 @@ namespace PasswordManagerAccess.Example.LastPass
         private class TextUi : DuoAsyncUi, IAsyncUi
         {
             public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
-                ProvideOtpPasscode("Google Authenticator", cancellationToken);
+                ProvideOtpPasscode("Google Authenticator", methods, cancellationToken);
 
             public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
-                ProvideOtpPasscode("Microsoft Authenticator", cancellationToken);
+                ProvideOtpPasscode("Microsoft Authenticator", methods, cancellationToken);
 
             public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] methods, CancellationToken cancellationToken) =>
-                ProvideOtpPasscode("Yubikey", cancellationToken);
+                ProvideOtpPasscode("Yubikey", methods, cancellationToken);
 
             public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
                 MfaMethod[] methods,
                 CancellationToken cancellationToken
-            ) => ApproveOutOfBand("LastPass Authenticator", cancellationToken);
+            ) => ApproveOutOfBand("LastPass Authenticator", methods, cancellationToken);
 
             public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] methods, CancellationToken cancellationToken) =>
-                ApproveOutOfBand("Duo Security", cancellationToken);
+                ApproveOutOfBand("Duo Security", methods, cancellationToken);
 
             public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveSalesforceAuth(
                 MfaMethod[] methods,
                 CancellationToken cancellationToken
-            ) => ApproveOutOfBand("Salesforce Authenticator", cancellationToken);
+            ) => ApproveOutOfBand("Salesforce Authenticator", methods, cancellationToken);
 
             //
             // Private
             //
 
-            private static async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideOtpPasscode(string method, CancellationToken cancellationToken)
+            private static async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideOtpPasscode(
+                string method,
+                MfaMethod[] methods,
+                CancellationToken cancellationToken
+            )
             {
-                var answer = await GetAnswer($"Please enter {method} code {PressEnterToCancel}", cancellationToken);
-                return answer == "" ? new Cancelled("") : new Otp(answer, await GetRememberMe(cancellationToken));
+                var prompt = $"> Please enter {method} code {PressEnterToCancel}" + BuildMfaPrompt(methods);
+
+                var answer = await GetAnswer(prompt, cancellationToken);
+                return answer switch
+                {
+                    "" => new Cancelled(""),
+                    var s when s.EndsWith('!') => methods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
+                    _ => new Otp(answer, await GetRememberMe(cancellationToken)),
+                };
             }
 
             private static async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveOutOfBand(
                 string method,
+                MfaMethod[] methods,
                 CancellationToken cancellationToken
             )
             {
                 Console.WriteLine($"> Please approve out-of-band via {method} and press ENTER");
-                var answer = await GetAnswer($"Or enter the {method} passcode from the app or 'c' to cancel", cancellationToken);
+                var answer = await GetAnswer(
+                    $"Or enter the {method} passcode from the app or 'c' to cancel" + BuildMfaPrompt(methods),
+                    cancellationToken
+                );
 
-                if (answer.ToLower() == "c")
-                    return new Cancelled("");
+                return answer switch
+                {
+                    "c" or "C" => new Cancelled(""),
+                    var s when s.EndsWith('!') => methods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
+                    "" => new WaitForOutOfBand(await GetRememberMe(cancellationToken)),
+                    _ => new Otp(answer, await GetRememberMe(cancellationToken)),
+                };
+            }
 
-                var rememberMe = await GetRememberMe(cancellationToken);
-                return answer.Length == 0 ? new WaitForOutOfBand(rememberMe) : new Otp(answer, rememberMe);
+            private static string BuildMfaPrompt(MfaMethod[] methods)
+            {
+                if (methods.Length == 0)
+                    return "";
+
+                var prompt = $" or selected a diffrent MFA method by entering the number followed by !:\n";
+                for (var i = 0; i < methods.Length; i++)
+                    prompt += $"{i + 1}. {methods[i]}\n";
+
+                return prompt;
             }
         }
 

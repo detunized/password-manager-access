@@ -30,6 +30,17 @@ namespace PasswordManagerAccess.Example.Common
                 }
             }
 
+            var otherMfaMethodStartIndex = index;
+            if (otherMethods.Length > 0)
+            {
+                prompt += "\nOr choose a different MFA method:\n";
+                foreach (var m in otherMethods)
+                {
+                    prompt += $"  {index}. {m}\n";
+                    index += 1;
+                }
+            }
+
             while (true)
             {
                 var answer = await GetAnswer(prompt, cancellationToken).ConfigureAwait(false);
@@ -40,10 +51,15 @@ namespace PasswordManagerAccess.Example.Common
 
                 int choice;
                 if (int.TryParse(answer, out choice))
+                {
+                    if (choice >= otherMfaMethodStartIndex)
+                        return otherMethods[choice - otherMfaMethodStartIndex];
+
                     foreach (var d in devices)
                     foreach (var f in d.Factors)
                         if (--choice == 0)
                             return IDuoAsyncUi.Choice(d, f, await GetRememberMe(cancellationToken).ConfigureAwait(false));
+                }
 
                 Console.WriteLine("Wrong input, try again");
             }
