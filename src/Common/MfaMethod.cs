@@ -15,6 +15,7 @@ public enum MfaMethod
     // OTP-like
     U2F,
     Fido2,
+    WebAuthn,
 
     // OOB
     Duo,
@@ -32,7 +33,7 @@ public static class MfaMethodExtensions
             MfaMethod.MicrosoftAuthenticator => "Microsoft Authenticator",
             MfaMethod.YubikeyOtp => "Yubikey OTP",
             MfaMethod.U2F => "U2F",
-            MfaMethod.Fido2 => "Fido2",
+            MfaMethod.WebAuthn => "WebAuthn",
             MfaMethod.LastPassAuthenticator => "LastPass Authenticator",
             MfaMethod.SalesforceAuthenticator => "Salesforce Authenticator",
             MfaMethod.Duo => "Duo",

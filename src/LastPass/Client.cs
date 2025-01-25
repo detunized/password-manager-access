@@ -153,6 +153,8 @@ namespace PasswordManagerAccess.LastPass
             if (cause == null)
                 throw MakeLoginError(response);
 
+            var enabledMfaMethods = ParseAvailableMfaMethods(response);
+
             // 3.1. One-time-password is required
             if (KnownOtpMethods.TryGetValue(cause, out var otpMethod))
             {
@@ -161,7 +163,7 @@ namespace PasswordManagerAccess.LastPass
                         password,
                         keyIterationCount,
                         otpMethod,
-                        [], // TODO: Add other methods
+                        enabledMfaMethods.Where(x => x != otpMethod).ToArray(),
                         clientInfo,
                         ui,
                         rest,
@@ -175,12 +177,20 @@ namespace PasswordManagerAccess.LastPass
             //      additional input from the user.
             else if (cause == "outofbandrequired")
             {
+                var allAttributes = GetAllErrorAttributes(response);
+                if (!allAttributes.TryGetValue("outofbandtype", out var oobMethodName))
+                    throw new InternalErrorException("Out of band method is not specified");
+
+                if (!KnownMfaMethods.TryGetValue(oobMethodName, out var oobMethod))
+                    throw new InternalErrorException($"Unsupported out of band method: {oobMethodName}");
+
                 var oobResult = await LoginWithOob(
                         username,
                         password,
                         keyIterationCount,
-                        GetAllErrorAttributes(response),
-                        [], // TODO: Add other methods
+                        allAttributes,
+                        oobMethod,
+                        enabledMfaMethods.Where(x => x != oobMethod).ToArray(),
                         clientInfo,
                         ui,
                         rest,
@@ -292,6 +302,7 @@ namespace PasswordManagerAccess.LastPass
             string password,
             int keyIterationCount,
             Dictionary<string, string> parameters,
+            MfaMethod method,
             MfaMethod[] otherMethods,
             ClientInfo clientInfo,
             IAsyncUi ui,
@@ -300,7 +311,7 @@ namespace PasswordManagerAccess.LastPass
             CancellationToken cancellationToken
         )
         {
-            var oobResult = await ApproveOob(username, parameters, otherMethods, ui, rest, logger, cancellationToken).ConfigureAwait(false);
+            var oobResult = await ApproveOob(username, parameters, method, otherMethods, ui, rest, logger, cancellationToken).ConfigureAwait(false);
 
             // The user chose a different MFA method
             if (oobResult.Value is MfaMethod mfa)
@@ -360,18 +371,6 @@ namespace PasswordManagerAccess.LastPass
             return session;
         }
 
-        internal record OobResult(bool WaitForOutOfBand, string Passcode, bool RememberMe);
-
-        // This is used to pass the extra params along with the OOB result
-        internal struct OobWithExtras(OobResult result, Dictionary<string, object> extras = null)
-        {
-            // This is a special sentinel value to mark the Duo V4 to V1 redirect
-            public static readonly OobResult DuoV4ToV1Redirect = new(false, "duo-v4-to-v1-redirect", false);
-
-            public readonly OobResult Result = result;
-            public readonly Dictionary<string, object> Extras = extras ?? [];
-        }
-
         internal record OtpWithExtras(Otp Otp, Dictionary<string, object> Extras)
         {
             public OtpWithExtras(Otp otp)
@@ -383,6 +382,7 @@ namespace PasswordManagerAccess.LastPass
         internal static async Task<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>> ApproveOob(
             string username,
             Dictionary<string, string> parameters,
+            MfaMethod method,
             MfaMethod[] otherMethods,
             IAsyncUi ui,
             RestClient rest,
@@ -390,10 +390,8 @@ namespace PasswordManagerAccess.LastPass
             CancellationToken cancellationToken
         )
         {
-            if (!parameters.TryGetValue("outofbandtype", out var method))
-                throw new InternalErrorException("Out of band method is not specified");
-
-            if (method == "duo" && parameters.GetOrDefault("preferduowebsdk", "") == "1")
+            // Duo with Web SDK is handled separately
+            if (method == MfaMethod.Duo && parameters.GetOrDefault("preferduowebsdk", "") == "1")
             {
                 var duoResult = await ApproveDuoWebSdk(username, parameters, otherMethods, ui, rest, logger, cancellationToken).ConfigureAwait(false);
                 return duoResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(otp => otp, mfa => mfa);
@@ -401,17 +399,18 @@ namespace PasswordManagerAccess.LastPass
 
             var oobResult = method switch
             {
-                "lastpassauth" => await ui.ApproveLastPassAuth(otherMethods, cancellationToken).ConfigureAwait(false),
-                "duo" => await ui.ApproveDuo(otherMethods, cancellationToken).ConfigureAwait(false),
-                "salesforcehash" => await ui.ApproveSalesforceAuth(otherMethods, cancellationToken).ConfigureAwait(false),
+                MfaMethod.LastPassAuthenticator => await ui.ApproveLastPassAuth(otherMethods, cancellationToken).ConfigureAwait(false),
+                MfaMethod.Duo => await ui.ApproveDuo(otherMethods, cancellationToken).ConfigureAwait(false),
+                MfaMethod.SalesforceAuthenticator => await ui.ApproveSalesforceAuth(otherMethods, cancellationToken).ConfigureAwait(false),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
             };
 
-            // The user cancelled
-            if (oobResult.TryPickT3(out _, out var result))
-                throw new CanceledMultiFactorException("Out of band step is canceled by the user");
-
-            return result.MapT0(otp => new OtpWithExtras(otp));
+            return oobResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(
+                otp => new OtpWithExtras(otp),
+                waitForOob => waitForOob,
+                mfa => mfa,
+                cancelled => throw new CanceledMultiFactorException("Out of band step is canceled by the user")
+            );
         }
 
         internal static async Task<OneOf<OtpWithExtras, MfaMethod>> ApproveDuoWebSdk(
@@ -696,6 +695,16 @@ namespace PasswordManagerAccess.LastPass
             }
         }
 
+        // TODO: Log unsupported methods, don't just ignore them
+        internal static MfaMethod[] ParseAvailableMfaMethods(XDocument response)
+        {
+            return (GetOptionalErrorAttribute(response, "enabled_providers") ?? "")
+                .Split(',')
+                .Select(x => KnownMfaMethods.GetValueOrDefault(x, MfaMethod.None))
+                .Where(x => x != MfaMethod.None)
+                .ToArray();
+        }
+
         internal static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount, ClientInfo clientInfo)
         {
             var ok = response.XPathSelectElement("response/ok");
@@ -859,6 +868,30 @@ namespace PasswordManagerAccess.LastPass
                 ["googleauthrequired"] = MfaMethod.GoogleAuthenticator,
                 ["microsoftauthrequired"] = MfaMethod.MicrosoftAuthenticator,
                 ["otprequired"] = MfaMethod.YubikeyOtp,
+            };
+
+        private static readonly Dictionary<string, MfaMethod> KnownMfaMethods =
+            // All the methods found in the original JS code. Keep them commented out to make it easier
+            // to see what's missing.
+            new()
+            {
+                ["duo"] = MfaMethod.Duo,
+                ["googleauth"] = MfaMethod.GoogleAuthenticator,
+                // ["grid"] = ???,
+                ["lastpassauth"] = MfaMethod.LastPassAuthenticator,
+                // ["lastpassmfa"] = ???,
+                // ["multifactor"] = ???,
+                ["microsoftauth"] = MfaMethod.MicrosoftAuthenticator,
+                ["salesforcehash"] = MfaMethod.SalesforceAuthenticator,
+                // ["secureauth"] = ???,
+                // ["securid"] = ???,
+                // ["sesame"] = ???,
+                // ["symantecvip"] = ???,
+                // ["toopher"] = ???,
+                // ["transakt"] = ???,
+                ["yubikey"] = MfaMethod.YubikeyOtp,
+                // ["no_multifactor"] = ???,
+                ["webauthn"] = MfaMethod.Fido2,
             };
     }
 }
