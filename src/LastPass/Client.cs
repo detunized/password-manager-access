@@ -126,6 +126,7 @@ namespace PasswordManagerAccess.LastPass
                         password,
                         keyIterationCount,
                         forceMfaMethod,
+                        false,
                         [],
                         clientInfo,
                         rest,
@@ -244,6 +245,7 @@ namespace PasswordManagerAccess.LastPass
             string password,
             int keyIterationCount,
             MfaMethod forceMfaMethod,
+            bool rememberMe,
             Dictionary<string, object> extraParameters,
             ClientInfo clientInfo,
             RestClient rest,
@@ -260,8 +262,14 @@ namespace PasswordManagerAccess.LastPass
                 ["includeprivatekeyenc"] = "1",
                 ["outofbandsupported"] = "1",
                 ["uuid"] = clientInfo.Id,
-                ["trustlabel"] = clientInfo.Description, // TODO: Test against the real server if it's ok to send this every time!
             };
+
+            if (rememberMe)
+            {
+                parameters["trustlabel"] = clientInfo.Description;
+                parameters["canexpire"] = "1";
+                parameters["cansetuuid"] = "0";
+            }
 
             if (forceMfaMethod != MfaMethod.None)
                 parameters["provider"] = GetMfaMethodName(forceMfaMethod);
@@ -313,6 +321,7 @@ namespace PasswordManagerAccess.LastPass
                     password,
                     keyIterationCount,
                     method,
+                    otp.RememberMe,
                     new Dictionary<string, object> { ["otp"] = otp.Passcode },
                     clientInfo,
                     rest,
@@ -323,9 +332,6 @@ namespace PasswordManagerAccess.LastPass
             var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
             if (session == null)
                 throw MakeLoginError(response);
-
-            if (otp.RememberMe)
-                await MarkDeviceAsTrusted(session, clientInfo, rest, cancellationToken).ConfigureAwait(false);
 
             return session;
         }
@@ -372,7 +378,7 @@ namespace PasswordManagerAccess.LastPass
             );
 
             Session session;
-            for (; ; )
+            while (true)
             {
                 // In case of the OOB auth the server doesn't respond instantly. This works more like a long poll.
                 // The server times out in about 10 seconds so there's no need to back off.
@@ -380,7 +386,8 @@ namespace PasswordManagerAccess.LastPass
                         username,
                         password,
                         keyIterationCount,
-                        MfaMethod.None,
+                        method,
+                        rememberMe,
                         extraParameters,
                         clientInfo,
                         rest,
@@ -399,9 +406,6 @@ namespace PasswordManagerAccess.LastPass
                 extraParameters["outofbandretry"] = "1";
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
             }
-
-            if (rememberMe)
-                await MarkDeviceAsTrusted(session, clientInfo, rest, cancellationToken).ConfigureAwait(false);
 
             return session;
         }
@@ -655,6 +659,7 @@ namespace PasswordManagerAccess.LastPass
             return code;
         }
 
+        // TODO: Remove this!
         internal static async Task MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest, CancellationToken cancellationToken)
         {
             var response = await rest.PostFormAsync(
