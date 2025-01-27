@@ -113,107 +113,137 @@ namespace PasswordManagerAccess.LastPass
             // <response><error iterations="5000" /></response>
             var keyIterationCount = 100100;
 
-            XDocument response = null;
-            Session session = null;
+            var changedIterationCount = false;
+            var changedServer = false;
+            var forceMfaMethod = MfaMethod.None;
 
-            // We have a maximum of 3 retries in case we need to try again with the correct domain and/or
-            // the number of KDF iterations the second/third time around.
-            for (var i = 0; i < 3; i++)
+            while (true)
             {
                 // 2. Knowing the iterations count we can hash the password and log in.
                 //    On the first attempt simply with the username and password.
-                response = await PerformSingleLoginRequest(username, password, keyIterationCount, [], clientInfo, rest, cancellationToken)
+                var response = await PerformSingleLoginRequest(
+                        username,
+                        password,
+                        keyIterationCount,
+                        forceMfaMethod,
+                        [],
+                        clientInfo,
+                        rest,
+                        cancellationToken
+                    )
                     .ConfigureAwait(false);
 
-                session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+                var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
                 if (session != null)
                     return (session, rest);
 
-                // It's possible we're being redirected to another region.
+                // 3. It's possible we're being redirected to another region.
                 var server = GetOptionalErrorAttribute(response, "server");
                 if (!server.IsNullOrEmpty())
                 {
+                    // Prevent infinite loops
+                    if (changedServer)
+                        throw new InternalErrorException("Trying to change server too many times");
+
+                    // Change the server and retry
                     rest = new RestClient(transport, "https://" + server);
+                    changedServer = true;
                     continue;
                 }
 
-                // It's possible for the request above to come back with the correct iteration count.
-                // In this case we have to parse and repeat.
+                // 4. It's possible for the request above to come back with the correct iteration count.
+                //    In this case we have to parse and repeat.
                 var correctIterationCount = GetOptionalErrorAttribute(response, "iterations");
-                if (correctIterationCount == null)
-                    break;
+                if (!correctIterationCount.IsNullOrEmpty())
+                {
+                    // Prevent infinite loops
+                    if (changedIterationCount)
+                        throw new InternalErrorException("Trying to change iteration count too many times");
 
-                if (!int.TryParse(correctIterationCount, out keyIterationCount))
-                    throw new InternalErrorException($"Failed to parse the iteration count, expected an integer value '{correctIterationCount}'");
+                    if (!int.TryParse(correctIterationCount, out keyIterationCount))
+                        throw new InternalErrorException($"Failed to parse the iteration count, expected an integer value '{correctIterationCount}'");
+
+                    // Change the iteration count and retry
+                    changedIterationCount = true;
+                    continue;
+                }
+
+                // 5. The simple login failed. This is usually due to some error, invalid credentials or
+                //    a multifactor authentication being enabled.
+                var cause = GetOptionalErrorAttribute(response, "cause");
+                if (cause == null)
+                    throw MakeLoginError(response);
+
+                var enabledMfaMethods = ParseAvailableMfaMethods(response);
+                OneOf<Session, MfaMethod> mfaLoginResult;
+
+                // 6.1. One-time-password is required
+                if (KnownOtpMethods.TryGetValue(cause, out var otpMethod))
+                {
+                    mfaLoginResult = await LoginWithOtp(
+                            username,
+                            password,
+                            keyIterationCount,
+                            otpMethod,
+                            enabledMfaMethods.Where(x => x != otpMethod).ToArray(),
+                            clientInfo,
+                            ui,
+                            rest,
+                            cancellationToken
+                        )
+                        .ConfigureAwait(false);
+                }
+                // 6.2. Some out-of-bound authentication is enabled. This might or might not require
+                //      additional input from the user depending on the method.
+                else if (cause == "outofbandrequired")
+                {
+                    var allAttributes = GetAllErrorAttributes(response);
+                    if (!allAttributes.TryGetValue("outofbandtype", out var oobMethodName))
+                        throw new InternalErrorException("Out of band method is not specified");
+
+                    if (!KnownMfaMethods.TryGetValue(oobMethodName, out var oobMethod))
+                        throw new InternalErrorException($"Unsupported out of band method: {oobMethodName}");
+
+                    mfaLoginResult = await LoginWithOob(
+                            username,
+                            password,
+                            keyIterationCount,
+                            allAttributes,
+                            oobMethod,
+                            enabledMfaMethods.Where(x => x != oobMethod).ToArray(),
+                            clientInfo,
+                            ui,
+                            rest,
+                            logger,
+                            cancellationToken
+                        )
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new InternalErrorException($"Unsupported login failure reason: {cause}");
+                }
+
+                switch (mfaLoginResult.Value)
+                {
+                    // All good, we got a valid session
+                    case Session s:
+                        return (s, rest);
+                    case MfaMethod mfaMethod:
+                        // We need to retry the login with a different MFA method
+                        forceMfaMethod = mfaMethod;
+                        continue;
+                }
+
+                throw new InternalErrorException("Logic error: should never get here");
             }
-
-            // 3. The simple login failed. This is usually due to some error, invalid credentials or
-            //    a multifactor authentication being enabled.
-            var cause = GetOptionalErrorAttribute(response, "cause");
-            if (cause == null)
-                throw MakeLoginError(response);
-
-            var enabledMfaMethods = ParseAvailableMfaMethods(response);
-
-            // 3.1. One-time-password is required
-            if (KnownOtpMethods.TryGetValue(cause, out var otpMethod))
-            {
-                var otpResult = await LoginWithOtp(
-                        username,
-                        password,
-                        keyIterationCount,
-                        otpMethod,
-                        enabledMfaMethods.Where(x => x != otpMethod).ToArray(),
-                        clientInfo,
-                        ui,
-                        rest,
-                        cancellationToken
-                    )
-                    .ConfigureAwait(false);
-
-                session = otpResult.Match(s => s, _ => throw new NotImplementedException("MFA selection is not supported"));
-            }
-            // 3.2. Some out-of-bound authentication is enabled. This does not require any
-            //      additional input from the user.
-            else if (cause == "outofbandrequired")
-            {
-                var allAttributes = GetAllErrorAttributes(response);
-                if (!allAttributes.TryGetValue("outofbandtype", out var oobMethodName))
-                    throw new InternalErrorException("Out of band method is not specified");
-
-                if (!KnownMfaMethods.TryGetValue(oobMethodName, out var oobMethod))
-                    throw new InternalErrorException($"Unsupported out of band method: {oobMethodName}");
-
-                var oobResult = await LoginWithOob(
-                        username,
-                        password,
-                        keyIterationCount,
-                        allAttributes,
-                        oobMethod,
-                        enabledMfaMethods.Where(x => x != oobMethod).ToArray(),
-                        clientInfo,
-                        ui,
-                        rest,
-                        logger,
-                        cancellationToken
-                    )
-                    .ConfigureAwait(false);
-
-                session = oobResult.Match(s => s, _ => throw new NotImplementedException("MFA selection is not supported"));
-            }
-
-            // Nothing worked
-            if (session == null)
-                throw MakeLoginError(response);
-
-            // All good
-            return (session, rest);
         }
 
         internal static async Task<XDocument> PerformSingleLoginRequest(
             string username,
             string password,
             int keyIterationCount,
+            MfaMethod forceMfaMethod,
             Dictionary<string, object> extraParameters,
             ClientInfo clientInfo,
             RestClient rest,
@@ -232,6 +262,9 @@ namespace PasswordManagerAccess.LastPass
                 ["uuid"] = clientInfo.Id,
                 ["trustlabel"] = clientInfo.Description, // TODO: Test against the real server if it's ok to send this every time!
             };
+
+            if (forceMfaMethod != MfaMethod.None)
+                parameters["provider"] = GetMfaMethodName(forceMfaMethod);
 
             foreach (var kv in extraParameters)
                 parameters[kv.Key] = kv.Value;
@@ -279,6 +312,7 @@ namespace PasswordManagerAccess.LastPass
                     username,
                     password,
                     keyIterationCount,
+                    method,
                     new Dictionary<string, object> { ["otp"] = otp.Passcode },
                     clientInfo,
                     rest,
@@ -346,6 +380,7 @@ namespace PasswordManagerAccess.LastPass
                         username,
                         password,
                         keyIterationCount,
+                        MfaMethod.None,
                         extraParameters,
                         clientInfo,
                         rest,
@@ -792,6 +827,22 @@ namespace PasswordManagerAccess.LastPass
             }
 
             return accounts.ToArray();
+        }
+
+        internal static string GetMfaMethodName(MfaMethod method)
+        {
+            return method switch
+            {
+                MfaMethod.GoogleAuthenticator => "googleauth",
+                MfaMethod.MicrosoftAuthenticator => "microsoftauth",
+                MfaMethod.YubikeyOtp => "yubikey",
+
+                MfaMethod.Duo => "duo",
+                MfaMethod.LastPassAuthenticator => "lastpassauth",
+                MfaMethod.SalesforceAuthenticator => "salesforcehash",
+
+                _ => throw new UnsupportedFeatureException($"Unsupported MFA method: {method}"),
+            };
         }
 
         //
