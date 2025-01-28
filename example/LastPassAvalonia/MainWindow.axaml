@@ -10,15 +10,38 @@
         Title="LastPass">
     <StackPanel Spacing="5" Margin="10" VerticalAlignment="Stretch">
 
-        <TextBlock Margin="0 5" >Username</TextBlock>
-        <TextBox Text="{Binding Username}"/>
+        <TextBlock Margin="0 5">Username</TextBlock>
+        <TextBox Text="{Binding Username}" />
 
-        <TextBlock Margin="0 5" >Password</TextBlock>
+        <TextBlock Margin="0 5">Password</TextBlock>
         <TextBox Text="{Binding Password}" />
 
-        <Button Command="{Binding Login}" IsEnabled="{Binding IsLoginEnabled}" >Login</Button>
+        <Button Command="{Binding Login}" IsEnabled="{Binding IsLoginEnabled}">Login</Button>
 
         <TextBlock Margin="0 5" Text="{Binding Status}" Foreground="Teal" />
+
+        <!-- MFA -->
+        <Separator />
+
+        <!-- Duo -->
+        <StackPanel Spacing="5" Margin="10" VerticalAlignment="Stretch" IsEnabled="{Binding IsDuoEnabled}">
+            <TextBlock Margin="0 10 0 5">Duo:</TextBlock>
+            <ItemsControl ItemsSource="{Binding DuoMethods}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <RadioButton Content="{Binding Name}" GroupName="Duo" IsChecked="{Binding IsChecked}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <CheckBox IsChecked="{Binding RememberMe}">Remember me</CheckBox>
+
+            <Button Command="{Binding ApproveDuo}">Approve</Button>
+            <Button Command="{Binding CancelDuo}">Cancel</Button>
+
+            <TextBlock Margin="0 5" Text="{Binding DuoStatus}" Foreground="Green" />
+        </StackPanel>
+
     </StackPanel>
 
 </Window>
