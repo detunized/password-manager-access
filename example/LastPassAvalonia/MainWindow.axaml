@@ -23,8 +23,15 @@
         <!-- MFA -->
         <Separator />
 
+        <!-- Google Auth -->
+        <StackPanel Spacing="5" Margin="10" VerticalAlignment="Stretch" IsVisible="{Binding IsGoogleAuthEnabled}">
+            <TextBlock Margin="0 10 0 5">Google Authenticator:</TextBlock>
+            <TextBox Text="{Binding GoogleAuthPasscode}" />
+            <Button Command="{Binding ApproveGoogleAuth}">Approve</Button>
+        </StackPanel>
+
         <!-- Duo -->
-        <StackPanel Spacing="5" Margin="10" VerticalAlignment="Stretch" IsEnabled="{Binding IsDuoEnabled}">
+        <StackPanel Spacing="5" Margin="10" VerticalAlignment="Stretch" IsVisible="{Binding IsDuoEnabled}">
             <TextBlock Margin="0 10 0 5">Duo:</TextBlock>
             <ItemsControl ItemsSource="{Binding DuoMethods}">
                 <ItemsControl.ItemTemplate>
@@ -37,9 +44,21 @@
             <CheckBox IsChecked="{Binding RememberMe}">Remember me</CheckBox>
 
             <Button Command="{Binding ApproveDuo}">Approve</Button>
-            <Button Command="{Binding CancelDuo}">Cancel</Button>
 
             <TextBlock Margin="0 5" Text="{Binding DuoStatus}" Foreground="Green" />
+        </StackPanel>
+
+        <StackPanel Spacing="5" Margin="10" VerticalAlignment="Stretch" IsVisible="{Binding IsMfaEnabled}">
+            <TextBlock Margin="0 10 0 5">Use a different MFA method:</TextBlock>
+            <ItemsControl ItemsSource="{Binding EnabledMfaMethods}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Content="{Binding Name}" Command="{Binding Select}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Margin="0 10 0 5">Or cancel:</TextBlock>
+            <Button Content="Cancel MFA" Command="{Binding CancelMfa}" />
         </StackPanel>
 
     </StackPanel>

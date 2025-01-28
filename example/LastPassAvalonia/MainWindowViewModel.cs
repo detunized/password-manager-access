@@ -4,6 +4,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive;
 using System.Threading;
 using System.Threading.Tasks;
 using OneOf;
@@ -92,22 +93,39 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     }
 
     //
+    // Google Auth
+    //
+
+    private bool _isGoogleAuthEnabled = false;
+    public bool IsGoogleAuthEnabled
+    {
+        get => _isGoogleAuthEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isGoogleAuthEnabled, value);
+    }
+
+    private string _googleAuthPasscode = "";
+    public string GoogleAuthPasscode
+    {
+        get => _googleAuthPasscode;
+        set => this.RaiseAndSetIfChanged(ref _googleAuthPasscode, value);
+    }
+
+    private TaskCompletionSource<bool>? _approveGoogleAuthTcs;
+
+    public void ApproveGoogleAuth()
+    {
+        _approveGoogleAuthTcs?.SetResult(true);
+    }
+
+    //
     // Duo
     //
 
     private TaskCompletionSource<bool>? _approveDuoTcs;
-    private TaskCompletionSource<bool>? _cancelDuoTcs;
 
     public record DuoMethod(string Name, bool IsChecked, int DeviceIndex, int FactorIndex);
 
     public ObservableCollection<DuoMethod> DuoMethods { get; } = [];
-
-    private int _selectedDuoMethod = -1;
-    public int SelectedDuoMethod
-    {
-        get => _selectedDuoMethod;
-        set => this.RaiseAndSetIfChanged(ref _selectedDuoMethod, value);
-    }
 
     private bool _rememberMe = false;
     public bool RememberMe
@@ -135,18 +153,62 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         _approveDuoTcs?.SetResult(true);
     }
 
-    public void CancelDuo()
+    //
+    // MFA method selection
+    //
+
+    private TaskCompletionSource<MfaMethod>? _selectMfaTcs;
+    private TaskCompletionSource<bool>? _cancelMfaTcs;
+
+    public record EnabledMfaMethod(string Name, MfaMethod Method, ReactiveCommand<Unit, Unit> Select);
+
+    public ObservableCollection<EnabledMfaMethod> EnabledMfaMethods { get; } = [];
+
+    private bool _isMfaEnabled = false;
+    public bool IsMfaEnabled
     {
-        _cancelDuoTcs?.SetResult(true);
+        get => _isMfaEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isMfaEnabled, value);
+    }
+
+    public void SelectMfaMethod(MfaMethod method)
+    {
+        _selectMfaTcs?.SetResult(method);
+    }
+
+    public void CancelMfa()
+    {
+        _cancelMfaTcs?.SetResult(true);
     }
 
     //
     // IAsyncUi
     //
 
-    public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IsGoogleAuthEnabled = true;
+            SetMfaMethods(otherMethods);
+
+            _approveGoogleAuthTcs = new TaskCompletionSource<bool>();
+            var done = await Task.WhenAny(_approveGoogleAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
+
+            if (done == _selectMfaTcs.Task)
+                return _selectMfaTcs.Task.Result;
+
+            if (done == _cancelMfaTcs.Task)
+                return new Cancelled("User cancelled");
+
+            return new Otp(GoogleAuthPasscode, RememberMe);
+        }
+        finally
+        {
+            ClearMfaMethods();
+            _approveGoogleAuthTcs = null;
+            IsGoogleAuthEnabled = false;
+        }
     }
 
     public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
@@ -183,11 +245,11 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         CancellationToken cancellationToken
     )
     {
-        IsDuoEnabled = true;
-
         try
         {
-            DuoMethods.Clear();
+            SetMfaMethods(otherMethods);
+
+            DuoMethods.RemoveAll();
             for (int di = 0; di < devices.Length; di++)
             {
                 var device = devices[di];
@@ -197,13 +259,18 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                     DuoMethods.Add(new DuoMethod($"{device.Name}: {factor}", di == 0 && fi == 0, di, fi));
                 }
             }
+            IsDuoEnabled = true;
 
+            // TODO: Use cancellation token
             _approveDuoTcs = new TaskCompletionSource<bool>();
-            _cancelDuoTcs = new TaskCompletionSource<bool>();
 
-            var done = await Task.WhenAny(_approveDuoTcs.Task, _cancelDuoTcs.Task);
-            if (done == _cancelDuoTcs.Task)
+            var done = await Task.WhenAny(_approveDuoTcs.Task, _cancelMfaTcs.Task, _selectMfaTcs.Task);
+
+            if (done == _cancelMfaTcs.Task)
                 return new DuoCancelled("User cancelled");
+
+            if (done == _selectMfaTcs.Task)
+                return _selectMfaTcs.Task.Result;
 
             var selectedMethod = DuoMethods.First(m => m.IsChecked);
             return new DuoChoice(
@@ -214,6 +281,8 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
         finally
         {
+            ClearMfaMethods();
+            _approveDuoTcs = null;
             IsDuoEnabled = false;
         }
     }
@@ -227,5 +296,42 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     {
         DuoStatus = text;
         return Task.CompletedTask;
+    }
+
+    //
+    // Helpers
+    //
+
+    private void SetMfaMethods(MfaMethod[] methods)
+    {
+        ClearMfaMethods();
+
+        foreach (var method in methods)
+            EnabledMfaMethods.Add(new EnabledMfaMethod(method.GetName(), method, ReactiveCommand.Create(() => SelectMfaMethod(method))));
+
+        _selectMfaTcs = new TaskCompletionSource<MfaMethod>();
+        _cancelMfaTcs = new TaskCompletionSource<bool>();
+
+        IsMfaEnabled = true;
+    }
+
+    private void ClearMfaMethods()
+    {
+        IsMfaEnabled = false;
+
+        EnabledMfaMethods.RemoveAll();
+
+        _selectMfaTcs = null;
+        _cancelMfaTcs = null;
+    }
+}
+
+internal static class ObservableCollectionExtensions
+{
+    // For some reason .Clear doesn't update the UI properly. This works.
+    public static void RemoveAll<T>(this ObservableCollection<T> collection)
+    {
+        while (collection.Count > 0)
+            collection.RemoveAt(collection.Count - 1);
     }
 }
