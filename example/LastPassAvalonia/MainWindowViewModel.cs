@@ -118,6 +118,62 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     }
 
     //
+    // Microsoft Auth
+    //
+
+    private bool _isMicrosoftAuthEnabled = false;
+    public bool IsMicrosoftAuthEnabled
+    {
+        get => _isMicrosoftAuthEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isMicrosoftAuthEnabled, value);
+    }
+
+    private string _microsoftAuthPasscode = "";
+    public string MicrosoftAuthPasscode
+    {
+        get => _microsoftAuthPasscode;
+        set => this.RaiseAndSetIfChanged(ref _microsoftAuthPasscode, value);
+    }
+
+    private TaskCompletionSource<bool>? _approveMicrosoftAuthTcs;
+
+    public void ApproveMicrosoftAuth()
+    {
+        _approveMicrosoftAuthTcs?.SetResult(true);
+    }
+
+    //
+    // LastPass Auth
+    //
+
+    private bool _isLastPassAuthEnabled = false;
+    public bool IsLastPassAuthEnabled
+    {
+        get => _isLastPassAuthEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isLastPassAuthEnabled, value);
+    }
+
+    private string _lastPassAuthPasscode = "";
+    public string LastPassAuthPasscode
+    {
+        get => _lastPassAuthPasscode;
+        set => this.RaiseAndSetIfChanged(ref _lastPassAuthPasscode, value);
+    }
+
+    private TaskCompletionSource<bool>? _approveLastPassAuthTcs;
+    private TaskCompletionSource<bool>? _pushToMobileLastPassAuthTcs;
+
+    public void ApproveLastPassAuth()
+    {
+        _approveLastPassAuthTcs?.SetResult(true);
+    }
+
+    public void PushToMobileLastPassAuth()
+    {
+        _pushToMobileLastPassAuthTcs?.SetResult(true);
+    }
+
+    //
     // Duo
     //
 
@@ -205,15 +261,36 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
         finally
         {
-            ClearMfaMethods();
-            _approveGoogleAuthTcs = null;
+            IsMfaEnabled = false;
             IsGoogleAuthEnabled = false;
+            _approveGoogleAuthTcs = null;
         }
     }
 
-    public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IsMicrosoftAuthEnabled = true;
+            SetMfaMethods(otherMethods);
+
+            _approveMicrosoftAuthTcs = new TaskCompletionSource<bool>();
+            var done = await Task.WhenAny(_approveMicrosoftAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
+
+            if (done == _selectMfaTcs.Task)
+                return _selectMfaTcs.Task.Result;
+
+            if (done == _cancelMfaTcs.Task)
+                return new Cancelled("User cancelled");
+
+            return new Otp(MicrosoftAuthPasscode, RememberMe);
+        }
+        finally
+        {
+            IsMfaEnabled = false;
+            IsMicrosoftAuthEnabled = false;
+            _approveMicrosoftAuthTcs = null;
+        }
     }
 
     public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
@@ -221,9 +298,39 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
+        MfaMethod[] otherMethods,
+        CancellationToken cancellationToken
+    )
     {
-        throw new NotImplementedException();
+        try
+        {
+            IsLastPassAuthEnabled = true;
+            SetMfaMethods(otherMethods);
+
+            _approveLastPassAuthTcs = new TaskCompletionSource<bool>();
+            _pushToMobileLastPassAuthTcs = new TaskCompletionSource<bool>();
+
+            var done = await Task.WhenAny(_approveLastPassAuthTcs.Task, _pushToMobileLastPassAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
+
+            if (done == _selectMfaTcs.Task)
+                return _selectMfaTcs.Task.Result;
+
+            if (done == _cancelMfaTcs.Task)
+                return new Cancelled("User cancelled");
+
+            if (done == _pushToMobileLastPassAuthTcs.Task)
+                return new WaitForOutOfBand(RememberMe);
+
+            return new Otp(LastPassAuthPasscode, RememberMe);
+        }
+        finally
+        {
+            IsMfaEnabled = false;
+            IsLastPassAuthEnabled = false;
+            _approveLastPassAuthTcs = null;
+            _pushToMobileLastPassAuthTcs = null;
+        }
     }
 
     public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] otherMethods, CancellationToken cancellationToken)
