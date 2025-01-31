@@ -3,12 +3,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:LastPassAvalonia"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="480"
         x:Class="LastPassAvalonia.MainWindow"
         x:CompileBindings="True"
         x:DataType="vm:MainWindowViewModel"
         Title="LastPass">
-    <StackPanel Spacing="5" Margin="10" VerticalAlignment="Stretch">
+    <StackPanel Spacing="5" Margin="20" VerticalAlignment="Stretch">
 
         <TextBlock Margin="0 5">Username</TextBlock>
         <TextBox Text="{Binding Username}" />
@@ -23,29 +23,34 @@
         <!-- MFA -->
         <Separator />
 
-        <StackPanel Spacing="5" Margin="10">
+        <StackPanel Spacing="5">
 
-            <CheckBox IsChecked="{Binding RememberMe}" IsEnabled="{Binding IsMfaEnabled}">Remember me</CheckBox>
+            <StackPanel Spacing="5">
+                <TextBlock Text="{Binding MfaStatus}" Foreground="DarkGreen" />
+                <CheckBox IsChecked="{Binding RememberMe}" IsEnabled="{Binding IsMfaEnabled}">Remember me</CheckBox>
+            </StackPanel>
 
-            <StackPanel Spacing="5" Margin="10" Orientation="Horizontal">
+            <Separator />
+
+            <StackPanel Spacing="20" Orientation="Horizontal">
 
                 <!-- Google Auth -->
-                <StackPanel Spacing="5" Margin="10" VerticalAlignment="Top" IsEnabled="{Binding IsGoogleAuthEnabled}">
-                    <TextBlock Margin="0 10 0 5">Google Authenticator:</TextBlock>
+                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsGoogleAuthEnabled}">
+                    <TextBlock>Google Authenticator:</TextBlock>
                     <TextBox Text="{Binding GoogleAuthPasscode}" />
                     <Button Command="{Binding ApproveGoogleAuth}">Approve</Button>
                 </StackPanel>
 
                 <!-- Microsoft Auth -->
-                <StackPanel Spacing="5" Margin="10" VerticalAlignment="Top" IsEnabled="{Binding IsMicrosoftAuthEnabled}">
-                    <TextBlock Margin="0 10 0 5">Microsoft Authenticator:</TextBlock>
+                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsMicrosoftAuthEnabled}">
+                    <TextBlock>Microsoft Authenticator:</TextBlock>
                     <TextBox Text="{Binding MicrosoftAuthPasscode}" />
                     <Button Command="{Binding ApproveMicrosoftAuth}">Approve</Button>
                 </StackPanel>
 
                 <!-- LastPass Auth -->
-                <StackPanel Spacing="5" Margin="10" VerticalAlignment="Top" IsEnabled="{Binding IsLastPassAuthEnabled}">
-                    <TextBlock Margin="0 10 0 5">LastPass Authenticator:</TextBlock>
+                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsLastPassAuthEnabled}">
+                    <TextBlock>LastPass Authenticator:</TextBlock>
                     <StackPanel Spacing="5" Orientation="Horizontal">
                         <TextBox Text="{Binding LastPassAuthPasscode}" />
                         <Button Command="{Binding ApproveLastPassAuth}">Use passcode</Button>
@@ -54,8 +59,8 @@
                 </StackPanel>
 
                 <!-- Duo -->
-                <StackPanel Spacing="5" Margin="10" VerticalAlignment="Top" IsEnabled="{Binding IsDuoEnabled}">
-                    <TextBlock Margin="0 10 0 5">Duo:</TextBlock>
+                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsDuoEnabled}">
+                    <TextBlock>Duo:</TextBlock>
                     <ItemsControl ItemsSource="{Binding DuoMethods}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -71,9 +76,11 @@
 
             </StackPanel>
 
+            <Separator />
+
             <!-- MFA methods -->
-            <StackPanel Spacing="5" Margin="10" VerticalAlignment="Top" IsEnabled="{Binding IsMfaEnabled}">
-                <TextBlock Margin="0 10 0 5">Use a different MFA method:</TextBlock>
+            <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsMfaEnabled}">
+                <TextBlock>Use a different MFA method:</TextBlock>
                 <ItemsControl ItemsSource="{Binding EnabledMfaMethods}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -81,7 +88,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Margin="0 10 0 5">Or cancel:</TextBlock>
+                <TextBlock>Or cancel:</TextBlock>
                 <Button Content="Cancel MFA" Command="{Binding CancelMfa}" />
             </StackPanel>
 

@@ -18,8 +18,8 @@ namespace LastPassAvalonia;
 
 public class MainWindowViewModel : ViewModelBase, IAsyncUi
 {
-    private string _username = "lastpass.ruby+24-april-2020@gmail.com";
-    private string _password = "Password123!";
+    private string _username = "lastpass.ruby+20-january-2025@gmail.com";
+    private string _password = "Arousal3-Catalog-Overtly-Slobbery-Entitle";
     private string _status = "Press Login to continue";
     private bool _isLoggingIn = false;
     private CancellationTokenSource? _loginCancellationTokenSource;
@@ -183,6 +183,13 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
     public ObservableCollection<DuoMethod> DuoMethods { get; } = [];
 
+    private string _mfaStatus = "MFA section";
+    public string MfaStatus
+    {
+        get => _mfaStatus;
+        set => this.RaiseAndSetIfChanged(ref _mfaStatus, value);
+    }
+
     private bool _rememberMe = false;
     public bool RememberMe
     {
@@ -246,10 +253,10 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         try
         {
             IsGoogleAuthEnabled = true;
-            SetMfaMethods(otherMethods);
+            SetMfaMethods(otherMethods, "Please enter Google Authenticator code");
 
             _approveGoogleAuthTcs = new TaskCompletionSource<bool>();
-            var done = await Task.WhenAny(_approveGoogleAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
+            var done = await Task.WhenAny(_approveGoogleAuthTcs.Task, _selectMfaTcs!.Task, _cancelMfaTcs!.Task);
 
             if (done == _selectMfaTcs.Task)
                 return _selectMfaTcs.Task.Result;
@@ -272,7 +279,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         try
         {
             IsMicrosoftAuthEnabled = true;
-            SetMfaMethods(otherMethods);
+            SetMfaMethods(otherMethods, "Please enter Microsoft Authenticator code");
 
             _approveMicrosoftAuthTcs = new TaskCompletionSource<bool>();
             var done = await Task.WhenAny(_approveMicrosoftAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
@@ -306,7 +313,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         try
         {
             IsLastPassAuthEnabled = true;
-            SetMfaMethods(otherMethods);
+            SetMfaMethods(otherMethods, "Please enter LastPass Authenticator passcode or choose to push to mobile");
 
             _approveLastPassAuthTcs = new TaskCompletionSource<bool>();
             _pushToMobileLastPassAuthTcs = new TaskCompletionSource<bool>();
@@ -346,7 +353,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     {
         try
         {
-            SetMfaMethods(otherMethods);
+            SetMfaMethods(otherMethods, "Please choose a Duo factor");
 
             DuoMethods.RemoveAll();
             for (int di = 0; di < devices.Length; di++)
@@ -401,7 +408,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     // Helpers
     //
 
-    private void SetMfaMethods(MfaMethod[] methods)
+    private void SetMfaMethods(MfaMethod[] methods, string status)
     {
         ClearMfaMethods();
 
@@ -411,13 +418,14 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         _selectMfaTcs = new TaskCompletionSource<MfaMethod>();
         _cancelMfaTcs = new TaskCompletionSource<bool>();
 
+        MfaStatus = status;
         IsMfaEnabled = true;
     }
 
     private void ClearMfaMethods()
     {
         IsMfaEnabled = false;
-
+        MfaStatus = "";
         EnabledMfaMethods.RemoveAll();
 
         _selectMfaTcs = null;
