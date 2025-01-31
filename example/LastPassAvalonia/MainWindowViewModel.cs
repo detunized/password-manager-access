@@ -338,14 +338,6 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         throw new NotImplementedException();
     }
 
-    public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveSalesforceAuth(
-        MfaMethod[] otherMethods,
-        CancellationToken cancellationToken
-    )
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
         DuoDevice[] devices,
         MfaMethod[] otherMethods,

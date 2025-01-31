@@ -924,19 +924,6 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
-        public async Task ApproveOob_calls_Ui_ApproveSalesforceAuth()
-        {
-            // Arrange
-            var ui = GetCancelingUi();
-
-            // Act
-            await Client.ApproveOob(Username, SalesforceAuthOobParameters, ui, null, null, CancellationToken.None);
-
-            // Assert
-            ui.ApproveSalesforceAuthCalledTimes.Should().Be(1);
-        }
-
-        [Fact]
         public void ApproveOob_calls_IDuoUi()
         {
             // TODO: See how to test this. Maybe Duo.Authenticate should be hidden behind an interface that we can mock.
@@ -1342,7 +1329,6 @@ namespace PasswordManagerAccess.Test.LastPass
             public int ProvideYubikeyPasscodeCalledTimes { get; private set; }
             public int ApproveLastPassAuthCalledTimes { get; private set; }
             public int ApproveDuoCalledTimes { get; private set; }
-            public int ApproveSalesforceAuthCalledTimes { get; private set; }
             public int ChooseDuoFactorCalledTimes { get; set; }
             public int ProvideDuoPasscodeCalledTimes { get; set; }
             public int UpdateDuoStatusCalledTimes { get; set; }
@@ -1374,12 +1360,6 @@ namespace PasswordManagerAccess.Test.LastPass
             public Task<OobResult> ApproveDuo(CancellationToken cancellationToken)
             {
                 ApproveDuoCalledTimes++;
-                return Task.FromResult(oob);
-            }
-
-            public Task<OobResult> ApproveSalesforceAuth(CancellationToken cancellationToken)
-            {
-                ApproveSalesforceAuthCalledTimes++;
                 return Task.FromResult(oob);
             }
 
@@ -1457,8 +1437,6 @@ namespace PasswordManagerAccess.Test.LastPass
         private static readonly Dictionary<string, string> LastPassAuthOobParameters = new() { ["outofbandtype"] = "lastpassauth" };
 
         private static readonly Dictionary<string, string> DuoOobParameters = new() { ["outofbandtype"] = "duo" };
-
-        private static readonly Dictionary<string, string> SalesforceAuthOobParameters = new() { ["outofbandtype"] = "salesforcehash" };
 
         private static readonly string OkResponseValidPrivateKey =
             "<response>"

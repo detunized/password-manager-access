@@ -440,7 +440,6 @@ namespace PasswordManagerAccess.LastPass
             {
                 MfaMethod.LastPassAuthenticator => await ui.ApproveLastPassAuth(otherMethods, cancellationToken).ConfigureAwait(false),
                 MfaMethod.Duo => await ui.ApproveDuo(otherMethods, cancellationToken).ConfigureAwait(false),
-                MfaMethod.SalesforceAuthenticator => await ui.ApproveSalesforceAuth(otherMethods, cancellationToken).ConfigureAwait(false),
                 _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
             };
 
@@ -844,7 +843,6 @@ namespace PasswordManagerAccess.LastPass
 
                 MfaMethod.Duo => "duo",
                 MfaMethod.LastPassAuthenticator => "lastpassauth",
-                MfaMethod.SalesforceAuthenticator => "salesforcehash",
 
                 _ => throw new UnsupportedFeatureException($"Unsupported MFA method: {method}"),
             };
@@ -938,7 +936,7 @@ namespace PasswordManagerAccess.LastPass
                 // ["lastpassmfa"] = ???,
                 // ["multifactor"] = ???,
                 ["microsoftauth"] = MfaMethod.MicrosoftAuthenticator,
-                ["salesforcehash"] = MfaMethod.SalesforceAuthenticator,
+                // ["salesforcehash"] = ???,
                 // ["secureauth"] = ???,
                 // ["securid"] = ???,
                 // ["sesame"] = ???,

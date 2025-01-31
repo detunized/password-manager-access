@@ -20,7 +20,6 @@ public enum MfaMethod
     // OOB
     Duo,
     LastPassAuthenticator,
-    SalesforceAuthenticator,
 }
 
 public static class MfaMethodExtensions
@@ -35,7 +34,6 @@ public static class MfaMethodExtensions
             MfaMethod.U2F => "U2F",
             MfaMethod.WebAuthn => "WebAuthn",
             MfaMethod.LastPassAuthenticator => "LastPass Authenticator",
-            MfaMethod.SalesforceAuthenticator => "Salesforce Authenticator",
             MfaMethod.Duo => "Duo",
             _ => "Unknown",
         };
