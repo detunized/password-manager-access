@@ -16,7 +16,10 @@
         <TextBlock Margin="0 5">Password</TextBlock>
         <TextBox Text="{Binding Password}" />
 
-        <Button Command="{Binding Login}" IsEnabled="{Binding IsLoginEnabled}">Login</Button>
+        <StackPanel Spacing="5" Orientation="Horizontal">
+            <Button Command="{Binding Login}" IsEnabled="{Binding IsLoginEnabled}">Login</Button>
+            <Button Command="{Binding CancelLogin}" IsEnabled="{Binding IsCancelEnabled}">Cancel</Button>
+        </StackPanel>
 
         <TextBlock Margin="0 5" Text="{Binding Status}" Foreground="Teal" />
 
@@ -72,6 +75,13 @@
                     <Button Command="{Binding ApproveDuo}">Approve</Button>
 
                     <TextBlock Margin="0 5" Text="{Binding DuoStatus}" Foreground="Green" />
+                </StackPanel>
+
+                <!-- YubiKey -->
+                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsYubiKeyEnabled}">
+                    <TextBlock>Yubikey:</TextBlock>
+                    <TextBox Text="{Binding YubiKeyPasscode}" />
+                    <Button Command="{Binding ApproveYubiKey}">Approve</Button>
                 </StackPanel>
 
             </StackPanel>

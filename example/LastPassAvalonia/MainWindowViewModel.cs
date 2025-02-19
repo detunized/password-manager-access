@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive;
 using System.Threading;
@@ -19,11 +20,6 @@ namespace LastPassAvalonia;
 public class MainWindowViewModel : ViewModelBase, IAsyncUi
 {
     private string _username = "lastpass.ruby+20-january-2025@gmail.com";
-    private string _password = "Arousal3-Catalog-Overtly-Slobbery-Entitle";
-    private string _status = "Press Login to continue";
-    private bool _isLoggingIn = false;
-    private CancellationTokenSource? _loginCancellationTokenSource;
-
     public string Username
     {
         get => _username;
@@ -34,6 +30,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
+    private string _password = "Arousal3-Catalog-Overtly-Slobbery-Entitle";
     public string Password
     {
         get => _password;
@@ -44,18 +41,24 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
+    private string _status = "Press Login to continue";
     public string Status
     {
         get => _status;
         set => this.RaiseAndSetIfChanged(ref _status, value);
     }
 
+    private bool _isLoggingIn = false;
     public bool IsLoginEnabled => !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password) && !_isLoggingIn;
+    public bool IsCancelEnabled => _isLoggingIn;
+
+    private CancellationTokenSource? _loginCancellationTokenSource;
 
     public async Task Login()
     {
         _isLoggingIn = true;
         this.RaisePropertyChanged(nameof(IsLoginEnabled));
+        this.RaisePropertyChanged(nameof(IsCancelEnabled));
 
         _loginCancellationTokenSource = new CancellationTokenSource();
 
@@ -89,7 +92,13 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             _loginCancellationTokenSource = null;
             _isLoggingIn = false;
             this.RaisePropertyChanged(nameof(IsLoginEnabled));
+            this.RaisePropertyChanged(nameof(IsCancelEnabled));
         }
+    }
+
+    public void CancelLogin()
+    {
+        _loginCancellationTokenSource?.Cancel();
     }
 
     //
@@ -217,6 +226,31 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     }
 
     //
+    // YubiKey
+    //
+
+    private bool _isYubiKeyEnabled = false;
+    public bool IsYubiKeyEnabled
+    {
+        get => _isYubiKeyEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isYubiKeyEnabled, value);
+    }
+
+    private string _yubiKeyPasscode = "";
+    public string YubiKeyPasscode
+    {
+        get => _yubiKeyPasscode;
+        set => this.RaiseAndSetIfChanged(ref _yubiKeyPasscode, value);
+    }
+
+    private TaskCompletionSource<bool>? _approveYubiKeyTcs;
+
+    public void ApproveYubiKey()
+    {
+        _approveYubiKeyTcs?.SetResult(true);
+    }
+
+    //
     // MFA method selection
     //
 
@@ -256,7 +290,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             SetMfaMethods(otherMethods, "Please enter Google Authenticator code");
 
             _approveGoogleAuthTcs = new TaskCompletionSource<bool>();
-            var done = await Task.WhenAny(_approveGoogleAuthTcs.Task, _selectMfaTcs!.Task, _cancelMfaTcs!.Task);
+            var done = await WhenAnyWithCancellation(cancellationToken, _approveGoogleAuthTcs.Task, _selectMfaTcs!.Task, _cancelMfaTcs!.Task);
 
             if (done == _selectMfaTcs.Task)
                 return _selectMfaTcs.Task.Result;
@@ -268,7 +302,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
         finally
         {
-            IsMfaEnabled = false;
+            ClearMfaMethods();
             IsGoogleAuthEnabled = false;
             _approveGoogleAuthTcs = null;
         }
@@ -282,7 +316,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             SetMfaMethods(otherMethods, "Please enter Microsoft Authenticator code");
 
             _approveMicrosoftAuthTcs = new TaskCompletionSource<bool>();
-            var done = await Task.WhenAny(_approveMicrosoftAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
+            var done = await WhenAnyWithCancellation(cancellationToken, _approveMicrosoftAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
 
             if (done == _selectMfaTcs.Task)
                 return _selectMfaTcs.Task.Result;
@@ -294,15 +328,36 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
         finally
         {
-            IsMfaEnabled = false;
+            ClearMfaMethods();
             IsMicrosoftAuthEnabled = false;
             _approveMicrosoftAuthTcs = null;
         }
     }
 
-    public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IsYubiKeyEnabled = true;
+            SetMfaMethods(otherMethods, "Please enter YubiKey passcode");
+
+            _approveYubiKeyTcs = new TaskCompletionSource<bool>();
+            var done = await WhenAnyWithCancellation(cancellationToken, _approveYubiKeyTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
+
+            if (done == _selectMfaTcs.Task)
+                return _selectMfaTcs.Task.Result;
+
+            if (done == _cancelMfaTcs.Task)
+                return new Cancelled("User cancelled");
+
+            return new Otp(YubiKeyPasscode, RememberMe);
+        }
+        finally
+        {
+            ClearMfaMethods();
+            IsYubiKeyEnabled = false;
+            _approveYubiKeyTcs = null;
+        }
     }
 
     public async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
@@ -318,7 +373,13 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             _approveLastPassAuthTcs = new TaskCompletionSource<bool>();
             _pushToMobileLastPassAuthTcs = new TaskCompletionSource<bool>();
 
-            var done = await Task.WhenAny(_approveLastPassAuthTcs.Task, _pushToMobileLastPassAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
+            var done = await WhenAnyWithCancellation(
+                cancellationToken,
+                _approveLastPassAuthTcs.Task,
+                _pushToMobileLastPassAuthTcs.Task,
+                _selectMfaTcs.Task,
+                _cancelMfaTcs.Task
+            );
 
             if (done == _selectMfaTcs.Task)
                 return _selectMfaTcs.Task.Result;
@@ -333,7 +394,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
         finally
         {
-            IsMfaEnabled = false;
+            ClearMfaMethods();
             IsLastPassAuthEnabled = false;
             _approveLastPassAuthTcs = null;
             _pushToMobileLastPassAuthTcs = null;
@@ -367,10 +428,9 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             }
             IsDuoEnabled = true;
 
-            // TODO: Use cancellation token
             _approveDuoTcs = new TaskCompletionSource<bool>();
 
-            var done = await Task.WhenAny(_approveDuoTcs.Task, _cancelMfaTcs.Task, _selectMfaTcs.Task);
+            var done = await WhenAnyWithCancellation(cancellationToken, _approveDuoTcs.Task, _cancelMfaTcs.Task, _selectMfaTcs.Task);
 
             if (done == _cancelMfaTcs.Task)
                 return new DuoCancelled("User cancelled");
@@ -388,8 +448,8 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         finally
         {
             ClearMfaMethods();
-            _approveDuoTcs = null;
             IsDuoEnabled = false;
+            _approveDuoTcs = null;
         }
     }
 
@@ -408,6 +468,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     // Helpers
     //
 
+    [MemberNotNull(nameof(_cancelMfaTcs), nameof(_selectMfaTcs))]
     private void SetMfaMethods(MfaMethod[] methods, string status)
     {
         ClearMfaMethods();
@@ -430,6 +491,20 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
         _selectMfaTcs = null;
         _cancelMfaTcs = null;
+    }
+
+    private static async Task<Task> WhenAnyWithCancellation(CancellationToken cancellationToken, params Task[] tasks)
+    {
+        var cancelTcs = new TaskCompletionSource<object>();
+        await using (cancellationToken.Register(() => cancelTcs.TrySetCanceled(cancellationToken)))
+        {
+            var completedTask = await Task.WhenAny(tasks.Append(cancelTcs.Task)).ConfigureAwait(false);
+
+            if (completedTask == cancelTcs.Task)
+                await completedTask.ConfigureAwait(false); // Await the canceled task to throw the exception
+
+            return completedTask;
+        }
     }
 }
 
