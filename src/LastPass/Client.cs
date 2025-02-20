@@ -134,6 +134,8 @@ namespace PasswordManagerAccess.LastPass
                     )
                     .ConfigureAwait(false);
 
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
                 if (session != null)
                     return (session, rest);
@@ -193,6 +195,8 @@ namespace PasswordManagerAccess.LastPass
                             cancellationToken
                         )
                         .ConfigureAwait(false);
+
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
                 // 6.2. Some out-of-bound authentication is enabled. This might or might not require
                 //      additional input from the user depending on the method.
@@ -219,6 +223,8 @@ namespace PasswordManagerAccess.LastPass
                             cancellationToken
                         )
                         .ConfigureAwait(false);
+
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
                 else
                 {
