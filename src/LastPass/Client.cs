@@ -435,26 +435,28 @@ namespace PasswordManagerAccess.LastPass
             CancellationToken cancellationToken
         )
         {
-            // Duo with Web SDK is handled separately
-            if (method == MfaMethod.Duo && parameters.GetOrDefault("preferduowebsdk", "") == "1")
+            switch (method)
             {
-                var duoResult = await ApproveDuoWebSdk(username, parameters, otherMethods, ui, rest, logger, cancellationToken).ConfigureAwait(false);
-                return duoResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(otp => otp, mfa => mfa);
+                case MfaMethod.Duo:
+                    if (parameters.GetOrDefault("preferduowebsdk", "") != "1")
+                        throw new UnsupportedFeatureException("Duo is only supported via Duo Web SDK");
+
+                    var duoResult = await ApproveDuoWebSdk(username, parameters, otherMethods, ui, rest, logger, cancellationToken)
+                        .ConfigureAwait(false);
+                    return duoResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(otp => otp, mfa => mfa);
+
+                case MfaMethod.LastPassAuthenticator:
+                    var lpaResult = await ui.ApproveLastPassAuth(otherMethods, cancellationToken).ConfigureAwait(false);
+                    return lpaResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(
+                        otp => new OtpWithExtras(otp),
+                        waitForOob => waitForOob,
+                        mfa => mfa,
+                        cancelled => throw new CanceledMultiFactorException("Out of band step is canceled by the user")
+                    );
+
+                default:
+                    throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported");
             }
-
-            var oobResult = method switch
-            {
-                MfaMethod.LastPassAuthenticator => await ui.ApproveLastPassAuth(otherMethods, cancellationToken).ConfigureAwait(false),
-                MfaMethod.Duo => await ui.ApproveDuo(otherMethods, cancellationToken).ConfigureAwait(false),
-                _ => throw new UnsupportedFeatureException($"Out of band method '{method}' is not supported"),
-            };
-
-            return oobResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(
-                otp => new OtpWithExtras(otp),
-                waitForOob => waitForOob,
-                mfa => mfa,
-                cancelled => throw new CanceledMultiFactorException("Out of band step is canceled by the user")
-            );
         }
 
         internal static async Task<OneOf<OtpWithExtras, MfaMethod>> ApproveDuoWebSdk(

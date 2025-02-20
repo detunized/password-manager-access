@@ -435,11 +435,6 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] otherMethods, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
         DuoDevice[] devices,
         MfaMethod[] otherMethods,

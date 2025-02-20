@@ -28,7 +28,6 @@ namespace PasswordManagerAccess.LastPass.Ui
         //   3. one of the MFA methods from `otherMethods`: the user chose a different MFA method
         //   4. new Cancelled(...): the user cancelled the operation
         Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(MfaMethod[] otherMethods, CancellationToken cancellationToken);
-        Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] otherMethods, CancellationToken cancellationToken);
     }
 
     public record Otp(string Passcode, bool RememberMe);

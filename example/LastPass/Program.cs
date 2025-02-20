@@ -31,9 +31,6 @@ namespace PasswordManagerAccess.Example.LastPass
                 CancellationToken cancellationToken
             ) => ApproveOutOfBand("LastPass Authenticator", methods, cancellationToken);
 
-            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveDuo(MfaMethod[] methods, CancellationToken cancellationToken) =>
-                ApproveOutOfBand("Duo Security", methods, cancellationToken);
-
             //
             // Private
             //
