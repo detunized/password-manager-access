@@ -43,6 +43,11 @@ namespace PasswordManagerAccess.Duo
             return Task.FromResult(passcode.IsNullOrEmpty() ? IDuoAsyncUi.CancelPasscode() : IDuoAsyncUi.Passcode(passcode));
         }
 
+        public Task DuoDone(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)
         {
             ui.UpdateDuoStatus(status, text);

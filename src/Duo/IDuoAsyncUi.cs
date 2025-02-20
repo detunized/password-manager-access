@@ -11,6 +11,7 @@ namespace PasswordManagerAccess.Duo;
 // Adds Duo functionality to the module-specific Ui class
 public interface IDuoAsyncUi
 {
+    // This is the entry point to the UI, it might be called multiple times during the login process, but it's guaranteed to be called first.
     // At this point it's possible to:
     //   1. Proceed with one of the Duo devices. To do that return IDuoAsyncUi.Choice(device, factor, rememberMe).
     //   2. Choose a different MFA method (if available). To do that return IDuoAsyncUi.SelectDifferentMethod(method).
@@ -25,6 +26,10 @@ public interface IDuoAsyncUi
     //   1. Provide a passcode. To do that return IDuoAsyncUi.Passcode(code).
     //   2. To cancel return CancelPasscode()
     Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken);
+
+    // This is called when the Duo operation is done. This is a good time to close and/or clean up the UI.
+    // This is guaranteed to be called regardless of the outcome but only in case the sequence has been started with ChooseDuoFactor.
+    Task DuoDone(CancellationToken cancellationToken);
 
     // This updates the UI with the messages from the server.
     Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken);

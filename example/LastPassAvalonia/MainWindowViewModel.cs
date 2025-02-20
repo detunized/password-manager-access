@@ -186,7 +186,8 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     // Duo
     //
 
-    private TaskCompletionSource<bool>? _approveDuoTcs;
+    private TaskCompletionSource<bool>? _selectDuoTcs;
+    private TaskCompletionSource<bool>? _submitDuoPasscodeTcs;
 
     public record DuoMethod(string Name, bool IsChecked, int DeviceIndex, int FactorIndex);
 
@@ -213,6 +214,27 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         set => this.RaiseAndSetIfChanged(ref _isDuoEnabled, value);
     }
 
+    private bool _isDuoFactorSelectionEnabled = false;
+    public bool IsDuoFactorSelectionEnabled
+    {
+        get => _isDuoFactorSelectionEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isDuoFactorSelectionEnabled, value);
+    }
+
+    private bool _isDuoPasscodeEnabled = false;
+    public bool IsDuoPasscodeEnabled
+    {
+        get => _isDuoPasscodeEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isDuoPasscodeEnabled, value);
+    }
+
+    private string _duoPasscode = "";
+    public string DuoPasscode
+    {
+        get => _duoPasscode;
+        set => this.RaiseAndSetIfChanged(ref _duoPasscode, value);
+    }
+
     private string _duoStatus = "";
     public string DuoStatus
     {
@@ -220,9 +242,21 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         set => this.RaiseAndSetIfChanged(ref _duoStatus, value);
     }
 
-    public void ApproveDuo()
+    private string _duoState = "";
+    public string DuoState
     {
-        _approveDuoTcs?.SetResult(true);
+        get => _duoState;
+        set => this.RaiseAndSetIfChanged(ref _duoState, value);
+    }
+
+    public void SelectDuo()
+    {
+        _selectDuoTcs?.SetResult(true);
+    }
+
+    public void SubmitDuoPasscode()
+    {
+        _submitDuoPasscodeTcs?.SetResult(true);
     }
 
     //
@@ -415,22 +449,23 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         try
         {
             SetMfaMethods(otherMethods, "Please choose a Duo factor");
+            DuoState = "Duo is in progress";
 
             DuoMethods.RemoveAll();
-            for (int di = 0; di < devices.Length; di++)
+            for (var di = 0; di < devices.Length; di++)
             {
                 var device = devices[di];
-                for (int fi = 0; fi < device.Factors.Length; fi++)
+                for (var fi = 0; fi < device.Factors.Length; fi++)
                 {
                     var factor = device.Factors[fi];
                     DuoMethods.Add(new DuoMethod($"{device.Name}: {factor}", di == 0 && fi == 0, di, fi));
                 }
             }
             IsDuoEnabled = true;
+            IsDuoFactorSelectionEnabled = true;
+            _selectDuoTcs = new TaskCompletionSource<bool>();
 
-            _approveDuoTcs = new TaskCompletionSource<bool>();
-
-            var done = await WhenAnyWithCancellation(cancellationToken, _approveDuoTcs.Task, _cancelMfaTcs.Task, _selectMfaTcs.Task);
+            var done = await WhenAnyWithCancellation(cancellationToken, _selectDuoTcs.Task, _cancelMfaTcs.Task, _selectMfaTcs.Task);
 
             if (done == _cancelMfaTcs.Task)
                 return new DuoCancelled("User cancelled");
@@ -447,15 +482,37 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
         finally
         {
-            ClearMfaMethods();
-            IsDuoEnabled = false;
-            _approveDuoTcs = null;
+            IsDuoFactorSelectionEnabled = false;
+            _selectDuoTcs = null;
         }
     }
 
-    public Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken)
+    public async Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IsDuoPasscodeEnabled = true;
+            DuoState = "Please enter Duo passcode";
+
+            _submitDuoPasscodeTcs = new TaskCompletionSource<bool>();
+
+            await WhenAnyWithCancellation(cancellationToken, _submitDuoPasscodeTcs.Task);
+
+            return string.IsNullOrWhiteSpace(DuoPasscode) ? new DuoCancelled("User cancelled") : new DuoPasscode(DuoPasscode);
+        }
+        finally
+        {
+            IsDuoPasscodeEnabled = false;
+            _submitDuoPasscodeTcs = null;
+        }
+    }
+
+    public Task DuoDone(CancellationToken cancellationToken)
+    {
+        ClearMfaMethods();
+        IsDuoEnabled = false;
+        DuoState = "Duo is done";
+        return Task.CompletedTask;
     }
 
     public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)

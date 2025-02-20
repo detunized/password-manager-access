@@ -64,7 +64,7 @@
                 <!-- Duo -->
                 <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsDuoEnabled}">
                     <TextBlock>Duo:</TextBlock>
-                    <ItemsControl ItemsSource="{Binding DuoMethods}">
+                    <ItemsControl ItemsSource="{Binding DuoMethods}" IsEnabled="{Binding IsDuoFactorSelectionEnabled}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <RadioButton Content="{Binding Name}" GroupName="Duo" IsChecked="{Binding IsChecked}" />
@@ -72,8 +72,12 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Button Command="{Binding ApproveDuo}">Approve</Button>
+                    <Button Command="{Binding SelectDuo}" IsEnabled="{Binding IsDuoFactorSelectionEnabled}">Select</Button>
 
+                    <TextBox Text="{Binding DuoPasscode}" IsEnabled="{Binding IsDuoPasscodeEnabled}" />
+                    <Button Command="{Binding SubmitDuoPasscode}" IsEnabled="{Binding IsDuoPasscodeEnabled}">Submit passcode</Button>
+
+                    <TextBlock Margin="0 5" Text="{Binding DuoState}" Foreground="Blue" />
                     <TextBlock Margin="0 5" Text="{Binding DuoStatus}" Foreground="Green" />
                 </StackPanel>
 

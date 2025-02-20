@@ -71,6 +71,11 @@ namespace PasswordManagerAccess.Example.Common
             return answer == "" ? IDuoAsyncUi.CancelPasscode() : IDuoAsyncUi.Passcode(answer);
         }
 
+        public Task DuoDone(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken)
         {
             WriteLine($"Duo {status}: {text}", StatusToColor(status));

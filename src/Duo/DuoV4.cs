@@ -66,54 +66,61 @@ namespace PasswordManagerAccess.Duo
             if (devices.Length == 0)
                 throw Util.MakeInvalidResponseError("no devices are registered for authentication");
 
-            while (true)
+            try
             {
-                // Ask the user to choose what to do
-                var factorResult = await ui.ChooseDuoFactor(devices, otherMethods, cancellationToken).ConfigureAwait(false);
-
-                switch (factorResult.Value)
+                while (true)
                 {
-                    case MfaMethod mfa:
-                        return mfa;
-                    case DuoCancelled cancelled:
-                        return cancelled;
-                }
+                    // Ask the user to choose what to do
+                    var factorResult = await ui.ChooseDuoFactor(devices, otherMethods, cancellationToken).ConfigureAwait(false);
 
-                var choice = factorResult.AsT0;
-
-                // SMS is a special case: it doesn't submit any codes, it rather tells the server to send a new code
-                // to the phone via SMS.
-                if (choice.Factor == DuoFactor.SendPasscodesBySms)
-                {
-                    _ = await SubmitFactor(sessionId, choice, "", apiRest, cancellationToken).ConfigureAwait(false);
-                    choice = choice with { Factor = DuoFactor.Passcode };
-                }
-
-                // Ask for the passcode
-                var passcode = "";
-                if (choice.Factor == DuoFactor.Passcode)
-                {
-                    var passcodeResult = await ui.ProvideDuoPasscode(choice.Device, cancellationToken).ConfigureAwait(false);
-                    switch (passcodeResult.Value)
+                    switch (factorResult.Value)
                     {
-                        case DuoPasscode p:
-                            passcode = p.Passcode;
-                            break;
+                        case MfaMethod mfa:
+                            return mfa;
                         case DuoCancelled cancelled:
                             return cancelled;
                     }
+
+                    var choice = factorResult.AsT0;
+
+                    // SMS is a special case: it doesn't submit any codes, it rather tells the server to send a new code
+                    // to the phone via SMS.
+                    if (choice.Factor == DuoFactor.SendPasscodesBySms)
+                    {
+                        _ = await SubmitFactor(sessionId, choice, "", apiRest, cancellationToken).ConfigureAwait(false);
+                        choice = choice with { Factor = DuoFactor.Passcode };
+                    }
+
+                    // Ask for the passcode
+                    var passcode = "";
+                    if (choice.Factor == DuoFactor.Passcode)
+                    {
+                        var passcodeResult = await ui.ProvideDuoPasscode(choice.Device, cancellationToken).ConfigureAwait(false);
+                        switch (passcodeResult.Value)
+                        {
+                            case DuoPasscode p:
+                                passcode = p.Passcode;
+                                break;
+                            case DuoCancelled cancelled:
+                                return cancelled;
+                        }
+                    }
+
+                    var maybeResult = await SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
+                    if (maybeResult == null)
+                        continue;
+
+                    // All good
+                    var result = maybeResult.Value;
+                    return new DuoResult($"{result.Code}:{result.State}", "", choice.RememberMe);
                 }
-
-                var maybeResult = await SubmitFactorAndWaitForResult(sessionId, xsrf, choice, passcode, ui, apiRest, cancellationToken)
-                    .ConfigureAwait(false);
-
-                // Flow error like an incorrect passcode. The UI has been updated with the error. Keep going.
-                if (maybeResult == null)
-                    continue;
-
-                // All good
-                var result = maybeResult.Value;
-                return new DuoResult($"{result.Code}:{result.State}", "", choice.RememberMe);
+            }
+            finally
+            {
+                await ui.DuoDone(cancellationToken).ConfigureAwait(false);
             }
         }
 
