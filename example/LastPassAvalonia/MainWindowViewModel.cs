@@ -207,6 +207,13 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         set => this.RaiseAndSetIfChanged(ref _rememberMe, value);
     }
 
+    private string _mfaAttempt = "";
+    public string MfaAttempt
+    {
+        get => _mfaAttempt;
+        set => this.RaiseAndSetIfChanged(ref _mfaAttempt, value);
+    }
+
     private bool _isDuoEnabled = false;
     public bool IsDuoEnabled
     {
@@ -316,12 +323,16 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     // IAsyncUi
     //
 
-    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(
+        int attempt,
+        MfaMethod[] otherMethods,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
             IsGoogleAuthEnabled = true;
-            SetMfaMethods(otherMethods, "Please enter Google Authenticator code");
+            SetMfaMethods(otherMethods, "Please enter Google Authenticator code", attempt);
 
             _approveGoogleAuthTcs = new TaskCompletionSource<bool>();
             var done = await WhenAnyWithCancellation(cancellationToken, _approveGoogleAuthTcs.Task, _selectMfaTcs!.Task, _cancelMfaTcs!.Task);
@@ -342,12 +353,16 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(
+        int attempt,
+        MfaMethod[] otherMethods,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
             IsMicrosoftAuthEnabled = true;
-            SetMfaMethods(otherMethods, "Please enter Microsoft Authenticator code");
+            SetMfaMethods(otherMethods, "Please enter Microsoft Authenticator code", attempt);
 
             _approveMicrosoftAuthTcs = new TaskCompletionSource<bool>();
             var done = await WhenAnyWithCancellation(cancellationToken, _approveMicrosoftAuthTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
@@ -368,12 +383,16 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(MfaMethod[] otherMethods, CancellationToken cancellationToken)
+    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(
+        int attempt,
+        MfaMethod[] otherMethods,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
             IsYubiKeyEnabled = true;
-            SetMfaMethods(otherMethods, "Please enter YubiKey passcode");
+            SetMfaMethods(otherMethods, "Please enter YubiKey passcode", attempt);
 
             _approveYubiKeyTcs = new TaskCompletionSource<bool>();
             var done = await WhenAnyWithCancellation(cancellationToken, _approveYubiKeyTcs.Task, _selectMfaTcs.Task, _cancelMfaTcs.Task);
@@ -395,6 +414,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     }
 
     public async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
+        int attempt,
         MfaMethod[] otherMethods,
         CancellationToken cancellationToken
     )
@@ -402,7 +422,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         try
         {
             IsLastPassAuthEnabled = true;
-            SetMfaMethods(otherMethods, "Please enter LastPass Authenticator passcode or choose to push to mobile");
+            SetMfaMethods(otherMethods, "Please enter LastPass Authenticator passcode or choose to push to mobile", attempt);
 
             _approveLastPassAuthTcs = new TaskCompletionSource<bool>();
             _pushToMobileLastPassAuthTcs = new TaskCompletionSource<bool>();
@@ -443,7 +463,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     {
         try
         {
-            SetMfaMethods(otherMethods, "Please choose a Duo factor");
+            SetMfaMethods(otherMethods, "Please choose a Duo factor", 0);
             DuoState = "Duo is in progress";
 
             DuoMethods.RemoveAll();
@@ -521,7 +541,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     //
 
     [MemberNotNull(nameof(_cancelMfaTcs), nameof(_selectMfaTcs))]
-    private void SetMfaMethods(MfaMethod[] methods, string status)
+    private void SetMfaMethods(MfaMethod[] methods, string status, int attempt)
     {
         ClearMfaMethods();
 
@@ -532,6 +552,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         _cancelMfaTcs = new TaskCompletionSource<bool>();
 
         MfaStatus = status;
+        MfaAttempt = $"Attempt: {attempt + 1}";
         IsMfaEnabled = true;
     }
 

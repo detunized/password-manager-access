@@ -19,6 +19,9 @@ namespace PasswordManagerAccess.LastPass
 {
     internal static class Client
     {
+        public const int MaxOtpAttempts = 3;
+        public const int MaxOobAttempts = 3;
+
         public static async Task<Account[]> OpenVault(
             string username,
             string password,
@@ -303,43 +306,52 @@ namespace PasswordManagerAccess.LastPass
             CancellationToken cancellationToken
         )
         {
-            var otpResult = method switch
+            for (var attempt = 0; ; attempt++)
             {
-                MfaMethod.GoogleAuthenticator => await ui.ProvideGoogleAuthPasscode(otherMethods, cancellationToken).ConfigureAwait(false),
-                MfaMethod.MicrosoftAuthenticator => await ui.ProvideMicrosoftAuthPasscode(otherMethods, cancellationToken).ConfigureAwait(false),
-                MfaMethod.YubikeyOtp => await ui.ProvideYubikeyPasscode(otherMethods, cancellationToken).ConfigureAwait(false),
-                _ => throw new InternalErrorException("Invalid OTP method"),
-            };
+                var otpResult = method switch
+                {
+                    MfaMethod.GoogleAuthenticator => await ui.ProvideGoogleAuthPasscode(attempt, otherMethods, cancellationToken)
+                        .ConfigureAwait(false),
+                    MfaMethod.MicrosoftAuthenticator => await ui.ProvideMicrosoftAuthPasscode(attempt, otherMethods, cancellationToken)
+                        .ConfigureAwait(false),
+                    MfaMethod.YubikeyOtp => await ui.ProvideYubikeyPasscode(attempt, otherMethods, cancellationToken).ConfigureAwait(false),
+                    _ => throw new InternalErrorException("Invalid OTP method"),
+                };
 
-            switch (otpResult.Value)
-            {
-                case MfaMethod mfa:
-                    return mfa;
-                case Cancelled:
-                    throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+                switch (otpResult.Value)
+                {
+                    case MfaMethod mfa:
+                        return mfa;
+                    case Cancelled:
+                        throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+                }
+
+                // User provided a passcode
+                var otp = otpResult.AsT0;
+
+                var response = await PerformSingleLoginRequest(
+                        username,
+                        password,
+                        keyIterationCount,
+                        method,
+                        otp.RememberMe,
+                        new Dictionary<string, object> { ["otp"] = otp.Passcode },
+                        clientInfo,
+                        rest,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
+
+                var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
+                if (session != null)
+                    return session;
+
+                var error = MakeLoginError(response);
+                if (error is BadMultiFactorException && attempt < MaxOtpAttempts - 1)
+                    continue;
+
+                throw error;
             }
-
-            // User provided a passcode
-            var otp = otpResult.AsT0;
-
-            var response = await PerformSingleLoginRequest(
-                    username,
-                    password,
-                    keyIterationCount,
-                    method,
-                    otp.RememberMe,
-                    new Dictionary<string, object> { ["otp"] = otp.Passcode },
-                    clientInfo,
-                    rest,
-                    cancellationToken
-                )
-                .ConfigureAwait(false);
-
-            var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
-            if (session == null)
-                throw MakeLoginError(response);
-
-            return session;
         }
 
         // Returns a valid session or throws
@@ -446,7 +458,8 @@ namespace PasswordManagerAccess.LastPass
                     return duoResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(otp => otp, mfa => mfa);
 
                 case MfaMethod.LastPassAuthenticator:
-                    var lpaResult = await ui.ApproveLastPassAuth(otherMethods, cancellationToken).ConfigureAwait(false);
+                    // TODO: Add LP Auth attempts
+                    var lpaResult = await ui.ApproveLastPassAuth(-1, otherMethods, cancellationToken).ConfigureAwait(false);
                     return lpaResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(
                         otp => new OtpWithExtras(otp),
                         waitForOob => waitForOob,
