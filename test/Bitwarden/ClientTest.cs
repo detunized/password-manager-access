@@ -10,6 +10,7 @@ using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using Xunit;
+using MfaMethod = PasswordManagerAccess.Bitwarden.Ui.MfaMethod;
 using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
