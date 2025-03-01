@@ -20,7 +20,6 @@ namespace PasswordManagerAccess.LastPass
     internal static class Client
     {
         public const int MaxOtpAttempts = 3;
-        public const int MaxOobAttempts = 3;
 
         public static async Task<Account[]> OpenVault(
             string username,
