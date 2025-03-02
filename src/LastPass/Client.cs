@@ -343,7 +343,12 @@ namespace PasswordManagerAccess.LastPass
 
                 var session = ExtractSessionFromLoginResponse(response, keyIterationCount, clientInfo);
                 if (session != null)
+                {
+                    if (otp.RememberMe)
+                        await MarkDeviceAsTrusted(session, clientInfo, rest, cancellationToken).ConfigureAwait(false);
+
                     return session;
+                }
 
                 var error = MakeLoginError(response);
                 if (error is BadMultiFactorException && attempt < MaxOtpAttempts - 1)
@@ -423,6 +428,9 @@ namespace PasswordManagerAccess.LastPass
                 extraParameters["outofbandretry"] = "1";
                 extraParameters["outofbandretryid"] = GetErrorAttribute(response, "retryid");
             }
+
+            if (rememberMe)
+                await MarkDeviceAsTrusted(session, clientInfo, rest, cancellationToken).ConfigureAwait(false);
 
             return session;
         }
@@ -678,7 +686,6 @@ namespace PasswordManagerAccess.LastPass
             return code;
         }
 
-        // TODO: Remove this!
         internal static async Task MarkDeviceAsTrusted(Session session, ClientInfo clientInfo, RestClient rest, CancellationToken cancellationToken)
         {
             var response = await rest.PostFormAsync(
