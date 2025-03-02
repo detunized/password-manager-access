@@ -84,7 +84,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
         catch (Exception e)
         {
-            Status = e.Message;
+            Status = $"{e.GetType().Name}: {e.Message}";
         }
         finally
         {
