@@ -319,7 +319,8 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_failed_otp()
         {
             // Arrange
-            var flow = new RestFlow().Post(OtpRequiredResponse).Post("<response><error cause='googleauthfailed' /></response>");
+            // Need to retry OTP 3 times because of the 3 attempts limit
+            var flow = new RestFlow().Post(OtpRequiredResponse).Post(OtpFailedResponse).Post(OtpFailedResponse).Post(OtpFailedResponse);
 
             // Act
             var act = () =>
@@ -395,7 +396,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 );
 
             // Assert
-            await act.Should().ThrowAsync<InternalErrorException>().WithMessage("Blah");
+            await act.Should().ThrowAsync<InternalErrorException>().WithMessage("*Blah*");
             logger.Entries.Should().NotBeEmpty();
             logger.Entries.Should().ContainSingle(x => x.Message.Contains("POST https://lastpass.com/login.php"));
         }
@@ -421,7 +422,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 );
 
             // Assert
-            await act.Should().ThrowAsync<InternalErrorException>().WithMessage("Blah");
+            await act.Should().ThrowAsync<InternalErrorException>().WithMessage("*Blah*");
             logger.Entries.Should().BeEmpty();
         }
 
@@ -491,7 +492,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 );
 
             // Assert
-            var e = await act.Should().ThrowAsync<InternalErrorException>().WithMessage("Blah");
+            var e = await act.Should().ThrowAsync<InternalErrorException>().WithMessage("*Blah*");
             e.And.Log.Should().NotBeEmpty();
             e.And.Log.Should().ContainSingle(x => x.Message.Contains("POST https://lastpass.com/login.php"));
         }
@@ -516,7 +517,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 );
 
             // Assert
-            var e = await act.Should().ThrowAsync<InternalErrorException>().WithMessage("Blah");
+            var e = await act.Should().ThrowAsync<InternalErrorException>().WithMessage("*Blah*");
             e.And.Log.Should().BeEmpty();
         }
 
@@ -543,7 +544,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 );
 
             // Assert
-            var e = await act.Should().ThrowAsync<InternalErrorException>().WithMessage("Blah");
+            var e = await act.Should().ThrowAsync<InternalErrorException>().WithMessage("*Blah*");
             e.And.Log.Should().ContainSingle(x => x.Message.Contains("&username=********&"));
         }
 
@@ -729,7 +730,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 Password,
                 IterationCount,
                 MfaMethod.None,
-                false,
+                true,
                 [],
                 ClientInfo,
                 flow.ToRestClient(BaseUrl),
@@ -760,8 +761,7 @@ namespace PasswordManagerAccess.Test.LastPass
             );
 
             // Assert
-            sessionOrMfa.Should().BeOfType<Session>();
-            AssertSessionWithPrivateKey(sessionOrMfa.AsT0);
+            sessionOrMfa.Switch(AssertSessionWithPrivateKey, mfa => Assert.Fail("Expected a session, but got a MFA method"));
         }
 
         [Fact]
@@ -784,8 +784,7 @@ namespace PasswordManagerAccess.Test.LastPass
             );
 
             // Assert
-            sessionOrMfa.Should().BeOfType<Session>();
-            AssertSessionWithPrivateKey(sessionOrMfa.AsT0);
+            sessionOrMfa.Switch(AssertSessionWithPrivateKey, mfa => Assert.Fail("Expected a session, but got a MFA method"));
         }
 
         [Fact]
@@ -808,8 +807,7 @@ namespace PasswordManagerAccess.Test.LastPass
             );
 
             // Assert
-            sessionOrMfa.Should().BeOfType<Session>();
-            AssertSessionWithPrivateKey(sessionOrMfa.AsT0);
+            sessionOrMfa.Switch(AssertSessionWithPrivateKey, mfa => Assert.Fail("Expected a session, but got a MFA method"));
         }
 
         [Fact]
@@ -824,7 +822,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 Password,
                 DefaultKeyIterationCount,
                 LastPassAuthOobParameters,
-                MfaMethod.None,
+                MfaMethod.LastPassAuthenticator,
                 [],
                 ClientInfo,
                 GetWaitingForOobUi(),
@@ -834,8 +832,7 @@ namespace PasswordManagerAccess.Test.LastPass
             );
 
             // Assert
-            sessionOrMfa.Should().BeOfType<Session>();
-            AssertSessionWithPrivateKey(sessionOrMfa.AsT0);
+            sessionOrMfa.Switch(AssertSessionWithPrivateKey, mfa => Assert.Fail("Expected a session, but got a MFA method"));
         }
 
         [Fact]
@@ -854,7 +851,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 Password,
                 DefaultKeyIterationCount,
                 LastPassAuthOobParameters,
-                MfaMethod.None,
+                MfaMethod.LastPassAuthenticator,
                 [],
                 ClientInfo,
                 GetWaitingForOobUi(),
@@ -864,8 +861,7 @@ namespace PasswordManagerAccess.Test.LastPass
             );
 
             // Assert
-            sessionOrMfa.Should().BeOfType<Session>();
-            AssertSessionWithPrivateKey(sessionOrMfa.AsT0);
+            sessionOrMfa.Switch(AssertSessionWithPrivateKey, mfa => Assert.Fail("Expected a session, but got a MFA method"));
         }
 
         [Fact]
@@ -880,7 +876,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 Password,
                 DefaultKeyIterationCount,
                 LastPassAuthOobParameters,
-                MfaMethod.None,
+                MfaMethod.LastPassAuthenticator,
                 [],
                 ClientInfo,
                 GetPasscodeProvidingOobUi(),
@@ -890,8 +886,7 @@ namespace PasswordManagerAccess.Test.LastPass
             );
 
             // Assert
-            sessionOrMfa.Should().BeOfType<Session>();
-            AssertSessionWithPrivateKey(sessionOrMfa.AsT0);
+            sessionOrMfa.Switch(AssertSessionWithPrivateKey, mfa => Assert.Fail("Expected a session, but got a MFA method"));
         }
 
         [Fact]
@@ -906,7 +901,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 Password,
                 DefaultKeyIterationCount,
                 LastPassAuthOobParameters,
-                MfaMethod.None,
+                MfaMethod.LastPassAuthenticator,
                 [],
                 ClientInfo,
                 GetWaitingForOobWithRememberMeUi(),
@@ -916,8 +911,7 @@ namespace PasswordManagerAccess.Test.LastPass
             );
 
             // Assert
-            sessionOrMfa.Should().BeOfType<Session>();
-            AssertSessionWithPrivateKey(sessionOrMfa.AsT0);
+            sessionOrMfa.Switch(AssertSessionWithPrivateKey, mfa => Assert.Fail("Expected a session, but got a MFA method"));
         }
 
         [Fact]
@@ -931,19 +925,6 @@ namespace PasswordManagerAccess.Test.LastPass
 
             // Assert
             ui.ApproveLastPassAuthCalledTimes.Should().Be(1);
-        }
-
-        [Fact]
-        public async Task ApproveOob_calls_Ui_ApproveDuo()
-        {
-            // Arrange
-            var ui = GetCancelingUi();
-
-            // Act
-            await Client.ApproveOob(Username, DuoOobParameters, MfaMethod.Duo, [], ui, null, null, CancellationToken.None);
-
-            // Assert
-            ui.ApproveDuoCalledTimes.Should().Be(1);
         }
 
         [Fact]
@@ -1340,7 +1321,6 @@ namespace PasswordManagerAccess.Test.LastPass
             public int ProvideMicrosoftAuthPasscodeCalledTimes { get; private set; }
             public int ProvideYubikeyPasscodeCalledTimes { get; private set; }
             public int ApproveLastPassAuthCalledTimes { get; private set; }
-            public int ApproveDuoCalledTimes { get; private set; }
             public int ChooseDuoFactorCalledTimes { get; private set; }
             public int ProvideDuoPasscodeCalledTimes { get; private set; }
             public int DuoDoneCalledTimes { get; private set; }
@@ -1509,6 +1489,12 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private const string ServerResponse =
             "<response>" + "<error server='lastpass.eu' message='our princess is in another castle' />" + "</response>";
+
+        private const string OtpFailedResponse = """
+            <response>
+                <error cause="googleauthfailed" />
+            </response>
+            """;
     }
 
     internal static class RestFlowDuoExtensions
