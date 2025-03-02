@@ -465,8 +465,7 @@ namespace PasswordManagerAccess.LastPass
                     return duoResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(otp => otp, mfa => mfa);
 
                 case MfaMethod.LastPassAuthenticator:
-                    // TODO: Add LP Auth attempts
-                    var lpaResult = await ui.ApproveLastPassAuth(-1, otherMethods, cancellationToken).ConfigureAwait(false);
+                    var lpaResult = await ui.ApproveLastPassAuth(0, otherMethods, cancellationToken).ConfigureAwait(false);
                     return lpaResult.Match<OneOf<OtpWithExtras, WaitForOutOfBand, MfaMethod>>(
                         otp => new OtpWithExtras(otp),
                         waitForOob => waitForOob,
