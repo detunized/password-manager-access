@@ -230,7 +230,7 @@ namespace PasswordManagerAccess.LastPass
                 }
                 else
                 {
-                    throw new InternalErrorException($"Unsupported login failure reason: {cause}");
+                    throw MakeLoginError(response);
                 }
 
                 switch (mfaLoginResult.Value)
@@ -899,10 +899,10 @@ namespace PasswordManagerAccess.LastPass
             {
                 switch (cause.Value)
                 {
-                    case "unknownemail":
+                    case "user_not_exists":
                         return new BadCredentialsException("Invalid username");
 
-                    case "unknownpassword":
+                    case "password_invalid":
                         return new BadCredentialsException("Invalid password");
 
                     case "googleauthfailed":

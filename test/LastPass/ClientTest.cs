@@ -279,7 +279,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_invalid_username()
         {
             // Arrange
-            var flow = new RestFlow().Post("<response><error cause='unknownemail' /></response>");
+            var flow = new RestFlow().Post("""<response><error cause="user_not_exists" /></response>""");
 
             // Act
             var act = () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null, CancellationToken.None);
@@ -292,7 +292,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_invalid_password()
         {
             // Arrange
-            var flow = new RestFlow().Post("<response><error cause='unknownpassword' /></response>");
+            var flow = new RestFlow().Post("""<response><error cause="password_invalid" /></response>""");
 
             // Act
             var act = () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null, CancellationToken.None);
