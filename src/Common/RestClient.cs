@@ -425,6 +425,7 @@ namespace PasswordManagerAccess.Common
         public readonly ReadOnlyHttpCookies DefaultHeaders;
         public readonly ReadOnlyHttpCookies DefaultCookies;
         public readonly ISimpleLogger Logger;
+        public readonly bool UseSystemJson;
 
         public RestClient(
             IRestTransport transport,
@@ -432,7 +433,8 @@ namespace PasswordManagerAccess.Common
             IRequestSigner signer = null,
             ReadOnlyHttpHeaders defaultHeaders = null,
             ReadOnlyHttpCookies defaultCookies = null,
-            ISimpleLogger logger = null
+            ISimpleLogger logger = null,
+            bool useSystemJson = false
         )
         {
             Transport = transport;
@@ -441,6 +443,7 @@ namespace PasswordManagerAccess.Common
             DefaultHeaders = defaultHeaders ?? new ReadOnlyDictionary<string, string>(NoHeaders);
             DefaultCookies = defaultCookies ?? new ReadOnlyDictionary<string, string>(NoCookies);
             Logger = logger;
+            UseSystemJson = useSystemJson;
         }
 
         //
@@ -476,7 +479,7 @@ namespace PasswordManagerAccess.Common
                 headers ?? NoHeaders,
                 cookies ?? NoCookies,
                 maxRedirects,
-                JsonConvert.DeserializeObject<T>
+                DeserializeFromJson<T>
             );
         }
 
@@ -505,7 +508,7 @@ namespace PasswordManagerAccess.Common
                 headers ?? NoHeaders,
                 cookies ?? NoCookies,
                 MaxRedirects,
-                JsonConvert.DeserializeObject<T>
+                DeserializeFromJson<T>
             );
         }
 
@@ -534,7 +537,7 @@ namespace PasswordManagerAccess.Common
                 headers ?? NoHeaders,
                 cookies ?? NoCookies,
                 MaxRedirects,
-                JsonConvert.DeserializeObject<T>
+                DeserializeFromJson<T>
             );
         }
 
@@ -572,7 +575,7 @@ namespace PasswordManagerAccess.Common
                 headers ?? NoHeaders,
                 cookies ?? NoCookies,
                 MaxRedirects,
-                JsonConvert.DeserializeObject<T>
+                DeserializeFromJson<T>
             );
         }
 
@@ -722,12 +725,12 @@ namespace PasswordManagerAccess.Common
             return allocatedResult;
         }
 
-        private static HttpContent ToJsonContent(PostParameters parameters)
+        private HttpContent ToJsonContent(PostParameters parameters)
         {
             return new StringContent(JsonParametersToString(parameters), Encoding.UTF8, "application/json");
         }
 
-        private static string JsonParametersToString(PostParameters parameters)
+        private string JsonParametersToString(PostParameters parameters)
         {
             if (parameters == JsonBlank)
                 return "";
@@ -735,7 +738,7 @@ namespace PasswordManagerAccess.Common
             if (parameters == JsonNull)
                 return "null";
 
-            return JsonConvert.SerializeObject(parameters);
+            return SerializeToJson(parameters);
         }
 
         private static HttpContent ToFormContent(PostParameters parameters)
@@ -743,6 +746,16 @@ namespace PasswordManagerAccess.Common
             // TODO: FormUrlEncodedContent doesn't add "charset=utf-8"
             //       Maybe a better option would be to send it as StringContent with forced encoding.
             return new FormUrlEncodedContent(parameters.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())));
+        }
+
+        private string SerializeToJson<T>(T value)
+        {
+            return UseSystemJson ? System.Text.Json.JsonSerializer.Serialize(value) : JsonConvert.SerializeObject(value);
+        }
+
+        private T DeserializeFromJson<T>(string json)
+        {
+            return UseSystemJson ? System.Text.Json.JsonSerializer.Deserialize<T>(json) : JsonConvert.DeserializeObject<T>(json);
         }
 
         private const int MaxRedirects = 3;

@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace PasswordManagerAccess.Common;
 
@@ -94,7 +93,7 @@ internal partial class RestClient
             headers ?? NoHeaders,
             cookies ?? NoCookies,
             maxRedirects,
-            JsonConvert.DeserializeObject<T>,
+            DeserializeFromJson<T>,
             cancellationToken
         );
 
@@ -172,7 +171,7 @@ internal partial class RestClient
             headers,
             cookies,
             maxRedirects,
-            JsonConvert.DeserializeObject<T>,
+            DeserializeFromJson<T>,
             cancellationToken
         );
 
@@ -244,7 +243,7 @@ internal partial class RestClient
             headers ?? NoHeaders,
             cookies ?? NoCookies,
             maxRedirects,
-            JsonConvert.DeserializeObject<T>,
+            DeserializeFromJson<T>,
             cancellationToken
         );
 
@@ -296,7 +295,7 @@ internal partial class RestClient
             headers ?? NoHeaders,
             cookies ?? NoCookies,
             maxRedirects,
-            JsonConvert.DeserializeObject<T>,
+            DeserializeFromJson<T>,
             cancellationToken
         );
 
