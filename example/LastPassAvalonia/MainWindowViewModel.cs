@@ -9,15 +9,19 @@ using System.Reactive;
 using System.Threading;
 using System.Threading.Tasks;
 using OneOf;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.LastPass;
 using PasswordManagerAccess.LastPass.Ui;
 using ReactiveUI;
+using Platform = PasswordManagerAccess.LastPass.Platform;
 
 namespace LastPassAvalonia;
 
-public class MainWindowViewModel : ViewModelBase, IAsyncUi
+public class MainWindowViewModel : ViewModelBase, IAsyncUi, IAsyncSsoUi
 {
     private string _username = "lastpass.ruby+20-january-2025@gmail.com";
     public string Username
@@ -50,6 +54,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
     private bool _isLoggingIn = false;
     public bool IsLoginEnabled => !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password) && !_isLoggingIn;
+    public bool IsLoginWithSsoEnabled => !string.IsNullOrEmpty(Username) && !_isLoggingIn;
     public bool IsCancelEnabled => _isLoggingIn;
 
     private CancellationTokenSource? _loginCancellationTokenSource;
@@ -58,6 +63,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     {
         _isLoggingIn = true;
         this.RaisePropertyChanged(nameof(IsLoginEnabled));
+        this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
         this.RaisePropertyChanged(nameof(IsCancelEnabled));
 
         _loginCancellationTokenSource = new CancellationTokenSource();
@@ -92,7 +98,73 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             _loginCancellationTokenSource = null;
             _isLoggingIn = false;
             this.RaisePropertyChanged(nameof(IsLoginEnabled));
+            this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
             this.RaisePropertyChanged(nameof(IsCancelEnabled));
+        }
+    }
+
+    public async Task LoginWithSso()
+    {
+        _isLoggingIn = true;
+        this.RaisePropertyChanged(nameof(IsLoginEnabled));
+        this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
+        this.RaisePropertyChanged(nameof(IsCancelEnabled));
+
+        _loginCancellationTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            Status = "Logging in with SSO...";
+            await Vault.OpenWithSso(
+                Username,
+                new ClientInfo(Platform.Desktop, "385e2742aefd399bd182c1ea4c1aac4d", "Example for lastpass-sharp"),
+                this,
+                new ParserOptions
+                {
+                    // Set to true to parse "server" secure notes
+                    ParseSecureNotesToAccount = false,
+                    LoggingEnabled = true,
+                },
+                null,
+                _loginCancellationTokenSource.Token
+            );
+
+            Status = $"Logged in with SSO";
+        }
+        catch (Exception e)
+        {
+            Status = $"{e.GetType().Name}: {e.Message}";
+        }
+        finally
+        {
+            _loginCancellationTokenSource.Dispose();
+            _loginCancellationTokenSource = null;
+            _isLoggingIn = false;
+            this.RaisePropertyChanged(nameof(IsLoginEnabled));
+            this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
+            this.RaisePropertyChanged(nameof(IsCancelEnabled));
+        }
+    }
+
+    //
+    // IAsyncSsoUi
+    //
+
+    public async Task<string> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken)
+    {
+        // TODO: Handle cancellationToken here!
+
+        using (IWebDriver driver = new ChromeDriver())
+        {
+            driver.Navigate().GoToUrl(url);
+
+            // Wait for the redirect to happen
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromMinutes(2));
+            wait.Until(d => d.Url.StartsWith(redirectUrl), cancellationToken);
+
+            // At this point, we've been redirected to the expected URL
+            var redirectedTo = driver.Url;
+            return redirectedTo.StartsWith(redirectUrl) ? redirectedTo : "";
         }
     }
 

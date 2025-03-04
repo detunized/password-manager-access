@@ -30,6 +30,20 @@ namespace PasswordManagerAccess.LastPass
             );
         }
 
+        public static async Task<Vault> OpenWithSso(
+            string username,
+            ClientInfo clientInfo,
+            IAsyncSsoUi ssoUi,
+            ParserOptions options,
+            ISecureLogger? logger,
+            CancellationToken cancellationToken
+        )
+        {
+            using var transport = new RestTransport();
+            await Client.LoginWithSso(username, clientInfo, ssoUi, transport, options, logger, cancellationToken).ConfigureAwait(false);
+            return new Vault([]);
+        }
+
         public static string GenerateRandomClientId() => Crypto.RandomHex(32);
 
         //

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -20,6 +21,432 @@ namespace PasswordManagerAccess.LastPass
     internal static class Client
     {
         public const int MaxOtpAttempts = 3;
+
+        // SSO flow
+        //
+        // 1. Check the login type:
+        //    GET: https://lastpass.com/lmiapi/login/type?username=dmitry%40downhillpro.xyz
+        //    Response: {"type": 3}
+        //      - type should be 3
+        //      - type <= 2 is getPasswordSaml (a different form of SSO)
+        //      - Azure is handled differently
+
+        // 2. Go to OpenIDConnectAuthority (https://login.microsoftonline.com/4c5a5ec1-9ac5-4612-9b4c-6bed178bb65a/v2.0/.well-known/openid-configuration)
+        //    to get the config:
+
+        // 3. Perform SSO login
+        //    https://login.microsoftonline.com/4c5a5ec1-9ac5-4612-9b4c-6bed178bb65a/oauth2/v2.0/authorize?
+        //      client_id=51a5546b-7676-48f3-afcf-8c15b94ccdc2
+        //      redirect_uri=https%3A%2F%2Faccounts.lastpass.com%2Ffederated%2Foidcredirect.html
+        //      response_type=code
+        //      scope=openid%20email%20profile
+        //      state=c01d06db5bc04b83b2274d767a8f8176
+        //      code_challenge=d3QPUhlIoYSCB1-H8PStoFfN4Bfyb5Dld6xH04hsxtY
+        //      code_challenge_method=S256
+        //      response_mode=fragment
+        //      login_hint=dmitry%40downhillpro.xyz
+
+        // response_type:
+        //  - if PkceEnabled: "code"
+        //  - else: "id_token token"
+
+        // response_mode:
+        //  - if PkceEnabled && Provider !== e.OIDC_PROVIDERS.PingOne : "fragment"
+        //  - else: null
+
+        // e.OIDC_PROVIDERS = {
+        //         Azure: 0,
+        //         Okta: 1,
+        //         OktaWithoutAuthorizationServer: 2,
+        //         Google: 3,
+        //         PingOne: 4,
+        //         OneLogin: 5
+        //     }
+
+        // TODO: Move to Model.cs
+        public class SsoLoginInfo
+        {
+            [JsonPropertyName("type")]
+            public int Type { get; set; }
+
+            [JsonPropertyName("OpenIDConnectAuthority")]
+            public string OpenIdConnectAuthority { get; set; }
+
+            [JsonPropertyName("OpenIDConnectClientId")]
+            public string OpenIdConnectClientId { get; set; }
+
+            [JsonPropertyName("CompanyId")]
+            public int CompanyId { get; set; }
+        }
+
+        public class OpenIdConnectConfig
+        {
+            [JsonPropertyName("authorization_endpoint")]
+            public string AuthorizationEndpoint { get; set; }
+
+            [JsonPropertyName("token_endpoint")]
+            public string TokenEndpoint { get; set; }
+
+            [JsonPropertyName("userinfo_endpoint")]
+            public string UserInfoEndpoint { get; set; }
+
+            [JsonPropertyName("msgraph_host")]
+            public string MsGraphHost { get; set; }
+        }
+
+        public class CodeForToken
+        {
+            [JsonPropertyName("token_type")]
+            public string TokenType { get; set; }
+
+            [JsonPropertyName("scope")]
+            public string Scope { get; set; }
+
+            [JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+
+            [JsonPropertyName("ext_expires_in")]
+            public int ExtExpiresIn { get; set; }
+
+            [JsonPropertyName("access_token")]
+            public string AccessToken { get; set; }
+
+            [JsonPropertyName("refresh_token")]
+            public string RefreshToken { get; set; }
+
+            [JsonPropertyName("id_token")]
+            public string IdToken { get; set; }
+        }
+
+        public class UserInfo
+        {
+            [JsonPropertyName("sub")]
+            public string Sub { get; set; }
+
+            [JsonPropertyName("name")]
+            public string Name { get; set; }
+
+            [JsonPropertyName("given_name")]
+            public string GivenName { get; set; }
+
+            [JsonPropertyName("picture")]
+            public string Picture { get; set; }
+
+            [JsonPropertyName("email")]
+            public string Email { get; set; }
+        }
+
+        public class AzureK1Response
+        {
+            [JsonPropertyName("@odata.context")]
+            public string OdataContext { get; set; }
+
+            [JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [JsonPropertyName("displayName")]
+            public string DisplayName { get; set; }
+
+            [JsonPropertyName("mail")]
+            public string Mail { get; set; }
+
+            [JsonPropertyName("extensions@odata.context")]
+            public string ExtensionsOdataContext { get; set; }
+
+            [JsonPropertyName("extensions")]
+            public Extension[] Extensions { get; set; }
+
+            public class Extension
+            {
+                [JsonPropertyName("@odata.type")]
+                public string OdataType { get; set; }
+
+                [JsonPropertyName("extensionName")]
+                public string ExtensionName { get; set; }
+
+                [JsonPropertyName("LastPassK1")]
+                public string LastPassK1 { get; set; }
+
+                [JsonPropertyName("id")]
+                public string Id { get; set; }
+            }
+        }
+
+        public class AlpK2Response
+        {
+            [JsonPropertyName("k2")]
+            public string K2 { get; set; }
+
+            [JsonPropertyName("fragment_id")]
+            public string FragmentId { get; set; }
+        }
+
+        public static async Task LoginWithSso(
+            string username,
+            ClientInfo clientInfo,
+            IAsyncSsoUi ssoUi,
+            IRestTransport transport,
+            ParserOptions options,
+            ISecureLogger logger, // can be null
+            CancellationToken cancellationToken
+        )
+        {
+            // We allow the logger to be null for optimization purposes
+            var tagLog = options.LoggingEnabled ? new TaggedLogger("LastPass", logger ?? new NullLogger()) : null;
+
+            var rest = new RestClient(
+                transport,
+                "",
+                defaultHeaders: new Dictionary<string, string>
+                {
+                    ["User-Agent"] =
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+                },
+                logger: tagLog,
+                useSystemJson: true
+            );
+
+            var lowerCaseUsername = username.ToLowerInvariant().Trim();
+            var response = await rest.GetAsync<SsoLoginInfo>(
+                    "https://lastpass.com/lmiapi/login/type?username=" + lowerCaseUsername.EncodeUri(),
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            var loginInfo = response.Data;
+            if (loginInfo.Type <= 0)
+                throw new InternalErrorException("SSO is not available for this account");
+
+            if (loginInfo.OpenIdConnectAuthority.IsNullOrEmpty())
+                throw new InternalErrorException("SSO is not available for this account");
+
+            var response2 = await rest.GetAsync<OpenIdConnectConfig>(loginInfo.OpenIdConnectAuthority, cancellationToken).ConfigureAwait(false);
+            if (!response2.IsSuccessful)
+                throw MakeError(response2);
+
+            var config = response2.Data;
+
+            var redirectUri = "https://accounts.lastpass.com/federated/oidcredirect.html";
+            var state = Crypto.RandomHex(32);
+            var codeVerifier = Crypto.RandomHex(96);
+            var codeChallenge = Crypto.Sha256(codeVerifier).ToUrlSafeBase64NoPadding();
+            var nonce = Crypto.RandomHex(16);
+
+            var urlParams = new Dictionary<string, string>
+            {
+                ["client_id"] = loginInfo.OpenIdConnectClientId,
+                ["redirect_uri"] = redirectUri,
+                ["response_type"] = "code",
+                ["scope"] = "openid email profile",
+                ["state"] = state,
+                ["code_challenge"] = codeChallenge,
+                ["code_challenge_method"] = "S256",
+                ["response_mode"] = "fragment",
+                ["login_hint"] = lowerCaseUsername,
+                ["nonce"] = nonce,
+            };
+            var url = config.AuthorizationEndpoint + "?" + string.Join("&", urlParams.Select(kv => kv.Key + "=" + kv.Value.EncodeUri()));
+
+            var redirectedTo = await ssoUi.PerformSsoLogin(url, redirectUri, cancellationToken).ConfigureAwait(false);
+            if (redirectedTo.IsNullOrEmpty())
+                throw new InternalErrorException("SSO login failed: no redirect"); // TOOD: Add a new exception type
+
+            var code = Url.ExtractQueryParameter(redirectedTo, "code");
+            if (code.IsNullOrEmpty())
+                throw new InternalErrorException("SSO login failed: no code"); // TOOD: Add a new exception type
+
+            var responseState = Url.ExtractQueryParameter(redirectedTo, "state");
+            if (responseState.IsNullOrEmpty())
+                throw new InternalErrorException("SSO login failed: no state"); // TOOD: Add a new exception type
+
+            // Verify the code
+            if (state != responseState)
+                throw new InternalErrorException("SSO login failed: invalid state"); // TOOD: Add a new exception type
+
+            // Exchange the code for a token
+            var tokenResponse = await rest.PostFormAsync<CodeForToken>(
+                    config.TokenEndpoint,
+                    new Dictionary<string, object>
+                    {
+                        ["client_id"] = loginInfo.OpenIdConnectClientId,
+                        ["code"] = code,
+                        ["redirect_uri"] = redirectUri,
+                        ["code_verifier"] = codeVerifier,
+                        ["grant_type"] = "authorization_code",
+                    },
+                    headers: new Dictionary<string, string> { ["Origin"] = "chrome-extension://hdokiejnpimakedhajhdlcegeplioahd" },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+
+            if (!tokenResponse.IsSuccessful)
+                throw MakeError(tokenResponse);
+
+            var token = tokenResponse.Data;
+
+            // Validate and parse JWT token
+
+            var idOpenId = token.Scope.Split(' ').Contains("openid");
+            if (!idOpenId)
+                throw new InternalErrorException("SSO login failed: missing openid scope"); // TOOD: Add a new exception type
+
+            // After filterProtocolClaims:
+            // {
+            //     "email": "dmitry@downhillpro.xyz",
+            //     "name": "Dmitry",
+            //     "oid": "cb151fd4-0560-406d-847f-915f3598b052",
+            //     "preferred_username": "dmitry@downhillpro.xyz",
+            //     "rh": "1.ASgAwV5aTMWaEkabTGvtF4u2WmtUpVF2dvNIr8-MFblMzcIoAOooAA.",
+            //     "sid": "001368d9-abd4-0956-0e0c-ee9a269b511d",
+            //     "sub": "d1FosjQTGSYp2_PIS2TsIx4C3rcmTxMFDFTNmMEBDYo",
+            //     "tid": "4c5a5ec1-9ac5-4612-9b4c-6bed178bb65a",
+            //     "uti": "kGicXBjTeECT26jCXGwSAQ",
+            //     "ver": "2.0"
+            // }
+
+            // The following properties are stripped:
+            // [
+            //     "nonce",
+            //     "at_hash",
+            //     "iat",
+            //     "nbf",
+            //     "exp",
+            //     "aud",
+            //     "iss",
+            //     "c_hash"
+            // ]
+
+            // Get the user claims:
+
+            var azureGraphApiHost = config.AuthorizationEndpoint.Contains("microsoftonline.us") ? "graph.microsoft.us" : "graph.microsoft.com";
+
+            var userInfoResponse = await rest.GetAsync<UserInfo>(
+                    $"https://{azureGraphApiHost}/oidc/userinfo",
+                    headers: new Dictionary<string, string> { ["Authorization"] = $"Bearer {token.AccessToken}" },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+            if (!userInfoResponse.IsSuccessful)
+                throw MakeError(userInfoResponse);
+
+            var userInfo = userInfoResponse.Data;
+
+            // TODO: Merge claims
+
+            // Check that all the lowercased emails are the same:
+            //   1. The email given by the user
+            //   2. The email from JWT
+            //   3. The preferred_username from JWT
+
+            // Fetch K1 (this is only for Azure)
+            var k1Response = await rest.GetAsync<AzureK1Response>(
+                    $"https://{azureGraphApiHost}/v1.0/me?$select=id,displayName,mail&$expand=extensions",
+                    headers: new Dictionary<string, string> { ["Authorization"] = $"Bearer {token.AccessToken}" },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+            if (!k1Response.IsSuccessful)
+                throw MakeError(k1Response);
+
+            var k1 = k1Response.Data.Extensions.FirstOrDefault(x => x.Id == "com.lastpass.keys")?.LastPassK1;
+
+            // Get K2 from ALP server
+            var alpResponse = await rest.PostJsonAsync<AlpK2Response>(
+                    "https://accounts.lastpass.com/federatedlogin/api/v1/getkey",
+                    new Dictionary<string, object> { ["company_id"] = loginInfo.CompanyId, ["id_token"] = token.IdToken },
+                    headers: new Dictionary<string, string>
+                    {
+                        ["Origin"] = "chrome-extension://hdokiejnpimakedhajhdlcegeplioahd",
+                        ["User-Agent"] =
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+
+            if (!alpResponse.IsSuccessful)
+                throw MakeError(alpResponse);
+
+            var k2 = alpResponse.Data.K2;
+            var fragmentId = alpResponse.Data.FragmentId;
+
+            var k1Bytes = k1.Decode64Loose();
+            var k2Bytes = k2.Decode64Loose();
+
+            // xor k1 and k2
+            var k1XorK2 = new byte[k1Bytes.Length];
+            for (int i = 0; i < k1Bytes.Length; i++)
+                k1XorK2[i] = (byte)(k1Bytes[i] ^ k2Bytes[i]);
+
+            var k1Sha256 = Crypto.Sha256(k1Bytes);
+            var k1XorK2Sha256 = Crypto.Sha256(k1XorK2);
+
+            var calculatedFragmentId = k1Sha256.ToBase64();
+
+            // Derive the key
+
+            var iterationCount = 600_000; // TODO: !!!
+            var password = k1XorK2Sha256.ToBase64();
+            //var key = Util.DeriveKey(lowerCaseUsername, password, iterationCount);
+            //var keyHash = Util.DeriveKeyHash(lowerCaseUsername, password, iterationCount).ToHex();
+
+            var loginResponseXml = await PerformSingleLoginRequest(
+                    lowerCaseUsername,
+                    password,
+                    iterationCount,
+                    MfaMethod.None,
+                    false,
+                    new Dictionary<string, object>
+                    {
+                        ["xml"] = "1", // TODO: Do we need this?
+                        ["method"] = "web", // TODO: Do we need this?
+                        ["authsessionid"] = "",
+                        ["alpfragmentid"] = alpResponse.Data.FragmentId,
+                        ["calculatedfragmentid"] = calculatedFragmentId,
+                    },
+                    clientInfo,
+                    rest,
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+
+            // loginResponse = await rest.PostFormAsync(
+            //         "https://lastpass.com/login.php",
+            //         new Dictionary<string, object>
+            //         {
+            //             ["hash"] = keyHash,
+            //             ["xml"] = "1",
+            //             ["method"] = "web",
+            //             ["username"] = lowerCaseUsername,
+            //             //["encrypted_username"] = "LX/IONwUbfzIcgU45khH84LXFIPtJLr3Nr7TEH9nHD0=",
+            //             ["iterations"] = iterationCount,
+            //             //["email"] = lowerCaseUsername,
+            //             ["outofbandsupported"] = "1",
+            //             ["uuid"] = "ba8082fd21cd6a76d23767bc0f7274c2de845baa960f010e95e4d5d2a6e7b16",
+            //             //["deviceId"] = "",
+            //             //["key_integrity_fingerprint"] = "c7820132bc98174321f2f1c337ec9df71de4f3eca6a6b5b6f896739b2c708fb0",
+            //             ["authsessionid"] = "",
+            //             ["alpfragmentid"] = alpResponse.Data.FragmentId,
+            //             ["calculatedfragmentid"] = calculatedFragmentId,
+            //             ["sesameotp"] = "",
+            //             ["otp"] = "",
+            //             ["lcid"] = "",
+            //             ["domain"] = "",
+            //             //["lostpwotphash"] = "2c577da2aca1bfc6feb411ff3dac0fe7ec77d67c292720f705654492592491a1",
+            //         },
+            //         cancellationToken
+            //     )
+            //     .ConfigureAwait(false);
+
+            // if (!loginResponse.IsSuccessful)
+            //     throw MakeError(loginResponse);
+
+            var session = ExtractSessionFromLoginResponse(loginResponseXml, iterationCount, clientInfo);
+            if (session == null)
+                throw new InternalErrorException("Login failed");
+        }
 
         public static async Task<Account[]> OpenVault(
             string username,

@@ -10,6 +10,11 @@ using PasswordManagerAccess.Duo;
 // TODO: Remove this namespace
 namespace PasswordManagerAccess.LastPass.Ui
 {
+    public interface IAsyncSsoUi
+    {
+        Task<string> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken);
+    }
+
     public interface IAsyncUi : IDuoAsyncUi
     {
         // OTP (one-time passcode) methods
