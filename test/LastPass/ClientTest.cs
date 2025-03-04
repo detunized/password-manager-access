@@ -1171,11 +1171,13 @@ namespace PasswordManagerAccess.Test.LastPass
             act.Should().Throw<InternalErrorException>().WithMessage("Failed to parse XML in response from https://int.er.net/");
         }
 
-        [Fact]
-        public void ExtractSessionFromLoginResponse_returns_session()
+        [Theory]
+        [InlineData(OkElement)]
+        [InlineData(OkResponse)]
+        public void ExtractSessionFromLoginResponse_returns_session(string response)
         {
             // Arrange
-            var xml = XDocument.Parse(OkResponse);
+            var xml = XDocument.Parse(response);
 
             // Act
             var session = Client.ExtractSessionFromLoginResponse(xml, DefaultKeyIterationCount, ClientInfo);
@@ -1185,7 +1187,9 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Theory]
+        [InlineData(OkElementNoPrivateKey)]
         [InlineData(OkResponseNoPrivateKey)]
+        [InlineData(OkElementBlankPrivateKey)]
         [InlineData(OkResponseBlankPrivateKey)]
         public void ExtractSessionFromLoginResponse_returns_session_without_private_key(string response)
         {
@@ -1460,12 +1464,13 @@ namespace PasswordManagerAccess.Test.LastPass
             + $"<ok sessionid='session-id' token='token' iterations='{IterationCount}' privatekeyenc='{TestData.EncryptedPrivateKey}' />"
             + "</response>";
 
-        private const string OkResponse = "<response>" + "<ok sessionid='session-id' token='token' privatekeyenc='private-key' />" + "</response>";
+        private const string OkElement = "<ok sessionid='session-id' token='token' privatekeyenc='private-key' />";
+        private const string OkElementNoPrivateKey = "<ok sessionid='session-id' token='token' />";
+        private const string OkElementBlankPrivateKey = "<ok sessionid='session-id' token='token' privatekeyenc='' />";
 
-        private const string OkResponseNoPrivateKey = "<response>" + "<ok sessionid='session-id' token='token' />" + "</response>";
-
-        private const string OkResponseBlankPrivateKey =
-            "<response>" + "<ok sessionid='session-id' token='token' privatekeyenc='' />" + "</response>";
+        private const string OkResponse = "<response>" + OkElement + "</response>";
+        private const string OkResponseNoPrivateKey = "<response>" + OkElementNoPrivateKey + "</response>";
+        private const string OkResponseBlankPrivateKey = "<response>" + OkElementBlankPrivateKey + "</response>";
 
         private const string OtpRequiredResponse = "<response>" + "<error cause='googleauthrequired' />" + "</response>";
 

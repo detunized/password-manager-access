@@ -772,7 +772,7 @@ namespace PasswordManagerAccess.LastPass
 
         internal static Session ExtractSessionFromLoginResponse(XDocument response, int keyIterationCount, ClientInfo clientInfo)
         {
-            var ok = response.XPathSelectElement("response/ok");
+            var ok = response.XPathSelectElement("//ok");
             if (ok == null)
                 return null;
 
