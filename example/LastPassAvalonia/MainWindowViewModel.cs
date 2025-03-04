@@ -21,9 +21,9 @@ using Platform = PasswordManagerAccess.LastPass.Platform;
 
 namespace LastPassAvalonia;
 
-public class MainWindowViewModel : ViewModelBase, IAsyncUi, IAsyncSsoUi
+public class MainWindowViewModel : ViewModelBase, IAsyncUi
 {
-    private string _username = "lastpass.ruby+20-january-2025@gmail.com";
+    private string _username = "dmitry@downhillpro.xyz";
     public string Username
     {
         get => _username;
@@ -143,28 +143,6 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi, IAsyncSsoUi
             this.RaisePropertyChanged(nameof(IsLoginEnabled));
             this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
             this.RaisePropertyChanged(nameof(IsCancelEnabled));
-        }
-    }
-
-    //
-    // IAsyncSsoUi
-    //
-
-    public async Task<string> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken)
-    {
-        // TODO: Handle cancellationToken here!
-
-        using (IWebDriver driver = new ChromeDriver())
-        {
-            driver.Navigate().GoToUrl(url);
-
-            // Wait for the redirect to happen
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromMinutes(2));
-            wait.Until(d => d.Url.StartsWith(redirectUrl), cancellationToken);
-
-            // At this point, we've been redirected to the expected URL
-            var redirectedTo = driver.Url;
-            return redirectedTo.StartsWith(redirectUrl) ? redirectedTo : "";
         }
     }
 
@@ -606,6 +584,25 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi, IAsyncSsoUi
     {
         DuoStatus = text;
         return Task.CompletedTask;
+    }
+
+    public async Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken)
+    {
+        // TODO: Handle cancellationToken here!
+
+        // TODO: Make this async
+        using (IWebDriver driver = new ChromeDriver())
+        {
+            driver.Navigate().GoToUrl(url);
+
+            // Wait for the redirect to happen
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromMinutes(2));
+            wait.Until(d => d.Url.StartsWith(redirectUrl), cancellationToken);
+
+            // At this point, we've been redirected to the expected URL
+            var redirectedTo = driver.Url;
+            return redirectedTo.StartsWith(redirectUrl) ? redirectedTo : "";
+        }
     }
 
     //

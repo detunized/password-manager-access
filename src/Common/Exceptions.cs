@@ -34,8 +34,11 @@ namespace PasswordManagerAccess.Common
     // Bad 2FA/MFA code or whatever else is used in that particular 2FA/MFA method.
     public class BadMultiFactorException(string message, Exception? inner = null) : BaseException(message, inner);
 
-    // The user canceled the 2FA/MFA sequence. This is more of a control flow exception, a deep return.
+    // The user canceled the 2FA/MFA sequence.
     public class CanceledMultiFactorException(string message, Exception? inner = null) : BaseException(message, inner);
+
+    // The user canceled the SSO login sequence.
+    public class CanceledSsoLoginException(string message, Exception? inner = null) : BaseException(message, inner);
 
     // Something went wrong with the network. Not an unexpected response, but rather a connectivity issue.
     public class NetworkErrorException(string message, Exception? inner = null) : BaseException(message, inner);

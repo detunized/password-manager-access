@@ -24,6 +24,11 @@ namespace PasswordManagerAccess.Test
             return AssertThrows<CanceledMultiFactorException>(action, message);
         }
 
+        public static CanceledSsoLoginException AssertThrowsCanceledSsoLogin(Action action, string message = "")
+        {
+            return AssertThrows<CanceledSsoLoginException>(action, message);
+        }
+
         public static NetworkErrorException AssertThrowsNetworkError(Action action, string message = "")
         {
             return AssertThrows<NetworkErrorException>(action, message);
