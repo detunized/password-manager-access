@@ -4,6 +4,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Threading;
@@ -23,7 +24,9 @@ namespace LastPassAvalonia;
 
 public class MainWindowViewModel : ViewModelBase, IAsyncUi
 {
-    private string _username = "dmitry@downhillpro.xyz";
+    private static readonly bool UseBrowserPersistence = false;
+
+    private string _username = "";
     public string Username
     {
         get => _username;
@@ -34,7 +37,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    private string _password = "Arousal3-Catalog-Overtly-Slobbery-Entitle";
+    private string _password = "";
     public string Password
     {
         get => _password;
@@ -545,7 +548,24 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         return await Task.Run<OneOf<string, Canceled>>(
             () =>
             {
-                using var driver = new ChromeDriver();
+                var options = new ChromeOptions();
+
+                // Enable this to make a persistent profile to save the login state
+                if (UseBrowserPersistence)
+                {
+                    // Get a temporary directory path for the Chrome profile
+                    var tempPath = Path.GetTempPath();
+                    var chromeProfilePath = Path.Combine(tempPath, "lastpass-chrome-profile");
+
+                    // Ensure the directory exists
+                    if (!Directory.Exists(chromeProfilePath))
+                        Directory.CreateDirectory(chromeProfilePath);
+
+                    options.AddArgument($"--user-data-dir={chromeProfilePath}");
+                    options.AddArgument("--profile-directory=Default");
+                }
+
+                using var driver = new ChromeDriver(options);
                 var timedOut = false;
 
                 driver.Navigate().GoToUrl(url);

@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using OneOf;
@@ -18,6 +19,8 @@ namespace PasswordManagerAccess.Example.LastPass
 {
     public static class Program
     {
+        private static readonly bool UseBrowserPersistence = false;
+
         // Very simple text based user interface that demonstrates how to respond to Vault UI requests.
         private class TextUi : DuoAsyncUi, IAsyncUi
         {
@@ -52,7 +55,24 @@ namespace PasswordManagerAccess.Example.LastPass
                 return await Task.Run<OneOf<string, Canceled>>(
                     () =>
                     {
-                        using var driver = new ChromeDriver();
+                        var options = new ChromeOptions();
+
+                        // Enable this to make a persistent profile to save the login state
+                        if (UseBrowserPersistence)
+                        {
+                            // Get a temporary directory path for the Chrome profile
+                            var tempPath = Path.GetTempPath();
+                            var chromeProfilePath = Path.Combine(tempPath, "lastpass-chrome-profile");
+
+                            // Ensure the directory exists
+                            if (!Directory.Exists(chromeProfilePath))
+                                Directory.CreateDirectory(chromeProfilePath);
+
+                            options.AddArgument($"--user-data-dir={chromeProfilePath}");
+                            options.AddArgument("--profile-directory=Default");
+                        }
+
+                        using var driver = new ChromeDriver(options);
                         var timedOut = false;
 
                         driver.Navigate().GoToUrl(url);
