@@ -327,7 +327,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     // IAsyncUi
     //
 
-    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(
+    public async Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
         int attempt,
         MfaMethod[] otherMethods,
         CancellationToken cancellationToken
@@ -345,7 +345,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                 return _selectMfaTcs.Task.Result;
 
             if (done == _cancelMfaTcs.Task)
-                return new Cancelled("User cancelled");
+                return new Canceled("User cancelled");
 
             return new Otp(GoogleAuthPasscode, RememberMe);
         }
@@ -357,7 +357,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(
+    public async Task<OneOf<Otp, MfaMethod, Canceled>> ProvideMicrosoftAuthPasscode(
         int attempt,
         MfaMethod[] otherMethods,
         CancellationToken cancellationToken
@@ -375,7 +375,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                 return _selectMfaTcs.Task.Result;
 
             if (done == _cancelMfaTcs.Task)
-                return new Cancelled("User cancelled");
+                return new Canceled("User cancelled");
 
             return new Otp(MicrosoftAuthPasscode, RememberMe);
         }
@@ -387,7 +387,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(
+    public async Task<OneOf<Otp, MfaMethod, Canceled>> ProvideYubikeyPasscode(
         int attempt,
         MfaMethod[] otherMethods,
         CancellationToken cancellationToken
@@ -405,7 +405,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                 return _selectMfaTcs.Task.Result;
 
             if (done == _cancelMfaTcs.Task)
-                return new Cancelled("User cancelled");
+                return new Canceled("User cancelled");
 
             return new Otp(YubiKeyPasscode, RememberMe);
         }
@@ -417,7 +417,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
+    public async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Canceled>> ApproveLastPassAuth(
         int attempt,
         MfaMethod[] otherMethods,
         CancellationToken cancellationToken
@@ -443,7 +443,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                 return _selectMfaTcs.Task.Result;
 
             if (done == _cancelMfaTcs.Task)
-                return new Cancelled("User cancelled");
+                return new Canceled("User cancelled");
 
             if (done == _pushToMobileLastPassAuthTcs.Task)
                 return new WaitForOutOfBand(RememberMe);
@@ -540,24 +540,38 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         return Task.CompletedTask;
     }
 
-    public async Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken)
+    public async Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken)
     {
-        // TODO: Handle cancellationToken here!
-        await Task.Delay(0, cancellationToken);
+        return await Task.Run<OneOf<string, Canceled>>(
+            () =>
+            {
+                using var driver = new ChromeDriver();
+                var timedOut = false;
 
-        // TODO: Make this async
-        using (IWebDriver driver = new ChromeDriver())
-        {
-            driver.Navigate().GoToUrl(url);
+                driver.Navigate().GoToUrl(url);
 
-            // Wait for the redirect to happen
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromMinutes(2));
-            wait.Until(d => d.Url.StartsWith(redirectUrl), cancellationToken);
+                try
+                {
+                    // Wait for the redirect to happen
+                    new WebDriverWait(driver, TimeSpan.FromMinutes(2)).Until(
+                        d => d.WindowHandles.Count == 0 || d.Url.StartsWith(redirectUrl),
+                        cancellationToken
+                    );
+                }
+                catch (WebDriverTimeoutException)
+                {
+                    timedOut = true;
+                }
 
-            // At this point, we've been redirected to the expected URL
-            var redirectedTo = driver.Url;
-            return redirectedTo.StartsWith(redirectUrl) ? redirectedTo : "";
-        }
+                // Timed out or the user closed the window
+                if (timedOut || driver.WindowHandles.Count == 0)
+                    return new Canceled("User cancelled");
+
+                // We should be ok here
+                return driver.Url;
+            },
+            cancellationToken
+        );
     }
 
     //

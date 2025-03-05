@@ -16,22 +16,22 @@ namespace PasswordManagerAccess.LastPass.Ui
         // Each of these methods should return one of the following three options:
         //   1. new Otp(...): the user provided a valid passcode
         //   2. one of the MFA methods from `otherMethods`: the user chose a different MFA method
-        //   3. new Cancelled(...): the user cancelled the operation
-        Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(int attempt, MfaMethod[] otherMethods, CancellationToken cancellationToken);
-        Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(
+        //   3. new Canceled(...): the user canceled the operation
+        Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(int attempt, MfaMethod[] otherMethods, CancellationToken cancellationToken);
+        Task<OneOf<Otp, MfaMethod, Canceled>> ProvideMicrosoftAuthPasscode(
             int attempt,
             MfaMethod[] otherMethods,
             CancellationToken cancellationToken
         );
-        Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(int attempt, MfaMethod[] otherMethods, CancellationToken cancellationToken);
+        Task<OneOf<Otp, MfaMethod, Canceled>> ProvideYubikeyPasscode(int attempt, MfaMethod[] otherMethods, CancellationToken cancellationToken);
 
         // OOB (out-of-band) methods
         // This method should return one of the following four options:
         //   1. new Otp(...): the user provided a valid passcode
         //   2. new WaitForOutOfBand(...): the user chose to perform an out-of-band action
         //   3. one of the MFA methods from `otherMethods`: the user chose a different MFA method
-        //   4. new Cancelled(...): the user cancelled the operation
-        Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
+        //   4. new Canceled(...): the user canceled the operation
+        Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Canceled>> ApproveLastPassAuth(
             int attempt, // TODO: Remove this parameter
             MfaMethod[] otherMethods,
             CancellationToken cancellationToken
@@ -43,13 +43,13 @@ namespace PasswordManagerAccess.LastPass.Ui
         // `expectedRedirectUrl`.
         // This method should return one of the following two options:
         //   1. The complete URL the SSO login process was redirected to in the end (should start with `expectedRedirectUrl`)
-        //   2. new Cancelled(...): the user cancelled the operation
-        Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken);
+        //   2. new Canceled(...): the user canceled the operation
+        Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken);
     }
 
     public record Otp(string Passcode, bool RememberMe);
 
     public record WaitForOutOfBand(bool RememberMe);
 
-    public record Cancelled(string Reason);
+    public record Canceled(string Reason);
 }

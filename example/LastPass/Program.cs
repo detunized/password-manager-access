@@ -17,31 +17,31 @@ namespace PasswordManagerAccess.Example.LastPass
         // Very simple text based user interface that demonstrates how to respond to Vault UI requests.
         private class TextUi : DuoAsyncUi, IAsyncUi
         {
-            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
                 int attempt,
                 MfaMethod[] methods,
                 CancellationToken cancellationToken
             ) => ProvideOtpPasscode(attempt, "Google Authenticator", methods, cancellationToken);
 
-            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideMicrosoftAuthPasscode(
                 int attempt,
                 MfaMethod[] methods,
                 CancellationToken cancellationToken
             ) => ProvideOtpPasscode(attempt, "Microsoft Authenticator", methods, cancellationToken);
 
-            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideYubikeyPasscode(
                 int attempt,
                 MfaMethod[] methods,
                 CancellationToken cancellationToken
             ) => ProvideOtpPasscode(attempt, "Yubikey", methods, cancellationToken);
 
-            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
+            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Canceled>> ApproveLastPassAuth(
                 int attempt,
                 MfaMethod[] methods,
                 CancellationToken cancellationToken
             ) => ApproveOutOfBand(attempt, "LastPass Authenticator", methods, cancellationToken);
 
-            public Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
+            public Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
             {
                 throw new NotImplementedException();
             }
@@ -50,7 +50,7 @@ namespace PasswordManagerAccess.Example.LastPass
             // Private
             //
 
-            private static async Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideOtpPasscode(
+            private static async Task<OneOf<Otp, MfaMethod, Canceled>> ProvideOtpPasscode(
                 int attempt,
                 string method,
                 MfaMethod[] methods,
@@ -62,13 +62,13 @@ namespace PasswordManagerAccess.Example.LastPass
                 var answer = await GetAnswer(prompt, cancellationToken);
                 return answer switch
                 {
-                    "" => new Cancelled(""),
+                    "" => new Canceled(""),
                     var s when s.EndsWith('!') => methods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
                     _ => new Otp(answer, await GetRememberMe(cancellationToken)),
                 };
             }
 
-            private static async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveOutOfBand(
+            private static async Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Canceled>> ApproveOutOfBand(
                 int attempt,
                 string method,
                 MfaMethod[] methods,
@@ -83,7 +83,7 @@ namespace PasswordManagerAccess.Example.LastPass
 
                 return answer switch
                 {
-                    "c" or "C" => new Cancelled(""),
+                    "c" or "C" => new Canceled(""),
                     var s when s.EndsWith('!') => methods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
                     "" => new WaitForOutOfBand(await GetRememberMe(cancellationToken)),
                     _ => new Otp(answer, await GetRememberMe(cancellationToken)),

@@ -334,7 +334,7 @@ namespace PasswordManagerAccess.LastPass
                 {
                     case MfaMethod mfa:
                         return mfa;
-                    case Cancelled:
+                    case Canceled:
                         throw new CanceledMultiFactorException("Second factor step is canceled by the user");
                 }
 

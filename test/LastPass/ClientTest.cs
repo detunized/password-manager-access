@@ -1365,7 +1365,7 @@ namespace PasswordManagerAccess.Test.LastPass
             public void Log(LogEntry entry) => Entries.Add(entry);
         }
 
-        private class FakeUi(OneOf<Otp, MfaMethod, Cancelled> otp, OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled> oob) : IAsyncUi
+        private class FakeUi(OneOf<Otp, MfaMethod, Canceled> otp, OneOf<Otp, WaitForOutOfBand, MfaMethod, Canceled> oob) : IAsyncUi
         {
             public int ProvideGoogleAuthPasscodeCalledTimes { get; private set; }
             public int ProvideMicrosoftAuthPasscodeCalledTimes { get; private set; }
@@ -1376,7 +1376,7 @@ namespace PasswordManagerAccess.Test.LastPass
             public int DuoDoneCalledTimes { get; private set; }
             public int UpdateDuoStatusCalledTimes { get; private set; }
 
-            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideGoogleAuthPasscode(
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
                 int attempt,
                 MfaMethod[] otherMethods,
                 CancellationToken cancellationToken
@@ -1386,7 +1386,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 return Task.FromResult(otp);
             }
 
-            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideMicrosoftAuthPasscode(
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideMicrosoftAuthPasscode(
                 int attempt,
                 MfaMethod[] otherMethods,
                 CancellationToken cancellationToken
@@ -1396,7 +1396,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 return Task.FromResult(otp);
             }
 
-            public Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideYubikeyPasscode(
                 int attempt,
                 MfaMethod[] otherMethods,
                 CancellationToken cancellationToken
@@ -1406,7 +1406,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 return Task.FromResult(otp);
             }
 
-            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Cancelled>> ApproveLastPassAuth(
+            public Task<OneOf<Otp, WaitForOutOfBand, MfaMethod, Canceled>> ApproveLastPassAuth(
                 int attempt,
                 MfaMethod[] otherMethods,
                 CancellationToken cancellationToken
@@ -1416,7 +1416,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 return Task.FromResult(oob);
             }
 
-            public Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
+            public Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
             {
                 throw new NotImplementedException();
             }
@@ -1453,19 +1453,19 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         // OTP and OOB
-        private static FakeUi GetCancelingUi() => new(new Cancelled("User cancelled"), new Cancelled("User cancelled"));
+        private static FakeUi GetCancelingUi() => new(new Canceled("User cancelled"), new Canceled("User cancelled"));
 
         // OTP only
-        private static FakeUi GetOtpProvidingUi() => new(new Otp(Otp, false), new Cancelled("User cancelled"));
+        private static FakeUi GetOtpProvidingUi() => new(new Otp(Otp, false), new Canceled("User cancelled"));
 
-        private static FakeUi GetOtpProvidingWithRememberMeUi() => new(new Otp(Otp, true), new Cancelled("User cancelled"));
+        private static FakeUi GetOtpProvidingWithRememberMeUi() => new(new Otp(Otp, true), new Canceled("User cancelled"));
 
         // OOB only
-        private static FakeUi GetWaitingForOobUi() => new(new Cancelled("User cancelled"), new WaitForOutOfBand(false));
+        private static FakeUi GetWaitingForOobUi() => new(new Canceled("User cancelled"), new WaitForOutOfBand(false));
 
-        private static FakeUi GetWaitingForOobWithRememberMeUi() => new(new Cancelled("User cancelled"), new WaitForOutOfBand(true));
+        private static FakeUi GetWaitingForOobWithRememberMeUi() => new(new Canceled("User cancelled"), new WaitForOutOfBand(true));
 
-        private static FakeUi GetPasscodeProvidingOobUi() => new(new Cancelled("User cancelled"), new Otp(Otp, false));
+        private static FakeUi GetPasscodeProvidingOobUi() => new(new Canceled("User cancelled"), new Otp(Otp, false));
 
         private static void AssertLoginStateWithPrivateKey(Client.LoginState state)
         {
