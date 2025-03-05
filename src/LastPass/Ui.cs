@@ -7,7 +7,7 @@ using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 
-namespace PasswordManagerAccess.LastPass
+namespace PasswordManagerAccess.LastPass.Ui
 {
     public interface IAsyncUi : IDuoAsyncUi
     {

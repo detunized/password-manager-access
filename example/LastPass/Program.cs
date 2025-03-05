@@ -12,6 +12,7 @@ using OpenQA.Selenium.Support.UI;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.LastPass;
+using PasswordManagerAccess.LastPass.Ui;
 using Platform = PasswordManagerAccess.LastPass.Platform;
 
 namespace PasswordManagerAccess.Example.LastPass

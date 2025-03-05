@@ -11,6 +11,7 @@ using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.LastPass;
+using PasswordManagerAccess.LastPass.Ui;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.LastPass
