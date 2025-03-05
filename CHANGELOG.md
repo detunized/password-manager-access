@@ -1,5 +1,19 @@
 # Changelog
 
+## 22.0.0-preview
+  - LastPass: the module refactored to be completely async (major incompatible API change)
+  - LastPass: Azure AD SSO support
+  - LastPass: Avalonia UI based GUI example program
+  - LastPass: added support for application side cancellation of the login process via `CancellationToken`
+  - LastPass: added support for MFA method selection in the MFA flow in the UI
+  - LastPass: added support for multiple attempts in the MFA flow in the UI
+  - LastPass: fixed some bugs in Duo support
+  - LastPass: removed support for private LastPass Duo handling method (only Duo Web SDK is supported now)
+  - LastPass: removed support for Salesforce Authenticator MFA method
+  - LastPass: fixed a bug with sometimes not remembering the trusted device
+  - LastPass: fixed a bug with incorrect username/password detection
+  - LastPass: now uses .NET native JSON parser under the hood
+
 ## 21.0.4
   - Dashlane: bumped the client version to get rid of the "unsupported" error
 
