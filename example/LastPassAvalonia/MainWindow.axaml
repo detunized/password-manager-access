@@ -18,7 +18,6 @@
 
         <StackPanel Spacing="5" Orientation="Horizontal">
             <Button Command="{Binding Login}" IsEnabled="{Binding IsLoginEnabled}">Login</Button>
-            <Button Command="{Binding LoginWithSso}" IsEnabled="{Binding IsLoginWithSsoEnabled}">Login with SSO</Button>
             <Button Command="{Binding CancelLogin}" IsEnabled="{Binding IsCancelEnabled}">Cancel</Button>
         </StackPanel>
 

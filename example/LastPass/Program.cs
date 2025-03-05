@@ -41,6 +41,11 @@ namespace PasswordManagerAccess.Example.LastPass
                 CancellationToken cancellationToken
             ) => ApproveOutOfBand(attempt, "LastPass Authenticator", methods, cancellationToken);
 
+            public Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
             //
             // Private
             //

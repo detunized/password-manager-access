@@ -3,5 +3,5 @@
 
 namespace PasswordManagerAccess.LastPass
 {
-    internal record Session(string Id, int KeyIterationCount, string Token, Platform Platform, string EncryptedPrivateKey);
+    internal record Session(string Id, string Token, string EncryptedPrivateKey);
 }

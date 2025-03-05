@@ -10,11 +10,6 @@ using PasswordManagerAccess.Duo;
 // TODO: Remove this namespace
 namespace PasswordManagerAccess.LastPass.Ui
 {
-    public interface IAsyncSsoUi
-    {
-        Task<string> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken);
-    }
-
     public interface IAsyncUi : IDuoAsyncUi
     {
         // OTP (one-time passcode) methods
@@ -31,7 +26,7 @@ namespace PasswordManagerAccess.LastPass.Ui
         Task<OneOf<Otp, MfaMethod, Cancelled>> ProvideYubikeyPasscode(int attempt, MfaMethod[] otherMethods, CancellationToken cancellationToken);
 
         // OOB (out-of-band) methods
-        // Each of these methods should return one of the following four options:
+        // This method should return one of the following four options:
         //   1. new Otp(...): the user provided a valid passcode
         //   2. new WaitForOutOfBand(...): the user chose to perform an out-of-band action
         //   3. one of the MFA methods from `otherMethods`: the user chose a different MFA method
@@ -41,6 +36,15 @@ namespace PasswordManagerAccess.LastPass.Ui
             MfaMethod[] otherMethods,
             CancellationToken cancellationToken
         );
+
+        // SSO
+        // This method should be used to display an interactive browser session to allow the user to log into
+        // the SSO provider. After a successful login the user should be redirected to a URL beginning with
+        // `expectedRedirectUrl`.
+        // This method should return one of the following two options:
+        //   1. The complete URL the SSO login process was redirected to in the end (should start with `expectedRedirectUrl`)
+        //   2. new Cancelled(...): the user cancelled the operation
+        Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken);
     }
 
     public record Otp(string Passcode, bool RememberMe);

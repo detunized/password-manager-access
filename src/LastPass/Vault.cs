@@ -30,18 +30,12 @@ namespace PasswordManagerAccess.LastPass
             );
         }
 
-        public static async Task<Vault> OpenWithSso(
-            string username,
-            ClientInfo clientInfo,
-            IAsyncSsoUi ssoUi,
-            ParserOptions options,
-            ISecureLogger? logger,
-            CancellationToken cancellationToken
-        )
+        // This method should be used to check if the user account is an SSO account.
+        // In case of the SSO account the password in the Open method should be left blank.
+        public static Task<bool> IsSsoAccount(string username, CancellationToken cancellationToken)
         {
             using var transport = new RestTransport();
-            await Client.LoginWithSso(username, clientInfo, ssoUi, transport, options, logger, cancellationToken).ConfigureAwait(false);
-            return new Vault([]);
+            return Client.IsSsoAccount(username, transport, cancellationToken);
         }
 
         public static string GenerateRandomClientId() => Crypto.RandomHex(32);

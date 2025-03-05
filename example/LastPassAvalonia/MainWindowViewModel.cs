@@ -54,7 +54,6 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
     private bool _isLoggingIn = false;
     public bool IsLoginEnabled => !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password) && !_isLoggingIn;
-    public bool IsLoginWithSsoEnabled => !string.IsNullOrEmpty(Username) && !_isLoggingIn;
     public bool IsCancelEnabled => _isLoggingIn;
 
     private CancellationTokenSource? _loginCancellationTokenSource;
@@ -63,7 +62,6 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     {
         _isLoggingIn = true;
         this.RaisePropertyChanged(nameof(IsLoginEnabled));
-        this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
         this.RaisePropertyChanged(nameof(IsCancelEnabled));
 
         _loginCancellationTokenSource = new CancellationTokenSource();
@@ -98,50 +96,6 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             _loginCancellationTokenSource = null;
             _isLoggingIn = false;
             this.RaisePropertyChanged(nameof(IsLoginEnabled));
-            this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
-            this.RaisePropertyChanged(nameof(IsCancelEnabled));
-        }
-    }
-
-    public async Task LoginWithSso()
-    {
-        _isLoggingIn = true;
-        this.RaisePropertyChanged(nameof(IsLoginEnabled));
-        this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
-        this.RaisePropertyChanged(nameof(IsCancelEnabled));
-
-        _loginCancellationTokenSource = new CancellationTokenSource();
-
-        try
-        {
-            Status = "Logging in with SSO...";
-            await Vault.OpenWithSso(
-                Username,
-                new ClientInfo(Platform.Desktop, "385e2742aefd399bd182c1ea4c1aac4d", "Example for lastpass-sharp"),
-                this,
-                new ParserOptions
-                {
-                    // Set to true to parse "server" secure notes
-                    ParseSecureNotesToAccount = false,
-                    LoggingEnabled = true,
-                },
-                null,
-                _loginCancellationTokenSource.Token
-            );
-
-            Status = $"Logged in with SSO";
-        }
-        catch (Exception e)
-        {
-            Status = $"{e.GetType().Name}: {e.Message}";
-        }
-        finally
-        {
-            _loginCancellationTokenSource.Dispose();
-            _loginCancellationTokenSource = null;
-            _isLoggingIn = false;
-            this.RaisePropertyChanged(nameof(IsLoginEnabled));
-            this.RaisePropertyChanged(nameof(IsLoginWithSsoEnabled));
             this.RaisePropertyChanged(nameof(IsCancelEnabled));
         }
     }
@@ -589,6 +543,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     public async Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken)
     {
         // TODO: Handle cancellationToken here!
+        await Task.Delay(0, cancellationToken);
 
         // TODO: Make this async
         using (IWebDriver driver = new ChromeDriver())

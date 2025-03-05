@@ -26,13 +26,14 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(OkResponseValidPrivateKey)
+                .Post(OkResponseValidPrivateKey) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .Get(BlobBase64)
+                .Get(BlobBase64) // 4. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 5. Logout
                 .ExpectUrl("/logout.php");
 
             // Act
@@ -48,13 +49,14 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(OkResponseValidPrivateKey)
+                .Post(OkResponseValidPrivateKey) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .Get(BlobBase64)
+                .Get(BlobBase64) // 4. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 5. Logout
                 .ExpectUrl("/logout.php");
 
             // Act
@@ -70,16 +72,17 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(OtpRequiredResponse)
+                .Post(OtpRequiredResponse) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .Post(OkResponseValidPrivateKey)
+                .Post(OkResponseValidPrivateKey) // 4. Login with OTP
                 .ExpectUrl("/login.php")
                 .ExpectContent($"otp={Otp}")
-                .Get(BlobBase64)
+                .Get(BlobBase64) // 5. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 6. Logout
                 .ExpectUrl("/logout.php");
 
             // Act
@@ -104,18 +107,19 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(OtpRequiredResponse)
+                .Post(OtpRequiredResponse) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .Post(OkResponseValidPrivateKey)
+                .Post(OkResponseValidPrivateKey) // 4. Login with OTP
                 .ExpectUrl("/login.php")
                 .ExpectContent($"otp={Otp}")
-                .Post("")
+                .Post("") // 5. Save trusted device
                 .ExpectUrl("/trust.php")
-                .Get(BlobBase64)
+                .Get(BlobBase64) // 6. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 7. Logout
                 .ExpectUrl("/logout.php");
 
             // Act
@@ -140,21 +144,22 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(OobRequiredResponse)
+                .Post(OobRequiredResponse) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .Post(OobRetryResponse)
+                .Post(OobRetryResponse) // 4. Login with OOB
                 .ExpectUrl("/login.php")
                 .ExpectContent("outofbandrequest=1")
-                .Post(OkResponseValidPrivateKey)
+                .Post(OkResponseValidPrivateKey) // 5. Retry to login with OOB
                 .ExpectUrl("/login.php")
                 .ExpectContent("outofbandrequest=1")
                 .ExpectContent("outofbandretry=1")
                 .ExpectContent("outofbandretryid=retry-id")
-                .Get(BlobBase64)
+                .Get(BlobBase64) // 6. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 7. Logout
                 .ExpectUrl("/logout.php");
 
             // Act
@@ -179,23 +184,24 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(OobRequiredResponse)
+                .Post(OobRequiredResponse) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .Post(OobRetryResponse)
+                .Post(OobRetryResponse) // 4. Login with OOB
                 .ExpectUrl("/login.php")
                 .ExpectContent("outofbandrequest=1")
-                .Post(OkResponseValidPrivateKey)
+                .Post(OkResponseValidPrivateKey) // 5. Retry to login with OOB
                 .ExpectUrl("/login.php")
                 .ExpectContent("outofbandrequest=1")
                 .ExpectContent("outofbandretry=1")
                 .ExpectContent("outofbandretryid=retry-id")
-                .Post("")
+                .Post("") // 6. Save trusted device
                 .ExpectUrl("/trust.php")
-                .Get(BlobBase64)
+                .Get(BlobBase64) // 7. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 8. Logout
                 .ExpectUrl("/logout.php");
 
             // Act
@@ -219,15 +225,16 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_returns_accounts_with_duo_v4()
         {
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(DuoV4RequiredResponse)
+                .Post(DuoV4RequiredResponse) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .LastPassDuo()
-                .Post(OkResponseValidPrivateKey)
-                .Get(BlobBase64)
+                .LastPassDuo() // 4. Login with Duo
+                .Post(OkResponseValidPrivateKey) // 5. Submit Duo passcode
+                .Get(BlobBase64) // 6. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 7. Logout
                 .ExpectUrl("/logout.php");
 
             var accounts = await Client.OpenVault(
@@ -249,14 +256,16 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
                 .ExpectContent($"username={Username.EncodeUriData()}")
-                .Post(OkResponseValidPrivateKey)
+                .Post(OkResponseValidPrivateKey) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
                 .ExpectContent($"username={Username.EncodeUriData()}")
-                .Get(BlobBase64)
-                .Post("");
+                .Get(BlobBase64) // 4. Get vault
+                .Post("") // 5. Logout
+                .ExpectUrl("/logout.php");
 
             // Act
             // TODO: Decryption fails here because of the incorrect password
@@ -279,7 +288,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_invalid_username()
         {
             // Arrange
-            var flow = new RestFlow().Post("""<response><error cause="user_not_exists" /></response>""");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post("""<response><error cause="user_not_exists" /></response>"""); // 2. Normal login attempt
 
             // Act
             var act = () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null, CancellationToken.None);
@@ -292,7 +303,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_invalid_password()
         {
             // Arrange
-            var flow = new RestFlow().Post("""<response><error cause="password_invalid" /></response>""");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post("""<response><error cause="password_invalid" /></response>"""); // 2. Normal login attempt
 
             // Act
             var act = () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null, CancellationToken.None);
@@ -305,7 +318,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_canceled_otp()
         {
             // Arrange
-            var flow = new RestFlow().Post(OtpRequiredResponse);
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(OtpRequiredResponse); // 2. Normal login attempt
 
             // Act
             var act = () =>
@@ -320,7 +335,12 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             // Need to retry OTP 3 times because of the 3 attempts limit
-            var flow = new RestFlow().Post(OtpRequiredResponse).Post(OtpFailedResponse).Post(OtpFailedResponse).Post(OtpFailedResponse);
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(OtpRequiredResponse) // 2. Normal login attempt
+                .Post(OtpFailedResponse) // 3. Login with OTP (attempt 1)
+                .Post(OtpFailedResponse) // 4. Login with OTP (attempt 2)
+                .Post(OtpFailedResponse); // 5. Login with OTP (attempt 3)
 
             // Act
             var act = () =>
@@ -334,7 +354,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_canceled_oob()
         {
             // Arrange
-            var flow = new RestFlow().Post(OobRequiredResponse);
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(OobRequiredResponse); // 2. Normal login attempt
 
             // Act
             var act = () =>
@@ -348,7 +370,10 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_failed_oob()
         {
             // Arrange
-            var flow = new RestFlow().Post(OobRequiredResponse).Post("<response><error cause='multifactorresponsefailed' /></response>");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(OobRequiredResponse) // 2. Normal login attempt
+                .Post("<response><error cause='multifactorresponsefailed' /></response>"); // 3. Login with OOB
 
             // Act
             var act = () =>
@@ -366,7 +391,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_throws_on_other_errors(string response, string expected)
         {
             // Arrange
-            var flow = new RestFlow().Post(response);
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(response); // 2. Normal login attempt
 
             // Act
             var act = () => Client.OpenVault(Username, Password, ClientInfo, null, flow, ParserOptions.Default, null, CancellationToken.None);
@@ -379,7 +406,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_logs_to_secure_logger()
         {
             // Arrange
-            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post("<response><error cause='Blah' /></response>"); // 2. Normal login attempt
             var logger = new FakeSecureLogger();
 
             // Act
@@ -405,7 +434,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_does_not_log_to_secure_logger_when_logging_is_disabled()
         {
             // Arrange
-            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post("<response><error cause='Blah' /></response>"); // 2. Normal login attempt
             var logger = new FakeSecureLogger();
 
             // Act
@@ -431,15 +462,16 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(DuoV4RequiredResponse)
+                .Post(DuoV4RequiredResponse) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .LastPassDuo()
-                .Post(OkResponseValidPrivateKey)
-                .Get(BlobBase64)
+                .LastPassDuo() // 4. Login with Duo
+                .Post(OkResponseValidPrivateKey) // 5. Submit Duo passcode
+                .Get(BlobBase64) // 6. Get vault
                 .ExpectUrl("/getaccts.php?")
-                .Post("")
+                .Post("") // 7. Logout
                 .ExpectUrl("/logout.php");
             var logger = new FakeSecureLogger();
 
@@ -455,13 +487,14 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
                 .ExpectUrl("/login.php")
-                .Post(DuoV4RequiredResponse)
+                .Post(DuoV4RequiredResponse) // 3. Login with updated iteration count
                 .ExpectUrl("/login.php")
-                .LastPassDuo()
-                .Post(OkResponseValidPrivateKey)
-                .Get(BlobBase64)
+                .LastPassDuo() // 4. Login with Duo
+                .Post(OkResponseValidPrivateKey) // 5. Submit Duo passcode
+                .Get(BlobBase64) // 6. Get vault
                 .ExpectUrl("/getaccts.php?")
                 .Post("")
                 .ExpectUrl("/logout.php");
@@ -476,7 +509,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_attaches_log_to_exception()
         {
             // Arrange
-            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post("<response><error cause='Blah' /></response>"); // 2. Normal login attempt
 
             // Act
             var act = () =>
@@ -501,7 +536,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_does_not_attach_log_when_logging_is_disabled()
         {
             // Arrange
-            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post("<response><error cause='Blah' /></response>"); // 2. Normal login attempt
 
             // Act
             var act = () =>
@@ -528,7 +565,9 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task OpenVault_censors_username_in_logs(string username)
         {
             // Arrange
-            var flow = new RestFlow().Post("<response><error cause='Blah' /></response>");
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post("<response><error cause='Blah' /></response>"); // 2. Normal login attempt
 
             // Act
             var act = () =>
@@ -552,14 +591,15 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task Login_returns_session_and_rest_client()
         {
             // Arrange
-            var flow = new RestFlow().Post(OkResponse);
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(OkResponse); // 2. Normal login attempt
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(DefaultKeyIterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(BaseUrl);
         }
 
@@ -567,14 +607,16 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task Login_returns_session_and_rest_client_with_iteration_retry()
         {
             // Arrange
-            var flow = new RestFlow().Post(IterationResponse).Post(OkResponse);
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
+                .Post(OkResponse); // 3. Login with updated iteration count
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(IterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(BaseUrl);
         }
 
@@ -582,14 +624,18 @@ namespace PasswordManagerAccess.Test.LastPass
         public async Task Login_returns_session_and_rest_client_with_server_retry()
         {
             // Arrange
-            var flow = new RestFlow().Post(ServerResponse).ExpectUrl(BaseUrl).Post(OkResponse).ExpectUrl(AlternativeBaseUrl);
+            var flow = new RestFlow()
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(ServerResponse) // 2. Normal login attempt
+                .ExpectUrl(BaseUrl)
+                .Post(OkResponse) // 3. Login with updated server
+                .ExpectUrl(AlternativeBaseUrl);
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(DefaultKeyIterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(AlternativeBaseUrl);
         }
 
@@ -598,19 +644,19 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(ServerResponse)
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(ServerResponse) // 2. Normal login attempt
                 .ExpectUrl(BaseUrl)
-                .Post(IterationResponse)
+                .Post(IterationResponse) // 3. Login with updated server
                 .ExpectUrl(AlternativeBaseUrl)
-                .Post(OkResponse)
+                .Post(OkResponse) // 4. Login with updated iteration count and server
                 .ExpectUrl(AlternativeBaseUrl);
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, null, flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(IterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(AlternativeBaseUrl);
         }
 
@@ -619,16 +665,16 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(OtpRequiredResponse) // 1. normal login attempt
-                .Post(OkResponse) // 2. login with otp
-                .Post(""); // 3. save trusted device
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(OtpRequiredResponse) // 2. Normal login attempt
+                .Post(OkResponse) // 3. Login with OTP
+                .Post(""); // 4. Save trusted device
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(DefaultKeyIterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(BaseUrl);
         }
 
@@ -637,17 +683,17 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse) // 1. normal login attempt
-                .Post(OtpRequiredResponse) // 2. normal login attempt with updated iteration count
-                .Post(OkResponse) // 3. login with otp
-                .Post(""); // 4. save trusted device
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
+                .Post(OtpRequiredResponse) // 3. Normal login attempt with updated iteration count
+                .Post(OkResponse) // 4. Login with OTP
+                .Post(""); // 5. Save trusted device
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, GetOtpProvidingUi(), flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(IterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(BaseUrl);
         }
 
@@ -656,16 +702,16 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(OobRequiredResponse) // 1. normal login attempt
-                .Post(OkResponse) // 2. check oob
-                .Post(""); // 3. save trusted device
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(OobRequiredResponse) // 2. Normal login attempt
+                .Post(OkResponse) // 3. Check OOB
+                .Post(""); // 4. Save trusted device
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(DefaultKeyIterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(BaseUrl);
         }
 
@@ -674,17 +720,17 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(IterationResponse) // 1. normal login attempt
-                .Post(OobRequiredResponse) // 2. normal login attempt with updated iteration count
-                .Post(OkResponse) // 3. check oob
-                .Post(""); // 4. save trusted device
+                .Get(RegularLoginResponse) // 1. Check account type
+                .Post(IterationResponse) // 2. Normal login attempt
+                .Post(OobRequiredResponse) // 3. Normal login attempt with updated iteration count
+                .Post(OkResponse) // 4. Check OOB
+                .Post(""); // 5. Save trusted device
 
             // Act
-            var (session, rest) = await Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, null, CancellationToken.None);
+            var (state, rest) = await Client.Login(Username, Password, ClientInfo, GetWaitingForOobUi(), flow, null, CancellationToken.None);
 
             // Assert
-            session.KeyIterationCount.Should().Be(IterationCount);
-            AssertSessionWithPrivateKey(session);
+            AssertLoginStateWithPrivateKey(state);
             rest.BaseUrl.Should().Be(BaseUrl);
         }
 
@@ -721,13 +767,13 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectContent("method=cli")
                 .ExpectContent($"username={Username.EncodeUriData()}")
                 .ExpectContent($"iterations={IterationCount}")
-                .ExpectContent("hash=26ecd8a4442e24fde414bd0594233b1bbdb55fa410d56a5d8284a316c7298b65")
+                .ExpectContent($"hash={KeyHash}")
                 .ExpectContent($"trustlabel={ClientInfo.Description}");
 
             // Act
             var xml = await Client.PerformSingleLoginRequest(
                 Username,
-                Password,
+                KeyHash,
                 IterationCount,
                 MfaMethod.None,
                 true,
@@ -1090,7 +1136,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectCookie("PHPSESSID", Session.Id);
 
             // Act/Assert
-            await Client.Logout(Session, flow.ToRestClient(BaseUrl), CancellationToken.None);
+            await Client.Logout(LoginState, flow.ToRestClient(BaseUrl), CancellationToken.None);
         }
 
         [Fact]
@@ -1100,7 +1146,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var flow = new RestFlow().Get("blah-blah".ToBytes().ToBase64());
 
             // Act
-            var blob = await Client.DownloadVault(Session, flow, CancellationToken.None);
+            var blob = await Client.DownloadVault(LoginState, flow, CancellationToken.None);
 
             // Assert
             blob.Should().Equal("blah-blah".ToBytes());
@@ -1117,7 +1163,7 @@ namespace PasswordManagerAccess.Test.LastPass
                 .ExpectCookie("PHPSESSID", Session.Id);
 
             // Act/Assert
-            await Client.DownloadVault(Session, flow.ToRestClient(BaseUrl), CancellationToken.None);
+            await Client.DownloadVault(LoginState, flow.ToRestClient(BaseUrl), CancellationToken.None);
         }
 
         [Theory]
@@ -1136,7 +1182,7 @@ namespace PasswordManagerAccess.Test.LastPass
         public void GetSessionCookies_escapes_session_id()
         {
             // Arrange
-            var session = new Session(" /:;?=", -1, "", Platform.Desktop, "");
+            var session = new Session(" /:;?=", "", "");
 
             // Act
             var cookies = Client.GetSessionCookies(session);
@@ -1180,7 +1226,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var xml = XDocument.Parse(response);
 
             // Act
-            var session = Client.ExtractSessionFromLoginResponse(xml, DefaultKeyIterationCount, ClientInfo);
+            var session = Client.ExtractSessionFromLoginResponse(xml);
 
             // Assert
             AssertSessionWithPrivateKey(session);
@@ -1197,7 +1243,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var xml = XDocument.Parse(response);
 
             // Act
-            var session = Client.ExtractSessionFromLoginResponse(xml, DefaultKeyIterationCount, ClientInfo);
+            var session = Client.ExtractSessionFromLoginResponse(xml);
 
             // Assert
             AssertSessionWithoutPrivateKey(session);
@@ -1370,6 +1416,11 @@ namespace PasswordManagerAccess.Test.LastPass
                 return Task.FromResult(oob);
             }
 
+            public Task<OneOf<string, Cancelled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
             public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
                 DuoDevice[] devices,
                 MfaMethod[] otherMethods,
@@ -1416,6 +1467,20 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private static FakeUi GetPasscodeProvidingOobUi() => new(new Cancelled("User cancelled"), new Otp(Otp, false));
 
+        private static void AssertLoginStateWithPrivateKey(Client.LoginState state)
+        {
+            AssertSessionWithPrivateKey(state.Session);
+            state.Platform.Should().Be(Platform.Desktop);
+            state.EncryptionKey.Should().NotBeEmpty();
+        }
+
+        private static void AssertLoginStateWithoutPrivateKey(Client.LoginState state)
+        {
+            AssertSessionWithoutPrivateKey(state.Session);
+            state.Platform.Should().Be(Platform.Desktop);
+            state.EncryptionKey.Should().Equal(TestData.EncryptionKey);
+        }
+
         private static void AssertSessionWithPrivateKey(Session session)
         {
             AssertSessionCommon(session);
@@ -1432,7 +1497,6 @@ namespace PasswordManagerAccess.Test.LastPass
         {
             session.Id.Should().Be("session-id");
             session.Token.Should().Be("token");
-            session.Platform.Should().Be(Platform.Desktop);
         }
 
         //
@@ -1446,18 +1510,26 @@ namespace PasswordManagerAccess.Test.LastPass
         private const string AlternativeBaseUrl = "https://lastpass.eu";
         private const string Username = "lastpass.ruby@gmail.com";
         private const string Password = "&nT%*pMWJb*7s6u1";
+        private const string KeyHash = "deadbeef";
         private const int IterationCount = 5000;
         private const string Otp = "123456";
         private const int DefaultKeyIterationCount = 100100;
 
         private static readonly ClientInfo ClientInfo = new(Platform.Desktop, "client-id", "description");
-        private static readonly Session Session = new("session-id", IterationCount, "token", Platform.Desktop, "private-key");
+        private static readonly Session Session = new("session-id", "token", "private-key");
+        private static readonly Client.LoginState LoginState = new(Session, Platform.Desktop, TestData.EncryptionKey);
 
         private static readonly Dictionary<string, string> LastPassAuthOobParameters = new() { ["outofbandtype"] = "lastpassauth" };
 
         private static readonly Dictionary<string, string> DuoOobParameters = new() { ["outofbandtype"] = "duo" };
 
         //private static readonly Dictionary<string, string> DuoOobParameters = new() { ["outofbandtype"] = "duo", ["preferduowebsdk"] = "1" };
+
+        private static readonly string RegularLoginResponse = """
+            {
+                "type": 0
+            }
+            """;
 
         private static readonly string OkResponseValidPrivateKey =
             "<response>"
