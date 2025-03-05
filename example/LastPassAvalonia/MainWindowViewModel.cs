@@ -16,7 +16,6 @@ using OpenQA.Selenium.Support.UI;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.LastPass;
-using PasswordManagerAccess.LastPass.Ui;
 using ReactiveUI;
 using Platform = PasswordManagerAccess.LastPass.Platform;
 

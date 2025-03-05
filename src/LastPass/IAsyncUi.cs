@@ -7,8 +7,7 @@ using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 
-// TODO: Remove this namespace
-namespace PasswordManagerAccess.LastPass.Ui
+namespace PasswordManagerAccess.LastPass
 {
     public interface IAsyncUi : IDuoAsyncUi
     {

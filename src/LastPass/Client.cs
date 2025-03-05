@@ -13,7 +13,6 @@ using System.Xml.XPath;
 using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
-using PasswordManagerAccess.LastPass.Ui;
 
 namespace PasswordManagerAccess.LastPass
 {
