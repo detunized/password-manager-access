@@ -5,10 +5,14 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using OneOf;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.LastPass;
 using PasswordManagerAccess.LastPass.Ui;
+using Platform = PasswordManagerAccess.LastPass.Platform;
 
 namespace PasswordManagerAccess.Example.LastPass
 {
@@ -41,9 +45,40 @@ namespace PasswordManagerAccess.Example.LastPass
                 CancellationToken cancellationToken
             ) => ApproveOutOfBand(attempt, "LastPass Authenticator", methods, cancellationToken);
 
-            public Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
+            public async Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
             {
-                throw new NotImplementedException();
+                WriteLine("Please log in to the SSO provider in the browser window that just opened", ConsoleColor.Green);
+
+                return await Task.Run<OneOf<string, Canceled>>(
+                    () =>
+                    {
+                        using var driver = new ChromeDriver();
+                        var timedOut = false;
+
+                        driver.Navigate().GoToUrl(url);
+
+                        try
+                        {
+                            // Wait for the redirect to happen
+                            new WebDriverWait(driver, TimeSpan.FromMinutes(2)).Until(
+                                d => d.WindowHandles.Count == 0 || d.Url.StartsWith(expectedRedirectUrl),
+                                cancellationToken
+                            );
+                        }
+                        catch (WebDriverTimeoutException)
+                        {
+                            timedOut = true;
+                        }
+
+                        // Timed out or the user closed the window
+                        if (timedOut || driver.WindowHandles.Count == 0)
+                            return new Canceled("User cancelled");
+
+                        // We should be ok here
+                        return driver.Url;
+                    },
+                    cancellationToken
+                );
             }
 
             //

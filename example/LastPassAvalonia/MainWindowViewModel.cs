@@ -540,7 +540,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         return Task.CompletedTask;
     }
 
-    public async Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string redirectUrl, CancellationToken cancellationToken)
+    public async Task<OneOf<string, Canceled>> PerformSsoLogin(string url, string expectedRedirectUrl, CancellationToken cancellationToken)
     {
         return await Task.Run<OneOf<string, Canceled>>(
             () =>
@@ -554,7 +554,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                 {
                     // Wait for the redirect to happen
                     new WebDriverWait(driver, TimeSpan.FromMinutes(2)).Until(
-                        d => d.WindowHandles.Count == 0 || d.Url.StartsWith(redirectUrl),
+                        d => d.WindowHandles.Count == 0 || d.Url.StartsWith(expectedRedirectUrl),
                         cancellationToken
                     );
                 }

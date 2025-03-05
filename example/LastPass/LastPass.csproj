@@ -4,6 +4,7 @@
     <ProjectReference Include="..\..\src\PasswordManagerAccess.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.24.0" />
   </ItemGroup>
 
   <PropertyGroup>
