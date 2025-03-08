@@ -1,5 +1,8 @@
 # Changelog
 
+## 22.0.3
+- LastPass: fixed a bug with some MFA methods not working correctly
+
 ## 22.0.2
   - LastPass: the module refactored to be completely async (major incompatible API change)
   - LastPass: Azure AD SSO support
