@@ -200,7 +200,7 @@ namespace PasswordManagerAccess.LastPass
                 {
                     mfaLoginResult = await LoginWithOtp(
                             username,
-                            password,
+                            keyHash,
                             keyIterationCount,
                             otpMethod,
                             enabledMfaMethods.Where(x => x != otpMethod).ToArray(),
@@ -226,7 +226,7 @@ namespace PasswordManagerAccess.LastPass
 
                     mfaLoginResult = await LoginWithOob(
                             username,
-                            password,
+                            keyHash,
                             keyIterationCount,
                             allAttributes,
                             oobMethod,

@@ -74,7 +74,7 @@ internal static partial class Client
         // 2. Generate a challenge
         var challenge = GenerateSsoChallenge();
 
-        // 3. Build the SSO URL for the user to login with
+        // 3. Build the SSO URL for the user to log in with
         var ssoUrl = BuildSsoUrl(username, ssoInfo, oidcConfig, challenge);
 
         // 4. Let the user login to the SSO provider
