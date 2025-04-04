@@ -34,6 +34,9 @@ public class VaultItem
         _keychain = keychain;
     }
 
+    internal R.Encrypted EncryptedOverview => _itemInfo.Overview;
+    internal R.Encrypted EncryptedDetails => _itemInfo.Details;
+
     internal R.VaultItemOverview DecryptOverview() => Util.Decrypt<R.VaultItemOverview>(_itemInfo.Overview, _keychain);
 
     internal R.VaultItemDetails DecryptDetails() => Util.Decrypt<R.VaultItemDetails>(_itemInfo.Details, _keychain);

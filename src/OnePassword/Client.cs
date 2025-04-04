@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
@@ -74,6 +75,33 @@ namespace PasswordManagerAccess.OnePassword
 
             var (accounts, sshKeys) = GetVaultItems(info.Id, session.Keychain, session.Key, session.Rest);
             return new Vault(info, accounts, sshKeys);
+        }
+
+        public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, string vaultId, Session session)
+        {
+            var oneOf3 = GetVaultItem(itemId, vaultId, session.Keychain, session.Key, session.Rest);
+
+            // The item is not available
+            if (oneOf3.TryPickT2(out var failure, out var oneOf2))
+                return failure;
+
+            var item = oneOf2.Match<VaultItem>(a => a, k => k);
+
+            if (CanDecrypt(item))
+                return oneOf3;
+
+            // Attempt to fetch everything necessary to decrypt the item
+            var accountInfo = GetAccountInfo(session.Key, session.Rest);
+            var keysets = GetKeysets(session.Key, session.Rest);
+            DecryptKeysets(keysets.Keysets, session.Credentials, session.Keychain);
+            GetAccessibleVaults(accountInfo, session.Keychain).FirstOrDefault(x => x.Id == vaultId)?.DecryptKeyIntoKeychain();
+
+            if (CanDecrypt(item))
+                return oneOf3;
+
+            throw new InternalErrorException("Failed to fetch the keys to decrypt the item");
+
+            bool CanDecrypt(VaultItem i) => session.Keychain.CanDecrypt(i.EncryptedOverview) && session.Keychain.CanDecrypt(i.EncryptedDetails);
         }
 
         // Use this function to generate a unique random identifier for each new client.
@@ -671,22 +699,53 @@ namespace PasswordManagerAccess.OnePassword
 
             foreach (var item in EnumerateAccountsItemsInVault(id, sessionKey, rest))
             {
-                if (item.Deleted == "Y")
-                    continue;
-
-                switch (item.TemplateId)
+                switch (ConvertVaultItem(keychain, item).Value)
                 {
-                    case Account.LoginTemplateId:
-                    case Account.ServerTemplateId:
-                        accounts.Add(new Account(item, keychain));
+                    case Account account:
+                        accounts.Add(account);
                         break;
-                    case SshKey.SshKeyTemplateId:
-                        sshKeys.Add(new SshKey(item, keychain));
+                    case SshKey sshKey:
+                        sshKeys.Add(sshKey);
+                        break;
+                    case bool:
+                        // Deleted item or unsupported, silently ignore
                         break;
                 }
             }
 
             return (accounts.ToArray(), sshKeys.ToArray());
+        }
+
+        internal static OneOf<Account, SshKey, NoItem> ConvertVaultItem(Keychain keychain, R.VaultItem item)
+        {
+            if (item.Deleted == "Y")
+                return NoItem.Deleted;
+
+            return item.TemplateId switch
+            {
+                Account.LoginTemplateId or Account.ServerTemplateId => new Account(item, keychain),
+                SshKey.SshKeyTemplateId => new SshKey(item, keychain),
+                _ => NoItem.UnsupportedType,
+            };
+        }
+
+        internal static OneOf<Account, SshKey, NoItem> GetVaultItem(
+            string itemId,
+            string vaultId,
+            Keychain keychain,
+            AesKey sessionKey,
+            RestClient rest
+        )
+        {
+            var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/item/{itemId}");
+            if (response.IsSuccessful)
+                return ConvertVaultItem(keychain, DecryptResponse<R.SingleVaultItem>(response.Data, sessionKey).Item);
+
+            // Special case: the item not found
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && response.Content.Trim() == "{}")
+                return NoItem.NotFound;
+
+            throw MakeError(response);
         }
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.

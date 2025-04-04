@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -21,30 +22,23 @@ namespace PasswordManagerAccess.OnePassword
 
         public AesKey GetAes(string id)
         {
-            if (!_aes.ContainsKey(id))
-                throw new InternalErrorException($"AES key '{id}' not found");
+            if (_aes.TryGetValue(id, out var aes))
+                return aes;
 
-            return _aes[id];
+            throw new InternalErrorException($"AES key '{id}' not found");
         }
 
         public RsaKey GetRsa(string id)
         {
-            if (!_rsa.ContainsKey(id))
-                throw new InternalErrorException($"RSA key '{id}' not found");
+            if (_rsa.TryGetValue(id, out var rsa))
+                return rsa;
 
-            return _rsa[id];
+            throw new InternalErrorException($"RSA key '{id}' not found");
         }
 
-        public bool CanDecrypt(Encrypted encrypted)
-        {
-            if (encrypted.Scheme == AesKey.EncryptionScheme)
-                return _aes.ContainsKey(encrypted.KeyId);
+        public bool CanDecrypt(Encrypted encrypted) => CanDecrypt(encrypted.Scheme, encrypted.KeyId);
 
-            if (RsaKey.EncryptionSchemes.Contains(encrypted.Scheme))
-                return _rsa.ContainsKey(encrypted.KeyId);
-
-            throw new UnsupportedFeatureException($"Encryption scheme '{encrypted.Scheme}' is not supported");
-        }
+        public bool CanDecrypt(R.Encrypted encrypted) => CanDecrypt(encrypted.Scheme, encrypted.KeyId);
 
         public byte[] Decrypt(Encrypted encrypted)
         {
@@ -58,10 +52,25 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         //
+        // Internal
+        //
+
+        internal bool CanDecrypt(string scheme, string keyId)
+        {
+            if (scheme == AesKey.EncryptionScheme)
+                return _aes.ContainsKey(keyId);
+
+            if (RsaKey.EncryptionSchemes.Contains(scheme))
+                return _rsa.ContainsKey(keyId);
+
+            throw new UnsupportedFeatureException($"Encryption scheme '{scheme}' is not supported");
+        }
+
+        //
         // Private
         //
 
-        private readonly Dictionary<string, AesKey> _aes = new Dictionary<string, AesKey>();
-        private readonly Dictionary<string, RsaKey> _rsa = new Dictionary<string, RsaKey>();
+        private readonly Dictionary<string, AesKey> _aes = new();
+        private readonly Dictionary<string, RsaKey> _rsa = new();
     }
 }
