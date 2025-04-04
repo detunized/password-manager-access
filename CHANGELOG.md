@@ -1,5 +1,8 @@
 # Changelog
 
+## 21.1.0
+  - 1Password: added support for single item retrieval (see `Client.GetItem`)
+
 ## 21.0.4
   - Dashlane: bumped the client version to get rid of the "unsupported" error
 
