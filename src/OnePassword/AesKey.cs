@@ -9,6 +9,7 @@ namespace PasswordManagerAccess.OnePassword
     {
         public const string ContainerType = "b5+jwk+json";
         public const string EncryptionScheme = "A256GCM";
+        public const int IvSize = 12;
 
         public readonly string Id;
         public readonly byte[] Key;
@@ -26,21 +27,25 @@ namespace PasswordManagerAccess.OnePassword
 
         public Encrypted Encrypt(byte[] plaintext)
         {
-            return Encrypt(plaintext, Crypto.RandomBytes(12));
+            return Encrypt(plaintext, Crypto.RandomBytes(IvSize));
         }
 
-        public Encrypted Encrypt(byte[] plaintext, byte[] iv)
+        public Encrypted Encrypt(byte[] plaintext, byte[] iv) => Encrypt(plaintext, iv, []);
+
+        public Encrypted Encrypt(byte[] plaintext, byte[] iv, byte[] adata)
         {
             return new Encrypted(
                 keyId: Id,
                 scheme: EncryptionScheme,
                 container: ContainerType,
                 iv: iv,
-                ciphertext: AesGcm.Encrypt(Key, plaintext, iv, new byte[0])
+                ciphertext: AesGcm.Encrypt(Key, plaintext, iv, adata)
             );
         }
 
-        public byte[] Decrypt(Encrypted e)
+        public byte[] Decrypt(Encrypted e) => Decrypt(e, []);
+
+        public byte[] Decrypt(Encrypted e, byte[] adata)
         {
             if (e.KeyId != Id)
                 throw new InternalErrorException("Mismatching key id");
@@ -48,7 +53,7 @@ namespace PasswordManagerAccess.OnePassword
             if (e.Scheme != EncryptionScheme)
                 throw new InternalErrorException($"Invalid encryption scheme '{e.Scheme}', expected '{EncryptionScheme}'");
 
-            return AesGcm.Decrypt(Key, e.Ciphertext, e.Iv, new byte[0]);
+            return AesGcm.Decrypt(Key, e.Ciphertext, e.Iv, adata);
         }
     }
 }

@@ -315,7 +315,12 @@ namespace PasswordManagerAccess.Common
 
         private static HttpClient MakeDefaultHttpClient()
         {
-            var handler = new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false };
+            var handler = new HttpClientHandler
+            {
+                UseCookies = false,
+                AllowAutoRedirect = false,
+                AutomaticDecompression = DecompressionMethods.All,
+            };
 
             // On iOS .NET 8 which the native HTTP handler behaves differently than on desktop .NET.
             // We need to enable cookies explicitly, otherwise the Set-Cookie headers are discarded
@@ -422,7 +427,7 @@ namespace PasswordManagerAccess.Common
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
         public readonly IRequestSigner Signer;
-        public readonly ReadOnlyHttpCookies DefaultHeaders;
+        public readonly ReadOnlyHttpHeaders DefaultHeaders;
         public readonly ReadOnlyHttpCookies DefaultCookies;
         public readonly ISimpleLogger Logger;
         public readonly bool UseSystemJson;
@@ -572,6 +577,28 @@ namespace PasswordManagerAccess.Common
                 endpoint,
                 HttpMethod.Put,
                 null,
+                headers ?? NoHeaders,
+                cookies ?? NoCookies,
+                MaxRedirects,
+                DeserializeFromJson<T>
+            );
+        }
+
+        //
+        // PUT JSON
+        //
+
+        public RestResponse<string> PutJson(string endpoint, PostParameters parameters, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            return MakeRequest<string>(endpoint, HttpMethod.Put, ToJsonContent(parameters), headers ?? NoHeaders, cookies ?? NoCookies, MaxRedirects);
+        }
+
+        public RestResponse<string, T> PutJson<T>(string endpoint, PostParameters parameters, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            return MakeRequest<string, T>(
+                endpoint,
+                HttpMethod.Put,
+                ToJsonContent(parameters),
                 headers ?? NoHeaders,
                 cookies ?? NoCookies,
                 MaxRedirects,

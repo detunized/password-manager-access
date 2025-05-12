@@ -1,7 +1,10 @@
 # Changelog
 
+## 21.1.0 (out of order release, based on 21.0.4)
+  - 1Password: added support for single item retrieval (see `Client.GetItem`)
+
 ## 22.0.3
-- LastPass: fixed a bug with some MFA methods not working correctly
+  - LastPass: fixed a bug with some MFA methods not working correctly
 
 ## 22.0.2
   - LastPass: the module refactored to be completely async (major incompatible API change)

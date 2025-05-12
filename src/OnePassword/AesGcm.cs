@@ -11,23 +11,23 @@ namespace PasswordManagerAccess.OnePassword
     // TODO: Call to the native functions on the platforms where they are available
     class AesGcm
     {
-        public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] authData)
+        public static byte[] Encrypt(byte[] key, byte[] plaintext, byte[] iv, byte[] adata)
         {
             var length = plaintext.Length;
             var ciphertext = new byte[length + 16];
             var hashKey = new byte[16];
             var hashSalt = new byte[16];
 
-            Crypt(key, plaintext, length, iv, authData, ciphertext, hashKey, hashSalt);
+            Crypt(key, plaintext, length, iv, ciphertext, hashKey, hashSalt);
 
             // Put the tag at the end of the ciphertext
-            var tag = ComputeTag(hashKey, hashSalt, authData, ciphertext, length);
+            var tag = ComputeTag(hashKey, hashSalt, adata, ciphertext, length);
             tag.CopyTo(ciphertext, length);
 
             return ciphertext;
         }
 
-        public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] authData)
+        public static byte[] Decrypt(byte[] key, byte[] ciphertext, byte[] iv, byte[] adata)
         {
             if (ciphertext.Length < 16)
                 throw new InternalErrorException("The ciphertext must be at least 16 bytes long");
@@ -37,14 +37,14 @@ namespace PasswordManagerAccess.OnePassword
             var hashKey = new byte[16];
             var hashSalt = new byte[16];
 
-            Crypt(key, ciphertext, length, iv, authData, plaintext, hashKey, hashSalt);
-            var tag = ComputeTag(hashKey, hashSalt, authData, ciphertext, length);
+            Crypt(key, ciphertext, length, iv, plaintext, hashKey, hashSalt);
+            var tag = ComputeTag(hashKey, hashSalt, adata, ciphertext, length);
 
             // Timing attack resistant (not that anyone cares in this case) array comparison.
             // XOR two arrays and bitwise sum up all the bytes. Should evaluate to 0 when
             // and only when the arrays are the same.
-            int sum = 0;
-            for (int i = 0; i < 16; ++i)
+            var sum = 0;
+            for (var i = 0; i < 16; ++i)
                 sum |= tag[i] ^ ciphertext[length + i];
 
             if (sum != 0)
@@ -62,7 +62,6 @@ namespace PasswordManagerAccess.OnePassword
             byte[] input,
             int length,
             byte[] iv,
-            byte[] authData,
             // output
             byte[] output,
             byte[] hashKey,
@@ -83,7 +82,7 @@ namespace PasswordManagerAccess.OnePassword
             encryptor.TransformBlock(counter, 0, 16, hashSalt, 0);
 
             var block = new byte[16];
-            for (int i = 0; i < length; i += 16)
+            for (var i = 0; i < length; i += 16)
             {
                 IncrementCounter(counter);
                 encryptor.TransformBlock(counter, 0, 16, block, 0);
@@ -106,11 +105,11 @@ namespace PasswordManagerAccess.OnePassword
             return aes;
         }
 
-        internal static byte[] ComputeTag(byte[] hashKey, byte[] hashSalt, byte[] authData, byte[] ciphertext, int ciphertextLength)
+        internal static byte[] ComputeTag(byte[] hashKey, byte[] hashSalt, byte[] adata, byte[] ciphertext, int ciphertextLength)
         {
-            var tag = GHash(hashKey, authData, authData.Length, ciphertext, ciphertextLength);
+            var tag = GHash(hashKey, adata, adata.Length, ciphertext, ciphertextLength);
 
-            for (int i = 0; i < 16; ++i)
+            for (var i = 0; i < 16; ++i)
                 tag[i] ^= hashSalt[i];
 
             return tag;
@@ -136,7 +135,7 @@ namespace PasswordManagerAccess.OnePassword
             ++counter[12];
         }
 
-        internal static byte[] GHash(byte[] key, byte[] authData, int authDataLength, byte[] ciphertext, int ciphertextLength)
+        internal static byte[] GHash(byte[] key, byte[] adata, int adataLength, byte[] ciphertext, int ciphertextLength)
         {
             if (key.Length != 16)
                 throw new InternalErrorException("The key must be 16 bytes long");
@@ -144,13 +143,13 @@ namespace PasswordManagerAccess.OnePassword
             var key128 = new UInt128(key);
             var x = new UInt128();
 
-            for (int i = 0; i < authDataLength; i += 16)
-                x = XorMultiply(key128, x, new UInt128(authData, i, authDataLength));
+            for (var i = 0; i < adataLength; i += 16)
+                x = XorMultiply(key128, x, new UInt128(adata, i, adataLength));
 
-            for (int i = 0; i < ciphertextLength; i += 16)
+            for (var i = 0; i < ciphertextLength; i += 16)
                 x = XorMultiply(key128, x, new UInt128(ciphertext, i, ciphertextLength));
 
-            var l = new UInt128(low: (ulong)ciphertextLength * 8, high: (ulong)authDataLength * 8);
+            var l = new UInt128(low: (ulong)ciphertextLength * 8, high: (ulong)adataLength * 8);
 
             return XorMultiply(key128, x, l).ToBytes();
         }
@@ -172,7 +171,7 @@ namespace PasswordManagerAccess.OnePassword
 
                 y.ShiftLeftBy1();
 
-                bool odd = x.IsOdd();
+                var odd = x.IsOdd();
                 x.ShiftRightBy1();
                 if (odd)
                     x.High ^= (0xE1UL << 56);

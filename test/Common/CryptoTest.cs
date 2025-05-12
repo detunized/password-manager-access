@@ -196,6 +196,62 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
+        // HMAC-SHA-384
+        //
+
+        [Fact]
+        public void HmacSha384_string_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha384, Crypto.HmacSha384("key".ToBytes(), Message));
+        }
+
+        [Fact]
+        public void HmacSha384_bytes_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha384, Crypto.HmacSha384("key".ToBytes(), MessageBytes));
+        }
+
+        [Fact]
+        public void HmacSha384_byte_range_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha384, Crypto.HmacSha384("key".ToBytes(), MessageBlahBytes, MessageStart, MessageLength));
+        }
+
+        [Fact]
+        public void HmacSha384_span_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha384, Crypto.HmacSha384("key".ToBytes(), MessageBytes.AsRoSpan()));
+        }
+
+        //
+        // HMAC-SHA-512
+        //
+
+        [Fact]
+        public void HmacSha512_string_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha512, Crypto.HmacSha512("key".ToBytes(), Message));
+        }
+
+        [Fact]
+        public void HmacSha512_bytes_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha512, Crypto.HmacSha512("key".ToBytes(), MessageBytes));
+        }
+
+        [Fact]
+        public void HmacSha512_byte_range_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha512, Crypto.HmacSha512("key".ToBytes(), MessageBlahBytes, MessageStart, MessageLength));
+        }
+
+        [Fact]
+        public void HmacSha512_span_returns_mac()
+        {
+            Assert.Equal(MessageHmacSha512, Crypto.HmacSha512("key".ToBytes(), MessageBytes.AsRoSpan()));
+        }
+
+        //
         // PBKDF2
         //
         // We're not implementing the algorithm in Crypto and it doesn't make sense to have
@@ -555,6 +611,13 @@ namespace PasswordManagerAccess.Test.Common
 
         // $ echo -n message | openssl dgst -sha256 -hmac "key" -binary | openssl base64 -A
         private static readonly byte[] MessageHmacSha256 = "bp7ym3X//Ft6uuUn1Y/a2y/kLnIZARl2kXNDBl9Y7Uo=".Decode64();
+
+        // $ echo -n message | openssl dgst -sha384 -hmac "key" -binary | openssl base64 -A
+        private static readonly byte[] MessageHmacSha384 = "D9OuMje+mMZKB1tzlJifxnifMXiPraQurahe5mmL3i/q4gtmJxtnVEuQYsdzsthv".Decode64();
+
+        // $ echo -n message | openssl dgst -sha512 -hmac "key" -binary | openssl base64 -A
+        private static readonly byte[] MessageHmacSha512 =
+            "5Hc4TXyiKd0UJuZLY+vy0269bX5mmmc1Qk5y6mwB0/i1brOcNtgjL1QnmZuNGj+c0RKPxp9NdbQ0IWgQ+jZ+mA==".Decode64();
 
         private static readonly byte[] MessageBlahBytes = $"blah-{Message}-blah".ToBytes();
         private const int MessageStart = 5;

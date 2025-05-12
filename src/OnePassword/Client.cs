@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
@@ -14,7 +15,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    public static class Client
+    public static partial class Client
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
@@ -23,6 +24,15 @@ namespace PasswordManagerAccess.OnePassword
         //       it's possible this needs to be updated every now and then. Keep an eye on this.
         public const string ClientVersion = "2190004";
         public const string ClientId = ClientName + "/" + ClientVersion;
+
+        //
+        // SSO stubs
+        //
+
+        public static bool IsSsoAccount(string username) => false;
+
+        public static Session SsoLogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage) =>
+            throw new NotImplementedException("SSO login is not implemented in this version of the library");
 
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
@@ -36,6 +46,7 @@ namespace PasswordManagerAccess.OnePassword
             }
             catch (Exception)
             {
+                // We only need to dispose in case of an error, otherwise it's returned with the session.
                 transport.Dispose();
                 throw;
             }
@@ -76,6 +87,33 @@ namespace PasswordManagerAccess.OnePassword
             return new Vault(info, accounts, sshKeys);
         }
 
+        public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, string vaultId, Session session)
+        {
+            var oneOf3 = GetVaultItem(itemId, vaultId, session.Keychain, session.Key, session.Rest);
+
+            // The item is not available
+            if (oneOf3.TryPickT2(out var failure, out var oneOf2))
+                return failure;
+
+            var item = oneOf2.Match<VaultItem>(a => a, k => k);
+
+            if (CanDecrypt(item))
+                return oneOf3;
+
+            // Attempt to fetch everything necessary to decrypt the item
+            var accountInfo = GetAccountInfo(session.Key, session.Rest);
+            var keysets = GetKeysets(session.Key, session.Rest);
+            DecryptKeysets(keysets.Keysets, session.Credentials, session.Keychain);
+            GetAccessibleVaults(accountInfo, session.Keychain).FirstOrDefault(x => x.Id == vaultId)?.DecryptKeyIntoKeychain();
+
+            if (CanDecrypt(item))
+                return oneOf3;
+
+            throw new InternalErrorException("Failed to fetch the keys to decrypt the item");
+
+            bool CanDecrypt(VaultItem i) => session.Keychain.CanDecrypt(i.EncryptedOverview) && session.Keychain.CanDecrypt(i.EncryptedDetails);
+        }
+
         // Use this function to generate a unique random identifier for each new client.
         public static string GenerateRandomUuid()
         {
@@ -90,7 +128,6 @@ namespace PasswordManagerAccess.OnePassword
         {
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
             var (sessionKey, sessionRest) = LogIn(credentials, app, ui, storage, rest);
-
             return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
         }
 
@@ -184,7 +221,7 @@ namespace PasswordManagerAccess.OnePassword
             var sessionRest = MakeRestClient(rest, sessionId: sessionId);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(credentials, srpInfo, sessionId, sessionRest);
+            var sessionKey = SrpV1.Perform(credentials, srpInfo, sessionId, sessionRest);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
@@ -205,15 +242,40 @@ namespace PasswordManagerAccess.OnePassword
             return $"https://{domain}/api";
         }
 
-        internal static RestClient MakeRestClient(IRestTransport transport, string baseUrl, IRequestSigner signer = null, string sessionId = null)
+        // TODO: Rename to MakeRestClient after the migration is complete
+        internal static RestClient MakeSystemJsonRestClient(
+            IRestTransport transport,
+            string baseUrl,
+            IRequestSigner signer = null,
+            string sessionId = null
+        ) => MakeRestClientInternal(transport, baseUrl, signer, sessionId, useSystemJson: true);
+
+        // TODO: Remove this after the migration to System.Text.Json is complete
+        internal static RestClient MakeRestClient(IRestTransport transport, string baseUrl, IRequestSigner signer = null, string sessionId = null) =>
+            MakeRestClientInternal(transport, baseUrl, signer, sessionId, useSystemJson: false);
+
+        // TODO: Remove this after the migration to System.Text.Json is complete
+        internal static RestClient MakeRestClientInternal(
+            IRestTransport transport,
+            string baseUrl,
+            IRequestSigner signer = null,
+            string sessionId = null,
+            bool useSystemJson = false
+        )
         {
             var headers = new Dictionary<string, string>(2) { ["X-AgileBits-Client"] = ClientId };
             if (!sessionId.IsNullOrEmpty())
                 headers["X-AgileBits-Session-ID"] = sessionId;
 
-            return new RestClient(transport, baseUrl, signer, headers);
+            return new RestClient(transport, baseUrl, signer, headers, useSystemJson: useSystemJson);
         }
 
+        internal static RestClient MakeSystemJsonRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
+        {
+            return MakeSystemJsonRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
+        }
+
+        // TODO: Remove this after the migration to System.Text.Json is complete
         internal static RestClient MakeRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
         {
             return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
@@ -671,22 +733,53 @@ namespace PasswordManagerAccess.OnePassword
 
             foreach (var item in EnumerateAccountsItemsInVault(id, sessionKey, rest))
             {
-                if (item.Deleted == "Y")
-                    continue;
-
-                switch (item.TemplateId)
+                switch (ConvertVaultItem(keychain, item).Value)
                 {
-                    case Account.LoginTemplateId:
-                    case Account.ServerTemplateId:
-                        accounts.Add(new Account(item, keychain));
+                    case Account account:
+                        accounts.Add(account);
                         break;
-                    case SshKey.SshKeyTemplateId:
-                        sshKeys.Add(new SshKey(item, keychain));
+                    case SshKey sshKey:
+                        sshKeys.Add(sshKey);
+                        break;
+                    case bool:
+                        // Deleted item or unsupported, silently ignore
                         break;
                 }
             }
 
             return (accounts.ToArray(), sshKeys.ToArray());
+        }
+
+        internal static OneOf<Account, SshKey, NoItem> ConvertVaultItem(Keychain keychain, R.VaultItem item)
+        {
+            if (item.Deleted == "Y")
+                return NoItem.Deleted;
+
+            return item.TemplateId switch
+            {
+                Account.LoginTemplateId or Account.ServerTemplateId => new Account(item, keychain),
+                SshKey.SshKeyTemplateId => new SshKey(item, keychain),
+                _ => NoItem.UnsupportedType,
+            };
+        }
+
+        internal static OneOf<Account, SshKey, NoItem> GetVaultItem(
+            string itemId,
+            string vaultId,
+            Keychain keychain,
+            AesKey sessionKey,
+            RestClient rest
+        )
+        {
+            var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/item/{itemId}");
+            if (response.IsSuccessful)
+                return ConvertVaultItem(keychain, DecryptResponse<R.SingleVaultItem>(response.Data, sessionKey).Item);
+
+            // Special case: the item not found
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && response.Content.Trim() == "{}")
+                return NoItem.NotFound;
+
+            throw MakeError(response);
         }
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
@@ -845,14 +938,20 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static T PostEncryptedJson<T>(string endpoint, Dictionary<string, object> parameters, AesKey sessionKey, RestClient rest)
         {
+            var encrypted = PostEncryptedJsonNoDecrypt<R.Encrypted>(endpoint, parameters, sessionKey, rest);
+            return DecryptResponse<T>(encrypted, sessionKey);
+        }
+
+        internal static T PostEncryptedJsonNoDecrypt<T>(string endpoint, Dictionary<string, object> parameters, AesKey sessionKey, RestClient rest)
+        {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
 
-            var response = rest.PostJson<R.Encrypted>(endpoint, encryptedPayload.ToDictionary());
+            var response = rest.PostJson<T>(endpoint, encryptedPayload.ToDictionary());
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            return DecryptResponse<T>(response.Data, sessionKey);
+            return response.Data;
         }
 
         internal static T DecryptResponse<T>(R.Encrypted encrypted, IDecryptor decryptor)

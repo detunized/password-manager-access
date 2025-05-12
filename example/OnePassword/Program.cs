@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
@@ -38,18 +39,15 @@ namespace Example
             // See config.yaml.example for an example.
             var config = Util.ReadConfig();
 
-            string serviceAccountToken;
-            config.TryGetValue("service-account-token", out serviceAccountToken);
-
             try
             {
                 DumpAllVaults(
                     config["username"],
-                    config["password"],
-                    config["account-key"],
-                    config["domain"],
+                    config.GetValueOrDefault("password", ""),
+                    config.GetValueOrDefault("account-key", ""),
+                    config.GetValueOrDefault("domain", ""),
                     config["device-id"],
-                    serviceAccountToken ?? ""
+                    config.GetValueOrDefault("service-account-token", "")
                 );
             }
             catch (BaseException e)
@@ -62,8 +60,14 @@ namespace Example
         {
             var device = new AppInfo { Name = "PMA 1Password example", Version = "1.0.0" };
 
-            var session = string.IsNullOrEmpty(serviceAccountToken)
-                ? Client.LogIn(
+            Session session;
+            if (Client.IsSsoAccount(username))
+            {
+                session = Client.SsoLogIn(new Credentials { Username = username, DeviceUuid = uuid }, device, new TextUi(), new PlainStorage());
+            }
+            else if (string.IsNullOrEmpty(serviceAccountToken))
+            {
+                session = Client.LogIn(
                     new Credentials
                     {
                         Username = username,
@@ -75,15 +79,29 @@ namespace Example
                     device,
                     new TextUi(),
                     new PlainStorage()
-                )
-                : Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
+                );
+            }
+            else
+            {
+                session = Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
+            }
+
+            // Enable this to get a single item from a vault
+            var getSingleItem = false;
 
             try
             {
-                var vaults = Client.ListAllVaults(session);
+                if (getSingleItem)
+                {
+                    GetSingleItem(session);
+                }
+                else
+                {
+                    var vaults = Client.ListAllVaults(session);
 
-                for (var i = 0; i < vaults.Length; i++)
-                    DumpVault(i, vaults[i], session);
+                    for (var i = 0; i < vaults.Length; i++)
+                        DumpVault(i, vaults[i], session);
+                }
             }
             finally
             {
@@ -93,65 +111,73 @@ namespace Example
 
         private static void DumpVault(int index, VaultInfo vaultInfo, Session session)
         {
-            Console.WriteLine("{0}: '{1}', '{2}':", index + 1, vaultInfo.Id, vaultInfo.Name);
+            Console.WriteLine($"Vault {index + 1} '{vaultInfo.Id}', '{vaultInfo.Name}':");
 
             var vault = Client.OpenVault(vaultInfo, session);
 
             // Dump accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
-            {
-                var account = vault.Accounts[i];
-                Console.WriteLine(
-                    "  {0}:\n"
-                        + "          id: {1}\n"
-                        + "        name: {2}\n"
-                        + "    username: {3}\n"
-                        + "    password: {4}\n"
-                        + "         url: {5}\n"
-                        + "        note: {6}\n",
-                    i + 1,
-                    account.Id,
-                    account.Name,
-                    account.Username,
-                    account.Password,
-                    account.MainUrl,
-                    account.Note
-                );
-
-                foreach (var url in account.Urls)
-                    Console.WriteLine($"         url: {url.Name}: {url.Value}");
-
-                foreach (var otp in account.Otps)
-                    Console.WriteLine($"         otp: {otp.Name}: {otp.Secret} (section: {otp.Section})");
-
-                foreach (var field in account.Fields)
-                    Console.WriteLine($"       field: {field.Name}: {field.Value} (section: {field.Section})");
-            }
+                DumpAccount($"{i + 1}", vault.Accounts[i]);
 
             // Dump SSH keys
             for (var i = 0; i < vault.SshKeys.Length; ++i)
-            {
-                var sshKey = vault.SshKeys[i];
-                Console.WriteLine(
-                    $"""
-                    {i + 1}:
-                                 name: {sshKey.Name}
-                          description: {sshKey.Description}
-                          private key: {Shorten(sshKey.PrivateKey)}
-                           public key: {Shorten(sshKey.PublicKey)}
-                          fingerprint: {sshKey.Fingerprint}
-                             key type: {sshKey.KeyType}
-                                 note: {sshKey.Note}
-                             original: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Original))}
-                              OpenSSH: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.OpenSsh))}
-                               PKCS#8: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Pkcs8))}
-                               PKCS#1: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Pkcs1))}
-                    """
-                );
+                DumpSshKey($"{i + 1}", vault.SshKeys[i]);
+        }
 
-                foreach (var field in sshKey.Fields)
-                    Console.WriteLine($"       field: '{field.Name}' = '{Shorten(field.Value)}' (section: '{field.Section}')");
-            }
+        private static void GetSingleItem(Session session)
+        {
+            // TODO: Use your own vault and item IDs, this is just an example.
+            Client
+                .GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session)
+                .Switch(account => DumpAccount("1", account), sshKey => DumpSshKey("1", sshKey), noItem => Console.WriteLine($"No item: {noItem}"));
+        }
+
+        private static void DumpAccount(string name, Account account)
+        {
+            Console.WriteLine(
+                $"""
+                Account {name}:
+                               id: {account.Id}
+                             name: {account.Name}
+                         username: {account.Username}
+                         password: {account.Password}
+                              url: {account.MainUrl}
+                             note: {account.Note}
+                """
+            );
+
+            foreach (var url in account.Urls)
+                Console.WriteLine($"              url: {url.Name}: {url.Value}");
+
+            foreach (var otp in account.Otps)
+                Console.WriteLine($"              otp: {otp.Name}: {otp.Secret} (section: {otp.Section})");
+
+            foreach (var field in account.Fields)
+                Console.WriteLine($"            field: {field.Name}: {field.Value} (section: {field.Section})");
+        }
+
+        private static void DumpSshKey(string name, SshKey sshKey)
+        {
+            Console.WriteLine(
+                $"""
+                SSH key {name}:
+                               id: {sshKey.Id}
+                             name: {sshKey.Name}
+                      description: {sshKey.Description}
+                      private key: {Shorten(sshKey.PrivateKey)}
+                       public key: {Shorten(sshKey.PublicKey)}
+                      fingerprint: {sshKey.Fingerprint}
+                         key type: {sshKey.KeyType}
+                             note: {sshKey.Note}
+                         original: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Original))}
+                          OpenSSH: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.OpenSsh))}
+                           PKCS#8: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Pkcs8))}
+                           PKCS#1: {Shorten(sshKey.GetPrivateKey(SshKeyFormat.Pkcs1))}
+                """
+            );
+
+            foreach (var field in sshKey.Fields)
+                Console.WriteLine($"            field: '{field.Name}' = '{Shorten(field.Value)}' (section: '{field.Section}')");
 
             static string Shorten(string s, int length = 80)
             {
