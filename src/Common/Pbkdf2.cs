@@ -11,24 +11,16 @@ namespace PasswordManagerAccess.Common
     // algorithm in PBKDF2. Remove this when no longer needed.
     internal static class Pbkdf2
     {
-        public static byte[] GenerateSha1(byte[] password, byte[] salt, int iterationCount, int byteCount)
-        {
-            return Generate<HMACSHA1>(password, salt, iterationCount, byteCount);
-        }
+        public static byte[] GenerateSha1(byte[] password, byte[] salt, int iterationCount, int byteCount) =>
+            Generate(password, salt, iterationCount, byteCount, HashAlgorithmName.SHA1);
 
-        public static byte[] GenerateSha256(byte[] password, byte[] salt, int iterationCount, int byteCount)
-        {
-            return Generate<HMACSHA256>(password, salt, iterationCount, byteCount);
-        }
+        public static byte[] GenerateSha256(byte[] password, byte[] salt, int iterationCount, int byteCount) =>
+            Generate(password, salt, iterationCount, byteCount, HashAlgorithmName.SHA256);
 
-        public static byte[] GenerateSha512(byte[] password, byte[] salt, int iterationCount, int byteCount)
-        {
-            return Generate<HMACSHA512>(password, salt, iterationCount, byteCount);
-        }
+        public static byte[] GenerateSha512(byte[] password, byte[] salt, int iterationCount, int byteCount) =>
+            Generate(password, salt, iterationCount, byteCount, HashAlgorithmName.SHA512);
 
-        // TODO: Call to the native functions on the platforms where they are available
-        public static byte[] Generate<T>(byte[] password, byte[] salt, int iterationCount, int byteCount)
-            where T : HMAC, new()
+        internal static byte[] Generate(byte[] password, byte[] salt, int iterationCount, int byteCount, HashAlgorithmName hashAlgorithmName)
         {
             if (iterationCount <= 0)
                 throw new InternalErrorException("Iteration count should be positive");
@@ -36,47 +28,10 @@ namespace PasswordManagerAccess.Common
             if (byteCount < 0)
                 throw new InternalErrorException("Byte count should be nonnegative");
 
-            using var hmac = new T() { Key = password };
+            if (byteCount == 0)
+                return [];
 
-            // Prepare hash input (salt + block index)
-            var hashInputSize = salt.Length + 4;
-            var hashInput = new byte[hashInputSize];
-            salt.CopyTo(hashInput, 0);
-            hashInput[hashInputSize - 4] = 0;
-            hashInput[hashInputSize - 3] = 0;
-            hashInput[hashInputSize - 2] = 0;
-            hashInput[hashInputSize - 1] = 0;
-
-            var bytes = new byte[byteCount];
-            var hashSize = hmac.HashSize / 8;
-            var blockCount = (byteCount + hashSize - 1) / hashSize;
-
-            // TODO: @performance
-            for (var i = 0; i < blockCount; ++i)
-            {
-                // Increase 32-bit big-endian block index at the end of the hash input buffer
-                if (++hashInput[hashInputSize - 1] == 0)
-                    if (++hashInput[hashInputSize - 2] == 0)
-                        if (++hashInput[hashInputSize - 3] == 0)
-                            ++hashInput[hashInputSize - 4];
-
-                var hashed = hmac.ComputeHash(hashInput);
-                var block = hashed;
-                for (var j = 1; j < iterationCount; ++j)
-                {
-                    hashed = hmac.ComputeHash(hashed);
-                    for (var k = 0; k < hashed.Length; ++k)
-                    {
-                        block[k] ^= hashed[k];
-                    }
-                }
-
-                var offset = i * hashSize;
-                var size = Math.Min(hashSize, byteCount - offset);
-                Array.Copy(block, 0, bytes, offset, size);
-            }
-
-            return bytes;
+            return new Rfc2898DeriveBytes(password, salt, iterationCount, hashAlgorithmName).GetBytes(byteCount);
         }
     }
 }
