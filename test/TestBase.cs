@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
+using Xunit;
 
 namespace PasswordManagerAccess.Test
 {
@@ -15,6 +16,11 @@ namespace PasswordManagerAccess.Test
         public static IEnumerable<object[]> ToMemberData<T>(params T[] e)
         {
             return e.Select(x => new object[] { x });
+        }
+
+        public static IEnumerable<TheoryDataRow<T>> ToTheoryData<T>(params T[] e)
+        {
+            return e.Select(x => new TheoryDataRow<T>(x));
         }
 
         public string GetFixture(string name, string extension = "json")
