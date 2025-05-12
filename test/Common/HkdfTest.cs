@@ -11,6 +11,7 @@ namespace PasswordManagerAccess.Test.Common
 {
     public class HkdfTest
     {
+        // TODO: This method tests the internal function Hkdf.DeriveKey. It should test the public methods instead.
         [Theory]
         [MemberData(nameof(TestCases))]
         public void Generate_returns_expected_values(TestCase tc)
@@ -28,6 +29,14 @@ namespace PasswordManagerAccess.Test.Common
                 // Assert
                 result.Should().Equal(expected.DecodeHex());
             }
+        }
+
+        [Fact]
+        public void Generate_throws_on_negative_byteCount()
+        {
+            var act = () =>
+                Hkdf.DeriveKey(ikm: "ikm".ToBytes(), salt: "salt".ToBytes(), info: "info".ToBytes(), byteCount: -1, hash: HashAlgorithmName.SHA256);
+            act.Should().Throw<InternalErrorException>().WithMessage("Byte count should be nonnegative");
         }
 
         //
@@ -101,6 +110,6 @@ namespace PasswordManagerAccess.Test.Common
             ),
         ];
 
-        public static readonly IEnumerable<object[]> TestCases = TestBase.ToMemberData(TestCasesData);
+        public static readonly IEnumerable<TheoryDataRow<TestCase>> TestCases = TestBase.ToTheoryData(TestCasesData);
     }
 }
