@@ -14,13 +14,7 @@ namespace PasswordManagerAccess.Example.Common
         public static async Task<string> GetAnswer(string prompt, CancellationToken cancellationToken)
         {
             Console.WriteLine(prompt + "\n> ");
-
-#if NET8_0_OR_GREATER
             var input = await Console.In.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-#else
-            var input = await Console.In.ReadLineAsync().ConfigureAwait(false);
-#endif
-
             return input == null ? "" : input.Trim();
         }
 
