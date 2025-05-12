@@ -20,6 +20,10 @@ namespace PasswordManagerAccess.Common
         public static byte[] GenerateSha512(byte[] password, byte[] salt, int iterationCount, int byteCount) =>
             Generate(password, salt, iterationCount, byteCount, HashAlgorithmName.SHA512);
 
+        //
+        // Internal
+        //
+
         internal static byte[] Generate(byte[] password, byte[] salt, int iterationCount, int byteCount, HashAlgorithmName hashAlgorithmName)
         {
             if (iterationCount <= 0)
