@@ -5,26 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
-using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
 using U2fWin10;
 using R = PasswordManagerAccess.OnePassword.Response;
-
-// Async refactoring TODO:
-//
-// [x] Make all networking methods async and take CancellationToken
-// [ ] Check IAsyncEnumerable
-// [ ] Make SecureStorage async
-// [ ] Make UI async
-// [ ] Make SRP async
-// [ ] Switch to async Duo
-// [ ] Convert to record types
-// [ ] Convert to System.Text.Json
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -47,7 +33,7 @@ namespace PasswordManagerAccess.OnePassword
         public static Task<Session> SsoLogIn(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             CancellationToken cancellationToken
         ) => throw new NotImplementedException("SSO login is not implemented in this version of the library");
@@ -58,7 +44,7 @@ namespace PasswordManagerAccess.OnePassword
         public static async Task<Session> LogIn(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             CancellationToken cancellationToken
         )
@@ -156,7 +142,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static async Task<Session> LogIn(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             IRestTransport transport,
             CancellationToken cancellationToken
@@ -244,7 +230,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static async Task<(AesKey, RestClient)> LogIn(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
@@ -263,7 +249,7 @@ namespace PasswordManagerAccess.OnePassword
         private static async Task<(AesKey, RestClient)> LoginAttempt(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
@@ -525,7 +511,7 @@ namespace PasswordManagerAccess.OnePassword
             SecondFactor[] factors,
             Credentials credentials,
             AesKey sessionKey,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
@@ -632,7 +618,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static async Task<SecondFactorResult> GetSecondFactorResult(
             SecondFactor factor,
             Credentials credentials,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -646,7 +632,7 @@ namespace PasswordManagerAccess.OnePassword
             };
         }
 
-        internal static async Task<SecondFactorResult> AuthenticateWithGoogleAuth(IUi ui, CancellationToken cancellationToken)
+        internal static async Task<SecondFactorResult> AuthenticateWithGoogleAuth(IAsyncUi ui, CancellationToken cancellationToken)
         {
             var passcode = await ui.ProvideGoogleAuthPasscode(cancellationToken);
             if (passcode == Passcode.Cancel)
@@ -658,7 +644,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static async Task<SecondFactorResult> AuthenticateWithWebAuthn(
             SecondFactor factor,
             Credentials credentials,
-            IUi ui,
+            IAsyncUi ui,
             CancellationToken cancellationToken
         )
         {
@@ -706,7 +692,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task<SecondFactorResult> AuthenticateWithDuo(
             SecondFactor factor,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -725,8 +711,8 @@ namespace PasswordManagerAccess.OnePassword
             // TODO: Switch to async Duo
             var isV1 = extra.Url.IsNullOrEmpty();
             var result = isV1
-                ? DuoV1.Authenticate(CheckParam(extra.Host, "host"), CheckParam(extra.Signature, "sigRequest"), ui, rest.Transport)
-                : DuoV4.Authenticate(extra.Url, ui, rest.Transport);
+                ? DuoV1.Authenticate(CheckParam(extra.Host, "host"), CheckParam(extra.Signature, "sigRequest"), null, rest.Transport)
+                : DuoV4.Authenticate(extra.Url, null, rest.Transport);
 
             if (result == null)
                 return SecondFactorResult.Cancel();
@@ -839,7 +825,7 @@ namespace PasswordManagerAccess.OnePassword
             var accounts = new List<Account>();
             var sshKeys = new List<SshKey>();
 
-            foreach (var item in await EnumerateAccountsItemsInVault(id, sessionKey, rest, cancellationToken))
+            await foreach (var item in EnumerateAccountsItemsInVault(id, sessionKey, rest, cancellationToken))
             {
                 switch (ConvertVaultItem(keychain, item).Value)
                 {

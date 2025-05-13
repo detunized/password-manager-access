@@ -68,17 +68,24 @@ namespace PasswordManagerAccess.OnePassword
             return dot < 0 ? domain : domain.Substring(dot + 1);
         }
 
-        public class ThrowUi : IUi
+        public class ThrowUi : IAsyncUi
         {
-            public DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw MakeLogicError();
+            public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
+                DuoDevice[] devices,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => throw MakeLogicError();
 
-            public string ProvideDuoPasscode(DuoDevice device) => throw MakeLogicError();
+            public Task DuoDone(CancellationToken cancellationToken) => throw MakeLogicError();
 
-            public void UpdateDuoStatus(DuoStatus status, string text) => throw MakeLogicError();
+            public Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken) =>
+                throw MakeLogicError();
 
-            public Passcode ProvideGoogleAuthPasscode() => throw MakeLogicError();
+            public Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) => throw MakeLogicError();
 
-            public Passcode ProvideWebAuthnRememberMe() => throw MakeLogicError();
+            public Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken) => throw MakeLogicError();
+
+            public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken) => throw MakeLogicError();
         }
 
         public class ThrowStorage : ISecureStorage
