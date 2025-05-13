@@ -2,8 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using PasswordManagerAccess.OnePassword;
-using Shouldly;
-using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword;
 

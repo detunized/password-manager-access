@@ -4,7 +4,6 @@
 using System.Numerics;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
-using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
