@@ -3,7 +3,6 @@
 
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
-using Xunit;
 using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.Test.OnePassword

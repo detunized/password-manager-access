@@ -1,11 +1,9 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
-using Xunit;
 using R = PasswordManagerAccess.OnePassword.Response;
 using Util = PasswordManagerAccess.OnePassword.Util;
 
@@ -112,11 +110,11 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void ThrowUi_throws_on_method_call()
         {
             var ui = new Util.ThrowUi();
-            AssertLogicError(() => ui.ChooseDuoFactor(Array.Empty<DuoDevice>()));
-            AssertLogicError(() => ui.ProvideDuoPasscode(new DuoDevice("", "", Array.Empty<DuoFactor>())));
-            AssertLogicError(() => ui.UpdateDuoStatus(DuoStatus.Info, ""));
-            AssertLogicError(() => ui.ProvideGoogleAuthPasscode());
-            AssertLogicError(() => ui.ProvideWebAuthnRememberMe());
+            AssertLogicError(() => ui.ChooseDuoFactor([], [], CancellationToken.None));
+            AssertLogicError(() => ui.ProvideDuoPasscode(new DuoDevice("", "", []), CancellationToken.None));
+            AssertLogicError(() => ui.UpdateDuoStatus(DuoStatus.Info, "", CancellationToken.None));
+            AssertLogicError(() => ui.ProvideGoogleAuthPasscode(CancellationToken.None));
+            AssertLogicError(() => ui.ProvideWebAuthnRememberMe(CancellationToken.None));
         }
 
         [Fact]
