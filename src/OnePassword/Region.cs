@@ -3,26 +3,25 @@
 
 using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.OnePassword
-{
-    public enum Region
-    {
-        Global,
-        Europe,
-        Canada,
-    }
+namespace PasswordManagerAccess.OnePassword;
 
-    public static class Extensions
+public enum Region
+{
+    Global,
+    Europe,
+    Canada,
+}
+
+public static class Extensions
+{
+    public static string ToDomain(this Region region)
     {
-        public static string ToDomain(this Region region)
+        return region switch
         {
-            return region switch
-            {
-                Region.Global => "my.1password.com",
-                Region.Europe => "my.1password.eu",
-                Region.Canada => "my.1password.ca",
-                _ => throw new InternalErrorException("The region is not valid"),
-            };
-        }
+            Region.Global => "my.1password.com",
+            Region.Europe => "my.1password.eu",
+            Region.Canada => "my.1password.ca",
+            _ => throw new InternalErrorException("The region is not valid"),
+        };
     }
 }
