@@ -251,13 +251,27 @@ internal partial class RestClient
     // POST raw
     //
 
+    public Task<RestResponse<string>> PostRawAsync(string endpoint, string content, CancellationToken cancellationToken) =>
+        PostRawAsync(endpoint, content, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> PostRawAsync(string endpoint, string content, HttpHeaders headers, CancellationToken cancellationToken) =>
+        PostRawAsync(endpoint, content, headers, NoCookies, MaxRedirects, cancellationToken);
+
     public Task<RestResponse<string>> PostRawAsync(
         string endpoint,
         string content,
-        HttpHeaders headers = null,
-        HttpCookies cookies = null,
-        int maxRedirects = MaxRedirects,
-        CancellationToken cancellationToken = default
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => PostRawAsync(endpoint, content, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> PostRawAsync(
+        string endpoint,
+        string content,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
     ) =>
         MakeRequestAsync<string>(
             endpoint,
@@ -273,25 +287,30 @@ internal partial class RestClient
     // PUT
     //
 
-    public Task<RestResponse<string>> PutAsync(
-        string endpoint,
-        HttpHeaders headers = null,
-        HttpCookies cookies = null,
-        int maxRedirects = MaxRedirects,
-        CancellationToken cancellationToken = default
-    ) => MakeRequestAsync<string>(endpoint, HttpMethod.Put, null, headers ?? NoHeaders, cookies ?? NoCookies, maxRedirects, cancellationToken);
+    public Task<RestResponse<string, T>> PutAsync<T>(string endpoint, CancellationToken cancellationToken) =>
+        PutAsync<T>(endpoint, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PutAsync<T>(string endpoint, HttpHeaders headers, CancellationToken cancellationToken) =>
+        PutAsync<T>(endpoint, headers, NoCookies, MaxRedirects, cancellationToken);
 
     public Task<RestResponse<string, T>> PutAsync<T>(
         string endpoint,
-        HttpHeaders headers = null,
-        HttpCookies cookies = null,
-        int maxRedirects = MaxRedirects,
-        CancellationToken cancellationToken = default
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => PutAsync<T>(endpoint, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PutAsync<T>(
+        string endpoint,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
     ) =>
         MakeRequestAsync<string, T>(
             endpoint,
             HttpMethod.Put,
-            null,
+            null, // This is a "no-content" PUT
             headers ?? NoHeaders,
             cookies ?? NoCookies,
             maxRedirects,
