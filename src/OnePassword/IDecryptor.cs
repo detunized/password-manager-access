@@ -1,10 +1,9 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-namespace PasswordManagerAccess.OnePassword
+namespace PasswordManagerAccess.OnePassword;
+
+internal interface IDecryptor
 {
-    internal interface IDecryptor
-    {
-        byte[] Decrypt(Encrypted e);
-    }
+    byte[] Decrypt(Encrypted e);
 }

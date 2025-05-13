@@ -3,7 +3,6 @@
 
 #nullable enable
 
-namespace PasswordManagerAccess.OnePassword
-{
-    public record Vault(VaultInfo Info, Account[] Accounts, SshKey[] SshKeys);
-}
+namespace PasswordManagerAccess.OnePassword;
+
+public record Vault(VaultInfo Info, Account[] Accounts, SshKey[] SshKeys);
