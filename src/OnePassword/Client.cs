@@ -695,6 +695,9 @@ public static partial class Client
         CancellationToken cancellationToken
     )
     {
+        // TODO: Remove this when the Duo code is async
+        await Task.Yield();
+
         if (!(factor.Parameters is R.DuoMfa extra))
             throw new InternalErrorException("Duo extra parameters expected");
 
