@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
@@ -12,22 +14,24 @@ namespace Example
 {
     public static class Program
     {
-        private class TextUi : DuoUi, IUi
+        private class TextUi : DuoAsyncUi, IAsyncUi
         {
-            public Passcode ProvideGoogleAuthPasscode()
+            public async Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
             {
-                var passcode = GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}");
-                return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+                var passcode = await GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}", cancellationToken).ConfigureAwait(false);
+                return string.IsNullOrWhiteSpace(passcode)
+                    ? Passcode.Cancel
+                    : new Passcode(passcode, await GetRememberMe(cancellationToken).ConfigureAwait(false));
             }
 
-            public Passcode ProvideWebAuthnRememberMe()
+            public async Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken)
             {
-                var yesNo = GetAnswer($"Remember this device? {PressEnterToCancel}").ToLower();
+                var yesNo = (await GetAnswer($"Remember this device? {PressEnterToCancel}", cancellationToken).ConfigureAwait(false)).ToLower();
                 return string.IsNullOrWhiteSpace(yesNo) ? Passcode.Cancel : new Passcode("", yesNo == "y" || yesNo == "yes");
             }
         }
 
-        public static void Main()
+        public static async Task Main()
         {
             // Read 1Password credentials from a file
             // The file should contain 5 values:
@@ -41,14 +45,15 @@ namespace Example
 
             try
             {
-                DumpAllVaults(
-                    config["username"],
-                    config.GetValueOrDefault("password", ""),
-                    config.GetValueOrDefault("account-key", ""),
-                    config.GetValueOrDefault("domain", ""),
-                    config["device-id"],
-                    config.GetValueOrDefault("service-account-token", "")
-                );
+                await DumpAllVaults(
+                        config["username"],
+                        config.GetValueOrDefault("password", ""),
+                        config.GetValueOrDefault("account-key", ""),
+                        config.GetValueOrDefault("domain", ""),
+                        config["device-id"],
+                        config.GetValueOrDefault("service-account-token", "")
+                    )
+                    .ConfigureAwait(false);
             }
             catch (BaseException e)
             {
@@ -56,34 +61,54 @@ namespace Example
             }
         }
 
-        private static void DumpAllVaults(string username, string password, string accountKey, string domain, string uuid, string serviceAccountToken)
+        private static async Task DumpAllVaults(
+            string username,
+            string password,
+            string accountKey,
+            string domain,
+            string uuid,
+            string serviceAccountToken
+        )
         {
             var device = new AppInfo { Name = "PMA 1Password example", Version = "1.0.0" };
 
             Session session;
-            if (Client.IsSsoAccount(username))
+            if (await Client.IsSsoAccount(username, CancellationToken.None).ConfigureAwait(false))
             {
-                session = Client.SsoLogIn(new Credentials { Username = username, DeviceUuid = uuid }, device, new TextUi(), new PlainStorage());
+                session = await Client
+                    .SsoLogIn(
+                        new Credentials { Username = username, DeviceUuid = uuid },
+                        device,
+                        new TextUi(),
+                        new PlainStorage(),
+                        CancellationToken.None
+                    )
+                    .ConfigureAwait(false);
             }
             else if (string.IsNullOrEmpty(serviceAccountToken))
             {
-                session = Client.LogIn(
-                    new Credentials
-                    {
-                        Username = username,
-                        Password = password,
-                        AccountKey = accountKey,
-                        Domain = domain,
-                        DeviceUuid = uuid,
-                    },
-                    device,
-                    new TextUi(),
-                    new PlainStorage()
-                );
+                session = await Client
+                    .LogIn(
+                        new Credentials
+                        {
+                            Username = username,
+                            Password = password,
+                            AccountKey = accountKey,
+                            Domain = domain,
+                            DeviceUuid = uuid,
+                        },
+                        device,
+                        new TextUi(),
+                        new PlainStorage(),
+                        CancellationToken.None
+                    )
+                    .ConfigureAwait(false);
             }
             else
             {
-                session = Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
+                session = await Client
+                    .LogIn(new ServiceAccount { Token = serviceAccountToken }, device, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
 
             // Enable this to get a single item from a vault
@@ -96,27 +121,29 @@ namespace Example
             {
                 if (getSingleItem)
                 {
-                    GetSingleItem(session);
+                    await GetSingleItem(session).ConfigureAwait(false);
                 }
                 else
                 {
-                    var vaults = Client.ListAllVaults(session);
+                    var vaults = await Client.ListAllVaults(session, CancellationToken.None).ConfigureAwait(false);
 
                     for (var i = 0; i < vaults.Length; i++)
-                        DumpVault(i, vaults[i], session);
+                    {
+                        await DumpVault(i, vaults[i], session).ConfigureAwait(false);
+                    }
                 }
             }
             finally
             {
-                Client.LogOut(session);
+                await Client.LogOut(session, CancellationToken.None).ConfigureAwait(false);
             }
         }
 
-        private static void DumpVault(int index, VaultInfo vaultInfo, Session session)
+        private static async Task DumpVault(int index, VaultInfo vaultInfo, Session session)
         {
             Console.WriteLine($"Vault {index + 1} '{vaultInfo.Id}', '{vaultInfo.Name}':");
 
-            var vault = Client.OpenVault(vaultInfo, session);
+            var vault = await Client.OpenVault(vaultInfo, session, CancellationToken.None).ConfigureAwait(false);
 
             // Dump accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
@@ -127,12 +154,13 @@ namespace Example
                 DumpSshKey($"{i + 1}", vault.SshKeys[i]);
         }
 
-        private static void GetSingleItem(Session session)
+        private static async Task GetSingleItem(Session session)
         {
             // TODO: Use your own vault and item IDs, this is just an example.
-            Client
-                .GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session)
-                .Switch(account => DumpAccount("1", account), sshKey => DumpSshKey("1", sshKey), noItem => Console.WriteLine($"No item: {noItem}"));
+            var item = await Client
+                .GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session, CancellationToken.None)
+                .ConfigureAwait(false);
+            item.Switch(account => DumpAccount("1", account), sshKey => DumpSshKey("1", sshKey), noItem => Console.WriteLine($"No item: {noItem}"));
         }
 
         private static void DumpAccount(string name, Account account)
