@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
@@ -880,7 +881,7 @@ public static partial class Client
         string id,
         AesKey sessionKey,
         RestClient rest,
-        CancellationToken cancellationToken
+        [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {
         var batchId = 0;
