@@ -2,8 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using PasswordManagerAccess.Common;
-using PasswordManagerAccess.OnePassword;
-using Xunit;
+using UInt128 = PasswordManagerAccess.OnePassword.UInt128;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
