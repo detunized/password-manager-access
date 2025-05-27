@@ -17,7 +17,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             {
                 Id = "id",
                 Name = "name",
-                Notes = "notes",
+                Note = "notes",
                 DeletedDate = "deleted date",
                 Folder = "folder",
                 CollectionIds = ["collection1", "collection2"],
@@ -38,7 +38,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             // VaultItem properties
             sshKey.Id.Should().Be("id");
             sshKey.Name.Should().Be("name");
-            sshKey.Notes.Should().Be("notes");
+            sshKey.Note.Should().Be("notes");
             sshKey.DeletedDate.Should().Be("deleted date");
             sshKey.Folder.Should().Be("folder");
             sshKey.CollectionIds.Should().Equal("collection1", "collection2");

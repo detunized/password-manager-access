@@ -5,20 +5,25 @@ namespace PasswordManagerAccess.Bitwarden
 {
     public class SshKey : VaultItem
     {
-        public SshKey(VaultItem item)
+        // TODO: Add 'required' modifier to all properties
+        public string PublicKey { get; init; }
+        public string PrivateKey { get; init; }
+        public string Fingerprint { get; init; }
+
+        //
+        // Internal
+        //
+
+        internal SshKey(VaultItem item)
         {
             Id = item.Id;
             Name = item.Name;
-            Notes = item.Notes;
+            Note = item.Note;
             DeletedDate = item.DeletedDate;
             Folder = item.Folder;
             CollectionIds = item.CollectionIds;
             HidePassword = item.HidePassword;
             CustomFields = item.CustomFields;
         }
-
-        public string PublicKey { get; init; }
-        public string PrivateKey { get; init; }
-        public string Fingerprint { get; init; }
     }
 }

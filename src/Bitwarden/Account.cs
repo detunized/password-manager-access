@@ -3,51 +3,28 @@
 
 namespace PasswordManagerAccess.Bitwarden
 {
-    // TODO: Inherit from VaultItem
-    public class Account
+    public class Account : VaultItem
     {
-        public readonly string Id;
-        public readonly string Name;
-        public readonly string Username;
-        public readonly string Password;
-        public readonly string Url;
-        public readonly string Note;
-        public readonly string Totp;
-        public readonly string DeletedDate;
-        public readonly string Folder;
-        public readonly string[] CollectionIds;
-        public readonly bool HidePassword;
-        public readonly CustomField[] CustomFields;
+        // TODO: Add 'required' modifier to all properties
+        public string Username { get; init; }
+        public string Password { get; init; }
+        public string Url { get; init; }
+        public string Totp { get; init; }
 
-        public Account(
-            string id,
-            string name,
-            string username,
-            string password,
-            string url,
-            string note,
-            string totp,
-            string deletedDate,
-            string folder,
-            string[] collectionIds,
-            bool hidePassword,
-            CustomField[] customFields
-        )
+        //
+        // Internal
+        //
+
+        internal Account(VaultItem item)
         {
-            Id = id;
-            Name = name;
-            Username = username;
-            Password = password;
-            Url = url;
-            Note = note;
-            Totp = totp;
-            DeletedDate = deletedDate;
-            Folder = folder;
-            CollectionIds = collectionIds;
-            HidePassword = hidePassword;
-            CustomFields = customFields;
+            Id = item.Id;
+            Name = item.Name;
+            Note = item.Note;
+            DeletedDate = item.DeletedDate;
+            Folder = item.Folder;
+            CollectionIds = item.CollectionIds;
+            HidePassword = item.HidePassword;
+            CustomFields = item.CustomFields;
         }
     }
-
-    public record CustomField(string Name, string Value) { }
 }

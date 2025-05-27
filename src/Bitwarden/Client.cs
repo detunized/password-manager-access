@@ -621,29 +621,14 @@ namespace PasswordManagerAccess.Bitwarden
             Dictionary<string, Collection> collections
         )
         {
-            // The item is encrypted with either the vault key or the org key.
-            var key = item.OrganizationId.IsNullOrEmpty() ? vaultKey : orgKeys[item.OrganizationId];
-
-            // Newer items (from approx. Aug 2024) have a unique item key attached.
-            if (!item.Key.IsNullOrEmpty())
-                key = DecryptToBytes(item.Key, key);
-
-            var folder = item.FolderId != null && folders.ContainsKey(item.FolderId) ? folders[item.FolderId] : "";
-
-            return new Account(
-                id: item.Id,
-                name: DecryptToStringOrBlank(item.Name, key),
-                username: DecryptToStringOrBlank(item.Login.Username, key),
-                password: DecryptToStringOrBlank(item.Login.Password, key),
-                url: DecryptToStringOrBlank(item.Login.Uri, key),
-                note: DecryptToStringOrBlank(item.Notes, key),
-                totp: DecryptToStringOrBlank(item.Login.Totp, key),
-                deletedDate: item.DeletedDate,
-                folder: folder,
-                collectionIds: item.CollectionIds ?? [],
-                hidePassword: ResolveHidePassword(item.CollectionIds, collections),
-                customFields: ParseCustomFields(item, key)
-            );
+            var (vaultItem, key) = ParseVaultItem(item, vaultKey, orgKeys, folders, collections);
+            return new Account(vaultItem)
+            {
+                Username = DecryptToStringOrBlank(item.Login.Username, key),
+                Password = DecryptToStringOrBlank(item.Login.Password, key),
+                Url = DecryptToStringOrBlank(item.Login.Uri, key),
+                Totp = DecryptToStringOrBlank(item.Login.Totp, key),
+            };
         }
 
         internal static SshKey ParseSshKeyItem(
@@ -684,7 +669,7 @@ namespace PasswordManagerAccess.Bitwarden
             {
                 Id = item.Id,
                 Name = DecryptToStringOrBlank(item.Name, key),
-                Notes = DecryptToStringOrBlank(item.Notes, key),
+                Note = DecryptToStringOrBlank(item.Notes, key),
                 DeletedDate = item.DeletedDate,
                 Folder = folder,
                 CollectionIds = item.CollectionIds ?? [],
