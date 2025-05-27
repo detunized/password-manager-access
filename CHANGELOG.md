@@ -1,5 +1,8 @@
 # Changelog
 
+## 22.1.0 (combines both 21.1.0 and 22.0.3)
+  - Bitwarden: added support for SSH keys (see `Vault.SshKeys`)
+
 ## 21.1.0 (out of order release, based on 21.0.4)
   - 1Password: added support for single item retrieval (see `Client.GetItem`)
 
