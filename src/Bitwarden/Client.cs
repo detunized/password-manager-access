@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.Bitwarden
     {
         // This is so-called "browser" mode. It's not really trying to mimic a browser, but rather the CLI
         // in the "browser" mode, where the username and the password and, possibly, 2FA are used to log in.
-        public static (Account[], Collection[], Organization[], ParseError[]) OpenVaultBrowser(
+        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultBrowser(
             string username,
             string password,
             string deviceId,
@@ -51,7 +51,7 @@ namespace PasswordManagerAccess.Bitwarden
         }
 
         // This mode a true non-interactive CLI/API mode. The 2FA is not used in this mode.
-        public static (Account[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
+        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
             string clientId,
             string clientSecret,
             string password,
@@ -513,7 +513,7 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static (Account[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)
+        internal static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)
         {
             var vaultKey = DecryptVaultKey(vault.Profile, key);
             var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
@@ -524,7 +524,7 @@ namespace PasswordManagerAccess.Bitwarden
             var collectionsById = collections.ToDictionary(x => x.Id);
             var (accounts, sshKeys, errors) = ParseAccounts(vault.Ciphers, vaultKey, orgKeys, folders, collectionsById);
 
-            return (accounts, collections, organizations, errors);
+            return (accounts, sshKeys, collections, organizations, errors);
         }
 
         private static Organization[] ParseOrganizations(R.Organization[] organizations)

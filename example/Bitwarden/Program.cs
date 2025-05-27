@@ -148,6 +148,35 @@ namespace PasswordManagerAccess.Example.Bitwarden
                     }
                 }
 
+                if (vault.SshKeys.Length > 0)
+                {
+                    Console.WriteLine("SSH Keys:");
+                    foreach (var key in vault.SshKeys)
+                    {
+                        Console.WriteLine(
+                            "  - id: {0}\n"
+                                + "    name: {1}\n"
+                                + "    public key: {2}\n"
+                                + "    private key: {3}\n"
+                                + "    fingerprint: {4}\n"
+                                + "    folder: {5}\n",
+                            key.Id,
+                            key.Name,
+                            key.PublicKey,
+                            key.PrivateKey,
+                            key.Fingerprint,
+                            key.Folder
+                        );
+
+                        if (key.CustomFields.Length > 0)
+                        {
+                            Console.WriteLine("    Custom fields:");
+                            foreach (var f in key.CustomFields)
+                                Console.WriteLine($"      - {f.Name}: {f.Value}");
+                        }
+                    }
+                }
+
                 if (vault.Collections.Length > 0)
                 {
                     Console.WriteLine("Collections:");
