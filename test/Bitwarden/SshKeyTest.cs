@@ -44,6 +44,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             sshKey.CollectionIds.Should().Equal("collection1", "collection2");
             sshKey.HidePassword.Should().BeTrue();
             sshKey.CustomFields.Should().Equal(new CustomField("name1", "value1"), new CustomField("name2", "value2"));
+
             // SshKey properties
             sshKey.PublicKey.Should().Be("public key");
             sshKey.PrivateKey.Should().Be("private key");
