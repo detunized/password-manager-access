@@ -297,6 +297,11 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly bool Complete;
     }
 
+    internal record SingleVaultItem(
+        [JsonProperty("contentVersion", Required = Required.Always)] int Version,
+        [JsonProperty("item", Required = Required.Always)] VaultItem Item
+    );
+
     internal class VaultItem
     {
         [JsonProperty("uuid", Required = Required.Always)]
