@@ -138,6 +138,7 @@ namespace PasswordManagerAccess.Bitwarden.Response
         SecureNote = 2,
         Card = 3,
         Identity = 4,
+        SshKey = 5,
     }
 
     public struct Item
@@ -172,8 +173,11 @@ namespace PasswordManagerAccess.Bitwarden.Response
         [JsonProperty("fields")]
         public Field[] Fields;
 
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("login", NullValueHandling = NullValueHandling.Ignore)]
         public LoginInfo Login;
+
+        [JsonProperty("sshKey", NullValueHandling = NullValueHandling.Ignore)]
+        public SshKeyInfo SshKey;
     }
 
     public class Field
@@ -204,6 +208,18 @@ namespace PasswordManagerAccess.Bitwarden.Response
 
         [JsonProperty("totp")]
         public string Totp;
+    }
+
+    public struct SshKeyInfo
+    {
+        [JsonProperty("publicKey")]
+        public string PublicKey;
+
+        [JsonProperty("privateKey")]
+        public string PrivateKey;
+
+        [JsonProperty("keyFingerprint")]
+        public string Fingerprint;
     }
 
     //

@@ -3,6 +3,7 @@
 
 namespace PasswordManagerAccess.Bitwarden
 {
+    // TODO: Inherit from VaultItem
     public class Account
     {
         public readonly string Id;
