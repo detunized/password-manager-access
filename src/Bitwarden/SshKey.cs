@@ -3,19 +3,18 @@
 
 namespace PasswordManagerAccess.Bitwarden
 {
-    public class Account : VaultItem
+    public class SshKey : VaultItem
     {
         // TODO: Add 'required' modifier to all properties
-        public string Username { get; init; }
-        public string Password { get; init; }
-        public string Url { get; init; }
-        public string Totp { get; init; }
+        public string PublicKey { get; init; }
+        public string PrivateKey { get; init; }
+        public string Fingerprint { get; init; }
 
         //
         // Internal
         //
 
-        internal Account(VaultItem item)
+        internal SshKey(VaultItem item)
         {
             Id = item.Id;
             Name = item.Name;

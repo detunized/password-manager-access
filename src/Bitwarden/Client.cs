@@ -19,7 +19,7 @@ namespace PasswordManagerAccess.Bitwarden
     {
         // This is so-called "browser" mode. It's not really trying to mimic a browser, but rather the CLI
         // in the "browser" mode, where the username and the password and, possibly, 2FA are used to log in.
-        public static (Account[], Collection[], Organization[], ParseError[]) OpenVaultBrowser(
+        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultBrowser(
             string username,
             string password,
             string deviceId,
@@ -51,7 +51,7 @@ namespace PasswordManagerAccess.Bitwarden
         }
 
         // This mode a true non-interactive CLI/API mode. The 2FA is not used in this mode.
-        public static (Account[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
+        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
             string clientId,
             string clientSecret,
             string password,
@@ -513,7 +513,7 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static (Account[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)
+        internal static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)
         {
             var vaultKey = DecryptVaultKey(vault.Profile, key);
             var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
@@ -522,9 +522,9 @@ namespace PasswordManagerAccess.Bitwarden
             var collections = ParseCollections(vault.Collections, vaultKey, orgKeys);
             var organizations = ParseOrganizations(vault.Profile.Organizations);
             var collectionsById = collections.ToDictionary(x => x.Id);
-            var (accounts, errors) = ParseAccounts(vault.Ciphers, vaultKey, orgKeys, folders, collectionsById);
+            var (accounts, sshKeys, errors) = ParseAccounts(vault.Ciphers, vaultKey, orgKeys, folders, collectionsById);
 
-            return (accounts, collections, organizations, errors);
+            return (accounts, sshKeys, collections, organizations, errors);
         }
 
         private static Organization[] ParseOrganizations(R.Organization[] organizations)
@@ -577,7 +577,7 @@ namespace PasswordManagerAccess.Bitwarden
                 .ToArray();
         }
 
-        internal static (Account[], ParseError[]) ParseAccounts(
+        internal static (Account[], SshKey[], ParseError[]) ParseAccounts(
             R.Item[] items,
             byte[] vaultKey,
             Dictionary<string, byte[]> orgKeys,
@@ -586,28 +586,69 @@ namespace PasswordManagerAccess.Bitwarden
         )
         {
             var accounts = new List<Account>(items.Length);
+            var sshKeys = new List<SshKey>(items.Length);
             List<ParseError> errors = null;
 
             foreach (var item in items)
             {
-                if (item.Type != R.ItemType.Login)
-                    continue;
-
                 try
                 {
-                    accounts.Add(ParseAccountItem(item, vaultKey, orgKeys, folders, collections));
+                    switch (item.Type)
+                    {
+                        case R.ItemType.Login:
+                            accounts.Add(ParseAccountItem(item, vaultKey, orgKeys, folders, collections));
+                            break;
+                        case R.ItemType.SshKey:
+                            sshKeys.Add(ParseSshKeyItem(item, vaultKey, orgKeys, folders, collections));
+                            break;
+                    }
                 }
                 catch (Exception e)
                 {
-                    errors ??= new List<ParseError>();
-                    errors.Add(new ParseError($"Failed to parse account '{item.Id}'", e.Message, e.StackTrace));
+                    errors ??= [];
+                    errors.Add(new ParseError($"Failed to parse a vault item '{item.Id}' of type '{item.Type}'", e.Message, e.StackTrace));
                 }
             }
 
-            return (accounts.ToArray(), errors?.ToArray() ?? Array.Empty<ParseError>());
+            return ([.. accounts], [.. sshKeys], errors?.ToArray() ?? []);
         }
 
         internal static Account ParseAccountItem(
+            R.Item item,
+            byte[] vaultKey,
+            Dictionary<string, byte[]> orgKeys,
+            Dictionary<string, string> folders,
+            Dictionary<string, Collection> collections
+        )
+        {
+            var (vaultItem, key) = ParseVaultItem(item, vaultKey, orgKeys, folders, collections);
+            return new Account(vaultItem)
+            {
+                Username = DecryptToStringOrBlank(item.Login.Username, key),
+                Password = DecryptToStringOrBlank(item.Login.Password, key),
+                Url = DecryptToStringOrBlank(item.Login.Uri, key),
+                Totp = DecryptToStringOrBlank(item.Login.Totp, key),
+            };
+        }
+
+        internal static SshKey ParseSshKeyItem(
+            R.Item item,
+            byte[] vaultKey,
+            Dictionary<string, byte[]> orgKeys,
+            Dictionary<string, string> folders,
+            Dictionary<string, Collection> collections
+        )
+        {
+            var (vaultItem, key) = ParseVaultItem(item, vaultKey, orgKeys, folders, collections);
+            return new SshKey(vaultItem)
+            {
+                PublicKey = DecryptToStringOrBlank(item.SshKey.PublicKey, key),
+                PrivateKey = DecryptToStringOrBlank(item.SshKey.PrivateKey, key),
+                Fingerprint = DecryptToStringOrBlank(item.SshKey.Fingerprint, key),
+            };
+        }
+
+        internal static (VaultItem, byte[] key) ParseVaultItem(
             R.Item item,
             byte[] vaultKey,
             Dictionary<string, byte[]> orgKeys,
@@ -624,20 +665,19 @@ namespace PasswordManagerAccess.Bitwarden
 
             var folder = item.FolderId != null && folders.ContainsKey(item.FolderId) ? folders[item.FolderId] : "";
 
-            return new Account(
-                id: item.Id,
-                name: DecryptToStringOrBlank(item.Name, key),
-                username: DecryptToStringOrBlank(item.Login.Username, key),
-                password: DecryptToStringOrBlank(item.Login.Password, key),
-                url: DecryptToStringOrBlank(item.Login.Uri, key),
-                note: DecryptToStringOrBlank(item.Notes, key),
-                totp: DecryptToStringOrBlank(item.Login.Totp, key),
-                deletedDate: item.DeletedDate,
-                folder: folder,
-                collectionIds: item.CollectionIds ?? [],
-                hidePassword: ResolveHidePassword(item.CollectionIds, collections),
-                customFields: ParseCustomFields(item, key)
-            );
+            var parsedItem = new VaultItem
+            {
+                Id = item.Id,
+                Name = DecryptToStringOrBlank(item.Name, key),
+                Note = DecryptToStringOrBlank(item.Notes, key),
+                DeletedDate = item.DeletedDate,
+                Folder = folder,
+                CollectionIds = item.CollectionIds ?? [],
+                HidePassword = ResolveHidePassword(item.CollectionIds, collections),
+                CustomFields = ParseCustomFields(item, key),
+            };
+
+            return (parsedItem, key);
         }
 
         internal static CustomField[] ParseCustomFields(R.Item item, byte[] key)
@@ -791,7 +831,7 @@ namespace PasswordManagerAccess.Bitwarden
 
         private const string RememberMeTokenKey = "remember-me-token";
 
-        private const string CliVersion = "2024.4.1";
+        private const string CliVersion = "2025.2.0";
         private static readonly string Platform = GetPlatform();
         private static readonly string UserAgent = $"Bitwarden_CLI/{CliVersion} ({Platform.ToUpper()})";
 
