@@ -14,6 +14,18 @@ namespace PasswordManagerAccess.OnePassword.Ui
         // with the system UI and there's no way around it.
         // Return Passcode.Cancel to cancel
         Passcode ProvideWebAuthnRememberMe();
+
+        // TODO: Make this non-optional
+        string PerformSsoLogin(string url, string expectedRedirectUrl)
+        {
+            return "";
+        }
+
+        // TODO: Make this non-optional
+        Passcode ProvideDeviceEnrollmentVerificationCode()
+        {
+            return Passcode.Cancel;
+        }
     }
 
     public class Passcode
