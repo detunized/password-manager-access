@@ -11,9 +11,9 @@ namespace PasswordManagerAccess.Bitwarden
     {
         internal readonly string Token;
         internal readonly byte[] Key;
-        internal readonly (RestClient Api, RestClient Identity) Rest;
+        internal readonly RestClient Rest;
 
-        internal Session(string token, byte[] key, (RestClient Api, RestClient Identity) rest)
+        internal Session(string token, byte[] key, RestClient rest)
         {
             Token = token;
             Key = key;

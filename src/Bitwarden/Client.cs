@@ -87,7 +87,7 @@ namespace PasswordManagerAccess.Bitwarden
             // 4. Authenticate with the server and get the token
             var token = Login(username, hash, deviceId, ui, storage, rest.Api, rest.Identity);
 
-            return new Session(token, key, rest);
+            return new Session(token, key, rest.Api);
         }
 
         public static Session LogInCliApi(
@@ -110,13 +110,13 @@ namespace PasswordManagerAccess.Bitwarden
             // 3. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(encryptedVault.Profile.Email, password, kdfInfo);
 
-            return new Session(token, key, rest);
+            return new Session(token, key, rest.Api);
         }
 
         public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DownloadVault(Session session)
         {
             // 1. Fetch the vault
-            var encryptedVault = DownloadVault(session.Rest.Api, session.Token);
+            var encryptedVault = DownloadVault(session.Rest, session.Token);
 
             // 2. Decrypt and parse the vault
             return DecryptVault(encryptedVault, session.Key);
