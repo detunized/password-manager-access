@@ -22,7 +22,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class ClientTest : TestBase
+    public partial class ClientTest : TestBase
     {
         [Fact]
         public void ParseServiceAccountToken_returns_parsed_token()

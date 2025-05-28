@@ -45,5 +45,17 @@ namespace PasswordManagerAccess.OnePassword
                 { "data", Ciphertext.ToUrlSafeBase64NoPadding() },
             };
         }
+
+        public Response.Encrypted ToModel()
+        {
+            return new()
+            {
+                KeyId = KeyId,
+                Scheme = Scheme,
+                Container = Container,
+                Iv = Iv.ToUrlSafeBase64NoPadding(),
+                Ciphertext = Ciphertext.ToUrlSafeBase64NoPadding(),
+            };
+        }
     }
 }
