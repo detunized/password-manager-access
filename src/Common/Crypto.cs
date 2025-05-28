@@ -166,7 +166,7 @@ namespace PasswordManagerAccess.Common
         }
 
         //
-        // HMAC
+        // HMAC SHA-256
         //
 
         public static byte[] HmacSha256(byte[] key, string message)
@@ -189,6 +189,58 @@ namespace PasswordManagerAccess.Common
         {
             // TODO: On modern frameworks it's possible to use Span based Crypto API
             return HmacSha256(key, message.ToArray());
+        }
+
+        //
+        // HMAC SHA-384
+        //
+
+        public static byte[] HmacSha384(byte[] key, string message)
+        {
+            return HmacSha384(key, message.ToBytes());
+        }
+
+        public static byte[] HmacSha384(byte[] key, byte[] message)
+        {
+            return HmacSha384(key, message, 0, message.Length);
+        }
+
+        public static byte[] HmacSha384(byte[] key, byte[] message, int start, int size)
+        {
+            using var hmac = new HMACSHA384(key);
+            return hmac.ComputeHash(message, start, size);
+        }
+
+        public static byte[] HmacSha384(byte[] key, ReadOnlySpan<byte> message)
+        {
+            // TODO: On modern frameworks it's possible to use Span based Crypto API
+            return HmacSha384(key, message.ToArray());
+        }
+
+        //
+        // HMAC SHA-512
+        //
+
+        public static byte[] HmacSha512(byte[] key, string message)
+        {
+            return HmacSha512(key, message.ToBytes());
+        }
+
+        public static byte[] HmacSha512(byte[] key, byte[] message)
+        {
+            return HmacSha512(key, message, 0, message.Length);
+        }
+
+        public static byte[] HmacSha512(byte[] key, byte[] message, int start, int size)
+        {
+            using var hmac = new HMACSHA512(key);
+            return hmac.ComputeHash(message, start, size);
+        }
+
+        public static byte[] HmacSha512(byte[] key, ReadOnlySpan<byte> message)
+        {
+            // TODO: On modern frameworks it's possible to use Span based Crypto API
+            return HmacSha512(key, message.ToArray());
         }
 
         //
