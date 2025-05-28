@@ -361,8 +361,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetVaultAccounts_returns_accounts()
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
-            var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            var keychain = new Keychain(
+                new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
+            );
 
             var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
@@ -374,8 +375,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ixsi-response"));
-            var keychain = new Keychain();
-            keychain.Add(new AesKey("i32wahdpkpvhog37mtsnqzy4bm", "91bbd5df47ba0de2437a8ed1fbb9064cc9d3ad78ea472516fb5192263ec46e7d".DecodeHex()));
+            var keychain = new Keychain(
+                new AesKey("i32wahdpkpvhog37mtsnqzy4bm", "91bbd5df47ba0de2437a8ed1fbb9064cc9d3ad78ea472516fb5192263ec46e7d".DecodeHex())
+            );
 
             // Act
             var (_, sshKeys) = Client.GetVaultItems("ixsi7ub55tanrwgvbyvn7cjpha", keychain, TestData.SessionKey, flow);
@@ -398,8 +400,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-saiw-response"));
-            var keychain = new Keychain();
-            keychain.Add(new AesKey("3hhlvfccmm4253ou43jfrgty3m", "b357079312198b155764b4e6aa7709df357cf3779973d7451abda5f15d90379c".DecodeHex()));
+            var keychain = new Keychain(
+                new AesKey("3hhlvfccmm4253ou43jfrgty3m", "b357079312198b155764b4e6aa7709df357cf3779973d7451abda5f15d90379c".DecodeHex())
+            );
 
             // Act
             var (_, sshKeys) = Client.GetVaultItems("3hhlvfccmm4253ou43jfrgty3m", keychain, TestData.SessionKey, flow);
@@ -509,8 +512,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetVaultAccounts_with_no_items_work()
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
-            var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            var keychain = new Keychain(
+                new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
+            );
 
             var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
@@ -521,8 +525,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetVaultAccounts_returns_server_secrets()
         {
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-server-secrets-response"));
-            var keychain = new Keychain();
-            keychain.Add(new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e", "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex()));
+            var keychain = new Keychain(
+                new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e", "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex())
+            );
 
             var (accounts, _) = Client.GetVaultItems("6xkojw55yh4uo4vtdewghr5boi", keychain, TestData.SessionKey, flow);
 
@@ -536,8 +541,9 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .Get(EncryptFixture("get-vault-accounts-ru74-response"))
                 .ExpectUrl("1password.com/api/v1/vault")
                 .ToRestClient(ApiUrl);
-            var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            var keychain = new Keychain(
+                new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
+            );
 
             Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
         }
@@ -549,8 +555,9 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-1-response"))
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-2-response"))
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-3-response"));
-            var keychain = new Keychain();
-            keychain.Add(new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex()));
+            var keychain = new Keychain(
+                new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
+            );
 
             var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 

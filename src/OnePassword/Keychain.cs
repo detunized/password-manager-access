@@ -10,6 +10,12 @@ namespace PasswordManagerAccess.OnePassword
 {
     internal class Keychain : IDecryptor
     {
+        public Keychain(params AesKey[] aesKeys)
+        {
+            foreach (var key in aesKeys)
+                _aes[key.Id] = key;
+        }
+
         public void Add(AesKey key)
         {
             _aes[key.Id] = key;

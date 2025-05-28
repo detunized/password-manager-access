@@ -118,7 +118,6 @@ namespace PasswordManagerAccess.OnePassword
         {
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
             var (sessionKey, sessionRest) = LogIn(credentials, app, ui, storage, rest);
-
             return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
         }
 
