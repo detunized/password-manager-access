@@ -427,7 +427,7 @@ namespace PasswordManagerAccess.Common
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
         public readonly IRequestSigner Signer;
-        public readonly ReadOnlyHttpCookies DefaultHeaders;
+        public readonly ReadOnlyHttpHeaders DefaultHeaders;
         public readonly ReadOnlyHttpCookies DefaultCookies;
         public readonly ISimpleLogger Logger;
         public readonly bool UseSystemJson;

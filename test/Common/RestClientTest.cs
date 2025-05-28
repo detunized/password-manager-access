@@ -66,7 +66,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void Get_decodes_json()
         {
-            var response = Serve("{'Key': 'k', 'Value': 'v'}").Get<KeyValuePair<string, string>>(Url);
+            var response = Serve("""{"Key":"k","Value":"v"}""").Get<KeyValuePair<string, string>>(Url);
 
             Assert.True(response.IsSuccessful);
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
@@ -156,6 +156,15 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         [Fact]
+        public void PostJson_decodes_json()
+        {
+            var response = Serve("""{"Key":"k","Value":"v"}""").PostJson<KeyValuePair<string, string>>(Url, NoParameters);
+
+            Assert.True(response.IsSuccessful);
+            Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
+        }
+
+        [Fact]
         public void PostRaw_sends_content_as_is()
         {
             var content = "blah-blah...";
@@ -202,7 +211,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void Put_decodes_json()
         {
-            var response = Serve("{'Key': 'k', 'Value': 'v'}").Put<KeyValuePair<string, string>>(Url);
+            var response = Serve("""{"Key":"k","Value":"v"}""").Put<KeyValuePair<string, string>>(Url);
 
             Assert.True(response.IsSuccessful);
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
