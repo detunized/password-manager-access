@@ -114,9 +114,6 @@ namespace Example
             // Enable this to get a single item from a vault
             var getSingleItem = false;
 
-            // Enable this to get a single item from a vault
-            var getSingleItem = false;
-
             try
             {
                 if (getSingleItem)
