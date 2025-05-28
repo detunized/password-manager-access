@@ -1,0 +1,15 @@
+{
+    "Id": "b2afa1f6-9caf-4575-8d0e-a981014bab9f",
+    "Name": "Test Account",
+    "Email": "test.account@gmail.com",
+    "EmailVerified": true,
+    "Premium": false,
+    "MasterPasswordHint": "Random gibberish, no chance",
+    "Culture": "en-US",
+    "TwoFactorEnabled": false,
+    "Key": "2.XZ2vMa5oFCcp7BUAfPowvA==|1/GDPwJWo+2Iacio0UkRfR0zXXUufGjMIxD+y/A/YfQPKKep69B0nfbueqZJ1nA1pv15qVounBVJLhetVMGW7mKSxdVtTYObe0Uiqm/C9/s=|ZLZcTYFq4o1tBSYkGUbQEIj64/rAE8sAVmfzpOhPTNM=",
+    "PrivateKey": "2.JuxxkukucA+iYd34Wh46CA==|hkffBuibZiKlYNOEo6Xx3YJfvem4nnEKGyN/MlfKjhjybLedjB/VGhozg6zH3i+wdFfnpcs4mAsGWPVfmk44jVRD5VsPt8oCE7rfwc7b3MCzifO/VNtPQoYegzKXSdTYf2jPQBMz6pHlbgmUpeOr55aH4eIacCzNCFrovptlx1z38N1ppRamE1WmVMmHx4xNq5Q+jOdCZoAaib08quEdgZ7PFfH4ichKz9n/nkq0huwZf2EdxWLERiDbCOZEfKWLnvqdfoiFWNczvaMhF5s+vKgwMAIn+rAm21bj5bSaB41Qfja7q/JaRX37RHYMvUC1CNVsu0zHSKzlam6DCmU/g8YQbTqW2vR0lLQ75pUXs86C2aAZM/bBS8t7HPVFebAYvvWoeqCCBfbdY8zyt696hNqC9dl3xDyM1XswVLNGejjD4x/kfA8SxOlQK5lqqcyUgJLmk8+fTmrgESagl8yyJP13jcLcSCPnROlf6Id4KlIy1TlCG3w8o+2hXNLniKujo/CxkXtigvtDUYM9ZZ2TKAmF1GFvC3h57svpBVjDvjDu1pU+yYtMMNRc3eq/BpIIjqbVAoup0U4NLj66BKNsKLT8NOg0MPQmBUTbbDmMupLVHBJ+nqQuBfY+FieK2lKWQpWRMlHhRVhtCysu1by7wkZds8V+Dg0gDFyMdFXHBKMhn5r8SPzIqZwRoJAPviWtXD/+PLguYhKj80W8r1ZcFq8n5NviJMrXdeoyZeY/dl+XTeG7yQzj5Wi1nh3jm7vBnJdVfhi9hKqnHDIkjNCDDWLl+DgCpSbV05FrIE/GCvcxh4JK29IGkHz+ExVuDmPy2O/ql7eTxcNsMKUHVnCZjv0Nl3mtUaX9sXS2iUf2lO109UmHyFNv+n00JqovggfUiXz3Ju731nsopIUZgUnh93MBJJc9lBoMkbYtR996+WFAYrt0HHTcZCQQMk2fketw2yaon7elURXNpWnAA672jqKpBXKWTCiWcuuBahKHCZ7ulVf0A7V39Rs22nVxBcvt1Yv3Ge79/hQ2dMJUiM+LvFhgrDroSWOm3BeT+WohwCiI5wyoql7TYXcJml8SIgHmLd/ueJDnZU08y3UXpk5hIWUmDLZFlIa8GEFWFLhoM/e8TyNV4YF7nWySdOYQlEXJxa5IfxnOM9j9txyYA9DHKCkhtSsqqSVRLuuOGe9nGzcT7M9ihKzbc6oWROo07pNnxSHmOQ9cok/e20z2xFisB5Xd+Ng0TZ+kmXTVA0dGkESC8a523YuU+2bi49oXhBDvbRm1MaCHwjkzC0xKWm2fR30sBT8Vq4Yiwk4iST7PDoy3IVavv04zAWN3pUdqJdiUtw/d9kL6zAhjkvhbEVYisyt6+mTTPkHamgkIEusNevaSuiFox8rUQlSo4/jTCP21J/1j9IQgW36RpL13LwBTdVCvzjLcN+pg/CWaQsDi+wfqvVIgOaQmT2/ga7CRSC2FM88tQlxNdun+XN7q1tMfyhDLFNqieW0reHmiEAHF1RscuWOl4uGZk4JrHk2/A0zMFEusxEAjTJ3Bdor+P17DqbbsO/WPP89P7l9LCdD42tID6pxdOf+bSRgdvEITNMbynd3KW0e5JHp37h8T9dMW8AfE67QqTlTcrQAE8f01AIA=|sigiETV3CWdzuNjb6rS/KUdivnYNZMSPa7kspri9Fok=",
+    "SecurityStamp": "NGTZNWR7VD5YTIYMRL6HHPFALWZK2SVL",
+    "Organizations": [],
+    "Object": "profile"
+}

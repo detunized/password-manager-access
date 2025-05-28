@@ -99,12 +99,11 @@ namespace PasswordManagerAccess.Bitwarden
             // 1. Login and get the client info
             var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest.Identity);
 
-            // TODO: The vault should not be downloaded here!!! Use accounts/profile endpoint instead!!!
-            // 2. We need to fetch the vault to get the email for key derivation
-            var encryptedVault = FetchVault(token, rest.Api);
+            // 2. Fetch the profile to get the email for key derivation
+            var profile = FetchProfile(token, rest.Api);
 
             // 3. Derive the master encryption key or KEK (key encryption key)
-            var key = Util.DeriveKey(encryptedVault.Profile.Email, clientInfo.Password, kdfInfo);
+            var key = Util.DeriveKey(profile.Email, clientInfo.Password, kdfInfo);
 
             return new Session(token, key, rest.Api, transport);
         }
@@ -530,6 +529,15 @@ namespace PasswordManagerAccess.Bitwarden
             var response = rest.PostJson("two-factor/send-email-login", parameters);
             if (response.IsSuccessful)
                 return;
+
+            throw MakeSpecializedError(response);
+        }
+
+        internal static R.Profile FetchProfile(string token, RestClient rest)
+        {
+            var response = rest.Get<R.Profile>("accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+            if (response.IsSuccessful)
+                return response.Data;
 
             throw MakeSpecializedError(response);
         }

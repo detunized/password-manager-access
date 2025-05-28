@@ -319,7 +319,37 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void DownloadVault_returns_parsed_response()
+        public void FetchProfile_returns_parsed_response()
+        {
+            var rest = new RestFlow().Get(GetFixture("profile")).ToRestClient();
+
+            var profile = Client.FetchProfile("token", rest);
+
+            Assert.Equal("test.account@gmail.com", profile.Email);
+        }
+
+        [Fact]
+        public void FetchProfile_makes_GET_request_to_specific_endpoint()
+        {
+            var rest = new RestFlow().Get(GetFixture("profile")).ExpectUrl(ApiUrl + "/accounts/profile").ToRestClient(ApiUrl);
+
+            Client.FetchProfile("token", rest);
+        }
+
+        [Fact]
+        public void FetchProfile_sets_auth_header()
+        {
+            var rest = new RestFlow()
+                .Get(GetFixture("profile"))
+                .ExpectUrl(ApiUrl + "/accounts/profile")
+                .ExpectHeader("Authorization", "token")
+                .ToRestClient(ApiUrl);
+
+            Client.FetchProfile("token", rest);
+        }
+
+        [Fact]
+        public void FetchVault_returns_parsed_response()
         {
             var rest = new RestFlow().Get(GetFixture("vault")).ExpectUrl(ApiUrl + "/sync").ToRestClient(ApiUrl);
 
@@ -331,7 +361,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void DownloadVault_makes_GET_request_to_specific_endpoint()
+        public void FetchVault_makes_GET_request_to_specific_endpoint()
         {
             var rest = new RestFlow().Get(GetFixture("vault")).ExpectUrl(ApiUrl + "/sync").ToRestClient(ApiUrl);
 
@@ -339,7 +369,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void DownloadVault_sets_auth_header()
+        public void FetchVault_sets_auth_header()
         {
             var rest = new RestFlow()
                 .Get(GetFixture("vault"))
