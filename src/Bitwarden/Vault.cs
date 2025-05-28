@@ -1,20 +1,23 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System.Collections.Generic;
 using System.Linq;
 
 namespace PasswordManagerAccess.Bitwarden
 {
-    public class Vault
+    public record Vault(Account[] Accounts, SshKey[] SshKeys, Collection[] Collections, Organization[] Organizations, ParseError[] ParseErrors)
     {
-        public required Account[] Accounts { get; init; }
-        public required SshKey[] SshKeys { get; init; }
-        public required Collection[] Collections { get; init; }
-        public required Organization[] Organizations { get; init; }
-        public required ParseError[] ParseErrors { get; init; }
+        public IReadOnlyDictionary<string, Collection> CollectionsById => _collectionsById ??= Collections.ToDictionary(c => c.Id);
+        public IReadOnlyDictionary<string, Organization> OrganizationsById => _organizationsById ??= Organizations.ToDictionary(o => o.Id);
 
-        public IReadOnlyDictionary<string, Collection> CollectionsById => Collections.ToDictionary(c => c.Id);
-        public IReadOnlyDictionary<string, Organization> OrganizationsById => Organizations.ToDictionary(o => o.Id);
+        //
+        // Private
+        //
+
+        private IReadOnlyDictionary<string, Collection>? _collectionsById;
+        private IReadOnlyDictionary<string, Organization>? _organizationsById;
     }
 }

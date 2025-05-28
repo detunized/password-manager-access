@@ -90,15 +90,7 @@ namespace PasswordManagerAccess.Bitwarden
         {
             var encryptedVault = FetchVault(session);
             var (accounts, sshKeys, collections, organizations, errors) = DecryptVault(encryptedVault, session.Key);
-
-            return new Vault
-            {
-                Accounts = accounts,
-                SshKeys = sshKeys,
-                Collections = collections,
-                Organizations = organizations,
-                ParseErrors = errors,
-            };
+            return new Vault(accounts, sshKeys, collections, organizations, errors);
         }
 
         // This method logs out the session. Call this when the session is no longer needed.
