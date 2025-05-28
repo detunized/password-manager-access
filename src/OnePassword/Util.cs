@@ -27,7 +27,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public static byte[] Hkdf(string method, byte[] ikm, byte[] salt)
         {
-            return Common.Hkdf.Generate(ikm: ikm, salt: salt, info: method.ToBytes(), byteCount: 32);
+            return Common.Hkdf.Sha256(ikm: ikm, salt: salt, info: method.ToBytes(), byteCount: 32);
         }
 
         public static byte[] Pbes2(string method, string password, byte[] salt, int iterations)
