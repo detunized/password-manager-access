@@ -91,116 +91,178 @@ namespace PasswordManagerAccess.Example.Bitwarden
 
             try
             {
-                Vault vault;
-                if (config.TryGetValue("client-id", out var clientId))
+                // Choose either a single call to Vault.Open or a sequence of LogIn, DownloadVault, and LogOut.
+                var useVaultOpen = false;
+                if (useVaultOpen)
                 {
-                    // Fully non-interactive CLI/API mode
-                    Console.WriteLine("Using the CLI/API mode");
-                    vault = Vault.Open(
-                        new ClientInfoCliApi(
-                            clientId: clientId,
-                            clientSecret: config["client-secret"],
-                            password: config["password"],
-                            deviceId: deviceId
-                        ),
-                        baseUrl
-                    );
+                    UseVaultOpen(config, deviceId, baseUrl);
                 }
                 else
                 {
-                    // Possibly interactive browser mode
-                    Console.WriteLine("Using the browser mode");
-                    vault = Vault.Open(
-                        new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
-                        baseUrl: baseUrl,
-                        ui: new TextUi(),
-                        storage: new PlainStorage()
-                    );
-                }
-
-                for (var i = 0; i < vault.Accounts.Length; ++i)
-                {
-                    var account = vault.Accounts[i];
-                    Console.WriteLine(
-                        "{0}:\n"
-                            + "          id: {1}\n"
-                            + "        name: {2}\n"
-                            + "    username: {3}\n"
-                            + "    password: {4}\n"
-                            + "         url: {5}\n"
-                            + "        note: {6}\n"
-                            + "      folder: {7}\n",
-                        i + 1,
-                        account.Id,
-                        account.Name,
-                        account.Username,
-                        account.Password,
-                        account.Url,
-                        account.Note,
-                        account.Folder
-                    );
-
-                    if (account.CustomFields.Length > 0)
-                    {
-                        Console.WriteLine("    Custom fields:");
-                        foreach (var f in account.CustomFields)
-                            Console.WriteLine($"      - {f.Name}: {f.Value}");
-                    }
-                }
-
-                if (vault.SshKeys.Length > 0)
-                {
-                    Console.WriteLine("SSH Keys:");
-                    foreach (var key in vault.SshKeys)
-                    {
-                        Console.WriteLine(
-                            "  - id: {0}\n"
-                                + "    name: {1}\n"
-                                + "    public key: {2}\n"
-                                + "    private key: {3}\n"
-                                + "    fingerprint: {4}\n"
-                                + "    folder: {5}\n",
-                            key.Id,
-                            key.Name,
-                            key.PublicKey,
-                            key.PrivateKey,
-                            key.Fingerprint,
-                            key.Folder
-                        );
-
-                        if (key.CustomFields.Length > 0)
-                        {
-                            Console.WriteLine("    Custom fields:");
-                            foreach (var f in key.CustomFields)
-                                Console.WriteLine($"      - {f.Name}: {f.Value}");
-                        }
-                    }
-                }
-
-                if (vault.Collections.Length > 0)
-                {
-                    Console.WriteLine("Collections:");
-                    foreach (var c in vault.Collections)
-                        Console.WriteLine($"  - id: {c.Id}, name: {c.Name}, org: {c.OrganizationId}, hide passwords: {c.HidePasswords}");
-                }
-
-                if (vault.Organizations.Length > 0)
-                {
-                    Console.WriteLine("Organizations:");
-                    foreach (var o in vault.Organizations)
-                        Console.WriteLine($"  - id: {o.Id}, name: {o.Name}");
-                }
-
-                if (vault.ParseErrors.Length > 0)
-                {
-                    Console.WriteLine("Parse errors:");
-                    foreach (var e in vault.ParseErrors)
-                        Console.WriteLine($"  - error: {e.Description}");
+                    UseLoginDownloadLogout(config, deviceId, baseUrl);
                 }
             }
             catch (BaseException e)
             {
                 Util.PrintException(e);
+            }
+        }
+
+        private static void UseLoginDownloadLogout(Dictionary<string, string> config, string deviceId, string baseUrl)
+        {
+            Session session;
+
+            if (config.TryGetValue("client-id", out var clientId))
+            {
+                // Fully non-interactive CLI/API mode
+                Console.WriteLine("Using the CLI/API mode with manual sequence");
+                session = Client.LogIn(
+                    new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
+                    baseUrl
+                );
+            }
+            else
+            {
+                // Possibly interactive browser mode
+                Console.WriteLine("Using the browser mode with manual sequence");
+                session = Client.LogIn(
+                    new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
+                    baseUrl: baseUrl,
+                    ui: new TextUi(),
+                    storage: new PlainStorage()
+                );
+            }
+
+            try
+            {
+                // Download vault data
+                var (accounts, sshKeys, collections, organizations, parseErrors) = Client.DownloadVault(session);
+
+                // Display the data
+                DumpVault(accounts, sshKeys, collections, organizations, parseErrors);
+            }
+            finally
+            {
+                // Always log out to clean up resources
+                Client.LogOut(session);
+            }
+        }
+
+        private static void UseVaultOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
+        {
+            Vault vault;
+
+            if (config.TryGetValue("client-id", out var clientId))
+            {
+                // Fully non-interactive CLI/API mode
+                Console.WriteLine("Using the CLI/API mode with Vault.Open");
+                vault = Vault.Open(
+                    new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
+                    baseUrl
+                );
+            }
+            else
+            {
+                // Possibly interactive browser mode
+                Console.WriteLine("Using the browser mode with Vault.Open");
+                vault = Vault.Open(
+                    new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
+                    baseUrl: baseUrl,
+                    ui: new TextUi(),
+                    storage: new PlainStorage()
+                );
+            }
+
+            // Display the data
+            DumpVault(vault.Accounts, vault.SshKeys, vault.Collections, vault.Organizations, vault.ParseErrors);
+        }
+
+        private static void DumpVault(
+            Account[] accounts,
+            SshKey[] sshKeys,
+            Collection[] collections,
+            Organization[] organizations,
+            ParseError[] parseErrors
+        )
+        {
+            for (var i = 0; i < accounts.Length; ++i)
+            {
+                var account = accounts[i];
+                Console.WriteLine(
+                    "{0}:\n"
+                        + "          id: {1}\n"
+                        + "        name: {2}\n"
+                        + "    username: {3}\n"
+                        + "    password: {4}\n"
+                        + "         url: {5}\n"
+                        + "        note: {6}\n"
+                        + "      folder: {7}\n",
+                    i + 1,
+                    account.Id,
+                    account.Name,
+                    account.Username,
+                    account.Password,
+                    account.Url,
+                    account.Note,
+                    account.Folder
+                );
+
+                if (account.CustomFields.Length > 0)
+                {
+                    Console.WriteLine("    Custom fields:");
+                    foreach (var f in account.CustomFields)
+                        Console.WriteLine($"      - {f.Name}: {f.Value}");
+                }
+            }
+
+            if (sshKeys.Length > 0)
+            {
+                Console.WriteLine("SSH Keys:");
+                foreach (var key in sshKeys)
+                {
+                    Console.WriteLine(
+                        "  - id: {0}\n"
+                            + "    name: {1}\n"
+                            + "    public key: {2}\n"
+                            + "    private key: {3}\n"
+                            + "    fingerprint: {4}\n"
+                            + "    folder: {5}\n",
+                        key.Id,
+                        key.Name,
+                        key.PublicKey,
+                        key.PrivateKey,
+                        key.Fingerprint,
+                        key.Folder
+                    );
+
+                    if (key.CustomFields.Length > 0)
+                    {
+                        Console.WriteLine("    Custom fields:");
+                        foreach (var f in key.CustomFields)
+                            Console.WriteLine($"      - {f.Name}: {f.Value}");
+                    }
+                }
+            }
+
+            if (collections.Length > 0)
+            {
+                Console.WriteLine("Collections:");
+                foreach (var c in collections)
+                    Console.WriteLine($"  - id: {c.Id}, name: {c.Name}, org: {c.OrganizationId}, hide passwords: {c.HidePasswords}");
+            }
+
+            if (organizations.Length > 0)
+            {
+                Console.WriteLine("Organizations:");
+                foreach (var o in organizations)
+                    Console.WriteLine($"  - id: {o.Id}, name: {o.Name}");
+            }
+
+            if (parseErrors.Length > 0)
+            {
+                Console.WriteLine("Parse errors:");
+                foreach (var e in parseErrors)
+                    Console.WriteLine($"  - error: {e.Description}");
             }
         }
     }

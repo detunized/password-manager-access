@@ -50,6 +50,7 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
+        // TODO: Make this return the Vault object.
         public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DownloadVault(Session session)
         {
             var encryptedVault = FetchVault(session);
