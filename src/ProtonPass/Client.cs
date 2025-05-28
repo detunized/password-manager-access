@@ -638,7 +638,7 @@ namespace PasswordManagerAccess.ProtonPass
                 key: vaultKey,
                 ciphertext: encryptedShareInfo.Sub(12, encryptedShareInfo.Length - 12),
                 iv: encryptedShareInfo.Sub(0, 12),
-                authData: "vaultcontent".ToBytes()
+                adata: "vaultcontent".ToBytes()
             );
             return Protobuf.Vault.Parser.ParseFrom(shareInfoProto);
         }
@@ -677,7 +677,7 @@ namespace PasswordManagerAccess.ProtonPass
                     key: vaultKey,
                     ciphertext: encryptedKey.Sub(12, encryptedKey.Length - 12),
                     iv: encryptedKey.Sub(0, 12),
-                    authData: "itemkey".ToBytes()
+                    adata: "itemkey".ToBytes()
                 );
 
                 var encryptedContent = item.Content.Decode64();
@@ -685,7 +685,7 @@ namespace PasswordManagerAccess.ProtonPass
                     key: key,
                     ciphertext: encryptedContent.Sub(12, encryptedContent.Length - 12),
                     iv: encryptedContent.Sub(0, 12),
-                    authData: "itemcontent".ToBytes()
+                    adata: "itemcontent".ToBytes()
                 );
 
                 var parsedItem = Item.Parser.ParseFrom(content);
