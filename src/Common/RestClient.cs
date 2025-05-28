@@ -585,6 +585,28 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // PUT JSON
+        //
+
+        public RestResponse<string> PutJson(string endpoint, PostParameters parameters, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            return MakeRequest<string>(endpoint, HttpMethod.Put, ToJsonContent(parameters), headers ?? NoHeaders, cookies ?? NoCookies, MaxRedirects);
+        }
+
+        public RestResponse<string, T> PutJson<T>(string endpoint, PostParameters parameters, HttpHeaders headers = null, HttpCookies cookies = null)
+        {
+            return MakeRequest<string, T>(
+                endpoint,
+                HttpMethod.Put,
+                ToJsonContent(parameters),
+                headers ?? NoHeaders,
+                cookies ?? NoCookies,
+                MaxRedirects,
+                DeserializeFromJson<T>
+            );
+        }
+
+        //
         // Internal
         //
 

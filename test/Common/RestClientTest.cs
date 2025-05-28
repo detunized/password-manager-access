@@ -217,6 +217,63 @@ namespace PasswordManagerAccess.Test.Common
         }
 
         //
+        // PUT JSON
+        //
+
+        [Fact]
+        public void PutJson_sends_json_headers()
+        {
+            InRequest(
+                rest => rest.PutJson(Url, NoParameters),
+                request => Assert.Equal(new[] { "application/json; charset=utf-8" }, request.Content.Headers.GetValues("Content-type"))
+            );
+        }
+
+        [Fact]
+        public void PutJson_encodes_json()
+        {
+            InRequest(
+                rest => rest.PutJson(Url, new Dictionary<string, object> { ["k"] = "v" }),
+                request => Assert.Equal("{\"k\":\"v\"}", request.Content.ReadAsStringAsync().Result)
+            );
+        }
+
+        [Fact]
+        public void PutJson_with_NoParameters_sends_empty_object()
+        {
+            InRequest(rest => rest.PutJson(Url, RestClient.NoParameters), request => Assert.Equal("{}", request.Content.ReadAsStringAsync().Result));
+        }
+
+        [Fact]
+        public void PutJson_with_JsonBlank_sends_blank()
+        {
+            InRequest(rest => rest.PutJson(Url, RestClient.JsonBlank), request => Assert.Equal("", request.Content.ReadAsStringAsync().Result));
+        }
+
+        [Fact]
+        public void PutJson_with_JsonNull_sends_null()
+        {
+            InRequest(rest => rest.PutJson(Url, RestClient.JsonNull), request => Assert.Equal("null", request.Content.ReadAsStringAsync().Result));
+        }
+
+        [Fact]
+        public void PutJson_returns_response_headers()
+        {
+            var response = Serve("", ResponseHeaders).PutJson(Url, NoParameters);
+
+            Assert.Equal(ResponseHeaders, response.Headers);
+        }
+
+        [Fact]
+        public void PutJson_decodes_json()
+        {
+            var response = Serve("""{"Key":"k","Value":"v"}""").PutJson<KeyValuePair<string, string>>(Url, NoParameters);
+
+            Assert.True(response.IsSuccessful);
+            Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
+        }
+
+        //
         // URI
         //
 
