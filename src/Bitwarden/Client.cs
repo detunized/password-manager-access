@@ -29,6 +29,50 @@ namespace PasswordManagerAccess.Bitwarden
             IRestTransport transport
         )
         {
+            var session = LogInBrowser(username, password, deviceId, baseUrl, ui, storage, transport);
+            try
+            {
+                return DownloadVault(session);
+            }
+            finally
+            {
+                LogOut(session);
+            }
+        }
+
+        // This mode a true non-interactive CLI/API mode. The 2FA is not used in this mode.
+        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
+            string clientId,
+            string clientSecret,
+            string password,
+            string deviceId,
+            string baseUrl,
+            IRestTransport transport
+        )
+        {
+            var session = LogInCliApi(clientId, clientSecret, password, deviceId, baseUrl, transport);
+            try
+            {
+                return DownloadVault(session);
+            }
+            finally
+            {
+                LogOut(session);
+            }
+        }
+
+        // Three-stage API: Login, DownloadAndDecryptVault, Logout
+        // This allows reusing the session to download the vault multiple times
+        public static Session LogInBrowser(
+            string username,
+            string password,
+            string deviceId,
+            string baseUrl,
+            IUi ui,
+            ISecureStorage storage,
+            IRestTransport transport
+        )
+        {
             var rest = MakeRestClients(baseUrl, transport);
 
             // 1. Request the number of KDF iterations needed to derive the key
@@ -43,15 +87,10 @@ namespace PasswordManagerAccess.Bitwarden
             // 4. Authenticate with the server and get the token
             var token = Login(username, hash, deviceId, ui, storage, rest.Api, rest.Identity);
 
-            // 5. Fetch the vault
-            var encryptedVault = DownloadVault(rest.Api, token);
-
-            // 6. Decrypt and parse the vault. Done!
-            return DecryptVault(encryptedVault, key);
+            return new Session(token, key, rest);
         }
 
-        // This mode a true non-interactive CLI/API mode. The 2FA is not used in this mode.
-        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
+        public static Session LogInCliApi(
             string clientId,
             string clientSecret,
             string password,
@@ -63,16 +102,30 @@ namespace PasswordManagerAccess.Bitwarden
             var rest = MakeRestClients(baseUrl, transport);
 
             // 1. Login and get the client info
-            var (token, kdfInfo) = LoginCliApi(clientId, clientSecret, deviceId, rest.Identity);
+            var (token, kdfInfo) = LogInCliApi(clientId, clientSecret, deviceId, rest.Identity);
 
-            // 2. Fetch the vault
+            // 2. We need to fetch the vault to get the email for key derivation
             var encryptedVault = DownloadVault(rest.Api, token);
 
             // 3. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(encryptedVault.Profile.Email, password, kdfInfo);
 
-            // 4. Decrypt and parse the vault. Done!
-            return DecryptVault(encryptedVault, key);
+            return new Session(token, key, rest);
+        }
+
+        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DownloadVault(Session session)
+        {
+            // 1. Fetch the vault
+            var encryptedVault = DownloadVault(session.Rest.Api, session.Token);
+
+            // 2. Decrypt and parse the vault
+            return DecryptVault(encryptedVault, session.Key);
+        }
+
+        public static void LogOut(Session session)
+        {
+            // Bitwarden doesn't require explicit logout, but we clean up resources
+            // The session token will naturally expire
         }
 
         //
@@ -246,7 +299,7 @@ namespace PasswordManagerAccess.Bitwarden
             throw new BadMultiFactorException("Second factor code is not correct");
         }
 
-        internal static (string Token, R.KdfInfo KdfInfo) LoginCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
+        internal static (string Token, R.KdfInfo KdfInfo) LogInCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {

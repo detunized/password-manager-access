@@ -170,7 +170,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ExpectUrl(IdentityUrl + "/connect/token")
                 .ToRestClient(IdentityUrl);
 
-            var (token, kdfInfo) = Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest);
+            var (token, kdfInfo) = Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
             Assert.Equal(R.KdfMethod.Pbkdf2Sha256, kdfInfo.Kdf);
@@ -185,7 +185,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ExpectUrl(IdentityUrl + "/connect/token")
                 .ToRestClient(IdentityUrl);
 
-            var (token, kdfInfo) = Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest);
+            var (token, kdfInfo) = Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
             Assert.Equal(R.KdfMethod.Argon2id, kdfInfo.Kdf);
@@ -203,7 +203,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 )
                 .ToRestClient(IdentityUrl);
 
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest), "KDF method");
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest), "KDF method");
         }
 
         [Fact]
@@ -215,7 +215,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ToRestClient(IdentityUrl);
 
             Exceptions.AssertThrowsBadCredentials(
-                () => Client.LoginCliApi(ClientId, ClientSecret, DeviceId, rest),
+                () => Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest),
                 "Client ID or secret is incorrect"
             );
         }
