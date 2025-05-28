@@ -315,7 +315,12 @@ namespace PasswordManagerAccess.Common
 
         private static HttpClient MakeDefaultHttpClient()
         {
-            var handler = new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false };
+            var handler = new HttpClientHandler
+            {
+                UseCookies = false,
+                AllowAutoRedirect = false,
+                AutomaticDecompression = DecompressionMethods.All,
+            };
 
             // On iOS .NET 8 which the native HTTP handler behaves differently than on desktop .NET.
             // We need to enable cookies explicitly, otherwise the Set-Cookie headers are discarded
