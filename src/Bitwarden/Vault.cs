@@ -36,14 +36,7 @@ namespace PasswordManagerAccess.Bitwarden
         // This version allows custom base URL. baseUrl could be set to null or "" for the default value.
         public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
-            var session = Client.LogInBrowser(
-                username: clientInfo.Username,
-                password: clientInfo.Password,
-                deviceId: clientInfo.DeviceId,
-                baseUrl: baseUrl,
-                ui: ui,
-                storage: storage
-            );
+            var session = Client.LogInBrowser(clientInfo: clientInfo, baseUrl: baseUrl, ui: ui, storage: storage);
             try
             {
                 var (accounts, sshKeys, collections, organizations, errors) = Client.DownloadVault(session);
@@ -66,13 +59,7 @@ namespace PasswordManagerAccess.Bitwarden
         // on the first run and reused later on.
         public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null)
         {
-            var session = Client.LogInCliApi(
-                clientId: clientInfo.ClientId,
-                clientSecret: clientInfo.ClientSecret,
-                password: clientInfo.Password,
-                deviceId: clientInfo.DeviceId,
-                baseUrl: baseUrl
-            );
+            var session = Client.LogInCliApi(clientInfo: clientInfo, baseUrl: baseUrl);
             try
             {
                 var (accounts, sshKeys, collections, organizations, errors) = Client.DownloadVault(session);
@@ -82,18 +69,6 @@ namespace PasswordManagerAccess.Bitwarden
             {
                 Client.LogOut(session);
             }
-        }
-
-        [Obsolete("Please use the overloads with either ClientInfoBrowser or ClientInfoCliApi")]
-        public static Vault Open(string username, string password, string deviceId, IUi ui, ISecureStorage storage)
-        {
-            return Open(username, password, deviceId, null, ui, storage);
-        }
-
-        [Obsolete("Please use the overloads with either ClientInfoBrowser or ClientInfoCliApi")]
-        public static Vault Open(string username, string password, string deviceId, string baseUrl, IUi ui, ISecureStorage storage)
-        {
-            return Open(new ClientInfoBrowser(username: username, password: password, deviceId: deviceId), baseUrl, ui, storage);
         }
 
         public static string GenerateRandomDeviceId()

@@ -19,12 +19,12 @@ namespace PasswordManagerAccess.Bitwarden
     {
         // Three-stage API: Login, DownloadAndDecryptVault, Logout
         // This allows reusing the session to download the vault multiple times
-        public static Session LogInBrowser(string username, string password, string deviceId, string baseUrl, IUi ui, ISecureStorage storage)
+        public static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
             try
             {
-                return LogInBrowser(username, password, deviceId, baseUrl, ui, storage, transport);
+                return LogInBrowser(clientInfo, baseUrl, ui, storage, transport);
             }
             catch (Exception)
             {
@@ -33,12 +33,12 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        public static Session LogInCliApi(string clientId, string clientSecret, string password, string deviceId, string baseUrl)
+        public static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl)
         {
             var transport = new RestTransport();
             try
             {
-                return LogInCliApi(clientId, clientSecret, password, deviceId, baseUrl, transport);
+                return LogInCliApi(clientInfo, baseUrl, transport);
             }
             catch (Exception)
             {
@@ -47,53 +47,38 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        internal static Session LogInBrowser(
-            string username,
-            string password,
-            string deviceId,
-            string baseUrl,
-            IUi ui,
-            ISecureStorage storage,
-            IRestTransport transport
-        )
+        internal static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             var rest = MakeRestClients(baseUrl, transport);
 
             // 1. Request the number of KDF iterations needed to derive the key
-            var kdfInfo = RequestKdfInfo(username, rest.Api);
+            var kdfInfo = RequestKdfInfo(clientInfo.Username, rest.Api);
 
             // 2. Derive the master encryption key or KEK (key encryption key)
-            var key = Util.DeriveKey(username, password, kdfInfo);
+            var key = Util.DeriveKey(clientInfo.Username, clientInfo.Password, kdfInfo);
 
             // 3. Hash the password that is going to be sent to the server
-            var hash = Util.HashPassword(password, key);
+            var hash = Util.HashPassword(clientInfo.Password, key);
 
             // 4. Authenticate with the server and get the token
-            var token = Login(username, hash, deviceId, ui, storage, rest.Api, rest.Identity);
+            var token = Login(clientInfo.Username, hash, clientInfo.DeviceId, ui, storage, rest.Api, rest.Identity);
 
             return new Session(token, key, rest.Api, transport);
         }
 
-        internal static Session LogInCliApi(
-            string clientId,
-            string clientSecret,
-            string password,
-            string deviceId,
-            string baseUrl,
-            IRestTransport transport
-        )
+        internal static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl, IRestTransport transport)
         {
             var rest = MakeRestClients(baseUrl, transport);
 
             // 1. Login and get the client info
-            var (token, kdfInfo) = LogInCliApi(clientId, clientSecret, deviceId, rest.Identity);
+            var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest.Identity);
 
             // TODO: The vault should not be downloaded here!!! Use accounts/profile endpoint instead!!!
             // 2. We need to fetch the vault to get the email for key derivation
             var encryptedVault = DownloadVault(rest.Api, token);
 
             // 3. Derive the master encryption key or KEK (key encryption key)
-            var key = Util.DeriveKey(encryptedVault.Profile.Email, password, kdfInfo);
+            var key = Util.DeriveKey(encryptedVault.Profile.Email, clientInfo.Password, kdfInfo);
 
             return new Session(token, key, rest.Api, transport);
         }
