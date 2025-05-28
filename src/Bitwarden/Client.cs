@@ -17,10 +17,43 @@ namespace PasswordManagerAccess.Bitwarden
 {
     public static class Client
     {
-        // See Vault.Open for the main entry point comments
+        // Use this function to generate a random device ID. The device ID should be unique to each
+        // installation, but it should not be new on every run. A new random device ID should be
+        // generated with GenerateRandomDeviceId on the first run and reused later on.
+        public static string GenerateRandomDeviceId() => Guid.NewGuid().ToString();
+
+        //
+        // Single shot methods
+        //
+
+        // The main entry point for a single shot method. Use this function to open the vault
+        // in the browser mode. In this case the login process is interactive when 2FA is enabled.
+        // This is an old mode that might potentially trigger a captcha. Captcha solving is not
+        // supported. There's no way to complete a login and get the vault if the captcha is triggered.
+        // Use the CLI/API mode. This mode requires a different type of credentials.
+        public static Vault Open(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => Open(clientInfo, null, ui, storage);
+
+        // This version allows a custom base URL. `baseUrl` could be set to null or "" for the default value.
+        public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage) =>
+            DownloadAndLogOut(LogIn(clientInfo, baseUrl, ui, storage));
+
+        // The main entry point for a single shot method. Use this function to open the vault in the
+        // CLI/API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
+        // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
+        // either. This is the preferred mode. This mode requires a different type of credentials that
+        // could be found in the vault settings: the client ID and the client secret.
+        public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null) => DownloadAndLogOut(LogIn(clientInfo, baseUrl));
+
+        //
+        // LogIn, DownloadVault, LogOut sequence
+        //
+
+        // This method performs a login in the browser mode. The returned session can be used to
+        // download the vault, if needed multiple times. When no longer needed LogOut should be called.
+        // See signle shot Open for more comments.
         public static Session LogIn(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => LogIn(clientInfo, null, ui, storage);
 
-        // See Vault.Open for the main entry point comments
+        // Same as above but allows a custom base URL. `baseUrl` could be set to null or "" for the default value.
         public static Session LogIn(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
@@ -35,7 +68,9 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        // See Vault.Open for the main entry point comments
+        // This method performs a login in the CLI/API mode. The returned session can be used to
+        // download the vault, if needed multiple times. When no longer needed LogOut should be called.
+        // See single shot Open for more comments.
         public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = null)
         {
             var transport = new RestTransport();
@@ -50,13 +85,25 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        // TODO: Make this return the Vault object.
-        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DownloadVault(Session session)
+        // This method downloads the vault from the server. The session must be obtained from LogIn.
+        public static Vault DownloadVault(Session session)
         {
             var encryptedVault = FetchVault(session);
-            return DecryptVault(encryptedVault, session.Key);
+            var (accounts, sshKeys, collections, organizations, errors) = DecryptVault(encryptedVault, session.Key);
+
+            return new Vault
+            {
+                Accounts = accounts,
+                SshKeys = sshKeys,
+                Collections = collections,
+                Organizations = organizations,
+                ParseErrors = errors,
+            };
         }
 
+        // This method logs out the session. Call this when the session is no longer needed.
+        // After that the session object could not be used anymore. The behavior is undefined
+        // if it's used again.
         public static void LogOut(Session session)
         {
             try
@@ -73,6 +120,18 @@ namespace PasswordManagerAccess.Bitwarden
         //
         // Internal
         //
+
+        internal static Vault DownloadAndLogOut(Session session)
+        {
+            try
+            {
+                return DownloadVault(session);
+            }
+            finally
+            {
+                LogOut(session);
+            }
+        }
 
         internal static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage, IRestTransport transport)
         {

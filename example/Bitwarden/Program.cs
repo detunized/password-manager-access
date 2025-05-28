@@ -80,7 +80,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             var deviceId = config.GetValueOrDefault("device-id", "");
             if (string.IsNullOrEmpty(deviceId))
             {
-                deviceId = Vault.GenerateRandomDeviceId();
+                deviceId = Client.GenerateRandomDeviceId();
                 Console.WriteLine($"Your newly generated device ID is {deviceId}. " + "Store it and use it for subsequent runs.");
             }
 
@@ -136,10 +136,10 @@ namespace PasswordManagerAccess.Example.Bitwarden
             try
             {
                 // Download vault data
-                var (accounts, sshKeys, collections, organizations, parseErrors) = Client.DownloadVault(session);
+                var vault = Client.DownloadVault(session);
 
                 // Display the data
-                DumpVault(accounts, sshKeys, collections, organizations, parseErrors);
+                DumpVault(vault);
             }
             finally
             {
@@ -156,7 +156,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             {
                 // Fully non-interactive CLI/API mode
                 Console.WriteLine("Using the CLI/API mode with Vault.Open");
-                vault = Vault.Open(
+                vault = Client.Open(
                     new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
                     baseUrl
                 );
@@ -165,7 +165,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             {
                 // Possibly interactive browser mode
                 Console.WriteLine("Using the browser mode with Vault.Open");
-                vault = Vault.Open(
+                vault = Client.Open(
                     new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
                     baseUrl: baseUrl,
                     ui: new TextUi(),
@@ -174,20 +174,14 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
 
             // Display the data
-            DumpVault(vault.Accounts, vault.SshKeys, vault.Collections, vault.Organizations, vault.ParseErrors);
+            DumpVault(vault);
         }
 
-        private static void DumpVault(
-            Account[] accounts,
-            SshKey[] sshKeys,
-            Collection[] collections,
-            Organization[] organizations,
-            ParseError[] parseErrors
-        )
+        private static void DumpVault(Vault vault)
         {
-            for (var i = 0; i < accounts.Length; ++i)
+            for (var i = 0; i < vault.Accounts.Length; ++i)
             {
-                var account = accounts[i];
+                var account = vault.Accounts[i];
                 Console.WriteLine(
                     "{0}:\n"
                         + "          id: {1}\n"
@@ -215,10 +209,10 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 }
             }
 
-            if (sshKeys.Length > 0)
+            if (vault.SshKeys.Length > 0)
             {
                 Console.WriteLine("SSH Keys:");
-                foreach (var key in sshKeys)
+                foreach (var key in vault.SshKeys)
                 {
                     Console.WriteLine(
                         "  - id: {0}\n"
@@ -244,24 +238,24 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 }
             }
 
-            if (collections.Length > 0)
+            if (vault.Collections.Length > 0)
             {
                 Console.WriteLine("Collections:");
-                foreach (var c in collections)
+                foreach (var c in vault.Collections)
                     Console.WriteLine($"  - id: {c.Id}, name: {c.Name}, org: {c.OrganizationId}, hide passwords: {c.HidePasswords}");
             }
 
-            if (organizations.Length > 0)
+            if (vault.Organizations.Length > 0)
             {
                 Console.WriteLine("Organizations:");
-                foreach (var o in organizations)
+                foreach (var o in vault.Organizations)
                     Console.WriteLine($"  - id: {o.Id}, name: {o.Name}");
             }
 
-            if (parseErrors.Length > 0)
+            if (vault.ParseErrors.Length > 0)
             {
                 Console.WriteLine("Parse errors:");
-                foreach (var e in parseErrors)
+                foreach (var e in vault.ParseErrors)
                     Console.WriteLine($"  - error: {e.Description}");
             }
         }
