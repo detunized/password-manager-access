@@ -3,10 +3,12 @@
 
 using System;
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using JsonRequiredAttribute = System.Text.Json.Serialization.JsonRequiredAttribute;
 
-// TODO: Rename to Wire or Model since not all this things are responses
+// TODO: Merge with Model
 namespace PasswordManagerAccess.OnePassword.Response
 {
     internal class UserLoginInfo
@@ -18,37 +20,48 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly string Url;
     }
 
+    // This class has both Newtonsoft.Json and System.Text.Json attributes
     internal class NewSession
     {
         [JsonProperty("status", Required = Required.Always)]
-        public readonly string Status;
+        [JsonPropertyName("status"), JsonRequired]
+        public string Status { get; set; }
 
         [JsonProperty("sessionID", Required = Required.Always)]
-        public readonly string SessionId;
+        [JsonPropertyName("sessionID"), JsonRequired]
+        public string SessionId { get; set; }
 
         [JsonProperty("accountKeyFormat")]
-        public readonly string KeyFormat;
+        [JsonPropertyName("accountKeyFormat"), JsonRequired]
+        public string KeyFormat { get; set; }
 
         [JsonProperty("accountKeyUuid")]
-        public readonly string KeyUuid;
+        [JsonPropertyName("accountKeyUuid"), JsonRequired]
+        public string KeyUuid { get; set; }
 
         [JsonProperty("userAuth")]
-        public readonly UserAuth Auth;
+        [JsonPropertyName("userAuth"), JsonRequired]
+        public UserAuth Auth { get; set; }
     }
 
+    // This class has both Newtonsoft.Json and System.Text.Json attributes
     internal class UserAuth
     {
         [JsonProperty("method")]
-        public readonly string Method;
+        [JsonPropertyName("method"), JsonRequired]
+        public string Method { get; set; }
 
         [JsonProperty("alg")]
-        public readonly string Algorithm;
+        [JsonPropertyName("alg"), JsonRequired]
+        public string Algorithm { get; set; }
 
         [JsonProperty("iterations")]
-        public readonly int Iterations;
+        [JsonPropertyName("iterations"), JsonRequired]
+        public int Iterations { get; set; }
 
         [JsonProperty("salt")]
-        public readonly string Salt;
+        [JsonPropertyName("salt"), JsonRequired]
+        public string Salt { get; set; }
     }
 
     internal struct SuccessStatus
@@ -57,22 +70,28 @@ namespace PasswordManagerAccess.OnePassword.Response
         public readonly int Success;
     }
 
+    // For the time being this class has both Newtonsoft.Json and System.Text.Json attributes
     internal class Encrypted
     {
         [JsonProperty("kid", Required = Required.Always)]
-        public readonly string KeyId;
+        [JsonPropertyName("kid"), JsonRequired]
+        public string KeyId { get; set; }
 
         [JsonProperty("enc", Required = Required.Always)]
-        public readonly string Scheme;
+        [JsonPropertyName("enc"), JsonRequired]
+        public string Scheme { get; set; }
 
         [JsonProperty("cty", Required = Required.Always)]
-        public readonly string Container;
+        [JsonPropertyName("cty"), JsonRequired]
+        public string Container { get; set; }
 
         [JsonProperty("iv")]
-        public readonly string Iv;
+        [JsonPropertyName("iv")]
+        public string Iv { get; set; }
 
         [JsonProperty("data", Required = Required.Always)]
-        public readonly string Ciphertext;
+        [JsonPropertyName("data"), JsonRequired]
+        public string Ciphertext { get; set; }
     }
 
     internal class AccountInfo
@@ -402,7 +421,7 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty("t")]
         public readonly string Name;
 
-        [JsonConverter(typeof(VaultItemSectionFieldValueConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(VaultItemSectionFieldValueConverter))]
         [JsonProperty("v")]
         public readonly string Value;
 
@@ -448,7 +467,7 @@ namespace PasswordManagerAccess.OnePassword.Response
 
     // The "v" value could be practically anything. We are only interested in the string values.
     // The rest is simply converted to JSON as a fallback.
-    internal class VaultItemSectionFieldValueConverter : JsonConverter<string>
+    internal class VaultItemSectionFieldValueConverter : Newtonsoft.Json.JsonConverter<string>
     {
         public override string ReadJson(JsonReader reader, Type objectType, string existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
@@ -463,7 +482,11 @@ namespace PasswordManagerAccess.OnePassword.Response
         public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer) => throw new NotImplementedException();
     }
 
-    internal class AForB
+    //
+    // SrpV1
+    //
+
+    internal class AForBV1
     {
         [JsonProperty("sessionID", Required = Required.Always)]
         public readonly string SessionId;
@@ -471,6 +494,14 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty("userB", Required = Required.Always)]
         public readonly string B;
     }
+
+    //
+    // SrpV2
+    //
+
+    internal record AForBV2([property: JsonPropertyName("userB"), JsonRequired] string B);
+
+    internal record ServerHash([property: JsonPropertyName("serverVerifyHash"), JsonRequired] string ServerVerifyHash);
 
     internal class ServiceAccountToken
     {

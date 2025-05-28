@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
@@ -38,18 +39,15 @@ namespace Example
             // See config.yaml.example for an example.
             var config = Util.ReadConfig();
 
-            string serviceAccountToken;
-            config.TryGetValue("service-account-token", out serviceAccountToken);
-
             try
             {
                 DumpAllVaults(
                     config["username"],
-                    config["password"],
-                    config["account-key"],
-                    config["domain"],
+                    config.GetValueOrDefault("password", ""),
+                    config.GetValueOrDefault("account-key", ""),
+                    config.GetValueOrDefault("domain", ""),
                     config["device-id"],
-                    serviceAccountToken ?? ""
+                    config.GetValueOrDefault("service-account-token", "")
                 );
             }
             catch (BaseException e)
@@ -62,8 +60,14 @@ namespace Example
         {
             var device = new AppInfo { Name = "PMA 1Password example", Version = "1.0.0" };
 
-            var session = string.IsNullOrEmpty(serviceAccountToken)
-                ? Client.LogIn(
+            Session session;
+            if (Client.IsSsoAccount(username))
+            {
+                session = Client.SsoLogIn(new Credentials { Username = username, DeviceUuid = uuid }, device, new TextUi(), new PlainStorage());
+            }
+            else if (string.IsNullOrEmpty(serviceAccountToken))
+            {
+                session = Client.LogIn(
                     new Credentials
                     {
                         Username = username,
@@ -75,8 +79,15 @@ namespace Example
                     device,
                     new TextUi(),
                     new PlainStorage()
-                )
-                : Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
+                );
+            }
+            else
+            {
+                session = Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
+            }
+
+            // Enable this to get a single item from a vault
+            var getSingleItem = false;
 
             // Enable this to get a single item from a vault
             var getSingleItem = false;

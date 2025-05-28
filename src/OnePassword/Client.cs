@@ -15,7 +15,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    public static class Client
+    public static partial class Client
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
@@ -24,6 +24,15 @@ namespace PasswordManagerAccess.OnePassword
         //       it's possible this needs to be updated every now and then. Keep an eye on this.
         public const string ClientVersion = "2190004";
         public const string ClientId = ClientName + "/" + ClientVersion;
+
+        //
+        // SSO stubs
+        //
+
+        public static bool IsSsoAccount(string username) => false;
+
+        public static Session SsoLogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage) =>
+            throw new NotImplementedException("SSO login is not implemented in this version of the library");
 
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
@@ -37,6 +46,7 @@ namespace PasswordManagerAccess.OnePassword
             }
             catch (Exception)
             {
+                // We only need to dispose in case of an error, otherwise it's returned with the session.
                 transport.Dispose();
                 throw;
             }
@@ -211,7 +221,7 @@ namespace PasswordManagerAccess.OnePassword
             var sessionRest = MakeRestClient(rest, sessionId: sessionId);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(credentials, srpInfo, sessionId, sessionRest);
+            var sessionKey = SrpV1.Perform(credentials, srpInfo, sessionId, sessionRest);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
@@ -232,15 +242,40 @@ namespace PasswordManagerAccess.OnePassword
             return $"https://{domain}/api";
         }
 
-        internal static RestClient MakeRestClient(IRestTransport transport, string baseUrl, IRequestSigner signer = null, string sessionId = null)
+        // TODO: Rename to MakeRestClient after the migration is complete
+        internal static RestClient MakeSystemJsonRestClient(
+            IRestTransport transport,
+            string baseUrl,
+            IRequestSigner signer = null,
+            string sessionId = null
+        ) => MakeRestClientInternal(transport, baseUrl, signer, sessionId, useSystemJson: true);
+
+        // TODO: Remove this after the migration to System.Text.Json is complete
+        internal static RestClient MakeRestClient(IRestTransport transport, string baseUrl, IRequestSigner signer = null, string sessionId = null) =>
+            MakeRestClientInternal(transport, baseUrl, signer, sessionId, useSystemJson: false);
+
+        // TODO: Remove this after the migration to System.Text.Json is complete
+        internal static RestClient MakeRestClientInternal(
+            IRestTransport transport,
+            string baseUrl,
+            IRequestSigner signer = null,
+            string sessionId = null,
+            bool useSystemJson = false
+        )
         {
             var headers = new Dictionary<string, string>(2) { ["X-AgileBits-Client"] = ClientId };
             if (!sessionId.IsNullOrEmpty())
                 headers["X-AgileBits-Session-ID"] = sessionId;
 
-            return new RestClient(transport, baseUrl, signer, headers);
+            return new RestClient(transport, baseUrl, signer, headers, useSystemJson: useSystemJson);
         }
 
+        internal static RestClient MakeSystemJsonRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
+        {
+            return MakeSystemJsonRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
+        }
+
+        // TODO: Remove this after the migration to System.Text.Json is complete
         internal static RestClient MakeRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
         {
             return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
@@ -903,14 +938,20 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static T PostEncryptedJson<T>(string endpoint, Dictionary<string, object> parameters, AesKey sessionKey, RestClient rest)
         {
+            var encrypted = PostEncryptedJsonNoDecrypt<R.Encrypted>(endpoint, parameters, sessionKey, rest);
+            return DecryptResponse<T>(encrypted, sessionKey);
+        }
+
+        internal static T PostEncryptedJsonNoDecrypt<T>(string endpoint, Dictionary<string, object> parameters, AesKey sessionKey, RestClient rest)
+        {
             var payload = JsonConvert.SerializeObject(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
 
-            var response = rest.PostJson<R.Encrypted>(endpoint, encryptedPayload.ToDictionary());
+            var response = rest.PostJson<T>(endpoint, encryptedPayload.ToDictionary());
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            return DecryptResponse<T>(response.Data, sessionKey);
+            return response.Data;
         }
 
         internal static T DecryptResponse<T>(R.Encrypted encrypted, IDecryptor decryptor)
