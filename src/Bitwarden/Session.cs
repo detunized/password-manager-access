@@ -12,12 +12,14 @@ namespace PasswordManagerAccess.Bitwarden
         internal readonly string Token;
         internal readonly byte[] Key;
         internal readonly RestClient Rest;
+        internal readonly IRestTransport Transport;
 
-        internal Session(string token, byte[] key, RestClient rest)
+        internal Session(string token, byte[] key, RestClient rest, IRestTransport transport)
         {
             Token = token;
             Key = key;
             Rest = rest;
+            Transport = transport;
         }
     }
 }

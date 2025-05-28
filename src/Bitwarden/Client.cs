@@ -15,55 +15,39 @@ using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Bitwarden
 {
-    internal static class Client
+    public static class Client
     {
-        // This is so-called "browser" mode. It's not really trying to mimic a browser, but rather the CLI
-        // in the "browser" mode, where the username and the password and, possibly, 2FA are used to log in.
-        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultBrowser(
-            string username,
-            string password,
-            string deviceId,
-            string baseUrl,
-            IUi ui,
-            ISecureStorage storage,
-            IRestTransport transport
-        )
-        {
-            var session = LogInBrowser(username, password, deviceId, baseUrl, ui, storage, transport);
-            try
-            {
-                return DownloadVault(session);
-            }
-            finally
-            {
-                LogOut(session);
-            }
-        }
-
-        // This mode a true non-interactive CLI/API mode. The 2FA is not used in this mode.
-        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
-            string clientId,
-            string clientSecret,
-            string password,
-            string deviceId,
-            string baseUrl,
-            IRestTransport transport
-        )
-        {
-            var session = LogInCliApi(clientId, clientSecret, password, deviceId, baseUrl, transport);
-            try
-            {
-                return DownloadVault(session);
-            }
-            finally
-            {
-                LogOut(session);
-            }
-        }
-
         // Three-stage API: Login, DownloadAndDecryptVault, Logout
         // This allows reusing the session to download the vault multiple times
-        public static Session LogInBrowser(
+        public static Session LogInBrowser(string username, string password, string deviceId, string baseUrl, IUi ui, ISecureStorage storage)
+        {
+            var transport = new RestTransport();
+            try
+            {
+                return LogInBrowser(username, password, deviceId, baseUrl, ui, storage, transport);
+            }
+            catch (Exception)
+            {
+                transport.Dispose();
+                throw;
+            }
+        }
+
+        public static Session LogInCliApi(string clientId, string clientSecret, string password, string deviceId, string baseUrl)
+        {
+            var transport = new RestTransport();
+            try
+            {
+                return LogInCliApi(clientId, clientSecret, password, deviceId, baseUrl, transport);
+            }
+            catch (Exception)
+            {
+                transport.Dispose();
+                throw;
+            }
+        }
+
+        internal static Session LogInBrowser(
             string username,
             string password,
             string deviceId,
@@ -87,10 +71,10 @@ namespace PasswordManagerAccess.Bitwarden
             // 4. Authenticate with the server and get the token
             var token = Login(username, hash, deviceId, ui, storage, rest.Api, rest.Identity);
 
-            return new Session(token, key, rest.Api);
+            return new Session(token, key, rest.Api, transport);
         }
 
-        public static Session LogInCliApi(
+        internal static Session LogInCliApi(
             string clientId,
             string clientSecret,
             string password,
@@ -104,13 +88,14 @@ namespace PasswordManagerAccess.Bitwarden
             // 1. Login and get the client info
             var (token, kdfInfo) = LogInCliApi(clientId, clientSecret, deviceId, rest.Identity);
 
+            // TODO: The vault should not be downloaded here!!! Use accounts/profile endpoint instead!!!
             // 2. We need to fetch the vault to get the email for key derivation
             var encryptedVault = DownloadVault(rest.Api, token);
 
             // 3. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(encryptedVault.Profile.Email, password, kdfInfo);
 
-            return new Session(token, key, rest.Api);
+            return new Session(token, key, rest.Api, transport);
         }
 
         public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DownloadVault(Session session)
@@ -124,8 +109,15 @@ namespace PasswordManagerAccess.Bitwarden
 
         public static void LogOut(Session session)
         {
-            // Bitwarden doesn't require explicit logout, but we clean up resources
-            // The session token will naturally expire
+            try
+            {
+                // Bitwarden doesn't require explicit logout, but we clean up resources
+                // The session token will naturally expire
+            }
+            finally
+            {
+                session.Transport.Dispose();
+            }
         }
 
         //

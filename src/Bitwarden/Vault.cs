@@ -36,18 +36,23 @@ namespace PasswordManagerAccess.Bitwarden
         // This version allows custom base URL. baseUrl could be set to null or "" for the default value.
         public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
-            using var transport = new RestTransport();
-            var (accounts, sshKeys, collections, organizations, errors) = Client.OpenVaultBrowser(
+            var session = Client.LogInBrowser(
                 username: clientInfo.Username,
                 password: clientInfo.Password,
                 deviceId: clientInfo.DeviceId,
                 baseUrl: baseUrl,
                 ui: ui,
-                storage: storage,
-                transport: transport
+                storage: storage
             );
-
-            return new Vault(accounts, sshKeys, collections, organizations, errors);
+            try
+            {
+                var (accounts, sshKeys, collections, organizations, errors) = Client.DownloadVault(session);
+                return new Vault(accounts, sshKeys, collections, organizations, errors);
+            }
+            finally
+            {
+                Client.LogOut(session);
+            }
         }
 
         // The main entry point. Use this function to open the vault in the CLI/API mode. In
@@ -61,17 +66,22 @@ namespace PasswordManagerAccess.Bitwarden
         // on the first run and reused later on.
         public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null)
         {
-            using var transport = new RestTransport();
-            var (accounts, sshKeys, collections, organizations, errors) = Client.OpenVaultCliApi(
+            var session = Client.LogInCliApi(
                 clientId: clientInfo.ClientId,
                 clientSecret: clientInfo.ClientSecret,
                 password: clientInfo.Password,
                 deviceId: clientInfo.DeviceId,
-                baseUrl: baseUrl,
-                transport: transport
+                baseUrl: baseUrl
             );
-
-            return new Vault(accounts, sshKeys, collections, organizations, errors);
+            try
+            {
+                var (accounts, sshKeys, collections, organizations, errors) = Client.DownloadVault(session);
+                return new Vault(accounts, sshKeys, collections, organizations, errors);
+            }
+            finally
+            {
+                Client.LogOut(session);
+            }
         }
 
         [Obsolete("Please use the overloads with either ClientInfoBrowser or ClientInfoCliApi")]
