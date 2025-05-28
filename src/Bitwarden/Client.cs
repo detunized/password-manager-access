@@ -17,9 +17,11 @@ namespace PasswordManagerAccess.Bitwarden
 {
     public static class Client
     {
-        // Three-stage API: Login, DownloadAndDecryptVault, Logout
-        // This allows reusing the session to download the vault multiple times
-        public static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
+        // See Vault.Open for the main entry point comments
+        public static Session LogIn(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => LogIn(clientInfo, null, ui, storage);
+
+        // See Vault.Open for the main entry point comments
+        public static Session LogIn(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
             try
@@ -33,7 +35,8 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        public static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl)
+        // See Vault.Open for the main entry point comments
+        public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = null)
         {
             var transport = new RestTransport();
             try
@@ -46,6 +49,29 @@ namespace PasswordManagerAccess.Bitwarden
                 throw;
             }
         }
+
+        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DownloadVault(Session session)
+        {
+            var encryptedVault = FetchVault(session);
+            return DecryptVault(encryptedVault, session.Key);
+        }
+
+        public static void LogOut(Session session)
+        {
+            try
+            {
+                // Bitwarden doesn't require explicit logout, but we clean up resources
+                // The session token will naturally expire
+            }
+            finally
+            {
+                session.Transport.Dispose();
+            }
+        }
+
+        //
+        // Internal
+        //
 
         internal static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
@@ -75,39 +101,13 @@ namespace PasswordManagerAccess.Bitwarden
 
             // TODO: The vault should not be downloaded here!!! Use accounts/profile endpoint instead!!!
             // 2. We need to fetch the vault to get the email for key derivation
-            var encryptedVault = DownloadVault(rest.Api, token);
+            var encryptedVault = FetchVault(token, rest.Api);
 
             // 3. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(encryptedVault.Profile.Email, clientInfo.Password, kdfInfo);
 
             return new Session(token, key, rest.Api, transport);
         }
-
-        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DownloadVault(Session session)
-        {
-            // 1. Fetch the vault
-            var encryptedVault = DownloadVault(session.Rest, session.Token);
-
-            // 2. Decrypt and parse the vault
-            return DecryptVault(encryptedVault, session.Key);
-        }
-
-        public static void LogOut(Session session)
-        {
-            try
-            {
-                // Bitwarden doesn't require explicit logout, but we clean up resources
-                // The session token will naturally expire
-            }
-            finally
-            {
-                session.Transport.Dispose();
-            }
-        }
-
-        //
-        // Internal
-        //
 
         internal static (RestClient Api, RestClient Identity) MakeRestClients(string baseUrl, IRestTransport transport)
         {
@@ -534,9 +534,11 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static R.Vault DownloadVault(RestClient rest, string token)
+        internal static R.Vault FetchVault(Session session) => FetchVault(session.Token, session.Rest);
+
+        internal static R.Vault FetchVault(string token, RestClient rest)
         {
-            var response = rest.Get<R.Vault>("sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", token } });
+            var response = rest.Get<R.Vault>("sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
             if (response.IsSuccessful)
                 return response.Data;
 

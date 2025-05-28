@@ -323,7 +323,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow().Get(GetFixture("vault")).ExpectUrl(ApiUrl + "/sync").ToRestClient(ApiUrl);
 
-            var response = Client.DownloadVault(rest, "token");
+            var response = Client.FetchVault("token", rest);
 
             Assert.StartsWith("2.XZ2v", response.Profile.Key);
             Assert.Equal(6, response.Ciphers.Length);
@@ -335,7 +335,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow().Get(GetFixture("vault")).ExpectUrl(ApiUrl + "/sync").ToRestClient(ApiUrl);
 
-            Client.DownloadVault(rest, "token");
+            Client.FetchVault("token", rest);
         }
 
         [Fact]
@@ -347,7 +347,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ExpectHeader("Authorization", "token")
                 .ToRestClient(ApiUrl);
 
-            Client.DownloadVault(rest, "token");
+            Client.FetchVault("token", rest);
         }
 
         [Fact]

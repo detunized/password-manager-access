@@ -28,25 +28,11 @@ namespace PasswordManagerAccess.Bitwarden
         // The device ID should be unique to each installation, but it should not be new on
         // every run. A new random device ID should be generated with GenerateRandomDeviceId
         // on the first run and reused later on.
-        public static Vault Open(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage)
-        {
-            return Open(clientInfo, null, ui, storage);
-        }
+        public static Vault Open(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => Open(clientInfo, null, ui, storage);
 
         // This version allows custom base URL. baseUrl could be set to null or "" for the default value.
-        public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
-        {
-            var session = Client.LogInBrowser(clientInfo: clientInfo, baseUrl: baseUrl, ui: ui, storage: storage);
-            try
-            {
-                var (accounts, sshKeys, collections, organizations, errors) = Client.DownloadVault(session);
-                return new Vault(accounts, sshKeys, collections, organizations, errors);
-            }
-            finally
-            {
-                Client.LogOut(session);
-            }
-        }
+        public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage) =>
+            DownloadAndLogOut(Client.LogIn(clientInfo, baseUrl, ui, storage));
 
         // The main entry point. Use this function to open the vault in the CLI/API mode. In
         // this mode the login is fully non-interactive even with 2FA enabled. Bitwarden servers
@@ -57,9 +43,16 @@ namespace PasswordManagerAccess.Bitwarden
         // The device ID should be unique to each installation, but it should not be new on
         // every run. A new random device ID should be generated with GenerateRandomDeviceId
         // on the first run and reused later on.
-        public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null)
+        public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null) => DownloadAndLogOut(Client.LogIn(clientInfo, baseUrl));
+
+        public static string GenerateRandomDeviceId() => Guid.NewGuid().ToString();
+
+        //
+        // Internal
+        //
+
+        private static Vault DownloadAndLogOut(Session session)
         {
-            var session = Client.LogInCliApi(clientInfo: clientInfo, baseUrl: baseUrl);
             try
             {
                 var (accounts, sshKeys, collections, organizations, errors) = Client.DownloadVault(session);
@@ -69,11 +62,6 @@ namespace PasswordManagerAccess.Bitwarden
             {
                 Client.LogOut(session);
             }
-        }
-
-        public static string GenerateRandomDeviceId()
-        {
-            return Guid.NewGuid().ToString();
         }
 
         //
