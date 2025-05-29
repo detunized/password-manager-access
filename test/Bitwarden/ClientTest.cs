@@ -3,12 +3,12 @@
 
 using System.Collections.Generic;
 using System.Net;
-using FluentAssertions;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
+using Shouldly;
 using Xunit;
 using MfaMethod = PasswordManagerAccess.Bitwarden.Ui.MfaMethod;
 using R = PasswordManagerAccess.Bitwarden.Response;
@@ -140,9 +140,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Client.Login(Username, PasswordHash, DeviceId, ui, SetupSecureStorage(null), apiRest, idRest);
 
             // Assert
-            ui.ChooseMfaMethodCalledTimes.Should().Be(1);
-            ui.ProvideGoogleAuthPasscodeCalledTimes.Should().Be(1);
-            ui.CloseCalledTimes.Should().Be(1);
+            ui.ChooseMfaMethodCalledTimes.ShouldBe(1);
+            ui.ProvideGoogleAuthPasscodeCalledTimes.ShouldBe(1);
+            ui.CloseCalledTimes.ShouldBe(1);
         }
 
         [Fact]
@@ -393,8 +393,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var result = Client.FetchItem("item-id", session);
 
             // Assert
-            result.IsT0.Should().BeTrue();
-            result.AsT0.Id.Should().Be(expectedId);
+            result.IsT0.ShouldBeTrue();
+            result.AsT0.Id.ShouldBe(expectedId);
         }
 
         [Fact]
@@ -411,8 +411,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var result = Client.FetchItem("item-id", session);
 
             // Assert
-            result.IsT1.Should().BeTrue();
-            result.AsT1.Should().Be(NoItem.NotFound);
+            result.IsT1.ShouldBeTrue();
+            result.AsT1.ShouldBe(NoItem.NotFound);
         }
 
         [Fact]
@@ -430,9 +430,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var folders = Client.FetchFolders(session);
 
             // Assert
-            folders.Length.Should().Be(2);
-            folders[0].Name.Should().StartWith("2.");
-            folders[1].Name.Should().StartWith("2.");
+            folders.Length.ShouldBe(2);
+            folders[0].Name.ShouldStartWith("2.");
+            folders[1].Name.ShouldStartWith("2.");
         }
 
         [Fact]
@@ -450,9 +450,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var collections = Client.FetchCollections(session);
 
             // Assert
-            collections.Length.Should().Be(2);
-            collections[0].Name.Should().StartWith("2.");
-            collections[1].Name.Should().StartWith("2.");
+            collections.Length.ShouldBe(2);
+            collections[0].Name.ShouldStartWith("2.");
+            collections[1].Name.ShouldStartWith("2.");
         }
 
         [Fact]
@@ -655,7 +655,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var value = Client.ResolveLinkedField(linkedId, Key, LoginItem);
 
             // Assert
-            value.Should().Be(expected);
+            value.ShouldBe(expected);
         }
 
         [Fact]
