@@ -380,6 +380,38 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Client.FetchVault("token", rest);
         }
 
+        [Theory]
+        [InlineData("single-item-login", "e481381f-25ca-4245-845d-a981014d20a6")]
+        [InlineData("single-item-ssh-key", "318df280-7880-4e4f-a965-b2e901549751")]
+        public void FetchItem_returns_parsed_response(string fixtureName, string expectedId)
+        {
+            // Arrange
+            var rest = new RestFlow().Get(GetFixture(fixtureName)).ExpectUrl(ApiUrl + "/ciphers/item-id").ToRestClient(ApiUrl);
+            var session = MakeSession(rest);
+
+            // Act
+            var result = Client.FetchItem("item-id", session);
+
+            // Assert
+            result.IsT0.Should().BeTrue();
+            result.AsT0.Id.Should().Be(expectedId);
+        }
+
+        [Fact]
+        public void FetchItem_returns_not_found_for_missing_item()
+        {
+            var rest = new RestFlow()
+                .Get(GetFixture("item-not-found"), HttpStatusCode.NotFound)
+                .ExpectUrl(ApiUrl + "/ciphers/item-id")
+                .ToRestClient(ApiUrl);
+            var session = MakeSession(rest);
+
+            var result = Client.FetchItem("item-id", session);
+
+            result.IsT1.Should().BeTrue();
+            result.AsT1.Should().Be(NoItem.NotFound);
+        }
+
         [Fact]
         public void DecryptVault_returns_accounts()
         {

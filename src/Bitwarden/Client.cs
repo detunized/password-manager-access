@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using OneOf;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
@@ -604,6 +605,22 @@ namespace PasswordManagerAccess.Bitwarden
             var response = rest.Get<R.Vault>("sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
             if (response.IsSuccessful)
                 return response.Data;
+
+            throw MakeSpecializedError(response);
+        }
+
+        internal static OneOf<R.Item, NoItem> FetchItem(string itemId, Session session)
+        {
+            var response = session.Rest.Get<R.Item>(
+                $"ciphers/{itemId}/details",
+                new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
+            );
+            if (response.IsSuccessful)
+                return response.Data;
+
+            // Special case: the item not found
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return NoItem.NotFound;
 
             throw MakeSpecializedError(response);
         }
