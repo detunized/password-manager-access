@@ -18,7 +18,7 @@ namespace PasswordManagerAccess.Bitwarden
         internal RestClient Rest { get; }
         internal IRestTransport Transport { get; }
 
-        internal Session(string token, byte[] key, RestClient rest, IRestTransport transport)
+        internal Session(string token, byte[] key, R.Profile profile, RestClient rest, IRestTransport transport)
         {
             Token = token;
             Key = key;
