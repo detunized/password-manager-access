@@ -690,6 +690,74 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Assert.Equal("", blank);
         }
 
+        [Theory, CombinatorialData]
+        public void GetItem_makes_requests_and_returns_vault_item(
+            [CombinatorialValues("single-item-login", "single-item-ssh-key")] string fixtureName,
+            bool haveItemFolder,
+            bool haveSessionFolders,
+            bool haveItemCollections,
+            bool haveSessionCollections
+        )
+        {
+            var itemJson = GetFixture(fixtureName);
+            var itemModel = JsonConvert.DeserializeObject<R.Item>(itemJson);
+
+            // Simulate no folder situation
+            if (!haveItemFolder)
+                itemModel.FolderId = null;
+
+            // Simulate no collection situation
+            if (!haveItemCollections)
+                itemModel.CollectionIds = [];
+
+            var itemId = itemModel.Id;
+
+            var rest = new RestFlow()
+                .Get(JsonConvert.SerializeObject(itemModel))
+                .ExpectUrl($"/ciphers/{itemId}/details")
+                .ExpectHeader("Authorization", "Bearer token");
+
+            // Simulate no cached folders situation
+            if (haveItemFolder && !haveSessionFolders)
+                rest.Get(GetFixture("folders"));
+
+            // Simulate no cached collections situation
+            if (haveItemCollections && !haveSessionCollections)
+                rest.Get(GetFixture("collections"));
+
+            var session = MakeSession(rest);
+
+            if (haveSessionFolders)
+                session.Folders = JsonConvert.DeserializeObject<Model.FolderList>(GetFixture("folders")).Folders;
+
+            if (haveSessionCollections)
+                session.Collections = JsonConvert.DeserializeObject<Model.CollectionList>(GetFixture("collections")).Collections;
+
+            var result = Client.GetItem(itemId, session);
+
+            var item = result.Value as VaultItem;
+            Assert.NotNull(item);
+            Assert.Equal(itemId, item.Id);
+
+            if (haveItemFolder)
+                Assert.NotEmpty(item.Folder);
+            else
+                Assert.Empty(item.Folder);
+
+            if (haveItemCollections)
+                Assert.NotEmpty(item.CollectionIds);
+            else
+                Assert.Empty(item.CollectionIds);
+
+            if (!haveItemFolder && !haveSessionFolders)
+                Assert.Null(session.Folders);
+
+            if (!haveItemCollections && !haveSessionCollections)
+                Assert.Null(session.Collections);
+        }
+
+        }
+
         //
         // Helpers
         //

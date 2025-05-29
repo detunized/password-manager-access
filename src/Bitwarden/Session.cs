@@ -18,6 +18,10 @@ namespace PasswordManagerAccess.Bitwarden
         internal RestClient Rest { get; }
         internal IRestTransport Transport { get; }
 
+        // Set lazily if needed
+        internal R.Folder[]? Folders { get; set; }
+        internal R.Collection[]? Collections { get; set; }
+
         internal Session(string token, byte[] key, R.Profile profile, RestClient rest, IRestTransport transport)
         {
             Token = token;

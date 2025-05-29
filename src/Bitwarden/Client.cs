@@ -625,6 +625,23 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
+        internal static OneOf<R.Item, NoItem> FetchItemAndUpdateSession(string itemId, Session session)
+        {
+            var maybeItem = FetchItem(itemId, session);
+            if (maybeItem.IsT1)
+                return maybeItem;
+
+            var item = maybeItem.AsT0;
+
+            if (item.FolderId != null && session.Folders == null)
+                session.Folders = FetchFolders(session);
+
+            if ((item.CollectionIds?.Length ?? 0) > 0 && session.Collections == null)
+                session.Collections = FetchCollections(session);
+
+            return item;
+        }
+
         internal static R.Folder[] FetchFolders(Session session)
         {
             var response = session.Rest.Get<Model.FolderList>($"folders", new Dictionary<string, string> { { "Authorization", $"{session.Token}" } });
@@ -796,15 +813,13 @@ namespace PasswordManagerAccess.Bitwarden
             if (!item.Key.IsNullOrEmpty())
                 key = DecryptToBytes(item.Key, key);
 
-            var folder = item.FolderId != null && folders.ContainsKey(item.FolderId) ? folders[item.FolderId] : "";
-
             var parsedItem = new VaultItem
             {
                 Id = item.Id,
                 Name = DecryptToStringOrBlank(item.Name, key),
                 Note = DecryptToStringOrBlank(item.Notes, key),
                 DeletedDate = item.DeletedDate,
-                Folder = folder,
+                Folder = folders.GetValueOrDefault(item.FolderId ?? "", ""),
                 CollectionIds = item.CollectionIds ?? [],
                 HidePassword = ResolveHidePassword(item.CollectionIds ?? [], collections),
                 CustomFields = ParseCustomFields(item, key),
