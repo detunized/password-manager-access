@@ -625,6 +625,27 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
+        internal static R.Folder[] FetchFolders(Session session)
+        {
+            var response = session.Rest.Get<Model.FolderList>($"folders", new Dictionary<string, string> { { "Authorization", $"{session.Token}" } });
+            if (response.IsSuccessful)
+                return response.Data.Folders;
+
+            throw MakeSpecializedError(response);
+        }
+
+        internal static R.Collection[] FetchCollections(Session session)
+        {
+            var response = session.Rest.Get<Model.CollectionList>(
+                $"collections",
+                new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
+            );
+            if (response.IsSuccessful)
+                return response.Data.Collections;
+
+            throw MakeSpecializedError(response);
+        }
+
         internal static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)
         {
             var vaultKey = DecryptVaultKey(vault.Profile, key);

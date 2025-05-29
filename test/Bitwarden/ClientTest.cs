@@ -413,6 +413,46 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void FetchFolders_returns_parsed_response()
+        {
+            // Arrange
+            var rest = new RestFlow()
+                .Get(GetFixture("folders"))
+                .ExpectUrl(ApiUrl + "/folders")
+                .ExpectHeader("Authorization", "Bearer token")
+                .ToRestClient(ApiUrl);
+            var session = MakeSession(rest);
+
+            // Act
+            var folders = Client.FetchFolders(session);
+
+            // Assert
+            folders.Length.Should().Be(2);
+            folders[0].Name.Should().StartWith("2.");
+            folders[1].Name.Should().StartWith("2.");
+        }
+
+        [Fact]
+        public void FetchCollections_returns_parsed_response()
+        {
+            // Arrange
+            var rest = new RestFlow()
+                .Get(GetFixture("collections"))
+                .ExpectUrl(ApiUrl + "/collections")
+                .ExpectHeader("Authorization", "Bearer token")
+                .ToRestClient(ApiUrl);
+            var session = MakeSession(rest);
+
+            // Act
+            var collections = Client.FetchCollections(session);
+
+            // Assert
+            collections.Length.Should().Be(2);
+            collections[0].Name.Should().StartWith("2.");
+            collections[1].Name.Should().StartWith("2.");
+        }
+
+        [Fact]
         public void DecryptVault_returns_accounts()
         {
             var (accounts, _, _, _, errors) = Client.DecryptVault(LoadVaultFixture(), Kek);
