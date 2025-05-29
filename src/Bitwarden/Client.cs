@@ -141,7 +141,10 @@ namespace PasswordManagerAccess.Bitwarden
             // 4. Authenticate with the server and get the token
             var token = Login(clientInfo.Username, hash, clientInfo.DeviceId, ui, storage, rest.Api, rest.Identity);
 
-            return new Session(token, key, rest.Api, transport);
+            // 5. Fetch the profile to get the email for key derivation
+            var profile = FetchProfile(token, rest.Api);
+
+            return new Session(token, key, profile, rest.Api, transport);
         }
 
         internal static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl, IRestTransport transport)
@@ -157,7 +160,7 @@ namespace PasswordManagerAccess.Bitwarden
             // 3. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(profile.Email, clientInfo.Password, kdfInfo);
 
-            return new Session(token, key, rest.Api, transport);
+            return new Session(token, key, profile, rest.Api, transport);
         }
 
         internal static (RestClient Api, RestClient Identity) MakeRestClients(string baseUrl, IRestTransport transport)

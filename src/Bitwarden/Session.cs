@@ -1,7 +1,10 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Bitwarden
 {
@@ -9,15 +12,17 @@ namespace PasswordManagerAccess.Bitwarden
     // various operations like downloading vaults or logging out.
     public class Session
     {
-        internal readonly string Token;
-        internal readonly byte[] Key;
-        internal readonly RestClient Rest;
-        internal readonly IRestTransport Transport;
+        internal string Token { get; }
+        internal byte[] Key { get; }
+        internal R.Profile Profile { get; }
+        internal RestClient Rest { get; }
+        internal IRestTransport Transport { get; }
 
         internal Session(string token, byte[] key, RestClient rest, IRestTransport transport)
         {
             Token = token;
             Key = key;
+            Profile = profile;
             Rest = rest;
             Transport = transport;
         }

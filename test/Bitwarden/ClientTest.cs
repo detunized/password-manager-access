@@ -321,17 +321,17 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void FetchProfile_returns_parsed_response()
         {
-            var rest = new RestFlow().Get(GetFixture("profile")).ToRestClient();
+            var rest = new RestFlow().Get(GetFixture("profile"));
 
             var profile = Client.FetchProfile("token", rest);
 
-            Assert.Equal("test.account@gmail.com", profile.Email);
+            Assert.Equal("lastpass.ruby@gmail.com", profile.Email);
         }
 
         [Fact]
         public void FetchProfile_makes_GET_request_to_specific_endpoint()
         {
-            var rest = new RestFlow().Get(GetFixture("profile")).ExpectUrl(ApiUrl + "/accounts/profile").ToRestClient(ApiUrl);
+            var rest = new RestFlow().Get(GetFixture("profile")).ExpectUrl("/accounts/profile");
 
             Client.FetchProfile("token", rest);
         }
@@ -665,6 +665,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
             }
         }
 
+        private Session MakeSession(RestClient rest) => new("Bearer token", Kek, LoadProfileFixture(), rest, rest.Transport);
+
         private static ISecureStorage SetupSecureStorage(string token)
         {
             return new MemoryStorage(new Dictionary<string, string> { ["remember-me-token"] = token });
@@ -673,6 +675,11 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private R.Vault LoadVaultFixture(string name = "vault")
         {
             return JsonConvert.DeserializeObject<R.Vault>(GetFixture(name));
+        }
+
+        private R.Profile LoadProfileFixture(string name = "profile")
+        {
+            return JsonConvert.DeserializeObject<R.Profile>(GetFixture(name));
         }
 
         //
