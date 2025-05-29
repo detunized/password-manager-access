@@ -110,6 +110,19 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
+        // This method fetches a single item from the vault by its ID. The session must be obtained from LogIn.
+        public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, Session session)
+        {
+            var maybeItem = FetchItemAndUpdateSession(itemId, session);
+
+            return maybeItem.Value switch
+            {
+                R.Item item => ParseItem(item, session),
+                NoItem noItem => noItem,
+                _ => throw new InternalErrorException("Logic error"),
+            };
+        }
+
         //
         // Internal
         //
@@ -661,6 +674,24 @@ namespace PasswordManagerAccess.Bitwarden
                 return response.Data.Collections;
 
             throw MakeSpecializedError(response);
+        }
+
+        internal static OneOf<Account, SshKey, NoItem> ParseItem(R.Item item, Session session)
+        {
+            // TOOD: DRY this up and cache the results!
+            var vaultKey = DecryptVaultKey(session.Profile, session.Key);
+            var privateKey = DecryptPrivateKey(session.Profile, vaultKey);
+            var orgKeys = DecryptOrganizationKeys(session.Profile, privateKey);
+            var folders = ParseFolders(session.Folders ?? [], vaultKey);
+            var collections = ParseCollections(session.Collections ?? [], vaultKey, orgKeys);
+            var collectionsById = collections.ToDictionary(x => x.Id);
+
+            return item.Type switch
+            {
+                R.ItemType.Login => ParseAccountItem(item, vaultKey, orgKeys, folders, collectionsById),
+                R.ItemType.SshKey => ParseSshKeyItem(item, vaultKey, orgKeys, folders, collectionsById),
+                _ => NoItem.UnsupportedType,
+            };
         }
 
         internal static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)

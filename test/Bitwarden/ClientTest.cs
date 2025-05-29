@@ -400,14 +400,17 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void FetchItem_returns_not_found_for_missing_item()
         {
+            // Arrange
             var rest = new RestFlow()
                 .Get(GetFixture("item-not-found"), HttpStatusCode.NotFound)
                 .ExpectUrl(ApiUrl + "/ciphers/item-id")
                 .ToRestClient(ApiUrl);
             var session = MakeSession(rest);
 
+            // Act
             var result = Client.FetchItem("item-id", session);
 
+            // Assert
             result.IsT1.Should().BeTrue();
             result.AsT1.Should().Be(NoItem.NotFound);
         }
@@ -699,6 +702,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             bool haveSessionCollections
         )
         {
+            // Arrange
             var itemJson = GetFixture(fixtureName);
             var itemModel = JsonConvert.DeserializeObject<R.Item>(itemJson);
 
@@ -733,8 +737,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
             if (haveSessionCollections)
                 session.Collections = JsonConvert.DeserializeObject<Model.CollectionList>(GetFixture("collections")).Collections;
 
+            // Act
             var result = Client.GetItem(itemId, session);
 
+            // Assert
             var item = result.Value as VaultItem;
             Assert.NotNull(item);
             Assert.Equal(itemId, item.Id);
@@ -756,6 +762,69 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 Assert.Null(session.Collections);
         }
 
+        [Fact]
+        public void GetItem_returns_no_item_on_missing_item()
+        {
+            // Arrange
+            var rest = new RestFlow().Get(GetFixture("item-not-found"), HttpStatusCode.NotFound);
+
+            // Act
+            var result = Client.GetItem("missing-item-id", MakeSession(rest));
+
+            // Assert
+            Assert.Equal(NoItem.NotFound, result.AsT2);
+        }
+
+        [Fact]
+        public void GetItem_returns_no_item_on_unsupported_item()
+        {
+            // Arrange
+            var rest = new RestFlow().Get(GetFixture("single-item-card"));
+
+            // Act
+            var result = Client.GetItem("unsupported-item-id", MakeSession(rest, [], []));
+
+            // Assert
+            Assert.Equal(NoItem.UnsupportedType, result.AsT2);
+        }
+
+        [Fact]
+        public void GetItem_returns_account_for_login_item()
+        {
+            // Arrange
+            var rest = new RestFlow()
+                .Get(GetFixture("single-item-login"))
+                .ExpectUrl(ApiUrl + "/ciphers/item-id/details")
+                .ExpectHeader("Authorization", "Bearer token")
+                .ToRestClient(ApiUrl);
+
+            // Act
+            var result = Client.GetItem("item-id", MakeSession(rest, [], []));
+
+            Assert.True(result.IsT0);
+            var account = result.AsT0;
+            Assert.Equal("e481381f-25ca-4245-845d-a981014d20a6", account.Id);
+            Assert.Equal("Google", account.Name);
+        }
+
+        [Fact]
+        public void GetItem_returns_ssh_key_for_ssh_key_item()
+        {
+            // Arrange
+            var rest = new RestFlow()
+                .Get(GetFixture("single-item-ssh-key"))
+                .ExpectUrl(ApiUrl + "/ciphers/item-id/details")
+                .ExpectHeader("Authorization", "Bearer token")
+                .ToRestClient(ApiUrl);
+
+            // Act
+            var result = Client.GetItem("item-id", MakeSession(rest, [], []));
+
+            // Assert
+            Assert.True(result.IsT1);
+            var sshKey = result.AsT1;
+            Assert.Equal("318df280-7880-4e4f-a965-b2e901549751", sshKey.Id);
+            Assert.Equal("ssh2", sshKey.Name);
         }
 
         //
@@ -805,7 +874,15 @@ namespace PasswordManagerAccess.Test.Bitwarden
             }
         }
 
-        private Session MakeSession(RestClient rest) => new("Bearer token", Kek, LoadProfileFixture(), rest, rest.Transport);
+        private Session MakeSession(RestClient rest, R.Folder[] folders = null, R.Collection[] collections = null)
+        {
+            var session = new Session("Bearer token", Kek, LoadProfileFixture(), rest, rest.Transport)
+            {
+                Folders = folders,
+                Collections = collections,
+            };
+            return session;
+        }
 
         private static ISecureStorage SetupSecureStorage(string token)
         {
