@@ -768,7 +768,7 @@ namespace PasswordManagerAccess.Bitwarden
                 DeletedDate = item.DeletedDate,
                 Folder = folder,
                 CollectionIds = item.CollectionIds ?? [],
-                HidePassword = ResolveHidePassword(item.CollectionIds, collections),
+                HidePassword = ResolveHidePassword(item.CollectionIds ?? [], collections),
                 CustomFields = ParseCustomFields(item, key),
             };
 
