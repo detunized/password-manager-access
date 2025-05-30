@@ -3,8 +3,8 @@
 
 #nullable enable
 
+using System.Collections.Generic;
 using PasswordManagerAccess.Common;
-using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Bitwarden
 {
@@ -14,15 +14,15 @@ namespace PasswordManagerAccess.Bitwarden
     {
         internal string Token { get; }
         internal byte[] Key { get; }
-        internal R.Profile Profile { get; }
+        internal Profile Profile { get; }
         internal RestClient Rest { get; }
         internal IRestTransport Transport { get; }
 
-        // Set lazily if needed
-        internal R.Folder[]? Folders { get; set; }
-        internal R.Collection[]? Collections { get; set; }
+        // Set lazily if/when needed
+        internal Dictionary<string, string>? Folders { get; set; }
+        internal Dictionary<string, Collection>? Collections { get; set; }
 
-        internal Session(string token, byte[] key, R.Profile profile, RestClient rest, IRestTransport transport)
+        internal Session(string token, byte[] key, Profile profile, RestClient rest, IRestTransport transport)
         {
             Token = token;
             Key = key;
@@ -31,4 +31,7 @@ namespace PasswordManagerAccess.Bitwarden
             Transport = transport;
         }
     }
+
+    // TODO: Move to Model maybe?
+    internal record Profile(byte[] VaultKey, byte[] PrivateKey, Dictionary<string, Organization> Organizations, Dictionary<string, byte[]> OrgKeys);
 }

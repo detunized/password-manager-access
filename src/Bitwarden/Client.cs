@@ -90,8 +90,9 @@ namespace PasswordManagerAccess.Bitwarden
         public static Vault DownloadVault(Session session)
         {
             var encryptedVault = FetchVault(session);
-            var (accounts, sshKeys, collections, organizations, errors) = DecryptVault(encryptedVault, session.Key);
-            return new Vault(accounts, sshKeys, collections, organizations, errors);
+            return DecryptVault(encryptedVault, session.Key);
+            // TODO: Update the session with the profile, folders and collections. This could be useful if the user
+            //       fetches single items after that.
         }
 
         // This method logs out the session. Call this when the session is no longer needed.
@@ -113,7 +114,7 @@ namespace PasswordManagerAccess.Bitwarden
         // This method fetches a single item from the vault by its ID. The session must be obtained from LogIn.
         public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, Session session)
         {
-            var maybeItem = FetchItemAndUpdateSession(itemId, session);
+            var maybeItem = FetchItemAndMaybeFoldersAndCollections(itemId, session);
 
             return maybeItem.Value switch
             {
@@ -155,8 +156,13 @@ namespace PasswordManagerAccess.Bitwarden
             // 4. Authenticate with the server and get the token
             var token = Login(clientInfo.Username, hash, clientInfo.DeviceId, ui, storage, rest.Api, rest.Identity);
 
-            // 5. Fetch the profile to get the email for key derivation
-            var profile = FetchProfile(token, rest.Api);
+            // 5. Fetch the profile in case this session is going be used to download a single item.
+            //    The full vault download contains the profile too, but not the single item download.
+            //    So in case of the full vault download it's redundant, but this should be a big deal.
+            var encryptedProfile = FetchProfile(token, rest.Api);
+
+            // 6. Decrypt the profile (it contains the vault key, the orgs and the org keys)
+            var profile = DecryptProfile(encryptedProfile, key);
 
             return new Session(token, key, profile, rest.Api, transport);
         }
@@ -168,11 +174,15 @@ namespace PasswordManagerAccess.Bitwarden
             // 1. Login and get the client info
             var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest.Identity);
 
-            // 2. Fetch the profile to get the email for key derivation
-            var profile = FetchProfile(token, rest.Api);
+            // 2. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
+            //    Whether downloading the full vault or a single item, we need the profile first.
+            var encryptedProfile = FetchProfile(token, rest.Api);
 
             // 3. Derive the master encryption key or KEK (key encryption key)
-            var key = Util.DeriveKey(profile.Email, clientInfo.Password, kdfInfo);
+            var key = Util.DeriveKey(encryptedProfile.Email, clientInfo.Password, kdfInfo);
+
+            // 4. Decrypt the profile (it contains the vault key, the orgs and the org keys)
+            var profile = DecryptProfile(encryptedProfile, key);
 
             return new Session(token, key, profile, rest.Api, transport);
         }
@@ -602,6 +612,26 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
+        //
+        // Fetch/Parse helpers
+        //
+
+        internal static Dictionary<string, string> FetchAndParseFolders(Session session)
+        {
+            var folders = FetchFolders(session);
+            return ParseFolders(folders, session.Profile.VaultKey);
+        }
+
+        internal static Dictionary<string, Collection> FetchAndParseCollections(Session session)
+        {
+            var collections = FetchCollections(session);
+            return ParseCollections(collections, session.Profile.VaultKey, session.Profile.OrgKeys);
+        }
+
+        //
+        // Fetching data
+        //
+
         internal static R.Profile FetchProfile(string token, RestClient rest)
         {
             var response = rest.Get<R.Profile>("accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
@@ -638,7 +668,7 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static OneOf<R.Item, NoItem> FetchItemAndUpdateSession(string itemId, Session session)
+        internal static OneOf<R.Item, NoItem> FetchItemAndMaybeFoldersAndCollections(string itemId, Session session)
         {
             var maybeItem = FetchItem(itemId, session);
             if (maybeItem.IsT1)
@@ -646,11 +676,15 @@ namespace PasswordManagerAccess.Bitwarden
 
             var item = maybeItem.AsT0;
 
+            // TODO: There's a chance that the folders are outdated in case they were edited since the last fetch.
+            //       Figure out the expiry/refresh logic.
             if (item.FolderId != null && session.Folders == null)
-                session.Folders = FetchFolders(session);
+                session.Folders = FetchAndParseFolders(session);
 
+            // TODO: There's a chance that the collections are outdated in case they were edited since the last fetch.
+            //       Figure out the expiry/refresh logic.
             if ((item.CollectionIds?.Length ?? 0) > 0 && session.Collections == null)
-                session.Collections = FetchCollections(session);
+                session.Collections = FetchAndParseCollections(session);
 
             return item;
         }
@@ -676,36 +710,43 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
+        //
+        // Parsing data
+        //
+
         internal static OneOf<Account, SshKey, NoItem> ParseItem(R.Item item, Session session)
         {
-            // TOOD: DRY this up and cache the results!
-            var vaultKey = DecryptVaultKey(session.Profile, session.Key);
-            var privateKey = DecryptPrivateKey(session.Profile, vaultKey);
-            var orgKeys = DecryptOrganizationKeys(session.Profile, privateKey);
-            var folders = ParseFolders(session.Folders ?? [], vaultKey);
-            var collections = ParseCollections(session.Collections ?? [], vaultKey, orgKeys);
-            var collectionsById = collections.ToDictionary(x => x.Id);
+            var profile = session.Profile;
+            var folders = session.Folders;
+            var collections = session.Collections;
 
             return item.Type switch
             {
-                R.ItemType.Login => ParseAccountItem(item, vaultKey, orgKeys, folders, collectionsById),
-                R.ItemType.SshKey => ParseSshKeyItem(item, vaultKey, orgKeys, folders, collectionsById),
+                R.ItemType.Login => ParseAccountItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
+                R.ItemType.SshKey => ParseSshKeyItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
                 _ => NoItem.UnsupportedType,
             };
         }
 
-        internal static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)
+        internal static Profile DecryptProfile(R.Profile profile, byte[] key, bool needOrgKeys = true)
         {
-            var vaultKey = DecryptVaultKey(vault.Profile, key);
-            var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
-            var orgKeys = DecryptOrganizationKeys(vault.Profile, privateKey);
-            var folders = ParseFolders(vault.Folders, vaultKey);
-            var collections = ParseCollections(vault.Collections, vaultKey, orgKeys);
-            var organizations = ParseOrganizations(vault.Profile.Organizations);
-            var collectionsById = collections.ToDictionary(x => x.Id);
-            var (accounts, sshKeys, errors) = ParseAccounts(vault.Ciphers, vaultKey, orgKeys, folders, collectionsById);
+            var vaultKey = DecryptVaultKey(profile, key);
+            var privateKey = DecryptPrivateKey(profile, vaultKey);
+            var organizations = ParseOrganizations(profile.Organizations).ToDictionary(x => x.Id);
+            var orgKeys = needOrgKeys ? DecryptOrganizationKeys(profile, privateKey) : [];
 
-            return (accounts, sshKeys, collections, organizations, errors);
+            return new Profile(vaultKey, privateKey, organizations, orgKeys);
+        }
+
+        internal static Vault DecryptVault(R.Vault vault, byte[] key)
+        {
+            // We ignore the session profile as it might be out of date. It doesn't take long to decrypt everything,
+            // given that we're going to parse the whole vault in the next step.
+            var profile = DecryptProfile(vault.Profile, key);
+            var folders = ParseFolders(vault.Folders, profile.VaultKey);
+            var collections = ParseCollections(vault.Collections, profile.VaultKey, profile.OrgKeys);
+            var (accounts, sshKeys, errors) = ParseAccounts(vault.Ciphers, profile.VaultKey, profile.OrgKeys, folders, collections);
+            return new Vault(accounts, sshKeys, collections.Values.ToArray(), profile.Organizations.Values.ToArray(), errors);
         }
 
         private static Organization[] ParseOrganizations(R.Organization[] organizations)
@@ -736,7 +777,7 @@ namespace PasswordManagerAccess.Bitwarden
         internal static Dictionary<string, byte[]> DecryptOrganizationKeys(R.Profile profile, byte[] privateKey)
         {
             if (privateKey == null || profile.Organizations == null)
-                return new Dictionary<string, byte[]>();
+                return [];
 
             return profile.Organizations.ToDictionary(x => x.Id, x => DecryptRsaToBytes(x.Key, privateKey));
         }
@@ -746,16 +787,21 @@ namespace PasswordManagerAccess.Bitwarden
             return folders.ToDictionary(i => i.Id, i => DecryptToString(i.Name, key));
         }
 
-        internal static Collection[] ParseCollections(R.Collection[] collections, byte[] vaultKey, Dictionary<string, byte[]> orgKeys)
+        internal static Dictionary<string, Collection> ParseCollections(
+            R.Collection[] collections,
+            byte[] vaultKey,
+            Dictionary<string, byte[]> orgKeys
+        )
         {
-            return collections
-                .Select(x => new Collection(
+            return collections.ToDictionary(
+                x => x.Id,
+                x => new Collection(
                     id: x.Id,
                     name: DecryptToString(x.Name, x.OrganizationId.IsNullOrEmpty() ? vaultKey : orgKeys[x.OrganizationId]),
                     organizationId: x.OrganizationId ?? "",
                     hidePasswords: x.HidePasswords
-                ))
-                .ToArray();
+                )
+            );
         }
 
         internal static (Account[], SshKey[], ParseError[]) ParseAccounts(
@@ -781,6 +827,9 @@ namespace PasswordManagerAccess.Bitwarden
                             break;
                         case R.ItemType.SshKey:
                             sshKeys.Add(ParseSshKeyItem(item, vaultKey, orgKeys, folders, collections));
+                            break;
+                        default:
+                            // Unsupported items are ignored.
                             break;
                     }
                 }
@@ -850,9 +899,9 @@ namespace PasswordManagerAccess.Bitwarden
                 Name = DecryptToStringOrBlank(item.Name, key),
                 Note = DecryptToStringOrBlank(item.Notes, key),
                 DeletedDate = item.DeletedDate,
-                Folder = folders.GetValueOrDefault(item.FolderId ?? "", ""),
+                Folder = item.FolderId == null ? "" : folders.GetValueOrDefault(item.FolderId, ""),
                 CollectionIds = item.CollectionIds ?? [],
-                HidePassword = ResolveHidePassword(item.CollectionIds ?? [], collections),
+                HidePassword = item.CollectionIds != null && ResolveHidePassword(item.CollectionIds, collections),
                 CustomFields = ParseCustomFields(item, key),
             };
 

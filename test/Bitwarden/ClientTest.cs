@@ -458,126 +458,121 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_returns_accounts()
         {
-            var (accounts, _, _, _, errors) = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var vault = Client.DecryptVault(LoadVaultFixture(), DerivedKek);
 
-            Assert.Equal(3, accounts.Length);
-            Assert.Equal("Facebook", accounts[0].Name);
-            Assert.Equal("Google", accounts[1].Name);
-            Assert.Equal("only name", accounts[2].Name);
+            Assert.Equal(3, vault.Accounts.Length);
+            Assert.Equal("Facebook", vault.Accounts[0].Name);
+            Assert.Equal("Google", vault.Accounts[1].Name);
+            Assert.Equal("only name", vault.Accounts[2].Name);
 
-            Assert.Empty(errors);
+            Assert.Empty(vault.ParseErrors);
         }
 
         [Fact]
         public void DecryptVault_returns_ssh_keys()
         {
-            var (_, sshKeys, _, _, errors) = Client.DecryptVault(LoadVaultFixture("vault-with-ssh-keys"), Kek);
+            var vault = Client.DecryptVault(LoadVaultFixture("vault-with-ssh-keys"), DerivedKek);
 
-            Assert.Equal(5, sshKeys.Length);
-            Assert.Equal("318df280-7880-4e4f-a965-b2e901549751", sshKeys[0].Id);
-            Assert.Equal("c30a73d5-dae6-4c8a-ba77-b2e901547392", sshKeys[1].Id);
-            Assert.Equal("f11504c5-7533-433d-95b1-b2e90154b77f", sshKeys[2].Id);
+            Assert.Equal(5, vault.SshKeys.Length);
+            Assert.Equal("318df280-7880-4e4f-a965-b2e901549751", vault.SshKeys[0].Id);
+            Assert.Equal("c30a73d5-dae6-4c8a-ba77-b2e901547392", vault.SshKeys[1].Id);
+            Assert.Equal("f11504c5-7533-433d-95b1-b2e90154b77f", vault.SshKeys[2].Id);
 
-            Assert.Empty(errors);
+            Assert.Empty(vault.ParseErrors);
         }
 
         [Fact]
         public void DecryptVault_returns_collections()
         {
-            var (_, _, collections, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
+            var vault = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
 
-            Assert.Equal(2, collections.Length);
+            Assert.Equal(2, vault.Collections.Length);
 
-            Assert.Equal("b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", collections[0].Id);
-            Assert.Equal("Default Collection", collections[0].Name);
-            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", collections[0].OrganizationId);
-            Assert.False(collections[0].HidePasswords);
+            Assert.Equal("b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", vault.Collections[0].Id);
+            Assert.Equal("Default Collection", vault.Collections[0].Name);
+            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", vault.Collections[0].OrganizationId);
+            Assert.False(vault.Collections[0].HidePasswords);
 
-            Assert.Equal("0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5", collections[1].Id);
-            Assert.Equal("Hidden pwd", collections[1].Name);
-            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", collections[1].OrganizationId);
-            Assert.True(collections[1].HidePasswords);
+            Assert.Equal("0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5", vault.Collections[1].Id);
+            Assert.Equal("Hidden pwd", vault.Collections[1].Name);
+            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", vault.Collections[1].OrganizationId);
+            Assert.True(vault.Collections[1].HidePasswords);
         }
 
         [Fact]
         public void DecryptVault_returns_organizations()
         {
-            var (_, _, _, organizations, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
+            var vault = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
 
-            Assert.Equal(2, organizations.Length);
+            Assert.Equal(2, vault.Organizations.Length);
 
-            Assert.Equal("487e674f-7b11-4b33-9d1a-adb2007f6a6a", organizations[0].Id);
-            Assert.Equal("Gobias Industries Inc", organizations[0].Name);
+            Assert.Equal("487e674f-7b11-4b33-9d1a-adb2007f6a6a", vault.Organizations[0].Id);
+            Assert.Equal("Gobias Industries Inc", vault.Organizations[0].Name);
 
-            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", organizations[1].Id);
-            Assert.Equal("Free Sharing Corp", organizations[1].Name);
+            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", vault.Organizations[1].Id);
+            Assert.Equal("Free Sharing Corp", vault.Organizations[1].Name);
         }
 
         [Fact]
         public void DecryptVault_assigns_folders()
         {
-            var (accounts, _, _, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var vault = Client.DecryptVault(LoadVaultFixture(), DerivedKek);
 
-            Assert.Equal("Facebook", accounts[0].Name);
-            Assert.Equal("folder2", accounts[0].Folder);
+            Assert.Equal("Facebook", vault.Accounts[0].Name);
+            Assert.Equal("folder2", vault.Accounts[0].Folder);
 
-            Assert.Equal("Google", accounts[1].Name);
-            Assert.Equal("", accounts[1].Folder);
+            Assert.Equal("Google", vault.Accounts[1].Name);
+            Assert.Equal("", vault.Accounts[1].Folder);
 
-            Assert.Equal("only name", accounts[2].Name);
-            Assert.Equal("folder1", accounts[2].Folder);
+            Assert.Equal("only name", vault.Accounts[2].Name);
+            Assert.Equal("folder1", vault.Accounts[2].Folder);
         }
 
         [Fact]
         public void DecryptVault_resolves_HidePassword_with_no_collections()
         {
-            var (accounts, _, _, _, _) = Client.DecryptVault(LoadVaultFixture(), Kek);
+            var vault = Client.DecryptVault(LoadVaultFixture(), DerivedKek);
 
-            Assert.Equal(3, accounts.Length);
-            Assert.False(accounts[0].HidePassword);
-            Assert.False(accounts[1].HidePassword);
-            Assert.False(accounts[2].HidePassword);
+            Assert.Equal(3, vault.Accounts.Length);
+            Assert.False(vault.Accounts[0].HidePassword);
+            Assert.False(vault.Accounts[1].HidePassword);
+            Assert.False(vault.Accounts[2].HidePassword);
         }
 
         [Fact]
         public void DecryptVault_assigns_collections_and_resolves_HidePassword()
         {
-            var (accounts, _, _, _, _) = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
+            var vault = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
 
-            Assert.Equal(3, accounts.Length);
+            Assert.Equal(3, vault.Accounts.Length);
 
-            Assert.Equal("both", accounts[0].Name);
-            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" }, accounts[0].CollectionIds);
-            Assert.False(accounts[0].HidePassword);
+            Assert.Equal("both", vault.Accounts[0].Name);
+            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" }, vault.Accounts[0].CollectionIds);
+            Assert.False(vault.Accounts[0].HidePassword);
 
-            Assert.Equal("hiddenonly", accounts[1].Name);
-            Assert.Equal(new[] { "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" }, accounts[1].CollectionIds);
-            Assert.True(accounts[1].HidePassword);
+            Assert.Equal("hiddenonly", vault.Accounts[1].Name);
+            Assert.Equal(new[] { "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" }, vault.Accounts[1].CollectionIds);
+            Assert.True(vault.Accounts[1].HidePassword);
 
-            Assert.Equal("defonly", accounts[2].Name);
-            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88" }, accounts[2].CollectionIds);
-            Assert.False(accounts[2].HidePassword);
+            Assert.Equal("defonly", vault.Accounts[2].Name);
+            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88" }, vault.Accounts[2].CollectionIds);
+            Assert.False(vault.Accounts[2].HidePassword);
         }
 
         [Fact]
         public void DecryptVault_returns_errors()
         {
-            var (accounts, _, _, _, errors) = Client.DecryptVault(LoadVaultFixture("vault-with-errors"), Kek);
+            var vault = Client.DecryptVault(LoadVaultFixture("vault-with-errors"), DerivedKek);
 
-            Assert.NotEmpty(accounts);
-            Assert.NotEmpty(errors);
+            Assert.NotEmpty(vault.Accounts);
+            Assert.NotEmpty(vault.ParseErrors);
         }
 
         [Fact]
         public void ParseAccountItem_returns_account()
         {
             var vault = LoadVaultFixture();
-            var folders = new Dictionary<string, string>
-            {
-                { "d0e9210c-610b-4427-a344-a99600d462d3", "folder1" },
-                { "94542f0a-d858-46ce-87a5-a99600d47732", "folder2" },
-            };
-            var account = Client.ParseAccountItem(vault.Ciphers[0], Key, null, folders, new Dictionary<string, Collection>());
+            var account = Client.ParseAccountItem(vault.Ciphers[0], VaultKey, null, Folders, new Dictionary<string, Collection>());
 
             Assert.Equal("a323db80-891a-4d91-9304-a981014cf3ca", account.Id);
             Assert.Equal("Facebook", account.Name);
@@ -592,12 +587,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void ParseAccountItemWithFields_returns_account()
         {
             var vault = LoadVaultFixture("vault-with-fields");
-            var folders = new Dictionary<string, string>
-            {
-                { "d0e9210c-610b-4427-a344-a99600d462d3", "folder1" },
-                { "94542f0a-d858-46ce-87a5-a99600d47732", "folder2" },
-            };
-            var account = Client.ParseAccountItem(vault.Ciphers[1], Key, null, folders, new Dictionary<string, Collection>());
+            var account = Client.ParseAccountItem(vault.Ciphers[1], VaultKey, null, Folders, new Dictionary<string, Collection>());
 
             Assert.Equal("e481381f-25ca-4245-845d-a981014d20a6", account.Id);
             Assert.Equal("Google", account.Name);
@@ -642,7 +632,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             };
 
             // Act/Assert
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ParseField(field, Key, LoginItem), "Custom field type 4");
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ParseField(field, VaultKey, LoginItem), "Custom field type 4");
         }
 
         [Theory]
@@ -652,7 +642,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void ResolveLinkedField_returns_mapped_value(int? linkedId, string expected)
         {
             // Arrange/Act
-            var value = Client.ResolveLinkedField(linkedId, Key, LoginItem);
+            var value = Client.ResolveLinkedField(linkedId, VaultKey, LoginItem);
 
             // Assert
             value.ShouldBe(expected);
@@ -662,34 +652,34 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void ResolveLinkedField_throws_on_unsupported_linked_id()
         {
             // Arrange/Act/Assert
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ResolveLinkedField(5, Key, LoginItem), "Linked field ID 5");
+            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ResolveLinkedField(5, VaultKey, LoginItem), "Linked field ID 5");
         }
 
         [Fact]
         public void DecryptToBytes_returns_decrypted_input()
         {
-            var plaintext = Client.DecryptToBytes(EncryptedString, Key);
+            var plaintext = Client.DecryptToBytes(EncryptedString, VaultKey);
             Assert.Equal(Plaintext.ToBytes(), plaintext);
         }
 
         [Fact]
         public void DecryptToString_returns_decrypted_input()
         {
-            var plaintext = Client.DecryptToString(EncryptedString, Key);
+            var plaintext = Client.DecryptToString(EncryptedString, VaultKey);
             Assert.Equal(Plaintext, plaintext);
         }
 
         [Fact]
         public void DecryptToStringOrBlank_returns_decrypted_input()
         {
-            var plaintext = Client.DecryptToStringOrBlank(EncryptedString, Key);
+            var plaintext = Client.DecryptToStringOrBlank(EncryptedString, VaultKey);
             Assert.Equal(Plaintext, plaintext);
         }
 
         [Fact]
         public void DecryptToStringOrBlank_returns_blank_for_null_input()
         {
-            var blank = Client.DecryptToStringOrBlank(null, Key);
+            var blank = Client.DecryptToStringOrBlank(null, VaultKey);
             Assert.Equal("", blank);
         }
 
@@ -732,10 +722,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var session = MakeSession(rest);
 
             if (haveSessionFolders)
-                session.Folders = JsonConvert.DeserializeObject<Model.FolderList>(GetFixture("folders")).Folders;
+                session.Folders = Folders;
 
             if (haveSessionCollections)
-                session.Collections = JsonConvert.DeserializeObject<Model.CollectionList>(GetFixture("collections")).Collections;
+                session.Collections = Collections;
 
             // Act
             var result = Client.GetItem(itemId, session);
@@ -874,15 +864,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
             }
         }
 
-        private Session MakeSession(RestClient rest, R.Folder[] folders = null, R.Collection[] collections = null)
-        {
-            var session = new Session("Bearer token", Kek, LoadProfileFixture(), rest, rest.Transport)
-            {
-                Folders = folders,
-                Collections = collections,
-            };
-            return session;
-        }
+        private Session MakeSession(RestClient rest, Dictionary<string, string> folders = null, Dictionary<string, Collection> collections = null) =>
+            new("Bearer token", DerivedKek, Profile, rest, rest.Transport) { Folders = folders, Collections = collections };
 
         private static ISecureStorage SetupSecureStorage(string token)
         {
@@ -912,8 +895,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string DeviceId = "device-id";
         private const string RememberMeToken = "remember-me-token";
         private static readonly byte[] PasswordHash = "password-hash".ToBytes();
-        private static readonly byte[] Kek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
-        private static readonly byte[] Key = "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();
+        private static readonly byte[] DerivedKek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
+        private static readonly byte[] VaultKey =
+            "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();
         private static readonly byte[] KekForVaultWithCollections = "zTrKlq/dviZ7aFFyRLDdT8Zju2rRM80+NzDtCl4hvlc=".Decode64();
 
         private const string EncryptedString =
@@ -928,6 +912,44 @@ namespace PasswordManagerAccess.Test.Bitwarden
                     Username = "2.VljekSAM8OlXrGeo3feg4g==|zWnkxbTOPwRhq8w549i94Q==|Un5VXCsoowbqBvIMHqxzF1As5LV6LVuZTXyoJGiNkrU=",
                     Password = "2.p/TTcAaZh3YdXjsUGv+UIA==|zzvBs2YffTZhK1GeWwncKQ==|84h3MIjJslUuOZkWJKdMkfRxOwDmKLsujnA7Q95jhF0=",
                 },
+            };
+
+        private static readonly Dictionary<string, Organization> Organizations =
+            new()
+            {
+                ["d9e85d3d-72bb-4269-a50d-b2ea00bf3505"] = new Organization(id: "d9e85d3d-72bb-4269-a50d-b2ea00bf3505", name: "organization1"),
+                ["195d27a0-82b0-4259-a8e2-ae6d00ce6c85"] = new Organization(id: "195d27a0-82b0-4259-a8e2-ae6d00ce6c85", name: "organization2"),
+            };
+
+        private static readonly Dictionary<string, byte[]> OrgKeys =
+            new()
+            {
+                ["d9e85d3d-72bb-4269-a50d-b2ea00bf3505"] =
+                    "IBu6jMkr2dJRSs2nh0OogrBB/XJ1gRwdoKepo6RJH/fDZhYaF6dHw/PVGPoWiSUDCwZ5eqdFAkEE+poyUock6A==".Decode64(),
+                ["195d27a0-82b0-4259-a8e2-ae6d00ce6c85"] =
+                    "YJ28tRb4SbLvFcJLsOhh3Ci4a+9d2xesUlV84fVrHPDbIHbm9J+Hko0Hf27GCmM3PFrLmtnf3k8eperdgASHow==".Decode64(),
+            };
+
+        private static readonly Profile Profile = new(VaultKey, [], Organizations, OrgKeys);
+
+        private static readonly Dictionary<string, string> Folders =
+            new() { ["d0e9210c-610b-4427-a344-a99600d462d3"] = "folder1", ["94542f0a-d858-46ce-87a5-a99600d47732"] = "folder2" };
+
+        private static readonly Dictionary<string, Collection> Collections =
+            new()
+            {
+                ["406cc470-08c9-469c-b4a7-b2ea00bf352b"] = new Collection(
+                    id: "406cc470-08c9-469c-b4a7-b2ea00bf352b",
+                    name: "collection1",
+                    organizationId: "d9e85d3d-72bb-4269-a50d-b2ea00bf3505",
+                    hidePasswords: false
+                ),
+                ["c323c924-420d-45b6-b58e-b2ea00bfb96a"] = new Collection(
+                    id: "c323c924-420d-45b6-b58e-b2ea00bfb96a",
+                    name: "collection2",
+                    organizationId: "d9e85d3d-72bb-4269-a50d-b2ea00bf3505",
+                    hidePasswords: false
+                ),
             };
     }
 }
