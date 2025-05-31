@@ -947,6 +947,10 @@ namespace PasswordManagerAccess.Bitwarden
             return collectionIds.All(x => collections.GetOrDefault(x, null)?.HidePasswords == true);
         }
 
+        //
+        // Encryption
+        //
+
         internal static byte[] DecryptToBytes(string s, byte[] key)
         {
             return CipherString.Parse(s).Decrypt(key);
@@ -1071,14 +1075,15 @@ namespace PasswordManagerAccess.Bitwarden
             _ => throw new InternalErrorException($"Unexpected device name {Platform}"),
         };
 
-        private static readonly Dictionary<string, string> DefaultRestHeaders = new Dictionary<string, string>
-        {
-            ["User-Agent"] = UserAgent,
-            ["Device-Type"] = DeviceType,
-            ["Bitwarden-Client-Name"] = "cli",
-            ["Bitwarden-Client-Version"] = CliVersion,
-        };
+        private static readonly Dictionary<string, string> DefaultRestHeaders =
+            new()
+            {
+                ["User-Agent"] = UserAgent,
+                ["Device-Type"] = DeviceType,
+                ["Bitwarden-Client-Name"] = "cli",
+                ["Bitwarden-Client-Version"] = CliVersion,
+            };
 
-        private static readonly R.KdfInfo DefaultKdfInfo = new R.KdfInfo { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 5000 };
+        private static readonly R.KdfInfo DefaultKdfInfo = new() { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 5000 };
     }
 }
