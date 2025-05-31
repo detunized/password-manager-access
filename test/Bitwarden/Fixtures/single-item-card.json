@@ -1,0 +1,53 @@
+{
+    "collectionIds": [
+        "406cc470-08c9-469c-b4a7-b2ea00bf352b",
+        "c323c924-420d-45b6-b58e-b2ea00bfb96a"
+    ],
+    "folderId": "94542f0a-d858-46ce-87a5-a99600d47732",
+    "favorite": false,
+    "edit": true,
+    "viewPassword": true,
+    "permissions": {
+        "delete": true,
+        "restore": true
+    },
+    "id": "0eaec72a-0804-49b8-8836-a99600ccf26c",
+    "organizationId": null,
+    "type": 3,
+    "data": {
+        "cardholderName": "2.8JvIbyUL6yHJRWJs9X4DwQ==|rNeSKfDkIcchKq/fDaUumw==|3QXNu9j/3iaNEHEHjNO9IsVdGapZKdGDSIuH0T+kQxc=",
+        "brand": null,
+        "number": "2.cKD/WK0MgZLLPXbn+YkOvw==|m6Gzj0S0YRP/HDc40oD3Ng==|TLnFWo8J3gt2T8whrkRIiVQiPkVXjfjAoBfmXXECW2c=",
+        "expMonth": "2.fntGQGYe4WSXTkquqO3f5Q==|vnDWIqi3WCYFHzr+Q60EqA==|2VhnGp54Ie7AopczcllOPyG61JcXRFHLGkPWdK5AcaQ=",
+        "expYear": "2.nxffZ5Y5bNRzwWhEz3n/BA==|pfnUuzoOAolzndPOfEIIqg==|7cb0i+ykn6fhHR0wpKOnmqKGxjrFvA7xs4PGRqIMU5s=",
+        "code": "2.1vNINkSz1Vm10sx/Ayw7bQ==|nfD7MckmVu1eXV4oOPe9YA==|tJXsbgCouCbnp6WBzAWcI5GhdDrtMin+7h7XXV0shVc=",
+        "name": "2.BvE8xQu7yJc+nzFYYBX+pQ==|7wVY40Gyli98YOXKlP+Amw==|7J80J+9EyifFnJ0mBpn9wds7MfP5uZqDR9CFP+W+Ybo=",
+        "notes": "2.ujSVCLBa5/HSnoRtsElEsA==|QHuaTCAYV71RGZUbBWp6IQ==|5FXcBgdSDySOte0vDdBP7KmFB8MQRzFRnZ7OekTXZ+Q=",
+        "fields": null,
+        "passwordHistory": null
+    },
+    "name": "2.BvE8xQu7yJc+nzFYYBX+pQ==|7wVY40Gyli98YOXKlP+Amw==|7J80J+9EyifFnJ0mBpn9wds7MfP5uZqDR9CFP+W+Ybo=",
+    "notes": "2.ujSVCLBa5/HSnoRtsElEsA==|QHuaTCAYV71RGZUbBWp6IQ==|5FXcBgdSDySOte0vDdBP7KmFB8MQRzFRnZ7OekTXZ+Q=",
+    "login": null,
+    "card": {
+        "cardholderName": "2.8JvIbyUL6yHJRWJs9X4DwQ==|rNeSKfDkIcchKq/fDaUumw==|3QXNu9j/3iaNEHEHjNO9IsVdGapZKdGDSIuH0T+kQxc=",
+        "brand": null,
+        "number": "2.cKD/WK0MgZLLPXbn+YkOvw==|m6Gzj0S0YRP/HDc40oD3Ng==|TLnFWo8J3gt2T8whrkRIiVQiPkVXjfjAoBfmXXECW2c=",
+        "expMonth": "2.fntGQGYe4WSXTkquqO3f5Q==|vnDWIqi3WCYFHzr+Q60EqA==|2VhnGp54Ie7AopczcllOPyG61JcXRFHLGkPWdK5AcaQ=",
+        "expYear": "2.nxffZ5Y5bNRzwWhEz3n/BA==|pfnUuzoOAolzndPOfEIIqg==|7cb0i+ykn6fhHR0wpKOnmqKGxjrFvA7xs4PGRqIMU5s=",
+        "code": "2.1vNINkSz1Vm10sx/Ayw7bQ==|nfD7MckmVu1eXV4oOPe9YA==|tJXsbgCouCbnp6WBzAWcI5GhdDrtMin+7h7XXV0shVc="
+    },
+    "identity": null,
+    "secureNote": null,
+    "sshKey": null,
+    "fields": null,
+    "passwordHistory": null,
+    "attachments": null,
+    "organizationUseTotp": false,
+    "revisionDate": "2025-05-29T20:42:51.76Z",
+    "creationDate": "2018-11-12T12:26:11.3433333Z",
+    "deletedDate": null,
+    "reprompt": 0,
+    "key": null,
+    "object": "cipherDetails"
+}

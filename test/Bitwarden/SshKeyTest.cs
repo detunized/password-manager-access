@@ -1,8 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using FluentAssertions;
 using PasswordManagerAccess.Bitwarden;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Bitwarden
@@ -36,19 +36,19 @@ namespace PasswordManagerAccess.Test.Bitwarden
             // Assert
 
             // VaultItem properties
-            sshKey.Id.Should().Be("id");
-            sshKey.Name.Should().Be("name");
-            sshKey.Note.Should().Be("notes");
-            sshKey.DeletedDate.Should().Be("deleted date");
-            sshKey.Folder.Should().Be("folder");
-            sshKey.CollectionIds.Should().Equal("collection1", "collection2");
-            sshKey.HidePassword.Should().BeTrue();
-            sshKey.CustomFields.Should().Equal(new CustomField("name1", "value1"), new CustomField("name2", "value2"));
+            sshKey.Id.ShouldBe("id");
+            sshKey.Name.ShouldBe("name");
+            sshKey.Note.ShouldBe("notes");
+            sshKey.DeletedDate.ShouldBe("deleted date");
+            sshKey.Folder.ShouldBe("folder");
+            sshKey.CollectionIds.ShouldBe(["collection1", "collection2"]);
+            sshKey.HidePassword.ShouldBeTrue();
+            sshKey.CustomFields.ShouldBe([new CustomField("name1", "value1"), new CustomField("name2", "value2")]);
 
             // SshKey properties
-            sshKey.PublicKey.Should().Be("public key");
-            sshKey.PrivateKey.Should().Be("private key");
-            sshKey.Fingerprint.Should().Be("fingerprint");
+            sshKey.PublicKey.ShouldBe("public key");
+            sshKey.PrivateKey.ShouldBe("private key");
+            sshKey.Fingerprint.ShouldBe("fingerprint");
         }
     }
 }

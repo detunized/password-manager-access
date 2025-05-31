@@ -18,31 +18,6 @@ namespace PasswordManagerAccess.Test.ProtonPass
 {
     public class ClientTest : TestBase
     {
-        [Fact(Skip = "Not implemented")]
-        public async Task Open_returns_a_vault_with_a_valid_access_token()
-        {
-            // Arrange
-            var mockHttp = new MockHttpHandler();
-            mockHttp
-                .When(m =>
-                    m.Method("GET")
-                        .RequestUri("*/pass/v1/invite")
-                        .Header("X-Pm-Appversion", "android-pass@1.19.0")
-                        .Header("X-Pm-Uid", "session-id")
-                        .Header("Authorization", "Bearer access-token")
-                        .Not.Header("X-Pm-Human-Verification-Token")
-                        .Not.Header("X-Pm-Human-Verification-Token-Type")
-                )
-                .Respond(w => w.StatusCode(200).JsonText(GetFixture("sessions")));
-
-            // Act
-            await Swallow(() => Client.OpenAll("username", "password", GetAsyncUi(), GetAsyncStorage(), mockHttp.ToConfig(), MakeToken()));
-
-            // Assert
-            mockHttp.VerifyAll();
-            mockHttp.VerifyNoOtherRequests();
-        }
-
         [Fact]
         public async Task RequestNewAuthSession_returns_a_session()
         {
@@ -71,19 +46,6 @@ namespace PasswordManagerAccess.Test.ProtonPass
 
             mockHttp.VerifyAll();
             mockHttp.VerifyNoOtherRequests();
-        }
-
-        [Fact(Skip = "Need to figure out the the error propagation")]
-        public async Task RequestNewAuthSession_fails_on_invalid_json()
-        {
-            // Arrange
-            var rest = Serve("}{");
-
-            // Act
-            Func<Task> act = () => Client.RequestNewAuthSession(rest, MakeToken());
-
-            // Assert
-            await act.Should().ThrowAsync<InternalErrorException>().WithMessage("Failed to parse the response JSON");
         }
 
         [Fact]

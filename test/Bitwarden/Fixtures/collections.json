@@ -1,0 +1,26 @@
+{
+	"data": [
+		{
+			"readOnly": false,
+			"hidePasswords": false,
+			"manage": true,
+			"id": "406cc470-08c9-469c-b4a7-b2ea00bf352b",
+			"organizationId": "d9e85d3d-72bb-4269-a50d-b2ea00bf3505",
+			"name": "2.oYiIYTccAerK16ii2sj9tg==|kH8QDVBNQoT0Fir6AnW2aQ76AuM2hEfeBrus6ODZ3XA=|xBBUigUa0+q7eONwmQEvNJcw9yyYptc0gjj0gf7XYY4=",
+			"externalId": null,
+			"object": "collectionDetails"
+		},
+		{
+			"readOnly": false,
+			"hidePasswords": false,
+			"manage": true,
+			"id": "c323c924-420d-45b6-b58e-b2ea00bfb96a",
+			"organizationId": "d9e85d3d-72bb-4269-a50d-b2ea00bf3505",
+			"name": "2.FUgZmWUkdTG19V5dvLpkEA==|ejaq/LmVX84OTVC4lclNSA==|pUjUKHjuBhisNKiTNGvbS/zyLLJ+qVIrl8NT26qWdi4=",
+			"externalId": "",
+			"object": "collectionDetails"
+		}
+	],
+	"continuationToken": null,
+	"object": "list"
+}
