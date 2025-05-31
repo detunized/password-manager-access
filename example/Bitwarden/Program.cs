@@ -95,7 +95,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 var useVaultOpen = false;
                 if (useVaultOpen)
                 {
-                    UseVaultOpen(config, deviceId, baseUrl);
+                    UseOpen(config, deviceId, baseUrl);
                 }
                 else
                 {
@@ -133,13 +133,44 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 );
             }
 
+            // Enable this to get a single item from a vault
+            var getSingleItem = true;
+
             try
             {
-                // Download vault data
-                var vault = Client.DownloadVault(session);
+                if (getSingleItem)
+                {
+                    // Get a single item from the vault (Account)
+                    var item1 = Client.GetItem("25e95b65-aa73-40b4-af02-b2ee0079daa5", session);
 
-                // Display the data
-                DumpVault(vault);
+                    // Use the old-school switch statement to match the item type
+                    switch (item1.Value)
+                    {
+                        case Account account:
+                            PrintAccount(account);
+                            break;
+                        case SshKey sshKey:
+                            PrintSshKey(sshKey);
+                            break;
+                        case NoItem noItem:
+                            Console.WriteLine($"No item found: {noItem}");
+                            break;
+                    }
+
+                    // Get another item with the same session (SshKey)
+                    var item2 = Client.GetItem("318df280-7880-4e4f-a965-b2e901549751", session);
+
+                    // Can also use the OneOf.Switch method
+                    item2.Switch(PrintAccount, PrintSshKey, noItem => Console.WriteLine($"No item found: {noItem}"));
+                }
+                else
+                {
+                    // Download vault data
+                    var vault = Client.DownloadVault(session);
+
+                    // Display the data
+                    DumpVault(vault);
+                }
             }
             finally
             {
@@ -148,7 +179,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
         }
 
-        private static void UseVaultOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
+        private static void UseOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
             Vault vault;
 
@@ -181,60 +212,16 @@ namespace PasswordManagerAccess.Example.Bitwarden
         {
             for (var i = 0; i < vault.Accounts.Length; ++i)
             {
-                var account = vault.Accounts[i];
-                Console.WriteLine(
-                    "{0}:\n"
-                        + "          id: {1}\n"
-                        + "        name: {2}\n"
-                        + "    username: {3}\n"
-                        + "    password: {4}\n"
-                        + "         url: {5}\n"
-                        + "        note: {6}\n"
-                        + "      folder: {7}\n",
-                    i + 1,
-                    account.Id,
-                    account.Name,
-                    account.Username,
-                    account.Password,
-                    account.Url,
-                    account.Note,
-                    account.Folder
-                );
-
-                if (account.CustomFields.Length > 0)
-                {
-                    Console.WriteLine("    Custom fields:");
-                    foreach (var f in account.CustomFields)
-                        Console.WriteLine($"      - {f.Name}: {f.Value}");
-                }
+                Console.WriteLine($"Account {i + 1}:");
+                PrintAccount(vault.Accounts[i]);
             }
 
             if (vault.SshKeys.Length > 0)
             {
-                Console.WriteLine("SSH Keys:");
-                foreach (var key in vault.SshKeys)
+                for (var i = 0; i < vault.SshKeys.Length; ++i)
                 {
-                    Console.WriteLine(
-                        "  - id: {0}\n"
-                            + "    name: {1}\n"
-                            + "    public key: {2}\n"
-                            + "    private key: {3}\n"
-                            + "    fingerprint: {4}\n"
-                            + "    folder: {5}\n",
-                        key.Id,
-                        key.Name,
-                        key.PublicKey,
-                        key.PrivateKey,
-                        key.Fingerprint,
-                        key.Folder
-                    );
-
-                    if (key.CustomFields.Length > 0)
-                    {
-                        Console.WriteLine("    Custom fields:");
-                        foreach (var f in key.CustomFields)
-                            Console.WriteLine($"      - {f.Name}: {f.Value}");
-                    }
+                    Console.WriteLine($"SSH Key {i + 1}:");
+                    PrintSshKey(vault.SshKeys[i]);
                 }
             }
 
@@ -258,6 +245,56 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 foreach (var e in vault.ParseErrors)
                     Console.WriteLine($"  - error: {e.Description}");
             }
+        }
+
+        private static void PrintAccount(Account account)
+        {
+            Console.WriteLine(
+                $"""
+                          id: {account.Id}
+                        name: {account.Name}
+                    username: {account.Username}
+                    password: {account.Password}
+                         url: {account.Url}
+                        note: {ToSingleLine(account.Note, 100)}
+                      folder: {account.Folder}
+                """
+            );
+
+            PrintCustomFields(account);
+        }
+
+        private static void PrintSshKey(SshKey sshKey)
+        {
+            Console.WriteLine(
+                $"""
+                          id: {sshKey.Id}
+                        name: {sshKey.Name}
+                  public key: {ToSingleLine(sshKey.PublicKey, 100)}
+                 private key: {ToSingleLine(sshKey.PrivateKey, 100)}
+                 fingerprint: {sshKey.Fingerprint}
+                        note: {ToSingleLine(sshKey.Note, 100)}
+                      folder: {sshKey.Folder}
+                """
+            );
+
+            PrintCustomFields(sshKey);
+        }
+
+        private static void PrintCustomFields(VaultItem item)
+        {
+            if (item.CustomFields.Length > 0)
+            {
+                Console.WriteLine("      custom fields:");
+                foreach (var f in item.CustomFields)
+                    Console.WriteLine($"      - {f.Name}: {f.Value}");
+            }
+        }
+
+        private static string ToSingleLine(string s, int maxLength)
+        {
+            var line = s.Replace("\r\n", " ").Replace("\n", " ").Trim();
+            return line.Length > maxLength ? line[..maxLength] + "..." : line;
         }
     }
 }
