@@ -7,9 +7,9 @@ using System.IO;
 using System.Net;
 using System.Numerics;
 using System.Text;
-using FluentAssertions;
 using Newtonsoft.Json.Linq;
 using PasswordManagerAccess.Common;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
@@ -1129,9 +1129,9 @@ namespace PasswordManagerAccess.Test.Common
             c.Add(new Uri("http://example3.com"), new Cookie("key4", "value4"));
 
             // Act/Assert
-            c.GetAllCookies().Should().HaveCount(4);
+            c.GetAllCookies().Count.ShouldBe(4);
             c.Clear();
-            c.GetAllCookies().Should().BeEmpty();
+            c.GetAllCookies().ShouldBeEmpty();
         }
 
         private class TrickleStream : Stream

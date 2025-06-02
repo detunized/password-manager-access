@@ -3,14 +3,12 @@
 
 #nullable enable
 
-using System;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using MockHttp;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ProtonPass;
+using Shouldly;
 using Xunit;
 using static PasswordManagerAccess.Test.TestUtil;
 
@@ -28,10 +26,10 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var session = await Client.RequestNewAuthSession(rest, MakeToken());
 
             // Assert
-            session.Code.Should().Be(1000);
-            session.TokenType.Should().Be("Bearer");
-            session.AccessToken.Should().Be("gx6unefgftd3dem4uaf2ajimi4l4cgjq");
-            session.Id.Should().Be("mbv6z4cpi4mseqh2wbljnrynlbr7lcqm");
+            session.Code.ShouldBe(1000);
+            session.TokenType.ShouldBe("Bearer");
+            session.AccessToken.ShouldBe("gx6unefgftd3dem4uaf2ajimi4l4cgjq");
+            session.Id.ShouldBe("mbv6z4cpi4mseqh2wbljnrynlbr7lcqm");
         }
 
         [Fact]
@@ -53,14 +51,11 @@ namespace PasswordManagerAccess.Test.ProtonPass
         {
             // Arrange
             var rest = Serve("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}", HttpStatusCode.BadRequest);
+            var act = () => Client.RequestNewAuthSession(rest, MakeToken());
 
-            // Act
-            Func<Task> act = () => Client.RequestNewAuthSession(rest, MakeToken());
-
-            // Assert
-            await act.Should()
-                .ThrowAsync<InternalErrorException>()
-                .WithMessage("Request to '*' failed with HTTP status BadRequest and error 1001: 'Invalid credentials'");
+            // Act/Assert
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
+            ex.Message.ShouldMatch("Request to '.*' failed with HTTP status BadRequest and error 1001: 'Invalid credentials'");
         }
 
         [Fact]
@@ -73,12 +68,12 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var authInfo = await Client.RequestAuthInfo("username", rest, MakeToken());
 
             // Assert
-            authInfo.Code.Should().Be(1000);
-            authInfo.Modulus.Should().StartWith("-----BEGIN PGP SIGNED MESSAGE-----");
-            authInfo.ServerEphemeral.Should().StartWith("VEzZpI2z");
-            authInfo.Version.Should().Be(4);
-            authInfo.Salt.Should().Be("sNvZT3Qzr/0y5w==");
-            authInfo.SrpSession.Should().Be("b9383fa145662386c91b7c440c2a4720");
+            authInfo.Code.ShouldBe(1000);
+            authInfo.Modulus.ShouldStartWith("-----BEGIN PGP SIGNED MESSAGE-----");
+            authInfo.ServerEphemeral.ShouldStartWith("VEzZpI2z");
+            authInfo.Version.ShouldBe(4);
+            authInfo.Salt.ShouldBe("sNvZT3Qzr/0y5w==");
+            authInfo.SrpSession.ShouldBe("b9383fa145662386c91b7c440c2a4720");
         }
 
         [Fact]
@@ -107,11 +102,11 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var srpData = await Client.RequestExtraAuthInfo("username", rest, MakeToken());
 
             // Assert
-            srpData.Modulus.Should().StartWith("-----BEGIN PGP SIGNED MESSAGE-----");
-            srpData.ServerEphemeral.Should().StartWith("cpOjTyrS");
-            srpData.Version.Should().Be(4);
-            srpData.Salt.Should().Be("Rbr+rLgHibg/aA==");
-            srpData.SessionId.Should().Be("0621fe3601bdf366283bf99837e891d2");
+            srpData.Modulus.ShouldStartWith("-----BEGIN PGP SIGNED MESSAGE-----");
+            srpData.ServerEphemeral.ShouldStartWith("cpOjTyrS");
+            srpData.Version.ShouldBe(4);
+            srpData.Salt.ShouldBe("Rbr+rLgHibg/aA==");
+            srpData.SessionId.ShouldBe("0621fe3601bdf366283bf99837e891d2");
         }
 
         [Fact]
@@ -128,39 +123,6 @@ namespace PasswordManagerAccess.Test.ProtonPass
 
             mockHttp.VerifyAll();
             mockHttp.VerifyNoOtherRequests();
-        }
-
-        //
-        // Helpers
-        //
-
-        private class TestAsyncUi : IAsyncUi
-        {
-            public Task<IAsyncUi.CaptchaResult> SolveCaptcha(string url, string humanVerificationToken, CancellationToken cancellationToken) =>
-                Task.FromResult(new IAsyncUi.CaptchaResult(true, "ok-human-verification-token"));
-
-            public Task<IAsyncUi.PasscodeResult> ProvideExtraPassword(int attempt, CancellationToken cancellationToken) =>
-                Task.FromResult(new IAsyncUi.PasscodeResult("extra-password"));
-
-            public Task<IAsyncUi.PasscodeResult> ProvideGoogleAuthPasscode(int attempt, CancellationToken cancellationToken) =>
-                Task.FromResult(new IAsyncUi.PasscodeResult("123456"));
-        }
-
-        private static IAsyncUi GetAsyncUi()
-        {
-            return new TestAsyncUi();
-        }
-
-        private static IAsyncSecureStorage GetAsyncStorage()
-        {
-            return new MemoryStorage(
-                new()
-                {
-                    ["session-id"] = "session-id",
-                    ["access-token"] = "access-token",
-                    ["refresh-token"] = "refresh-token",
-                }
-            );
         }
     }
 }

@@ -4,8 +4,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using FluentAssertions;
 using PasswordManagerAccess.Common;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
@@ -24,7 +24,7 @@ namespace PasswordManagerAccess.Test.Common
             var bytes = Crypto.RandomBytes(numBytes);
 
             // Assert
-            bytes.Length.Should().Be(numBytes);
+            bytes.Length.ShouldBe(numBytes);
         }
 
         [Fact]
@@ -36,9 +36,9 @@ namespace PasswordManagerAccess.Test.Common
             var bytes3 = Crypto.RandomBytes(32);
 
             // Assert
-            bytes1.Should().NotEqual(bytes2);
-            bytes1.Should().NotEqual(bytes3);
-            bytes2.Should().NotEqual(bytes3);
+            bytes1.ShouldNotBe(bytes2);
+            bytes1.ShouldNotBe(bytes3);
+            bytes2.ShouldNotBe(bytes3);
         }
 
         //

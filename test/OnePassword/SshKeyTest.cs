@@ -1,8 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using FluentAssertions;
 using PasswordManagerAccess.OnePassword;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword;
@@ -20,7 +20,7 @@ public class SshKeyTest
         var key = SshKey.ConvertToOpenSsh(pkcs8Key);
 
         // Assert
-        key.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
+        key.ShouldStartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
     }
 
     [Theory]
@@ -33,7 +33,7 @@ public class SshKeyTest
         var key = SshKey.ConvertToPkcs1(pkcs8Key);
 
         // Assert
-        key.Should().StartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
+        key.ShouldStartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
     }
 
     //

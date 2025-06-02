@@ -3,8 +3,8 @@
 
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using FluentAssertions;
 using PasswordManagerAccess.Common;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
@@ -27,16 +27,22 @@ namespace PasswordManagerAccess.Test.Common
                 var result = Hkdf.DeriveKey(ikm: ikm, salt: salt, info: info, byteCount: tc.ByteCount, hash: hmac);
 
                 // Assert
-                result.Should().Equal(expected.DecodeHex());
+                result.ShouldBe(expected.DecodeHex());
             }
         }
 
         [Fact]
         public void Generate_throws_on_negative_byteCount()
         {
+            // Arrange
             var act = () =>
                 Hkdf.DeriveKey(ikm: "ikm".ToBytes(), salt: "salt".ToBytes(), info: "info".ToBytes(), byteCount: -1, hash: HashAlgorithmName.SHA256);
-            act.Should().Throw<InternalErrorException>().WithMessage("Byte count should be nonnegative");
+
+            // Act
+            var ex = act.ShouldThrow<InternalErrorException>();
+
+            // Assert
+            ex.Message.ShouldContain("Byte count should be nonnegative");
         }
 
         //
