@@ -2,9 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
-using System.Runtime.Intrinsics.Arm;
-using FluentAssertions;
 using PasswordManagerAccess.Common;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
@@ -25,8 +24,12 @@ namespace PasswordManagerAccess.Test.Common
         {
             foreach (var generate in Generators)
             {
+                // Act later
                 var act = () => generate("password".ToBytes(), "salt".ToBytes(), iterationCount, 32);
-                act.Should().Throw<InternalErrorException>().WithMessage("Iteration count should be positive");
+
+                // Assert
+                var ex = act.ShouldThrow<InternalErrorException>();
+                ex.Message.ShouldBe("Iteration count should be positive");
             }
         }
 
@@ -35,8 +38,12 @@ namespace PasswordManagerAccess.Test.Common
         {
             foreach (var generate in Generators)
             {
+                // Act later
                 var act = () => generate("password".ToBytes(), "salt".ToBytes(), 1, -1);
-                act.Should().Throw<InternalErrorException>().WithMessage("Byte count should be nonnegative");
+
+                // Assert
+                var ex = act.ShouldThrow<InternalErrorException>();
+                ex.Message.ShouldBe("Byte count should be nonnegative");
             }
         }
 
@@ -46,7 +53,7 @@ namespace PasswordManagerAccess.Test.Common
 
         private void Generate_returns_correct_result(Func<byte[], byte[], int, int, byte[]> generator, string[] expectedResults)
         {
-            expectedResults.Should().HaveCount(TestCases.Length);
+            expectedResults.Length.ShouldBe(TestCases.Length);
 
             for (var i = 0; i < TestCases.Length; i++)
             {
@@ -64,7 +71,7 @@ namespace PasswordManagerAccess.Test.Common
                 var actual = generator(password, salt, iterationCount, byteCount);
 
                 // Assert
-                actual.Should().Equal(expectedBytes);
+                actual.ShouldBe(expectedBytes);
             }
         }
 

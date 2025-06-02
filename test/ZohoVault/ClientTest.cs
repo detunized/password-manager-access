@@ -3,11 +3,11 @@
 
 using System.Collections.Generic;
 using System.Net;
-using FluentAssertions;
 using Newtonsoft.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault;
 using PasswordManagerAccess.ZohoVault.Ui;
+using Shouldly;
 using Xunit;
 using R = PasswordManagerAccess.ZohoVault.Response;
 
@@ -56,7 +56,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 MakeFullFlow()
             );
 
-            storage.Values["cookies"].Should().NotBeEmpty();
+            storage.Values["cookies"].ShouldNotBeEmpty();
         }
 
         [Fact]
@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 MakeFullFlow()
             );
 
-            storage.Values.Should().NotContainKey("cookies");
+            storage.Values.ShouldNotContainKey("cookies");
         }
 
         [Fact]

@@ -5,9 +5,9 @@
 
 using System;
 using System.Numerics;
-using FluentAssertions;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ProtonPass;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.ProtonPass
@@ -62,10 +62,10 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var proofs = Srp.GenerateProofs(Srp.BitLength, hashPassword, serverEphemeralBytes, modulus, GetRandomBigInt);
 
             // Assert
-            proofs.Should().NotBeNull();
-            proofs.ClientEphemeral.Should().Equal(expectedClientEphemeral);
-            proofs.ClientProof.Should().Equal(expectedClientProof);
-            proofs.ServerProof.Should().Equal(expectedServerProof);
+            proofs.ShouldNotBeNull();
+            proofs.ClientEphemeral.ShouldBe(expectedClientEphemeral);
+            proofs.ClientProof.ShouldBe(expectedClientProof);
+            proofs.ServerProof.ShouldBe(expectedServerProof);
         }
 
         [Fact]
@@ -78,23 +78,24 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var modulus = Srp.ParseModulus(ModulusMessage);
 
             // Assert
-            modulus.Should().Equal(expected);
+            modulus.ShouldBe(expected);
         }
 
         [Theory]
-        [InlineData("-----BEGIN PGP SIGNED MESSAGE-----", "?----BEGIN PGP SIGNED MESSAGE-----", "Invalid PGP message format: missing start *")]
-        [InlineData("-----BEGIN PGP SIGNATURE-----", "?----BEGIN PGP SIGNATURE-----", "Invalid PGP message format: missing start *")]
-        [InlineData("\n\n", "\n", "Invalid PGP message format: missing two *")]
+        [InlineData("-----BEGIN PGP SIGNED MESSAGE-----", "?----BEGIN PGP SIGNED MESSAGE-----", "Invalid PGP message format: missing start .*")]
+        [InlineData("-----BEGIN PGP SIGNATURE-----", "?----BEGIN PGP SIGNATURE-----", "Invalid PGP message format: missing start .*")]
+        [InlineData("\n\n", "\n", "Invalid PGP message format: missing two .*")]
         public void ParseModulus_throws_on_error(string replaceWhat, string replaceWith, string errorMessage)
         {
             // Arrange
             var brokenMessage = ModulusMessage.Replace(replaceWhat, replaceWith);
 
-            // Act
+            // Act later
             Action act = () => Srp.ParseModulus(brokenMessage);
 
             // Assert
-            act.Should().Throw<InternalErrorException>().WithMessage(errorMessage);
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldMatch(errorMessage);
         }
 
         // Test cases are generated using https://github.com/ProtonMail/go-srp
@@ -158,7 +159,6 @@ namespace PasswordManagerAccess.Test.ProtonPass
             // Arrange
             var expectedBytes = expected.Decode64();
             var salt = "salt!salt!".ToBytes();
-
             var modulus = new byte[256];
             for (var i = 0; i < 256; i++)
                 modulus[i] = (byte)i;
@@ -167,7 +167,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var hash = Srp.HashPassword(version, password, username, salt, modulus);
 
             // Assert
-            hash.Should().Equal(expectedBytes);
+            hash.ShouldBe(expectedBytes);
         }
 
         // Test cases are generated using https://github.com/ProtonMail/go-srp
@@ -188,7 +188,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var hash = Srp.BCryptHashPassword("test!!!", salt);
 
             // Assert
-            hash.Should().Be(expected);
+            hash.ShouldBe(expected);
         }
 
         // Test cases are generated using https://github.com/ProtonMail/go-srp
@@ -212,8 +212,8 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var hash = Srp.FixBCryptHash(broken, salt);
 
             // Assert
-            hash.Should().Be(expected);
-            hash.Should().NotBe(broken);
+            hash.ShouldBe(expected);
+            hash.ShouldNotBe(broken);
         }
 
         // Test cases are generated using https://github.com/ProtonMail/go-srp
@@ -236,7 +236,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var output = Srp.EncodeBase64(input, input.Length);
 
             // Assert
-            output.Should().Be(expected);
+            output.ShouldBe(expected);
         }
 
         [Theory]
@@ -256,7 +256,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var result = Srp.Concat(a, b);
 
             // Assert
-            result.Should().Equal(expected);
+            result.ShouldBe(expected);
         }
 
         [Theory]
@@ -280,7 +280,7 @@ namespace PasswordManagerAccess.Test.ProtonPass
             var result = Srp.Concat(a, b, c);
 
             // Assert
-            result.Should().Equal(expected);
+            result.ShouldBe(expected);
         }
 
         //

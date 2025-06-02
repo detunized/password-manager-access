@@ -1,12 +1,13 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Duo
@@ -20,8 +21,8 @@ namespace PasswordManagerAccess.Test.Duo
             var (tx, app) = DuoV1.ParseSignature("tx:app");
 
             // Assert
-            tx.Should().Be("tx");
-            app.Should().Be("app");
+            tx.ShouldBe("tx");
+            app.ShouldBe("app");
         }
 
         [Theory]
@@ -30,11 +31,12 @@ namespace PasswordManagerAccess.Test.Duo
         [InlineData("tx:app:other")]
         public void ParseSignature_throws_on_invalid_signature(string invalid)
         {
-            // Arrange/Act
-            var act = () => DuoV1.ParseSignature(invalid);
+            // Act later
+            Action act = () => DuoV1.ParseSignature(invalid);
 
             // Assert
-            act.Should().Throw<InternalErrorException>().WithMessage("*signature is invalid*");
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldContain("signature is invalid");
         }
 
         [Fact]
@@ -47,7 +49,7 @@ namespace PasswordManagerAccess.Test.Duo
             var html = await DuoV1.DownloadFrame("tx", flow, CancellationToken.None);
 
             // Assert
-            html.DocumentNode.InnerHtml.Should().Be("<html></html>");
+            html.DocumentNode.InnerHtml.ShouldBe("<html></html>");
         }
 
         [Fact]
@@ -56,17 +58,12 @@ namespace PasswordManagerAccess.Test.Duo
             // Arrange
             var flow = new RestFlow().Post("", HttpStatusCode.BadRequest);
 
-            // Act
+            // Act later
             var act = () => DuoV1.DownloadFrame("tx", flow, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<InternalErrorException>();
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
+            ex.Message.ShouldMatch("Duo: rest call to https://.* failed .*");
         }
-
-        //
-        // Data
-        //
-
-        private const string BaseUrl = "http://base.url";
     }
 }

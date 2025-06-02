@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using FluentAssertions;
-using FluentAssertions.Execution;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -18,6 +16,7 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
 using PasswordManagerAccess.OnePassword.Ui;
+using Shouldly;
 using Xunit;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -28,15 +27,17 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void ParseServiceAccountToken_returns_parsed_token()
         {
+            // Act
             var parsed = Client.ParseServiceAccountToken(TestData.ServiceAccountAccessToken);
 
-            Assert.Equal("3joey3mfq7yws@1passwordserviceaccounts.com", parsed.Username);
-            Assert.Null(parsed.Password);
-            Assert.Equal("A3-Y6T9TL-NYJW82-344C5-GTHJQ-YWGD6-NWC2J", parsed.AccountKey);
-            Assert.Equal("lastpassruby-team.1password.com", parsed.Domain);
-            Assert.Equal("qv557zvdo2kbta4z6x3t2shuby", parsed.DeviceUuid);
-            Assert.Equal("40cda13824f823d28b8bc34ee0c35581ea5195e09e599e4992d33b3fa8179525", parsed.SrpX);
-            Assert.Equal("5FsPUVlIqJwvn5OBdqXbB1zWYG3CVJ6fmWxlZ8zchjk", parsed.Key.Key.ToUrlSafeBase64NoPadding());
+            // Assert
+            parsed.Username.ShouldBe("3joey3mfq7yws@1passwordserviceaccounts.com");
+            parsed.Password.ShouldBeNull();
+            parsed.AccountKey.ShouldBe("A3-Y6T9TL-NYJW82-344C5-GTHJQ-YWGD6-NWC2J");
+            parsed.Domain.ShouldBe("lastpassruby-team.1password.com");
+            parsed.DeviceUuid.ShouldBe("qv557zvdo2kbta4z6x3t2shuby");
+            parsed.SrpX.ShouldBe("40cda13824f823d28b8bc34ee0c35581ea5195e09e599e4992d33b3fa8179525");
+            parsed.Key.Key.ToUrlSafeBase64NoPadding().ShouldBe("5FsPUVlIqJwvn5OBdqXbB1zWYG3CVJ6fmWxlZ8zchjk");
         }
 
         [Theory]
@@ -47,176 +48,233 @@ namespace PasswordManagerAccess.Test.OnePassword
         [InlineData("ops_e30")]
         public void ParseServiceAccountToken_throws_on_invalid_token(string token)
         {
-            Exceptions.AssertThrowsInternalError(() => Client.ParseServiceAccountToken(token), "Invalid service account token");
+            // Act later
+            var act = () => Client.ParseServiceAccountToken(token);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldStartWith("Invalid service account token");
         }
 
         [Fact]
         public void ListAllVaults_returns_vaults()
         {
+            // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).Get(EncryptFixture("get-keysets-response"));
+
+            // Act
             var vaults = Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow);
 
-            Assert.NotEmpty(vaults);
+            // Assert
+            vaults.ShouldNotBeEmpty();
         }
 
         [Fact]
         public void StartNewSession_returns_session_on_ok()
         {
+            // Arrange
             var flow = new RestFlow().Get(GetFixture("start-new-session-response"));
+
+            // Act
             var (sessionId, srpInfo) = Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
 
-            Assert.Equal(TestData.SessionId, sessionId);
-            Assert.Equal(TestData.SrpInfo.SrpMethod, srpInfo.SrpMethod);
-            Assert.Equal(TestData.SrpInfo.KeyMethod, srpInfo.KeyMethod);
-            Assert.Equal(TestData.SrpInfo.Iterations, srpInfo.Iterations);
-            Assert.Equal(TestData.SrpInfo.Salt, srpInfo.Salt);
+            // Assert
+            sessionId.ShouldBe(TestData.SessionId);
+            srpInfo.SrpMethod.ShouldBe(TestData.SrpInfo.SrpMethod);
+            srpInfo.KeyMethod.ShouldBe(TestData.SrpInfo.KeyMethod);
+            srpInfo.Iterations.ShouldBe(TestData.SrpInfo.Iterations);
+            srpInfo.Salt.ShouldBe(TestData.SrpInfo.Salt);
         }
 
         [Fact]
         public void StartNewSession_makes_GET_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Get(GetFixture("start-new-session-response")).ExpectUrl("1password.com/api/v2/auth").ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
         }
 
         [Fact]
         public void StartNewSession_throws_on_unknown_status()
         {
+            // Arrange
             var flow = new RestFlow().Get("{'status': 'unknown', 'sessionID': 'blah'}");
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow),
-                "Failed to start a new session, unsupported response status"
-            );
+            // Act later
+            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldStartWith("Failed to start a new session, unsupported response status");
         }
 
         [Fact]
         public void StartNewSession_throws_on_network_error()
         {
+            // Arrange
             var error = new HttpRequestException("Network error");
             var flow = new RestFlow().Get(error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow), "Network error");
-            Assert.Same(error, e.InnerException);
+            // Act later
+            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<NetworkErrorException>();
+            ex.InnerException.ShouldBe(error);
         }
 
         [Fact]
         public void StartNewSession_throws_on_invalid_json()
         {
+            // Arrange
             var flow = new RestFlow().Get("{'reason': 'deprecated'}", HttpStatusCode.Forbidden);
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow),
-                "The server responded with the failure reason: 'deprecated'"
-            );
+            // Act later
+            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldBe("The server responded with the failure reason: 'deprecated'");
         }
 
         [Fact]
         public void StartNewSession_reports_failure_reason()
         {
+            // Arrange
             var flow = new RestFlow().Get("} invalid json {");
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow),
-                "Invalid or unexpected response"
-            );
+            // Act later
+            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldStartWith("Invalid or unexpected response");
         }
 
         [Fact]
         public void RegisterDevice_works()
         {
+            // Arrange
             var flow = new RestFlow().Post("{'success': 1}");
 
+            // Act/Assert
             Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
         }
 
         [Fact]
         public void RegisterDevice_makes_POST_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Post("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
         }
 
         [Fact]
         public void RegisterDevice_throws_on_error()
         {
+            // Arrange
             var flow = new RestFlow().Post("{'success': 0}");
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow),
-                "Failed to register the device"
-            );
+            // Act later
+            Action act = () => Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldStartWith("Failed to register the device");
         }
 
         [Fact]
         public void ReauthorizeDevice_works()
         {
+            // Arrange
             var flow = new RestFlow().Put("{'success': 1}");
 
+            // Act/Assert
             Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
         }
 
         [Fact]
         public void ReauthorizeDevice_makes_PUT_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
         }
 
         [Fact]
         public void ReauthorizeDevice_throws_on_error()
         {
+            // Arrange
             var flow = new RestFlow().Put("{'success': 0}");
 
-            Exceptions.AssertThrowsInternalError(
-                () => Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow),
-                "Failed to reauthorize the device"
-            );
+            // Act later
+            Action act = () => Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldStartWith("Failed to reauthorize the device");
         }
 
         [Fact]
         public void VerifySessionKey_returns_success()
         {
+            // Arrange
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response"));
+
+            // Act
             var result = Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
 
-            Assert.Equal(Client.VerifyStatus.Success, result.Status);
+            // Assert
+            result.Status.ShouldBe(Client.VerifyStatus.Success);
         }
 
         [Fact]
         public void VerifySessionKey_makes_POST_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response")).ExpectUrl("1password.com/api/v2/auth/verify").ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
         }
 
         [Fact]
         public void VerifySessionKey_returns_factors()
         {
+            // Arrange
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
+
+            // Act
             var result = Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
 
-            Assert.Equal(3, result.Factors.Length);
+            // Assert
+            result.Factors.Length.ShouldBe(3);
         }
 
         [Fact]
         public void VerifySessionKey_throws_BadCredentials_on_auth_error()
         {
+            // Arrange
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
-            Exceptions.AssertThrowsBadCredentials(
-                () => Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow),
-                "Username, password or account key"
-            );
+            // Act later
+            Action act = () => Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<BadCredentialsException>();
+            ex.Message.ShouldBe("Username, password or account key is incorrect");
         }
 
         [Fact]
         public void GetSecondFactors_returns_factors()
         {
+            // Arrange
             var expected = new[]
             {
                 Client.SecondFactorKind.GoogleAuthenticator,
@@ -224,150 +282,216 @@ namespace PasswordManagerAccess.Test.OnePassword
                 Client.SecondFactorKind.Duo,
             };
             var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
-                "{" + "'duo': {'enabled': true}, " + "'totp': {'enabled': true}, " + "'dsecret': {'enabled': true}" + "}"
+                """
+                {
+                    "duo": { "enabled": true },
+                    "totp": { "enabled": true },
+                    "dsecret": { "enabled": true }
+                }
+                """
             );
+
+            // Act
             var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
 
-            Assert.Equal(expected, factors);
+            // Assert
+            factors.ShouldBe(expected);
         }
 
         [Fact]
         public void GetSecondFactors_ignores_missing_factors()
         {
+            // Arrange
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>("{'totp': {'enabled': true}}");
+            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+                """
+                {
+                    "totp": { "enabled": true }
+                }
+                """
+            );
+
+            // Act
             var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
 
-            Assert.Equal(expected, factors);
+            // Assert
+            factors.ShouldBe(expected);
         }
 
         [Fact]
         public void GetSecondFactors_ignores_disabled_factors()
         {
+            // Arrange
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
             var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
-                "{" + "'duo': {'enabled': false}, " + "'totp': {'enabled': true}, " + "'dsecret': {'enabled': false}" + "}"
+                """
+                {
+                    "duo": { "enabled": false },
+                    "totp": { "enabled": true },
+                    "dsecret": { "enabled": false }
+                }
+                """
             );
+
+            // Act
             var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
 
-            Assert.Equal(expected, factors);
+            // Assert
+            factors.ShouldBe(expected);
         }
 
         [Fact]
         public void PerformSecondFactorAuthentication_throws_on_canceled_mfa()
         {
+            // Arrange
             var flow = new RestFlow();
 
-            Exceptions.AssertThrowsCanceledMultiFactor(
-                () => Client.PerformSecondFactorAuthentication(GoogleAuthFactors, Credentials, TestData.SessionKey, new CancelingUi(), null, flow),
-                "Second factor step is canceled by the user"
-            );
+            // Act later
+            Action act = () =>
+                Client.PerformSecondFactorAuthentication(GoogleAuthFactors, Credentials, TestData.SessionKey, new CancelingUi(), null, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<CanceledMultiFactorException>();
+            ex.Message.ShouldBe("Second factor step is canceled by the user");
         }
 
         [Fact]
         public void ChooseInteractiveSecondFactor_returns_high_priority_factor()
         {
+            // Arrange
             var factors = new[]
             {
                 new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator),
                 new Client.SecondFactor(Client.SecondFactorKind.Duo),
             };
+
+            // Act
             var chosen = Client.ChooseInteractiveSecondFactor(factors);
 
-            Assert.Equal(Client.SecondFactorKind.Duo, chosen.Kind);
+            // Assert
+            chosen.Kind.ShouldBe(Client.SecondFactorKind.Duo);
         }
 
         [Fact]
         public void ChooseInteractiveSecondFactor_throws_on_empty_factors()
         {
-            Exceptions.AssertThrowsInternalError(
-                () => Client.ChooseInteractiveSecondFactor(new Client.SecondFactor[0]),
-                "The list of 2FA methods is empty"
-            );
+            // Act later
+            Action act = () => Client.ChooseInteractiveSecondFactor(new Client.SecondFactor[0]);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldBe("The list of 2FA methods is empty");
         }
 
         [Fact]
         public void ChooseInteractiveSecondFactor_throws_on_missing_factors()
         {
+            // Arrange
             var factors = new[] { new Client.SecondFactor(Client.SecondFactorKind.RememberMeToken) };
 
-            Exceptions.AssertThrowsInternalError(() => Client.ChooseInteractiveSecondFactor(factors), "doesn't contain any supported methods");
+            // Act later
+            Action act = () => Client.ChooseInteractiveSecondFactor(factors);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldBe("The list of 2FA methods doesn't contain any supported methods");
         }
 
         [Fact]
         public void SubmitSecondFactorCode_returns_remember_me_token()
         {
+            // Arrange
             var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
+
+            // Act
             var token = Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
 
-            Assert.Equal("gUhBItRHUI7vAc04TJNUkA", token);
+            // Assert
+            token.ShouldBe("gUhBItRHUI7vAc04TJNUkA");
         }
 
         [Fact]
         public void SubmitSecondFactorCode_makes_POST_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Post(EncryptFixture("mfa-response")).ExpectUrl("1password.com/api/v1/auth/mfa").ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
         }
 
         [Fact]
         public void SubmitSecondFactorCode_throws_BadMultiFactor_on_auth_error()
         {
+            // Arrange
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
-            Exceptions.AssertThrowsBadMultiFactor(
-                () => Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow),
-                "Incorrect second factor code"
-            );
+            // Act later
+            Action act = () =>
+                Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
+
+            // Assert
+            var ex = act.ShouldThrow<BadMultiFactorException>();
+            ex.Message.ShouldBe("Incorrect second factor code");
         }
 
         [Fact]
         public void GetAccountInfo_works()
         {
+            // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-account-info-response"));
 
+            // Act/Assert
             Client.GetAccountInfo(TestData.SessionKey, flow);
         }
 
         [Fact]
         public void GetAccountInfo_makes_GET_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).ExpectUrl("1password.com/api/v1/account").ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.GetAccountInfo(TestData.SessionKey, flow);
         }
 
         [Fact]
         public void GetKeysets_works()
         {
+            // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-keysets-response"));
 
+            // Act/Assert
             Client.GetKeysets(TestData.SessionKey, flow);
         }
 
         [Fact]
         public void GetKeysets_makes_GET_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow()
                 .Get(EncryptFixture("get-keysets-response"))
                 .ExpectUrl("1password.com/api/v1/account/keysets")
                 .ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.GetKeysets(TestData.SessionKey, flow);
         }
 
         [Fact]
         public void GetVaultAccounts_returns_accounts()
         {
+            // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
 
+            // Act
             var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
-            Assert.NotEmpty(accounts);
+            // Assert
+            accounts.ShouldNotBeEmpty();
         }
 
         [Fact]
@@ -383,16 +507,16 @@ namespace PasswordManagerAccess.Test.OnePassword
             var (_, sshKeys) = Client.GetVaultItems("ixsi7ub55tanrwgvbyvn7cjpha", keychain, TestData.SessionKey, flow);
 
             // Assert
-            sshKeys.Should().HaveCount(4);
-            sshKeys.Should().ContainSingle(x => x.Name == "ssh-key-1");
+            sshKeys.Length.ShouldBe(4);
+            sshKeys.Count(x => x.Name == "ssh-key-1").ShouldBe(1);
 
             var key = sshKeys.First(x => x.Name == "ssh-key-1");
-            key.Description.Should().Be("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");
-            key.Note.Should().Be("blah-blah notes");
-            key.PrivateKey.Should().StartWith("-----BEGIN PRIVATE KEY-----\nMIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQDaUFtI3U5Zq4gQ");
-            key.PublicKey.Should().StartWith("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDaUFtI3");
-            key.Fingerprint.Should().Be("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");
-            key.KeyType.Should().Be("rsa-4096");
+            key.Description.ShouldBe("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");
+            key.Note.ShouldBe("blah-blah notes");
+            key.PrivateKey.ShouldStartWith("-----BEGIN PRIVATE KEY-----\nMIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQDaUFtI3U5Zq4gQ");
+            key.PublicKey.ShouldStartWith("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDaUFtI3");
+            key.Fingerprint.ShouldBe("SHA256:QB4tVGscKvicUwhQh/ozOCg7JUUj8h56zL3PIPuPGQs");
+            key.KeyType.ShouldBe("rsa-4096");
         }
 
         [Fact]
@@ -418,49 +542,49 @@ namespace PasswordManagerAccess.Test.OnePassword
                     case "rsa-4096":
                     {
                         var openSshKey = sshKey.GetPrivateKey(SshKeyFormat.OpenSsh);
-                        openSshKey.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
+                        openSshKey.ShouldStartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
 
                         var pkcs8Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs8);
-                        pkcs8Key.Should().StartWith("-----BEGIN PRIVATE KEY-----\nMII");
+                        pkcs8Key.ShouldStartWith("-----BEGIN PRIVATE KEY-----\nMII");
 
                         var pkcs1Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs1);
-                        pkcs1Key.Should().StartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
+                        pkcs1Key.ShouldStartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
 
                         var openSsh = ParseOpenSshPrivateKey(openSshKey);
 
                         var pkcs8 = ParsePkcs8PrivateKey(pkcs8Key);
-                        pkcs8.Should().BeOfType<RsaPrivateCrtKeyParameters>();
+                        pkcs8.ShouldBeOfType<RsaPrivateCrtKeyParameters>();
 
                         var pkcs1 = ParsePkcs1PrivateKey(pkcs1Key);
-                        pkcs1.Should().BeOfType<RsaPrivateCrtKeyParameters>();
+                        pkcs1.ShouldBeOfType<RsaPrivateCrtKeyParameters>();
 
                         var rsaSsh = (RsaPrivateCrtKeyParameters)openSsh;
                         var rsa8 = (RsaPrivateCrtKeyParameters)pkcs8;
                         var rsa1 = (RsaPrivateCrtKeyParameters)pkcs1;
 
-                        rsaSsh.Modulus.Should().Be(rsa8.Modulus);
-                        rsaSsh.Modulus.Should().Be(rsa1.Modulus);
+                        rsaSsh.Modulus.ShouldBe(rsa8.Modulus);
+                        rsaSsh.Modulus.ShouldBe(rsa1.Modulus);
 
-                        rsaSsh.PublicExponent.Should().Be(rsa8.PublicExponent);
-                        rsaSsh.PublicExponent.Should().Be(rsa1.PublicExponent);
+                        rsaSsh.PublicExponent.ShouldBe(rsa8.PublicExponent);
+                        rsaSsh.PublicExponent.ShouldBe(rsa1.PublicExponent);
 
-                        rsaSsh.Exponent.Should().Be(rsa8.Exponent);
-                        rsaSsh.Exponent.Should().Be(rsa1.Exponent);
+                        rsaSsh.Exponent.ShouldBe(rsa8.Exponent);
+                        rsaSsh.Exponent.ShouldBe(rsa1.Exponent);
 
-                        rsaSsh.P.Should().Be(rsa8.P);
-                        rsaSsh.P.Should().Be(rsa1.P);
+                        rsaSsh.P.ShouldBe(rsa8.P);
+                        rsaSsh.P.ShouldBe(rsa1.P);
 
-                        rsaSsh.Q.Should().Be(rsa8.Q);
-                        rsaSsh.Q.Should().Be(rsa1.Q);
+                        rsaSsh.Q.ShouldBe(rsa8.Q);
+                        rsaSsh.Q.ShouldBe(rsa1.Q);
 
-                        rsaSsh.DP.Should().Be(rsa8.DP);
-                        rsaSsh.DP.Should().Be(rsa1.DP);
+                        rsaSsh.DP.ShouldBe(rsa8.DP);
+                        rsaSsh.DP.ShouldBe(rsa1.DP);
 
-                        rsaSsh.DQ.Should().Be(rsa8.DQ);
-                        rsaSsh.DQ.Should().Be(rsa1.DQ);
+                        rsaSsh.DQ.ShouldBe(rsa8.DQ);
+                        rsaSsh.DQ.ShouldBe(rsa1.DQ);
 
-                        rsaSsh.QInv.Should().Be(rsa8.QInv);
-                        rsaSsh.QInv.Should().Be(rsa1.QInv);
+                        rsaSsh.QInv.ShouldBe(rsa8.QInv);
+                        rsaSsh.QInv.ShouldBe(rsa1.QInv);
 
                         break;
                     }
@@ -468,75 +592,81 @@ namespace PasswordManagerAccess.Test.OnePassword
                     case "ed25519":
                     {
                         var openSshKey = sshKey.GetPrivateKey(SshKeyFormat.OpenSsh);
-                        openSshKey.Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
+                        openSshKey.ShouldStartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG");
 
                         var pkcs8Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs8);
-                        pkcs8Key.Should().StartWith("-----BEGIN PRIVATE KEY-----\nM");
+                        pkcs8Key.ShouldStartWith("-----BEGIN PRIVATE KEY-----\nM");
 
                         var pkcs1Key = sshKey.GetPrivateKey(SshKeyFormat.Pkcs1);
-                        pkcs1Key.Should().Be("");
+                        pkcs1Key.ShouldBe("");
 
                         var openSsh = ParseOpenSshPrivateKey(openSshKey);
-                        openSsh.Should().BeOfType<Ed25519PrivateKeyParameters>();
+                        openSsh.ShouldBeOfType<Ed25519PrivateKeyParameters>();
 
                         var pkcs8 = ParsePkcs8PrivateKey(pkcs8Key);
-                        pkcs8.Should().BeOfType<Ed25519PrivateKeyParameters>();
+                        pkcs8.ShouldBeOfType<Ed25519PrivateKeyParameters>();
 
                         var edSsh = (Ed25519PrivateKeyParameters)openSsh;
                         var ed8 = (Ed25519PrivateKeyParameters)pkcs8;
 
-                        edSsh.GetEncoded().Should().BeEquivalentTo(ed8.GetEncoded());
-                        edSsh.GetEncoded().Should().HaveCount(32);
+                        edSsh.GetEncoded().ShouldBe(ed8.GetEncoded());
+                        edSsh.GetEncoded().Length.ShouldBe(32);
 
                         break;
                     }
 
                     default:
                     {
-                        Execute.Assertion.FailWith($"Unknown SSH key type: {sshKey.KeyType}");
-                        break;
+                        throw new InvalidOperationException($"Unknown SSH key type: {sshKey.KeyType}");
                     }
                 }
 
                 // Verify the original keys are in the right format
                 if (sshKey.Name.Contains("openssh imported"))
-                    sshKey.GetPrivateKey(SshKeyFormat.Original).Should().StartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl");
+                    sshKey.GetPrivateKey(SshKeyFormat.Original).ShouldStartWith("-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl");
                 else if (sshKey.Name.Contains("pkcs8 imported"))
-                    sshKey.GetPrivateKey(SshKeyFormat.Original).Should().StartWith("-----BEGIN PRIVATE KEY-----\nM");
+                    sshKey.GetPrivateKey(SshKeyFormat.Original).ShouldStartWith("-----BEGIN PRIVATE KEY-----\nM");
                 else if (sshKey.Name.Contains("pkcs1 imported"))
-                    sshKey.GetPrivateKey(SshKeyFormat.Original).Should().StartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
+                    sshKey.GetPrivateKey(SshKeyFormat.Original).ShouldStartWith("-----BEGIN RSA PRIVATE KEY-----\nMII");
             }
         }
 
         [Fact]
         public void GetVaultAccounts_with_no_items_work()
         {
+            // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
 
+            // Act
             var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
-            Assert.Empty(accounts);
+            // Assert
+            accounts.ShouldBeEmpty();
         }
 
         [Fact]
         public void GetVaultAccounts_returns_server_secrets()
         {
+            // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-server-secrets-response"));
             var keychain = new Keychain(
                 new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e", "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex())
             );
 
+            // Act
             var (accounts, _) = Client.GetVaultItems("6xkojw55yh4uo4vtdewghr5boi", keychain, TestData.SessionKey, flow);
 
-            Assert.Contains(accounts, x => x.Name == "server-test");
+            // Assert
+            accounts.ShouldContain(x => x.Name == "server-test");
         }
 
         [Fact]
         public void GetVaultAccounts_makes_GET_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow()
                 .Get(EncryptFixture("get-vault-accounts-ru74-response"))
                 .ExpectUrl("1password.com/api/v1/vault")
@@ -545,12 +675,14 @@ namespace PasswordManagerAccess.Test.OnePassword
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
 
+            // Act/Assert
             Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
         }
 
         [Fact]
         public void GetVaultAccounts_with_multiple_batches_returns_all_accounts()
         {
+            // Arrange
             var flow = new RestFlow()
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-1-response"))
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-2-response"))
@@ -559,44 +691,59 @@ namespace PasswordManagerAccess.Test.OnePassword
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
 
+            // Act
             var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
 
-            Assert.Equal(3, accounts.Length);
+            // Assert
+            accounts.Length.ShouldBe(3);
         }
 
         [Fact]
         public void LogOut_works()
         {
+            // Arrange
             var flow = new RestFlow().Put("{'success': 1}");
 
+            // Act/Assert
             Client.LogOut(flow);
         }
 
         [Fact]
         public void LogOut_makes_PUT_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/session/signout").ToRestClient(ApiUrl);
 
+            // Act/Assert
             Client.LogOut(flow);
         }
 
         [Fact]
         public void LogOut_throws_on_bad_response()
         {
+            // Arrange
             var flow = new RestFlow().Put("{'success': 0}");
 
-            Exceptions.AssertThrowsInternalError(() => Client.LogOut(flow), "Failed to logout");
+            // Act later
+            Action act = () => Client.LogOut(flow);
+
+            // Assert
+            var ex = act.ShouldThrow<InternalErrorException>();
+            ex.Message.ShouldBe("Failed to logout");
         }
 
         [Fact]
         public void DecryptKeyset_decrypts_all_keys()
         {
+            // Arrange
             var keysets = ParseFixture<R.KeysetsInfo>("get-keysets-response");
             var keychain = new Keychain();
+
+            // Act
             Client.DecryptKeysets(keysets.Keysets, Credentials, keychain);
 
-            // Master key
-            Assert.NotNull(keychain.GetAes("mp"));
+            // Assert
+            keychain.GetAes("mp").ShouldNotBeNull();
 
             var keysetIds = new[]
             {
@@ -608,40 +755,55 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             foreach (var i in keysetIds)
             {
-                Assert.NotNull(keychain.GetAes(i));
-                Assert.NotNull(keychain.GetRsa(i));
+                keychain.GetAes(i).ShouldNotBeNull();
+                keychain.GetRsa(i).ShouldNotBeNull();
             }
         }
 
         [Fact]
         public void DeriveMasterKey_returns_master_key()
         {
+            // Arrange
             var expected = "09f6cf6acc4f64f2ac6af5d912427253c4dd5e1a48dfc6bfea21df8f6d3a701e".DecodeHex();
+
+            // Act
             var key = Client.DeriveMasterKey("PBES2g-HS256", 100000, "i2enf0xq-XPKCFFf5UZqNQ".Decode64Loose(), TestData.Credentials);
 
-            Assert.Equal("mp", key.Id);
-            Assert.Equal(expected, key.Key);
+            // Assert
+            key.Id.ShouldBe("mp");
+            key.Key.ShouldBe(expected);
         }
 
-        [Fact]
-        public void GetApiUrl_returns_correct_url()
+        [Theory]
+        [InlineData("my.1password.com", "https://my.1password.com/api")]
+        [InlineData("my.1password.eu", "https://my.1password.eu/api")]
+        public void GetApiUrl_returns_correct_url(string domain, string expectedUrl)
         {
-            Assert.Equal("https://my.1password.com/api", Client.GetApiUrl("my.1password.com"));
-            Assert.Equal("https://my.1password.eu/api", Client.GetApiUrl("my.1password.eu"));
+            // Act
+            var url = Client.GetApiUrl(domain);
+
+            // Assert
+            url.ShouldBe(expectedUrl);
         }
 
         [Fact]
         public void MakeRestClient_sets_base_url()
         {
+            // Arrange
             var rest = Client.MakeRestClient(null, "https://base.url");
-            Assert.Equal("https://base.url", rest.BaseUrl);
+
+            // Assert
+            rest.BaseUrl.ShouldBe("https://base.url");
         }
 
         [Fact]
         public void MakeRestClient_copies_base_url()
         {
+            // Arrange
             var rest = Client.MakeRestClient(new RestClient(null, "https://base.url"));
-            Assert.Equal("https://base.url", rest.BaseUrl);
+
+            // Assert
+            rest.BaseUrl.ShouldBe("https://base.url");
         }
 
         //
