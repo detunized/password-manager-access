@@ -1,5 +1,35 @@
 # Upgrade notes
 
+## To 23.0.0
+
+This release introduces an incompatible API change for Bitwarden: the previous
+single-call `Vault.Open` method has been split into three separate methods to
+allow multiple downloads per login. Instead of calling `Vault.Open` which was
+removed, you should now use `Client.LogIn` to authenticate and obtain a session
+object, `Client.DownloadVault` to fetch the vault data, and `Client.LogOut` to
+clean up resources when finished. This change allows for more flexible session
+management and better error handling throughout the authentication and vault
+retrieval process.
+
+If you prefer the previous single-call approach, an easy replacement is
+provided: `Client.Open`. This method wraps the new sequence (`LogIn`,
+`DownloadVault`, and `LogOut`) into a single call, closely matching the old
+`Vault.Open` behavior for convenience. The `Vault` is a simple POD type now with
+no further functionality.
+
+Additionally, a new method `Client.GetItem` has been introduced, allowing you to
+fetch a single item from the vault by its ID using an existing session. This is
+useful for scenarios where you only need access to a specific item without
+downloading the entire vault. `Client.GetItem` can be called multiple times
+until the session expired. The session refresh functionality will be introduced
+in further releases.
+
+One side note: that `Client.GetItem` does not provide any organizations or
+collections as they are not part of the item data blob.
+
+As with one password, GetItem returns a `OneOf` object. Please refer to the
+`Bitwarden/Program.cs` for a working example.
+
 ## To 22.0.2
 
 This release introduces a lot of incompatible API changes, mainly related to the async refactoring of the LastPass module. 

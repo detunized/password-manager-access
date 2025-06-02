@@ -1,5 +1,8 @@
 # Changelog
 
+## 23.0.0
+  - Bitwarden: added support for single item retrieval (see `Client.GetItem`)
+
 ## 22.1.0 (combines both 21.1.0 and 22.0.3)
   - Bitwarden: added support for SSH keys (see `Vault.SshKeys`)
 
