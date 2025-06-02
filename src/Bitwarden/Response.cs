@@ -5,6 +5,21 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
+namespace PasswordManagerAccess.Bitwarden
+{
+    using R = Response;
+
+#nullable enable
+    // TODO: Finish migration to Model with records
+    internal static class Model
+    {
+        public record FolderList([JsonProperty("data", Required = Required.Always)] R.Folder[] Folders);
+
+        public record CollectionList([JsonProperty("data", Required = Required.Always)] R.Collection[] Collections);
+    }
+#nullable restore
+}
+
 // Everything in this namespace is public on purpose, even though it's only used internally.
 // This is done to avoid problems with code obfuscation. The deserialization doesn't work when
 // any names here get changed.

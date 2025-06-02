@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using OneOf;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
@@ -15,69 +16,176 @@ using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Bitwarden
 {
-    internal static class Client
+    public static class Client
     {
-        // This is so-called "browser" mode. It's not really trying to mimic a browser, but rather the CLI
-        // in the "browser" mode, where the username and the password and, possibly, 2FA are used to log in.
-        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultBrowser(
-            string username,
-            string password,
-            string deviceId,
-            string baseUrl,
-            IUi ui,
-            ISecureStorage storage,
-            IRestTransport transport
-        )
+        // Use this function to generate a random device ID. The device ID should be unique to each
+        // installation, but it should not be new on every run. A new random device ID should be
+        // generated with GenerateRandomDeviceId on the first run and reused later on.
+        public static string GenerateRandomDeviceId() => Guid.NewGuid().ToString();
+
+        //
+        // Single shot methods
+        //
+
+        // The main entry point for a single shot method. Use this function to open the vault
+        // in the browser mode. In this case the login process is interactive when 2FA is enabled.
+        // This is an old mode that might potentially trigger a captcha. Captcha solving is not
+        // supported. There's no way to complete a login and get the vault if the captcha is triggered.
+        // Use the CLI/API mode. This mode requires a different type of credentials.
+        public static Vault Open(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => Open(clientInfo, null, ui, storage);
+
+        // This version allows a custom base URL. `baseUrl` could be set to null or "" for the default value.
+        public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage) =>
+            DownloadAndLogOut(LogIn(clientInfo, baseUrl, ui, storage));
+
+        // The main entry point for a single shot method. Use this function to open the vault in the
+        // CLI/API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
+        // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
+        // either. This is the preferred mode. This mode requires a different type of credentials that
+        // could be found in the vault settings: the client ID and the client secret.
+        public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null) => DownloadAndLogOut(LogIn(clientInfo, baseUrl));
+
+        //
+        // LogIn, DownloadVault, LogOut sequence
+        //
+
+        // This method performs a login in the browser mode. The returned session can be used to
+        // download the vault, if needed multiple times. When no longer needed LogOut should be called.
+        // See signle shot Open for more comments.
+        public static Session LogIn(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => LogIn(clientInfo, null, ui, storage);
+
+        // Same as above but allows a custom base URL. `baseUrl` could be set to null or "" for the default value.
+        public static Session LogIn(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
-            var rest = MakeRestClients(baseUrl, transport);
-
-            // 1. Request the number of KDF iterations needed to derive the key
-            var kdfInfo = RequestKdfInfo(username, rest.Api);
-
-            // 2. Derive the master encryption key or KEK (key encryption key)
-            var key = Util.DeriveKey(username, password, kdfInfo);
-
-            // 3. Hash the password that is going to be sent to the server
-            var hash = Util.HashPassword(password, key);
-
-            // 4. Authenticate with the server and get the token
-            var token = Login(username, hash, deviceId, ui, storage, rest.Api, rest.Identity);
-
-            // 5. Fetch the vault
-            var encryptedVault = DownloadVault(rest.Api, token);
-
-            // 6. Decrypt and parse the vault. Done!
-            return DecryptVault(encryptedVault, key);
+            var transport = new RestTransport();
+            try
+            {
+                return LogInBrowser(clientInfo, baseUrl, ui, storage, transport);
+            }
+            catch (Exception)
+            {
+                transport.Dispose();
+                throw;
+            }
         }
 
-        // This mode a true non-interactive CLI/API mode. The 2FA is not used in this mode.
-        public static (Account[], SshKey[], Collection[], Organization[], ParseError[]) OpenVaultCliApi(
-            string clientId,
-            string clientSecret,
-            string password,
-            string deviceId,
-            string baseUrl,
-            IRestTransport transport
-        )
+        // This method performs a login in the CLI/API mode. The returned session can be used to
+        // download the vault, if needed multiple times. When no longer needed LogOut should be called.
+        // See single shot Open for more comments.
+        public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = null)
         {
-            var rest = MakeRestClients(baseUrl, transport);
+            var transport = new RestTransport();
+            try
+            {
+                return LogInCliApi(clientInfo, baseUrl, transport);
+            }
+            catch (Exception)
+            {
+                transport.Dispose();
+                throw;
+            }
+        }
 
-            // 1. Login and get the client info
-            var (token, kdfInfo) = LoginCliApi(clientId, clientSecret, deviceId, rest.Identity);
+        // This method downloads the vault from the server. The session must be obtained from LogIn.
+        public static Vault DownloadVault(Session session)
+        {
+            var encryptedVault = FetchVault(session);
+            return DecryptVault(encryptedVault, session.Key);
+            // TODO: Update the session with the profile, folders and collections. This could be useful if the user
+            //       fetches single items after that.
+        }
 
-            // 2. Fetch the vault
-            var encryptedVault = DownloadVault(rest.Api, token);
+        // This method logs out the session. Call this when the session is no longer needed.
+        // After that the session object could not be used anymore. The behavior is undefined
+        // if it's used again.
+        public static void LogOut(Session session)
+        {
+            try
+            {
+                // Bitwarden doesn't require explicit logout, but we clean up resources
+                // The session token will naturally expire
+            }
+            finally
+            {
+                session.Transport.Dispose();
+            }
+        }
 
-            // 3. Derive the master encryption key or KEK (key encryption key)
-            var key = Util.DeriveKey(encryptedVault.Profile.Email, password, kdfInfo);
+        // This method fetches a single item from the vault by its ID. The session must be obtained from LogIn.
+        public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, Session session)
+        {
+            var maybeItem = FetchItemAndMaybeFoldersAndCollections(itemId, session);
 
-            // 4. Decrypt and parse the vault. Done!
-            return DecryptVault(encryptedVault, key);
+            return maybeItem.Value switch
+            {
+                R.Item item => ParseItem(item, session),
+                NoItem noItem => noItem,
+                _ => throw new InternalErrorException("Logic error"),
+            };
         }
 
         //
         // Internal
         //
+
+        internal static Vault DownloadAndLogOut(Session session)
+        {
+            try
+            {
+                return DownloadVault(session);
+            }
+            finally
+            {
+                LogOut(session);
+            }
+        }
+
+        internal static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage, IRestTransport transport)
+        {
+            var rest = MakeRestClients(baseUrl, transport);
+
+            // 1. Request the number of KDF iterations needed to derive the key
+            var kdfInfo = RequestKdfInfo(clientInfo.Username, rest.Api);
+
+            // 2. Derive the master encryption key or KEK (key encryption key)
+            var key = Util.DeriveKey(clientInfo.Username, clientInfo.Password, kdfInfo);
+
+            // 3. Hash the password that is going to be sent to the server
+            var hash = Util.HashPassword(clientInfo.Password, key);
+
+            // 4. Authenticate with the server and get the token
+            var token = Login(clientInfo.Username, hash, clientInfo.DeviceId, ui, storage, rest.Api, rest.Identity);
+
+            // 5. Fetch the profile in case this session is going be used to download a single item.
+            //    The full vault download contains the profile too, but not the single item download.
+            //    So in case of the full vault download it's redundant, but this should be a big deal.
+            var encryptedProfile = FetchProfile(token, rest.Api);
+
+            // 6. Decrypt the profile (it contains the vault key, the orgs and the org keys)
+            var profile = DecryptProfile(encryptedProfile, key);
+
+            return new Session(token, key, profile, rest.Api, transport);
+        }
+
+        internal static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl, IRestTransport transport)
+        {
+            var rest = MakeRestClients(baseUrl, transport);
+
+            // 1. Login and get the client info
+            var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest.Identity);
+
+            // 2. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
+            //    Whether downloading the full vault or a single item, we need the profile first.
+            var encryptedProfile = FetchProfile(token, rest.Api);
+
+            // 3. Derive the master encryption key or KEK (key encryption key)
+            var key = Util.DeriveKey(encryptedProfile.Email, clientInfo.Password, kdfInfo);
+
+            // 4. Decrypt the profile (it contains the vault key, the orgs and the org keys)
+            var profile = DecryptProfile(encryptedProfile, key);
+
+            return new Session(token, key, profile, rest.Api, transport);
+        }
 
         internal static (RestClient Api, RestClient Identity) MakeRestClients(string baseUrl, IRestTransport transport)
         {
@@ -246,7 +354,7 @@ namespace PasswordManagerAccess.Bitwarden
             throw new BadMultiFactorException("Second factor code is not correct");
         }
 
-        internal static (string Token, R.KdfInfo KdfInfo) LoginCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
+        internal static (string Token, R.KdfInfo KdfInfo) LogInCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -504,27 +612,141 @@ namespace PasswordManagerAccess.Bitwarden
             throw MakeSpecializedError(response);
         }
 
-        internal static R.Vault DownloadVault(RestClient rest, string token)
+        //
+        // Fetch/Parse helpers
+        //
+
+        internal static Dictionary<string, string> FetchAndParseFolders(Session session)
         {
-            var response = rest.Get<R.Vault>("sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", token } });
+            var folders = FetchFolders(session);
+            return ParseFolders(folders, session.Profile.VaultKey);
+        }
+
+        internal static Dictionary<string, Collection> FetchAndParseCollections(Session session)
+        {
+            var collections = FetchCollections(session);
+            return ParseCollections(collections, session.Profile.VaultKey, session.Profile.OrgKeys);
+        }
+
+        //
+        // Fetching data
+        //
+
+        internal static R.Profile FetchProfile(string token, RestClient rest)
+        {
+            var response = rest.Get<R.Profile>("accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
             if (response.IsSuccessful)
                 return response.Data;
 
             throw MakeSpecializedError(response);
         }
 
-        internal static (Account[], SshKey[], Collection[], Organization[], ParseError[]) DecryptVault(R.Vault vault, byte[] key)
-        {
-            var vaultKey = DecryptVaultKey(vault.Profile, key);
-            var privateKey = DecryptPrivateKey(vault.Profile, vaultKey);
-            var orgKeys = DecryptOrganizationKeys(vault.Profile, privateKey);
-            var folders = ParseFolders(vault.Folders, vaultKey);
-            var collections = ParseCollections(vault.Collections, vaultKey, orgKeys);
-            var organizations = ParseOrganizations(vault.Profile.Organizations);
-            var collectionsById = collections.ToDictionary(x => x.Id);
-            var (accounts, sshKeys, errors) = ParseAccounts(vault.Ciphers, vaultKey, orgKeys, folders, collectionsById);
+        internal static R.Vault FetchVault(Session session) => FetchVault(session.Token, session.Rest);
 
-            return (accounts, sshKeys, collections, organizations, errors);
+        internal static R.Vault FetchVault(string token, RestClient rest)
+        {
+            var response = rest.Get<R.Vault>("sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+            if (response.IsSuccessful)
+                return response.Data;
+
+            throw MakeSpecializedError(response);
+        }
+
+        internal static OneOf<R.Item, NoItem> FetchItem(string itemId, Session session)
+        {
+            var response = session.Rest.Get<R.Item>(
+                $"ciphers/{itemId}/details",
+                new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
+            );
+            if (response.IsSuccessful)
+                return response.Data;
+
+            // Special case: the item not found
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return NoItem.NotFound;
+
+            throw MakeSpecializedError(response);
+        }
+
+        internal static OneOf<R.Item, NoItem> FetchItemAndMaybeFoldersAndCollections(string itemId, Session session)
+        {
+            var maybeItem = FetchItem(itemId, session);
+            if (maybeItem.IsT1)
+                return maybeItem;
+
+            var item = maybeItem.AsT0;
+
+            // TODO: There's a chance that the folders are outdated in case they were edited since the last fetch.
+            //       Figure out the expiry/refresh logic.
+            if (item.FolderId != null && session.Folders == null)
+                session.Folders = FetchAndParseFolders(session);
+
+            // TODO: There's a chance that the collections are outdated in case they were edited since the last fetch.
+            //       Figure out the expiry/refresh logic.
+            if ((item.CollectionIds?.Length ?? 0) > 0 && session.Collections == null)
+                session.Collections = FetchAndParseCollections(session);
+
+            return item;
+        }
+
+        internal static R.Folder[] FetchFolders(Session session)
+        {
+            var response = session.Rest.Get<Model.FolderList>($"folders", new Dictionary<string, string> { { "Authorization", $"{session.Token}" } });
+            if (response.IsSuccessful)
+                return response.Data.Folders;
+
+            throw MakeSpecializedError(response);
+        }
+
+        internal static R.Collection[] FetchCollections(Session session)
+        {
+            var response = session.Rest.Get<Model.CollectionList>(
+                $"collections",
+                new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
+            );
+            if (response.IsSuccessful)
+                return response.Data.Collections;
+
+            throw MakeSpecializedError(response);
+        }
+
+        //
+        // Parsing data
+        //
+
+        internal static OneOf<Account, SshKey, NoItem> ParseItem(R.Item item, Session session)
+        {
+            var profile = session.Profile;
+            var folders = session.Folders;
+            var collections = session.Collections;
+
+            return item.Type switch
+            {
+                R.ItemType.Login => ParseAccountItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
+                R.ItemType.SshKey => ParseSshKeyItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
+                _ => NoItem.UnsupportedType,
+            };
+        }
+
+        internal static Profile DecryptProfile(R.Profile profile, byte[] key)
+        {
+            var vaultKey = DecryptVaultKey(profile, key);
+            var privateKey = DecryptPrivateKey(profile, vaultKey);
+            var organizations = ParseOrganizations(profile.Organizations).ToDictionary(x => x.Id);
+            var orgKeys = privateKey == null ? [] : DecryptOrganizationKeys(profile, privateKey);
+
+            return new Profile(vaultKey, privateKey, organizations, orgKeys);
+        }
+
+        internal static Vault DecryptVault(R.Vault vault, byte[] key)
+        {
+            // We ignore the session profile as it might be out of date. It doesn't take long to decrypt everything,
+            // given that we're going to parse the whole vault in the next step.
+            var profile = DecryptProfile(vault.Profile, key);
+            var folders = ParseFolders(vault.Folders, profile.VaultKey);
+            var collections = ParseCollections(vault.Collections, profile.VaultKey, profile.OrgKeys);
+            var (accounts, sshKeys, errors) = ParseAccounts(vault.Ciphers, profile.VaultKey, profile.OrgKeys, folders, collections);
+            return new Vault(accounts, sshKeys, collections.Values.ToArray(), profile.Organizations.Values.ToArray(), errors);
         }
 
         private static Organization[] ParseOrganizations(R.Organization[] organizations)
@@ -546,16 +768,13 @@ namespace PasswordManagerAccess.Bitwarden
         // Null if not present
         internal static byte[] DecryptPrivateKey(R.Profile profile, byte[] vaultKey)
         {
-            if (profile.PrivateKey.IsNullOrEmpty())
-                return null;
-
-            return DecryptToBytes(profile.PrivateKey, vaultKey);
+            return profile.PrivateKey.IsNullOrEmpty() ? null : DecryptToBytes(profile.PrivateKey, vaultKey);
         }
 
         internal static Dictionary<string, byte[]> DecryptOrganizationKeys(R.Profile profile, byte[] privateKey)
         {
             if (privateKey == null || profile.Organizations == null)
-                return new Dictionary<string, byte[]>();
+                return [];
 
             return profile.Organizations.ToDictionary(x => x.Id, x => DecryptRsaToBytes(x.Key, privateKey));
         }
@@ -565,16 +784,21 @@ namespace PasswordManagerAccess.Bitwarden
             return folders.ToDictionary(i => i.Id, i => DecryptToString(i.Name, key));
         }
 
-        internal static Collection[] ParseCollections(R.Collection[] collections, byte[] vaultKey, Dictionary<string, byte[]> orgKeys)
+        internal static Dictionary<string, Collection> ParseCollections(
+            R.Collection[] collections,
+            byte[] vaultKey,
+            Dictionary<string, byte[]> orgKeys
+        )
         {
-            return collections
-                .Select(x => new Collection(
+            return collections.ToDictionary(
+                x => x.Id,
+                x => new Collection(
                     id: x.Id,
                     name: DecryptToString(x.Name, x.OrganizationId.IsNullOrEmpty() ? vaultKey : orgKeys[x.OrganizationId]),
                     organizationId: x.OrganizationId ?? "",
                     hidePasswords: x.HidePasswords
-                ))
-                .ToArray();
+                )
+            );
         }
 
         internal static (Account[], SshKey[], ParseError[]) ParseAccounts(
@@ -600,6 +824,9 @@ namespace PasswordManagerAccess.Bitwarden
                             break;
                         case R.ItemType.SshKey:
                             sshKeys.Add(ParseSshKeyItem(item, vaultKey, orgKeys, folders, collections));
+                            break;
+                        default:
+                            // Unsupported items are ignored.
                             break;
                     }
                 }
@@ -663,17 +890,15 @@ namespace PasswordManagerAccess.Bitwarden
             if (!item.Key.IsNullOrEmpty())
                 key = DecryptToBytes(item.Key, key);
 
-            var folder = item.FolderId != null && folders.ContainsKey(item.FolderId) ? folders[item.FolderId] : "";
-
             var parsedItem = new VaultItem
             {
                 Id = item.Id,
                 Name = DecryptToStringOrBlank(item.Name, key),
                 Note = DecryptToStringOrBlank(item.Notes, key),
                 DeletedDate = item.DeletedDate,
-                Folder = folder,
+                Folder = item.FolderId == null ? "" : folders.GetValueOrDefault(item.FolderId, ""),
                 CollectionIds = item.CollectionIds ?? [],
-                HidePassword = ResolveHidePassword(item.CollectionIds, collections),
+                HidePassword = item.CollectionIds != null && ResolveHidePassword(item.CollectionIds, collections),
                 CustomFields = ParseCustomFields(item, key),
             };
 
@@ -718,6 +943,10 @@ namespace PasswordManagerAccess.Bitwarden
             // Only hide the password when ALL the collections this item is in have "hide password" enabled.
             return collectionIds.All(x => collections.GetOrDefault(x, null)?.HidePasswords == true);
         }
+
+        //
+        // Encryption
+        //
 
         internal static byte[] DecryptToBytes(string s, byte[] key)
         {
@@ -843,14 +1072,15 @@ namespace PasswordManagerAccess.Bitwarden
             _ => throw new InternalErrorException($"Unexpected device name {Platform}"),
         };
 
-        private static readonly Dictionary<string, string> DefaultRestHeaders = new Dictionary<string, string>
-        {
-            ["User-Agent"] = UserAgent,
-            ["Device-Type"] = DeviceType,
-            ["Bitwarden-Client-Name"] = "cli",
-            ["Bitwarden-Client-Version"] = CliVersion,
-        };
+        private static readonly Dictionary<string, string> DefaultRestHeaders =
+            new()
+            {
+                ["User-Agent"] = UserAgent,
+                ["Device-Type"] = DeviceType,
+                ["Bitwarden-Client-Name"] = "cli",
+                ["Bitwarden-Client-Version"] = CliVersion,
+            };
 
-        private static readonly R.KdfInfo DefaultKdfInfo = new R.KdfInfo { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 5000 };
+        private static readonly R.KdfInfo DefaultKdfInfo = new() { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 5000 };
     }
 }
