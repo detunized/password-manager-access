@@ -728,12 +728,12 @@ namespace PasswordManagerAccess.Bitwarden
             };
         }
 
-        internal static Profile DecryptProfile(R.Profile profile, byte[] key, bool needOrgKeys = true)
+        internal static Profile DecryptProfile(R.Profile profile, byte[] key)
         {
             var vaultKey = DecryptVaultKey(profile, key);
             var privateKey = DecryptPrivateKey(profile, vaultKey);
             var organizations = ParseOrganizations(profile.Organizations).ToDictionary(x => x.Id);
-            var orgKeys = needOrgKeys ? DecryptOrganizationKeys(profile, privateKey) : [];
+            var orgKeys = privateKey == null ? [] : DecryptOrganizationKeys(profile, privateKey);
 
             return new Profile(vaultKey, privateKey, organizations, orgKeys);
         }
@@ -768,10 +768,7 @@ namespace PasswordManagerAccess.Bitwarden
         // Null if not present
         internal static byte[] DecryptPrivateKey(R.Profile profile, byte[] vaultKey)
         {
-            if (profile.PrivateKey.IsNullOrEmpty())
-                return null;
-
-            return DecryptToBytes(profile.PrivateKey, vaultKey);
+            return profile.PrivateKey.IsNullOrEmpty() ? null : DecryptToBytes(profile.PrivateKey, vaultKey);
         }
 
         internal static Dictionary<string, byte[]> DecryptOrganizationKeys(R.Profile profile, byte[] privateKey)
