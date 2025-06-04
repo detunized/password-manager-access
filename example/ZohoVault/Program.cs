@@ -49,15 +49,19 @@ namespace PasswordManagerAccess.Example.ZohoVault
             string totpSecret;
             config.TryGetValue("google-auth-totp-secret", out totpSecret);
 
+            var credentials = new Credentials(username: config["username"], password: config["password"], passphrase: config["passphrase"]);
+            var settings = new Settings { KeepSession = true };
+            var ui = new TextUi(totpSecret);
+            var storage = new PlainStorage();
+
+            Session session = null;
             try
             {
-                // Open the remote vault
-                var vault = Vault.Open(
-                    new Credentials(username: config["username"], password: config["password"], passphrase: config["passphrase"]),
-                    new Settings { KeepSession = true },
-                    new TextUi(totpSecret),
-                    new PlainStorage()
-                );
+                // Stage 1: LogIn
+                session = Client.LogIn(credentials, settings, ui, storage);
+
+                // Stage 2: Download Vault
+                var vault = Client.DownloadVault(session, credentials.Passphrase);
 
                 // Print the decrypted accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)
@@ -85,6 +89,14 @@ namespace PasswordManagerAccess.Example.ZohoVault
             catch (BaseException e)
             {
                 Util.PrintException(e);
+            }
+            finally
+            {
+                // Stage 3: LogOut
+                if (session != null)
+                {
+                    Client.LogOut(session);
+                }
             }
         }
     }

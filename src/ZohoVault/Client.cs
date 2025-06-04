@@ -18,9 +18,86 @@ namespace PasswordManagerAccess.ZohoVault
     using HttpHeaders = Dictionary<string, string>;
     using PostParameters = Dictionary<string, object>;
 
-    internal static class Client
+    public static class Client
     {
-        public static Account[] OpenVault(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
+        //
+        // Public API
+        //
+
+        //
+        // Single shot
+        //
+
+        public static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage)
+        {
+            using var transport = new RestTransport();
+            return Open(credentials, settings, ui, storage, transport);
+        }
+
+        //
+        // LogIn, DownloadVault, LogOut sequence
+        //
+
+        public static Session LogIn(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage)
+        {
+            var transport = new RestTransport();
+            try
+            {
+                return LogIn(credentials, settings, ui, storage, transport);
+            }
+            catch (Exception)
+            {
+                transport.Dispose();
+                throw;
+            }
+        }
+
+        public static Vault DownloadVault(Session session, string passphrase)
+        {
+            var authInfo = RequestAuthInfo(session.Cookies, session.UserInfo.Domain, session.Rest);
+            var vaultKey = DeriveAndVerifyVaultKey(passphrase, authInfo);
+            var vaultResponse = FetchVault(session.Cookies, session.UserInfo.Domain, session.Rest);
+            var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
+            var accounts = ParseAccounts(vaultResponse, vaultKey, sharingKey);
+
+            return new Vault(accounts);
+        }
+
+        public static void LogOut(Session session)
+        {
+            try
+            {
+                if (session.Settings.KeepSession)
+                    return;
+
+                EraseCookies(session.Storage);
+                LogOut(session.Cookies, session.UserInfo.Domain, session.Rest);
+            }
+            finally
+            {
+                session.Transport.Dispose();
+            }
+        }
+
+        //
+        // Internal
+        //
+
+        internal static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
+        {
+            var session = LogIn(credentials, settings, ui, storage, transport);
+            try
+            {
+                var vault = DownloadVault(session, credentials.Passphrase);
+                return vault;
+            }
+            finally
+            {
+                LogOut(session);
+            }
+        }
+
+        internal static Session LogIn(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             var rest = new RestClient(transport, defaultHeaders: Headers);
 
@@ -45,54 +122,39 @@ namespace PasswordManagerAccess.ZohoVault
                 needLogin = true;
             }
 
-            var needLogout = false;
-            try
+            // Normally we allow two attempts. The first one to "test" the old cookies and the second one to log in and perform the download.
+            // In case we don't have any cookies stored, we only allow one attempt to log in and perform the download.
+            var maxAttempts = needLogin ? 1 : 2;
+
+            for (var attempt = 0; attempt < maxAttempts; attempt++)
             {
-                // Normally we allow two attempts. The first one to "test" the old cookies and the second one to log in and perform the download.
-                // In case we don't have any cookies stored, we only allow one attempt to log in and perform the download.
-                var maxAttempts = needLogin ? 1 : 2;
-
-                for (var attempt = 0; attempt < maxAttempts; attempt++)
+                if (needLogin)
                 {
-                    if (needLogin)
-                    {
-                        // Perform the login dance that possibly involves the MFA steps. The cookies are later used by the subsequent requests.
-                        cookies = LogIn(userInfo, credentials.Password, token, ui, storage, rest);
+                    // Perform the login dance that possibly involves the MFA steps. The cookies are later used by the subsequent requests.
+                    cookies = LogIn(userInfo, credentials.Password, token, ui, storage, rest);
 
-                        // Save the cookies for the next time
-                        if (settings.KeepSession)
-                            SaveCookies(cookies, storage);
-                    }
-
-                    try
-                    {
-                        var authInfo = RequestAuthInfo(cookies, userInfo.Domain, rest);
-                        var vaultKey = DeriveAndVerifyVaultKey(credentials.Passphrase, authInfo);
-                        var vaultResponse = DownloadVault(cookies, userInfo.Domain, rest);
-                        var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
-
-                        needLogout = !settings.KeepSession;
-
-                        return ParseAccounts(vaultResponse, vaultKey, sharingKey);
-                    }
-                    catch (InvalidTicketException)
-                    {
-                        // If the cookies have expired, we need to do a full login
-                        EraseCookies(storage);
-                        needLogin = true;
-                    }
+                    // Save the cookies for the next time
+                    if (settings.KeepSession)
+                        SaveCookies(cookies, storage);
                 }
 
-                throw new InternalErrorException("Logical error");
-            }
-            finally
-            {
-                if (needLogout)
+                try
                 {
+                    // Test if the session is valid by making a simple request
+                    RequestAuthInfo(cookies, userInfo.Domain, rest);
+
+                    // If we get here, the session is valid
+                    return new Session(cookies, token, userInfo, rest, transport, settings, storage);
+                }
+                catch (InvalidTicketException)
+                {
+                    // If the cookies have expired, we need to do a full login
                     EraseCookies(storage);
-                    LogOut(cookies, userInfo.Domain, rest);
+                    needLogin = true;
                 }
             }
+
+            throw new InternalErrorException("Logical error");
         }
 
         //
@@ -361,10 +423,8 @@ namespace PasswordManagerAccess.ZohoVault
             return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
         }
 
-        internal static R.Vault DownloadVault(HttpCookies cookies, string domain, RestClient rest)
-        {
-            return GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
-        }
+        internal static R.Vault FetchVault(HttpCookies cookies, string domain, RestClient rest) =>
+            GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
 
         internal static byte[] DeriveAndVerifyVaultKey(string passphrase, AuthInfo authInfo)
         {

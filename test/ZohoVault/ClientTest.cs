@@ -17,15 +17,11 @@ namespace PasswordManagerAccess.Test.ZohoVault
     public class ClientTest : TestBase
     {
         [Fact]
-        public void OpenVault_returns_accounts()
+        public void Open_returns_accounts()
         {
-            var accounts = Client.OpenVault(
-                new Credentials(Username, Password, TestData.Passphrase),
-                new Settings(),
-                null,
-                GetStorage(),
-                MakeFullFlow()
-            );
+            var accounts = Client
+                .Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), MakeFullFlow())
+                .Accounts;
 
             Assert.Equal(2, accounts.Length);
 
@@ -45,25 +41,19 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Fact]
-        public void OpenVault_saves_cookies_when_keep_session_is_enabled()
+        public void Open_saves_cookies_when_keep_session_is_enabled()
         {
             var storage = GetStorage();
-            Client.OpenVault(
-                new Credentials(Username, Password, TestData.Passphrase),
-                new Settings { KeepSession = true },
-                null,
-                storage,
-                MakeFullFlow()
-            );
+            Client.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings { KeepSession = true }, null, storage, MakeFullFlow());
 
             storage.Values["cookies"].ShouldNotBeEmpty();
         }
 
         [Fact]
-        public void OpenVault_doe_not_save_cookies_when_keep_session_is_disabled()
+        public void Open_does_not_save_cookies_when_keep_session_is_disabled()
         {
             var storage = GetStorage();
-            Client.OpenVault(
+            Client.Open(
                 new Credentials(Username, Password, TestData.Passphrase),
                 new Settings { KeepSession = false },
                 null,
@@ -75,7 +65,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Fact]
-        public void OpenVault_returns_shared_accounts()
+        public void Open_returns_shared_accounts()
         {
             var flow = new RestFlow()
                 .Get("", cookies: OAuthCookies)
@@ -85,7 +75,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(GetFixture("vault-with-shared-items-response"))
                 .Get(""); // Logout
 
-            var vault = Vault.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), flow);
+            var vault = Client.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), flow);
             var accounts = vault.Accounts;
 
             Assert.Single(accounts);
@@ -333,11 +323,11 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         [Fact]
-        public void DownloadVault_makes_GET_request_to_specific_url_and_returns_vault_records()
+        public void FetchVault_makes_GET_request_to_specific_url_and_returns_vault_records()
         {
             var flow = new RestFlow().Get(GetFixture("vault-response")).ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT");
 
-            var vault = Client.DownloadVault(LoginCookies, DefaultDomain, flow);
+            var vault = Client.FetchVault(LoginCookies, DefaultDomain, flow);
 
             Assert.NotEmpty(vault.Secrets);
         }
