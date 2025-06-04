@@ -61,7 +61,7 @@ namespace PasswordManagerAccess.Example.ZohoVault
                 session = Client.LogIn(credentials, settings, ui, storage);
 
                 // Stage 2: Download Vault
-                var vault = Client.DownloadVault(session, credentials.Passphrase);
+                var vault = Client.DownloadVault(session);
 
                 // Print the decrypted accounts
                 for (var i = 0; i < vault.Accounts.Length; ++i)

@@ -52,13 +52,11 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        public static Vault DownloadVault(Session session, string passphrase)
+        public static Vault DownloadVault(Session session)
         {
-            var authInfo = RequestAuthInfo(session.Cookies, session.UserInfo.Domain, session.Rest);
-            var vaultKey = DeriveAndVerifyVaultKey(passphrase, authInfo);
-            var vaultResponse = FetchVault(session.Cookies, session.UserInfo.Domain, session.Rest);
-            var sharingKey = DecryptSharingKey(vaultResponse, vaultKey);
-            var accounts = ParseAccounts(vaultResponse, vaultKey, sharingKey);
+            var vaultResponse = FetchVault(session.Cookies, session.Domain, session.Rest);
+            var sharingKey = DecryptSharingKey(vaultResponse, session.VaultKey);
+            var accounts = ParseAccounts(vaultResponse, session.VaultKey, sharingKey);
 
             return new Vault(accounts);
         }
@@ -71,7 +69,7 @@ namespace PasswordManagerAccess.ZohoVault
                     return;
 
                 EraseCookies(session.Storage);
-                LogOut(session.Cookies, session.UserInfo.Domain, session.Rest);
+                LogOut(session.Cookies, session.Domain, session.Rest);
             }
             finally
             {
@@ -88,7 +86,7 @@ namespace PasswordManagerAccess.ZohoVault
             var session = LogIn(credentials, settings, ui, storage, transport);
             try
             {
-                var vault = DownloadVault(session, credentials.Passphrase);
+                var vault = DownloadVault(session);
                 return vault;
             }
             finally
@@ -140,11 +138,14 @@ namespace PasswordManagerAccess.ZohoVault
 
                 try
                 {
-                    // Test if the session is valid by making a simple request
-                    RequestAuthInfo(cookies, userInfo.Domain, rest);
+                    // Test if the session is valid and get auth info in the process
+                    var authInfo = RequestAuthInfo(cookies, userInfo.Domain, rest);
+
+                    // Derive and verify the vault key. It's stored in the session object for later use.
+                    var vaultKey = DeriveAndVerifyVaultKey(credentials.Passphrase, authInfo);
 
                     // If we get here, the session is valid
-                    return new Session(cookies, token, userInfo, rest, transport, settings, storage);
+                    return new Session(cookies, userInfo.Domain, rest, transport, settings, storage, vaultKey);
                 }
                 catch (InvalidTicketException)
                 {

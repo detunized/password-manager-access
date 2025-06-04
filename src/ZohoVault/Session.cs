@@ -6,34 +6,33 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ZohoVault
 {
-    // TODO: See what could be removed from here!
     public class Session
     {
         internal readonly Dictionary<string, string> Cookies;
-        internal readonly string Token;
-        internal readonly Client.UserInfo UserInfo;
+        internal readonly string Domain;
         internal readonly RestClient Rest;
         internal readonly IRestTransport Transport;
         internal readonly Settings Settings;
         internal readonly ISecureStorage Storage;
+        internal readonly byte[] VaultKey;
 
         internal Session(
             Dictionary<string, string> cookies,
-            string token,
-            Client.UserInfo userInfo,
+            string domain,
             RestClient rest,
             IRestTransport transport,
             Settings settings,
-            ISecureStorage storage
+            ISecureStorage storage,
+            byte[] vaultKey
         )
         {
             Cookies = cookies;
-            Token = token;
-            UserInfo = userInfo;
+            Domain = domain;
             Rest = rest;
             Transport = transport;
             Settings = settings;
             Storage = storage;
+            VaultKey = vaultKey;
         }
     }
 }
