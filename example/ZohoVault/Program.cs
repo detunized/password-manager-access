@@ -43,6 +43,26 @@ namespace PasswordManagerAccess.Example.ZohoVault
 
     static class Program
     {
+        static void DumpAccount(Account account, string index)
+        {
+            Console.WriteLine(
+                "{0}:\n"
+                    + "          id: {1}\n"
+                    + "        name: {2}\n"
+                    + "    username: {3}\n"
+                    + "    password: {4}\n"
+                    + "         url: {5}\n"
+                    + "        note: {6}\n",
+                index,
+                account.Id,
+                account.Name,
+                account.Username,
+                account.Password,
+                account.Url,
+                account.Note
+            );
+        }
+
         static void Main(string[] args)
         {
             var config = Util.ReadConfig();
@@ -60,30 +80,25 @@ namespace PasswordManagerAccess.Example.ZohoVault
                 // Stage 1: LogIn
                 session = Client.LogIn(credentials, settings, ui, storage);
 
-                // Stage 2: Download Vault
-                var vault = Client.DownloadVault(session);
+                // Enable this to get a single item from the vault
+                var getSingleItem = true;
 
-                // Print the decrypted accounts
-                for (var i = 0; i < vault.Accounts.Length; ++i)
+                if (getSingleItem)
                 {
-                    var account = vault.Accounts[i];
+                    // Stage 2a: Get a single item from the vault by ID
+                    // Replace with an actual item ID from your vault
+                    var account = Client.GetItem("34896000000013019", session);
 
-                    Console.WriteLine(
-                        "{0}:\n"
-                            + "          id: {1}\n"
-                            + "        name: {2}\n"
-                            + "    username: {3}\n"
-                            + "    password: {4}\n"
-                            + "         url: {5}\n"
-                            + "        note: {6}\n",
-                        i + 1,
-                        account.Id,
-                        account.Name,
-                        account.Username,
-                        account.Password,
-                        account.Url,
-                        account.Note
-                    );
+                    DumpAccount(account, "Single item retrieved");
+                }
+                else
+                {
+                    // Stage 2b: Download entire vault
+                    var vault = Client.DownloadVault(session);
+
+                    // Print the decrypted accounts
+                    for (var i = 0; i < vault.Accounts.Length; ++i)
+                        DumpAccount(vault.Accounts[i], (i + 1).ToString());
                 }
             }
             catch (BaseException e)

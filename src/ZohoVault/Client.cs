@@ -77,6 +77,13 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
+        public static Account GetItem(string itemId, Session session)
+        {
+            var secretResponse = FetchSecret(session.Cookies, session.Domain, itemId, session.Rest);
+            var key = secretResponse.IsShared == "YES" ? GetSharingKey(session) : session.VaultKey;
+            return ParseSecretToAccount(secretResponse, key);
+        }
+
         //
         // Internal
         //
@@ -362,7 +369,7 @@ namespace PasswordManagerAccess.ZohoVault
             var status = response.Data;
 
             // Success (200..299)
-            if (status.StatusCode / 100 == 2 && status.Result.Status == "success")
+            if (status.StatusCode / 100 == 2 && string.Equals(status.Result.Status, "success", StringComparison.OrdinalIgnoreCase))
                 return;
 
             var error = GetError(status);
@@ -426,6 +433,38 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static R.Vault FetchVault(HttpCookies cookies, string domain, RestClient rest) =>
             GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
+
+        internal static R.GetSecret FetchSecret(HttpCookies cookies, string domain, string itemId, RestClient rest) =>
+            GetWrapped<R.GetSecret>(SecretUrl(domain, itemId), cookies, rest);
+
+        internal static byte[] GetSharingKey(Session session)
+        {
+            // TODO: Don't fetch the entire vault. Just get the sharing key if possible.
+            var vaultResponse = FetchVault(session.Cookies, session.Domain, session.Rest);
+            return DecryptSharingKey(vaultResponse, session.VaultKey);
+        }
+
+        // TODO: Merge with ParseAccount!
+        internal static Account ParseSecretToAccount(R.GetSecret secret, byte[] key)
+        {
+            try
+            {
+                var data = JsonConvert.DeserializeObject<R.SecretData>(secret.SecretData ?? "{}");
+                return new Account(
+                    secret.SecretId,
+                    secret.SecretName ?? "",
+                    Util.DecryptStringLoose(data.Username, key),
+                    Util.DecryptStringLoose(data.Password, key),
+                    secret.SecretUrl ?? "",
+                    Util.DecryptStringLoose(secret.Notes, key)
+                );
+            }
+            catch (JsonException)
+            {
+                // If it doesn't parse then it's some other kind of unsupported secret type
+                throw new InternalErrorException("Failed to parse secret data");
+            }
+        }
 
         internal static byte[] DeriveAndVerifyVaultKey(string passphrase, AuthInfo authInfo)
         {
@@ -561,7 +600,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         private static bool IsSuccessful<T>(RestResponse<string, R.ResponseEnvelope<T>> response)
         {
-            return response.IsSuccessful && response.Data?.Operation?.Result?.Status == "success";
+            return response.IsSuccessful && string.Equals(response.Data?.Operation?.Result?.Status, "success", StringComparison.OrdinalIgnoreCase);
         }
 
         private static BaseException MakeErrorOnFailedRequest(RestResponse response)
@@ -661,6 +700,8 @@ namespace PasswordManagerAccess.ZohoVault
         private static string AuthInfoUrl(string domain) => $"https://vault.{domain}/api/json/login?OPERATION_NAME=GET_LOGIN";
 
         private static string VaultUrl(string domain) => $"https://vault.{domain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1";
+
+        private static string SecretUrl(string domain, string itemId) => $"https://vault.{domain}/api/rest/json/v1/secrets/{itemId}";
 
         private static string LogoutUrl(string domain) => $"https://accounts.{domain}/logout?servicename=ZohoVault";
 

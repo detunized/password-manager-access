@@ -419,6 +419,45 @@ namespace PasswordManagerAccess.Test.ZohoVault
             }
         }
 
+        // TODO: use lastpass.ruby@gmail.com account to get items that are not shared
+        // TODO: test on both shared and non-shared items
+        // TODO: get more fixtures
+
+        [Fact]
+        public void GetItem_makes_GET_request_and_returns_account()
+        {
+            var flow = new RestFlow()
+                .Get(GetFixture("get-secret-response"))
+                .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/34896000000013019")
+                .ExpectCookie(LoginCookieName, LoginCookieValue)
+                .Get(GetFixture("vault-response"))
+                .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1");
+
+            var session = new Session(LoginCookies, DefaultDomain, flow, null, new Settings(), GetStorage(), TestData.Key);
+            var account = Client.GetItem("34896000000013019", session);
+
+            Assert.Equal("34896000000013019", account.Id);
+            Assert.Equal("blah.com", account.Name);
+            Assert.Equal("mark", account.Username);
+            Assert.Equal("zuckerberg", account.Password);
+            Assert.Equal("", account.Url);
+            Assert.Equal("", account.Note);
+        }
+
+        [Fact]
+        public void FetchSecret_makes_GET_request_to_specific_url_and_returns_secret()
+        {
+            var flow = new RestFlow()
+                .Get(GetFixture("get-secret-response"))
+                .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/34896000000013019");
+
+            var secret = Client.FetchSecret(LoginCookies, DefaultDomain, "34896000000013019", flow);
+
+            Assert.Equal("34896000000013019", secret.SecretId);
+            Assert.Equal("blah.com", secret.SecretName);
+            Assert.Equal("YES", secret.IsShared);
+        }
+
         //
         // Helpers
         //
