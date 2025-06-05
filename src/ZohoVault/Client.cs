@@ -434,8 +434,8 @@ namespace PasswordManagerAccess.ZohoVault
         internal static R.Vault FetchVault(HttpCookies cookies, string domain, RestClient rest) =>
             GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
 
-        internal static R.GetSecret FetchSecret(HttpCookies cookies, string domain, string itemId, RestClient rest) =>
-            GetWrapped<R.GetSecret>(SecretUrl(domain, itemId), cookies, rest);
+        internal static R.SingleSecret FetchSecret(HttpCookies cookies, string domain, string itemId, RestClient rest) =>
+            GetWrapped<R.SingleSecret>(SecretUrl(domain, itemId), cookies, rest);
 
         internal static byte[] GetSharingKey(Session session)
         {
@@ -445,7 +445,7 @@ namespace PasswordManagerAccess.ZohoVault
         }
 
         // TODO: Merge with ParseAccount!
-        internal static Account ParseSecretToAccount(R.GetSecret secret, byte[] key)
+        internal static Account ParseSecretToAccount(R.SingleSecret secret, byte[] key)
         {
             try
             {

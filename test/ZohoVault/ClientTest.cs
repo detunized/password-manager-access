@@ -448,7 +448,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public void GetItem_makes_GET_request_and_returns_account()
         {
             var flow = new RestFlow()
-                .Get(GetFixture("get-secret-response"))
+                .Get(GetFixture("get-single-shared-item"))
                 .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/34896000000013019")
                 .ExpectCookie(LoginCookieName, LoginCookieValue)
                 .Get(GetFixture("vault-response"))
@@ -469,7 +469,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public void FetchSecret_makes_GET_request_to_specific_url_and_returns_secret()
         {
             var flow = new RestFlow()
-                .Get(GetFixture("get-secret-response"))
+                .Get(GetFixture("get-single-shared-item"))
                 .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/34896000000013019");
 
             var secret = Client.FetchSecret(LoginCookies, DefaultDomain, "34896000000013019", flow);

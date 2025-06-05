@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 
-using System;
 using System.ComponentModel;
 using Newtonsoft.Json;
 
@@ -229,97 +228,13 @@ namespace PasswordManagerAccess.ZohoVault.Response
         public readonly string RedirectUrl;
     }
 
-    // TODO: Remove what's not needed
-    internal class GetSecret
-    {
-        [JsonProperty("notes")]
-        public readonly string Notes;
-
-        [JsonProperty("accounttype")]
-        public readonly string AccountType;
-
-        [JsonProperty("description")]
-        public readonly string Description;
-
-        [JsonProperty("istrashed")]
-        public readonly bool IsTrashed;
-
-        [JsonProperty("userid")]
-        public readonly string UserId;
-
-        [JsonProperty("secretData")]
-        public readonly string SecretData;
-
-        [JsonProperty("isPasswordBreached")]
-        public readonly bool IsPasswordBreached;
-
-        [JsonProperty("isfavourites")]
-        public readonly bool IsFavourites;
-
-        [JsonProperty("secreturl")]
-        public readonly string SecretUrl;
-
-        [JsonProperty("policyid")]
-        public readonly string PolicyId;
-
-        [JsonProperty("autosubmit")]
-        public readonly bool AutoSubmit;
-
-        [JsonProperty("encdescription")]
-        public readonly string EncDescription;
-
-        [JsonProperty("onetimeacess")]
-        public readonly bool OneTimeAccess;
-
-        [JsonProperty("sharinglevel")]
-        public readonly int SharingLevel;
-
-        [JsonProperty("changepassword")]
-        public readonly bool ChangePassword;
-
-        [JsonProperty("isshared")]
-        public readonly string IsShared;
-
-        [JsonProperty("customcolumn")]
-        public readonly string CustomColumn;
-
-        [JsonProperty("secretid")]
-        public readonly string SecretId;
-
-        [JsonProperty("encsecretname")]
-        public readonly string EncSecretName;
-
-        [JsonProperty("classification")]
-        public readonly string Classification;
-
-        [JsonProperty("passwordmodifiedtime")]
-        public readonly long PasswordModifiedTime;
-
-        [JsonProperty("ownerdetails")]
-        public readonly OwnerDetails OwnerDetails;
-
-        [JsonProperty("autologon")]
-        public readonly bool AutoLogon;
-
-        [JsonProperty("tags")]
-        public readonly string Tags;
-
-        [JsonProperty("POLICYID")]
-        public readonly string PolicyIdUpper;
-
-        [JsonProperty("creationtime")]
-        public readonly long CreationTime;
-
-        [JsonProperty("secretname")]
-        public readonly string SecretName;
-    }
-
-    internal class OwnerDetails
-    {
-        [JsonProperty("USERNAME")]
-        public readonly string Username;
-
-        [JsonProperty("EMAIL")]
-        public readonly string Email;
-    }
+    internal record SingleSecret(
+        [JsonProperty("secretid")] string SecretId,
+        [JsonProperty("secretname")] string SecretName,
+        [JsonProperty("secreturl")] string SecretUrl,
+        [JsonProperty("notes")] string Notes,
+        [JsonProperty("secretData")] string SecretData,
+        [JsonProperty("isshared")] string IsShared,
+        [JsonProperty("istrashed")] bool IsTrashed
+    );
 }
