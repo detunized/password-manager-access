@@ -424,6 +424,27 @@ namespace PasswordManagerAccess.Test.ZohoVault
         // TODO: get more fixtures
 
         [Fact]
+        public void GetItem_makes_GET_request_and_returns_non_shared_account()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Get(GetFixture("get-single-not-shared-item"))
+                .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/30024000000018381");
+            var session = new Session(LoginCookies, DefaultDomain, flow, null, new Settings(), GetStorage(), TestData.Key);
+
+            // Act
+            var account = Client.GetItem("30024000000018381", session);
+
+            // Assert
+            account.Id.ShouldBe("30024000000018381");
+            account.Name.ShouldBe("Abbott, Hamill and Upton");
+            account.Username.ShouldBe("Duncan.Reinger");
+            account.Password.ShouldBe("vqnjBS5KKHesQsb");
+            account.Url.ShouldBe("http://jerome.info");
+            account.Note.ShouldBe("engineer enterprise functionalities");
+        }
+
+        [Fact(Skip = "Bad data in fixture")]
         public void GetItem_makes_GET_request_and_returns_account()
         {
             var flow = new RestFlow()
