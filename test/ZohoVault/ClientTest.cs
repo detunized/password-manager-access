@@ -16,13 +16,18 @@ namespace PasswordManagerAccess.Test.ZohoVault
     // TODO: Add more MFA tests
     public class ClientTest : TestBase
     {
+        //
+        // Client.Open
+        //
+
         [Fact]
         public void Open_returns_accounts()
         {
-            var accounts = Client
-                .Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), MakeFullFlow())
-                .Accounts;
+            // Act
+            var vault = Client.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), MakeFullFlow());
 
+            // Assert
+            var accounts = vault.Accounts;
             Assert.Equal(2, accounts.Length);
 
             Assert.Equal("30024000000008008", accounts[0].Id);
@@ -73,6 +78,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                 .Get(GetFixture("auth-info-with-shared-items-response"))
                 .Get(GetFixture("vault-with-shared-items-response"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1")
                 .Get(""); // Logout
 
             var vault = Client.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), flow);
@@ -87,6 +93,61 @@ namespace PasswordManagerAccess.Test.ZohoVault
             Assert.Equal("https://www.facebook.com", accounts[0].Url);
             Assert.Equal("Yo, bitches!", accounts[0].Note);
         }
+
+        //
+        // Client.GetItem
+        //
+
+        [Fact]
+        public void GetItem_makes_GET_request_and_returns_non_shared_account()
+        {
+            // Arrange
+            const string id = "30024000000018381";
+            var flow = new RestFlow()
+                .Get(GetFixture("get-single-not-shared-item"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}");
+            var session = new Session(LoginCookies, DefaultDomain, flow, null, new Settings(), GetStorage(), TestData.Key);
+
+            // Act
+            var account = Client.GetItem(id, session);
+
+            // Assert
+            account.Id.ShouldBe(id);
+            account.Name.ShouldBe("Abbott, Hamill and Upton");
+            account.Username.ShouldBe("Duncan.Reinger");
+            account.Password.ShouldBe("vqnjBS5KKHesQsb");
+            account.Url.ShouldBe("http://jerome.info");
+            account.Note.ShouldBe("engineer enterprise functionalities");
+        }
+
+        [Fact]
+        public void GetItem_makes_GET_request_downloads_profile_and_returns_shared_account()
+        {
+            // Arrange
+            const string id = "34896000000013019";
+            var flow = new RestFlow()
+                .Get(GetFixture("get-single-shared-item"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}")
+                .ExpectCookie(LoginCookieName, LoginCookieValue)
+                .Get(GetFixture("vault-with-sharing-key-response"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=0");
+            var session = new Session(LoginCookies, DefaultDomain, flow, null, new Settings(), GetStorage(), TestData.Key3);
+
+            // Act
+            var account = Client.GetItem(id, session);
+
+            // Assert
+            account.Id.ShouldBe(id);
+            account.Name.ShouldBe("blah.com");
+            account.Username.ShouldBe("blah");
+            account.Password.ShouldBe("pass");
+            account.Url.ShouldBe("");
+            account.Note.ShouldBe("blahahaha");
+        }
+
+        //
+        // Internal methods
+        //
 
         [Theory]
         [InlineData("https://accounts.zoho.com/singin", "zoho.com")]
@@ -325,11 +386,31 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [Fact]
         public void FetchVault_makes_GET_request_to_specific_url_and_returns_vault_records()
         {
-            var flow = new RestFlow().Get(GetFixture("vault-response")).ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT");
+            var flow = new RestFlow()
+                .Get(GetFixture("vault-response"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1");
 
             var vault = Client.FetchVault(LoginCookies, DefaultDomain, flow);
 
             Assert.NotEmpty(vault.Secrets);
+        }
+
+        [Fact]
+        public void FetchSecret_makes_GET_request_to_specific_url_and_returns_secret()
+        {
+            // Arrange
+            const string id = "34896000000013019";
+            var flow = new RestFlow()
+                .Get(GetFixture("get-single-shared-item"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}");
+
+            // Act
+            var secret = Client.FetchSecret(LoginCookies, DefaultDomain, id, flow);
+
+            // Assert
+            secret.SecretId.ShouldBe(id);
+            secret.SecretName.ShouldBe("blah.com");
+            secret.IsShared.ShouldBe("YES");
         }
 
         [Fact]
@@ -419,66 +500,6 @@ namespace PasswordManagerAccess.Test.ZohoVault
             }
         }
 
-        // TODO: use lastpass.ruby@gmail.com account to get items that are not shared
-        // TODO: test on both shared and non-shared items
-        // TODO: get more fixtures
-
-        [Fact]
-        public void GetItem_makes_GET_request_and_returns_non_shared_account()
-        {
-            // Arrange
-            var flow = new RestFlow()
-                .Get(GetFixture("get-single-not-shared-item"))
-                .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/30024000000018381");
-            var session = new Session(LoginCookies, DefaultDomain, flow, null, new Settings(), GetStorage(), TestData.Key);
-
-            // Act
-            var account = Client.GetItem("30024000000018381", session);
-
-            // Assert
-            account.Id.ShouldBe("30024000000018381");
-            account.Name.ShouldBe("Abbott, Hamill and Upton");
-            account.Username.ShouldBe("Duncan.Reinger");
-            account.Password.ShouldBe("vqnjBS5KKHesQsb");
-            account.Url.ShouldBe("http://jerome.info");
-            account.Note.ShouldBe("engineer enterprise functionalities");
-        }
-
-        [Fact(Skip = "Bad data in fixture")]
-        public void GetItem_makes_GET_request_and_returns_account()
-        {
-            var flow = new RestFlow()
-                .Get(GetFixture("get-single-shared-item"))
-                .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/34896000000013019")
-                .ExpectCookie(LoginCookieName, LoginCookieValue)
-                .Get(GetFixture("vault-response"))
-                .ExpectUrl("https://vault.zoho.com/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1");
-
-            var session = new Session(LoginCookies, DefaultDomain, flow, null, new Settings(), GetStorage(), TestData.Key);
-            var account = Client.GetItem("34896000000013019", session);
-
-            Assert.Equal("34896000000013019", account.Id);
-            Assert.Equal("blah.com", account.Name);
-            Assert.Equal("mark", account.Username);
-            Assert.Equal("zuckerberg", account.Password);
-            Assert.Equal("", account.Url);
-            Assert.Equal("", account.Note);
-        }
-
-        [Fact]
-        public void FetchSecret_makes_GET_request_to_specific_url_and_returns_secret()
-        {
-            var flow = new RestFlow()
-                .Get(GetFixture("get-single-shared-item"))
-                .ExpectUrl("https://vault.zoho.com/api/rest/json/v1/secrets/34896000000013019");
-
-            var secret = Client.FetchSecret(LoginCookies, DefaultDomain, "34896000000013019", flow);
-
-            Assert.Equal("34896000000013019", secret.SecretId);
-            Assert.Equal("blah.com", secret.SecretName);
-            Assert.Equal("YES", secret.IsShared);
-        }
-
         //
         // Helpers
         //
@@ -523,6 +544,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Post(GetFixture("login-success-response"), cookies: LoginCookies)
                 .Get(GetFixture("auth-info-response"))
                 .Get(GetFixture("vault-response"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1")
                 .Get(""); // Logout
         }
 

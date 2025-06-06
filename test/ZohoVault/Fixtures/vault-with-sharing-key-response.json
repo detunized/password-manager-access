@@ -1,0 +1,410 @@
+{
+	"operation": {
+		"result": {
+			"message": "",
+			"status": "success"
+		},
+		"name": "OPEN_VAULT",
+		"details": {
+			"FILE_ATTACHMENT": "Enabled",
+			"OFFLINE_ACCESS": "Enabled",
+			"POLICY_USAGE": "1",
+			"ZAAID": "20085515374",
+			"count": 2,
+			"ALLOW_SHARING_SECRETS": "Enabled",
+			"ORGNAME": "jack.the.rabbit_20085519105",
+			"PRIVATEKEY": "gQDdEmGXj2OIUkUH3Mr6HZnwnP0J1E7YDhsxFOAZLNDlITStPfDWAC0ufkW8JljezKfkksJGE7y7Mpr1BvNXMbeAD3eja5ufZVZmzk+hojnkk7ENWBHdrywKESZR7RmzPbWpr1EBn5b63OzuSo3IE3Gw2B8oc2NFN6TG54LKLwpkBq5+awjjTN9ZYrhSwv9qaujOlIgqYm1B4Db46Pj1Hnsb8BzT446nv4Py7ozdJJpahAgejDFuumjGAWnvuDJp9t9dkCmJWfHLb5YyCbdsmqeETCwBEGuWFzLpN5ShWfVcEht8CkMG65sl/0d6tHQ3CEuqV1Ggxqsj+E4buaM88Zrk6/5AR4TaStOW43BjzWh/KMIx+klGnS5JWdZK+Kw+Uncph3SS/36oDdCWxJiHE4EHbOFTp/vYAYMNJ27MESw2IAlvk5xevuK8HOqAWpMd9pSL9LEZGOPYpw4bIOPgQHO19OC7DNN5WQiv6G/Jv2zB5vduY1g2OMWV/44XHCxB+KXWOdZ+lf7dZn1TMt2JBcIGvkkOEGtj0THfqQuRA1psw7MT69zpT0ytpSHFcjgsUaflGwDqHq1ETllREDUL3w4ZHcZ4J3yE5CRF5++GduiY66seKDxIxyPQxkLfM1AeSbEOQQ9/JlukjKQQ45HcqQS1LJXPpS8AyrsPWlZBxG+gLBBhc3yTUpoot7M6/ZpGDUcgXIplss9xE2XSiSquWLe0ihY63dQVJXvmgmwX5R3TKz4fokwuQOa5PRNaNVcUA3gKNunQhEfts/2alWF4JSueDga35xZ4Wu1ODCWoljgCMfyoZqGyBYsg3prYBRZgJtL5/PYSKtZy2iGhaEoxxRt/76Bv3ti8bjcLyWOwbMTdNQ7nZmFKVrZYIRQjHoSeob12EVrKLQZHMDZh7Lyikhp0RgS3wxaAzjGTtSvI8Azvy3qvYVM9mygzZhQ+BavrVzi6lE6CSNyrrAe3Gzuz8lio8MSF3AiGDpMZppBKvCJblztXQx80yTJtuD6QmBA7yzHWw4UueiZIUxScIIcIZUibnBhplxXmFLLormHyO9RBRIMQ8HeETEMKR7tEis9iYy0SjnS2INrzhfqW2hG/kEFrJ/2g0Ad0MClreQGQMLs8eEttM/CFtft+enq0iLbXd2XUI4Z/QkV7lAa7UfZ4e7WfqATZh6s3ca4Nv5BUKDziyKbCTb6RHjU7eBIllR5lP9chnbXrWoFiTlfB7Jl0rd5Cvxl+0d1BqIbxzLE63XKBSFyRnl7VrmAK48GDW1M14Gr7uXxDZMoQk31jBSv6epEU5HhJqbItKJy0ylZU90Sx0wvwBaksig9b350BNviiZ2WhHAgu7OXOg3lDtJxUTKUzAxammoN6vmQMnHVKjUM9P0ZoyPeUh8BIa8PfpWo4DYpYGiN/vUiQ4Vl0K6/a8gPIf2n+dJgoQLy1Q+Dp+UNnekcGsDD4ee1CHCdX5UB5R8kEdwSVA5cJEI7GwhfeiZfwpdoBGg+1tNiw+zTt8ovErVqIIxYffOHkWXLciU4jTBuoS5LfUU4NhSW/gNAIhnXNppI=",
+			"USER": {
+				"USERID": "34896000000003004",
+				"USERNAME": "jack.the.rabbit",
+				"EMAIL": "jack.the.rabbit@outlook.com"
+			},
+			"ALLOW_ADD_SECRETS": "Enabled",
+			"SHARING_INITIATED": true,
+			"FEATURES": [],
+			"NEVER_SAVE_URL": [],
+			"PII_FIELD_CONTROL": "Enabled",
+			"SHARING_APPROVED": true,
+			"PLANID": 8001,
+			"SHARING_SECRETS_THIRD_PARTY": "Enabled",
+			"SECRETTYPECOLUMNS": {
+				"34896000000000019": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Health Care Agency",
+						"ISMANDATORY": true,
+						"TYPE": "text",
+						"NAME": "agency"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Policy Number",
+						"ISMANDATORY": true,
+						"TYPE": "text",
+						"NAME": "policyno"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Group Number",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "groupno"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File Attachment",
+						"ISMANDATORY": false,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "Health Care"
+				},
+				"34896000000000017": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Account Number",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "accno"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Online Banking ID",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "bankid"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Online Banking Password",
+						"ISMANDATORY": false,
+						"TYPE": "password",
+						"NAME": "password"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File Attachment",
+						"ISMANDATORY": false,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "Bank Account"
+				},
+				"34896000000000015": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "User Name",
+						"ISMANDATORY": true,
+						"TYPE": "text",
+						"NAME": "username"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Password",
+						"ISMANDATORY": true,
+						"TYPE": "password",
+						"NAME": "password"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File Attachment",
+						"ISMANDATORY": false,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "Web Account"
+				},
+				"34896000000000027": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File",
+						"ISMANDATORY": true,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "File Store"
+				},
+				"34896000000000025": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "User Name",
+						"ISMANDATORY": true,
+						"TYPE": "text",
+						"NAME": "username"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Password",
+						"ISMANDATORY": true,
+						"TYPE": "password",
+						"NAME": "password"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File Attachment",
+						"ISMANDATORY": false,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "Unix"
+				},
+				"34896000000010001": {
+					"FIELDS": [{
+						"PII": true,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "First Name",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "first_name"
+					}, {
+						"PII": true,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Middle Name",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "middle_name"
+					}, {
+						"PII": true,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Last Name",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "last_name"
+					}, {
+						"PII": true,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Address Line 1",
+						"ISMANDATORY": true,
+						"TYPE": "text",
+						"NAME": "address_1"
+					}, {
+						"PII": true,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Address Line 2",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "address_2"
+					}, {
+						"PII": true,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Address Line 3",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "address_3"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Country",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "country"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "State",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "state"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "City",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "city"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "ZIP/Postal Code",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "zip"
+					}, {
+						"PII": true,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Mobile/Phone",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "mobile"
+					}],
+					"STATUS": true,
+					"NAME": "Address"
+				},
+				"34896000000000023": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "User Name",
+						"ISMANDATORY": true,
+						"TYPE": "text",
+						"NAME": "username"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Password",
+						"ISMANDATORY": true,
+						"TYPE": "password",
+						"NAME": "password"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File Attachment",
+						"ISMANDATORY": false,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "Windows"
+				},
+				"34896000000000021": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Name",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "name"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Social Security Number",
+						"ISMANDATORY": true,
+						"TYPE": "text",
+						"NAME": "ssno"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File Attachment",
+						"ISMANDATORY": false,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "Social Security Number"
+				},
+				"34896000000009001": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Notes",
+						"ISMANDATORY": false,
+						"TYPE": "textarea",
+						"NAME": "notes"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "File Attachment",
+						"ISMANDATORY": false,
+						"TYPE": "file",
+						"NAME": "file"
+					}],
+					"STATUS": true,
+					"NAME": "Secure Note"
+				},
+				"34896000000006001": {
+					"FIELDS": [{
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Card Number",
+						"ISMANDATORY": true,
+						"TYPE": "password",
+						"NAME": "card_number"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Name on Card",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "card_holder_name"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Security Code",
+						"ISMANDATORY": false,
+						"TYPE": "password",
+						"NAME": "cvv"
+					}, {
+						"PII": false,
+						"IS_DELETED": false,
+						"isMaskAllowed": false,
+						"LABEL": "Valid Thru",
+						"ISMANDATORY": false,
+						"TYPE": "text",
+						"NAME": "valid_thru"
+					}],
+					"STATUS": true,
+					"NAME": "Payment Card"
+				}
+			},
+			"USERCONFIG": {
+				"CLICK_TO_LOGIN": "0",
+				"FILE_ATTACHMENT": "Enabled",
+				"OFFLINE_ACCESS": "Enabled",
+				"ALLOW_SHARING_SECRETS": "Enabled",
+				"LIMIT": "50",
+				"ALLOW_ADD_SECRETS": "Enabled",
+				"ACQUIRE_SECRETS": "0",
+				"PII_FIELD_CONTROL": "Enabled",
+				"SHARING_SECRETS_THIRD_PARTY": "Enabled",
+				"TRIAL_PLAN_ID": "8016",
+				"ALLOW_MULTIPLE_URL": "Enabled",
+				"INACTIVE_TIMEOUT": "15",
+				"PERSONAL_SECRETS": "Enabled",
+				"DEFAULT_PASSWDPOLICY_ID": "34896000000000191",
+				"ENTERPRISE_SECRETS": "Enabled"
+			},
+			"SECRETS": [],
+			"ALLOW_MULTIPLE_URL": "Enabled",
+			"SHARINGKEY": "1161ca16bedc37e37dca355e6e5de97092bb7504fb7b5ae560cb8dd7a27933773a7a032f2e23e55a103257fb4e2132522ad7ce229672500d6212605f60cbc78fb6b049a3c4193b30b0fe08085d770e62c1f34d4887d6b102f3ca7074c33293a2625e2d6b00aaa70c3842a1f884e56671ec52cf14efe2c5895c192da7753fe4b8",
+			"PERSONAL_SECRETS": "Enabled",
+			"ENTERPRISE_SECRETS": "Enabled"
+		}
+	}
+}

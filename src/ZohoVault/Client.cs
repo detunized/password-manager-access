@@ -80,6 +80,7 @@ namespace PasswordManagerAccess.ZohoVault
         public static Account GetItem(string itemId, Session session)
         {
             var secretResponse = FetchSecret(session.Cookies, session.Domain, itemId, session.Rest);
+            // TODO: Cache the sharing key in the session. Don't fetch it every time.
             var key = secretResponse.IsShared == "YES" ? GetSharingKey(session) : session.VaultKey;
             return ParseSecretToAccount(secretResponse, key);
         }
@@ -431,16 +432,15 @@ namespace PasswordManagerAccess.ZohoVault
             return new AuthInfo(info.Iterations, info.Salt.ToBytes(), info.Passphrase.Decode64());
         }
 
-        internal static R.Vault FetchVault(HttpCookies cookies, string domain, RestClient rest) =>
-            GetWrapped<R.Vault>(VaultUrl(domain), cookies, rest);
+        internal static R.Vault FetchVault(HttpCookies cookies, string domain, RestClient rest, int limit = -1) =>
+            GetWrapped<R.Vault>(VaultUrl(domain, limit), cookies, rest);
 
         internal static R.SingleSecret FetchSecret(HttpCookies cookies, string domain, string itemId, RestClient rest) =>
             GetWrapped<R.SingleSecret>(SecretUrl(domain, itemId), cookies, rest);
 
         internal static byte[] GetSharingKey(Session session)
         {
-            // TODO: Don't fetch the entire vault. Just get the sharing key if possible.
-            var vaultResponse = FetchVault(session.Cookies, session.Domain, session.Rest);
+            var vaultResponse = FetchVault(session.Cookies, session.Domain, session.Rest, 0);
             return DecryptSharingKey(vaultResponse, session.VaultKey);
         }
 
@@ -699,7 +699,7 @@ namespace PasswordManagerAccess.ZohoVault
 
         private static string AuthInfoUrl(string domain) => $"https://vault.{domain}/api/json/login?OPERATION_NAME=GET_LOGIN";
 
-        private static string VaultUrl(string domain) => $"https://vault.{domain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=-1";
+        private static string VaultUrl(string domain, int limit) => $"https://vault.{domain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit={limit}";
 
         private static string SecretUrl(string domain, string itemId) => $"https://vault.{domain}/api/rest/json/v1/secrets/{itemId}";
 
