@@ -129,6 +129,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
             account.Password.ShouldBe("vqnjBS5KKHesQsb");
             account.Url.ShouldBe("http://jerome.info");
             account.Note.ShouldBe("engineer enterprise functionalities");
+
+            session.SharingKey.ShouldBeNull();
         }
 
         [Fact]
@@ -137,9 +139,11 @@ namespace PasswordManagerAccess.Test.ZohoVault
             // Arrange
             const string id = "34896000000013019";
             var flow = new RestFlow()
+                // Item #1
                 .Get(GetFixture("get-single-shared-item"))
                 .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}")
                 .ExpectCookie(LoginCookieName, LoginCookieValue)
+                // Sharing key
                 .Get(GetFixture("vault-with-sharing-key-response"))
                 .ExpectUrl($"https://vault.{DefaultDomain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=0");
             var session = new Session(LoginCookies, DefaultDomain, flow, null, new Settings(), GetStorage(), TestData.Key3);
@@ -154,6 +158,37 @@ namespace PasswordManagerAccess.Test.ZohoVault
             account.Password.ShouldBe("pass");
             account.Url.ShouldBe("");
             account.Note.ShouldBe("blahahaha");
+
+            session.SharingKey.ShouldNotBeNull();
+        }
+
+        [Fact]
+        public void GetItem_makes_fetches_sharing_key_only_once()
+        {
+            // Arrange
+            const string id = "34896000000013019";
+            var flow1 = new RestFlow()
+                // Item #1
+                .Get(GetFixture("get-single-shared-item"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}")
+                .ExpectCookie(LoginCookieName, LoginCookieValue)
+                // Sharing key
+                .Get(GetFixture("vault-with-sharing-key-response"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=0")
+                // Item #2
+                .Get(GetFixture("get-single-shared-item"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}")
+                // Item #3
+                .Get(GetFixture("get-single-shared-item"))
+                .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}");
+            var session = new Session(LoginCookies, DefaultDomain, flow1, null, new Settings(), GetStorage(), TestData.Key3);
+
+            // Act
+            for (var i = 0; i < 3; i++)
+                Client.GetItem(id, session);
+
+            // Assert
+            session.SharingKey.ShouldNotBeNull();
         }
 
         //

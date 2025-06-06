@@ -80,8 +80,15 @@ namespace PasswordManagerAccess.ZohoVault
         public static Account GetItem(string itemId, Session session)
         {
             var secretResponse = FetchSecret(session.Cookies, session.Domain, itemId, session.Rest);
-            // TODO: Cache the sharing key in the session. Don't fetch it every time.
-            var key = secretResponse.IsShared == "YES" ? GetSharingKey(session) : session.VaultKey;
+
+            // When the item is shared, we need to potentially get the sharing key if it's the first time. After that we can use the cached one.
+            var key = secretResponse.IsShared switch
+            {
+                "NO" => session.VaultKey,
+                "YES" => session.SharingKey ??= GetSharingKey(session),
+                _ => throw new InternalErrorException($"Unexpected value for 'IsShared': '{secretResponse.IsShared}'"),
+            };
+
             return ParseSecretToAccount(secretResponse, key);
         }
 
