@@ -69,7 +69,7 @@ namespace PasswordManagerAccess.Example.ZohoVault
             string totpSecret;
             config.TryGetValue("google-auth-totp-secret", out totpSecret);
 
-            var credentials = new Credentials(username: config["username"], password: config["password"], passphrase: config["passphrase"]);
+            var credentials = new Credentials(Username: config["username"], Password: config["password"], Passphrase: config["passphrase"]);
             var settings = new Settings { KeepSession = true };
             var ui = new TextUi(totpSecret);
             var storage = new PlainStorage();
