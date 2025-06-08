@@ -503,8 +503,8 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var secret = Client.FetchSecret(LoginCookies, DefaultDomain, id, flow);
 
             // Assert
-            secret.SecretId.ShouldBe(id);
-            secret.SecretName.ShouldBe("blah.com");
+            secret.Id.ShouldBe(id);
+            secret.Name.ShouldBe("blah.com");
             secret.IsShared.ShouldBe("YES");
         }
 
@@ -555,7 +555,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public void ParseAccount_handles_missing_nulls_and_blanks(string json)
         {
             var secret = JsonConvert.DeserializeObject<R.Secret>(json);
-            var account = Client.ParseAccount(secret, new byte[32]);
+            var account = Client.ParseAccount(Client.ConvertToSecret(secret), new byte[32]);
 
             account.Id.ShouldBe("id");
             account.Name.ShouldBe("");

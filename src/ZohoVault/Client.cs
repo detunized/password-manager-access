@@ -79,17 +79,17 @@ namespace PasswordManagerAccess.ZohoVault
 
         public static Account GetItem(string itemId, Session session)
         {
-            var secretResponse = FetchSecret(session.Cookies, session.Domain, itemId, session.Rest);
+            var secret = FetchSecret(session.Cookies, session.Domain, itemId, session.Rest);
 
             // When the item is shared, we need to potentially get the sharing key if it's the first time. After that we can use the cached one.
-            var key = secretResponse.IsShared switch
+            var key = secret.IsShared switch
             {
                 "NO" => session.VaultKey,
                 "YES" => session.SharingKey ??= GetSharingKey(session),
-                _ => throw new InternalErrorException($"Unexpected value for 'IsShared': '{secretResponse.IsShared}'"),
+                _ => throw new InternalErrorException($"Unexpected value for 'IsShared': '{secret.IsShared}'"),
             };
 
-            return ParseSecretToAccount(secretResponse, key);
+            return ParseAccount(ConvertToSecret(secret), key);
         }
 
         //
@@ -451,26 +451,16 @@ namespace PasswordManagerAccess.ZohoVault
             return DecryptSharingKey(vaultResponse, session.VaultKey);
         }
 
-        // TODO: Merge with ParseAccount!
-        internal static Account ParseSecretToAccount(R.SingleSecret secret, byte[] key)
+        internal record Secret(string Id, string Name, string Url, string Note, string Data, string IsShared);
+
+        internal static Secret ConvertToSecret(R.SingleSecret secret)
         {
-            try
-            {
-                var data = JsonConvert.DeserializeObject<R.SecretData>(secret.SecretData ?? "{}");
-                return new Account(
-                    secret.SecretId,
-                    secret.SecretName ?? "",
-                    Util.DecryptStringLoose(data.Username, key),
-                    Util.DecryptStringLoose(data.Password, key),
-                    secret.SecretUrl ?? "",
-                    Util.DecryptStringLoose(secret.Notes, key)
-                );
-            }
-            catch (JsonException)
-            {
-                // If it doesn't parse then it's some other kind of unsupported secret type
-                throw new InternalErrorException("Failed to parse secret data");
-            }
+            return new Secret(secret.Id, secret.Name ?? "", secret.Url ?? "", secret.Notes ?? "", secret.Data ?? "{}", secret.IsShared ?? "");
+        }
+
+        internal static Secret ConvertToSecret(R.Secret secret)
+        {
+            return new Secret(secret.Id, secret.Name ?? "", secret.Url ?? "", secret.Note ?? "", secret.Data ?? "{}", secret.IsShared ?? "");
         }
 
         internal static byte[] DeriveAndVerifyVaultKey(string passphrase, AuthInfo authInfo)
@@ -527,21 +517,24 @@ namespace PasswordManagerAccess.ZohoVault
         {
             // TODO: Test on non account type secrets!
             // TODO: Test on accounts with missing fields!
-            return vaultResponse.Secrets.Select(x => ParseAccount(x, x.IsShared == "YES" ? sharingKey : vaultKey)).Where(x => x != null).ToArray();
+            return vaultResponse
+                .Secrets.Select(x => ParseAccount(ConvertToSecret(x), x.IsShared == "YES" ? sharingKey : vaultKey))
+                .Where(x => x != null)
+                .ToArray();
         }
 
         // Returns null on accounts that don't parse
-        internal static Account ParseAccount(R.Secret secret, byte[] key)
+        internal static Account ParseAccount(Secret secret, byte[] key)
         {
             try
             {
-                var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data ?? "{}");
+                var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data);
                 return new Account(
                     secret.Id,
-                    secret.Name ?? "",
+                    secret.Name,
                     Util.DecryptStringLoose(data.Username, key),
                     Util.DecryptStringLoose(data.Password, key),
-                    secret.Url ?? "",
+                    secret.Url,
                     Util.DecryptStringLoose(secret.Note, key)
                 );
             }

@@ -229,11 +229,11 @@ namespace PasswordManagerAccess.ZohoVault.Response
     }
 
     internal record SingleSecret(
-        [JsonProperty("secretid")] string SecretId,
-        [JsonProperty("secretname")] string SecretName,
-        [JsonProperty("secreturl")] string SecretUrl,
+        [JsonProperty("secretid")] string Id,
+        [JsonProperty("secretname")] string Name,
+        [JsonProperty("secreturl")] string Url,
         [JsonProperty("notes")] string Notes,
-        [JsonProperty("secretData")] string SecretData,
+        [JsonProperty("secretData")] string Data,
         [JsonProperty("isshared")] string IsShared,
         [JsonProperty("istrashed")] bool IsTrashed
     );
