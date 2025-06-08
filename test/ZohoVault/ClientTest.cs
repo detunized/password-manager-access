@@ -552,10 +552,29 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [InlineData("""{"SECRETID": "id", "SECRETDATA": "{\"username\":\"\",\"password\":\"\"}"}""")]
         [InlineData("""{"SECRETID": "id", "SECRETNAME": null, "SECRETURL": null, "SECURENOTE": null, "SECRETDATA": null, "ISSHARED": null}""")]
         [InlineData("""{"SECRETID": "id", "SECRETNAME": "", "SECRETURL": "", "SECURENOTE": "","ISSHARED": ""}""")]
-        public void ParseAccount_handles_missing_nulls_and_blanks(string json)
+        public void ParseAccount_handles_missing_nulls_and_blanks_in_R_Secret(string json)
         {
             var secret = JsonConvert.DeserializeObject<R.Secret>(json);
             var account = Client.ParseAccount(Client.ConvertToSecret(secret), new byte[32]);
+
+            account.Id.ShouldBe("id");
+            account.Name.ShouldBe("");
+            account.Username.ShouldBe("");
+            account.Password.ShouldBe("");
+            account.Url.ShouldBe("");
+            account.Note.ShouldBe("");
+        }
+
+        [Theory]
+        [InlineData("""{"secretid": "id", "secretData": "{}"}""")]
+        [InlineData("""{"secretid": "id", "secretData": "{\"username\":null,\"password\":null}"}""")]
+        [InlineData("""{"secretid": "id", "secretData": "{\"username\":\"\",\"password\":\"\"}"}""")]
+        [InlineData("""{"secretid": "id", "secretname": null, "secreturl": null, "notes": null, "secretData": "{}", "isshared": null}""")]
+        [InlineData("""{"secretid": "id", "secretname": "", "secreturl": "", "notes": "", "secretData": "{}", "isshared": ""}""")]
+        public void ParseAccount_handles_missing_nulls_and_blanks_in_R_SingleSecret(string json)
+        {
+            var singleSecret = JsonConvert.DeserializeObject<R.SingleSecret>(json);
+            var account = Client.ParseAccount(Client.ConvertToSecret(singleSecret), new byte[32]);
 
             account.Id.ShouldBe("id");
             account.Name.ShouldBe("");
