@@ -61,11 +61,11 @@ namespace PasswordManagerAccess.ZohoVault
             return new Vault(accounts);
         }
 
-        public static void LogOut(Session session)
+        public static void LogOut(Session session, ISecureStorage storage)
         {
             try
             {
-                EraseCookies(session.Storage);
+                EraseCookies(storage);
                 LogOut(session.Cookies, session.Domain, session.Rest);
             }
             finally
@@ -103,7 +103,7 @@ namespace PasswordManagerAccess.ZohoVault
             }
             finally
             {
-                LogOut(session);
+                LogOut(session, storage);
             }
         }
 
@@ -156,7 +156,7 @@ namespace PasswordManagerAccess.ZohoVault
                     var vaultKey = DeriveAndVerifyVaultKey(credentials.Passphrase, authInfo);
 
                     // If we get here, the session is valid
-                    return new Session(cookies, userInfo.Domain, rest, transport, storage, vaultKey);
+                    return new Session(cookies, userInfo.Domain, rest, transport, vaultKey);
                 }
                 catch (InvalidTicketException)
                 {

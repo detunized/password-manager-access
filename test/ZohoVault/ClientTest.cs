@@ -98,7 +98,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var flow = new RestFlow()
                 .Get(GetFixture("get-single-not-shared-item"))
                 .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}");
-            var session = new Session(LoginCookies, DefaultDomain, flow, null!, GetStorage(), TestData.Key);
+            var session = new Session(LoginCookies, DefaultDomain, flow, null!, TestData.Key);
 
             // Act
             var account = Client.GetItem(id, session);
@@ -127,7 +127,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 // Sharing key
                 .Get(GetFixture("vault-with-sharing-key-response"))
                 .ExpectUrl($"https://vault.{DefaultDomain}/api/json/login?OPERATION_NAME=OPEN_VAULT&limit=0");
-            var session = new Session(LoginCookies, DefaultDomain, flow, null!, GetStorage(), TestData.Key3);
+            var session = new Session(LoginCookies, DefaultDomain, flow, null!, TestData.Key3);
 
             // Act
             var account = Client.GetItem(id, session);
@@ -162,7 +162,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 // Item #3
                 .Get(GetFixture("get-single-shared-item"))
                 .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}");
-            var session = new Session(LoginCookies, DefaultDomain, flow1, null!, GetStorage(), TestData.Key3);
+            var session = new Session(LoginCookies, DefaultDomain, flow1, null!, TestData.Key3);
 
             // Act
             for (var i = 0; i < 3; i++)

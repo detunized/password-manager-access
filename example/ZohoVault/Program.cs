@@ -109,7 +109,7 @@ namespace PasswordManagerAccess.Example.ZohoVault
                 // Stage 3: LogOut
                 if (session != null)
                 {
-                    Client.LogOut(session);
+                    Client.LogOut(session, storage);
                 }
             }
         }
