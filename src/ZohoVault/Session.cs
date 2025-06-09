@@ -8,14 +8,13 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ZohoVault
 {
-    // TODO: Remove secure storage and settings from the session.
+    // TODO: Remove secure storage from the session.
     public class Session
     {
         internal Dictionary<string, string> Cookies { get; }
         internal string Domain { get; }
         internal RestClient Rest { get; }
         internal IRestTransport Transport { get; }
-        internal Settings Settings { get; }
         internal ISecureStorage Storage { get; }
         internal byte[] VaultKey { get; }
 
@@ -27,7 +26,6 @@ namespace PasswordManagerAccess.ZohoVault
             string domain,
             RestClient rest,
             IRestTransport transport,
-            Settings settings,
             ISecureStorage storage,
             byte[] vaultKey
         )
@@ -36,7 +34,6 @@ namespace PasswordManagerAccess.ZohoVault
             Domain = domain;
             Rest = rest;
             Transport = transport;
-            Settings = settings;
             Storage = storage;
             VaultKey = vaultKey;
         }

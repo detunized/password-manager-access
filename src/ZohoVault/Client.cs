@@ -28,22 +28,22 @@ namespace PasswordManagerAccess.ZohoVault
         // Single shot
         //
 
-        public static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage)
+        public static Vault Open(Credentials credentials, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return Open(credentials, settings, ui, storage, transport);
+            return Open(credentials, ui, storage, transport);
         }
 
         //
         // LogIn, DownloadVault, LogOut sequence
         //
 
-        public static Session LogIn(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage)
+        public static Session LogIn(Credentials credentials, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
             try
             {
-                return LogIn(credentials, settings, ui, storage, transport);
+                return LogIn(credentials, ui, storage, transport);
             }
             catch (Exception)
             {
@@ -65,9 +65,6 @@ namespace PasswordManagerAccess.ZohoVault
         {
             try
             {
-                if (session.Settings.KeepSession)
-                    return;
-
                 EraseCookies(session.Storage);
                 LogOut(session.Cookies, session.Domain, session.Rest);
             }
@@ -96,9 +93,9 @@ namespace PasswordManagerAccess.ZohoVault
         // Internal
         //
 
-        internal static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
+        internal static Vault Open(Credentials credentials, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
-            var session = LogIn(credentials, settings, ui, storage, transport);
+            var session = LogIn(credentials, ui, storage, transport);
             try
             {
                 var vault = DownloadVault(session);
@@ -110,7 +107,7 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        internal static Session LogIn(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
+        internal static Session LogIn(Credentials credentials, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             var rest = new RestClient(transport, defaultHeaders: Headers);
 
@@ -147,8 +144,7 @@ namespace PasswordManagerAccess.ZohoVault
                     cookies = LogIn(userInfo, credentials.Password, token, ui, storage, rest);
 
                     // Save the cookies for the next time
-                    if (settings.KeepSession)
-                        SaveCookies(cookies, storage);
+                    SaveCookies(cookies, storage);
                 }
 
                 try
@@ -160,7 +156,7 @@ namespace PasswordManagerAccess.ZohoVault
                     var vaultKey = DeriveAndVerifyVaultKey(credentials.Passphrase, authInfo);
 
                     // If we get here, the session is valid
-                    return new Session(cookies, userInfo.Domain, rest, transport, settings, storage, vaultKey);
+                    return new Session(cookies, userInfo.Domain, rest, transport, storage, vaultKey);
                 }
                 catch (InvalidTicketException)
                 {
