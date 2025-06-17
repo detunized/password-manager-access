@@ -28,10 +28,10 @@ namespace PasswordManagerAccess.ZohoVault
         // Single shot
         //
 
-        public static Vault Open(Credentials credentials, IUi ui, ISecureStorage storage)
+        public static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage)
         {
             using var transport = new RestTransport();
-            return Open(credentials, ui, storage, transport);
+            return Open(credentials, settings, ui, storage, transport);
         }
 
         //
@@ -93,7 +93,7 @@ namespace PasswordManagerAccess.ZohoVault
         // Internal
         //
 
-        internal static Vault Open(Credentials credentials, IUi ui, ISecureStorage storage, IRestTransport transport)
+        internal static Vault Open(Credentials credentials, Settings settings, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
             var session = LogIn(credentials, ui, storage, transport);
             try
@@ -103,7 +103,10 @@ namespace PasswordManagerAccess.ZohoVault
             }
             finally
             {
-                LogOut(session, storage);
+                if (settings.KeepSession)
+                    session.Transport.Dispose();
+                else
+                    LogOut(session, storage);
             }
         }
 

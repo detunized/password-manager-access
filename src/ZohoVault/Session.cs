@@ -8,6 +8,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ZohoVault
 {
+    // TODO: Make session disposable and dispose instead disposing Transport
     public class Session
     {
         internal Dictionary<string, string> Cookies { get; }

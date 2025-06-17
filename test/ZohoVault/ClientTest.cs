@@ -24,7 +24,13 @@ namespace PasswordManagerAccess.Test.ZohoVault
         public void Open_returns_accounts()
         {
             // Act
-            var vault = Client.Open(new Credentials(Username, Password, TestData.Passphrase), null, GetStorage(), MakeFullFlow());
+            var vault = Client.Open(
+                new Credentials(Username, Password, TestData.Passphrase),
+                new Settings { KeepSession = true },
+                null,
+                GetStorage(),
+                MakeFullFlow()
+            );
 
             // Assert
             var accounts = vault.Accounts;
@@ -52,10 +58,29 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var storage = GetStorage();
 
             // Act
-            Client.Open(new Credentials(Username, Password, TestData.Passphrase), null, storage, MakeFullFlow());
+            Client.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings { KeepSession = true }, null, storage, MakeFullFlow());
 
             // Assert
             storage.Values["cookies"].ShouldNotBeEmpty();
+        }
+
+        [Fact]
+        public void Open_does_not_save_cookies_when_keep_session_is_disabled()
+        {
+            // Arrange
+            var storage = GetStorage();
+
+            // Act
+            Client.Open(
+                new Credentials(Username, Password, TestData.Passphrase),
+                new Settings { KeepSession = false },
+                null,
+                storage,
+                MakeFullFlow()
+            );
+
+            // Assert
+            storage.Values.ShouldNotContainKey("cookies");
         }
 
         [Fact]
@@ -72,7 +97,7 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .Get(""); // Logout
 
             // Act
-            var vault = Client.Open(new Credentials(Username, Password, TestData.Passphrase), null, GetStorage(), flow);
+            var vault = Client.Open(new Credentials(Username, Password, TestData.Passphrase), new Settings(), null, GetStorage(), flow);
 
             // Assert
             var accounts = vault.Accounts;
