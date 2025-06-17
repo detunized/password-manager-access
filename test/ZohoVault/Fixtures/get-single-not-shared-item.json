@@ -1,0 +1,42 @@
+{
+    "operation": {
+        "result": {
+            "message": "",
+            "status": "Success"
+        },
+        "Details": {
+            "notes": "BAGAxjEhDWBiCwvGlpOddbCLZcHvn74StZlDyuZedfLtg2mUeUp10ePUnA==",
+            "accounttype": "30024000000000015",
+            "description": "",
+            "istrashed": false,
+            "userid": "30024000000008004",
+            "secretData": "{\"password\":\"BAG86zEhDWBo5S0cOVRYPH4A8vs0NgU=\",\"file\":\"\",\"username\":\"BAEQYDEhDWBQWYII2wkFpPFMnuLuoQ==\"}",
+            "isPasswordBreached": false,
+            "isfavourites": false,
+            "secreturl": "http://jerome.info",
+            "policyid": "30024000000000063",
+            "autosubmit": true,
+            "encdescription": "",
+            "onetimeacess": false,
+            "secretmultipleurl": [
+                "http://jerome.info"
+            ],
+            "changepassword": false,
+            "isshared": "NO",
+            "secretid": "30024000000018381",
+            "encsecretname": "",
+            "classification": "E",
+            "passwordmodifiedtime": 1611473212358,
+            "ownerdetails": {
+                "USERNAME": "lastpass.ruby",
+                "EMAIL": "lastpass.ruby@gmail.com"
+            },
+            "autologon": false,
+            "tags": "",
+            "POLICYID": "30024000000000063",
+            "creationtime": 1611473212358,
+            "secretname": "Abbott, Hamill and Upton"
+        },
+        "name": "GET_SECRET"
+    }
+}

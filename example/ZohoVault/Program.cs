@@ -43,48 +43,74 @@ namespace PasswordManagerAccess.Example.ZohoVault
 
     static class Program
     {
+        static void DumpAccount(Account account, string index)
+        {
+            Console.WriteLine(
+                "{0}:\n"
+                    + "          id: {1}\n"
+                    + "        name: {2}\n"
+                    + "    username: {3}\n"
+                    + "    password: {4}\n"
+                    + "         url: {5}\n"
+                    + "        note: {6}\n",
+                index,
+                account.Id,
+                account.Name,
+                account.Username,
+                account.Password,
+                account.Url,
+                account.Note
+            );
+        }
+
         static void Main(string[] args)
         {
             var config = Util.ReadConfig();
             string totpSecret;
             config.TryGetValue("google-auth-totp-secret", out totpSecret);
 
+            var credentials = new Credentials(Username: config["username"], Password: config["password"], Passphrase: config["passphrase"]);
+            var ui = new TextUi(totpSecret);
+            var storage = new PlainStorage();
+
+            Session session = null;
             try
             {
-                // Open the remote vault
-                var vault = Vault.Open(
-                    new Credentials(username: config["username"], password: config["password"], passphrase: config["passphrase"]),
-                    new Settings { KeepSession = true },
-                    new TextUi(totpSecret),
-                    new PlainStorage()
-                );
+                // Stage 1: LogIn
+                session = Client.LogIn(credentials, ui, storage);
 
-                // Print the decrypted accounts
-                for (var i = 0; i < vault.Accounts.Length; ++i)
+                // Enable this to get a single item from the vault
+                var getSingleItem = false;
+
+                if (getSingleItem)
                 {
-                    var account = vault.Accounts[i];
+                    // Stage 2a: Get a single item from the vault by ID
+                    // Replace with an actual item ID from your vault
+                    var account = Client.GetItem("34896000000013019", session);
 
-                    Console.WriteLine(
-                        "{0}:\n"
-                            + "          id: {1}\n"
-                            + "        name: {2}\n"
-                            + "    username: {3}\n"
-                            + "    password: {4}\n"
-                            + "         url: {5}\n"
-                            + "        note: {6}\n",
-                        i + 1,
-                        account.Id,
-                        account.Name,
-                        account.Username,
-                        account.Password,
-                        account.Url,
-                        account.Note
-                    );
+                    DumpAccount(account, "Single item retrieved");
+                }
+                else
+                {
+                    // Stage 2b: Download entire vault
+                    var vault = Client.DownloadVault(session);
+
+                    // Print the decrypted accounts
+                    for (var i = 0; i < vault.Accounts.Length; ++i)
+                        DumpAccount(vault.Accounts[i], (i + 1).ToString());
                 }
             }
             catch (BaseException e)
             {
                 Util.PrintException(e);
+            }
+            finally
+            {
+                // Stage 3: LogOut
+                if (session != null)
+                {
+                    Client.LogOut(session, storage);
+                }
             }
         }
     }

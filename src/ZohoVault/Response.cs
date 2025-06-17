@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 
-using System;
 using System.ComponentModel;
 using Newtonsoft.Json;
 
@@ -228,4 +227,14 @@ namespace PasswordManagerAccess.ZohoVault.Response
         [JsonProperty("redirect_uri")]
         public readonly string RedirectUrl;
     }
+
+    internal record SingleSecret(
+        [JsonProperty("secretid")] string Id,
+        [JsonProperty("secretname")] string Name,
+        [JsonProperty("secreturl")] string Url,
+        [JsonProperty("notes")] string Notes,
+        [JsonProperty("secretData")] string Data,
+        [JsonProperty("isshared")] string IsShared,
+        [JsonProperty("istrashed")] bool IsTrashed
+    );
 }

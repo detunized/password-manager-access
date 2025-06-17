@@ -1,0 +1,41 @@
+{
+    "operation": {
+        "result": {
+            "message": "",
+            "status": "Success"
+        },
+        "Details": {
+            "notes": "agDLK2Oi7mdqnyf9DzRnKt8=",
+            "accounttype": "34896000000000015",
+            "description": "",
+            "istrashed": false,
+            "userid": "34896000000003004",
+            "secretData": "{\"password\":\"aQDYY2Oi7mdlcsSU\",\"file\":\"aQCHjGOi7mc=\",\"username\":\"aQDumWOi7mfDLk7o\"}",
+            "isPasswordBreached": false,
+            "isfavourites": false,
+            "secreturl": "",
+            "policyid": "34896000000000191",
+            "autosubmit": true,
+            "encdescription": "",
+            "onetimeacess": false,
+            "sharinglevel": 10,
+            "changepassword": false,
+            "isshared": "YES",
+            "customcolumn": "eyJjdXN0b21jb2wiOltdfQ==",
+            "secretid": "34896000000013019",
+            "encsecretname": "agD0UGOi7mdYXb2j91/k3A==",
+            "classification": "E",
+            "passwordmodifiedtime": 1743692387330,
+            "ownerdetails": {
+                "USERNAME": "jack.the.rabbit",
+                "EMAIL": "jack.the.rabbit@outlook.com"
+            },
+            "autologon": false,
+            "tags": "",
+            "POLICYID": "34896000000000191",
+            "creationtime": 1743692387330,
+            "secretname": "blah.com"
+        },
+        "name": "GET_SECRET"
+    }
+}

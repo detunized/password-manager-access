@@ -15,6 +15,8 @@ namespace PasswordManagerAccess.Test
 {
     internal class RestFlow : HttpMessageHandler, IRestTransport
     {
+        public bool Disposed { get; private set; }
+
         public class ResponseContent
         {
             public readonly bool IsBinary;
@@ -449,6 +451,14 @@ namespace PasswordManagerAccess.Test
                 default:
                     throw new ArgumentException($"Unsupported content type {typeof(TContent)}");
             }
+        }
+
+        //
+        // IDisposable implementation
+        //
+        public new void Dispose()
+        {
+            Disposed = true;
         }
 
         //
