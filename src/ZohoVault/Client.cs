@@ -70,7 +70,7 @@ namespace PasswordManagerAccess.ZohoVault
             }
             finally
             {
-                session.Transport.Dispose();
+                session.Dispose();
             }
         }
 
@@ -104,7 +104,7 @@ namespace PasswordManagerAccess.ZohoVault
             finally
             {
                 if (settings.KeepSession)
-                    session.Transport.Dispose();
+                    session.Dispose();
                 else
                     LogOut(session, storage);
             }

@@ -3,13 +3,13 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ZohoVault
 {
-    // TODO: Make session disposable and dispose instead disposing Transport
-    public class Session
+    public sealed class Session : IDisposable
     {
         internal Dictionary<string, string> Cookies { get; }
         internal string Domain { get; }
@@ -28,5 +28,7 @@ namespace PasswordManagerAccess.ZohoVault
             Transport = transport;
             VaultKey = vaultKey;
         }
+
+        public void Dispose() => Transport.Dispose();
     }
 }

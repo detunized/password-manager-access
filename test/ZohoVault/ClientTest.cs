@@ -198,6 +198,41 @@ namespace PasswordManagerAccess.Test.ZohoVault
         }
 
         //
+        // Client.LogOut
+        //
+
+        [Fact]
+        public void LogOut_disposes_session()
+        {
+            // Arrange
+            var flow = new RestFlow().Get("RESULT=TRUE");
+            var session = new Session(LoginCookies, DefaultDomain, flow, flow, TestData.Key);
+            var storage = GetStorage();
+
+            // Act
+            Client.LogOut(session, storage);
+
+            // Assert
+            session.Transport.ShouldBeOfType<RestFlow>().Disposed.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void LogOut_removes_cookies_from_storage()
+        {
+            // Arrange
+            var flow = new RestFlow().Get("RESULT=TRUE");
+            var session = new Session(LoginCookies, DefaultDomain, flow, flow, TestData.Key);
+            var storage = GetStorage();
+            storage.Values["cookies"] = "login-cookies";
+
+            // Act
+            Client.LogOut(session, storage);
+
+            // Assert
+            storage.Values.ShouldNotContainKey("cookies");
+        }
+
+        //
         // Internal methods
         //
 
