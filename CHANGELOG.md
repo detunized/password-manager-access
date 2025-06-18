@@ -1,5 +1,9 @@
 # Changelog
 
+## 24.0.0
+  - ZohoVault: added support for single item retrieval (see `Client.GetItem`, also see `UPGRADE.md`
+    for upgrading instructions)
+
 ## 23.0.0
   - Bitwarden: added support for single item retrieval (see `Client.GetItem`)
 
