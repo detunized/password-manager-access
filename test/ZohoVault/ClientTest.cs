@@ -598,9 +598,14 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [InlineData("""{"SECRETID": "id", "SECRETNAME": "", "SECRETURL": "", "SECURENOTE": "","ISSHARED": ""}""")]
         public void ParseAccount_handles_missing_nulls_and_blanks_in_R_Secret(string json)
         {
+            // Arrange
             var secret = JsonConvert.DeserializeObject<R.Secret>(json);
-            var account = Client.ParseAccount(Client.ConvertToSecret(secret), new byte[32]);
 
+            // Act
+            var maybeAccount = Client.ParseAccount(Client.ConvertToSecret(secret), new byte[32]);
+
+            // Assert
+            var account = maybeAccount.Value.ShouldBeOfType<Account>();
             account.Id.ShouldBe("id");
             account.Name.ShouldBe("");
             account.Username.ShouldBe("");
@@ -617,9 +622,14 @@ namespace PasswordManagerAccess.Test.ZohoVault
         [InlineData("""{"secretid": "id", "secretname": "", "secreturl": "", "notes": "", "secretData": "{}", "isshared": ""}""")]
         public void ParseAccount_handles_missing_nulls_and_blanks_in_R_SingleSecret(string json)
         {
+            // Arrange
             var singleSecret = JsonConvert.DeserializeObject<R.SingleSecret>(json);
-            var account = Client.ParseAccount(Client.ConvertToSecret(singleSecret), new byte[32]);
 
+            // Act
+            var maybeAccount = Client.ParseAccount(Client.ConvertToSecret(singleSecret), new byte[32]);
+
+            // Assert
+            var account = maybeAccount.Value.ShouldBeOfType<Account>();
             account.Id.ShouldBe("id");
             account.Name.ShouldBe("");
             account.Username.ShouldBe("");

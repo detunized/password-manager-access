@@ -93,9 +93,7 @@ namespace PasswordManagerAccess.ZohoVault
                 _ => throw new InternalErrorException($"Unexpected value for 'IsShared': '{secret.IsShared}'"),
             };
 
-            // TODO: Returns null on accounts that don't parse. Fix this!
-            var account = ParseAccount(ConvertToSecret(secret), key);
-            return account == null ? NoItem.UnsupportedType : account;
+            return ParseAccount(ConvertToSecret(secret), key);
         }
 
         //
@@ -533,20 +531,22 @@ namespace PasswordManagerAccess.ZohoVault
 
         internal static Account[] ParseAccounts(R.Vault vaultResponse, byte[] vaultKey, byte[] sharingKey)
         {
-            // TODO: Test on non account type secrets!
-            // TODO: Test on accounts with missing fields!
+            // TODO: Maybe collect parsing errors and return them to the user.
             return vaultResponse
                 .Secrets.Select(x => ParseAccount(ConvertToSecret(x), x.IsShared == "YES" ? sharingKey : vaultKey))
-                .Where(x => x != null)
+                .Where(x => x.IsT0)
+                .Select(x => x.AsT0)
                 .ToArray();
         }
 
         // Returns null on accounts that don't parse
-        internal static Account ParseAccount(Secret secret, byte[] key)
+        internal static OneOf<Account, NoItem> ParseAccount(Secret secret, byte[] key)
         {
             try
             {
-                // TODO: Check `accounttype` field to be "34896000000000015"
+                // TODO: The secret type is never checked since it's not trivial. ZV has somewhat
+                //       overengineered secret types which have custom IDs for each user. So we only
+                //       rely on the parsing errors to determine if the secret is supported or not.
                 var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data);
                 return new Account(
                     secret.Id,
@@ -559,8 +559,8 @@ namespace PasswordManagerAccess.ZohoVault
             }
             catch (JsonException)
             {
-                // If it doesn't parse then it's some other kind of unsupported secret type. Ignore.
-                return null;
+                // If it doesn't parse, then it's some other kind of unsupported secret type. Ignore.
+                return NoItem.UnsupportedType;
             }
         }
 
