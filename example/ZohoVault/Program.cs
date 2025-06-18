@@ -80,15 +80,15 @@ namespace PasswordManagerAccess.Example.ZohoVault
                 session = Client.LogIn(credentials, ui, storage);
 
                 // Enable this to get a single item from the vault
-                var getSingleItem = false;
+                var getSingleItem = true;
 
                 if (getSingleItem)
                 {
                     // Stage 2a: Get a single item from the vault by ID
                     // Replace with an actual item ID from your vault
-                    var account = Client.GetItem("34896000000013019", session);
+                    var account = Client.GetItem("34896000000017025", session);
 
-                    DumpAccount(account, "Single item retrieved");
+                    account.Switch(a => DumpAccount(a, "Single item retrieved"), no => Console.WriteLine($"No item: {no}"));
                 }
                 else
                 {
@@ -109,7 +109,16 @@ namespace PasswordManagerAccess.Example.ZohoVault
                 // Stage 3: LogOut
                 if (session != null)
                 {
-                    Client.LogOut(session, storage);
+                    // Enable this to keep the session cookies in the secure storage and not log out.
+                    // This allows the subsequent logins to reuse the previous session without doing a full login.
+                    // Zoho limits the number of full logins to 20 per day.
+                    var keepSession = true;
+
+                    // Either LogOut or Dispose is required to clean up the session.
+                    if (keepSession)
+                        session.Dispose();
+                    else
+                        Client.LogOut(session, storage);
                 }
             }
         }

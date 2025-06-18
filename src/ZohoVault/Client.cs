@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ZohoVault.Ui;
 using R = PasswordManagerAccess.ZohoVault.Response;
@@ -74,9 +75,15 @@ namespace PasswordManagerAccess.ZohoVault
             }
         }
 
-        public static Account GetItem(string itemId, Session session)
+        public static OneOf<Account, NoItem> GetItem(string itemId, Session session)
         {
-            var secret = FetchSecret(session.Cookies, session.Domain, itemId, session.Rest);
+            var maybeSecret = FetchSecret(session.Cookies, session.Domain, itemId, session.Rest);
+
+            if (maybeSecret.TryPickT1(out var noItem, out var secret))
+                return noItem;
+
+            if (secret.IsTrashed)
+                return NoItem.Deleted;
 
             // When the item is shared, we need to potentially get the sharing key if it's the first time. After that we can use the cached one.
             var key = secret.IsShared switch
@@ -86,7 +93,9 @@ namespace PasswordManagerAccess.ZohoVault
                 _ => throw new InternalErrorException($"Unexpected value for 'IsShared': '{secret.IsShared}'"),
             };
 
-            return ParseAccount(ConvertToSecret(secret), key);
+            // TODO: Returns null on accounts that don't parse. Fix this!
+            var account = ParseAccount(ConvertToSecret(secret), key);
+            return account == null ? NoItem.UnsupportedType : account;
         }
 
         //
@@ -441,8 +450,18 @@ namespace PasswordManagerAccess.ZohoVault
         internal static R.Vault FetchVault(HttpCookies cookies, string domain, RestClient rest, int limit = -1) =>
             GetWrapped<R.Vault>(VaultUrl(domain, limit), cookies, rest);
 
-        internal static R.SingleSecret FetchSecret(HttpCookies cookies, string domain, string itemId, RestClient rest) =>
-            GetWrapped<R.SingleSecret>(SecretUrl(domain, itemId), cookies, rest);
+        internal static OneOf<R.SingleSecret, NoItem> FetchSecret(HttpCookies cookies, string domain, string itemId, RestClient rest)
+        {
+            var response = rest.Get<R.ResponseEnvelope<R.SingleSecret>>(SecretUrl(domain, itemId), cookies: cookies);
+            if (IsSuccessful(response))
+                return response.Data.Payload;
+
+            // Special case: the item not found
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return NoItem.NotFound;
+
+            throw MakeErrorOnFailedRequest(response);
+        }
 
         internal static byte[] GetSharingKey(Session session)
         {
@@ -527,6 +546,7 @@ namespace PasswordManagerAccess.ZohoVault
         {
             try
             {
+                // TODO: Check `accounttype` field to be "34896000000000015"
                 var data = JsonConvert.DeserializeObject<R.SecretData>(secret.Data);
                 return new Account(
                     secret.Id,

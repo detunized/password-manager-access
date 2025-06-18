@@ -4,4 +4,11 @@
 namespace PasswordManagerAccess.ZohoVault
 {
     public record Account(string Id, string Name, string Username, string Password, string Url, string Note);
+
+    public enum NoItem
+    {
+        NotFound,
+        Deleted,
+        UnsupportedType,
+    }
 }

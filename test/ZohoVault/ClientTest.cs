@@ -126,9 +126,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var session = new Session(LoginCookies, DefaultDomain, flow, null!, TestData.Key);
 
             // Act
-            var account = Client.GetItem(id, session);
+            var maybeAccount = Client.GetItem(id, session);
 
             // Assert
+            var account = maybeAccount.Value.ShouldBeOfType<Account>();
             account.Id.ShouldBe(id);
             account.Name.ShouldBe("Abbott, Hamill and Upton");
             account.Username.ShouldBe("Duncan.Reinger");
@@ -155,9 +156,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
             var session = new Session(LoginCookies, DefaultDomain, flow, null!, TestData.Key3);
 
             // Act
-            var account = Client.GetItem(id, session);
+            var maybeAccount = Client.GetItem(id, session);
 
             // Assert
+            var account = maybeAccount.Value.ShouldBeOfType<Account>();
             account.Id.ShouldBe(id);
             account.Name.ShouldBe("blah.com");
             account.Username.ShouldBe("blah");
@@ -541,9 +543,10 @@ namespace PasswordManagerAccess.Test.ZohoVault
                 .ExpectUrl($"https://vault.{DefaultDomain}/api/rest/json/v1/secrets/{id}");
 
             // Act
-            var secret = Client.FetchSecret(LoginCookies, DefaultDomain, id, flow);
+            var maybeSecret = Client.FetchSecret(LoginCookies, DefaultDomain, id, flow);
 
             // Assert
+            var secret = maybeSecret.Value.ShouldBeOfType<R.SingleSecret>();
             secret.Id.ShouldBe(id);
             secret.Name.ShouldBe("blah.com");
             secret.IsShared.ShouldBe("YES");
