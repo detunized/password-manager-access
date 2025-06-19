@@ -785,7 +785,7 @@ namespace PasswordManagerAccess.ProtonPass
                     8002 => new BadCredentialsException("Invalid credentials"),
                     // Handle "locked" first, in case there are both "locked" and "pass"
                     9101 when HasMissingScope(error, "locked") => new MissingLockedScopeException(),
-                    9100 when HasMissingScope(error, "pass") => new MissingPassScopeException(),
+                    9108 when HasMissingScope(error, "pass") => new MissingPassScopeException(),
                     2011 => new InvalidExtraPasswordException(),
                     2026 => new TooManyInvalidExtraPasswordAttemptsException(),
                     _ => new InternalErrorException(
