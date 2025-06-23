@@ -699,12 +699,12 @@ namespace PasswordManagerAccess.ProtonPass
                 accounts.Add(
                     new Account
                     {
-                        Id = metadata.ItemUuid ?? "",
+                        Id = item.Id ?? "",
                         Name = metadata.Name ?? "",
                         Email = login.ItemEmail ?? "",
                         Username = login.ItemUsername ?? "",
                         Password = login.Password ?? "",
-                        Urls = login.Urls?.ToArray() ?? Array.Empty<string>(),
+                        Urls = login.Urls?.ToArray() ?? [],
                         Totp = login.TotpUri ?? "",
                         Note = metadata.Note,
                     }
