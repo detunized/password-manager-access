@@ -28,13 +28,7 @@ namespace PasswordManagerAccess.ProtonPass
             CancellationToken cancellationToken
         )
         {
-            // TODO: Restructure this function to get rid of the RestClient.CloneWithHeaders() where possible!
-            var rest = new RestClient(
-                transport,
-                BaseUrl,
-                defaultHeaders: new Dictionary<string, string> { ["X-Pm-Appversion"] = AppVersion },
-                useSystemJson: true
-            );
+            var defaultHeaders = new Dictionary<string, string> { ["X-Pm-Appversion"] = AppVersion };
 
             // For the network traffic analysis it seems that there are two different access tokens. The first one
             // is just for requesting the auth info and initiating the login session. After that is done and identity
@@ -51,15 +45,12 @@ namespace PasswordManagerAccess.ProtonPass
             // TODO: Do we need to store this and use it again the next time?
             if (!humanVerificationTokenType.IsNullOrEmpty() && !humanVerificationToken.IsNullOrEmpty())
             {
-                // Add the human verification token to the headers
-                rest = rest.CloneWithHeaders(
-                    new Dictionary<string, string>
-                    {
-                        ["X-Pm-Human-Verification-Token-Type"] = humanVerificationTokenType!,
-                        ["X-Pm-Human-Verification-Token"] = humanVerificationToken!,
-                    }
-                );
+                defaultHeaders["X-Pm-Human-Verification-Token-Type"] = humanVerificationTokenType;
+                defaultHeaders["X-Pm-Human-Verification-Token"] = humanVerificationToken;
             }
+
+            // This is our "seed" rest client. All the other clients are derived from it and inherit the settings.
+            var rest = new RestClient(transport, BaseUrl, defaultHeaders: defaultHeaders, useSystemJson: true);
 
             // Either it's the first time we're running or the storage is corrupted. We need to start from scratch.
             if (sessionId.IsNullOrEmpty() || accessToken.IsNullOrEmpty() || refreshToken.IsNullOrEmpty())
@@ -71,7 +62,7 @@ namespace PasswordManagerAccess.ProtonPass
             {
                 // We have a session ID and the access token. Let's try to use them to access the vault.
                 rest = rest.CloneWithHeaders(
-                    new Dictionary<string, string> { ["X-Pm-Uid"] = sessionId!, ["Authorization"] = $"Bearer {accessToken!}" }
+                    new Dictionary<string, string> { ["X-Pm-Uid"] = sessionId, ["Authorization"] = $"Bearer {accessToken}" }
                 );
             }
 
