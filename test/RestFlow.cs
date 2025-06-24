@@ -15,6 +15,7 @@ namespace PasswordManagerAccess.Test
 {
     internal class RestFlow : HttpMessageHandler, IRestTransport
     {
+        public bool UseSystemJson { get; init; }
         public bool Disposed { get; private set; }
 
         public class ResponseContent
@@ -159,7 +160,7 @@ namespace PasswordManagerAccess.Test
 
         public RestClient ToRestClient(string baseUrl = "https://does.not.matter")
         {
-            return new RestClient(this, baseUrl);
+            return new RestClient(this, baseUrl, useSystemJson: UseSystemJson);
         }
 
         public static implicit operator RestClient(RestFlow flow)

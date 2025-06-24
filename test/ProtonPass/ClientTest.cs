@@ -4,26 +4,27 @@
 #nullable enable
 
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
-using MockHttp;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.ProtonPass;
 using Shouldly;
 using Xunit;
-using static PasswordManagerAccess.Test.TestUtil;
 
 namespace PasswordManagerAccess.Test.ProtonPass
 {
     public class ClientTest : TestBase
     {
         [Fact]
-        public async Task RequestNewAuthSession_returns_a_session()
+        public async Task RequestNewAuthSession_makes_POST_request_and_returns_a_session()
         {
             // Arrange
-            var rest = Serve(GetFixture("sessions"));
+            var rest = new RestFlow { UseSystemJson = true }
+                .Post(GetFixture("sessions"))
+                .ExpectUrl("/auth/v4/sessions");
 
             // Act
-            var session = await Client.RequestNewAuthSession(rest, MakeToken());
+            var session = await Client.RequestNewAuthSession(rest, CancellationToken.None);
 
             // Assert
             session.Code.ShouldBe(1000);
@@ -33,25 +34,13 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async Task RequestNewAuthSession_makes_POST_request()
-        {
-            // Arrange
-            var mockHttp = new MockHttpHandler();
-            mockHttp.When(w => w.Method("POST").RequestUri("*/auth/v4/sessions").WithoutBody()).Respond(w => w.JsonText(GetFixture("sessions")));
-
-            // Act
-            await Swallow(() => Client.RequestNewAuthSession(mockHttp.ToClient(), MakeToken()));
-
-            mockHttp.VerifyAll();
-            mockHttp.VerifyNoOtherRequests();
-        }
-
-        [Fact]
         public async Task RequestNewAuthSession_fails_on_error()
         {
             // Arrange
-            var rest = Serve("{\"Code\": 1001, \"Error\": \"Invalid credentials\"}", HttpStatusCode.BadRequest);
-            var act = () => Client.RequestNewAuthSession(rest, MakeToken());
+            var rest = new RestFlow { UseSystemJson = true }.Post("""{"Code": 1001, "Error": "Invalid credentials"}""", HttpStatusCode.BadRequest);
+
+            // Act later
+            var act = () => Client.RequestNewAuthSession(rest, CancellationToken.None);
 
             // Act/Assert
             var ex = await act.ShouldThrowAsync<InternalErrorException>();
@@ -59,13 +48,16 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async Task RequestAuthInfo_returns_auth_info()
+        public async Task RequestAuthInfo_makes_POST_request_and_returns_auth_info()
         {
             // Arrange
-            var rest = Serve(GetFixture("auth-info"));
+            var rest = new RestFlow { UseSystemJson = true }
+                .Post(GetFixture("auth-info"))
+                .ExpectUrl("/auth/v4/info")
+                .ExpectContent("""{"Username":"username","Intent":"Proton"}""");
 
             // Act
-            var authInfo = await Client.RequestAuthInfo("username", rest, MakeToken());
+            var authInfo = await Client.RequestAuthInfo("username", rest, CancellationToken.None);
 
             // Assert
             authInfo.Code.ShouldBe(1000);
@@ -77,29 +69,15 @@ namespace PasswordManagerAccess.Test.ProtonPass
         }
 
         [Fact]
-        public async Task RequestAuthInfo_makes_POST_request()
+        public async Task RequestExtraAuthInfo_makes_GET_request_and_returns_SRP_data()
         {
             // Arrange
-            var mockHttp = new MockHttpHandler();
-            mockHttp
-                .When(w => w.Method("POST").RequestUri("*/auth/v4/info").JsonText("{\"Username\":\"username\",\"Intent\":\"Proton\"}"))
-                .Respond(w => w.JsonText(GetFixture("auth-info")));
-
-            // Act/assert
-            await Swallow(() => Client.RequestAuthInfo("username", mockHttp.ToClient(), MakeToken()));
-
-            mockHttp.VerifyAll();
-            mockHttp.VerifyNoOtherRequests();
-        }
-
-        [Fact]
-        public async Task RequestExtraAuthInfo_returns_SRP_data()
-        {
-            // Arrange
-            var rest = Serve(GetFixture("extra-auth-info"));
+            var rest = new RestFlow { UseSystemJson = true }
+                .Get(GetFixture("extra-auth-info"))
+                .ExpectUrl("/pass/v1/user/srp/info?Username=username&Intent=Proton");
 
             // Act
-            var srpData = await Client.RequestExtraAuthInfo("username", rest, MakeToken());
+            var srpData = await Client.RequestExtraAuthInfo("username", rest, CancellationToken.None);
 
             // Assert
             srpData.Modulus.ShouldStartWith("-----BEGIN PGP SIGNED MESSAGE-----");
@@ -107,22 +85,6 @@ namespace PasswordManagerAccess.Test.ProtonPass
             srpData.Version.ShouldBe(4);
             srpData.Salt.ShouldBe("Rbr+rLgHibg/aA==");
             srpData.SessionId.ShouldBe("0621fe3601bdf366283bf99837e891d2");
-        }
-
-        [Fact]
-        public async Task RequestExtraAuthInfo_makes_GET_request()
-        {
-            // Arrange
-            var mockHttp = new MockHttpHandler();
-            mockHttp
-                .When(w => w.Method("GET").RequestUri("*/pass/v1/user/srp/info").JsonText("{\"Username\":\"username\",\"Intent\":\"Proton\"}"))
-                .Respond(w => w.JsonText(GetFixture("extra-auth-info")));
-
-            // Act/assert
-            await Swallow(() => Client.RequestExtraAuthInfo("username", mockHttp.ToClient(), MakeToken()));
-
-            mockHttp.VerifyAll();
-            mockHttp.VerifyNoOtherRequests();
         }
     }
 }

@@ -452,6 +452,32 @@ namespace PasswordManagerAccess.Common
         }
 
         //
+        // Convenience Clone methods
+        //
+
+        public enum HeaderOperation
+        {
+            Merge,
+            Replace,
+        }
+
+        public RestClient CloneWithHeaders(ReadOnlyHttpHeaders headers, HeaderOperation operation = HeaderOperation.Merge) =>
+            new(
+                Transport,
+                BaseUrl,
+                Signer,
+                operation switch
+                {
+                    HeaderOperation.Merge => DefaultHeaders.MergeCopy(headers),
+                    HeaderOperation.Replace => headers,
+                    _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
+                },
+                DefaultCookies,
+                Logger,
+                UseSystemJson
+            );
+
+        //
         // GET
         //
 
