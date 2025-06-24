@@ -800,7 +800,7 @@ namespace PasswordManagerAccess.ProtonPass
                 // Try to parse the error object from the response
                 var errorCode = 0;
                 var errorText = "";
-                if (RestAsync.TryDeserialize<Model.Error>(response.Content, out var error))
+                if (RestClient.TryDeserialize<Model.Error>(response.Content, out var error))
                 {
                     errorCode = error!.Code;
                     errorText = error.Text ?? "";

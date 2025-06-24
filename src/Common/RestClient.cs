@@ -811,6 +811,37 @@ namespace PasswordManagerAccess.Common
             return UseSystemJson ? System.Text.Json.JsonSerializer.Deserialize<T>(json) : JsonConvert.DeserializeObject<T>(json);
         }
 
+        //
+        // JsonSerializer extensions
+        //
+
+#nullable enable
+
+        // TODO: Find a better place for this!
+        // TODO: Consider making it non-static and deserializing with the RestClient settings
+        public static bool TryDeserialize<T>(string json, out T? result)
+            where T : class => TryDeserialize(json, out result, out _);
+
+        public static bool TryDeserialize<T>(string json, out T? result, out System.Text.Json.JsonException? error)
+            where T : class
+        {
+            try
+            {
+                result = System.Text.Json.JsonSerializer.Deserialize<T>(json);
+                error = null;
+                return result != null;
+            }
+            catch (System.Text.Json.JsonException e)
+            {
+                result = null;
+                error = e;
+            }
+
+            return false;
+        }
+
+#nullable restore
+
         private const int MaxRedirects = 3;
         private const int NoRedirects = 0;
     }
