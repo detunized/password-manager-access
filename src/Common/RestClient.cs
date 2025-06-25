@@ -404,40 +404,46 @@ namespace PasswordManagerAccess.Common
     // RestClient
     //
 
-    // This class tries to be immutable, it's easier to keep track of state and test that way. When
-    // the settings have to be changed, the new instance should be created.
+    // This class is no longer immutable. It's now possible to mutate the default headers and cookies.
+    // This class is not trying to manage the transport lifetime. It's managed externally. So it's possible to create multiple
+    // RestClients with the same transport, the copies are cheap.
     internal partial class RestClient
     {
         // TODO: Make these readonly dictionaries
-        public static readonly HttpHeaders NoHeaders = new HttpHeaders();
-        public static readonly HttpCookies NoCookies = new HttpCookies();
+        public static readonly HttpHeaders NoHeaders = new();
+        public static readonly HttpCookies NoCookies = new();
 
-        // NoParameters is a normal value, it's just just for convenience to not to type
+        // NoParameters is a normal value, it's just for convenience to not type
         // new Dictionary<string, object>() every time. Plus it saves an allocation.
         // For the JSON requests it's sent as "{}", for the Form requests as "".
-        public static readonly PostParameters NoParameters = new PostParameters();
+        public static readonly PostParameters NoParameters = new();
 
         // JsonBlank is a special case. It's used to send blank or no content which is
         // impossible to express in JSON. This is only relevant for JSON variants.
-        public static readonly PostParameters JsonBlank = new PostParameters();
+        public static readonly PostParameters JsonBlank = new();
 
         // JsonNull is used to send "null". This is only relevant for JSON variants.
-        public static readonly PostParameters JsonNull = new PostParameters();
+        public static readonly PostParameters JsonNull = new();
 
+        // TODO: Convert to properties
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
         public readonly IRequestSigner Signer;
-        public readonly ReadOnlyHttpHeaders DefaultHeaders;
-        public readonly ReadOnlyHttpCookies DefaultCookies;
+        public ReadOnlyHttpHeaders DefaultHeaders => _defaultHeaders;
+        public ReadOnlyHttpCookies DefaultCookies => _defaultCookies;
         public readonly ISimpleLogger Logger;
         public readonly bool UseSystemJson;
+
+        // Mutable state behind r/o properties
+        private readonly Dictionary<string, string> _defaultHeaders;
+        private readonly Dictionary<string, string> _defaultCookies;
 
         public RestClient(
             IRestTransport transport,
             string baseUrl = "",
             IRequestSigner signer = null,
             ReadOnlyHttpHeaders defaultHeaders = null,
-            ReadOnlyHttpCookies defaultCookies = null,
+            ReadOnlyHttpHeaders defaultCookies = null,
             ISimpleLogger logger = null,
             bool useSystemJson = false
         )
@@ -445,37 +451,25 @@ namespace PasswordManagerAccess.Common
             Transport = transport;
             BaseUrl = baseUrl;
             Signer = signer ?? new UnitRequestSigner();
-            DefaultHeaders = defaultHeaders ?? new ReadOnlyDictionary<string, string>(NoHeaders);
-            DefaultCookies = defaultCookies ?? new ReadOnlyDictionary<string, string>(NoCookies);
             Logger = logger;
             UseSystemJson = useSystemJson;
+
+            // We need a copy to make sure the caller doesn't mutate the original headers
+            _defaultHeaders = defaultHeaders?.Count > 0 ? new Dictionary<string, string>(defaultHeaders) : [];
+            _defaultCookies = defaultCookies?.Count > 0 ? new Dictionary<string, string>(defaultCookies) : [];
         }
 
         //
-        // Convenience Clone methods
+        // Mutate state
         //
 
-        public enum HeaderOperation
-        {
-            Merge,
-            Replace,
-        }
+        public void AddOrUpdateHeader(string name, string value) => _defaultHeaders[name] = value;
 
-        public RestClient CloneWithHeaders(ReadOnlyHttpHeaders headers, HeaderOperation operation = HeaderOperation.Merge) =>
-            new(
-                Transport,
-                BaseUrl,
-                Signer,
-                operation switch
-                {
-                    HeaderOperation.Merge => DefaultHeaders.MergeCopy(headers),
-                    HeaderOperation.Replace => headers,
-                    _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
-                },
-                DefaultCookies,
-                Logger,
-                UseSystemJson
-            );
+        public bool RemoveHeader(string name) => _defaultHeaders.Remove(name);
+
+        public void AddOrUpdateCookie(string name, string value) => _defaultCookies[name] = value;
+
+        public bool RemoveCookie(string name) => _defaultCookies.Remove(name);
 
         //
         // GET

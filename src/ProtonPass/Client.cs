@@ -28,7 +28,13 @@ namespace PasswordManagerAccess.ProtonPass
             CancellationToken cancellationToken
         )
         {
-            var defaultHeaders = new Dictionary<string, string> { ["X-Pm-Appversion"] = AppVersion };
+            // This is our "seed" rest client. Later the default headers are updated, possibly multiple times.
+            var rest = new RestClient(
+                transport,
+                BaseUrl,
+                defaultHeaders: new Dictionary<string, string> { ["X-Pm-Appversion"] = AppVersion },
+                useSystemJson: true
+            );
 
             // For the network traffic analysis it seems that there are two different access tokens. The first one
             // is just for requesting the auth info and initiating the login session. After that is done and identity
@@ -45,25 +51,21 @@ namespace PasswordManagerAccess.ProtonPass
             // TODO: Do we need to store this and use it again the next time?
             if (!humanVerificationTokenType.IsNullOrEmpty() && !humanVerificationToken.IsNullOrEmpty())
             {
-                defaultHeaders["X-Pm-Human-Verification-Token-Type"] = humanVerificationTokenType;
-                defaultHeaders["X-Pm-Human-Verification-Token"] = humanVerificationToken;
+                rest.AddOrUpdateHeader("X-Pm-Human-Verification-Token-Type", humanVerificationTokenType);
+                rest.AddOrUpdateHeader("X-Pm-Human-Verification-Token", humanVerificationToken);
             }
-
-            // This is our "seed" rest client. All the other clients are derived from it and inherit the settings.
-            var rest = new RestClient(transport, BaseUrl, defaultHeaders: defaultHeaders, useSystemJson: true);
 
             // Either it's the first time we're running or the storage is corrupted. We need to start from scratch.
             if (sessionId.IsNullOrEmpty() || accessToken.IsNullOrEmpty() || refreshToken.IsNullOrEmpty())
             {
                 // Get a fresh set of access tokens: access and refresh.
-                rest = await FullLoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                await FullLoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 // We have a session ID and the access token. Let's try to use them to access the vault.
-                rest = rest.CloneWithHeaders(
-                    new Dictionary<string, string> { ["X-Pm-Uid"] = sessionId, ["Authorization"] = $"Bearer {accessToken}" }
-                );
+                rest.AddOrUpdateHeader("X-Pm-Uid", sessionId);
+                rest.AddOrUpdateHeader("Authorization", $"Bearer {accessToken}");
             }
 
             // The flow could go through the following steps:
@@ -97,17 +99,14 @@ namespace PasswordManagerAccess.ProtonPass
 
                     hadTokenExpired = true;
 
-                    // Some hairy logic here. We need to refresh the session if possible, otherwise do a full login.
-                    var needFullLogin = refreshToken.IsNullOrEmpty();
-                    if (!needFullLogin)
+                    if (
+                        refreshToken.IsNullOrEmpty()
+                        || !await TryRefreshAuthSessionAndUpdate(sessionId!, refreshToken!, storage, rest, cancellationToken).ConfigureAwait(false)
+                    )
                     {
-                        (var refreshed, rest) = await TryRefreshAuthSessionAndUpdate(sessionId!, refreshToken!, storage, rest, cancellationToken)
-                            .ConfigureAwait(false);
-                        needFullLogin = !refreshed;
+                        // The refresh token is expired. We need to do a full login.
+                        await FullLoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                     }
-
-                    if (needFullLogin)
-                        rest = await FullLoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 }
                 catch (MissingLockedScopeException)
                 {
@@ -120,7 +119,7 @@ namespace PasswordManagerAccess.ProtonPass
                     hadLockedScope = true;
 
                     // We already have a session, so we don't need a full login, only the SRP part.
-                    rest = await LoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                    await LoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 }
                 catch (MissingPassScopeException)
                 {
@@ -144,8 +143,8 @@ namespace PasswordManagerAccess.ProtonPass
         // Internal
         //
 
-        // Side effects: modifies the storage and the UI.
-        internal static async Task<RestClient> FullLoginAndUpdate(
+        // Side effects: modifies the storage, updates the headers on the rest client, the UI.
+        internal static async Task FullLoginAndUpdate(
             string username,
             string password,
             IAsyncUi ui,
@@ -154,17 +153,12 @@ namespace PasswordManagerAccess.ProtonPass
             CancellationToken cancellationToken
         )
         {
-            rest = await GetBasicSessionAndUpdate(storage, rest, cancellationToken).ConfigureAwait(false);
-            rest = await LoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
-            return rest;
+            await GetBasicSessionAndUpdate(storage, rest, cancellationToken).ConfigureAwait(false);
+            await LoginAndUpdate(username, password, ui, storage, rest, cancellationToken).ConfigureAwait(false);
         }
 
-        // Side effects: modifies the storage
-        internal static async Task<RestClient> GetBasicSessionAndUpdate(
-            IAsyncSecureStorage storage,
-            RestClient rest,
-            CancellationToken cancellationToken
-        )
+        // Side effects: modifies the storage, updates the headers on the rest client
+        internal static async Task GetBasicSessionAndUpdate(IAsyncSecureStorage storage, RestClient rest, CancellationToken cancellationToken)
         {
             // To request this session we don't need any authentication. This session is only good for requesting the auth info.
             var session = await RequestNewAuthSession(rest, cancellationToken).ConfigureAwait(false);
@@ -174,15 +168,13 @@ namespace PasswordManagerAccess.ProtonPass
             // the authorization is granted. The rest we erase.
             await StoreSession(session.Id, null, null, storage).ConfigureAwait(false);
 
-            // Make a new client with the updated headers
-            return rest.CloneWithHeaders(
-                new Dictionary<string, string> { ["X-Pm-Uid"] = session.Id, ["Authorization"] = $"Bearer {session.AccessToken}" }
-            );
+            rest.AddOrUpdateHeader("X-Pm-Uid", session.Id);
+            rest.AddOrUpdateHeader("Authorization", $"Bearer {session.AccessToken}");
         }
 
         // This function is full of side effects. It modifies the REST client, the storage and the UI.
         // The REST is expected to be configured with a basic session at this point.
-        internal static async Task<RestClient> LoginAndUpdate(
+        internal static async Task LoginAndUpdate(
             string username,
             string password,
             IAsyncUi ui,
@@ -212,10 +204,9 @@ namespace PasswordManagerAccess.ProtonPass
                     // 3. Submit the SRP proof to the server. At this point we could get the CAPTCHA challenge.
                     var auth = await SubmitSrpProof(username, authInfo.SrpSession, proof, rest, cancellationToken).ConfigureAwait(false);
 
-                    // Make a new client with the updated headers
-                    rest = rest.CloneWithHeaders(
-                        new Dictionary<string, string> { ["X-Pm-Uid"] = auth.SessionId, ["Authorization"] = $"Bearer {auth.AccessToken}" }
-                    );
+                    // Update the session auth
+                    rest.AddOrUpdateHeader("X-Pm-Uid", auth.SessionId);
+                    rest.AddOrUpdateHeader("Authorization", $"Bearer {auth.AccessToken}");
 
                     // 4. Check if we need to provide 2FA
                     if (auth.Mfa.Enabled != 0)
@@ -226,7 +217,7 @@ namespace PasswordManagerAccess.ProtonPass
                     await StoreSession(auth.SessionId, auth.AccessToken, auth.RefreshToken, storage).ConfigureAwait(false);
 
                     // Done
-                    break;
+                    return;
                 }
                 catch (NeedCaptchaException e)
                 {
@@ -246,21 +237,15 @@ namespace PasswordManagerAccess.ProtonPass
 
                     await StoreHumanVerificationToken("captcha", result.Token, storage).ConfigureAwait(false);
 
-                    // Make a new client with the updated headers
-                    rest = rest.CloneWithHeaders(
-                        new Dictionary<string, string>
-                        {
-                            ["X-Pm-Human-Verification-Token-Type"] = "captcha",
-                            ["X-Pm-Human-Verification-Token"] = result.Token,
-                        }
-                    );
+                    // Update the HV token
+                    rest.AddOrUpdateHeader("X-Pm-Human-Verification-Token-Type", "captcha");
+                    rest.AddOrUpdateHeader("X-Pm-Human-Verification-Token", result.Token);
 
                     // Go another round
                 }
             }
 
-            // The rest client should have been updated by now
-            return rest;
+            throw new InternalErrorException("Failed to login");
         }
 
         private static async Task DoMultiFactorAuth(
@@ -385,7 +370,7 @@ namespace PasswordManagerAccess.ProtonPass
         }
 
         // This function returns an updated client on success
-        internal static async Task<(bool success, RestClient rest)> TryRefreshAuthSessionAndUpdate(
+        internal static async Task<bool> TryRefreshAuthSessionAndUpdate(
             string sessionId,
             string refreshToken,
             IAsyncSecureStorage storage,
@@ -400,20 +385,18 @@ namespace PasswordManagerAccess.ProtonPass
                 // Save for the next session
                 await StoreSession(session.Id, session.AccessToken, session.RefreshToken, storage).ConfigureAwait(false);
 
-                // Make a new client with the updated headers
-                return (
-                    true,
-                    rest.CloneWithHeaders(
-                        new Dictionary<string, string> { ["X-Pm-Uid"] = session.Id, ["Authorization"] = $"Bearer {session.AccessToken}" }
-                    )
-                );
+                // Update the session auth
+                rest.AddOrUpdateHeader("X-Pm-Uid", session.Id);
+                rest.AddOrUpdateHeader("Authorization", $"Bearer {session.AccessToken}");
+
+                return true;
             }
             catch (TokenExpiredException)
             {
                 // The refresh token is expired as well. Erase everything and start from scratch.
                 await StoreSession(sessionId, null, null, storage).ConfigureAwait(false);
 
-                return (false, rest);
+                return false;
             }
         }
 
@@ -800,7 +783,7 @@ namespace PasswordManagerAccess.ProtonPass
                 // Try to parse the error object from the response
                 var errorCode = 0;
                 var errorText = "";
-                if (RestClient.TryDeserialize<Model.Error>(response.Content, out var error))
+                if (RestClient.TryDeserialize<Model.Error>(response.Content ?? "", out var error))
                 {
                     errorCode = error!.Code;
                     errorText = error.Text ?? "";
