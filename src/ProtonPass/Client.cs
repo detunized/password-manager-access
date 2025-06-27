@@ -346,7 +346,7 @@ namespace PasswordManagerAccess.ProtonPass
             throw new InternalErrorException("Failed to login");
         }
 
-        private static async Task DoMultiFactorAuth(
+        internal static async Task DoMultiFactorAuth(
             Model.Mfa mfa,
             IAsyncUi ui,
             IAsyncSecureStorage storage,
@@ -371,7 +371,7 @@ namespace PasswordManagerAccess.ProtonPass
             throw new InternalErrorException($"Unknown 2FA method {mfa.Enabled}");
         }
 
-        private static async Task DoTotpMultiFactorAuth(
+        internal static async Task DoTotpMultiFactorAuth(
             Model.Mfa mfa,
             IAsyncUi ui,
             IAsyncSecureStorage storage,
@@ -408,7 +408,7 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
-        private static Task DoFido2MultiFactorAuth(
+        internal static Task DoFido2MultiFactorAuth(
             Model.Mfa mfa,
             IAsyncUi ui,
             IAsyncSecureStorage storage,
@@ -575,7 +575,7 @@ namespace PasswordManagerAccess.ProtonPass
             return response.Data!.SrpData;
         }
 
-        private static async Task<Model.Auth> SubmitSrpProof(
+        internal static async Task<Model.Auth> SubmitSrpProof(
             string username,
             string srpSession,
             Srp.Proofs proof,
@@ -601,7 +601,7 @@ namespace PasswordManagerAccess.ProtonPass
             return response.Data!;
         }
 
-        private static async Task SubmitExtraSrpProof(string srpSession, Srp.Proofs proof, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task SubmitExtraSrpProof(string srpSession, Srp.Proofs proof, RestClient rest, CancellationToken cancellationToken)
         {
             var response = await rest.PostJsonAsync<Model.Response>(
                     "pass/v1/user/srp/auth",
@@ -618,7 +618,7 @@ namespace PasswordManagerAccess.ProtonPass
                 throw MakeError(response);
         }
 
-        private static async Task<VaultInfo> DownloadVaultInfo(
+        internal static async Task<VaultInfo> DownloadVaultInfo(
             Model.Share vaultShare,
             Model.UserKey primaryKey,
             string keyPassphrase,
@@ -643,7 +643,7 @@ namespace PasswordManagerAccess.ProtonPass
             return new VaultInfo(vaultShare.Id, vaultInfo.Name, vaultInfo.Description) { VaultKey = vaultKey };
         }
 
-        private static async Task<Vault> DownloadVaultContent(
+        internal static async Task<Vault> DownloadVaultContent(
             Model.Share vaultShare,
             Model.UserKey primaryKey,
             string keyPassphrase,
@@ -661,7 +661,7 @@ namespace PasswordManagerAccess.ProtonPass
             return new Vault(vaultInfo, accounts.ToArray());
         }
 
-        private static async Task<List<Account>> DownloadVaultItems(
+        internal static async Task<List<Account>> DownloadVaultItems(
             string vaultId,
             byte[] vaultKey,
             RestClient rest,
@@ -823,7 +823,7 @@ namespace PasswordManagerAccess.ProtonPass
             return vault.LastToken ?? "";
         }
 
-        private static string DeriveKeyPassphrase(string password, string? saltBase64)
+        internal static string DeriveKeyPassphrase(string password, string? saltBase64)
         {
             if (saltBase64.IsNullOrEmpty())
                 return password;
@@ -831,17 +831,17 @@ namespace PasswordManagerAccess.ProtonPass
             return DeriveKeyPassphrase(password, saltBase64.Decode64());
         }
 
-        private static string DeriveKeyPassphrase(string password, byte[] salt)
+        internal static string DeriveKeyPassphrase(string password, byte[] salt)
         {
             return Srp.BCryptHashPassword(password, Srp.EncodeBase64(salt, 16)).Substring(29);
         }
 
-        private static async Task<byte[]> DecryptMessage(string messageBase64, string privateKey, string passphrase)
+        internal static async Task<byte[]> DecryptMessage(string messageBase64, string privateKey, string passphrase)
         {
             return await DecryptMessage(messageBase64.Decode64(), privateKey, passphrase).ConfigureAwait(false);
         }
 
-        private static async Task<byte[]> DecryptMessage(byte[] message, string privateKey, string passphrase)
+        internal static async Task<byte[]> DecryptMessage(byte[] message, string privateKey, string passphrase)
         {
             using var pgp = new PGP(new EncryptionKeys(privateKey, passphrase));
             using var inputStream = new MemoryStream(message);
