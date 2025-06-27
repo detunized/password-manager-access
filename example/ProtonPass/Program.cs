@@ -130,57 +130,83 @@ namespace PasswordManagerAccess.Example.ProtonPass
             }
         }
 
-        public static void Main(string[] args)
+        private static void DumpVaults(Vault[] vaults)
+        {
+            foreach (var vault in vaults)
+                DumpVault(vault);
+        }
+
+        private static void DumpVault(Vault vault)
+        {
+            Console.WriteLine(
+                "Vault: {0}\n" + "Description: {1}\n" + "ID: {2}\n" + "Accounts: ({3})\n",
+                vault.Info.Name,
+                vault.Info.Description,
+                vault.Info.Id,
+                vault.Accounts.Length
+            );
+
+            for (var i = 0; i < vault.Accounts.Length; ++i)
+            {
+                var account = vault.Accounts[i];
+
+                Console.WriteLine(
+                    "\n"
+                        + "{0}:\n"
+                        + "          id: {1}\n"
+                        + "        name: {2}\n"
+                        + "       email: {3}\n"
+                        + "    username: {4}\n"
+                        + "    password: {5}\n"
+                        + "        totp: {6}\n"
+                        + "        note: {7}\n"
+                        + "        urls: ({8})",
+                    i + 1,
+                    account.Id,
+                    account.Name,
+                    account.Email,
+                    account.Username,
+                    account.Password,
+                    account.Totp,
+                    account.Note,
+                    account.Urls.Length
+                );
+
+                for (var j = 0; j < account.Urls.Length; ++j)
+                    Console.WriteLine("           {0}: {1}", j + 1, account.Urls[j]);
+            }
+        }
+
+        public static async Task Main(string[] args)
         {
             var config = Util.ReadConfig();
             var extraPassword = config.GetValueOrDefault("extra-password", "");
 
             try
             {
-                var vaults = Vault
-                    .OpenAll(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage())
-                    .GetAwaiter()
-                    .GetResult();
+                // Uncomment the following line to use the old way of opening vaults.
+                // This is not recommended as it does not support the new Proton Pass features.
+                // var vaults = await Client
+                //     .OpenAll(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage())
+                //     .ConfigureAwait(false);
+                // DumpVaults(vaults);
 
-                foreach (var vault in vaults)
+                var cts = new CancellationTokenSource();
+                Session session = null;
+
+                try
                 {
-                    Console.WriteLine(
-                        "Vault: {0}\n" + "Description: {1}\n" + "ID: {2}\n" + "Accounts: ({3})\n",
-                        vault.Name,
-                        vault.Description,
-                        vault.Id,
-                        vault.Accounts.Length
-                    );
+                    session = await Client
+                        .LogIn(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage(), cts.Token)
+                        .ConfigureAwait(false);
 
-                    for (var i = 0; i < vault.Accounts.Length; ++i)
-                    {
-                        var account = vault.Accounts[i];
-
-                        Console.WriteLine(
-                            "\n"
-                                + "{0}:\n"
-                                + "          id: {1}\n"
-                                + "        name: {2}\n"
-                                + "       email: {3}\n"
-                                + "    username: {4}\n"
-                                + "    password: {5}\n"
-                                + "        totp: {6}\n"
-                                + "        note: {7}\n"
-                                + "        urls: ({8})",
-                            i + 1,
-                            account.Id,
-                            account.Name,
-                            account.Email,
-                            account.Username,
-                            account.Password,
-                            account.Totp,
-                            account.Note,
-                            account.Urls.Length
-                        );
-
-                        for (var j = 0; j < account.Urls.Length; ++j)
-                            Console.WriteLine("           {0}: {1}", j + 1, account.Urls[j]);
-                    }
+                    var vaults = await Client.DownloadAllVaults(session, cts.Token).ConfigureAwait(false);
+                    DumpVaults(vaults);
+                }
+                finally
+                {
+                    if (session != null)
+                        await Client.LogOut(session, cts.Token).ConfigureAwait(false);
                 }
             }
             catch (BaseException e)

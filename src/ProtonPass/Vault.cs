@@ -10,40 +10,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ProtonPass
 {
-    public class Vault
-    {
-        public string Id { get; internal set; } = "";
-        public string Name { get; internal set; } = "";
-        public string Description { get; internal set; } = "";
-        public Account[] Accounts { get; internal set; } = Array.Empty<Account>();
+    public record VaultInfo(string Id, string Name, string Description);
 
-        // TODO: Consider removing the = default on the cancellation token
-        public static async Task<Vault[]> OpenAll(
-            string username,
-            string password,
-            IAsyncUi ui,
-            IAsyncSecureStorage storage,
-            CancellationToken cancellationToken = default
-        )
-        {
-            using var transport = new RestTransport();
-            return await OpenAll(username, password, ui, storage, transport, cancellationToken).ConfigureAwait(false);
-        }
-
-        //
-        // Internal
-        //
-
-        internal static async Task<Vault[]> OpenAll(
-            string username,
-            string password,
-            IAsyncUi ui,
-            IAsyncSecureStorage storage,
-            IRestTransport transport,
-            CancellationToken cancellationToken
-        )
-        {
-            return await Client.OpenAll(username, password, ui, storage, transport, cancellationToken).ConfigureAwait(false);
-        }
-    }
+    public record Vault(VaultInfo Info, Account[] Accounts);
 }

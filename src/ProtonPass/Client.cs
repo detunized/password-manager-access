@@ -16,10 +16,83 @@ using PgpCore;
 
 namespace PasswordManagerAccess.ProtonPass
 {
-    internal static class Client
+    public static class Client
     {
-        // TODO: Refactor this function once done with the logic!
+        //
+        // Single shot
+        //
+
         public static async Task<Vault[]> OpenAll(
+            string username,
+            string password,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            CancellationToken cancellationToken
+        )
+        {
+            var session = await LogIn(username, password, ui, storage, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await DownloadAllVaults(session, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                await LogOut(session, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        //
+        // LogIn, Download, LogOut sequence
+        //
+
+        public static async Task<Session> LogIn(
+            string username,
+            string password,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            CancellationToken cancellationToken
+        )
+        {
+            var transport = new RestTransport();
+            try
+            {
+                return await LogIn(username, password, ui, storage, transport, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Only dispose the transport if we got an exception, otherwise it's stored in the session.
+                transport.Dispose();
+                throw;
+            }
+        }
+
+        public static async Task<Vault[]> DownloadAllVaults(Session session, CancellationToken cancellationToken)
+        {
+            // 4. Get all vault shares info
+            var vaultShares = await RequestAllVaultShares(session.Rest, cancellationToken).ConfigureAwait(false);
+            if (vaultShares.Length == 0)
+                throw new InternalErrorException("Expected at least one share");
+
+            // 5. Initiate the parallel downloads
+            var downloads = vaultShares
+                .Select(share => DownloadVaultContent(share, session.PrimaryKey, session.KeyPassphrase, session.Rest, cancellationToken))
+                .ToArray();
+
+            // 6. Wait for all the downloads to finish
+            return await Task.WhenAll(downloads).ConfigureAwait(false);
+        }
+
+        public static Task LogOut(Session session, CancellationToken cancellationToken)
+        {
+            session.Dispose();
+            return Task.CompletedTask;
+        }
+
+        //
+        // Internal
+        //
+
+        internal static async Task<Session> LogIn(
             string username,
             string password,
             IAsyncUi ui,
@@ -87,7 +160,21 @@ namespace PasswordManagerAccess.ProtonPass
             {
                 try
                 {
-                    return await DownloadAllVaults(password, rest, cancellationToken).ConfigureAwait(false);
+                    // 1. Get the key salts
+                    // At this point we're very likely to fail, so we do this first. It seems that when an access token is a bit old and is still good
+                    // for downloading some of the data, it's not good enough to get the salts. We need a fresh one.
+                    var salts = await RequestKeySalts(rest, cancellationToken).ConfigureAwait(false);
+
+                    // 2. Get the user info that contains the user keys
+                    var primaryKey = await RequestUserPrimaryKey(rest, cancellationToken).ConfigureAwait(false);
+
+                    // 3. Derive the key passphrase
+                    // The salt seems to be optional in case of the older accounts. Not sure how to test this IRL.
+                    // When there's no salt, the master password is the key password.
+                    var keyPassphrase = DeriveKeyPassphrase(password, salts.FirstOrDefault(x => x.Id == primaryKey.Id)?.Salt);
+
+                    // Done. This should be enough to download the vaults or items.
+                    return new Session(primaryKey, keyPassphrase, rest, transport);
                 }
                 catch (TokenExpiredException)
                 {
@@ -138,10 +225,6 @@ namespace PasswordManagerAccess.ProtonPass
 
             throw new InternalErrorException($"Failed to download the vault: {errorDetails}");
         }
-
-        //
-        // Internal
-        //
 
         // Side effects: modifies the storage, updates the headers on the rest client, the UI.
         internal static async Task FullLoginAndUpdate(
@@ -525,10 +608,10 @@ namespace PasswordManagerAccess.ProtonPass
             // 1. Get the key salts
             // At this point we're very likely to fail, so we do this first. It seems that when an access token is a bit old and is still good
             // for downloading some of the data, it's not good enough to get the salts. We need a fresh one.
-            var salts = await RequestKeySalts(rest, cancellationToken);
+            var salts = await RequestKeySalts(rest, cancellationToken).ConfigureAwait(false);
 
             // 2. Get the user info that contains the user keys
-            var primaryKey = await RequestUserPrimaryKey(rest, cancellationToken);
+            var primaryKey = await RequestUserPrimaryKey(rest, cancellationToken).ConfigureAwait(false);
 
             // 3. Derive the key passphrase
             // The salt seems to be optional in case of the older accounts. Not sure how to test this IRL.
@@ -536,7 +619,7 @@ namespace PasswordManagerAccess.ProtonPass
             var keyPassphrase = DeriveKeyPassphrase(password, salts.FirstOrDefault(x => x.Id == primaryKey.Id)?.Salt);
 
             // 4. Get all vault shares info
-            var vaultShares = await RequestAllVaultShares(rest, cancellationToken);
+            var vaultShares = await RequestAllVaultShares(rest, cancellationToken).ConfigureAwait(false);
             if (vaultShares.Length == 0)
                 throw new InternalErrorException("Expected at least one share");
 
@@ -556,7 +639,7 @@ namespace PasswordManagerAccess.ProtonPass
         )
         {
             // 1. Get the keys for the share
-            var latestShareKey = await RequestShareKey(vaultShare, rest, cancellationToken);
+            var latestShareKey = await RequestShareKey(vaultShare, rest, cancellationToken).ConfigureAwait(false);
 
             // 2. Make sure the user has a matching key
             if (latestShareKey.UserKeyId != primaryKey.Id)
@@ -580,13 +663,7 @@ namespace PasswordManagerAccess.ProtonPass
             } while (nextBatchMarker != "");
 
             // 6. Done
-            return new Vault
-            {
-                Id = vaultShare.Id, // TODO: Should we use VaultId instead? What's the difference?
-                Name = vaultInfo.Name,
-                Description = vaultInfo.Description,
-                Accounts = accounts.ToArray(),
-            };
+            return new Vault(new VaultInfo(vaultShare.Id, vaultInfo.Name, vaultInfo.Description), accounts.ToArray());
         }
 
         internal static async Task<Model.KeySalt[]> RequestKeySalts(RestClient rest, CancellationToken cancellationToken)
