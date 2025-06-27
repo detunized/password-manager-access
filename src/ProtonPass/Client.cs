@@ -97,6 +97,20 @@ namespace PasswordManagerAccess.ProtonPass
             return await Task.WhenAll(downloads).ConfigureAwait(false);
         }
 
+        public static async Task<Vault> DownloadVault(VaultInfo vaultInfo, Session session, CancellationToken cancellationToken)
+        {
+            var items = await DownloadVaultItems(vaultInfo.Id, vaultInfo.VaultKey, session.Rest, cancellationToken).ConfigureAwait(false);
+            return new Vault(vaultInfo, items.ToArray());
+        }
+
+        public static async Task<Vault> DownloadVault(string vaultId, Session session, CancellationToken cancellationToken)
+        {
+            var vaultShare = await RequestVaultShare(vaultId, session.Rest, cancellationToken).ConfigureAwait(false);
+            var vaultInfo = await DownloadVaultInfo(vaultShare, session.PrimaryKey, session.KeyPassphrase, session.Rest, cancellationToken)
+                .ConfigureAwait(false);
+            return await DownloadVault(vaultInfo, session, cancellationToken).ConfigureAwait(false);
+        }
+
         public static Task LogOut(Session session, CancellationToken cancellationToken)
         {
             session.Dispose();
@@ -710,7 +724,7 @@ namespace PasswordManagerAccess.ProtonPass
 
         internal static async Task<Model.Share[]> RequestAllVaultShares(RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.GetAsync<Model.ShareRoot>("pass/v1/share", cancellationToken).ConfigureAwait(false);
+            var response = await rest.GetAsync<Model.AllShares>("pass/v1/share", cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -718,6 +732,15 @@ namespace PasswordManagerAccess.ProtonPass
 
             // Filter out only the vault shares
             return shares.Where(x => x.TargetType == 1).ToArray();
+        }
+
+        internal static async Task<Model.Share> RequestVaultShare(string vaultId, RestClient rest, CancellationToken cancellationToken)
+        {
+            var response = await rest.GetAsync<Model.SingleShare>($"pass/v1/share/{vaultId}", cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            return response.Data!.Share;
         }
 
         internal static async Task<Model.ShareKey> RequestShareKey(string shareId, RestClient rest, CancellationToken cancellationToken)
