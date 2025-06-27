@@ -66,19 +66,34 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
+        public static async Task<VaultInfo[]> ListAllVaults(Session session, CancellationToken cancellationToken)
+        {
+            var vaultShares = await RequestAllVaultShares(session.Rest, cancellationToken).ConfigureAwait(false);
+
+            // Initiate the parallel downloads
+            var downloads = vaultShares
+                .Select(share => DownloadVaultInfo(share, session.PrimaryKey, session.KeyPassphrase, session.Rest, cancellationToken))
+                .ToArray();
+
+            // Wait for all the downloads to finish
+            return await Task.WhenAll(downloads).ConfigureAwait(false);
+        }
+
         public static async Task<Vault[]> DownloadAllVaults(Session session, CancellationToken cancellationToken)
         {
-            // 4. Get all vault shares info
+            // TODO: See if it's possible to refactor this function to use the ListAllVaults() above.
+
+            // 1. Get all vault shares info
             var vaultShares = await RequestAllVaultShares(session.Rest, cancellationToken).ConfigureAwait(false);
             if (vaultShares.Length == 0)
                 throw new InternalErrorException("Expected at least one share");
 
-            // 5. Initiate the parallel downloads
+            // 2. Initiate the parallel downloads
             var downloads = vaultShares
                 .Select(share => DownloadVaultContent(share, session.PrimaryKey, session.KeyPassphrase, session.Rest, cancellationToken))
                 .ToArray();
 
-            // 6. Wait for all the downloads to finish
+            // 3. Wait for all the downloads to finish
             return await Task.WhenAll(downloads).ConfigureAwait(false);
         }
 
@@ -603,34 +618,7 @@ namespace PasswordManagerAccess.ProtonPass
                 throw MakeError(response);
         }
 
-        internal static async Task<Vault[]> DownloadAllVaults(string password, RestClient rest, CancellationToken cancellationToken)
-        {
-            // 1. Get the key salts
-            // At this point we're very likely to fail, so we do this first. It seems that when an access token is a bit old and is still good
-            // for downloading some of the data, it's not good enough to get the salts. We need a fresh one.
-            var salts = await RequestKeySalts(rest, cancellationToken).ConfigureAwait(false);
-
-            // 2. Get the user info that contains the user keys
-            var primaryKey = await RequestUserPrimaryKey(rest, cancellationToken).ConfigureAwait(false);
-
-            // 3. Derive the key passphrase
-            // The salt seems to be optional in case of the older accounts. Not sure how to test this IRL.
-            // When there's no salt, the master password is the key password.
-            var keyPassphrase = DeriveKeyPassphrase(password, salts.FirstOrDefault(x => x.Id == primaryKey.Id)?.Salt);
-
-            // 4. Get all vault shares info
-            var vaultShares = await RequestAllVaultShares(rest, cancellationToken).ConfigureAwait(false);
-            if (vaultShares.Length == 0)
-                throw new InternalErrorException("Expected at least one share");
-
-            // 5. Initiate the parallel downloads
-            var downloads = vaultShares.Select(share => DownloadVaultContent(share, primaryKey, keyPassphrase, rest, cancellationToken)).ToArray();
-
-            // 6. Wait for all the downloads to finish
-            return await Task.WhenAll(downloads).ConfigureAwait(false);
-        }
-
-        private static async Task<Vault> DownloadVaultContent(
+        private static async Task<VaultInfo> DownloadVaultInfo(
             Model.Share vaultShare,
             Model.UserKey primaryKey,
             string keyPassphrase,
@@ -639,7 +627,7 @@ namespace PasswordManagerAccess.ProtonPass
         )
         {
             // 1. Get the keys for the share
-            var latestShareKey = await RequestShareKey(vaultShare, rest, cancellationToken).ConfigureAwait(false);
+            var latestShareKey = await RequestShareKey(vaultShare.Id, rest, cancellationToken).ConfigureAwait(false);
 
             // 2. Make sure the user has a matching key
             if (latestShareKey.UserKeyId != primaryKey.Id)
@@ -651,6 +639,35 @@ namespace PasswordManagerAccess.ProtonPass
             // 4. Decrypt vault info
             var vaultInfo = DecryptVaultInfo(vaultShare, vaultKey);
 
+            // 6. Done
+            return new VaultInfo(vaultShare.Id, vaultInfo.Name, vaultInfo.Description) { VaultKey = vaultKey };
+        }
+
+        private static async Task<Vault> DownloadVaultContent(
+            Model.Share vaultShare,
+            Model.UserKey primaryKey,
+            string keyPassphrase,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
+            // 1. Download the vault info
+            var vaultInfo = await DownloadVaultInfo(vaultShare, primaryKey, keyPassphrase, rest, cancellationToken).ConfigureAwait(false);
+
+            // 2. Get all the vault items
+            var accounts = await DownloadVaultItems(vaultInfo.Id, vaultInfo.VaultKey, rest, cancellationToken);
+
+            // 3. Done
+            return new Vault(vaultInfo, accounts.ToArray());
+        }
+
+        private static async Task<List<Account>> DownloadVaultItems(
+            string vaultId,
+            byte[] vaultKey,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
             var accounts = new List<Account>();
             var nextBatchMarker = "";
 
@@ -658,12 +675,11 @@ namespace PasswordManagerAccess.ProtonPass
             do
             {
                 // One batch at a time
-                nextBatchMarker = await GetVaultNextItems(vaultShare.Id, vaultKey, nextBatchMarker, accounts, rest, cancellationToken)
+                nextBatchMarker = await GetVaultNextItems(vaultId, vaultKey, nextBatchMarker, accounts, rest, cancellationToken)
                     .ConfigureAwait(false);
             } while (nextBatchMarker != "");
 
-            // 6. Done
-            return new Vault(new VaultInfo(vaultShare.Id, vaultInfo.Name, vaultInfo.Description), accounts.ToArray());
+            return accounts;
         }
 
         internal static async Task<Model.KeySalt[]> RequestKeySalts(RestClient rest, CancellationToken cancellationToken)
@@ -704,9 +720,9 @@ namespace PasswordManagerAccess.ProtonPass
             return shares.Where(x => x.TargetType == 1).ToArray();
         }
 
-        internal static async Task<Model.ShareKey> RequestShareKey(Model.Share vaultShare, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Model.ShareKey> RequestShareKey(string shareId, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.GetAsync<Model.ShareKeysRoot>($"pass/v1/share/{vaultShare.Id}/key", cancellationToken).ConfigureAwait(false);
+            var response = await rest.GetAsync<Model.ShareKeysRoot>($"pass/v1/share/{shareId}/key", cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessful)
                 throw MakeError(response);

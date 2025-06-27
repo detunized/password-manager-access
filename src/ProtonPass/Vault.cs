@@ -3,14 +3,12 @@
 
 #nullable enable
 
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using PasswordManagerAccess.Common;
-
 namespace PasswordManagerAccess.ProtonPass
 {
-    public record VaultInfo(string Id, string Name, string Description);
+    public record VaultInfo(string Id, string Name, string Description)
+    {
+        internal byte[] VaultKey { get; init; } = [];
+    }
 
     public record Vault(VaultInfo Info, Account[] Accounts);
 }

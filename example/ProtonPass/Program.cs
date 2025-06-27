@@ -136,45 +136,59 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 DumpVault(vault);
         }
 
+        private static void DumpVaultInfos(VaultInfo[] vaultInfos)
+        {
+            foreach (var info in vaultInfos)
+                DumpVaultInfo(info);
+        }
+
         private static void DumpVault(Vault vault)
         {
+            DumpVaultInfo(vault.Info);
+            DumpAccounts(vault.Accounts);
+        }
+
+        private static void DumpVaultInfo(VaultInfo info)
+        {
             Console.WriteLine(
-                "Vault: {0}\n" + "Description: {1}\n" + "ID: {2}\n" + "Accounts: ({3})\n",
-                vault.Info.Name,
-                vault.Info.Description,
-                vault.Info.Id,
-                vault.Accounts.Length
+                """
+                      Vault: {0}
+                Description: {1}
+                         ID: {2}
+                """,
+                info.Name,
+                info.Description,
+                info.Id
+            );
+        }
+
+        private static void DumpAccounts(Account[] accounts)
+        {
+            for (var i = 0; i < accounts.Length; ++i)
+            {
+                var account = accounts[i];
+                DumpAccount($"{i + 1}", account);
+            }
+        }
+
+        private static void DumpAccount(string prefix, Account account)
+        {
+            Console.WriteLine(
+                $"""
+                {prefix}:
+                          id: {account.Id}
+                        name: {account.Name}
+                       email: {account.Email}
+                    username: {account.Username}
+                    password: {account.Password}
+                        totp: {account.Totp}
+                        note: {account.Note}
+                        urls: ({account.Urls.Length})
+                """
             );
 
-            for (var i = 0; i < vault.Accounts.Length; ++i)
-            {
-                var account = vault.Accounts[i];
-
-                Console.WriteLine(
-                    "\n"
-                        + "{0}:\n"
-                        + "          id: {1}\n"
-                        + "        name: {2}\n"
-                        + "       email: {3}\n"
-                        + "    username: {4}\n"
-                        + "    password: {5}\n"
-                        + "        totp: {6}\n"
-                        + "        note: {7}\n"
-                        + "        urls: ({8})",
-                    i + 1,
-                    account.Id,
-                    account.Name,
-                    account.Email,
-                    account.Username,
-                    account.Password,
-                    account.Totp,
-                    account.Note,
-                    account.Urls.Length
-                );
-
-                for (var j = 0; j < account.Urls.Length; ++j)
-                    Console.WriteLine("           {0}: {1}", j + 1, account.Urls[j]);
-            }
+            for (var j = 0; j < account.Urls.Length; ++j)
+                Console.WriteLine($"           {j + 1}: {account.Urls[j]}");
         }
 
         public static async Task Main(string[] args)
@@ -199,6 +213,9 @@ namespace PasswordManagerAccess.Example.ProtonPass
                     session = await Client
                         .LogIn(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage(), cts.Token)
                         .ConfigureAwait(false);
+
+                    var vaultInfos = await Client.ListAllVaults(session, cts.Token).ConfigureAwait(false);
+                    DumpVaultInfos(vaultInfos);
 
                     var vaults = await Client.DownloadAllVaults(session, cts.Token).ConfigureAwait(false);
                     DumpVaults(vaults);
