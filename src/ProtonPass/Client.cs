@@ -106,7 +106,7 @@ namespace PasswordManagerAccess.ProtonPass
 
         public static async Task<OneOf<Vault, NoVault>> DownloadVault(string vaultId, Session session, CancellationToken cancellationToken)
         {
-            var maybeVaultInfo = await DownloadVaultInfo(vaultId, session, cancellationToken).ConfigureAwait(false);
+            var maybeVaultInfo = await GetOrDownloadVaultInfo(vaultId, session, cancellationToken).ConfigureAwait(false);
             if (maybeVaultInfo.IsT1)
                 return maybeVaultInfo.AsT1; // NoVault
 
@@ -120,22 +120,17 @@ namespace PasswordManagerAccess.ProtonPass
             CancellationToken cancellationToken
         )
         {
-            // TODO: DRY up!
-            // TODO: Cache the vault info!
+            var maybeVaultInfo = await GetOrDownloadVaultInfo(vaultId, session, cancellationToken).ConfigureAwait(false);
+            if (maybeVaultInfo.IsT1)
+                return maybeVaultInfo.AsT1; // NoVault
 
-            var maybeVaultShare = await RequestVaultShare(vaultId, session.Rest, cancellationToken).ConfigureAwait(false);
-            if (maybeVaultShare.IsT1)
-                return maybeVaultShare.AsT1;
-
-            var vaultInfo = await DownloadVaultInfo(maybeVaultShare.AsT0, session.PrimaryKey, session.KeyPassphrase, session.Rest, cancellationToken)
-                .ConfigureAwait(false);
-
+            var vaultInfo = maybeVaultInfo.AsT0;
             var maybeItem = await DownloadVaultItem(vaultInfo.Id, itemId, vaultInfo.VaultKey, session.Rest, cancellationToken).ConfigureAwait(false);
             return maybeItem.Index switch
             {
                 0 => maybeItem.AsT0, // Account
                 1 => maybeItem.AsT1, // NoItem
-                _ => throw new InternalErrorException($"Logic error: unexpected item type {maybeItem.Index}"),
+                _ => throw new InternalErrorException($"Logic error: unexpected OneOf index {maybeItem.Index}"),
             };
         }
 
@@ -148,6 +143,26 @@ namespace PasswordManagerAccess.ProtonPass
         //
         // Internal
         //
+
+        internal static async Task<OneOf<VaultInfo, NoVault>> GetOrDownloadVaultInfo(
+            string vaultId,
+            Session session,
+            CancellationToken cancellationToken
+        )
+        {
+            // See if we have the vault info in the cache already
+            if (!session.VaultInfos.TryGetValue(vaultId, out var vaultInfo))
+            {
+                var maybeVaultInfo = await DownloadVaultInfo(vaultId, session, cancellationToken).ConfigureAwait(false);
+                if (maybeVaultInfo.IsT1)
+                    return maybeVaultInfo.AsT1; // NoVault
+
+                vaultInfo = maybeVaultInfo.AsT0;
+                session.VaultInfos[vaultId] = vaultInfo;
+            }
+
+            return vaultInfo;
+        }
 
         internal static async Task<Session> LogIn(
             string username,

@@ -3,6 +3,7 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ProtonPass;
@@ -13,6 +14,8 @@ public sealed class Session : IDisposable
     internal string KeyPassphrase { get; }
     internal RestClient Rest { get; }
     internal IRestTransport Transport { get; }
+
+    internal Dictionary<string, VaultInfo> VaultInfos { get; } = [];
 
     internal Session(Model.UserKey primaryKey, string keyPassphrase, RestClient rest, IRestTransport transport)
     {
