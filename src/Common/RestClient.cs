@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -813,10 +813,10 @@ namespace PasswordManagerAccess.Common
 
         // TODO: Find a better place for this!
         // TODO: Consider making it non-static and deserializing with the RestClient settings
-        public static bool TryDeserialize<T>(string json, out T? result)
+        public static bool TryDeserialize<T>(string json, [NotNullWhen(true)] out T? result)
             where T : class => TryDeserialize(json, out result, out _);
 
-        public static bool TryDeserialize<T>(string json, out T? result, out System.Text.Json.JsonException? error)
+        public static bool TryDeserialize<T>(string json, [NotNullWhen(true)] out T? result, out System.Text.Json.JsonException? error)
             where T : class
         {
             try

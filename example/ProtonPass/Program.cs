@@ -191,6 +191,15 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 Console.WriteLine($"           {j + 1}: {account.Urls[j]}");
         }
 
+        enum DemoMode
+        {
+            SingleItem,
+            SingleVault,
+            AllVaultsOneByOneByInfo,
+            AllVaultsOneByOneById,
+            AllVaults,
+        }
+
         public static async Task Main(string[] args)
         {
             var config = Util.ReadConfig();
@@ -208,17 +217,77 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 var cts = new CancellationTokenSource();
                 Session session = null;
 
+                var demoMode = DemoMode.AllVaults;
+
                 try
                 {
                     session = await Client
                         .LogIn(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage(), cts.Token)
                         .ConfigureAwait(false);
 
-                    var vaultInfos = await Client.ListAllVaults(session, cts.Token).ConfigureAwait(false);
-                    DumpVaultInfos(vaultInfos);
+                    switch (demoMode)
+                    {
+                        case DemoMode.SingleItem:
+                            {
+                                var maybeAccount = await Client.GetItem(
+                                    "TsQKDDVRzzAm2FnkEjUMXZbo6qDa2gndi88rMEghRZfRYRnzezXbxO3Vhr9ihh-4_dP9Ikrp3ssTlReX4zI2ow==",
+                                    "DyIGqZSxf42a3n2qlfGpqVfiPHvoWM56DuoJW5mShsGxOxD32jEp_S3MLIS9jihx2-edhoNKzA3q5e-q4QvitQ==",
+                                    session,
+                                    cts.Token
+                                );
 
-                    var vaults = await Client.DownloadAllVaults(session, cts.Token).ConfigureAwait(false);
-                    DumpVaults(vaults);
+                                maybeAccount.Switch(
+                                    account => DumpAccount("Account", account),
+                                    noItem => Console.WriteLine($"NoItem: {noItem}"),
+                                    noVault => Console.WriteLine($"NoVault: {noVault}")
+                                );
+                            }
+
+                            break;
+                        case DemoMode.SingleVault:
+                            {
+                                var maybeVault = await Client
+                                    .DownloadVault(
+                                        "TsQKDDVRzzAm2FnkEjUMXZbo6qDa2gndi88rMEghRZfRYRnzezXbxO3Vhr9ihh-4_dP9Ikrp3ssTlReX4zI2ow==",
+                                        session,
+                                        cts.Token
+                                    )
+                                    .ConfigureAwait(false);
+
+                                maybeVault.Switch(DumpVault, noVault => Console.WriteLine($"NoVault: {noVault}"));
+                            }
+                            break;
+                        case DemoMode.AllVaultsOneByOneByInfo:
+                            {
+                                var vaultInfos = await Client.ListAllVaults(session, cts.Token).ConfigureAwait(false);
+                                DumpVaultInfos(vaultInfos);
+
+                                foreach (var vaultInfo in vaultInfos)
+                                {
+                                    var vault = await Client.DownloadVault(vaultInfo, session, cts.Token).ConfigureAwait(false);
+                                    DumpVault(vault);
+                                }
+                            }
+                            break;
+                        case DemoMode.AllVaultsOneByOneById:
+                            {
+                                var vaultInfos = await Client.ListAllVaults(session, cts.Token).ConfigureAwait(false);
+                                DumpVaultInfos(vaultInfos);
+
+                                foreach (var vaultInfo in vaultInfos)
+                                {
+                                    var maybeVault = await Client.DownloadVault(vaultInfo.Id, session, cts.Token).ConfigureAwait(false);
+                                    maybeVault.Switch(DumpVault, noVault => Console.WriteLine($"NoVault: {noVault}"));
+                                }
+                            }
+                            break;
+                        case DemoMode.AllVaults:
+                            {
+                                var vaults = await Client.DownloadAllVaults(session, cts.Token).ConfigureAwait(false);
+                                DumpVaults(vaults);
+                            }
+                            break;
+                    }
                 }
                 finally
                 {
