@@ -1,5 +1,36 @@
 # Upgrade notes
 
+## To 25.0.0
+
+Similar to v24.0.0. This release introduces an incompatible API change for ProtonPass: the previous
+single-call `Vault.OpenAll` method has been split into three separate methods to allow multiple
+downloads per login. Instead of calling `Vault.OpenAll` which was removed, you should now use
+`Client.LogIn` to authenticate and obtain a session object, `Client.ListAllVaults` to fetch all the
+vaults, and `Client.LogOut` to clean up resources when finished. This change allows for more flexible
+session management and better error handling throughout the authentication and vault retrieval
+process.
+
+Additionally, two new methods have been introduced to provide more granular control over vault access:
+`Client.ListAllVaults` which returns metadata about all available vaults without downloading their
+contents, and `Client.DownloadVault` which comes in two variants - one accepting a `VaultInfo` object
+returned by `Client.ListAllVaults`, and another accepting a vault ID string. These methods allow you
+to selectively download individual vaults rather than fetching all vaults at once, which can be more
+efficient when you only need access to specific vaults. Both variants of `Client.DownloadVault` can be
+called multiple times with an existing session until the session expires.
+
+`Client.DownloadVault` with the string ID returns a `OneOf<Vault, NoVault>` object and returns
+`NoVault` in case of an invalid vault ID. The `VaultInfo` variant throws an exception in case of
+an invalid vault info.
+
+Additionally, a new method `Client.GetItem` has been introduced, allowing you to fetch a single item
+from one of the vaults by providing two IDs using an existing session. This is useful for scenarios
+where you only need access to a specific item without downloading the entire vault. `Client.GetItem`
+can be called multiple times until the session expired. The session refresh functionality will be
+introduced in further releases.
+
+`Client.GetItem` returns a `OneOf<Account, NoItem, NoVault>` object. See `Program.cs` for the
+demonstration of all the variants in action.
+
 ## To 24.0.0
 
 Similar to v23.0.0. This release introduces an incompatible API change for ZohoVault: the previous
@@ -20,7 +51,6 @@ access to a specific item without downloading the entire vault. `Client.GetItem`
 multiple times until the session expired. The session refresh functionality will be introduced in
 further releases.
 
-
 If you prefer the previous single-call approach, an easy replacement is provided: `Client.Open`.
 This method wraps the new sequence (`LogIn`, `DownloadVault`, and `LogOut`) into a single call,
 closely matching the old `Vault.Open` behavior for convenience. The `Vault` is a simple POD type now
@@ -28,8 +58,6 @@ with no further functionality. Please note that this method unlike `Bitwarden.Cl
 `Settings` object which could be used to suppress log out. In case when `Setting.KeepSession` is set
 to `true` the session cookies are not erased and the follow-up logins are reusing the session if it
 hasn't expired.
-
-
 
 ## To 23.0.0
 

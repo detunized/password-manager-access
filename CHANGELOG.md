@@ -1,5 +1,13 @@
 # Changelog
 
+## 25.0.0
+  - ProtonPass: added support for single item retrieval (see `Client.GetItem`, also see `UPGRADE.md` for upgrading
+    instructions)
+  - ProtonPass: added support for multiple listing and opening individual vaults (see `Client.ListAllVaults`,
+    `Client.DownloadVault`, also see `UPGRADE.md` for upgrading instructions)
+  - ProtonPass: fixed a bug with extra password causing the login to fail
+  - General: removed the RestSharp dependency
+
 ## 24.0.0
   - ZohoVault: added support for single item retrieval (see `Client.GetItem`, also see `UPGRADE.md`
     for upgrading instructions)
