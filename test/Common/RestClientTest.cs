@@ -8,10 +8,15 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Common
 {
+    // TODO: Add global usings to get rid of these!
+    using HttpCookies = Dictionary<string, string>;
+    using HttpHeaders = Dictionary<string, string>;
+    using PostParameters = Dictionary<string, object>;
     using SendAsyncType = Func<HttpRequestMessage, Task<HttpResponseMessage>>;
 
     // TODO: Test redirects
@@ -24,6 +29,132 @@ namespace PasswordManagerAccess.Test.Common
 
             Assert.Null(response.Data);
             Assert.False(response.IsSuccessful);
+        }
+
+        //
+        // Header operations
+        //
+
+        [Fact]
+        public void Header_operations_sequence_constructor_add_update_remove()
+        {
+            // Arrange
+            var initialHeaders = new HttpHeaders
+            {
+                ["X-Initial"] = "initial-value",
+                ["X-ToUpdate"] = "original-value",
+                ["X-ToRemove"] = "remove-me",
+            };
+            var rest = new RestClient(null, defaultHeaders: initialHeaders);
+
+            // Act
+            rest.AddOrUpdateHeader("X-New", "new-value"); // Add new
+            rest.AddOrUpdateHeader("X-ToUpdate", "updated-value"); // Update existing
+            rest.RemoveHeader("X-ToRemove"); // Remove existing
+
+            // Assert
+            rest.DefaultHeaders.ShouldBeEquivalentTo(
+                new HttpHeaders
+                {
+                    ["X-Initial"] = "initial-value",
+                    ["X-ToUpdate"] = "updated-value",
+                    ["X-New"] = "new-value",
+                }
+            );
+        }
+
+        [Fact]
+        public void Constructor_creates_independent_copy_of_headers()
+        {
+            // Arrange
+            var initial = new HttpHeaders { ["X-Test"] = "original" };
+            var rest = new RestClient(null, defaultHeaders: initial);
+
+            // Act
+            initial["X-Test"] = "modified";
+            initial["X-New"] = "new-value";
+
+            // Assert
+            rest.DefaultHeaders.ShouldBeEquivalentTo(new HttpHeaders { ["X-Test"] = "original" });
+        }
+
+        [Fact]
+        public void Constructor_creates_independent_copy_of_empty_headers()
+        {
+            // Arrange
+            var initial = new HttpHeaders();
+            var rest = new RestClient(null, defaultHeaders: initial);
+
+            // Act
+            initial["X-Test"] = "modified";
+            initial["X-New"] = "new-value";
+
+            // Assert
+            rest.DefaultHeaders.ShouldBeEquivalentTo(new HttpHeaders());
+        }
+
+        //
+        // Cookie operations
+        //
+
+        [Fact]
+        public void AddOrUpdateCookie_adds_and_updates_cookies()
+        {
+            // Arrange
+            var rest = new RestClient(
+                null,
+                defaultCookies: new HttpCookies
+                {
+                    ["X-Initial"] = "initial-value",
+                    ["X-ToUpdate"] = "original-value",
+                    ["X-ToRemove"] = "remove-me",
+                }
+            );
+
+            // Act
+            rest.AddOrUpdateCookie("X-New", "new-value"); // Add new
+            rest.AddOrUpdateCookie("X-ToUpdate", "updated-value"); // Update existing
+            rest.RemoveCookie("X-ToRemove"); // Remove existing
+
+            // Assert
+            rest.DefaultCookies.ShouldBeEquivalentTo(
+                new HttpCookies
+                {
+                    ["X-Initial"] = "initial-value",
+                    ["X-ToUpdate"] = "updated-value",
+                    ["X-New"] = "new-value",
+                }
+            );
+        }
+
+        [Fact]
+        public void Constructor_creates_independent_copy_of_cookies()
+        {
+            // Arrange
+            var initial = new HttpCookies { ["X-Test"] = "original" };
+            var rest = new RestClient(null, defaultCookies: initial);
+
+            // Act
+            initial["X-Test"] = "modified";
+            initial["X-New"] = "new-value";
+
+            // Assert
+            rest.DefaultCookies.ShouldBeEquivalentTo(new HttpCookies { ["X-Test"] = "original" });
+        }
+
+        [Fact]
+        public void Constructor_creates_independent_copy_of_empty_cookies()
+        {
+            // Arrange
+            var initial = new HttpCookies();
+            var rest = new RestClient(null, defaultCookies: initial);
+
+            // Act
+            initial["X-Test"] = "modified";
+            initial["X-New"] = "new-value";
+
+            // Assert
+            rest.DefaultCookies.ShouldBeEquivalentTo(new HttpCookies());
         }
 
         //
@@ -50,17 +181,14 @@ namespace PasswordManagerAccess.Test.Common
         {
             InRequest(
                 rest => rest.Get(Url, headers: TestHeaders),
-                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName))
+                request => Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName))
             );
         }
 
         [Fact]
         public void Get_sends_cookies()
         {
-            InRequest(
-                rest => rest.Get(Url, cookies: TestCookies),
-                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie"))
-            );
+            InRequest(rest => rest.Get(Url, cookies: TestCookies), request => Assert.Equal([TestCookieHeader], request.Headers.GetValues("Cookie")));
         }
 
         [Fact]
@@ -97,8 +225,8 @@ namespace PasswordManagerAccess.Test.Common
         public void PostJson_sends_json_headers()
         {
             InRequest(
-                rest => rest.PostJson(Url, NoParameters),
-                request => Assert.Equal(new[] { "application/json; charset=utf-8" }, request.Content.Headers.GetValues("Content-type"))
+                rest => rest.PostJson(Url, RestClient.NoParameters),
+                request => Assert.Equal(["application/json; charset=utf-8"], request.Content.Headers.GetValues("Content-type"))
             );
         }
 
@@ -106,8 +234,8 @@ namespace PasswordManagerAccess.Test.Common
         public void PostJson_encodes_json()
         {
             InRequest(
-                rest => rest.PostJson(Url, new Dictionary<string, object> { ["k"] = "v" }),
-                request => Assert.Equal("{\"k\":\"v\"}", request.Content.ReadAsStringAsync().Result)
+                rest => rest.PostJson(Url, new PostParameters { ["k"] = "v" }),
+                request => Assert.Equal("""{"k":"v"}""", request.Content.ReadAsStringAsync().Result)
             );
         }
 
@@ -133,8 +261,8 @@ namespace PasswordManagerAccess.Test.Common
         public void PostForm_sends_form_headers()
         {
             InRequest(
-                rest => rest.PostForm(Url, NoParameters),
-                request => Assert.Equal(new[] { "application/x-www-form-urlencoded" }, request.Content.Headers.GetValues("Content-type"))
+                rest => rest.PostForm(Url, RestClient.NoParameters),
+                request => Assert.Equal(["application/x-www-form-urlencoded"], request.Content.Headers.GetValues("Content-type"))
             );
         }
 
@@ -142,7 +270,7 @@ namespace PasswordManagerAccess.Test.Common
         public void PostJson_encodes_form()
         {
             InRequest(
-                rest => rest.PostForm(Url, new Dictionary<string, object> { ["k"] = "v" }),
+                rest => rest.PostForm(Url, new PostParameters { ["k"] = "v" }),
                 request => Assert.Equal("k=v", request.Content.ReadAsStringAsync().Result)
             );
         }
@@ -150,7 +278,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void PostJson_returns_response_headers()
         {
-            var response = Serve("", ResponseHeaders).PostJson(Url, NoParameters);
+            var response = Serve("", ResponseHeaders).PostJson(Url, RestClient.NoParameters);
 
             Assert.Equal(ResponseHeaders, response.Headers);
         }
@@ -158,7 +286,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void PostJson_decodes_json()
         {
-            var response = Serve("""{"Key":"k","Value":"v"}""").PostJson<KeyValuePair<string, string>>(Url, NoParameters);
+            var response = Serve("""{"Key":"k","Value":"v"}""").PostJson<KeyValuePair<string, string>>(Url, RestClient.NoParameters);
 
             Assert.True(response.IsSuccessful);
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
@@ -195,7 +323,7 @@ namespace PasswordManagerAccess.Test.Common
         {
             InRequest(
                 rest => rest.Put(Url, headers: TestHeaders),
-                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName))
+                request => Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName))
             );
         }
 
@@ -233,8 +361,8 @@ namespace PasswordManagerAccess.Test.Common
         public void PutJson_sends_json_headers()
         {
             InRequest(
-                rest => rest.PutJson(Url, NoParameters),
-                request => Assert.Equal(new[] { "application/json; charset=utf-8" }, request.Content.Headers.GetValues("Content-type"))
+                rest => rest.PutJson(Url, RestClient.NoParameters),
+                request => Assert.Equal(["application/json; charset=utf-8"], request.Content.Headers.GetValues("Content-type"))
             );
         }
 
@@ -242,8 +370,8 @@ namespace PasswordManagerAccess.Test.Common
         public void PutJson_encodes_json()
         {
             InRequest(
-                rest => rest.PutJson(Url, new Dictionary<string, object> { ["k"] = "v" }),
-                request => Assert.Equal("{\"k\":\"v\"}", request.Content.ReadAsStringAsync().Result)
+                rest => rest.PutJson(Url, new PostParameters { ["k"] = "v" }),
+                request => Assert.Equal("""{"k":"v"}""", request.Content.ReadAsStringAsync().Result)
             );
         }
 
@@ -268,7 +396,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void PutJson_returns_response_headers()
         {
-            var response = Serve("", ResponseHeaders).PutJson(Url, NoParameters);
+            var response = Serve("", ResponseHeaders).PutJson(Url, RestClient.NoParameters);
 
             Assert.Equal(ResponseHeaders, response.Headers);
         }
@@ -276,7 +404,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void PutJson_decodes_json()
         {
-            var response = Serve("""{"Key":"k","Value":"v"}""").PutJson<KeyValuePair<string, string>>(Url, NoParameters);
+            var response = Serve("""{"Key":"k","Value":"v"}""").PutJson<KeyValuePair<string, string>>(Url, RestClient.NoParameters);
 
             Assert.True(response.IsSuccessful);
             Assert.Equal(new KeyValuePair<string, string>("k", "v"), response.Data);
@@ -320,7 +448,7 @@ namespace PasswordManagerAccess.Test.Common
         [Fact]
         public void MakeAbsoluteUri_allows_empty_base()
         {
-            RestClient rest = new RestClient(null, "");
+            RestClient rest = new RestClient(null);
             Assert.Equal("http://all.your.base/are/belong/to/us", rest.MakeAbsoluteUri("http://all.your.base/are/belong/to/us").AbsoluteUri);
         }
 
@@ -353,10 +481,10 @@ namespace PasswordManagerAccess.Test.Common
                 new AppendSigner(),
                 request =>
                 {
-                    Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
-                    Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
-                    Assert.Equal(new[] { "GET" }, request.Headers.GetValues("TestSigner-method"));
-                    Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
+                    Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName));
+                    Assert.Equal([Url], request.Headers.GetValues("TestSigner-uri"));
+                    Assert.Equal(["GET"], request.Headers.GetValues("TestSigner-method"));
+                    Assert.Equal(["extra"], request.Headers.GetValues("TestSigner-extra"));
                 }
             );
         }
@@ -365,14 +493,14 @@ namespace PasswordManagerAccess.Test.Common
         public void Post_request_is_signed_with_extra_headers()
         {
             InRequest(
-                rest => rest.PostJson(Url, NoParameters, TestHeaders),
+                rest => rest.PostJson(Url, RestClient.NoParameters, TestHeaders),
                 new AppendSigner(),
                 request =>
                 {
-                    Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
-                    Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
-                    Assert.Equal(new[] { "POST" }, request.Headers.GetValues("TestSigner-method"));
-                    Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
+                    Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName));
+                    Assert.Equal([Url], request.Headers.GetValues("TestSigner-uri"));
+                    Assert.Equal(["POST"], request.Headers.GetValues("TestSigner-method"));
+                    Assert.Equal(["extra"], request.Headers.GetValues("TestSigner-extra"));
                 }
             );
         }
@@ -385,10 +513,10 @@ namespace PasswordManagerAccess.Test.Common
                 new AppendSigner(),
                 request =>
                 {
-                    Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName));
-                    Assert.Equal(new[] { Url }, request.Headers.GetValues("TestSigner-uri"));
-                    Assert.Equal(new[] { "PUT" }, request.Headers.GetValues("TestSigner-method"));
-                    Assert.Equal(new[] { "extra" }, request.Headers.GetValues("TestSigner-extra"));
+                    Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName));
+                    Assert.Equal([Url], request.Headers.GetValues("TestSigner-uri"));
+                    Assert.Equal(["PUT"], request.Headers.GetValues("TestSigner-method"));
+                    Assert.Equal(["extra"], request.Headers.GetValues("TestSigner-extra"));
                 }
             );
         }
@@ -409,7 +537,7 @@ namespace PasswordManagerAccess.Test.Common
             InRequest(
                 rest => rest.Get(Url, headers: TestHeaders),
                 new ModifySigner(),
-                request => Assert.Equal(new[] { TestHeaderValue + "-modified" }, request.Headers.GetValues(TestHeaderName))
+                request => Assert.Equal([TestHeaderValue + "-modified"], request.Headers.GetValues(TestHeaderName))
             );
         }
 
@@ -421,8 +549,8 @@ namespace PasswordManagerAccess.Test.Common
                 "",
                 NoSigner,
                 TestHeaders,
-                NoCookies,
-                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName))
+                RestClient.NoCookies,
+                request => Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName))
             );
         }
 
@@ -433,9 +561,9 @@ namespace PasswordManagerAccess.Test.Common
                 rest => rest.Get(Url),
                 "",
                 NoSigner,
-                NoHeaders,
+                RestClient.NoHeaders,
                 TestCookies,
-                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie"))
+                request => Assert.Equal([TestCookieHeader], request.Headers.GetValues("Cookie"))
             );
         }
 
@@ -443,12 +571,12 @@ namespace PasswordManagerAccess.Test.Common
         public void Post_sends_default_headers()
         {
             InRequest(
-                rest => rest.PostJson(Url, NoParameters),
+                rest => rest.PostJson(Url, RestClient.NoParameters),
                 "",
                 NoSigner,
                 TestHeaders,
-                NoCookies,
-                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName))
+                RestClient.NoCookies,
+                request => Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName))
             );
         }
 
@@ -456,12 +584,12 @@ namespace PasswordManagerAccess.Test.Common
         public void Post_sends_default_cookies()
         {
             InRequest(
-                rest => rest.PostJson(Url, NoParameters),
+                rest => rest.PostJson(Url, RestClient.NoParameters),
                 "",
                 NoSigner,
-                NoHeaders,
+                RestClient.NoHeaders,
                 TestCookies,
-                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie"))
+                request => Assert.Equal([TestCookieHeader], request.Headers.GetValues("Cookie"))
             );
         }
 
@@ -473,8 +601,8 @@ namespace PasswordManagerAccess.Test.Common
                 "",
                 NoSigner,
                 TestHeaders,
-                NoCookies,
-                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName))
+                RestClient.NoCookies,
+                request => Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName))
             );
         }
 
@@ -485,9 +613,9 @@ namespace PasswordManagerAccess.Test.Common
                 rest => rest.Put(Url),
                 "",
                 NoSigner,
-                NoHeaders,
+                RestClient.NoHeaders,
                 TestCookies,
-                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie"))
+                request => Assert.Equal([TestCookieHeader], request.Headers.GetValues("Cookie"))
             );
         }
 
@@ -498,9 +626,9 @@ namespace PasswordManagerAccess.Test.Common
                 rest => rest.Get(Url, headers: TestHeaders),
                 "",
                 NoSigner,
-                new Dictionary<string, string> { [TestHeaderName] = "default-value" },
-                NoCookies,
-                request => Assert.Equal(new[] { TestHeaderValue }, request.Headers.GetValues(TestHeaderName))
+                new HttpHeaders { [TestHeaderName] = "default-value" },
+                RestClient.NoCookies,
+                request => Assert.Equal([TestHeaderValue], request.Headers.GetValues(TestHeaderName))
             );
         }
 
@@ -511,9 +639,9 @@ namespace PasswordManagerAccess.Test.Common
                 rest => rest.Get(Url, cookies: TestCookies),
                 "",
                 NoSigner,
-                NoHeaders,
-                new Dictionary<string, string> { [TestCookieName] = "default-value" },
-                request => Assert.Equal(new[] { TestCookieHeader }, request.Headers.GetValues("Cookie"))
+                RestClient.NoHeaders,
+                new HttpCookies { [TestCookieName] = "default-value" },
+                request => Assert.Equal([TestCookieHeader], request.Headers.GetValues("Cookie"))
             );
         }
 
@@ -525,8 +653,8 @@ namespace PasswordManagerAccess.Test.Common
                 "",
                 new ModifySigner(),
                 TestHeaders,
-                NoCookies,
-                request => Assert.Equal(new[] { TestHeaderValue + "-modified" }, request.Headers.GetValues(TestHeaderName))
+                RestClient.NoCookies,
+                request => Assert.Equal([TestHeaderValue + "-modified"], request.Headers.GetValues(TestHeaderName))
             );
         }
 
@@ -544,7 +672,7 @@ namespace PasswordManagerAccess.Test.Common
             )
             {
                 return headers.Merge(
-                    new Dictionary<string, string>
+                    new HttpHeaders
                     {
                         ["TestSigner-uri"] = uri.ToString(),
                         ["TestSigner-method"] = method.ToString(),
@@ -563,7 +691,7 @@ namespace PasswordManagerAccess.Test.Common
                 HttpContent content
             )
             {
-                return new Dictionary<string, string>();
+                return new HttpHeaders();
             }
         }
 
@@ -598,14 +726,14 @@ namespace PasswordManagerAccess.Test.Common
             using var transport = new RestTransport(request =>
             {
                 assertRequest(request);
-                return RespondWith(responseContent, NoHeaders)(request);
+                return RespondWith(responseContent, RestClient.NoHeaders)(request);
             });
             restCall(new RestClient(transport, "", signer, defaultHeaders, defaultCookies));
         }
 
         internal static void InRequest(Action<RestClient> restCall, IRequestSigner signer, Action<HttpRequestMessage> assertRequest)
         {
-            InRequest(restCall, "", signer, NoHeaders, NoCookies, assertRequest);
+            InRequest(restCall, "", signer, RestClient.NoHeaders, RestClient.NoCookies, assertRequest);
         }
 
         internal static void InRequest(Action<RestClient> restCall, Action<HttpRequestMessage> assertRequest)
@@ -615,12 +743,12 @@ namespace PasswordManagerAccess.Test.Common
 
         internal static RestClient Serve(string response, string baseUrl = "")
         {
-            return Serve(response, NoHeaders, baseUrl);
+            return Serve(response, RestClient.NoHeaders, baseUrl);
         }
 
         internal static RestClient Serve(byte[] response, string baseUrl = "")
         {
-            return Serve(response, NoHeaders, baseUrl);
+            return Serve(response, RestClient.NoHeaders, baseUrl);
         }
 
         internal static RestClient Serve(string response, IReadOnlyDictionary<string, string> headers, string baseUrl = "")
@@ -635,7 +763,7 @@ namespace PasswordManagerAccess.Test.Common
 
         internal static RestClient Fail(HttpStatusCode status, string baseUrl = "")
         {
-            return Fail(status, NoHeaders, baseUrl);
+            return Fail(status, RestClient.NoHeaders, baseUrl);
         }
 
         internal static RestClient Fail(HttpStatusCode status, IReadOnlyDictionary<string, string> headers, string baseUrl = "")
@@ -686,27 +814,25 @@ namespace PasswordManagerAccess.Test.Common
         //
 
         private const string Url = "https://example.com/";
-        private static readonly Dictionary<string, object> NoParameters = new Dictionary<string, object>();
         private static readonly IRequestSigner NoSigner = null;
-        private static readonly IReadOnlyDictionary<string, string> NoHeaders = new Dictionary<string, string>();
-        private static readonly IReadOnlyDictionary<string, string> NoCookies = new Dictionary<string, string>();
 
         private const string TestHeaderName = "header-name";
         private const string TestHeaderValue = "header-value";
 
-        private static readonly Dictionary<string, string> TestHeaders = new Dictionary<string, string> { [TestHeaderName] = TestHeaderValue };
+        private static readonly HttpHeaders TestHeaders = new() { [TestHeaderName] = TestHeaderValue };
 
         private const string TestCookieName = "cookie-name";
         private const string TestCookieValue = "cookie-value";
         private static readonly string TestCookieHeader = $"{TestCookieName}={TestCookieValue}";
 
-        private static readonly Dictionary<string, string> TestCookies = new Dictionary<string, string> { [TestCookieName] = TestCookieValue };
+        private static readonly HttpCookies TestCookies = new() { [TestCookieName] = TestCookieValue };
 
-        private static readonly Dictionary<string, string> ResponseHeaders = new Dictionary<string, string>
-        {
-            ["ha"] = "ha-ha",
-            ["ho"] = "ho-ho",
-            ["blah"] = "blah-blah",
-        };
+        private static readonly HttpHeaders ResponseHeaders =
+            new()
+            {
+                ["ha"] = "ha-ha",
+                ["ho"] = "ho-ho",
+                ["blah"] = "blah-blah",
+            };
     }
 }

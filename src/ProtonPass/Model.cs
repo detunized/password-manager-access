@@ -309,11 +309,16 @@ namespace PasswordManagerAccess.ProtonPass
             public string? Salt { get; set; }
         }
 
-        // TODO: Not the best name
-        public class ShareRoot : Response
+        public class AllShares : Response
         {
             [JsonPropertyName("Shares")]
             public Share[] Shares { get; set; } = [];
+        }
+
+        public class SingleShare : Response
+        {
+            [JsonPropertyName("Share")]
+            public Share Share { get; set; } = new();
         }
 
         public class Share
@@ -409,6 +414,13 @@ namespace PasswordManagerAccess.ProtonPass
 
             [JsonPropertyName("LastToken")]
             public string? LastToken { get; set; }
+        }
+
+        public class SingleItem : Response
+        {
+            [JsonPropertyName("Item")]
+            [JsonRequired]
+            public VaultItem Item { get; set; } = new();
         }
 
         public class VaultItem

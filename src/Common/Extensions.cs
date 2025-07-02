@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -49,9 +50,9 @@ namespace PasswordManagerAccess.Common
         // string
         //
 
-        public static bool IsNullOrEmpty(this string s)
+        public static bool IsNullOrEmpty([NotNullWhen(false)] this string s)
         {
-            return String.IsNullOrEmpty(s);
+            return string.IsNullOrEmpty(s);
         }
 
         public static byte[] ToBytes(this string s)

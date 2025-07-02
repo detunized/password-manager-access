@@ -15,6 +15,7 @@ namespace PasswordManagerAccess.Test
 {
     internal class RestFlow : HttpMessageHandler, IRestTransport
     {
+        public bool UseSystemJson { get; init; }
         public bool Disposed { get; private set; }
 
         public class ResponseContent
@@ -159,36 +160,12 @@ namespace PasswordManagerAccess.Test
 
         public RestClient ToRestClient(string baseUrl = "https://does.not.matter")
         {
-            return new RestClient(this, baseUrl);
+            return new RestClient(this, baseUrl, useSystemJson: UseSystemJson);
         }
 
         public static implicit operator RestClient(RestFlow flow)
         {
             return flow.ToRestClient();
-        }
-
-        //
-        // RestSharp.RestClient
-        //
-
-        public RestAsync.Config ToRestConfig()
-        {
-            return new RestAsync.Config { ConfigureMessageHandler = _ => this };
-        }
-
-        public static implicit operator RestAsync.Config(RestFlow flow)
-        {
-            return flow.ToRestConfig();
-        }
-
-        public RestSharp.RestClient ToAsyncRest(string baseUrl = "https://does.not.matter")
-        {
-            return RestAsync.Create(baseUrl, this);
-        }
-
-        public static implicit operator RestSharp.RestClient(RestFlow flow)
-        {
-            return flow.ToAsyncRest();
         }
 
         //
