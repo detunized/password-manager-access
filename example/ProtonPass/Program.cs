@@ -191,14 +191,17 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 Console.WriteLine($"           {j + 1}: {account.Urls[j]}");
         }
 
-        enum DemoMode
+        private enum DemoMode
         {
             SingleItem,
             SingleVault,
             AllVaultsOneByOneByInfo,
             AllVaultsOneByOneById,
             AllVaults,
+            AllVaultsSingleShot,
         }
+
+        private static readonly DemoMode Mode = DemoMode.SingleItem;
 
         public static async Task Main(string[] args)
         {
@@ -207,17 +210,22 @@ namespace PasswordManagerAccess.Example.ProtonPass
 
             try
             {
-                // Uncomment the following line to use the old way of opening vaults.
-                // This is not recommended as it does not support the new Proton Pass features.
-                // var vaults = await Client
-                //     .OpenAll(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage())
-                //     .ConfigureAwait(false);
-                // DumpVaults(vaults);
-
                 var cts = new CancellationTokenSource();
-                Session session = null;
 
-                var demoMode = DemoMode.AllVaults;
+                // This is the original method of opening Proton Pass vaults. It does everything in one go. There's no session object to deal with.
+                // This method is convenient for downloading all vaults in one shot. To download individual items or individual vaults, or do it
+                // multiple times, check one of the other ways demonstrated below.
+                if (Mode == DemoMode.AllVaultsSingleShot)
+                {
+                    var allVaults = await Client
+                        .OpenAll(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage(), cts.Token)
+                        .ConfigureAwait(false);
+                    DumpVaults(allVaults);
+
+                    return;
+                }
+
+                Session session = null;
 
                 try
                 {
@@ -225,10 +233,13 @@ namespace PasswordManagerAccess.Example.ProtonPass
                         .LogIn(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage(), cts.Token)
                         .ConfigureAwait(false);
 
-                    switch (demoMode)
+                    // Any of the operations below could be done multiple times on same session. Remember to call Client.LogOut when done.
+
+                    switch (Mode)
                     {
                         case DemoMode.SingleItem:
                             {
+                                // Use your own vault and item IDs.
                                 var maybeAccount = await Client.GetItem(
                                     "TsQKDDVRzzAm2FnkEjUMXZbo6qDa2gndi88rMEghRZfRYRnzezXbxO3Vhr9ihh-4_dP9Ikrp3ssTlReX4zI2ow==",
                                     "DyIGqZSxf42a3n2qlfGpqVfiPHvoWM56DuoJW5mShsGxOxD32jEp_S3MLIS9jihx2-edhoNKzA3q5e-q4QvitQ==",
@@ -246,6 +257,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
                             break;
                         case DemoMode.SingleVault:
                             {
+                                // Use your own vault ID.
                                 var maybeVault = await Client
                                     .DownloadVault(
                                         "TsQKDDVRzzAm2FnkEjUMXZbo6qDa2gndi88rMEghRZfRYRnzezXbxO3Vhr9ihh-4_dP9Ikrp3ssTlReX4zI2ow==",
