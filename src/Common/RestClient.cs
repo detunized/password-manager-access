@@ -428,7 +428,7 @@ namespace PasswordManagerAccess.Common
         // TODO: Convert to properties
         public readonly IRestTransport Transport;
         public readonly string BaseUrl;
-        public readonly IRequestSigner Signer;
+        public IRequestSigner Signer { get; private set; }
         public ReadOnlyHttpHeaders DefaultHeaders => _defaultHeaders;
         public ReadOnlyHttpCookies DefaultCookies => _defaultCookies;
         public readonly ISimpleLogger Logger;
@@ -470,6 +470,12 @@ namespace PasswordManagerAccess.Common
         public void AddOrUpdateCookie(string name, string value) => _defaultCookies[name] = value;
 
         public bool RemoveCookie(string name) => _defaultCookies.Remove(name);
+
+        // Pass null to remove the signer
+        public void SetSigner(IRequestSigner signer)
+        {
+            Signer = signer ?? new UnitRequestSigner();
+        }
 
         //
         // GET
