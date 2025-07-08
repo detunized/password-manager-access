@@ -79,7 +79,7 @@ public static partial class Client
         }
         finally
         {
-            session.Transport.Dispose();
+            session.Dispose();
         }
     }
 

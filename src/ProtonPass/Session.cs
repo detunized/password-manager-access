@@ -8,12 +8,14 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.ProtonPass;
 
+// The session object is opaque to the user. It holds all the state needed by Client to perform
+// various operations like opening vaults or logging out.
 public sealed class Session : IDisposable
 {
     internal Model.UserKey PrimaryKey { get; }
     internal string KeyPassphrase { get; }
     internal RestClient Rest { get; }
-    internal IRestTransport Transport { get; }
+    private IRestTransport Transport { get; }
 
     internal Dictionary<string, VaultInfo> VaultInfos { get; } = [];
 
