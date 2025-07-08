@@ -150,8 +150,15 @@ public static partial class Client
     )
     {
         var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
-        var (sessionKey, sessionRest) = await LogIn(credentials, app, ui, storage, rest, cancellationToken);
-        return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
+        while (true)
+        {
+            try
+            {
+                var sessionKey = await LoginAttempt(credentials, app, ui, storage, rest, cancellationToken);
+                return new Session(credentials, new Keychain(), sessionKey, rest, transport);
+            }
+            catch (RetryLoginException) { }
+        }
     }
 
     internal static Credentials ParseServiceAccountToken(string token)
@@ -224,30 +231,9 @@ public static partial class Client
         return vaults.ToArray();
     }
 
-    // This is exception is used internally to trigger re-login from the depth of the call stack.
-    // Possibly not the best design. TODO: Should this be done differently?
-    internal class RetryLoginException : Exception { }
-
-    internal static async Task<(AesKey, RestClient)> LogIn(
-        Credentials credentials,
-        AppInfo app,
-        IAsyncUi ui,
-        ISecureStorage storage,
-        RestClient rest,
-        CancellationToken cancellationToken
-    )
-    {
-        while (true)
-        {
-            try
-            {
-                return await LoginAttempt(credentials, app, ui, storage, rest, cancellationToken);
-            }
-            catch (RetryLoginException) { }
-        }
-    }
-
-    private static async Task<(AesKey, RestClient)> LoginAttempt(
+    // Side-effect: Configures the REST client with a new session.
+    // Returns the session key used in E2E protocol encryption for the current session.
+    private static async Task<AesKey> LoginAttempt(
         Credentials credentials,
         AppInfo app,
         IAsyncUi ui,
@@ -259,25 +245,24 @@ public static partial class Client
         // Step 1: Request to initiate a new session
         var (sessionId, srpInfo) = await StartNewSession(credentials, app, rest, cancellationToken);
 
-        // After a new session has been initiated, all the subsequent requests must be
-        // signed with the session ID.
-        var sessionRest = MakeRestClient(rest, sessionId: sessionId);
+        // All the following requests are expected to have a session ID in the header.
+        SetSessionId(rest, sessionId);
 
         // Step 2: Perform SRP exchange
-        var sessionKey = SrpV1.Perform(credentials, srpInfo, sessionId, sessionRest);
+        var sessionKey = SrpV1.Perform(credentials, srpInfo, sessionId, rest);
 
         // Assign a request signer now that we have a key.
         // All the following requests are expected to be signed with the MAC.
-        var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), sessionId);
+        rest.SetSigner(new MacRequestSigner(sessionKey));
 
         // Step 3: Verify the key with the server
-        var verifiedOrMfa = await VerifySessionKey(credentials, app, sessionKey, macRest, cancellationToken);
+        var verifiedOrMfa = await VerifySessionKey(credentials, app, sessionKey, rest, cancellationToken);
 
         // Step 4: Submit 2FA code if needed
         if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-            await PerformSecondFactorAuthentication(verifiedOrMfa.Factors, credentials, sessionKey, ui, storage, macRest, cancellationToken);
+            await PerformSecondFactorAuthentication(verifiedOrMfa.Factors, credentials, sessionKey, ui, storage, rest, cancellationToken);
 
-        return (sessionKey, macRest);
+        return sessionKey;
     }
 
     internal static string GetApiUrl(string domain)
@@ -316,6 +301,11 @@ public static partial class Client
     internal static RestClient MakeSystemJsonRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
     {
         return MakeSystemJsonRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
+    }
+
+    internal static void SetSessionId(RestClient rest, string sessionId)
+    {
+        rest.AddOrUpdateHeader("X-AgileBits-Session-ID", sessionId);
     }
 
     // TODO: Remove this after the migration to System.Text.Json is complete
@@ -465,10 +455,12 @@ public static partial class Client
                     ["name"] = app.Name,
                     ["model"] = app.Version,
                     ["osName"] = GetOsName(),
-                    ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET.
-                    // Look into that.
-                    ["userAgent"] = "", // TODO: The browser uses a user agent string here. We need to figure out
-                    // what CLI sends. This is not trivial at all because of the E2E encryption.
+                    // TODO: It's not so trivial to detect the proper OS version in .NET.
+                    //       Look into that!
+                    ["osVersion"] = "",
+                    // TODO: The browser uses a user agent string here. We need to figure out what
+                    //       CLI sends. This is not trivial at all because of the E2E encryption.
+                    ["userAgent"] = "",
                 },
             },
             sessionKey,
@@ -532,11 +524,16 @@ public static partial class Client
 
         var token = await SubmitSecondFactorResult(factor.Kind, secondFactorResult, sessionKey, rest, cancellationToken);
 
-        // Store the token with the application. Next time we're not gonna need to enter any passcodes.
+        // Store the token with the application. Next time we're not going to need to enter any passcodes.
         if (secondFactorResult.RememberMe)
             storage.StoreString(RememberMeTokenKey, token);
     }
 
+    // This is exception is used internally to trigger re-login from the depth of the call stack.
+    // Possibly not the best design. TODO: Should this be done differently?
+    internal class RetryLoginException : Exception;
+
+    // TODO: Consider using OneOf to return true/false or an error
     internal static async Task<bool> TrySubmitRememberMeToken(
         SecondFactor[] factors,
         AesKey sessionKey,
@@ -560,7 +557,7 @@ public static partial class Client
         }
         catch (BadMultiFactorException)
         {
-            // The token got rejected, need to erase it, it's no longer valid.
+            // The token got rejected. Need to erase it. It's no longer valid.
             storage.StoreString(RememberMeTokenKey, null);
 
             // When the stored 'remember me' token is rejected by the server, we need to try
@@ -626,6 +623,7 @@ public static partial class Client
             SecondFactorKind.GoogleAuthenticator => await AuthenticateWithGoogleAuth(ui, cancellationToken),
             SecondFactorKind.WebAuthn => await AuthenticateWithWebAuthn(factor, credentials, ui, cancellationToken),
             SecondFactorKind.Duo => await AuthenticateWithDuo(factor, ui, rest, cancellationToken),
+            SecondFactorKind.RememberMeToken => throw new InternalErrorException("Logic error: Remember Me token should be handled separately"),
             _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here"),
         };
     }
@@ -650,7 +648,7 @@ public static partial class Client
         if (rememberMe == Passcode.Cancel)
             return SecondFactorResult.Cancel();
 
-        if (!(factor.Parameters is R.WebAuthnMfa extra))
+        if (factor.Parameters is not R.WebAuthnMfa extra)
             throw new InternalErrorException("WebAuthn extra parameters expected");
 
         if (extra.KeyHandles.Length == 0)
@@ -695,19 +693,10 @@ public static partial class Client
         CancellationToken cancellationToken
     )
     {
-        // TODO: Remove this when the Duo code is async
         await Task.Yield();
 
-        if (!(factor.Parameters is R.DuoMfa extra))
+        if (factor.Parameters is not R.DuoMfa extra)
             throw new InternalErrorException("Duo extra parameters expected");
-
-        static string CheckParam(string param, string name)
-        {
-            if (param.IsNullOrEmpty())
-                throw new InternalErrorException($"Duo parameter '{name}' is invalid");
-
-            return param;
-        }
 
         // TODO: Switch to async Duo
         var isV1 = extra.Url.IsNullOrEmpty();
@@ -721,6 +710,16 @@ public static partial class Client
         var key = isV1 ? "sigResponse" : "code";
         var note = isV1 ? "v1" : "v4";
         return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Code }, result.RememberMe, note);
+
+        // ---
+
+        static string CheckParam(string param, string name)
+        {
+            if (param.IsNullOrEmpty())
+                throw new InternalErrorException($"Duo parameter '{name}' is invalid");
+
+            return param;
+        }
     }
 
     // Returns "remember me" token when successful
