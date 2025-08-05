@@ -1,5 +1,9 @@
 # Changelog
 
+## 26.0.0
+  - Remove Dropbox Passwords support as it is no longer available
+  - Remove Kaspersky Password Manager support as we don't support it anymore
+
 ## 25.0.0
   - ProtonPass: added support for single item retrieval (see `Client.GetItem`, also see `UPGRADE.md` for upgrading
     instructions)
