@@ -16,8 +16,6 @@ The following services are supported by this library:
   - [1Password](https://1password.com)
   - [Bitwarden](https://bitwarden.com)
   - [Dashlane](https://dashlane.com)
-  - [Dropbox Passwords](https://www.dropbox.com/features/security/passwords)
-  - [Kaspersky Password Manager (work in progress)](https://www.kaspersky.com/password-manager)
   - [LastPass](https://lastpass.com)
   - [ProtonPass](https://proton.me/pass)
   - [RoboForm](https://roboform.com)
