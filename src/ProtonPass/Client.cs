@@ -607,7 +607,7 @@ namespace PasswordManagerAccess.ProtonPass
             var shares = response.Data!.Shares;
 
             // Filter out only the vault shares
-            return shares.Where(x => x.TargetType == 1).ToArray();
+            return shares.Where(x => x.TargetType == Model.TargetType.Vault).ToArray();
         }
 
         internal static async Task<Model.ShareKey> RequestShareKey(Model.Share vaultShare, RestClient rest, CancellationToken cancellationToken)

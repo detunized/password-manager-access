@@ -316,6 +316,13 @@ namespace PasswordManagerAccess.ProtonPass
             public Share[] Shares { get; set; } = [];
         }
 
+        public enum TargetType
+        {
+            Unknown = 0,
+            Vault = 1,
+            Item = 2,
+        }
+
         public class Share
         {
             [JsonPropertyName("ShareID")]
@@ -334,7 +341,7 @@ namespace PasswordManagerAccess.ProtonPass
             public bool Owner { get; set; }
 
             [JsonPropertyName("TargetType")]
-            public int TargetType { get; set; }
+            public TargetType TargetType { get; set; }
 
             [JsonPropertyName("TargetID")]
             public string TargetId { get; set; } = "";
@@ -351,14 +358,17 @@ namespace PasswordManagerAccess.ProtonPass
             [JsonPropertyName("ShareRoleID")]
             public string ShareRoleId { get; set; } = "";
 
+            // Optional: only valid for vault shares
             [JsonPropertyName("Content")]
-            public string Content { get; set; } = "";
+            public string? Content { get; set; } = "";
 
+            // Optional: only valid for vault shares
             [JsonPropertyName("ContentKeyRotation")]
-            public int ContentKeyRotation { get; set; }
+            public int? ContentKeyRotation { get; set; }
 
+            // Optional: only valid for vault shares
             [JsonPropertyName("ContentFormatVersion")]
-            public int ContentFormatVersion { get; set; }
+            public int? ContentFormatVersion { get; set; }
         }
 
         public class ShareKeysRoot : Response
