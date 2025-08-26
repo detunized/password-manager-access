@@ -1,5 +1,8 @@
 # Changelog
 
+## 25.0.1
+  - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
+
 ## 25.0.0
   - ProtonPass: added support for single item retrieval (see `Client.GetItem`, also see `UPGRADE.md` for upgrading
     instructions)
