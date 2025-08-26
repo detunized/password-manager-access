@@ -201,7 +201,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
             AllVaultsSingleShot,
         }
 
-        private static readonly DemoMode Mode = DemoMode.SingleItem;
+        private static readonly DemoMode Mode = DemoMode.AllVaultsSingleShot;
 
         public static async Task Main(string[] args)
         {
