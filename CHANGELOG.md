@@ -1,5 +1,8 @@
 # Changelog
 
+## 22.1.1
+  - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
+
 ## 22.1.0 (combines both 21.1.0 and 22.0.3)
   - Bitwarden: added support for SSH keys (see `Vault.SshKeys`)
 
