@@ -1,5 +1,8 @@
 # Changelog
 
+## 25.0.1 (out of order release, based on 25.0.0)
+  - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
+
 ## 26.0.0
   - Remove Dropbox Passwords support as it is no longer available
   - Remove Kaspersky Password Manager support as we don't support it anymore
