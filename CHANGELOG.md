@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.0.1 (merges a fix from 25.0.1 to 22.1.1)
+  - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
+
+## 22.1.1 (out of order release, based on 22.1.0)
+  - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
+
 ## 25.0.1 (out of order release, based on 25.0.0)
   - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
 
