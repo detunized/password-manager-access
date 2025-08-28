@@ -85,7 +85,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
 
             // This one is optional
-            var baseUrl = config.GetValueOrDefault("base-url", "");
+            var baseUrl = config.GetValueOrDefault("base-url", "https://vault.bitwarden.com");
             if (!string.IsNullOrEmpty(baseUrl))
                 Console.WriteLine($"Using a custom base URL {baseUrl}");
 
@@ -134,7 +134,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
 
             // Enable this to get a single item from a vault
-            var getSingleItem = true;
+            var getSingleItem = false;
 
             try
             {
