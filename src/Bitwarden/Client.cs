@@ -18,6 +18,12 @@ namespace PasswordManagerAccess.Bitwarden
 {
     public static class Client
     {
+        // Default base URLs for different regions.
+        // The US region is the default one when no base URL is specified.
+        public const string BaseUrlUs = "https://vault.bitwarden.com";
+        public const string BaseUrlEu = "https://vault.bitwarden.eu";
+        public const string DefaultBaseUlr = BaseUrlUs;
+
         // Use this function to generate a random device ID. The device ID should be unique to each
         // installation, but it should not be new on every run. A new random device ID should be
         // generated with GenerateRandomDeviceId on the first run and reused later on.
@@ -32,9 +38,9 @@ namespace PasswordManagerAccess.Bitwarden
         // This is an old mode that might potentially trigger a captcha. Captcha solving is not
         // supported. There's no way to complete a login and get the vault if the captcha is triggered.
         // Use the CLI/API mode. This mode requires a different type of credentials.
-        public static Vault Open(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => Open(clientInfo, null, ui, storage);
+        public static Vault Open(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => Open(clientInfo, DefaultBaseUlr, ui, storage);
 
-        // This version allows a custom base URL. `baseUrl` could be set to null or "" for the default value.
+        // This version allows a custom base URL. The URL must be valid. It can be either a cloud or a self-hosted URL.
         public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage) =>
             DownloadAndLogOut(LogIn(clientInfo, baseUrl, ui, storage));
 
@@ -43,7 +49,7 @@ namespace PasswordManagerAccess.Bitwarden
         // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
         // either. This is the preferred mode. This mode requires a different type of credentials that
         // could be found in the vault settings: the client ID and the client secret.
-        public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = null) => DownloadAndLogOut(LogIn(clientInfo, baseUrl));
+        public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = DefaultBaseUlr) => DownloadAndLogOut(LogIn(clientInfo, baseUrl));
 
         //
         // LogIn, DownloadVault, LogOut sequence
@@ -51,10 +57,10 @@ namespace PasswordManagerAccess.Bitwarden
 
         // This method performs a login in the browser mode. The returned session can be used to
         // download the vault, if needed multiple times. When no longer needed LogOut should be called.
-        // See signle shot Open for more comments.
+        // See single shot Open for more comments.
         public static Session LogIn(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => LogIn(clientInfo, null, ui, storage);
 
-        // Same as above but allows a custom base URL. `baseUrl` could be set to null or "" for the default value.
+        // Same as above but allows a custom base URL. The URL must be valid. It can be either a cloud or a self-hosted URL.
         public static Session LogIn(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
         {
             var transport = new RestTransport();
@@ -145,7 +151,7 @@ namespace PasswordManagerAccess.Bitwarden
             var rest = MakeRestClients(baseUrl, transport);
 
             // 1. Request the number of KDF iterations needed to derive the key
-            var kdfInfo = RequestKdfInfo(clientInfo.Username, rest.Api);
+            var kdfInfo = RequestKdfInfo(clientInfo.Username, rest.Identity);
 
             // 2. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(clientInfo.Username, clientInfo.Password, kdfInfo);
@@ -189,6 +195,9 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static (RestClient Api, RestClient Identity) MakeRestClients(string baseUrl, IRestTransport transport)
         {
+            if (baseUrl.IsNullOrEmpty())
+                throw new ArgumentException("Base URL must not be null or empty", nameof(baseUrl));
+
             var apiUrl = DefaultApiUrl;
             var identityUrl = DefaultIdentityUrl;
 

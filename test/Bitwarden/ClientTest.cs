@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Newtonsoft.Json;
@@ -20,12 +21,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Theory]
         [InlineData(null)]
         [InlineData("")]
-        public void MakeRestClients_returns_default_urls(string baseUrl)
+        public void MakeRestClients_throws_on_null_or_empty_base_url(string baseUrl)
         {
-            var rest = Client.MakeRestClients(baseUrl, new RestFlow());
-
-            Assert.Equal(ApiUrl, rest.Api.BaseUrl);
-            Assert.Equal(IdentityUrl, rest.Identity.BaseUrl);
+            Exceptions.AssertThrows<ArgumentException>(() => Client.MakeRestClients(baseUrl, new RestFlow()), "Base URL must not be null or empty");
         }
 
         [Theory]
@@ -886,8 +884,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         // Data
         //
 
-        private const string ApiUrl = "https://api.bitwarden.com";
-        private const string IdentityUrl = "https://identity.bitwarden.com";
+        private const string ApiUrl = "https://vault.bitwarden.com/api";
+        private const string IdentityUrl = "https://vault.bitwarden.com/identity";
 
         private const string Username = "username";
         private const string ClientId = "client-id";
