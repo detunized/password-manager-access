@@ -148,10 +148,10 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage, IRestTransport transport)
         {
-            var rest = MakeRestClients(baseUrl, transport);
+            var rest = MakeRestClient(baseUrl, transport);
 
             // 1. Request the number of KDF iterations needed to derive the key
-            var kdfInfo = RequestKdfInfo(clientInfo.Username, rest.Identity);
+            var kdfInfo = RequestKdfInfo(clientInfo.Username, rest);
 
             // 2. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(clientInfo.Username, clientInfo.Password, kdfInfo);
@@ -160,29 +160,29 @@ namespace PasswordManagerAccess.Bitwarden
             var hash = Util.HashPassword(clientInfo.Password, key);
 
             // 4. Authenticate with the server and get the token
-            var token = Login(clientInfo.Username, hash, clientInfo.DeviceId, ui, storage, rest.Api, rest.Identity);
+            var token = Login(clientInfo.Username, hash, clientInfo.DeviceId, ui, storage, rest);
 
             // 5. Fetch the profile in case this session is going be used to download a single item.
             //    The full vault download contains the profile too, but not the single item download.
             //    So in case of the full vault download it's redundant, but this should be a big deal.
-            var encryptedProfile = FetchProfile(token, rest.Api);
+            var encryptedProfile = FetchProfile(token, rest);
 
             // 6. Decrypt the profile (it contains the vault key, the orgs and the org keys)
             var profile = DecryptProfile(encryptedProfile, key);
 
-            return new Session(token, key, profile, rest.Api, transport);
+            return new Session(token, key, profile, rest, transport);
         }
 
         internal static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl, IRestTransport transport)
         {
-            var rest = MakeRestClients(baseUrl, transport);
+            var rest = MakeRestClient(baseUrl, transport);
 
             // 1. Login and get the client info
-            var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest.Identity);
+            var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest);
 
             // 2. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
             //    Whether downloading the full vault or a single item, we need the profile first.
-            var encryptedProfile = FetchProfile(token, rest.Api);
+            var encryptedProfile = FetchProfile(token, rest);
 
             // 3. Derive the master encryption key or KEK (key encryption key)
             var key = Util.DeriveKey(encryptedProfile.Email, clientInfo.Password, kdfInfo);
@@ -190,35 +190,20 @@ namespace PasswordManagerAccess.Bitwarden
             // 4. Decrypt the profile (it contains the vault key, the orgs and the org keys)
             var profile = DecryptProfile(encryptedProfile, key);
 
-            return new Session(token, key, profile, rest.Api, transport);
+            return new Session(token, key, profile, rest, transport);
         }
 
-        internal static (RestClient Api, RestClient Identity) MakeRestClients(string baseUrl, IRestTransport transport)
+        internal static RestClient MakeRestClient(string baseUrl, IRestTransport transport)
         {
             if (baseUrl.IsNullOrEmpty())
                 throw new ArgumentException("Base URL must not be null or empty", nameof(baseUrl));
 
-            var apiUrl = DefaultApiUrl;
-            var identityUrl = DefaultIdentityUrl;
-
-            // When the base URL is specified we're targeting a self-hosted installation.
-            // In this case the `api.` and `identity.` subdomains are not used.
-            if (!baseUrl.IsNullOrEmpty())
-            {
-                var baseUrlNoSlash = baseUrl.TrimEnd('/');
-                apiUrl = baseUrlNoSlash + "/api";
-                identityUrl = baseUrlNoSlash + "/identity";
-            }
-
-            return (
-                Api: new RestClient(transport, apiUrl, defaultHeaders: DefaultRestHeaders),
-                Identity: new RestClient(transport, identityUrl, defaultHeaders: DefaultRestHeaders)
-            );
+            return new RestClient(transport, baseUrl.TrimEnd('/'), defaultHeaders: DefaultRestHeaders);
         }
 
         internal static R.KdfInfo RequestKdfInfo(string username, RestClient rest)
         {
-            var response = rest.PostJson<R.KdfInfo>("accounts/prelogin", new Dictionary<string, object> { { "email", username } });
+            var response = rest.PostJson<R.KdfInfo>("identity/accounts/prelogin", new Dictionary<string, object> { { "email", username } });
 
             if (response.IsSuccessful)
             {
@@ -256,20 +241,12 @@ namespace PasswordManagerAccess.Bitwarden
             }
         }
 
-        internal static string Login(
-            string username,
-            byte[] passwordHash,
-            string deviceId,
-            IUi ui,
-            ISecureStorage storage,
-            RestClient apiRest,
-            RestClient identityRest
-        )
+        internal static string Login(string username, byte[] passwordHash, string deviceId, IUi ui, ISecureStorage storage, RestClient rest)
         {
             // Try simple password login, potentially with a stored second factor token if
             // "remember me" was used before.
             var rememberMeOptions = GetRememberMeOptions(storage);
-            var response = RequestAuthToken(username, passwordHash, deviceId, rememberMeOptions, identityRest);
+            var response = RequestAuthToken(username, passwordHash, deviceId, rememberMeOptions, rest);
 
             // Simple password login (no 2FA) succeeded
             if (response.AuthToken != null)
@@ -296,7 +273,7 @@ namespace PasswordManagerAccess.Bitwarden
                     // When only the email 2FA present, the email is sent by the server right away.
                     // Trigger only when other methods are present.
                     if (secondFactor.Methods.Count != 1)
-                        TriggerEmailMfaPasscode(username, passwordHash, apiRest);
+                        TriggerEmailMfaPasscode(username, passwordHash, rest);
 
                     passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
                     break;
@@ -312,7 +289,7 @@ namespace PasswordManagerAccess.Bitwarden
 
                     if (!needV1)
                     {
-                        var v4 = DuoV4.Authenticate((string)extra["AuthUrl"], ui, apiRest.Transport);
+                        var v4 = DuoV4.Authenticate((string)extra["AuthUrl"], ui, rest.Transport);
 
                         if (v4 == DuoResult.RedirectToV1)
                             needV1 = true; // Fallback to V1 below
@@ -322,7 +299,7 @@ namespace PasswordManagerAccess.Bitwarden
 
                     if (needV1)
                     {
-                        var v1 = DuoV1.Authenticate((string)extra["Host"] ?? "", (string)extra["Signature"] ?? "", ui, apiRest.Transport);
+                        var v1 = DuoV1.Authenticate((string)extra["Host"] ?? "", (string)extra["Signature"] ?? "", ui, rest.Transport);
                         if (v1 != null)
                             passcode = new Passcode(v1.Code, v1.RememberMe);
                     }
@@ -350,7 +327,7 @@ namespace PasswordManagerAccess.Bitwarden
                 passwordHash,
                 deviceId,
                 new SecondFactorOptions(method, passcode.Code, passcode.RememberMe),
-                identityRest
+                rest
             );
 
             // Password + 2FA is successful
@@ -376,7 +353,7 @@ namespace PasswordManagerAccess.Bitwarden
                 { "deviceIdentifier", deviceId },
             };
 
-            var response = rest.PostForm<R.TokenCliApi>("connect/token", parameters);
+            var response = rest.PostForm<R.TokenCliApi>("identity/connect/token", parameters);
             if (!response.IsSuccessful)
                 throw MakeSpecializedError(response);
 
@@ -576,7 +553,7 @@ namespace PasswordManagerAccess.Bitwarden
 
             var headers = new Dictionary<string, string> { ["Auth-Email"] = username.ToBytes().ToUrlSafeBase64NoPadding() };
 
-            var response = rest.PostForm<R.AuthToken>("connect/token", parameters, headers);
+            var response = rest.PostForm<R.AuthToken>("identity/connect/token", parameters, headers);
             if (response.IsSuccessful)
             {
                 var token = response.Data;
@@ -614,7 +591,7 @@ namespace PasswordManagerAccess.Bitwarden
         {
             var parameters = new Dictionary<string, object> { { "email", username }, { "masterPasswordHash", passwordHash.ToBase64() } };
 
-            var response = rest.PostJson("two-factor/send-email-login", parameters);
+            var response = rest.PostJson("api/two-factor/send-email-login", parameters);
             if (response.IsSuccessful)
                 return;
 
@@ -643,7 +620,7 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static R.Profile FetchProfile(string token, RestClient rest)
         {
-            var response = rest.Get<R.Profile>("accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+            var response = rest.Get<R.Profile>("api/accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
             if (response.IsSuccessful)
                 return response.Data;
 
@@ -654,7 +631,7 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static R.Vault FetchVault(string token, RestClient rest)
         {
-            var response = rest.Get<R.Vault>("sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+            var response = rest.Get<R.Vault>("api/sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
             if (response.IsSuccessful)
                 return response.Data;
 
@@ -664,7 +641,7 @@ namespace PasswordManagerAccess.Bitwarden
         internal static OneOf<R.Item, NoItem> FetchItem(string itemId, Session session)
         {
             var response = session.Rest.Get<R.Item>(
-                $"ciphers/{itemId}/details",
+                $"api/ciphers/{itemId}/details",
                 new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
             );
             if (response.IsSuccessful)
@@ -700,7 +677,10 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static R.Folder[] FetchFolders(Session session)
         {
-            var response = session.Rest.Get<Model.FolderList>($"folders", new Dictionary<string, string> { { "Authorization", $"{session.Token}" } });
+            var response = session.Rest.Get<Model.FolderList>(
+                "api/folders",
+                new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
+            );
             if (response.IsSuccessful)
                 return response.Data.Folders;
 
@@ -710,7 +690,7 @@ namespace PasswordManagerAccess.Bitwarden
         internal static R.Collection[] FetchCollections(Session session)
         {
             var response = session.Rest.Get<Model.CollectionList>(
-                $"collections",
+                "api/collections",
                 new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
             );
             if (response.IsSuccessful)
@@ -1063,9 +1043,6 @@ namespace PasswordManagerAccess.Bitwarden
             // Don't crash, just assume Windows
             return "windows";
         }
-
-        private const string DefaultApiUrl = "https://api.bitwarden.com";
-        private const string DefaultIdentityUrl = "https://identity.bitwarden.com";
 
         private const string RememberMeTokenKey = "remember-me-token";
 
