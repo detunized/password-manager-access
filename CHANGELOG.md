@@ -1,5 +1,9 @@
 # Changelog
 
+## 26.1.0
+  - Bitwarden: added support for the .eu cloud accounts via supplying the https://vault.bitwarden.eu base URL.
+    Cloud and self-hosted base URL handling is unified now (see UPGRADE.md for upgrading instructions).
+
 ## 26.0.1 (merges a fix from 25.0.1 to 22.1.1)
   - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
 

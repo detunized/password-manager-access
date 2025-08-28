@@ -1,5 +1,17 @@
 # Upgrade notes
 
+## To 26.1.0
+
+The `baseUrl` parameter in all of the relevant `Client.*` methods is no longer optional and must be
+provided. Some overloads don't have it and are defaulted to the `Client.DefaultBaseUlr` which is set
+to https://vault.bitwarden.com. All the overloads with the `baseUrl` parameter must receive either a
+valid URL to a self-hosted instance or either `Client.BaseUrlUs` or `Client.BaseUrlEu` for the US and
+EU cloud instances respectively.
+
+## To 26.0.0
+
+Remove DropboxPasswords and Kaspersky from the application.
+
 ## To 25.0.0
 
 Similar to v24.0.0. This release introduces an incompatible API change for ProtonPass: the previous
