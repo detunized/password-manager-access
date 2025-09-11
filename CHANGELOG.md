@@ -1,5 +1,8 @@
 # Changelog
 
+## 22.1.2
+  - 1Password: fixed an issue with Duo MFA failing to authenticate in some situations
+
 ## 22.1.1
   - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
 
