@@ -1,5 +1,8 @@
 # Changelog
 
+## 26.1.1 (merges a fix from 22.0.4 to 26.1.0)
+  - 1Password: fixed an issue with Duo MFA failing to authenticate in some situations
+
 ## 22.0.4 (out of order release, based on 22.0.3)
   - 1Password: fixed an issue with Duo MFA failing to authenticate in some situations
 
@@ -7,7 +10,7 @@
   - Bitwarden: added support for the .eu cloud accounts via supplying the https://vault.bitwarden.eu base URL.
     Cloud and self-hosted base URL handling is unified now (see UPGRADE.md for upgrading instructions).
 
-## 26.0.1 (merges a fix from 25.0.1 to 22.1.1)
+## 26.0.1 (merges a fix from 25.0.1 to 26.0.0)
   - ProtonPass: fixed a bug with single shared items causing `Client.OpenAll` to fail
 
 ## 22.1.1 (out of order release, based on 22.1.0)
