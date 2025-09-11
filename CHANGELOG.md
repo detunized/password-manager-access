@@ -1,5 +1,8 @@
 # Changelog
 
+## 22.1.2 (merges a fix from 22.0.4 to 22.1.1)
+  - 1Password: fixed an issue with Duo MFA failing to authenticate in some situations
+
 ## 26.1.1 (merges a fix from 22.0.4 to 26.1.0)
   - 1Password: fixed an issue with Duo MFA failing to authenticate in some situations
 
