@@ -1,5 +1,8 @@
 # Changelog
 
+## 22.0.4 (out of order release, based on 22.0.3)
+  - 1Password: fixed an issue with Duo MFA failing to authenticate in some situations
+
 ## 26.1.0
   - Bitwarden: added support for the .eu cloud accounts via supplying the https://vault.bitwarden.eu base URL.
     Cloud and self-hosted base URL handling is unified now (see UPGRADE.md for upgrading instructions).
