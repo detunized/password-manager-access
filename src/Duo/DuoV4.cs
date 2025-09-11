@@ -115,7 +115,7 @@ namespace PasswordManagerAccess.Duo
 
                     // All good
                     var result = maybeResult.Value;
-                    return new DuoResult($"{result.Code}:{result.State}", "", choice.RememberMe);
+                    return new DuoResult(result.Code, result.State, choice.RememberMe);
                 }
             }
             finally
