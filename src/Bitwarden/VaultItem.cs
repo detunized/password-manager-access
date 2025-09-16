@@ -8,7 +8,6 @@ namespace PasswordManagerAccess.Bitwarden
         public string Id { get; init; }
         public string Name { get; init; }
         public string Note { get; init; }
-        public string DeletedDate { get; init; }
         public string Folder { get; init; }
         public string[] CollectionIds { get; init; }
         public bool HidePassword { get; init; }

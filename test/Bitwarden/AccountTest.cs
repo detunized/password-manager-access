@@ -18,7 +18,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 Id = "id",
                 Name = "name",
                 Note = "notes",
-                DeletedDate = "deleted date",
                 Folder = "folder",
                 CollectionIds = ["collection1", "collection2"],
                 HidePassword = true,
@@ -40,7 +39,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             account.Id.ShouldBe("id");
             account.Name.ShouldBe("name");
             account.Note.ShouldBe("notes");
-            account.DeletedDate.ShouldBe("deleted date");
             account.Folder.ShouldBe("folder");
             account.CollectionIds.ShouldBe(["collection1", "collection2"]);
             account.HidePassword.ShouldBeTrue();

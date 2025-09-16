@@ -6,5 +6,6 @@ namespace PasswordManagerAccess.Bitwarden;
 public enum NoItem
 {
     NotFound,
+    Deleted,
     UnsupportedType,
 }

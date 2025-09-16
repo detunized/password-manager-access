@@ -20,7 +20,6 @@ namespace PasswordManagerAccess.Bitwarden
             Id = item.Id;
             Name = item.Name;
             Note = item.Note;
-            DeletedDate = item.DeletedDate;
             Folder = item.Folder;
             CollectionIds = item.CollectionIds;
             HidePassword = item.HidePassword;

@@ -18,7 +18,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 Id = "id",
                 Name = "name",
                 Note = "notes",
-                DeletedDate = "deleted date",
                 Folder = "folder",
                 CollectionIds = ["collection1", "collection2"],
                 HidePassword = true,
@@ -39,7 +38,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             sshKey.Id.ShouldBe("id");
             sshKey.Name.ShouldBe("name");
             sshKey.Note.ShouldBe("notes");
-            sshKey.DeletedDate.ShouldBe("deleted date");
             sshKey.Folder.ShouldBe("folder");
             sshKey.CollectionIds.ShouldBe(["collection1", "collection2"]);
             sshKey.HidePassword.ShouldBeTrue();

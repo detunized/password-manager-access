@@ -474,6 +474,21 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
+        public void DecryptVault_ignores_deleted_items()
+        {
+            // This vault is a copy of vault-with-ssh-keys with all but one login and ssh key marked as deleted
+            var vault = Client.DecryptVault(LoadVaultFixture("vault-with-deleted-items"), DerivedKek);
+
+            Assert.Single(vault.Accounts);
+            Assert.Equal("16f777ff-8824-45cf-b3db-a9d600007388", vault.Accounts[0].Id);
+
+            Assert.Single(vault.SshKeys);
+            Assert.Equal("d1812aab-aae7-4f7e-aab4-b2ea00b9bba7", vault.SshKeys[0].Id);
+
+            Assert.Empty(vault.ParseErrors);
+        }
+
+        [Fact]
         public void DecryptVault_returns_collections()
         {
             var vault = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
@@ -807,6 +822,26 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var sshKey = result.AsT1;
             Assert.Equal("318df280-7880-4e4f-a965-b2e901549751", sshKey.Id);
             Assert.Equal("ssh2", sshKey.Name);
+        }
+
+        [Theory]
+        [InlineData("single-item-login-deleted")]
+        [InlineData("single-item-ssh-key-deleted")]
+        public void GetItem_returns_no_item_deleted_for_deleted_items(string fixtureName)
+        {
+            // Arrange
+            var rest = new RestFlow()
+                .Get(GetFixture(fixtureName))
+                .ExpectUrl(BaseUrl + "/api/ciphers/item-id/details")
+                .ExpectHeader("Authorization", "Bearer token")
+                .ToRestClient(BaseUrl);
+
+            // Act
+            var result = Client.GetItem("item-id", MakeSession(rest, [], []));
+
+            // Assert
+            Assert.True(result.IsT2);
+            Assert.Equal(NoItem.Deleted, result.AsT2);
         }
 
         //

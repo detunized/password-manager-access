@@ -705,6 +705,9 @@ namespace PasswordManagerAccess.Bitwarden
 
         internal static OneOf<Account, SshKey, NoItem> ParseItem(R.Item item, Session session)
         {
+            if (IsItemDeleted(item))
+                return NoItem.Deleted;
+
             var profile = session.Profile;
             var folders = session.Folders;
             var collections = session.Collections;
@@ -716,6 +719,8 @@ namespace PasswordManagerAccess.Bitwarden
                 _ => NoItem.UnsupportedType,
             };
         }
+
+        internal static bool IsItemDeleted(R.Item item) => !item.DeletedDate.IsNullOrEmpty();
 
         internal static Profile DecryptProfile(R.Profile profile, byte[] key)
         {
@@ -804,6 +809,10 @@ namespace PasswordManagerAccess.Bitwarden
 
             foreach (var item in items)
             {
+                // Deleted items are ignored
+                if (IsItemDeleted(item))
+                    continue;
+
                 try
                 {
                     switch (item.Type)
@@ -884,7 +893,6 @@ namespace PasswordManagerAccess.Bitwarden
                 Id = item.Id,
                 Name = DecryptToStringOrBlank(item.Name, key),
                 Note = DecryptToStringOrBlank(item.Notes, key),
-                DeletedDate = item.DeletedDate,
                 Folder = item.FolderId == null ? "" : folders.GetValueOrDefault(item.FolderId, ""),
                 CollectionIds = item.CollectionIds ?? [],
                 HidePassword = item.CollectionIds != null && ResolveHidePassword(item.CollectionIds, collections),
