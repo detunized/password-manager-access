@@ -1,5 +1,10 @@
 # Upgrade notes
 
+## To 27.0.0
+
+Delete all references to `Bitwarden.VaultItem.DeletedDate` as it's no longer available.
+
+
 ## To 26.1.0
 
 The `baseUrl` parameter in all of the relevant `Client.*` methods is no longer optional and must be

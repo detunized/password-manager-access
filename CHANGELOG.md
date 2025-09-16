@@ -1,5 +1,10 @@
 # Changelog
 
+## 27.0.0
+  - Bitwarden: deleted accounts and SSH keys are no longer listed in the vault
+  - Bitwarden: in a single item mode NoItem.Deleted is returned for deleted items
+  - Bitwarden: VaultItem.DeletedDate has been removed (API breaking change)
+
 ## 22.1.2 (merges a fix from 22.0.4 to 22.1.1)
   - 1Password: fixed an issue with Duo MFA failing to authenticate in some situations
 
