@@ -16,9 +16,13 @@ namespace PasswordManagerAccess.Dashlane
     // web/extension clients. It's been put on ice for now.
     internal class Dl1RequestSigner : IRequestSigner
     {
+        // TODO: Rework this!
+        public string Username { get; init; } = "";
+        public string Uki { get; init; } = "";
+
         public IReadOnlyDictionary<string, string> Sign(Uri uri, HttpMethod method, IReadOnlyDictionary<string, string> headers, HttpContent content)
         {
-            return Sign(uri, method, headers, content, Os.UnixSeconds());
+            return Sign(uri, method, headers, content, Os.UnixSeconds(), Username, Uki);
         }
 
         //
@@ -30,7 +34,9 @@ namespace PasswordManagerAccess.Dashlane
             HttpMethod method,
             IReadOnlyDictionary<string, string> headers,
             HttpContent content,
-            uint timestamp
+            uint timestamp,
+            string username = "",
+            string uki = ""
         )
         {
             var headersToSign = FormatHeaderForSigning(headers, content);
@@ -38,16 +44,22 @@ namespace PasswordManagerAccess.Dashlane
             var request = BuildRequest(uri, method, headersToSign, headerOrder, content);
             var requestHashHex = Crypto.Sha256(request).ToHex();
             var signingMaterial = BuildAuthSigningMaterial(timestamp, requestHashHex);
-            var signature = Crypto.HmacSha256(AppAccessSecret, signingMaterial).ToHex();
-            var extraHeaders = new Dictionary<string, string> { ["Authorization"] = BuildAuthHeader(timestamp, headerOrder, signature) };
+            var key = uki.IsNullOrEmpty() ? AppAccessSecret : $"{AppAccessSecret}\n{uki.Split('-')[1]}";
+            var signature = Crypto.HmacSha256(key.ToBytes(), signingMaterial).ToHex();
+            var extraHeaders = new Dictionary<string, string>
+            {
+                ["Authorization"] = BuildAuthHeader(timestamp, headerOrder, signature, username, uki),
+            };
 
             return headers.Merge(extraHeaders);
         }
 
-        internal static string BuildAuthHeader(uint timestamp, string[] headerOrder, string signature)
+        internal static string BuildAuthHeader(uint timestamp, string[] headerOrder, string signature, string username = "", string uki = "")
         {
             var headers = headerOrder.JoinToString(";");
-            return $"DL1-HMAC-SHA256 AppAccessKey={AppAccessKey},Timestamp={timestamp},SignedHeaders={headers},Signature={signature}";
+            var login = username.IsNullOrEmpty() ? "" : $"Login={username},";
+            var device = uki.IsNullOrEmpty() ? "" : $"DeviceAccessKey={uki.Split('-')[0]},";
+            return $"DL1-HMAC-SHA256 {login}AppAccessKey={AppAccessKey},{device}Timestamp={timestamp},SignedHeaders={headers},Signature={signature}";
         }
 
         internal static string HashBody(HttpContent content)
@@ -63,7 +75,7 @@ namespace PasswordManagerAccess.Dashlane
             foreach (var kv in headers)
             {
                 var name = kv.Key.ToLower();
-                if (ExcludeHeadersLowerCase.Contains(name))
+                if (!HeadersToSignLowerCase.Contains(name))
                     continue;
 
                 formattedHeaders[name] = kv.Value;
@@ -72,7 +84,7 @@ namespace PasswordManagerAccess.Dashlane
             foreach (var kv in content.Headers)
             {
                 var name = kv.Key.ToLower();
-                if (ExcludeHeadersLowerCase.Contains(name))
+                if (!HeadersToSignLowerCase.Contains(name))
                     continue;
 
                 formattedHeaders[name] = kv.Value.JoinToString(", ");
@@ -109,9 +121,9 @@ namespace PasswordManagerAccess.Dashlane
             return $"DL1-HMAC-SHA256\n{timestamp}\n{requestHash}";
         }
 
-        private const string AppAccessKey = "C4F8H4SEAMXNBQVSASVBWDDZNCVTESMY";
-        private static readonly byte[] AppAccessSecret = "Na9Dz3WcmjMZ5pdYU1AmC5TdYkeWAOzvOK6PkbU4QjfjPQTSaXY8pjPwrvHfVH14".ToBytes();
+        private const string AppAccessKey = "HB9JQATDY6Y62JYKT7KXBN4C7FH8HKC5";
+        private static readonly string AppAccessSecret = "boUtXxmDgLUtNFaigCMQ3+u+LAx0tg1ePAUE13nkR7dto+Zwq1naOHZTwbxxM7iL";
 
-        private static readonly HashSet<string> ExcludeHeadersLowerCase = new HashSet<string> { "content-length", "user-agent" };
+        private static readonly HashSet<string> HeadersToSignLowerCase = ["content-type", "user-agent"];
     }
 }

@@ -151,6 +151,10 @@ namespace PasswordManagerAccess.Dashlane
                 }
 
                 var info = RegisterDevice(username, ticket, code.RememberMe, rest);
+
+                // TODO: Remove this
+                var r = PostJson<R.MfaStatus>("Get2FAStatusUnauthenticated", new Dictionary<string, object> { ["login"] = username }, rest);
+
                 return new RegisterResult($"{info.AccessKey}-{info.SecretKey}", info.ServerKey ?? "", code.RememberMe);
             }
         }
@@ -162,7 +166,7 @@ namespace PasswordManagerAccess.Dashlane
                 new Dictionary<string, object>
                 {
                     ["login"] = username,
-                    ["methods"] = new[] { "email_token", "totp", "duo_push", "dashlane_authenticator", "u2f" },
+                    ["methods"] = new[] { "email_token", "totp", "duo_push", "dashlane_authenticator" },
                 },
                 rest
             ).Methods;
@@ -207,7 +211,12 @@ namespace PasswordManagerAccess.Dashlane
         {
             return PostJson<R.AuthTicket>(
                 "PerformTotpVerification",
-                new Dictionary<string, object> { ["login"] = username, ["otp"] = token },
+                new Dictionary<string, object>
+                {
+                    ["login"] = username,
+                    ["otp"] = token,
+                    ["activationFlow"] = false,
+                },
                 rest
             ).Ticket;
         }
@@ -218,17 +227,17 @@ namespace PasswordManagerAccess.Dashlane
                 "CompleteDeviceRegistrationWithAuthTicket",
                 new Dictionary<string, object>
                 {
-                    ["login"] = username,
-                    ["authTicket"] = ticket,
                     ["device"] = new Dictionary<string, object>
                     {
-                        ["appVersion"] = AppVersion,
                         ["deviceName"] = ClientName,
-                        ["osCountry"] = "US",
-                        ["osLanguage"] = "en-US",
+                        ["appVersion"] = AppVersion,
                         ["platform"] = Platform,
+                        ["osCountry"] = "en_US",
+                        ["osLanguage"] = "en_US",
                         ["temporary"] = !rememberMe,
                     },
+                    ["login"] = username,
+                    ["authTicket"] = ticket,
                 },
                 rest
             );
@@ -250,17 +259,22 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static R.Vault Fetch(string username, string deviceId, IRestTransport transport)
         {
-            var rest = new RestClient(transport, FetchBaseApiUrl);
+            // Reuse the other RestClient
+            var rest = new RestClient(
+                transport,
+                "https://api.dashlane.com/",
+                new Dl1RequestSigner { Username = username, Uki = deviceId },
+                defaultHeaders: new Dictionary<string, string> { ["Dashlane-Client-Agent"] = ClientAgent, ["User-Agent"] = UserAgent }
+            );
             var parameters = new Dictionary<string, object>
             {
-                ["login"] = username,
-                ["lock"] = "nolock",
-                ["timestamp"] = "0",
-                ["sharingTimestamp"] = "0",
-                ["uki"] = deviceId,
+                ["timestamp"] = 0,
+                ["needsKeys"] = false,
+                ["teamAdminGroups"] = false,
+                ["transactions"] = Array.Empty<string>(),
             };
 
-            var response = rest.PostForm<R.Vault>("12/backup/latest", parameters);
+            var response = rest.PostJson<R.Vault>("v1/sync/GetLatestContent", parameters);
             if (response.IsSuccessful)
                 return response.Data;
 
@@ -339,15 +353,13 @@ namespace PasswordManagerAccess.Dashlane
         //
 
         private const string AuthApiBaseUrl = "https://api.dashlane.com/v1/authentication/";
-        private const string FetchBaseApiUrl = "https://ws1.dashlane.com/";
-        private const string UserAgent =
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
+        private const string UserAgent = "Dashlane CLI v6.2526.2";
         private const string DeviceUkiKey = "device-uki";
-        private const string AppVersion = "6.2450-prod-webapp-92fd706a";
-        private const string Platform = "server_leeloo";
-        private const string ClientName = "Chrome - Mac OS (PMA)";
+        private const string AppVersion = "6.2526.2";
+        private const string Platform = "server_cli";
+        private const string ClientName = "hostname.local - darwin-arm64";
         private const int MaxMfaAttempts = 3;
         private static readonly string ClientAgent =
-            $"{{\"platform\":\"{Platform}\",\"version\":\"{AppVersion}\",\"osversion\":\"OS_X_10_15_7\",\"language\":\"en\"}}";
+            $$"""{"version":"{{AppVersion}}","platform":"{{Platform}}","osversion":"darwin-arm64","partner":"dashlane"}""";
     }
 }

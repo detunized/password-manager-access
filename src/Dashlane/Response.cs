@@ -67,6 +67,18 @@ namespace PasswordManagerAccess.Dashlane.Response
         public readonly string PrivateKey;
     }
 
+    public class MfaStatus
+    {
+        [JsonProperty("type", Required = Required.Always)]
+        public string Name { get; set; }
+
+        [JsonProperty("hasDashlaneAuthenticator")]
+        public bool HasDashlaneAuthenticator { get; set; }
+
+        [JsonProperty("isDuoEnabled")]
+        public bool IsDuoEnabled { get; set; }
+    }
+
     internal readonly struct ErrorEnvelope
     {
         [JsonProperty("requestId", Required = Required.Always)]
