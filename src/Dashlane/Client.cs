@@ -80,7 +80,7 @@ namespace PasswordManagerAccess.Dashlane
             var rest = new RestClient(
                 transport,
                 AuthApiBaseUrl,
-                new Dl1RequestSigner(),
+                new Dl1AppRequestSigner(),
                 defaultHeaders: new Dictionary<string, string>(2) { ["Dashlane-Client-Agent"] = ClientAgent, ["User-Agent"] = UserAgent }
             );
 
@@ -263,7 +263,13 @@ namespace PasswordManagerAccess.Dashlane
             var rest = new RestClient(
                 transport,
                 "https://api.dashlane.com/",
-                new Dl1RequestSigner { Username = username, Uki = deviceId },
+                new Dl1DeviceRequestSigner
+                {
+                    Username = username,
+                    // TODO: Improve this!
+                    DeviceAccessKey = deviceId.Split('-')[0],
+                    DeviceSecretKey = deviceId.Split('-')[1],
+                },
                 defaultHeaders: new Dictionary<string, string> { ["Dashlane-Client-Agent"] = ClientAgent, ["User-Agent"] = UserAgent }
             );
             var parameters = new Dictionary<string, object>

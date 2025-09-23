@@ -51,7 +51,7 @@ namespace PasswordManagerAccess.Dashlane
                                 foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword, keyCache))
                                     accounts[i.Id] = i;
                             }
-                            catch (BadCredentialsException e)
+                            catch (BadCredentialsException)
                             {
                                 // TODO: Remove this!
                                 // TODO: Report errors!
