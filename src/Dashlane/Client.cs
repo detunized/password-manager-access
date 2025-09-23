@@ -274,11 +274,7 @@ namespace PasswordManagerAccess.Dashlane
                 ["transactions"] = Array.Empty<string>(),
             };
 
-            var response = rest.PostJson<R.Vault>("v1/sync/GetLatestContent", parameters);
-            if (response.IsSuccessful)
-                return response.Data;
-
-            throw MakeSpecializedError(response, TryParseFetchError);
+            return PostJson<R.Vault>("v1/sync/GetLatestContent", parameters, rest);
         }
 
         internal static BaseException MakeSpecializedError(RestResponse<string> response, Func<RestResponse<string>, BaseException> parseError)

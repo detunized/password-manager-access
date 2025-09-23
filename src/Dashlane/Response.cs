@@ -111,35 +111,22 @@ namespace PasswordManagerAccess.Dashlane.Response
 
     internal class Vault
     {
-        [JsonProperty(PropertyName = "fullBackupFile")]
-        public readonly string EncryptedAccounts;
-
-        [JsonProperty(PropertyName = "transactionList")]
+        [JsonProperty(PropertyName = "transactions", Required = Required.Always)]
         public readonly Transaction[] Transactions;
-
-        //
-        // These ones are not used and only needed to identify this data structure during de-serialization.
-        //
-
-        [JsonProperty(PropertyName = "timestamp", Required = Required.Always)]
-        public readonly string UnusedTimestamp;
-
-        [JsonProperty(PropertyName = "summary", Required = Required.Always)]
-        public readonly object UnusedSummary;
     }
 
     internal class Transaction
     {
-        [JsonProperty(PropertyName = "type")]
+        [JsonProperty(PropertyName = "identifier", Required = Required.Always)]
+        public readonly string Id;
+
+        [JsonProperty(PropertyName = "type", Required = Required.Always)]
         public readonly string Kind;
 
-        [JsonProperty(PropertyName = "action")]
+        [JsonProperty(PropertyName = "action", Required = Required.Always)]
         public readonly string Action;
 
         [JsonProperty(PropertyName = "content")]
         public readonly string Content;
-
-        [JsonProperty(PropertyName = "identifier")]
-        public readonly string Id;
     }
 }

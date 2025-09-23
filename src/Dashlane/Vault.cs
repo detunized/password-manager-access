@@ -35,12 +35,7 @@ namespace PasswordManagerAccess.Dashlane
             // This is used with the MFA. The server supplies the password prefix that is used in encryption.
             var fullPassword = serverKey + password;
 
-            var fullFile = blob.EncryptedAccounts;
-            if (!string.IsNullOrWhiteSpace(fullFile))
-                foreach (var i in Parse.ExtractEncryptedAccounts(fullFile.Decode64(), fullPassword, keyCache))
-                    accounts[i.Id] = i;
-
-            foreach (var transaction in blob.Transactions ?? Array.Empty<R.Transaction>())
+            foreach (var transaction in blob.Transactions)
             {
                 if (transaction.Kind != "AUTHENTIFIANT")
                     continue;
@@ -50,8 +45,20 @@ namespace PasswordManagerAccess.Dashlane
                     case "BACKUP_EDIT":
                         var content = transaction.Content;
                         if (!string.IsNullOrWhiteSpace(content))
-                            foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword, keyCache))
-                                accounts[i.Id] = i;
+                        {
+                            try
+                            {
+                                foreach (var i in Parse.ExtractEncryptedAccounts(content.Decode64(), fullPassword, keyCache))
+                                    accounts[i.Id] = i;
+                            }
+                            catch (BadCredentialsException e)
+                            {
+                                // TODO: Remove this!
+                                // TODO: Report errors!
+                                Console.WriteLine($"Failed to decrypt transaction {transaction.Id}");
+                                // Ignore transaction
+                            }
+                        }
 
                         break;
                     case "BACKUP_REMOVE":
