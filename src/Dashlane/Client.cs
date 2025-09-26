@@ -14,76 +14,52 @@ namespace PasswordManagerAccess.Dashlane
     {
         public static (R.Vault Vault, string ServerKey) OpenVault(string username, Ui ui, ISecureStorage storage, IRestTransport transport)
         {
-            // Dashlane requires a registered known to the server device ID (UKI) to access the vault. When there's no
-            // UKI available we need to initiate a login sequence with a forced OTP.
-            var uki = storage.LoadString(DeviceUkiKey);
-
+            // See if we have access keys stored in the previous run
             // Server key is a server provided part of the password used in the vault decryption.
-            var serverKey = "";
+            // We do not store this. So in case OTP2 we need to request it every time.
+            var accessKeys = LoadAccessKeys(storage);
 
-            // Give 2 attempts max
-            // 1. Possibly fail to fetch the vault with an expired UKI
-            // 2. Try again with a new one
-            for (var i = 0; i < 2; i++)
+            // If we have access keys we can try to fetch the vault
+            if (accessKeys.IsValid)
             {
-                if (uki.IsNullOrEmpty())
-                {
-                    var registerResult = RegisterNewDeviceWithMultipleAttempts(username, ui, transport);
-
-                    uki = registerResult.Uki;
-                    serverKey = registerResult.ServerKey;
-
-                    if (registerResult.RememberMe)
-                        storage.StoreString(DeviceUkiKey, uki);
-
-                    // We don't want to try twice with a newly issued UKI. Take one attempt away.
-                    i++;
-                }
-
                 try
                 {
-                    return (Fetch(username, uki, transport), serverKey);
+                    // TODO: Add an extra check no OTP2 is used. See "authentication/Get2FAStatusUnauthenticated" endpoint.
+                    return (Fetch(username, accessKeys, transport), accessKeys.ServerKey);
                 }
                 catch (BadCredentialsException)
                 {
-                    // In case of expired or invalid UKI we get a BadCredentialsException here
-                    // Wipe the old UKI as it's no longer valid and try again
-                    uki = "";
-                    storage.StoreString(DeviceUkiKey, "");
+                    // Erase the access keys and fall through to the full login
+                    EraseAccessKeys(storage);
                 }
             }
 
-            throw new InternalErrorException("Failed to fetch the vault");
+            // Either we failed to fetch the vault or we didn't have access keys in the first place.
+            var result = RegisterNewDeviceWithMultipleAttempts(username, ui, MakeAppRestClient(transport));
+
+            // If we have OTP2 we need to erase the access keys
+            if (result.AccessKeys.IsOtp2)
+                EraseAccessKeys(storage);
+            else if (result.RememberMe)
+                StoreAccessKeys(result.AccessKeys, storage);
+
+            return (Fetch(username, result.AccessKeys, transport), result.AccessKeys.ServerKey);
         }
 
         //
         // Internal
         //
 
-        internal readonly struct RegisterResult
+        internal record AccessKeys(string AccessKey, string SecretKey, string ServerKey)
         {
-            public readonly string Uki;
-            public readonly string ServerKey;
-            public readonly bool RememberMe;
-
-            public RegisterResult(string uki, string serverKey, bool rememberMe)
-            {
-                Uki = uki;
-                ServerKey = serverKey;
-                RememberMe = rememberMe;
-            }
+            public bool IsValid => !AccessKey.IsNullOrEmpty() && !SecretKey.IsNullOrEmpty();
+            public bool IsOtp2 => !ServerKey.IsNullOrEmpty();
         }
 
-        // Returns a valid UKI and "remember me"
-        internal static RegisterResult RegisterNewDeviceWithMultipleAttempts(string username, Ui ui, IRestTransport transport)
-        {
-            var rest = new RestClient(
-                transport,
-                AuthApiBaseUrl,
-                new Dl1AppRequestSigner(),
-                defaultHeaders: new Dictionary<string, string>(2) { ["Dashlane-Client-Agent"] = ClientAgent, ["User-Agent"] = UserAgent }
-            );
+        internal record RegisterResult(AccessKeys AccessKeys, bool RememberMe);
 
+        internal static RegisterResult RegisterNewDeviceWithMultipleAttempts(string username, Ui ui, RestClient rest)
+        {
             var mfaMethods = RequestDeviceRegistration(username, rest);
             var mfaMethod = ChooseMfaMethod(mfaMethods);
 
@@ -152,17 +128,14 @@ namespace PasswordManagerAccess.Dashlane
 
                 var info = RegisterDevice(username, ticket, code.RememberMe, rest);
 
-                // TODO: Remove this
-                var r = PostJson<R.MfaStatus>("Get2FAStatusUnauthenticated", new Dictionary<string, object> { ["login"] = username }, rest);
-
-                return new RegisterResult($"{info.AccessKey}-{info.SecretKey}", info.ServerKey ?? "", code.RememberMe);
+                return new RegisterResult(new AccessKeys(info.AccessKey, info.SecretKey, info.ServerKey ?? ""), code.RememberMe);
             }
         }
 
         internal static R.VerificationMethod[] RequestDeviceRegistration(string username, RestClient rest)
         {
             return PostJson<R.VerificationMethods>(
-                "GetAuthenticationMethodsForDevice",
+                "authentication/GetAuthenticationMethodsForDevice",
                 new Dictionary<string, object>
                 {
                     ["login"] = username,
@@ -174,7 +147,8 @@ namespace PasswordManagerAccess.Dashlane
 
         internal static void TriggerEmailToken(string username, RestClient rest)
         {
-            PostJson<R.Blank>("RequestEmailTokenVerification", new Dictionary<string, object> { ["login"] = username }, rest);
+            // TODO: We need to open a browser to trigger the email 2FA
+            throw new UnsupportedFeatureException("Triggering email 2FA is not supported yet. Come back later.");
         }
 
         private enum MfaMethod
@@ -195,22 +169,24 @@ namespace PasswordManagerAccess.Dashlane
                 return MfaMethod.Email;
 
             var names = mfaMethods.Select(x => x.Name).JoinToString(", ");
-            throw new UnsupportedFeatureException($"None of the [{names}] MFA methods are supported");
+            throw new UnsupportedFeatureException($"None of the available MFA methods are supported: [{names}]");
         }
 
+        // Returns auth ticket
         internal static string SubmitEmailToken(string username, string token, RestClient rest)
         {
             return PostJson<R.AuthTicket>(
-                "PerformEmailTokenVerification",
+                "authentication/PerformEmailTokenVerification",
                 new Dictionary<string, object> { ["login"] = username, ["token"] = token },
                 rest
             ).Ticket;
         }
 
+        // Returns auth ticket
         internal static string SubmitOtpToken(string username, string token, RestClient rest)
         {
             return PostJson<R.AuthTicket>(
-                "PerformTotpVerification",
+                "authentication/PerformTotpVerification",
                 new Dictionary<string, object>
                 {
                     ["login"] = username,
@@ -224,7 +200,7 @@ namespace PasswordManagerAccess.Dashlane
         internal static R.DeviceInfo RegisterDevice(string username, string ticket, bool rememberMe, RestClient rest)
         {
             return PostJson<R.DeviceInfo>(
-                "CompleteDeviceRegistrationWithAuthTicket",
+                "authentication/CompleteDeviceRegistrationWithAuthTicket",
                 new Dictionary<string, object>
                 {
                     ["device"] = new Dictionary<string, object>
@@ -257,21 +233,11 @@ namespace PasswordManagerAccess.Dashlane
             throw MakeSpecializedError(response, TryParseAuthError);
         }
 
-        internal static R.Vault Fetch(string username, string deviceId, IRestTransport transport)
+        internal static R.Vault Fetch(string username, AccessKeys accessKeys, IRestTransport transport) =>
+            Fetch(MakeDeviceRestClient(transport, username, accessKeys));
+
+        internal static R.Vault Fetch(RestClient rest)
         {
-            // Reuse the other RestClient
-            var rest = new RestClient(
-                transport,
-                "https://api.dashlane.com/",
-                new Dl1DeviceRequestSigner
-                {
-                    Username = username,
-                    // TODO: Improve this!
-                    DeviceAccessKey = deviceId.Split('-')[0],
-                    DeviceSecretKey = deviceId.Split('-')[1],
-                },
-                defaultHeaders: new Dictionary<string, string> { ["Dashlane-Client-Agent"] = ClientAgent, ["User-Agent"] = UserAgent }
-            );
             var parameters = new Dictionary<string, object>
             {
                 ["timestamp"] = 0,
@@ -280,8 +246,12 @@ namespace PasswordManagerAccess.Dashlane
                 ["transactions"] = Array.Empty<string>(),
             };
 
-            return PostJson<R.Vault>("v1/sync/GetLatestContent", parameters, rest);
+            return PostJson<R.Vault>("sync/GetLatestContent", parameters, rest);
         }
+
+        //
+        // Error handling
+        //
 
         internal static BaseException MakeSpecializedError(RestResponse<string> response, Func<RestResponse<string>, BaseException> parseError)
         {
@@ -323,6 +293,9 @@ namespace PasswordManagerAccess.Dashlane
             {
                 case "user_not_found":
                     return new BadCredentialsException($"Invalid username: '{error.Message}'");
+                case "invalid_authentication":
+                case "unknown_userdevice_key":
+                    return new BadCredentialsException($"Invalid access codes: '{error.Message}'");
                 case "verification_failed":
                     return new BadMultiFactorException($"MFA failed: '{error.Message}'");
                 default:
@@ -351,17 +324,66 @@ namespace PasswordManagerAccess.Dashlane
         }
 
         //
+        // Rest clients
+        //
+
+        internal static RestClient MakeAppRestClient(IRestTransport transport) => MakeRestClient(new Dl1AppRequestSigner(), transport);
+
+        internal static RestClient MakeDeviceRestClient(IRestTransport transport, string username, AccessKeys accessKeys) =>
+            MakeRestClient(
+                new Dl1DeviceRequestSigner
+                {
+                    Username = username,
+                    DeviceAccessKey = accessKeys.AccessKey,
+                    DeviceSecretKey = accessKeys.SecretKey,
+                },
+                transport
+            );
+
+        internal static RestClient MakeRestClient(IRequestSigner signer, IRestTransport transport) =>
+            new(
+                transport,
+                AuthApiBaseUrl,
+                signer,
+                defaultHeaders: new Dictionary<string, string>(2) { ["Dashlane-Client-Agent"] = ClientAgent, ["User-Agent"] = UserAgent }
+            );
+
+        //
+        // Storage
+        //
+
+        internal static AccessKeys LoadAccessKeys(ISecureStorage storage) =>
+            // We don't store the server key
+            new(storage.LoadString(DeviceAccessKeyKey), storage.LoadString(DeviceSecretKeyKey), "");
+
+        internal static void StoreAccessKeys(AccessKeys accessKeys, ISecureStorage storage)
+        {
+            // We don't store the server key
+            storage.StoreString(DeviceAccessKeyKey, accessKeys.AccessKey);
+            storage.StoreString(DeviceSecretKeyKey, accessKeys.SecretKey);
+        }
+
+        internal static void EraseAccessKeys(ISecureStorage storage)
+        {
+            storage.StoreString(DeviceAccessKeyKey, "");
+            storage.StoreString(DeviceSecretKeyKey, "");
+        }
+
+        //
         // Data
         //
 
-        private const string AuthApiBaseUrl = "https://api.dashlane.com/v1/authentication/";
+        // Storage keys
+        private const string DeviceAccessKeyKey = "device-access-key";
+        private const string DeviceSecretKeyKey = "device-secret-key";
+
+        private const string AuthApiBaseUrl = "https://api.dashlane.com/v1/";
         private const string UserAgent = "Dashlane CLI v6.2526.2";
-        private const string DeviceUkiKey = "device-uki";
         private const string AppVersion = "6.2526.2";
         private const string Platform = "server_cli";
         private const string ClientName = "hostname.local - darwin-arm64";
         private const int MaxMfaAttempts = 3;
-        private static readonly string ClientAgent =
+        private const string ClientAgent =
             $$"""{"version":"{{AppVersion}}","platform":"{{Platform}}","osversion":"darwin-arm64","partner":"dashlane"}""";
     }
 }

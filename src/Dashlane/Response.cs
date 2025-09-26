@@ -70,7 +70,7 @@ namespace PasswordManagerAccess.Dashlane.Response
     public class MfaStatus
     {
         [JsonProperty("type", Required = Required.Always)]
-        public string Name { get; set; }
+        public string Kind { get; set; }
 
         [JsonProperty("hasDashlaneAuthenticator")]
         public bool HasDashlaneAuthenticator { get; set; }

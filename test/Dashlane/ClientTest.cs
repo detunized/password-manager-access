@@ -16,18 +16,35 @@ namespace PasswordManagerAccess.Test.Dashlane
         [Fact]
         private void Fetch_makes_post_request_to_specific_endpoint()
         {
+            // Arrange
             var rest = new RestFlow().Post(GetFixture("empty-vault")).ExpectUrl(FetchEndpoint);
-            Client.Fetch(Username, Uki, rest);
+
+            // Act/Assert
+            Client.Fetch(Username, AccessKeys, rest);
         }
 
         [Fact]
-        private void Fetch_makes_post_request_with_correct_username_uki_and_no_otp()
+        private void Fetch_makes_post_request_with_correct_parameters()
         {
+            // Arrange
             var rest = new RestFlow()
                 .Post(GetFixture("empty-vault"))
-                .ExpectContent($"login={Username}", $"uki={Uki}")
-                .ExpectContent(s => Assert.DoesNotContain("otp=", s));
-            Client.Fetch(Username, Uki, rest);
+                .ExpectContent("\"timestamp\":0", "\"needsKeys\":false", "\"teamAdminGroups\":false", "\"transactions\":[]");
+
+            // Act/Assert
+            Client.Fetch(Username, AccessKeys, rest);
+        }
+
+        [Fact]
+        private void Fetch_signs_request_with_username_and_device_access_keys()
+        {
+            // Arrange
+            var rest = new RestFlow()
+                .Post(GetFixture("empty-vault"))
+                .ExpectHeader("Authorization", "DL1-HMAC-SHA256 Login=username,", ",DeviceAccessKey=access-key,");
+
+            // Act/Assert
+            Client.Fetch(Username, AccessKeys, rest);
         }
 
         [Fact]
@@ -36,22 +53,24 @@ namespace PasswordManagerAccess.Test.Dashlane
             var error = new HttpRequestException("Network error");
             var rest = new RestFlow().Post("{}", error);
 
-            var e = Exceptions.AssertThrowsNetworkError(() => Client.Fetch(Username, Uki, rest), "A network error occurred");
+            var e = Exceptions.AssertThrowsNetworkError(() => Client.Fetch(rest), "A network error occurred");
             Assert.Equal(error, e.InnerException);
         }
 
-        [Fact]
-        private void Fetch_throws_on_invalid_username_or_password()
+        [Theory]
+        [InlineData("error-unknown-userdevice-key")]
+        [InlineData("error-invalid-authentication")]
+        private void Fetch_throws_BadCredentials_on_bad_access_keys(string fixture)
         {
-            var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Incorrect authentification'}");
-            Exceptions.AssertThrowsBadCredentials(() => Client.Fetch(Username, Uki, rest), "Invalid credentials");
+            var rest = new RestFlow().Post(GetFixture(fixture));
+            Exceptions.AssertThrowsBadCredentials(() => Client.Fetch(Username, AccessKeys, rest), "Invalid access codes");
         }
 
         [Fact]
-        private void Fetch_throws_on_other_message()
+        private void Fetch_throws_InternalError_on_other_message()
         {
-            var rest = new RestFlow().Post("{'objectType': 'message', 'content': 'Oops!'}");
-            Exceptions.AssertThrowsInternalError(() => Client.Fetch(Username, Uki, rest), "Oops!");
+            var rest = new RestFlow().Post(GetFixture("error-other-message"));
+            Exceptions.AssertThrowsInternalError(() => Client.Fetch(Username, AccessKeys, rest), "Oops, something went wrong!");
         }
 
         //
@@ -59,7 +78,10 @@ namespace PasswordManagerAccess.Test.Dashlane
         //
 
         private const string Username = "username";
-        private const string Uki = "uki";
-        private const string FetchEndpoint = "/12/backup/latest";
+        private const string FetchEndpoint = "/sync/GetLatestContent";
+        private const string AccessKey = "access-key";
+        private const string SecretKey = "secret-key";
+        private const string ServerKey = "server-key";
+        private static readonly Client.AccessKeys AccessKeys = new(AccessKey, SecretKey, ServerKey);
     }
 }

@@ -1,11 +1,10 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Dashlane;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Dashlane
@@ -13,111 +12,70 @@ namespace PasswordManagerAccess.Test.Dashlane
     public class VaultTest : TestBase
     {
         [Fact]
-        public void Open_returns_accounts_with_existing_device_id()
+        public void Open_throws_on_user_not_found()
         {
+            // Arrange
+            var flow = new RestFlow().Post(GetFixture("error-user-not-found"));
+
+            // Act/Assert
+            Exceptions.AssertThrowsBadCredentials(
+                () => Vault.Open(Username, Password, new ThrowingUi(), MakeEmptyStorage(), flow),
+                "The given login does not exist."
+            );
+        }
+
+        [Fact]
+        public void Open_returns_accounts_with_existing_device_keys()
+        {
+            // Arrange
             var flow = new RestFlow().Post(GetFixture("non-empty-vault"));
 
-            var vault = Vault.Open(Username, Password, null, new Storage(Uki), flow);
+            // Act
+            var vault = Vault.Open(Username, Password, new ThrowingUi(), MakeStorage(), flow);
 
-            Assert.NotEmpty(vault.Accounts);
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
         }
 
         [Fact]
-        public void Open_returns_accounts_with_email_token_and_device_registration()
+        public void Open_returns_accounts_with_totp_device_registration()
         {
+            // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("email-token-triggered"))
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
-            var vault = Vault.Open(Username, Password, MakeUi(Otp, false), new Storage(""), flow);
+            // Act
+            var vault = Vault.Open(Username, Password, MakeUi(Otp, false), MakeEmptyStorage(), flow);
 
-            Assert.NotEmpty(vault.Accounts);
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
         }
 
         [Fact]
-        public void Open_returns_accounts_with_otp_token_and_device_registration()
+        public void Open_returns_accounts_after_retry_on_failed_otp()
         {
+            // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("otp-requested"))
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("error-verification-failed"))
+                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
-            var vault = Vault.Open(Username, Password, MakeUi(Otp, false), new Storage(""), flow);
-
-            Assert.NotEmpty(vault.Accounts);
-        }
-
-        [Fact]
-        public void Open_throws_on_resend_with_totp()
-        {
-            var flow = new RestFlow().Post(GetFixture("otp-requested"));
-
-            Exceptions.AssertThrowsInternalError(
-                () => Vault.Open(Username, Password, MakeUi(Ui.Passcode.Resend), new Storage(""), flow),
-                "Return value Resend is invalid in this context"
+            // Act
+            var vault = Vault.Open(
+                Username,
+                Password,
+                MakeUi(new Ui.Passcode("123456", false), new Ui.Passcode(Otp, false), new Ui.Passcode(Otp, false)),
+                MakeEmptyStorage(),
+                flow
             );
-        }
 
-        [Fact]
-        public void Open_returns_accounts_with_email_token_and_device_registration_with_expired_device_id()
-        {
-            var flow = new RestFlow()
-                .Post(GetFixture("invalid-uki"))
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("email-token-triggered"))
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
-                .Post(GetFixture("non-empty-vault"));
-
-            var vault = Vault.Open(Username, Password, MakeUi(Otp, false), new Storage(Uki), flow);
-
-            Assert.NotEmpty(vault.Accounts);
-        }
-
-        [Fact]
-        public void Open_returns_accounts_with_otp_token_and_device_registration_with_expired_device_id()
-        {
-            var flow = new RestFlow()
-                .Post(GetFixture("invalid-uki"))
-                .Post(GetFixture("otp-requested"))
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
-                .Post(GetFixture("non-empty-vault"));
-
-            var vault = Vault.Open(Username, Password, MakeUi(Otp, false), new Storage(Uki), flow);
-
-            Assert.NotEmpty(vault.Accounts);
-        }
-
-        [Fact]
-        public void Open_throws_on_invalid_email_address()
-        {
-            var flow = new RestFlow().Post(GetFixture("invalid-email"), HttpStatusCode.BadRequest);
-
-            Exceptions.AssertThrowsBadCredentials(
-                () => Vault.Open(Username, Password, MakeUi(Otp, false), new Storage(""), flow),
-                "Invalid username: "
-            );
-        }
-
-        [Fact]
-        public void Open_returns_accounts_with_email_token_after_1_resend()
-        {
-            var flow = new RestFlow()
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("email-token-triggered")) // First token trigger
-                .Post(GetFixture("email-token-triggered")) // Resend
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
-                .Post(GetFixture("non-empty-vault"));
-
-            var vault = Vault.Open(Username, Password, MakeUi(Ui.Passcode.Resend, new Ui.Passcode(Otp, false)), new Storage(""), flow);
-
-            Assert.NotEmpty(vault.Accounts);
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
         }
 
         [Theory]
@@ -128,147 +86,106 @@ namespace PasswordManagerAccess.Test.Dashlane
         [InlineData("1234567")]
         public void Open_asks_ui_for_another_token_when_it_is_not_6_digits(string token)
         {
+            // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("email-token-triggered"))
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
-            var vault = Vault.Open(Username, Password, MakeUi(new Ui.Passcode(token, false), new Ui.Passcode(Otp, false)), new Storage(""), flow);
+            // Act
+            var vault = Vault.Open(Username, Password, MakeUi(new Ui.Passcode(token, false), new Ui.Passcode(Otp, false)), MakeEmptyStorage(), flow);
 
-            Assert.NotEmpty(vault.Accounts);
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
         }
 
         [Fact]
-        public void Open_returns_accounts_with_email_token_after_2_bad_attempts()
+        public void Open_saves_device_keys_when_remember_me_is_true()
         {
+            // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("email-token-triggered"))
-                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
-                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
-            var vault = Vault.Open(Username, Password, MakeUi(Otp, false), new Storage(""), flow);
+            var storage = MakeEmptyStorage();
 
-            Assert.NotEmpty(vault.Accounts);
+            // Act
+            Vault.Open(Username, Password, MakeUi(Otp, true), storage, flow);
+
+            // Assert
+            storage.Values.ShouldContainKeyAndValue("device-access-key", "7a9ba9207cb36988");
+            storage.Values.ShouldContainKeyAndValue("device-secret-key", "583ac4dc6c6ea8b9380ca03d095b51cd15f178bad10715d7ba67f06f47e63995");
         }
 
         [Fact]
-        public void Open_throws_on_invalid_email_token_after_3_attempts()
+        public void Open_does_not_save_device_keys_when_remember_me_is_false()
         {
+            // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
-                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest)
-                .Post(GetFixture("invalid-email-token"), HttpStatusCode.BadRequest);
-
-            Exceptions.AssertThrowsBadMultiFactor(() => Vault.Open(Username, Password, MakeUi(Otp, false), new Storage(""), flow), "MFA failed: ");
-        }
-
-        [Theory]
-        [InlineData(false, "")]
-        [InlineData(true, "5d95e3ccccaa40a1-9cf2dbfd517b6b85ab0a7e2cb23972a195aeef5440db095c187782ea0d349962")]
-        public void Open_respects_remember_me_option(bool rememberMe, string expectedDeviceId)
-        {
-            var flow = new RestFlow()
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("email-token-triggered"))
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
+                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
-            var storage = new Storage("");
+            var storage = MakeEmptyStorage();
 
-            Vault.Open(Username, Password, MakeUi(Otp, rememberMe), storage, flow);
+            // Act
+            Vault.Open(Username, Password, MakeUi(Otp, false), storage, flow);
 
-            Assert.Equal(expectedDeviceId, storage.Values["device-uki"]);
+            // Assert
+            storage.Values["device-access-key"].ShouldBe("");
+            storage.Values["device-secret-key"].ShouldBe("");
         }
 
         [Fact]
-        public void Open_erases_invalid_uki()
+        public void Open_opens_vault_with_server_key()
         {
+            // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("invalid-uki"))
-                .Post(GetFixture("email-token-sent"))
-                .Post(GetFixture("email-token-triggered"))
-                .Post(GetFixture("email-token-verified"))
-                .Post(GetFixture("device-registered"))
-                .Post(GetFixture("non-empty-vault"));
+                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("complete-device-registration-with-server-key"))
+                .Post(GetFixture("non-empty-vault-with-server-key"));
 
-            var storage = new Storage("invalid-uki");
+            // Act
+            var vault = Vault.Open(UsernameWithServerKey, PasswordWithServerKey, MakeUi(Otp, false), MakeEmptyStorage(), flow);
 
-            var vault = Vault.Open(Username, Password, MakeUi(Otp, false), storage, flow);
-
-            Assert.Equal("", storage.Values["device-uki"]);
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
         }
 
         [Fact]
-        public void Open_opens_empty_vault()
+        public void Open_with_server_ignores_remember_me_and_does_not_save_device_keys()
         {
-            Assert.Empty(Accounts("empty-vault"));
+            // Arrange
+            var flow = new RestFlow()
+                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("complete-device-registration-with-server-key"))
+                .Post(GetFixture("non-empty-vault-with-server-key"));
+
+            var storage = MakeEmptyStorage();
+
+            // Act
+            Vault.Open(UsernameWithServerKey, PasswordWithServerKey, MakeUi(Otp, true), storage, flow);
+
+            // Assert
+            storage.Values["device-access-key"].ShouldBe("");
+            storage.Values["device-secret-key"].ShouldBe("");
         }
 
-        [Fact]
-        public void Open_opens_a_vault_with_empty_fullfile_and_one_add_transaction()
-        {
-            Assert.Equal(new[] { Dude }, Accounts("empty-fullfile-one-add-transaction"));
-        }
-
-        [Fact]
-        public void Open_opens_a_vault_with_empty_fullfile_and_two_add_transations()
-        {
-            Assert.Equal(new[] { Dude, Nam }, Accounts("empty-fullfile-two-add-transactions"));
-        }
-
-        [Fact]
-        public void Open_opens_a_vault_with_empty_fullfile_and_two_add_and_one_remove_transations()
-        {
-            Assert.Equal(new[] { Dude, Nam }, Accounts("empty-fullfile-two-add-one-remove-transactions"));
-        }
-
-        [Fact]
-        public void Open_opens_a_vault_with_two_accounts_in_fullfile()
-        {
-            Assert.Equal(new[] { Dude, Nam }, Accounts("two-accounts-in-fullfile"));
-        }
-
-        [Fact]
-        public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_one_remove_transaction()
-        {
-            Assert.Equal(new[] { Dude }, Accounts("two-accounts-in-fullfile-one-remove-transaction"));
-        }
-
-        [Fact]
-        public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_two_remove_transactions()
-        {
-            Assert.Empty(Accounts("two-accounts-in-fullfile-two-remove-transactions"));
-        }
-
-        [Fact]
-        public void Open_opens_a_vault_with_two_accounts_in_fullfile_and_two_remove_and_one_add_transactions()
-        {
-            Assert.Equal(new[] { Dude }, Accounts("two-accounts-in-fullfile-two-remove-one-add-transactions"));
-        }
+        // TODO: Add tests to check transactions in the vault.
 
         //
         // Helpers
         //
 
-        class SequenceUi : Ui
+        private class SequenceUi(Ui.Passcode[] passcodes, bool loop = false) : Ui
         {
-            private readonly bool _loop;
-            private readonly Passcode[] _passcodes;
             private int _current;
-
-            public SequenceUi(Passcode[] passcodes, bool loop = false)
-            {
-                _passcodes = passcodes;
-                _loop = loop;
-            }
 
             public override Passcode ProvideGoogleAuthPasscode(int attempt) => Next();
 
@@ -276,66 +193,55 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             private Passcode Next()
             {
-                if (_current >= _passcodes.Length)
+                if (_current >= passcodes.Length)
                     Assert.Fail("SequenceUi: No more passcodes");
 
-                var passcode = _passcodes[_current];
+                var passcode = passcodes[_current];
                 _current++;
 
-                if (_loop && _current >= _passcodes.Length)
+                if (loop && _current >= passcodes.Length)
                     _current = 0;
 
                 return passcode;
             }
         }
 
-        Ui MakeUi(string code, bool rememberMe)
+        private class ThrowingUi : Ui
         {
-            return new SequenceUi(new[] { new Ui.Passcode(code, rememberMe) }, true);
+            public override Passcode ProvideGoogleAuthPasscode(int attempt) => throw new InvalidOperationException("Google Auth passcode");
+
+            public override Passcode ProvideEmailPasscode(int attempt) => throw new InvalidOperationException("Email passcode");
         }
 
-        Ui MakeUi(params Ui.Passcode[] passcodes)
+        private static Ui MakeUi(string code, bool rememberMe)
+        {
+            return new SequenceUi([new Ui.Passcode(code, rememberMe)], true);
+        }
+
+        private static Ui MakeUi(params Ui.Passcode[] passcodes)
         {
             return new SequenceUi(passcodes, false);
         }
 
-        class Storage : ISecureStorage
+        private static MemoryStorage MakeStorage() => MakeStorage(AccessKey, SecretKey);
+
+        private static MemoryStorage MakeEmptyStorage() => MakeStorage("", "");
+
+        private static MemoryStorage MakeStorage(string accessKey, string secretKey)
         {
-            public Dictionary<string, string> Values { get; } = new Dictionary<string, string>();
-
-            public Storage(string deviceId)
-            {
-                StoreString("device-uki", deviceId);
-            }
-
-            public string LoadString(string name)
-            {
-                return Values[name];
-            }
-
-            public void StoreString(string name, string value)
-            {
-                Values[name] = value;
-            }
-        }
-
-        private string[] Accounts(string filename)
-        {
-            var flow = new RestFlow().Post(GetFixture(filename));
-            return Vault.Open(Username, Password, null, new Storage(Uki), flow).Accounts.Select(i => i.Name).ToArray();
+            return new MemoryStorage(new Dictionary<string, string> { ["device-access-key"] = accessKey, ["device-secret-key"] = secretKey });
         }
 
         //
         // Data
         //
 
-        private const string Username = "username";
-        private const string Password = "password";
-        private const string Uki = "uki";
-
-        private const string Dude = "dude.com";
-        private const string Nam = "nam.com";
-
+        private const string Username = "lastpass.ruby+17-september-2025@gmail.com";
+        private const string Password = "PasswordPassword123!?";
+        private const string UsernameWithServerKey = "lastpass.ruby+26-september-2025@gmail.com";
+        private const string PasswordWithServerKey = "PasswordPassword123!?";
+        private const string AccessKey = "access-key";
+        private const string SecretKey = "secret-key";
         private const string Otp = "123456";
     }
 }

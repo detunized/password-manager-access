@@ -1,0 +1,24 @@
+{
+    "requestId": "2c30d68a-9e53-476f-a5e8-bbcb221702d8",
+    "data": {
+        "deviceAccessKey": "7a9ba9207cb36988",
+        "deviceSecretKey": "583ac4dc6c6ea8b9380ca03d095b51cd15f178bad10715d7ba67f06f47e63995",
+        "hasDesktopDevices": false,
+        "numberOfDevices": 11,
+        "publicUserId": "6nRaionUjTR3n9Y9Yind_LeleuxfglQAAIDPiY9yqkZm_WrY403zjlXuVCbS5AjU",
+        "settings": {
+            "identifier": "SETTINGS_userId",
+            "backupDate": 1758558722000,
+            "type": "SETTINGS",
+            "time": 1758138708,
+            "action": "BACKUP_EDIT",
+            "content": "JDEkYXJnb24yZCQxNiQzJDMyNzY4JDIkYWVzMjU2JGNiY2htYWMkMTYkj+OFlkXQYTjUuUlCXh3+Bh3L4mHKIKg3Rw708//HQjqHs6oBPCoCZjI0ixUbtJUvbMVFfgTu1/4mBD4vME/Ttuxc14wOuQZM4VOElKTxaI9bZNcIAfBHzCaIhEVPg9ydS1sWQWluBSqoITaA08PXPNRKWJuNmeU4gLuUvgwpKZAHKRMvgVKUj2ZVObY4pteD+SIqjPNtzqjP5sRnmyySFwUWfjshZ0G9NzfFkfmkWyqmWhqg2+EDMgNfSPD9EFipBwcOlUg2nR/L/Aey3DL7xyEt7i/NoAeII4hT8ZuZC5poiRuGqD+qtcBYMX7jFDViVSSO56ejGjYRvqMP/H46wGusjH8uedU1SbGFJlB8F7jlyMY4Zsqv582GJa6phjIW8zjoKcbqWFTUaWw142HluDmDSknIapUAjjOLHy0G5WXnDM3s61A1Gl9bSEc5D+WCir/lxbqt3UjkVuJPP2WmRs6DhnpsBwzRHF8RtimnmojTPpR0xQQLIz+B6R5j9i/fH2+wSifvooCJLF5uj5AdaRonXPgmtSpnPxZwqmpGkeuXmNySDpE2f9FYiXeVJAfdqnsrZNGo/+2BvNbMj0gfSR1Cpo0j8nr+9+AvudHcxurLDvZ3k5q2SRWdrfbkK8AsD3RjRc4pFulBojp3CYYX1LsCSFa6j6uoHy2cTJHnb4xDY8Hd5+vJahL0tbrbnVlaG1zsUp+FzVheBpnrzL/yelQnyPi9cdBpgX1gGFQRuHh6et4xGo3HC3KV7OzgsmyW4OwkjfcBaCV7nQ1GA2s0yc1b4HY/kgJ82q5i0NUaAV5AtgRhswJvi39NPxOEU3RfIG5ETijdsJ07Xhi126UIE+TqJgehXqbbnVPeH+WTuuU="
+        },
+        "sharingKeys": {
+            "publicKey": "-----BEGIN RSA PUBLIC KEY-----\nMIIBCgKCAQEAmWLEUmxgrXB9/VNLWHzjTjjixw9GRcU4QlXDdtgXg4XGOuc34F7S\nDkZt3l25s0N1j155RrFNTiCvYwnBssK4Dj2JPZOQQ13kPyqFQouhL4zrFztNmqmW\nOcCxOb1nK5GVMc8OLQIawHzEohdLpSLigRm13czuPXzTcgdC6iHEojc4H3dE++rI\nmBKigU87cYnS0ELh3dTqSv4Zhj0V/LBTtr05Jq49zmdxZl+fNwpyGCj4QgUB1EuI\nr+RLyHvmDYDktklAkEQVY9AwG4pYxlZ51k15RNthvC9JKIaOe6aEPJLfmUoiMrzp\n2TupwIUxvbcmlvbNKESSMoif7Smqj/jzlwIDAQAB\n-----END RSA PUBLIC KEY-----\n",
+            "privateKey": "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"
+        },
+        "deviceAnalyticsId": "aa66ae2a-23f9-4a72-a22a-6fba6316f6e4",
+        "userAnalyticsId": "c46c93c3-ae92-4b3e-85be-5f405bab2154"
+    }
+}

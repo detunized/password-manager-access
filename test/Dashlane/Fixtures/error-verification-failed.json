@@ -1,0 +1,10 @@
+{
+    "requestId": "65889786-bc10-4386-9d21-f98f9c4b2c46",
+    "errors": [
+        {
+            "type": "business_error",
+            "code": "verification_failed",
+            "message": "The OTP verification failed. This could be due for example to the user inputing a wrong token."
+        }
+    ]
+}

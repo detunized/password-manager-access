@@ -1,11 +1,11 @@
 {
-    "requestId": "f8aec971-39a8-4ae6-a474-5e2ba1010d75",
+    "requestId": "0c3bfdac-53c3-4c98-aa41-91795814ea8e",
     "data": {
-        "accountType": "masterPassword",
         "verifications": [
             {
                 "type": "totp"
             }
-        ]
+        ],
+        "accountType": "masterPassword"
     }
 }

@@ -1,0 +1,8 @@
+{
+    "requestId": "6659842c-cdbf-434a-8a86-7ed444e793f4",
+    "errors": [{
+        "type": "invalid_request_error",
+        "code": "other_error",
+        "message": "Oops, something went wrong!"
+    }]
+}
