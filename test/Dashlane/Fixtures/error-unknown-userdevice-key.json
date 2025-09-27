@@ -1,0 +1,10 @@
+{
+    "requestId": "9373563f-9870-4166-9b06-0aba073767e5",
+    "errors": [
+        {
+            "type": "invalid_request_error",
+            "code": "unknown_userdevice_key",
+            "message": "Error during authentication"
+        }
+    ]
+}

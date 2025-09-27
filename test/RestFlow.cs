@@ -58,13 +58,13 @@ namespace PasswordManagerAccess.Test
         {
             _responses.Add(
                 new Response(
-                    method: HttpMethod.Get,
-                    content: response,
-                    status: status,
-                    headers: headers ?? NoHeaders,
-                    cookies: cookies ?? NoCookies,
-                    responseUrl: responseUrl,
-                    error: error
+                    Method: HttpMethod.Get,
+                    Content: response,
+                    Status: status,
+                    Headers: headers ?? [],
+                    Cookies: cookies ?? [],
+                    ResponseUrl: responseUrl,
+                    Error: error
                 )
             );
             return this;
@@ -72,7 +72,7 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Get(ResponseContent response, Exception error)
         {
-            return Get(response, HttpStatusCode.OK, NoHeaders, NoCookies, NoResponseUrl, error);
+            return Get(response, HttpStatusCode.OK, [], [], NoResponseUrl, error);
         }
 
         public RestFlow Get(Exception error)
@@ -95,13 +95,13 @@ namespace PasswordManagerAccess.Test
         {
             _responses.Add(
                 new Response(
-                    method: HttpMethod.Post,
-                    content: response,
-                    status: status,
-                    headers: headers ?? NoHeaders,
-                    cookies: cookies ?? NoCookies,
-                    responseUrl: responseUrl,
-                    error: error
+                    Method: HttpMethod.Post,
+                    Content: response,
+                    Status: status,
+                    Headers: headers ?? [],
+                    Cookies: cookies ?? [],
+                    ResponseUrl: responseUrl,
+                    Error: error
                 )
             );
             return this;
@@ -109,7 +109,7 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Post(ResponseContent response, Exception error)
         {
-            return Post(response, HttpStatusCode.OK, NoHeaders, NoCookies, NoResponseUrl, error);
+            return Post(response, HttpStatusCode.OK, [], [], NoResponseUrl, error);
         }
 
         public RestFlow Post(Exception error)
@@ -132,13 +132,13 @@ namespace PasswordManagerAccess.Test
         {
             _responses.Add(
                 new Response(
-                    method: HttpMethod.Put,
-                    content: response,
-                    status: status,
-                    headers: headers ?? NoHeaders,
-                    cookies: cookies ?? NoCookies,
-                    responseUrl: responseUrl,
-                    error: error
+                    Method: HttpMethod.Put,
+                    Content: response,
+                    Status: status,
+                    Headers: headers ?? [],
+                    Cookies: cookies ?? [],
+                    ResponseUrl: responseUrl,
+                    Error: error
                 )
             );
             return this;
@@ -146,7 +146,7 @@ namespace PasswordManagerAccess.Test
 
         public RestFlow Put(ResponseContent response, Exception error)
         {
-            return Put(response, HttpStatusCode.OK, NoHeaders, NoCookies, NoResponseUrl, error);
+            return Put(response, HttpStatusCode.OK, [], [], NoResponseUrl, error);
         }
 
         public RestFlow Put(Exception error)
@@ -175,14 +175,14 @@ namespace PasswordManagerAccess.Test
         public RestFlow ExpectUrl(params string[] urlFragments)
         {
             var e = GetLastExpected();
-            e.UrlFragments = e.UrlFragments.Concat(urlFragments).ToArray();
+            e.UrlFragments.AddRange(urlFragments);
             return this;
         }
 
         public RestFlow ExpectContent(params string[] contentFragments)
         {
             var e = GetLastExpected();
-            e.ContentFragments = e.ContentFragments.Concat(contentFragments).ToArray();
+            e.ContentFragments.AddRange(contentFragments);
             return this;
         }
 
@@ -193,27 +193,23 @@ namespace PasswordManagerAccess.Test
             return this;
         }
 
-        public RestFlow ExpectHeader(string name, string value)
-        {
-            return ExpectHeaders(new Dictionary<string, string> { { name, value } });
-        }
-
-        public RestFlow ExpectHeaders(Dictionary<string, string> partialHeaders)
+        public RestFlow ExpectHeader(string name, params string[] values)
         {
             var e = GetLastExpected();
-            e.PartialHeaders = e.PartialHeaders.MergeCopy(partialHeaders);
+            if (e.PartialHeaders.TryGetValue(name, out var existing))
+                existing.AddRange(values);
+            else
+                e.PartialHeaders[name] = values.ToList();
             return this;
         }
 
-        public RestFlow ExpectCookie(string name, string value)
-        {
-            return ExpectCookies(new Dictionary<string, string> { { name, value } });
-        }
-
-        public RestFlow ExpectCookies(Dictionary<string, string> partialCookies)
+        public RestFlow ExpectCookie(string name, params string[] values)
         {
             var e = GetLastExpected();
-            e.PartialCookies = e.PartialCookies.MergeCopy(partialCookies);
+            if (e.PartialCookies.TryGetValue(name, out var existing))
+                existing.AddRange(values);
+            else
+                e.PartialCookies[name] = values.ToList();
             return this;
         }
 
@@ -221,53 +217,27 @@ namespace PasswordManagerAccess.Test
         // Private
         //
 
-        private class Expected
+        private record Expected(HttpMethod Method)
         {
-            public HttpMethod Method;
-            public string[] UrlFragments = NoFragments;
-            public string[] ContentFragments = NoFragments;
-            public Dictionary<string, string> PartialHeaders = NoHeaders;
-            public Dictionary<string, string> PartialCookies = NoCookies;
-
-            public List<Action<string>> ContentVerifiers = new List<Action<string>>();
-
-            public Expected(HttpMethod method)
-            {
-                Method = method;
-            }
+            public List<string> UrlFragments { get; } = [];
+            public List<string> ContentFragments { get; } = [];
+            public Dictionary<string, List<string>> PartialHeaders { get; } = [];
+            public Dictionary<string, List<string>> PartialCookies { get; } = [];
+            public List<Action<string>> ContentVerifiers { get; } = [];
         }
 
-        private class Response
+        private record Response(
+            HttpMethod Method,
+            ResponseContent Content,
+            HttpStatusCode Status,
+            Dictionary<string, string> Headers,
+            Dictionary<string, string> Cookies,
+            string ResponseUrl,
+            Exception Error
+        )
         {
-            // Returned to the caller
-            public readonly ResponseContent Content;
-            public readonly HttpStatusCode Status;
-            public readonly Dictionary<string, string> Headers;
-            public readonly Dictionary<string, string> Cookies;
-            public readonly string ResponseUrl;
-            public readonly Exception Error;
-
             // Expected to be received from the caller
-            public Expected Expected;
-
-            public Response(
-                HttpMethod method,
-                ResponseContent content,
-                HttpStatusCode status,
-                Dictionary<string, string> headers,
-                Dictionary<string, string> cookies,
-                string responseUrl,
-                Exception error
-            )
-            {
-                Content = content;
-                Status = status;
-                Headers = headers;
-                Cookies = cookies;
-                ResponseUrl = responseUrl;
-                Error = error;
-                Expected = new Expected(method);
-            }
+            public Expected Expected { get; } = new(Method);
         }
 
         private Response GetLastResponse()
@@ -298,9 +268,9 @@ namespace PasswordManagerAccess.Test
         )
         {
             // Make sure we don't try to request in parallel during testing.
-            // Otherwise RestFlow has to be reworked to be made thread safe.
+            // Otherwise, RestFlow has to be reworked to be made thread safe.
             lock (_requestLock)
-                MakeRequestLocked(uri, method, content, headers, cookies, maxRedirectCount, allocatedResult);
+                MakeRequestLocked(uri, method, content, headers, cookies, allocatedResult);
         }
 
         // TODO: Fix this!
@@ -330,12 +300,12 @@ namespace PasswordManagerAccess.Test
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             // The cookies are coming in the headers, so we have to parse them out
-            var cookies = NoCookies;
+            var cookies = new Dictionary<string, string>();
             if (request.Headers.TryGetValues("Cookie", out var cookieHeader))
             {
                 var cc = new CookieContainer();
                 cc.SetCookies(request.RequestUri!, cookieHeader.JoinToString("; "));
-                cookies = cc.GetCookies(request.RequestUri).Cast<Cookie>().ToDictionary(x => x.Name, x => x.Value);
+                cookies = cc.GetCookies(request.RequestUri).ToDictionary(x => x.Name, x => x.Value);
             }
 
             var result = new RestResponse<string>();
@@ -367,7 +337,6 @@ namespace PasswordManagerAccess.Test
             HttpContent content,
             IReadOnlyDictionary<string, string> headers,
             IReadOnlyDictionary<string, string> cookies,
-            int maxRedirectCount,
             RestResponse<TContent> allocatedResult
         )
         {
@@ -398,14 +367,16 @@ namespace PasswordManagerAccess.Test
             foreach (var header in e.PartialHeaders)
             {
                 Assert.Contains(header.Key, headers.Keys);
-                Assert.Equal(header.Value, headers[header.Key]);
+                foreach (var expectedValue in header.Value)
+                    Assert.Contains(expectedValue, headers[header.Key]);
             }
 
             // TODO: Better messages
             foreach (var cookie in e.PartialCookies)
             {
                 Assert.Contains(cookie.Key, cookies.Keys);
-                Assert.Equal(cookie.Value, cookies[cookie.Key]);
+                foreach (var expectedValue in cookie.Value)
+                    Assert.Contains(expectedValue, cookies[cookie.Key]);
             }
 
             // Response
@@ -442,14 +413,11 @@ namespace PasswordManagerAccess.Test
         // Data
         //
 
-        private static readonly string[] NoFragments = new string[0];
-        private static readonly Dictionary<string, string> NoHeaders = new Dictionary<string, string>();
-        private static readonly Dictionary<string, string> NoCookies = new Dictionary<string, string>();
         private const string NoResponseUrl = null;
 
-        private int _currentIndex = 0;
-        private readonly List<Response> _responses = new List<Response>();
+        private int _currentIndex;
+        private readonly List<Response> _responses = [];
 
-        private readonly object _requestLock = new object();
+        private readonly object _requestLock = new();
     }
 }

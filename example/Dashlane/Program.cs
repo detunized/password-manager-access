@@ -8,12 +8,19 @@ using PasswordManagerAccess.Example.Common;
 
 namespace PasswordManagerAccess.Example.Dashlane
 {
-    class TextUi : Ui
+    class TextUi(string totpSecret) : Ui
     {
         public override Passcode ProvideGoogleAuthPasscode(int attempt)
         {
             if (attempt > 0)
                 Bad("Google Authenticator code is invalid, try again");
+
+            if (!string.IsNullOrEmpty(totpSecret))
+            {
+                var totp = Util.CalculateGoogleAuthTotp(totpSecret);
+                Console.WriteLine($"Auto-generated TOTP: {totp}");
+                return new Passcode(totp, false);
+            }
 
             return GetPasscode($"Please enter Google Authenticator code {ToCancel}");
         }
@@ -33,6 +40,15 @@ namespace PasswordManagerAccess.Example.Dashlane
                 default:
                     return passcode;
             }
+        }
+
+        public override bool OpenInBrowser(string url, int attempt)
+        {
+            Console.WriteLine("Please open the following URL in your browser to trigger the email token:");
+            Console.WriteLine(url);
+            Console.WriteLine("Press ENTER when you're done or type 'c' to cancel");
+
+            return Console.ReadLine()?.Trim().ToLower() != "c";
         }
 
         //
@@ -83,12 +99,13 @@ namespace PasswordManagerAccess.Example.Dashlane
 
             var username = config["username"];
             var password = config["password"];
+            config.TryGetValue("google-auth-totp-secret", out var totpSecret);
 
             try
             {
                 // Fetch and parse first.
                 Console.WriteLine("Fetching and parsing the remote vault");
-                var vault = Vault.Open(username, password, new TextUi(), new PlainStorage());
+                var vault = Vault.Open(username, password, new TextUi(totpSecret), new PlainStorage());
 
                 // And then dump the accounts.
                 Console.WriteLine("The vault has {0} account(s) in it:", vault.Accounts.Length);

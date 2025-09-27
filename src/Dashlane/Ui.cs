@@ -10,22 +10,13 @@ namespace PasswordManagerAccess.Dashlane
         //
 
         // Passcode result
-        public class Passcode
+        public record Passcode(string Code, bool RememberMe)
         {
             // Return this to signal the cancellation of the operation
-            public static readonly Passcode Cancel = new Passcode("cancel", false);
+            public static readonly Passcode Cancel = new("cancel", false);
 
             // Return this to resend the email token (not valid for Google Auth)
-            public static readonly Passcode Resend = new Passcode("resend", false);
-
-            public readonly string Code;
-            public readonly bool RememberMe;
-
-            public Passcode(string code, bool rememberMe)
-            {
-                Code = code;
-                RememberMe = rememberMe;
-            }
+            public static readonly Passcode Resend = new("resend", false);
         }
 
         // To cancel return Passcode.Cancel
@@ -35,5 +26,11 @@ namespace PasswordManagerAccess.Dashlane
         // To cancel return Passcode.Cancel
         // To resend the token return Passcode.Resend
         public abstract Passcode ProvideEmailPasscode(int attempt);
+
+        // Open the URL in a regular or embedded browser to trigger the email token.
+        // The page is not interactive, but it executes some JavaScript to send the email.
+        // Potentially the user might need to solve a CAPTCHA.
+        // Return true to continue, false to cancel.
+        public abstract bool OpenInBrowser(string url, int attempt);
     }
 }

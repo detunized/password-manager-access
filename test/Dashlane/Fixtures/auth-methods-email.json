@@ -1,11 +1,11 @@
 {
-    "requestId": "ffaa5424-ab8a-40b7-b64d-260d30979bd9",
+    "requestId": "0c3bfdac-53c3-4c98-aa41-91795814ea8e",
     "data": {
-        "accountType": "masterPassword",
         "verifications": [
             {
                 "type": "email_token"
             }
-        ]
+        ],
+        "accountType": "masterPassword"
     }
 }

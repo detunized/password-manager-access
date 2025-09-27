@@ -3,4 +3,4 @@
 
 namespace PasswordManagerAccess.Dashlane;
 
-public record Account(string Id, string Name, string Username, string Password, string Url, string Note);
+public record ParseError(string Description, string Message, string CallStack);
