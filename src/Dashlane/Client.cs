@@ -121,8 +121,11 @@ namespace PasswordManagerAccess.Dashlane
                         _ => throw new InternalErrorException("Logical error"),
                     };
                 }
-                catch (BadMultiFactorException) when (attempt < MaxMfaAttempts - 1)
+                catch (BadMultiFactorException)
                 {
+                    if (attempt == MaxMfaAttempts - 1)
+                        throw new BadMultiFactorException("MFA failed too many times");
+
                     // Do nothing, try again
                     continue;
                 }

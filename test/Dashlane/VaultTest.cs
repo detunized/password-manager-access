@@ -42,8 +42,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("get-authentication-methods-for-device"))
-                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("perform-otp-verification"))
                 .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
@@ -59,9 +59,9 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("get-authentication-methods-for-device"))
+                .Post(GetFixture("auth-methods-totp"))
                 .Post(GetFixture("error-verification-failed"))
-                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("perform-otp-verification"))
                 .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
@@ -69,7 +69,7 @@ namespace PasswordManagerAccess.Test.Dashlane
             var vault = Vault.Open(
                 Username,
                 Password,
-                MakeUi(new Ui.Passcode("123456", false), new Ui.Passcode(Otp, false), new Ui.Passcode(Otp, false)),
+                MakeUi(new Ui.Passcode(WrongOtp, false), new Ui.Passcode(Otp, false)),
                 MakeEmptyStorage(),
                 flow
             );
@@ -88,8 +88,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("get-authentication-methods-for-device"))
-                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("perform-otp-verification"))
                 .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
@@ -105,8 +105,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("get-authentication-methods-for-device"))
-                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("perform-otp-verification"))
                 .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
@@ -125,8 +125,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("get-authentication-methods-for-device"))
-                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("perform-otp-verification"))
                 .Post(GetFixture("complete-device-registration-with-auth-ticket"))
                 .Post(GetFixture("non-empty-vault"));
 
@@ -145,8 +145,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("get-authentication-methods-for-device"))
-                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("perform-otp-verification"))
                 .Post(GetFixture("complete-device-registration-with-server-key"))
                 .Post(GetFixture("non-empty-vault-with-server-key"));
 
@@ -162,8 +162,8 @@ namespace PasswordManagerAccess.Test.Dashlane
         {
             // Arrange
             var flow = new RestFlow()
-                .Post(GetFixture("get-authentication-methods-for-device"))
-                .Post(GetFixture("perform-totp-verification"))
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("perform-otp-verification"))
                 .Post(GetFixture("complete-device-registration-with-server-key"))
                 .Post(GetFixture("non-empty-vault-with-server-key"));
 
@@ -175,6 +175,96 @@ namespace PasswordManagerAccess.Test.Dashlane
             // Assert
             storage.Values["device-access-key"].ShouldBe("");
             storage.Values["device-secret-key"].ShouldBe("");
+        }
+
+        [Fact]
+        public void Open_returns_accounts_with_email_token_device_registration()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Post(GetFixture("auth-methods-email"))
+                .Post(GetFixture("perform-otp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
+                .Post(GetFixture("non-empty-vault"));
+
+            // Act
+            var vault = Vault.Open(Username, Password, MakeUi(new Ui.Passcode(Otp, false)), MakeEmptyStorage(), flow);
+
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
+        }
+
+        [Fact]
+        public void Open_returns_accounts_after_retry_on_failed_email_token()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Post(GetFixture("auth-methods-email"))
+                .Post(GetFixture("error-verification-failed"))
+                .Post(GetFixture("perform-otp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
+                .Post(GetFixture("non-empty-vault"));
+
+            // Act
+            var vault = Vault.Open(
+                Username,
+                Password,
+                MakeUi(new Ui.Passcode(WrongOtp, false), new Ui.Passcode(Otp, false)),
+                MakeEmptyStorage(),
+                flow
+            );
+
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
+        }
+
+        [Fact]
+        public void Open_succeeds_after_two_failed_otp_attempts_and_third_successful()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("error-verification-failed"))
+                .Post(GetFixture("error-verification-failed"))
+                .Post(GetFixture("perform-otp-verification"))
+                .Post(GetFixture("complete-device-registration-with-auth-ticket"))
+                .Post(GetFixture("non-empty-vault"));
+
+            // Act
+            var vault = Vault.Open(
+                Username,
+                Password,
+                MakeUi(new Ui.Passcode(WrongOtp, false), new Ui.Passcode(WrongOtp, false), new Ui.Passcode(Otp, false)),
+                MakeEmptyStorage(),
+                flow
+            );
+
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
+        }
+
+        [Fact]
+        public void Open_throws_canceled_mfa_after_three_wrong_otp_attempts()
+        {
+            // Arrange
+            var flow = new RestFlow()
+                .Post(GetFixture("auth-methods-totp"))
+                .Post(GetFixture("error-verification-failed"))
+                .Post(GetFixture("error-verification-failed"))
+                .Post(GetFixture("error-verification-failed"));
+
+            // Act/Assert
+            Exceptions.AssertThrowsBadMultiFactor(
+                () =>
+                    Vault.Open(
+                        Username,
+                        Password,
+                        MakeUi(new Ui.Passcode(WrongOtp, false), new Ui.Passcode(WrongOtp, false), new Ui.Passcode(WrongOtp, false)),
+                        MakeEmptyStorage(),
+                        flow
+                    ),
+                "MFA failed too many times"
+            );
         }
 
         // TODO: Add tests to check transactions in the vault.
@@ -247,5 +337,6 @@ namespace PasswordManagerAccess.Test.Dashlane
         private const string AccessKey = "access-key";
         private const string SecretKey = "secret-key";
         private const string Otp = "123456";
+        private const string WrongOtp = "654321";
     }
 }
