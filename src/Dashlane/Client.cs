@@ -65,7 +65,7 @@ namespace PasswordManagerAccess.Dashlane
 
             // When email 2FA is selected we need to tell the server to send the token to the user
             if (mfaMethod == MfaMethod.Email)
-                TriggerEmailToken(username, rest);
+                TriggerEmailToken(username, 0, ui);
 
             for (var attempt = 0; ; attempt++)
             {
@@ -83,7 +83,8 @@ namespace PasswordManagerAccess.Dashlane
                 {
                     if (mfaMethod == MfaMethod.Email)
                     {
-                        TriggerEmailToken(username, rest);
+                        // For resend, we ignore the returned RememberMe since user already chose
+                        TriggerEmailToken(username, attempt, ui);
                         --attempt; // There was no attempt yet, we're just resending the token
                         continue;
                     }
@@ -145,10 +146,13 @@ namespace PasswordManagerAccess.Dashlane
             ).Methods;
         }
 
-        internal static void TriggerEmailToken(string username, RestClient rest)
+        internal static void TriggerEmailToken(string username, int attempt, Ui ui)
         {
-            // TODO: We need to open a browser to trigger the email 2FA
-            throw new UnsupportedFeatureException("Triggering email 2FA is not supported yet. Come back later.");
+            var url = $"https://www.dashlane.com/cli-device-registration?login={username.EncodeUriData()}";
+            var proceed = ui.OpenInBrowser(url, attempt);
+
+            if (!proceed)
+                throw new CanceledMultiFactorException("Email MFA canceled by the user");
         }
 
         private enum MfaMethod

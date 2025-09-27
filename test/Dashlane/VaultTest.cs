@@ -191,6 +191,8 @@ namespace PasswordManagerAccess.Test.Dashlane
 
             public override Passcode ProvideEmailPasscode(int attempt) => Next();
 
+            public override bool OpenInBrowser(string url, int attempt) => true;
+
             private Passcode Next()
             {
                 if (_current >= passcodes.Length)
@@ -211,6 +213,8 @@ namespace PasswordManagerAccess.Test.Dashlane
             public override Passcode ProvideGoogleAuthPasscode(int attempt) => throw new InvalidOperationException("Google Auth passcode");
 
             public override Passcode ProvideEmailPasscode(int attempt) => throw new InvalidOperationException("Email passcode");
+
+            public override bool OpenInBrowser(string url, int attempt) => throw new InvalidOperationException("Open in browser");
         }
 
         private static Ui MakeUi(string code, bool rememberMe)

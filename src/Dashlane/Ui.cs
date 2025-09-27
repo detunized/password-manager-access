@@ -26,5 +26,11 @@ namespace PasswordManagerAccess.Dashlane
         // To cancel return Passcode.Cancel
         // To resend the token return Passcode.Resend
         public abstract Passcode ProvideEmailPasscode(int attempt);
+
+        // Open the URL in a regular or embedded browser to trigger the email token.
+        // The page is not interactive, but it executes some JavaScript to send the email.
+        // Potentially the user might need to solve a CAPTCHA.
+        // Return true to continue, false to cancel.
+        public abstract bool OpenInBrowser(string url, int attempt);
     }
 }

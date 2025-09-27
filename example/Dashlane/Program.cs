@@ -42,6 +42,15 @@ namespace PasswordManagerAccess.Example.Dashlane
             }
         }
 
+        public override bool OpenInBrowser(string url, int attempt)
+        {
+            Console.WriteLine("Please open the following URL in your browser to trigger the email token:");
+            Console.WriteLine(url);
+            Console.WriteLine("Press ENTER when you're done or type 'c' to cancel");
+
+            return Console.ReadLine()?.Trim().ToLower() != "c";
+        }
+
         //
         // Private
         //
