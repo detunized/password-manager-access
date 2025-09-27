@@ -1,13 +1,21 @@
 # Upgrade notes
 
+## To 28.0.0
+
+`Ui.OpenInBrowser` must be implemeneted to allow the user to open a URL in a browser to trigger the
+email token to be sent. The easiest way is to offer the user to open the URL in their own browser.
+There's no state or cookies to manage, no logging in is required. In fact, the user's browser is much
+better for this than an embedded one, as Cloudflare is more likely to ignore the captcha and just send
+the code without any interaction. Return `true` from this method to continue the login process and
+`false` to cancel the login process.
+
 ## To 27.0.0
 
 Delete all references to `Bitwarden.VaultItem.DeletedDate` as it's no longer available.
 
-
 ## To 26.1.0
 
-The `baseUrl` parameter in all of the relevant `Client.*` methods is no longer optional and must be
+The `baseUrl` parameter in all the relevant `Client.*` methods is no longer optional and must be
 provided. Some overloads don't have it and are defaulted to the `Client.DefaultBaseUlr` which is set
 to https://vault.bitwarden.com. All the overloads with the `baseUrl` parameter must receive either a
 valid URL to a self-hosted instance or either `Client.BaseUrlUs` or `Client.BaseUrlEu` for the US and

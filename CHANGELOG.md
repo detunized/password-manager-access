@@ -1,5 +1,11 @@
 # Changelog
 
+## 28.0.0
+  - Dashlane: fixed Cloudflare captcha by implementing official CLI protocol (UI interface changed,
+    API breaking change, see UPGRADE.md)
+  - Dashlane: fixed a bug with failing decryption when OTP2 was used
+  - Dashlane: added `Vault.ParseErrors` property to return parse errors
+
 ## 27.0.0
   - Bitwarden: deleted accounts and SSH keys are no longer listed in the vault
   - Bitwarden: in a single item mode NoItem.Deleted is returned for deleted items
