@@ -736,15 +736,18 @@ namespace PasswordManagerAccess.OnePassword
             RestClient rest
         )
         {
+            // TODO: Make a request to var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/"); to check if the vault exists!
             var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/item/{itemId}");
             if (response.IsSuccessful)
                 return ConvertVaultItem(keychain, DecryptResponse<R.SingleVaultItem>(response.Data, sessionKey).Item);
 
-            // Special case: the item not found
-            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && response.Content.Trim() == "{}")
-                return NoItem.NotFound;
-
-            throw MakeError(response);
+            var error = MakeError(response);
+            return error switch
+            {
+                // Special case: the item not found
+                NotFoundException => NoItem.NotFound,
+                _ => throw error,
+            };
         }
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
@@ -844,8 +847,10 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         //
-        // HTTP
+        // Error handling
         //
+
+        internal class NotFoundException(string message) : BaseException(message);
 
         internal static BaseException MakeError(RestResponse<string> response)
         {
@@ -869,6 +874,8 @@ namespace PasswordManagerAccess.OnePassword
                 {
                     case 102:
                         return new BadCredentialsException("Username, password or account key is incorrect");
+                    case 117:
+                        return new NotFoundException($"The requested item not found: '{error.Message}'");
                     default:
                         return new InternalErrorException($"The server responded with the error code {error.Code} and the message '{error.Message}'");
                 }
@@ -891,6 +898,10 @@ namespace PasswordManagerAccess.OnePassword
 
             return null;
         }
+
+        //
+        // Network
+        //
 
         internal static T GetEncryptedJson<T>(string endpoint, AesKey sessionKey, RestClient rest)
         {
