@@ -1,7 +1,10 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using PasswordManagerAccess.Common;
+using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -14,6 +17,10 @@ namespace PasswordManagerAccess.OnePassword
         internal readonly AesKey Key;
         internal readonly RestClient Rest;
         internal readonly IRestTransport Transport;
+
+        // Cache
+        internal R.AccountInfo? AccountInfo { get; set; }
+        internal VaultInfo[]? AccessibleVaults { get; set; }
 
         internal Session(Credentials credentials, Keychain keychain, AesKey key, RestClient rest, IRestTransport transport)
         {
