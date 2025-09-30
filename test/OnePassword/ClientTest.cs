@@ -39,7 +39,14 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
-            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport);
+            var accountInfo = JsonConvert.DeserializeObject<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
+            var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
+            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
+            {
+                AccountInfo = accountInfo,
+                AccessibleVaults = [vaultInfo],
+            };
 
             // Act
             var result = Client.GetItem("wm3uxq4xsmb4mghxw6o3s7zrem", "ru74fjxlkipzzctorwj4icrj2a", session);
@@ -60,7 +67,14 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
-            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport);
+            var accountInfo = JsonConvert.DeserializeObject<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
+            var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
+            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
+            {
+                AccountInfo = accountInfo,
+                AccessibleVaults = [vaultInfo],
+            };
 
             // Act
             var result = Client.GetItem("nonexistent", "ru74fjxlkipzzctorwj4icrj2a", session);
