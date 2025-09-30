@@ -1,5 +1,9 @@
 # Changelog
 
+## 28.1.0
+  - 1Password: fixed incorrect item and vault IDs detection in Client.GetItem
+  - 1Password: added `NoItem.Inaccessible` for inaccessible vaults and items
+
 ## 28.0.0
   - Dashlane: fixed Cloudflare captcha by implementing official CLI protocol (UI interface changed,
     API breaking change, see UPGRADE.md)
