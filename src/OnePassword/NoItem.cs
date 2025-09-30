@@ -8,4 +8,5 @@ public enum NoItem
     NotFound,
     Deleted,
     UnsupportedType,
+    Inaccessible,
 }

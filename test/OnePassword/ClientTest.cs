@@ -24,6 +24,83 @@ namespace PasswordManagerAccess.Test.OnePassword
 {
     public class ClientTest : TestBase
     {
+        //
+        // Public methods
+        //
+
+        [Fact]
+        public void GetItem_returns_account()
+        {
+            // Arrange
+            var transport = new RestFlow()
+                .Get(EncryptFixture("get-vault-item-response"))
+                .ExpectUrl("1password.com/api/v1/vault/ru74fjxlkipzzctorwj4icrj2a/item/wm3uxq4xsmb4mghxw6o3s7zrem");
+            var rest = transport.ToRestClient(ApiUrl);
+            var keychain = new Keychain(
+                new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
+            );
+            var accountInfo = JsonConvert.DeserializeObject<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
+            var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
+            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
+            {
+                AccountInfo = accountInfo,
+                AccessibleVaults = [vaultInfo],
+            };
+
+            // Act
+            var result = Client.GetItem("wm3uxq4xsmb4mghxw6o3s7zrem", "ru74fjxlkipzzctorwj4icrj2a", session);
+
+            // Assert
+            result.TryPickT0(out var account, out _).ShouldBeTrue();
+            account.Id.ShouldBe("wm3uxq4xsmb4mghxw6o3s7zrem");
+        }
+
+        [Fact]
+        public void GetItem_returns_NoItem_when_not_found()
+        {
+            // Arrange
+            var transport = new RestFlow()
+                .Get(GetFixture("get-vault-item-not-found-response"), HttpStatusCode.NotFound)
+                .ExpectUrl("1password.com/api/v1/vault/ru74fjxlkipzzctorwj4icrj2a/item/nonexistent");
+            var rest = transport.ToRestClient(ApiUrl);
+            var keychain = new Keychain(
+                new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
+            );
+            var accountInfo = JsonConvert.DeserializeObject<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
+            var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
+            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
+            {
+                AccountInfo = accountInfo,
+                AccessibleVaults = [vaultInfo],
+            };
+
+            // Act
+            var result = Client.GetItem("nonexistent", "ru74fjxlkipzzctorwj4icrj2a", session);
+
+            // Assert
+            result.TryPickT2(out var noItem, out _).ShouldBeTrue();
+            noItem.ShouldBe(NoItem.NotFound);
+        }
+
+        [Fact]
+        public void ListAllVaults_returns_vaults()
+        {
+            // Arrange
+            var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).Get(EncryptFixture("get-keysets-response"));
+
+            // Act
+            var vaults = Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow);
+
+            // Assert
+            vaults.ShouldNotBeEmpty();
+        }
+
+        //
+        // Internal methods
+        //
+
         [Fact]
         public void ParseServiceAccountToken_returns_parsed_token()
         {
@@ -54,19 +131,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             // Assert
             var ex = act.ShouldThrow<InternalErrorException>();
             ex.Message.ShouldStartWith("Invalid service account token");
-        }
-
-        [Fact]
-        public void ListAllVaults_returns_vaults()
-        {
-            // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).Get(EncryptFixture("get-keysets-response"));
-
-            // Act
-            var vaults = Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow);
-
-            // Assert
-            vaults.ShouldNotBeEmpty();
         }
 
         [Fact]
@@ -479,7 +543,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_returns_accounts()
+        public void GetVaultItems_returns_accounts()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
@@ -495,7 +559,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_returns_ssh_keys()
+        public void GetVaultItems_returns_ssh_keys()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ixsi-response"));
@@ -520,7 +584,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_returns_converts_ssh_keys()
+        public void GetVaultItems_returns_converts_ssh_keys()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-saiw-response"));
@@ -632,7 +696,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_with_no_items_work()
+        public void GetVaultItems_with_no_items_work()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
@@ -648,7 +712,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_returns_server_secrets()
+        public void GetVaultItems_returns_server_secrets()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-server-secrets-response"));
@@ -664,7 +728,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_makes_GET_request_to_specific_url()
+        public void GetVaultItems_makes_GET_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow()
@@ -680,7 +744,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultAccounts_with_multiple_batches_returns_all_accounts()
+        public void GetVaultItems_with_multiple_batches_returns_all_accounts()
         {
             // Arrange
             var flow = new RestFlow()

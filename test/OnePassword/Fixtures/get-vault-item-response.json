@@ -1,0 +1,28 @@
+{
+    "contentVersion": 3,
+    "item": {
+        "uuid": "wm3uxq4xsmb4mghxw6o3s7zrem",
+        "templateUuid": "001",
+        "trashed": "N",
+        "createdAt": "2016-08-04T13:15:10Z",
+        "updatedAt": "2016-08-04T13:16:07Z",
+        "changerUuid": "DFM4DHQMQ5AS5M6UHSD6PNV774",
+        "packageUuid": "",
+        "itemVersion": 2,
+        "encryptedBy": "x4ouqoqyhcnqojrgubso4hsdga",
+        "encOverview": {
+            "cty": "b5+jwk+json",
+            "data": "9eH5PkEAnOA5QDds7BrUuwL3vo2abF1SSzwwVXwjnA_4zacK-qBCoK7flbzG-Pi_PIa9uxk3XkiJ4QavGD3FBJpdW9xxcvS5jadnyhmOfUNt7AKPLcg96hh0SLX9GdMnOGNXW_SW_UdBV4N-ux9wHv3dEf6gUw5emAYmucDcyGt4bvxNtXeFTFnZhuAB-lGA9l5xzjc",
+            "enc": "A256GCM",
+            "iv": "tgpqo7Cz06z2ka-W",
+            "kid": "x4ouqoqyhcnqojrgubso4hsdga"
+        },
+        "encDetails": {
+            "cty": "b5+jwk+json",
+            "data": "d-EtBOtn5hJWRX-IRVZc03axWv_EMDZtpCgFJEzP0qAHoCv8JTZJ00oWWDCINR2zFoHg5pks8ZvEMV1nquPwmN2hQxrB9mS8nK5wfWylgKms56VsdwD3P8SIZZcUOywX79oVN7VEu5C3fqBdeAiVvG_76ziHPFryApSbk9I34dIow6uZ0ldxGd5RPVaYRPkkZ1tf3_Nmgnm2n11JxEf0fSgj9Bc554hIMWLn7x3xYJbBgot_fYHqGP0UG7oBG0mXym1Lm_6lZFopQBlgIB0",
+            "enc": "A256GCM",
+            "iv": "RY7AOcB6_bTUwEwN",
+            "kid": "x4ouqoqyhcnqojrgubso4hsdga"
+        }
+    }
+}

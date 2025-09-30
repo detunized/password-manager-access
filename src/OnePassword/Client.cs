@@ -79,27 +79,50 @@ namespace PasswordManagerAccess.OnePassword
 
         public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, string vaultId, Session session)
         {
+            // 1. On the first request we fetch everything we need to decrypt the item. This is also allows us to check
+            // upfront if the vault exists and if it's accessible.
+            if (session.AccountInfo == null)
+            {
+                var accountInfo = GetAccountInfo(session.Key, session.Rest);
+                var keysetsInfo = GetKeysets(session.Key, session.Rest);
+
+                // Decrypt into the session keychain
+                DecryptKeysets(keysetsInfo.Keysets, session.Credentials, session.Keychain);
+
+                // Figure out which vaults are accessible with the current keychain
+                var accessibleVaults = GetAccessibleVaults(accountInfo, session.Keychain).ToArray();
+
+                // Decrypt all the vault keys into the session keychain
+                foreach (var v in accessibleVaults)
+                    v.DecryptKeyIntoKeychain();
+
+                // Store last to ensure consistent state
+                session.AccountInfo = accountInfo;
+                session.AccessibleVaults = accessibleVaults;
+            }
+
+            // 2. Check if the vault ID is valid and the vault exists
+            if (!session.AccountInfo.Vaults.Any(x => x.Id == vaultId))
+                return NoItem.NotFound;
+
+            // 3. Even if the vault is there, it might not be accessible
+            if (!session.AccessibleVaults.Any(x => x.Id == vaultId))
+                return NoItem.Inaccessible;
+
+            // 4. Download the item
             var oneOf3 = GetVaultItem(itemId, vaultId, session.Keychain, session.Key, session.Rest);
 
-            // The item is not available
-            if (oneOf3.TryPickT2(out var failure, out var oneOf2))
-                return failure;
+            // 5. Check if the item is not available
+            if (oneOf3.TryPickT2(out var noItem, out var oneOf2))
+                return noItem;
 
+            // 6. It's either an account or a SSH key
             var item = oneOf2.Match<VaultItem>(a => a, k => k);
 
             if (CanDecrypt(item))
                 return oneOf3;
 
-            // Attempt to fetch everything necessary to decrypt the item
-            var accountInfo = GetAccountInfo(session.Key, session.Rest);
-            var keysets = GetKeysets(session.Key, session.Rest);
-            DecryptKeysets(keysets.Keysets, session.Credentials, session.Keychain);
-            GetAccessibleVaults(accountInfo, session.Keychain).FirstOrDefault(x => x.Id == vaultId)?.DecryptKeyIntoKeychain();
-
-            if (CanDecrypt(item))
-                return oneOf3;
-
-            throw new InternalErrorException("Failed to fetch the keys to decrypt the item");
+            return NoItem.Inaccessible;
 
             bool CanDecrypt(VaultItem i) => session.Keychain.CanDecrypt(i.EncryptedOverview) && session.Keychain.CanDecrypt(i.EncryptedDetails);
         }
@@ -647,6 +670,7 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
+        // TODO: Rename to RequestAccountInfo
         internal static R.AccountInfo GetAccountInfo(AesKey sessionKey, RestClient rest)
         {
             return GetEncryptedJson<R.AccountInfo>(
@@ -656,11 +680,13 @@ namespace PasswordManagerAccess.OnePassword
             );
         }
 
+        // TODO: Rename to RequestKeysets
         internal static R.KeysetsInfo GetKeysets(AesKey sessionKey, RestClient rest)
         {
             return GetEncryptedJson<R.KeysetsInfo>("v1/account/keysets", sessionKey, rest);
         }
 
+        // TODO: We don't really need IEnumerable here
         internal static IEnumerable<VaultInfo> GetAccessibleVaults(R.AccountInfo accountInfo, Keychain keychain)
         {
             return from vault in accountInfo.Vaults
@@ -736,15 +762,18 @@ namespace PasswordManagerAccess.OnePassword
             RestClient rest
         )
         {
+            // TODO: Make a request to var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/"); to check if the vault exists!
             var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/item/{itemId}");
             if (response.IsSuccessful)
                 return ConvertVaultItem(keychain, DecryptResponse<R.SingleVaultItem>(response.Data, sessionKey).Item);
 
-            // Special case: the item not found
-            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && response.Content.Trim() == "{}")
-                return NoItem.NotFound;
-
-            throw MakeError(response);
+            var error = MakeError(response);
+            return error switch
+            {
+                // Special case: the item not found
+                NotFoundException => NoItem.NotFound,
+                _ => throw error,
+            };
         }
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
@@ -844,8 +873,10 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         //
-        // HTTP
+        // Error handling
         //
+
+        internal class NotFoundException(string message) : BaseException(message);
 
         internal static BaseException MakeError(RestResponse<string> response)
         {
@@ -869,6 +900,8 @@ namespace PasswordManagerAccess.OnePassword
                 {
                     case 102:
                         return new BadCredentialsException("Username, password or account key is incorrect");
+                    case 117:
+                        return new NotFoundException($"The requested item not found: '{error.Message}'");
                     default:
                         return new InternalErrorException($"The server responded with the error code {error.Code} and the message '{error.Message}'");
                 }
@@ -891,6 +924,10 @@ namespace PasswordManagerAccess.OnePassword
 
             return null;
         }
+
+        //
+        // Network
+        //
 
         internal static T GetEncryptedJson<T>(string endpoint, AesKey sessionKey, RestClient rest)
         {
