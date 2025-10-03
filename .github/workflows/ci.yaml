@@ -80,8 +80,7 @@ jobs:
       - name: Push
         run: |
           dotnet nuget add source https://devolutions.jfrog.io/devolutions/api/nuget/nuget-local --name artifactory
-          dotnet nuget setApiKey ${{ secrets.ARTIFACTORY_TOKEN }} --source artifactory
-          dotnet nuget push --source artifactory --skip-duplicate src/bin/Release/*.nupkg
+          dotnet nuget push --source artifactory --api-key ${{ secrets.ARTIFACTORY_TOKEN }} --skip-duplicate src/bin/Release/*.nupkg
 
       - name: Release
         run: gh release create ${{ github.ref_name }} --generate-notes ${{ github.workspace }}/**/*.nupkg
