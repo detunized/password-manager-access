@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
         dotnet: ['8.0']
 
     runs-on: ${{ matrix.os }}
@@ -79,7 +79,7 @@ jobs:
 
       - name: Push
         run: |
-          dotnet nuget add source https://devolutions.jfrog.io/devolutions/api/nuget/nuget-local --name artifactory --username ${{ secrets.ARTIFACTORY_USERNAME }}
+          dotnet nuget add source https://devolutions.jfrog.io/devolutions/api/nuget/nuget-local --name artifactory
           dotnet nuget setApiKey ${{ secrets.ARTIFACTORY_TOKEN }} --source artifactory
           dotnet nuget push --source artifactory --skip-duplicate src/bin/Release/*.nupkg
 
