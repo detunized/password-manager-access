@@ -78,10 +78,7 @@ jobs:
         run: ci/make-nuget-package.sh ${{ github.ref_name }}
 
       - name: Push
-        #run: ci/push-package-to-nuget.sh
-        run: echo "TODO: Push to Artifactory"
-        env:
-          NUGET_API_KEY: "TODO: Add API key"
+        run: echo "@TODO Push to Artifactory"
 
       - name: Release
         run: gh release create ${{ github.ref_name }} --generate-notes ${{ github.workspace }}/**/*.nupkg
