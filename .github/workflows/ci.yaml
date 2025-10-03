@@ -78,7 +78,9 @@ jobs:
         run: ci/make-nuget-package.sh ${{ github.ref_name }}
 
       - name: Push
-        run: echo "@TODO Push to Artifactory"
+        run: |
+          dotnet nuget add source https://devolutions.jfrog.io/devolutions/api/nuget/nuget-local --name artifactory --username ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --store-password-in-clear-text
+          dotnet nuget push --source artifactory --skip-duplicate src/bin/Release/*.nupkg
 
       - name: Release
         run: gh release create ${{ github.ref_name }} --generate-notes ${{ github.workspace }}/**/*.nupkg
