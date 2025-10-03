@@ -5,12 +5,12 @@ permissions: write-all
 on:
   push:
     branches:
-      - 'disabled_*'
+      - '*'
     tags:
-      - 'disabled_v*'
+      - 'v*'
   pull_request:
     branches:
-      - 'disabled_*'
+      - '*'
 
 jobs:
   Build:
