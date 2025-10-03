@@ -54,7 +54,7 @@ jobs:
         run: dotnet test --no-restore --configuration Release --framework net${{ matrix.dotnet }} --logger "trx;LogFileName=test-results.trx"
 
       - name: Test Report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c
         if: always()
         with:
           name: Test (${{ matrix.os }}, net${{ matrix.dotnet }})
@@ -78,13 +78,10 @@ jobs:
         run: ci/make-nuget-package.sh ${{ github.ref_name }}
 
       - name: Push
-        run: ci/push-package-to-nuget.sh
+        #run: ci/push-package-to-nuget.sh
+        run: echo "TODO: Push to Artifactory"
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: "TODO: Add API key"
 
       - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ${{ github.workspace }}/**/*.nupkg
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
+        run: gh release create ${{ github.ref_name }} --generate-notes ${{ github.workspace }}/**/*.nupkg
