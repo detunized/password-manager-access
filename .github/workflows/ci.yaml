@@ -84,12 +84,6 @@ jobs:
           dotnet nuget add source https://devolutions.jfrog.io/devolutions/api/nuget/nuget-local --name artifactory
           dotnet nuget push --source artifactory --api-key ${{ secrets.ARTIFACTORY_USERNAME }}:${{ secrets.ARTIFACTORY_TOKEN }} --skip-duplicate src/bin/Release/*.nupkg
 
-      - name: Dump dir 1
-        run: ls -lR src/bin/Release
-
-      - name: Dump dir 2
-        run: ls -lR ${{ github.workspace }}
-
       - name: Release
         run: gh release create ${{ github.ref_name }} --generate-notes src/bin/Release/*.nupkg
         env:
