@@ -85,6 +85,8 @@ jobs:
           dotnet nuget push --source artifactory --api-key ${{ secrets.ARTIFACTORY_USERNAME }}:${{ secrets.ARTIFACTORY_TOKEN }} --skip-duplicate src/bin/Release/*.nupkg
 
       - name: Release
-        run: gh release create ${{ github.ref_name }} --generate-notes ${{ github.workspace }}/**/*.nupkg
+        run: ls -lR src/bin/Release
+        run: ls -lR ${{ github.workspace }}
+        run: gh release create ${{ github.ref_name }} --generate-notes src/bin/Release/*.nupkg
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
