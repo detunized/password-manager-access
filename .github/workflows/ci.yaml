@@ -86,3 +86,5 @@ jobs:
 
       - name: Release
         run: gh release create ${{ github.ref_name }} --generate-notes ${{ github.workspace }}/**/*.nupkg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
