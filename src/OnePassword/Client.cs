@@ -45,8 +45,13 @@ namespace PasswordManagerAccess.OnePassword
 
         public static bool IsSsoAccount(string username) => false;
 
-        public static Session SsoLogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage) =>
-            throw new NotImplementedException("SSO login is not implemented in this version of the library");
+        public static Task<Session> SsoLogIn(
+            Credentials credentials,
+            AppInfo app,
+            IAsyncUi ui,
+            ISecureStorage storage,
+            CancellationToken cancellationToken
+        ) => throw new NotImplementedException("SSO login is not implemented in this version of the library");
 
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
@@ -54,7 +59,7 @@ namespace PasswordManagerAccess.OnePassword
         public static async Task<Session> LogIn(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             CancellationToken cancellationToken
         )
@@ -176,7 +181,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static async Task<Session> LogIn(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             IRestTransport transport,
             CancellationToken cancellationToken
@@ -264,7 +269,7 @@ namespace PasswordManagerAccess.OnePassword
         internal static async Task<(AesKey, RestClient)> LogIn(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
@@ -283,7 +288,7 @@ namespace PasswordManagerAccess.OnePassword
         private static async Task<(AesKey, RestClient)> LoginAttempt(
             Credentials credentials,
             AppInfo app,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
@@ -552,7 +557,7 @@ namespace PasswordManagerAccess.OnePassword
             SecondFactor[] factors,
             Credentials credentials,
             AesKey sessionKey,
-            IUi ui,
+            IAsyncUi ui,
             ISecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
@@ -659,32 +664,37 @@ namespace PasswordManagerAccess.OnePassword
         internal static async Task<SecondFactorResult> GetSecondFactorResult(
             SecondFactor factor,
             Credentials credentials,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
         {
             return factor.Kind switch
             {
-                SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(ui),
-                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, credentials, ui),
+                SecondFactorKind.GoogleAuthenticator => await AuthenticateWithGoogleAuth(ui, cancellationToken).ConfigureAwait(false),
+                SecondFactorKind.WebAuthn => await AuthenticateWithWebAuthn(factor, credentials, ui, cancellationToken).ConfigureAwait(false),
                 SecondFactorKind.Duo => await AuthenticateWithDuo(factor, ui, rest, cancellationToken).ConfigureAwait(false),
                 _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here"),
             };
         }
 
-        internal static SecondFactorResult AuthenticateWithGoogleAuth(IUi ui)
+        internal static async Task<SecondFactorResult> AuthenticateWithGoogleAuth(IAsyncUi ui, CancellationToken cancellationToken)
         {
-            var passcode = ui.ProvideGoogleAuthPasscode();
+            var passcode = await ui.ProvideGoogleAuthPasscode(cancellationToken).ConfigureAwait(false);
             if (passcode == Passcode.Cancel)
                 return SecondFactorResult.Cancel();
 
             return SecondFactorResult.Done(new Dictionary<string, string> { ["code"] = passcode.Code }, passcode.RememberMe);
         }
 
-        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, Credentials credentials, IUi ui)
+        internal static async Task<SecondFactorResult> AuthenticateWithWebAuthn(
+            SecondFactor factor,
+            Credentials credentials,
+            IAsyncUi ui,
+            CancellationToken cancellationToken
+        )
         {
-            var rememberMe = ui.ProvideWebAuthnRememberMe();
+            var rememberMe = await ui.ProvideWebAuthnRememberMe(cancellationToken).ConfigureAwait(false);
             if (rememberMe == Passcode.Cancel)
                 return SecondFactorResult.Cancel();
 
@@ -727,7 +737,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task<SecondFactorResult> AuthenticateWithDuo(
             SecondFactor factor,
-            IUi ui,
+            IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -744,19 +754,37 @@ namespace PasswordManagerAccess.OnePassword
             }
 
             var isV1 = extra.Url.IsNullOrEmpty();
-            // TODO: Fix this!
-            // Note: Duo async methods require additional parameters (logger, mfaMethods) not available in this context
-            // Using synchronous versions for now - they handle UI interaction which is inherently blocking anyway
             var result = isV1
-                ? DuoV1.Authenticate(CheckParam(extra.Host, "host"), CheckParam(extra.Signature, "sigRequest"), ui, rest.Transport)
-                : DuoV4.Authenticate(extra.Url, ui, rest.Transport);
+                ? await DuoV1
+                    .AuthenticateAsync(
+                        CheckParam(extra.Host, "host"),
+                        CheckParam(extra.Signature, "sigRequest"),
+                        otherMethods: [],
+                        ui,
+                        rest.Transport,
+                        logger: null,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false)
+                : await DuoV4
+                    .AuthenticateAsync(extra.Url, otherMethods: [], ui, rest.Transport, logger: null, cancellationToken)
+                    .ConfigureAwait(false);
 
-            if (result == null)
+            // TODO: Refactor to switch!
+            if (result.Value is DuoCancelled)
                 return SecondFactorResult.Cancel();
 
-            var key = isV1 ? "sigResponse" : "code";
-            var note = isV1 ? "v1" : "v4";
-            return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Code }, result.RememberMe, note);
+            if (result.TryPickT1(out var mfaMethod, out _))
+                throw new InternalErrorException($"Unexpected MFA method returned from Duo: {mfaMethod}");
+
+            if (result.TryPickT0(out var duoResult, out _))
+            {
+                var key = isV1 ? "sigResponse" : "code";
+                var note = isV1 ? "v1" : "v4";
+                return SecondFactorResult.Done(new Dictionary<string, string> { [key] = duoResult.Code }, duoResult.RememberMe, note);
+            }
+
+            throw new InternalErrorException("Unexpected result from Duo authentication");
         }
 
         // Returns "remember me" token when successful

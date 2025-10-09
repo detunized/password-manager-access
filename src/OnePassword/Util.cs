@@ -3,7 +3,10 @@
 
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
@@ -68,24 +71,31 @@ namespace PasswordManagerAccess.OnePassword
             return dot < 0 ? domain : domain.Substring(dot + 1);
         }
 
-        public class ThrowUi : IUi
-        {
-            public DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw MakeLogicError();
-
-            public string ProvideDuoPasscode(DuoDevice device) => throw MakeLogicError();
-
-            public void UpdateDuoStatus(DuoStatus status, string text) => throw MakeLogicError();
-
-            public Passcode ProvideGoogleAuthPasscode() => throw MakeLogicError();
-
-            public Passcode ProvideWebAuthnRememberMe() => throw MakeLogicError();
-        }
-
         public class ThrowStorage : ISecureStorage
         {
             public string LoadString(string name) => throw MakeLogicError();
 
             public void StoreString(string name, string value) => throw MakeLogicError();
+        }
+
+        public class ThrowUi : IAsyncUi
+        {
+            public Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) => throw MakeLogicError();
+
+            public Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken) => throw MakeLogicError();
+
+            public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
+                DuoDevice[] devices,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => throw MakeLogicError();
+
+            public Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken) =>
+                throw MakeLogicError();
+
+            public Task DuoDone(CancellationToken cancellationToken) => throw MakeLogicError();
+
+            public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken) => throw MakeLogicError();
         }
 
         //

@@ -14,14 +14,16 @@ namespace Example
 {
     public static class Program
     {
-        private class TextUi(string totpSecret = null) : DuoUi, IUi
+        private class TextUi(string totpSecret = null) : DuoAsyncUi, IAsyncUi
         {
-            public Passcode ProvideGoogleAuthPasscode()
+            public async Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
             {
                 if (string.IsNullOrEmpty(totpSecret))
                 {
-                    var passcode = GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}");
-                    return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+                    var passcode = await GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}", cancellationToken)
+                        .ConfigureAwait(false);
+                    var rememberMe = await GetRememberMe(cancellationToken).ConfigureAwait(false);
+                    return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, rememberMe);
                 }
 
                 var totp = Util.CalculateGoogleAuthTotp(totpSecret);
@@ -31,9 +33,9 @@ namespace Example
                 return new Passcode(totp, false);
             }
 
-            public Passcode ProvideWebAuthnRememberMe()
+            public async Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken)
             {
-                var yesNo = GetAnswer($"Remember this device? {PressEnterToCancel}").ToLower();
+                var yesNo = (await GetAnswer($"Remember this device? {PressEnterToCancel}", cancellationToken).ConfigureAwait(false)).ToLower();
                 return string.IsNullOrWhiteSpace(yesNo) ? Passcode.Cancel : new Passcode("", yesNo == "y" || yesNo == "yes");
             }
         }
@@ -86,12 +88,15 @@ namespace Example
             Session session;
             if (Client.IsSsoAccount(username))
             {
-                session = Client.SsoLogIn(
-                    new Credentials { Username = username, DeviceUuid = uuid },
-                    device,
-                    new TextUi(totpSecret),
-                    new PlainStorage()
-                );
+                session = await Client
+                    .SsoLogIn(
+                        new Credentials { Username = username, DeviceUuid = uuid },
+                        device,
+                        new TextUi(totpSecret),
+                        new PlainStorage(),
+                        CancellationToken.None
+                    )
+                    .ConfigureAwait(false);
             }
             else if (string.IsNullOrEmpty(serviceAccountToken))
             {
