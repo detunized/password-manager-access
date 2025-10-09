@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -10,13 +11,13 @@ namespace PasswordManagerAccess.OnePassword
 {
     /// The session object is opaque to the user. It holds all the state needed by Client to perform
     /// various operations like opening vaults or logging out.
-    public class Session
+    public sealed class Session : IDisposable
     {
-        internal readonly Credentials Credentials;
-        internal readonly Keychain Keychain;
-        internal readonly AesKey Key;
-        internal readonly RestClient Rest;
-        internal readonly IRestTransport Transport;
+        internal Credentials Credentials { get; }
+        internal Keychain Keychain { get; }
+        internal AesKey Key { get; }
+        internal RestClient Rest { get; }
+        private IRestTransport Transport { get; }
 
         // Cache
         internal R.AccountInfo? AccountInfo { get; set; }
@@ -30,5 +31,7 @@ namespace PasswordManagerAccess.OnePassword
             Rest = rest;
             Transport = transport;
         }
+
+        public void Dispose() => Transport.Dispose();
     }
 }

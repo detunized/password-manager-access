@@ -93,7 +93,7 @@ namespace PasswordManagerAccess.OnePassword
             }
             finally
             {
-                session.Transport.Dispose();
+                session.Dispose();
             }
         }
 
