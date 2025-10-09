@@ -3,3 +3,5 @@ password: passw0rd!
 account-key: A3-RTN9SA-DY9445Y5FF96X6E7B5GPFA95R9
 device-id: gvcwm2onr66yune47arn4qhq4z
 domain: my.1password.eu
+# Optional: Google Authenticator TOTP secret (base32 encoded)
+# google-auth-totp-secret: JBSWY3DPEHPK3PXP

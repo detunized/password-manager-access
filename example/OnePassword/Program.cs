@@ -12,12 +12,21 @@ namespace Example
 {
     public static class Program
     {
-        private class TextUi : DuoUi, IUi
+        private class TextUi(string totpSecret = null) : DuoUi, IUi
         {
             public Passcode ProvideGoogleAuthPasscode()
             {
-                var passcode = GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}");
-                return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+                if (string.IsNullOrEmpty(totpSecret))
+                {
+                    var passcode = GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}");
+                    return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+                }
+
+                var totp = Util.CalculateGoogleAuthTotp(totpSecret);
+                Console.WriteLine($"Auto-generated TOTP: {totp}");
+                Console.WriteLine("Remember this device: no");
+
+                return new Passcode(totp, false);
             }
 
             public Passcode ProvideWebAuthnRememberMe()
@@ -39,6 +48,9 @@ namespace Example
             // See config.yaml.example for an example.
             var config = Util.ReadConfig();
 
+            // Read optional TOTP secret for Google Authenticator
+            config.TryGetValue("google-auth-totp-secret", out var totpSecret);
+
             try
             {
                 DumpAllVaults(
@@ -47,7 +59,8 @@ namespace Example
                     config.GetValueOrDefault("account-key", ""),
                     config.GetValueOrDefault("domain", ""),
                     config["device-id"],
-                    config.GetValueOrDefault("service-account-token", "")
+                    config.GetValueOrDefault("service-account-token", ""),
+                    totpSecret
                 );
             }
             catch (BaseException e)
@@ -56,14 +69,27 @@ namespace Example
             }
         }
 
-        private static void DumpAllVaults(string username, string password, string accountKey, string domain, string uuid, string serviceAccountToken)
+        private static void DumpAllVaults(
+            string username,
+            string password,
+            string accountKey,
+            string domain,
+            string uuid,
+            string serviceAccountToken,
+            string totpSecret
+        )
         {
             var device = new AppInfo { Name = "PMA 1Password example", Version = "1.0.0" };
 
             Session session;
             if (Client.IsSsoAccount(username))
             {
-                session = Client.SsoLogIn(new Credentials { Username = username, DeviceUuid = uuid }, device, new TextUi(), new PlainStorage());
+                session = Client.SsoLogIn(
+                    new Credentials { Username = username, DeviceUuid = uuid },
+                    device,
+                    new TextUi(totpSecret),
+                    new PlainStorage()
+                );
             }
             else if (string.IsNullOrEmpty(serviceAccountToken))
             {
@@ -77,7 +103,7 @@ namespace Example
                         DeviceUuid = uuid,
                     },
                     device,
-                    new TextUi(),
+                    new TextUi(totpSecret),
                     new PlainStorage()
                 );
             }
