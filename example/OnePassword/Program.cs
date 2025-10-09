@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
@@ -36,7 +38,7 @@ namespace Example
             }
         }
 
-        public static void Main()
+        public static async Task Main()
         {
             // Read 1Password credentials from a file
             // The file should contain 5 values:
@@ -53,7 +55,7 @@ namespace Example
 
             try
             {
-                DumpAllVaults(
+                await DumpAllVaults(
                     config["username"],
                     config.GetValueOrDefault("password", ""),
                     config.GetValueOrDefault("account-key", ""),
@@ -69,7 +71,7 @@ namespace Example
             }
         }
 
-        private static void DumpAllVaults(
+        private static async Task DumpAllVaults(
             string username,
             string password,
             string accountKey,
@@ -93,7 +95,7 @@ namespace Example
             }
             else if (string.IsNullOrEmpty(serviceAccountToken))
             {
-                session = Client.LogIn(
+                session = await Client.LogIn(
                     new Credentials
                     {
                         Username = username,
@@ -104,12 +106,13 @@ namespace Example
                     },
                     device,
                     new TextUi(totpSecret),
-                    new PlainStorage()
+                    new PlainStorage(),
+                    CancellationToken.None
                 );
             }
             else
             {
-                session = Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
+                session = await Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device, CancellationToken.None);
             }
 
             // Enable this to get a single item from a vault
@@ -119,27 +122,28 @@ namespace Example
             {
                 if (getSingleItem)
                 {
-                    GetSingleItem(session);
+                    await GetSingleItem(session);
                 }
                 else
                 {
-                    var vaults = Client.ListAllVaults(session);
+                    var vaults = await Client.ListAllVaults(session, CancellationToken.None);
 
                     for (var i = 0; i < vaults.Length; i++)
-                        DumpVault(i, vaults[i], session);
+                        await DumpVault(i, vaults[i], session);
                 }
             }
             finally
             {
-                Client.LogOut(session);
+                await Client.LogOut(session, CancellationToken.None);
+                Console.WriteLine("Logged out");
             }
         }
 
-        private static void DumpVault(int index, VaultInfo vaultInfo, Session session)
+        private static async Task DumpVault(int index, VaultInfo vaultInfo, Session session)
         {
             Console.WriteLine($"Vault {index + 1} '{vaultInfo.Id}', '{vaultInfo.Name}':");
 
-            var vault = Client.OpenVault(vaultInfo, session);
+            var vault = await Client.OpenVault(vaultInfo, session, CancellationToken.None);
 
             // Dump accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
@@ -150,12 +154,14 @@ namespace Example
                 DumpSshKey($"{i + 1}", vault.SshKeys[i]);
         }
 
-        private static void GetSingleItem(Session session)
+        private static async Task GetSingleItem(Session session)
         {
             // TODO: Use your own vault and item IDs, this is just an example.
-            Client
-                .GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session)
-                .Switch(account => DumpAccount("1", account), sshKey => DumpSshKey("1", sshKey), noItem => Console.WriteLine($"No item: {noItem}"));
+            (await Client.GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session, CancellationToken.None)).Switch(
+                account => DumpAccount("1", account),
+                sshKey => DumpSshKey("1", sshKey),
+                noItem => Console.WriteLine($"No item: {noItem}")
+            );
         }
 
         private static void DumpAccount(string name, Account account)
