@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -22,14 +24,14 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public partial class ClientTest : TestBase
+    public class ClientTest : TestBase
     {
         //
         // Public methods
         //
 
         [Fact]
-        public void GetItem_returns_account()
+        public async Task GetItem_returns_account()
         {
             // Arrange
             var transport = new RestFlow()
@@ -49,7 +51,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             };
 
             // Act
-            var result = Client.GetItem("wm3uxq4xsmb4mghxw6o3s7zrem", "ru74fjxlkipzzctorwj4icrj2a", session);
+            var result = await Client.GetItem("wm3uxq4xsmb4mghxw6o3s7zrem", "ru74fjxlkipzzctorwj4icrj2a", session, CancellationToken.None);
 
             // Assert
             result.TryPickT0(out var account, out _).ShouldBeTrue();
@@ -57,7 +59,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetItem_returns_NoItem_when_not_found()
+        public async Task GetItem_returns_NoItem_when_not_found()
         {
             // Arrange
             var transport = new RestFlow()
@@ -77,7 +79,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             };
 
             // Act
-            var result = Client.GetItem("nonexistent", "ru74fjxlkipzzctorwj4icrj2a", session);
+            var result = await Client.GetItem("nonexistent", "ru74fjxlkipzzctorwj4icrj2a", session, CancellationToken.None);
 
             // Assert
             result.TryPickT2(out var noItem, out _).ShouldBeTrue();
@@ -85,13 +87,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void ListAllVaults_returns_vaults()
+        public async Task ListAllVaults_returns_vaults()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).Get(EncryptFixture("get-keysets-response"));
 
             // Act
-            var vaults = Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow);
+            var vaults = await Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             vaults.ShouldNotBeEmpty();
@@ -134,13 +136,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void StartNewSession_returns_session_on_ok()
+        public async Task StartNewSession_returns_session_on_ok()
         {
             // Arrange
             var flow = new RestFlow().Get(GetFixture("start-new-session-response"));
 
             // Act
-            var (sessionId, srpInfo) = Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+            var (sessionId, srpInfo) = await Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
 
             // Assert
             sessionId.ShouldBe(TestData.SessionId);
@@ -151,187 +153,187 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void StartNewSession_makes_GET_request_to_specific_url()
+        public async Task StartNewSession_makes_GET_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow().Get(GetFixture("start-new-session-response")).ExpectUrl("1password.com/api/v2/auth").ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+            await Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void StartNewSession_throws_on_unknown_status()
+        public async Task StartNewSession_throws_on_unknown_status()
         {
             // Arrange
             var flow = new RestFlow().Get("{'status': 'unknown', 'sessionID': 'blah'}");
 
             // Act later
-            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+            var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<InternalErrorException>();
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
             ex.Message.ShouldStartWith("Failed to start a new session, unsupported response status");
         }
 
         [Fact]
-        public void StartNewSession_throws_on_network_error()
+        public async Task StartNewSession_throws_on_network_error()
         {
             // Arrange
             var error = new HttpRequestException("Network error");
             var flow = new RestFlow().Get(error);
 
             // Act later
-            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+            var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<NetworkErrorException>();
+            var ex = await act.ShouldThrowAsync<NetworkErrorException>();
             ex.InnerException.ShouldBe(error);
         }
 
         [Fact]
-        public void StartNewSession_throws_on_invalid_json()
+        public async Task StartNewSession_throws_on_invalid_json()
         {
             // Arrange
             var flow = new RestFlow().Get("{'reason': 'deprecated'}", HttpStatusCode.Forbidden);
 
             // Act later
-            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+            var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<InternalErrorException>();
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
             ex.Message.ShouldBe("The server responded with the failure reason: 'deprecated'");
         }
 
         [Fact]
-        public void StartNewSession_reports_failure_reason()
+        public async Task StartNewSession_reports_failure_reason()
         {
             // Arrange
             var flow = new RestFlow().Get("} invalid json {");
 
             // Act later
-            Action act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow);
+            var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<InternalErrorException>();
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
             ex.Message.ShouldStartWith("Invalid or unexpected response");
         }
 
         [Fact]
-        public void RegisterDevice_works()
+        public async Task RegisterDevice_works()
         {
             // Arrange
             var flow = new RestFlow().Post("{'success': 1}");
 
             // Act/Assert
-            Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+            await Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void RegisterDevice_makes_POST_request_to_specific_url()
+        public async Task RegisterDevice_makes_POST_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow().Post("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+            await Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void RegisterDevice_throws_on_error()
+        public async Task RegisterDevice_throws_on_error()
         {
             // Arrange
             var flow = new RestFlow().Post("{'success': 0}");
 
             // Act later
-            Action act = () => Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+            var act = () => Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<InternalErrorException>();
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
             ex.Message.ShouldStartWith("Failed to register the device");
         }
 
         [Fact]
-        public void ReauthorizeDevice_works()
+        public async Task ReauthorizeDevice_works()
         {
             // Arrange
             var flow = new RestFlow().Put("{'success': 1}");
 
             // Act/Assert
-            Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+            await Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void ReauthorizeDevice_makes_PUT_request_to_specific_url()
+        public async Task ReauthorizeDevice_makes_PUT_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+            await Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void ReauthorizeDevice_throws_on_error()
+        public async Task ReauthorizeDevice_throws_on_error()
         {
             // Arrange
             var flow = new RestFlow().Put("{'success': 0}");
 
             // Act later
-            Action act = () => Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow);
+            var act = () => Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<InternalErrorException>();
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
             ex.Message.ShouldStartWith("Failed to reauthorize the device");
         }
 
         [Fact]
-        public void VerifySessionKey_returns_success()
+        public async Task VerifySessionKey_returns_success()
         {
             // Arrange
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response"));
 
             // Act
-            var result = Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
+            var result = await Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             result.Status.ShouldBe(Client.VerifyStatus.Success);
         }
 
         [Fact]
-        public void VerifySessionKey_makes_POST_request_to_specific_url()
+        public async Task VerifySessionKey_makes_POST_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response")).ExpectUrl("1password.com/api/v2/auth/verify").ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
+            await Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void VerifySessionKey_returns_factors()
+        public async Task VerifySessionKey_returns_factors()
         {
             // Arrange
             var flow = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
 
             // Act
-            var result = Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
+            var result = await Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             result.Factors.Length.ShouldBe(3);
         }
 
         [Fact]
-        public void VerifySessionKey_throws_BadCredentials_on_auth_error()
+        public async Task VerifySessionKey_throws_BadCredentials_on_auth_error()
         {
             // Arrange
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             // Act later
-            Action act = () => Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow);
+            var act = () => Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<BadCredentialsException>();
+            var ex = await act.ShouldThrowAsync<BadCredentialsException>();
             ex.Message.ShouldBe("Username, password or account key is incorrect");
         }
 
@@ -405,17 +407,25 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void PerformSecondFactorAuthentication_throws_on_canceled_mfa()
+        public async Task PerformSecondFactorAuthentication_throws_on_canceled_mfa()
         {
             // Arrange
             var flow = new RestFlow();
 
             // Act later
-            Action act = () =>
-                Client.PerformSecondFactorAuthentication(GoogleAuthFactors, Credentials, TestData.SessionKey, new CancelingUi(), null, flow);
+            var act = () =>
+                Client.PerformSecondFactorAuthentication(
+                    GoogleAuthFactors,
+                    Credentials,
+                    TestData.SessionKey,
+                    new CancelingUi(),
+                    null,
+                    flow,
+                    CancellationToken.None
+                );
 
             // Assert
-            var ex = act.ShouldThrow<CanceledMultiFactorException>();
+            var ex = await act.ShouldThrowAsync<CanceledMultiFactorException>();
             ex.Message.ShouldBe("Second factor step is canceled by the user");
         }
 
@@ -440,7 +450,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void ChooseInteractiveSecondFactor_throws_on_empty_factors()
         {
             // Act later
-            Action act = () => Client.ChooseInteractiveSecondFactor(new Client.SecondFactor[0]);
+            Action act = () => Client.ChooseInteractiveSecondFactor([]);
 
             // Assert
             var ex = act.ShouldThrow<InternalErrorException>();
@@ -462,75 +472,93 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void SubmitSecondFactorCode_returns_remember_me_token()
+        public async Task SubmitSecondFactorCode_returns_remember_me_token()
         {
             // Arrange
             var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
 
             // Act
-            var token = Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
+            var token = await Client.SubmitSecondFactorResult(
+                Client.SecondFactorKind.GoogleAuthenticator,
+                GoogleAuthMfaResult,
+                TestData.SessionKey,
+                flow,
+                CancellationToken.None
+            );
 
             // Assert
             token.ShouldBe("gUhBItRHUI7vAc04TJNUkA");
         }
 
         [Fact]
-        public void SubmitSecondFactorCode_makes_POST_request_to_specific_url()
+        public async Task SubmitSecondFactorCode_makes_POST_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow().Post(EncryptFixture("mfa-response")).ExpectUrl("1password.com/api/v1/auth/mfa").ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
+            await Client.SubmitSecondFactorResult(
+                Client.SecondFactorKind.GoogleAuthenticator,
+                GoogleAuthMfaResult,
+                TestData.SessionKey,
+                flow,
+                CancellationToken.None
+            );
         }
 
         [Fact]
-        public void SubmitSecondFactorCode_throws_BadMultiFactor_on_auth_error()
+        public async Task SubmitSecondFactorCode_throws_BadMultiFactor_on_auth_error()
         {
             // Arrange
             var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
 
             // Act later
-            Action act = () =>
-                Client.SubmitSecondFactorResult(Client.SecondFactorKind.GoogleAuthenticator, GoogleAuthMfaResult, TestData.SessionKey, flow);
+            var act = () =>
+                Client.SubmitSecondFactorResult(
+                    Client.SecondFactorKind.GoogleAuthenticator,
+                    GoogleAuthMfaResult,
+                    TestData.SessionKey,
+                    flow,
+                    CancellationToken.None
+                );
 
             // Assert
-            var ex = act.ShouldThrow<BadMultiFactorException>();
+            var ex = await act.ShouldThrowAsync<BadMultiFactorException>();
             ex.Message.ShouldBe("Incorrect second factor code");
         }
 
         [Fact]
-        public void GetAccountInfo_works()
+        public async Task GetAccountInfo_works()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-account-info-response"));
 
             // Act/Assert
-            Client.GetAccountInfo(TestData.SessionKey, flow);
+            await Client.GetAccountInfo(TestData.SessionKey, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void GetAccountInfo_makes_GET_request_to_specific_url()
+        public async Task GetAccountInfo_makes_GET_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).ExpectUrl("1password.com/api/v1/account").ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.GetAccountInfo(TestData.SessionKey, flow);
+            await Client.GetAccountInfo(TestData.SessionKey, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void GetKeysets_works()
+        public async Task GetKeysets_works()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-keysets-response"));
 
             // Act/Assert
-            Client.GetKeysets(TestData.SessionKey, flow);
+            await Client.GetKeysets(TestData.SessionKey, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void GetKeysets_makes_GET_request_to_specific_url()
+        public async Task GetKeysets_makes_GET_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow()
@@ -539,11 +567,11 @@ namespace PasswordManagerAccess.Test.OnePassword
                 .ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.GetKeysets(TestData.SessionKey, flow);
+            await Client.GetKeysets(TestData.SessionKey, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void GetVaultItems_returns_accounts()
+        public async Task GetVaultItems_returns_accounts()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
@@ -552,14 +580,14 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = await Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             accounts.ShouldNotBeEmpty();
         }
 
         [Fact]
-        public void GetVaultItems_returns_ssh_keys()
+        public async Task GetVaultItems_returns_ssh_keys()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ixsi-response"));
@@ -568,7 +596,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var (_, sshKeys) = Client.GetVaultItems("ixsi7ub55tanrwgvbyvn7cjpha", keychain, TestData.SessionKey, flow);
+            var (_, sshKeys) = await Client.GetVaultItems("ixsi7ub55tanrwgvbyvn7cjpha", keychain, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             sshKeys.Length.ShouldBe(4);
@@ -584,7 +612,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultItems_returns_converts_ssh_keys()
+        public async Task GetVaultItems_returns_converts_ssh_keys()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-saiw-response"));
@@ -593,7 +621,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var (_, sshKeys) = Client.GetVaultItems("3hhlvfccmm4253ou43jfrgty3m", keychain, TestData.SessionKey, flow);
+            var (_, sshKeys) = await Client.GetVaultItems("3hhlvfccmm4253ou43jfrgty3m", keychain, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             foreach (var sshKey in sshKeys)
@@ -696,7 +724,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         }
 
         [Fact]
-        public void GetVaultItems_with_no_items_work()
+        public async Task GetVaultItems_with_no_items_work()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
@@ -705,14 +733,14 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = await Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             accounts.ShouldBeEmpty();
         }
 
         [Fact]
-        public void GetVaultItems_returns_server_secrets()
+        public async Task GetVaultItems_returns_server_secrets()
         {
             // Arrange
             var flow = new RestFlow().Get(EncryptFixture("get-vault-with-server-secrets-response"));
@@ -721,14 +749,14 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var (accounts, _) = Client.GetVaultItems("6xkojw55yh4uo4vtdewghr5boi", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = await Client.GetVaultItems("6xkojw55yh4uo4vtdewghr5boi", keychain, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             accounts.ShouldContain(x => x.Name == "server-test");
         }
 
         [Fact]
-        public void GetVaultItems_makes_GET_request_to_specific_url()
+        public async Task GetVaultItems_makes_GET_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow()
@@ -740,11 +768,11 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act/Assert
-            Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            await Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void GetVaultItems_with_multiple_batches_returns_all_accounts()
+        public async Task GetVaultItems_with_multiple_batches_returns_all_accounts()
         {
             // Arrange
             var flow = new RestFlow()
@@ -756,43 +784,43 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var (accounts, _) = Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow);
+            var (accounts, _) = await Client.GetVaultItems("ru74fjxlkipzzctorwj4icrj2a", keychain, TestData.SessionKey, flow, CancellationToken.None);
 
             // Assert
             accounts.Length.ShouldBe(3);
         }
 
         [Fact]
-        public void LogOut_works()
+        public async Task LogOut_works()
         {
             // Arrange
             var flow = new RestFlow().Put("{'success': 1}");
 
             // Act/Assert
-            Client.LogOut(flow);
+            await Client.LogOut(flow, CancellationToken.None);
         }
 
         [Fact]
-        public void LogOut_makes_PUT_request_to_specific_url()
+        public async Task LogOut_makes_PUT_request_to_specific_url()
         {
             // Arrange
             var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/session/signout").ToRestClient(ApiUrl);
 
             // Act/Assert
-            Client.LogOut(flow);
+            await Client.LogOut(flow, CancellationToken.None);
         }
 
         [Fact]
-        public void LogOut_throws_on_bad_response()
+        public async Task LogOut_throws_on_bad_response()
         {
             // Arrange
             var flow = new RestFlow().Put("{'success': 0}");
 
             // Act later
-            Action act = () => Client.LogOut(flow);
+            var act = () => Client.LogOut(flow, CancellationToken.None);
 
             // Assert
-            var ex = act.ShouldThrow<InternalErrorException>();
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
             ex.Message.ShouldBe("Failed to logout");
         }
 
@@ -874,24 +902,24 @@ namespace PasswordManagerAccess.Test.OnePassword
         // Helpers
         //
 
-        private class NotImplementedUi : IUi
+        internal class CancelingUi : IAsyncUi
         {
-            public virtual Passcode ProvideGoogleAuthPasscode() => throw new NotImplementedException();
+            public Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) => Task.FromResult(Passcode.Cancel);
 
-            public virtual Passcode ProvideWebAuthnRememberMe() => throw new NotImplementedException();
+            public Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken) => Task.FromResult(Passcode.Cancel);
 
-            public virtual DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw new NotImplementedException();
+            public Task<OneOf.OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
+                DuoDevice[] devices,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => Task.FromResult(IDuoAsyncUi.CancelChoice());
 
-            public virtual string ProvideDuoPasscode(DuoDevice device) => throw new NotImplementedException();
+            public Task<OneOf.OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken) =>
+                Task.FromResult(IDuoAsyncUi.CancelPasscode());
 
-            public virtual void UpdateDuoStatus(DuoStatus status, string text) => throw new NotImplementedException();
-        }
+            public Task DuoDone(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        private class CancelingUi : NotImplementedUi
-        {
-            public override Passcode ProvideGoogleAuthPasscode() => Passcode.Cancel;
-
-            public override Passcode ProvideWebAuthnRememberMe() => Passcode.Cancel;
+            public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         private string EncryptFixture(string name)
@@ -929,7 +957,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         private const string ApiUrl = "https://my.1password.com/api";
 
-        private static readonly Client.SecondFactor[] GoogleAuthFactors = { new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator) };
+        private static readonly Client.SecondFactor[] GoogleAuthFactors = [new(Client.SecondFactorKind.GoogleAuthenticator)];
 
         private static readonly Client.SecondFactorResult GoogleAuthMfaResult = Client.SecondFactorResult.Done(
             new Dictionary<string, string> { ["code"] = "123456" },
