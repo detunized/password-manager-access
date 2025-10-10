@@ -4,6 +4,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -11,9 +13,16 @@ namespace PasswordManagerAccess.OnePassword;
 
 internal static class SrpV2
 {
-    public static AesKey PerformAndVerify(Credentials credentials, SrpInfo srpInfo, string keyUuid, string sessionId, RestClient rest)
+    public static async Task<AesKey> PerformAndVerifyAsync(
+        Credentials credentials,
+        SrpInfo srpInfo,
+        string keyUuid,
+        string sessionId,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
     {
-        var key = Perform(Srp.GenerateSecretA(), credentials, srpInfo, keyUuid, rest);
+        var key = await PerformAsync(Srp.GenerateSecretA(), credentials, srpInfo, keyUuid, rest, cancellationToken).ConfigureAwait(false);
         return new AesKey(sessionId, key);
     }
 
@@ -21,21 +30,34 @@ internal static class SrpV2
     // Internal
     //
 
-    internal static byte[] Perform(BigInteger secretA, Credentials credentials, SrpInfo srpInfo, string keyUuid, RestClient rest)
+    internal static async Task<byte[]> PerformAsync(
+        BigInteger secretA,
+        Credentials credentials,
+        SrpInfo srpInfo,
+        string keyUuid,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
     {
         var sharedA = Srp.ComputeSharedA(secretA);
-        var sharedB = ExchangeAForB(sharedA, rest);
+        var sharedB = await ExchangeAForBAsync(sharedA, rest, cancellationToken).ConfigureAwait(false);
         Srp.ValidateB(sharedB);
 
         var sessionKey = ComputeKey(secretA, sharedA, sharedB, credentials.SrpX.DecodeHex());
-        VerifyKey(sessionKey, credentials.Username, keyUuid, srpInfo.Salt, sharedA, sharedB, rest);
+        await VerifyKeyAsync(sessionKey, credentials.Username, keyUuid, srpInfo.Salt, sharedA, sharedB, rest, cancellationToken)
+            .ConfigureAwait(false);
 
         return sessionKey;
     }
 
-    internal static BigInteger ExchangeAForB(BigInteger sharedA, RestClient rest)
+    internal static async Task<BigInteger> ExchangeAForBAsync(BigInteger sharedA, RestClient rest, CancellationToken cancellationToken)
     {
-        var response = rest.PostJson<R.AForBV2>("v2/auth", new Dictionary<string, object> { ["userA"] = sharedA.ToHex() });
+        var response = await rest.PostJsonAsync<R.AForBV2>(
+                "v2/auth",
+                new Dictionary<string, object> { ["userA"] = sharedA.ToHex() },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
 
         // TODO: Do we need better error handling here?
         if (!response.IsSuccessful)
@@ -95,22 +117,25 @@ internal static class SrpV2
         return Crypto.Sha256(s.Span).ToUrlSafeBase64NoPadding();
     }
 
-    internal static void VerifyKey(
+    internal static async Task VerifyKeyAsync(
         byte[] sessionKey,
         string username,
         string keyUuid,
         byte[] salt,
         BigInteger sharedA,
         BigInteger sharedB,
-        RestClient rest
+        RestClient rest,
+        CancellationToken cancellationToken
     )
     {
         var clientHash = CalculateClientHash(sessionKey, username, keyUuid, salt, sharedA, sharedB);
 
-        var confirmKeyResponse = rest.PostJson<R.ServerHash>(
-            "v2/auth/confirm-key",
-            new Dictionary<string, object> { ["clientVerifyHash"] = clientHash.ToUrlSafeBase64NoPadding() }
-        );
+        var confirmKeyResponse = await rest.PostJsonAsync<R.ServerHash>(
+                "v2/auth/confirm-key",
+                new Dictionary<string, object> { ["clientVerifyHash"] = clientHash.ToUrlSafeBase64NoPadding() },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
 
         if (!confirmKeyResponse.IsSuccessful)
             throw new InternalErrorException($"Request to {confirmKeyResponse.RequestUri} failed");
