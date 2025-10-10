@@ -93,7 +93,7 @@ namespace Example
                         new Credentials { Username = username, DeviceUuid = uuid },
                         device,
                         new TextUi(totpSecret),
-                        new PlainStorage(),
+                        new AsyncPlainStorage(),
                         CancellationToken.None
                     )
                     .ConfigureAwait(false);
@@ -111,7 +111,7 @@ namespace Example
                     },
                     device,
                     new TextUi(totpSecret),
-                    new PlainStorage(),
+                    new AsyncPlainStorage(),
                     CancellationToken.None
                 );
             }

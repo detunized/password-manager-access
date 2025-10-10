@@ -20,7 +20,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 //
 // [x] Make all networking methods async and take CancellationToken
 // [x] Check IAsyncEnumerable
-// [ ] Make SecureStorage async
+// [x] Make SecureStorage async
 // [x] Make UI async
 // [ ] Make SRP async
 // [x] Switch to async Duo
@@ -49,7 +49,7 @@ namespace PasswordManagerAccess.OnePassword
             Credentials credentials,
             AppInfo app,
             IAsyncUi ui,
-            ISecureStorage storage,
+            IAsyncSecureStorage storage,
             CancellationToken cancellationToken
         ) => throw new NotImplementedException("SSO login is not implemented in this version of the library");
 
@@ -60,7 +60,7 @@ namespace PasswordManagerAccess.OnePassword
             Credentials credentials,
             AppInfo app,
             IAsyncUi ui,
-            ISecureStorage storage,
+            IAsyncSecureStorage storage,
             CancellationToken cancellationToken
         )
         {
@@ -182,7 +182,7 @@ namespace PasswordManagerAccess.OnePassword
             Credentials credentials,
             AppInfo app,
             IAsyncUi ui,
-            ISecureStorage storage,
+            IAsyncSecureStorage storage,
             IRestTransport transport,
             CancellationToken cancellationToken
         )
@@ -270,7 +270,7 @@ namespace PasswordManagerAccess.OnePassword
             Credentials credentials,
             AppInfo app,
             IAsyncUi ui,
-            ISecureStorage storage,
+            IAsyncSecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -290,7 +290,7 @@ namespace PasswordManagerAccess.OnePassword
             Credentials credentials,
             AppInfo app,
             IAsyncUi ui,
-            ISecureStorage storage,
+            IAsyncSecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -559,7 +559,7 @@ namespace PasswordManagerAccess.OnePassword
             Credentials credentials,
             AesKey sessionKey,
             IAsyncUi ui,
-            ISecureStorage storage,
+            IAsyncSecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -580,13 +580,13 @@ namespace PasswordManagerAccess.OnePassword
 
             // Store the token with the application. Next time we're not gonna need to enter any passcodes.
             if (secondFactorResult.RememberMe)
-                storage.StoreString(RememberMeTokenKey, token);
+                await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
         }
 
         internal static async Task<bool> TrySubmitRememberMeToken(
             SecondFactor[] factors,
             AesKey sessionKey,
-            ISecureStorage storage,
+            IAsyncSecureStorage storage,
             RestClient rest,
             CancellationToken cancellationToken
         )
@@ -594,7 +594,7 @@ namespace PasswordManagerAccess.OnePassword
             if (factors.All(x => x.Kind != SecondFactorKind.RememberMeToken))
                 return false;
 
-            var token = storage.LoadString(RememberMeTokenKey);
+            var token = await storage.LoadString(RememberMeTokenKey).ConfigureAwait(false);
             if (string.IsNullOrEmpty(token))
                 return false;
 
@@ -610,7 +610,7 @@ namespace PasswordManagerAccess.OnePassword
             catch (BadMultiFactorException)
             {
                 // The token got rejected, need to erase it, it's no longer valid.
-                storage.StoreString(RememberMeTokenKey, null);
+                await storage.StoreString(RememberMeTokenKey, null).ConfigureAwait(false);
 
                 // When the stored 'remember me' token is rejected by the server, we need to try
                 // the whole login sequence one more time. Probably the token is expired or it's

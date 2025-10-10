@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Linq;
 using System.Threading;
@@ -71,11 +73,11 @@ namespace PasswordManagerAccess.OnePassword
             return dot < 0 ? domain : domain.Substring(dot + 1);
         }
 
-        public class ThrowStorage : ISecureStorage
+        public class ThrowStorage : IAsyncSecureStorage
         {
-            public string LoadString(string name) => throw MakeLogicError();
+            public Task<string?> LoadString(string name) => throw MakeLogicError();
 
-            public void StoreString(string name, string value) => throw MakeLogicError();
+            public Task StoreString(string name, string? value) => throw MakeLogicError();
         }
 
         public class ThrowUi : IAsyncUi
@@ -112,7 +114,7 @@ namespace PasswordManagerAccess.OnePassword
             var plaintext = decryptor.Decrypt(encrypted).ToUtf8();
             try
             {
-                return JsonConvert.DeserializeObject<T>(plaintext);
+                return JsonConvert.DeserializeObject<T>(plaintext) ?? throw new InternalErrorException("Failed to parse JSON: got null");
             }
             catch (JsonException e)
             {

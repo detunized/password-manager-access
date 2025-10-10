@@ -3,9 +3,11 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
+using Shouldly;
 using Xunit;
 using R = PasswordManagerAccess.OnePassword.Response;
 using Util = PasswordManagerAccess.OnePassword.Util;
@@ -17,81 +19,129 @@ namespace PasswordManagerAccess.Test.OnePassword
         [Fact]
         public void RandomUuid_returns_string_of_26_characters()
         {
-            Assert.Equal(26, Util.RandomUuid().Length);
+            // Arrange/Act
+            var result = Util.RandomUuid().Length;
+
+            // Assert
+            result.ShouldBe(26);
         }
 
         [Fact]
         public void Hkdf_returns_derived_key()
         {
-            Assert.Equal("UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64Loose(), Util.Hkdf("PBES2g-HS256", "ikm".ToBytes(), "salt".ToBytes()));
+            // Arrange
+            var method = "PBES2g-HS256";
+            var ikm = "ikm".ToBytes();
+            var salt = "salt".ToBytes();
+            var expected = "UybCHXHHQRaFxUUR3G2ZO9CJ0H2eWJ1Ik_MpNQHrHdE".Decode64Loose();
+
+            // Act
+            var result = Util.Hkdf(method, ikm, salt);
+
+            // Assert
+            result.ShouldBe(expected);
         }
 
-        [Fact]
-        public void Pbes2_returns_derived_key()
+        [Theory]
+        [InlineData("PBES2g-HS256", "B-aZcYDPfxKQTwQQDUBdNIiP32KvbVBqDswjsZb-mdg")]
+        [InlineData("PBES2g-HS512", "_vcnaxBwQKCnE7y-yf0-GRzGFTJJ4kWj4aIgh9vmFgY")]
+        public void Pbes2_returns_derived_key(string method, string expectedBase64)
         {
-            Assert.Equal(
-                "B-aZcYDPfxKQTwQQDUBdNIiP32KvbVBqDswjsZb-mdg".Decode64Loose(),
-                Util.Pbes2("PBES2g-HS256", "password", "salt".ToBytes(), 100)
-            );
-            Assert.Equal(
-                "_vcnaxBwQKCnE7y-yf0-GRzGFTJJ4kWj4aIgh9vmFgY".Decode64Loose(),
-                Util.Pbes2("PBES2g-HS512", "password", "salt".ToBytes(), 100)
-            );
+            // Arrange
+            var password = "password";
+            var salt = "salt".ToBytes();
+            var iterations = 100;
+            var expected = expectedBase64.Decode64Loose();
+
+            // Act
+            var key = Util.Pbes2(method, password, salt, iterations);
+
+            // Assert
+            key.ShouldBe(expected);
         }
 
         [Fact]
         public void Pbes2_throws_on_unsupported_method()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(
-                () => Util.Pbes2("Unknown", "password", "salt".ToBytes(), 100),
-                "Method 'Unknown' is not supported"
-            );
+            // Arrange
+            var act = () => Util.Pbes2("Unknown", "password", "salt".ToBytes(), 100);
+
+            // Act/Assert
+            act.ShouldThrow<UnsupportedFeatureException>().Message.ShouldBe("Method 'Unknown' is not supported");
         }
 
         [Fact]
         public void CalculateSessionHmacSalt_returns_salt()
         {
+            // Arrange
             var key = new AesKey("", "WyICHHlP5lPigZUGZYoivbJMqgHjSti86UKwdjCryYM".Decode64Loose());
             var expected = "cce080cc9b3eaeaa9b6e621e1b4c4d2048babe16e40b0576fc2520c26473b9ac".DecodeHex();
 
-            Assert.Equal(expected, Util.CalculateSessionHmacSalt(key));
+            // Act
+            var salt = Util.CalculateSessionHmacSalt(key);
+
+            // Assert
+            salt.ShouldBe(expected);
         }
 
         [Fact]
         public void CalculateClientHash_returns_hash()
         {
-            Assert.Equal("SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA", Util.CalculateClientHash("RTN9SA", "TOZVTFIFBZGFDFNE5KSZFY7EZY"));
+            // Arrange
+            var accountKeyUuid = "RTN9SA";
+            var sessionId = "TOZVTFIFBZGFDFNE5KSZFY7EZY";
+            var expected = "SnO6NuEoGdflPsCV9nue0po8CGNwidfN_DExidLZ-uA";
+
+            // Act
+            var hash = Util.CalculateClientHash(accountKeyUuid, sessionId);
+
+            // Assert
+            hash.ShouldBe(expected);
         }
 
         [Fact]
         public void HashRememberMeToken_returns_hash()
         {
-            Assert.Equal("oNk_XW_e", Util.HashRememberMeToken("ZBcCUphmNqw-DNB45PKIbw", "HPI33B234JDIHCRKHCO3LDDIII"));
+            // Arrange
+            var token = "ZBcCUphmNqw-DNB45PKIbw";
+            var sessionId = "HPI33B234JDIHCRKHCO3LDDIII";
+            var expected = "oNk_XW_e";
+
+            // Act
+            var hash = Util.HashRememberMeToken(token, sessionId);
+
+            // Assert
+            hash.ShouldBe(expected);
         }
 
         [Fact]
         public void DecryptAesKey_adds_decrypted_key_to_keychain()
         {
+            // Arrange
             var encrypted = ParseFixture<R.Encrypted>("encrypted-aes-key");
             var keychain = new Keychain(new AesKey("mp", "44c38e8fedb84a1ab5ba74ed98dde931f6500ae39c1d9c85e20a7268ab2074f0".DecodeHex()));
 
+            // Act
             Util.DecryptAesKey(encrypted, keychain);
-            var k = keychain.GetAes("szerdhg2ww2ahjo4ilz57x7cce").Key.ToHex();
 
-            Assert.NotNull(keychain.GetAes("szerdhg2ww2ahjo4ilz57x7cce"));
+            // Assert
+            keychain.GetAes("szerdhg2ww2ahjo4ilz57x7cce").ShouldNotBeNull();
         }
 
         [Fact]
         public void DecryptRsaKey_adds_decrypted_key_to_keychain()
         {
+            // Arrange
             var encrypted = ParseFixture<R.Encrypted>("encrypted-rsa-key");
             var keychain = new Keychain(
                 new AesKey("szerdhg2ww2ahjo4ilz57x7cce", "bba932f6032dc4dffaa9b8f03c9fd4b810127b89a49408db7b914a131690c091".DecodeHex())
             );
 
+            // Act
             Util.DecryptRsaKey(encrypted, keychain);
 
-            Assert.NotNull(keychain.GetRsa("szerdhg2ww2ahjo4ilz57x7cce"));
+            // Assert
+            keychain.GetRsa("szerdhg2ww2ahjo4ilz57x7cce").ShouldNotBeNull();
         }
 
         [Theory]
@@ -106,35 +156,46 @@ namespace PasswordManagerAccess.Test.OnePassword
         [InlineData("", "")]
         public void GetTld_returns_tld(string domain, string expected)
         {
-            Assert.Equal(expected, Util.GetTld(domain));
+            // Act
+            var result = Util.GetTld(domain);
+
+            // Assert
+            result.ShouldBe(expected);
         }
 
         [Fact]
-        public void ThrowUi_throws_on_method_call()
+        public async Task ThrowUi_throws_on_method_call()
         {
+            // Arrange
             var ui = new Util.ThrowUi();
-            AssertLogicError(() => ui.ChooseDuoFactor([], [], CancellationToken.None));
-            AssertLogicError(() => ui.ProvideDuoPasscode(new DuoDevice("", "", []), CancellationToken.None));
-            AssertLogicError(() => ui.UpdateDuoStatus(DuoStatus.Info, "", CancellationToken.None));
-            AssertLogicError(() => ui.ProvideGoogleAuthPasscode(CancellationToken.None));
-            AssertLogicError(() => ui.ProvideWebAuthnRememberMe(CancellationToken.None));
+
+            // Act/Assert
+            await AssertLogicError(() => ui.ChooseDuoFactor([], [], CancellationToken.None));
+            await AssertLogicError(() => ui.ProvideDuoPasscode(new DuoDevice("", "", []), CancellationToken.None));
+            await AssertLogicError(() => ui.UpdateDuoStatus(DuoStatus.Info, "", CancellationToken.None));
+            await AssertLogicError(() => ui.ProvideGoogleAuthPasscode(CancellationToken.None));
+            await AssertLogicError(() => ui.ProvideWebAuthnRememberMe(CancellationToken.None));
         }
 
         [Fact]
-        public void ThrowStorage_throws_on_method_call()
+        public async Task ThrowStorage_throws_on_method_call()
         {
+            // Arrange
             var storage = new Util.ThrowStorage();
-            AssertLogicError(() => storage.LoadString(""));
-            AssertLogicError(() => storage.StoreString("", ""));
+
+            // Act & Assert
+            await AssertLogicError(() => storage.LoadString(""));
+            await AssertLogicError(() => storage.StoreString("", ""));
         }
 
         //
         // Helper
         //
 
-        static void AssertLogicError(Action f)
+        private static async Task AssertLogicError(Func<Task> f)
         {
-            Exceptions.AssertThrowsInternalError(f, "Logic error");
+            var ex = await f.ShouldThrowAsync<InternalErrorException>();
+            ex.Message.ShouldStartWith("Logic error");
         }
     }
 }
