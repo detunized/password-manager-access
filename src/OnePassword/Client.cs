@@ -19,11 +19,11 @@ using R = PasswordManagerAccess.OnePassword.Response;
 // Async refactoring TODO:
 //
 // [x] Make all networking methods async and take CancellationToken
-// [ ] Check IAsyncEnumerable
+// [x] Check IAsyncEnumerable
 // [ ] Make SecureStorage async
-// [ ] Make UI async
+// [x] Make UI async
 // [ ] Make SRP async
-// [ ] Switch to async Duo
+// [x] Switch to async Duo
 // [ ] Convert to record types
 // [ ] Convert to System.Text.Json
 
@@ -264,7 +264,7 @@ namespace PasswordManagerAccess.OnePassword
 
         // This is exception is used internally to trigger re-login from the depth of the call stack.
         // Possibly not the best design. TODO: Should this be done differently?
-        internal class RetryLoginException : Exception { }
+        internal class RetryLoginException : Exception;
 
         internal static async Task<(AesKey, RestClient)> LogIn(
             Credentials credentials,
@@ -275,6 +275,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
+            // TODO: Limit the number of retries to avoid infinite loops
             while (true)
             {
                 try
@@ -674,6 +675,7 @@ namespace PasswordManagerAccess.OnePassword
                 SecondFactorKind.GoogleAuthenticator => await AuthenticateWithGoogleAuth(ui, cancellationToken).ConfigureAwait(false),
                 SecondFactorKind.WebAuthn => await AuthenticateWithWebAuthn(factor, credentials, ui, cancellationToken).ConfigureAwait(false),
                 SecondFactorKind.Duo => await AuthenticateWithDuo(factor, ui, rest, cancellationToken).ConfigureAwait(false),
+                SecondFactorKind.RememberMeToken => throw new InternalErrorException("Logic error: Remember Me token should be handled separately"),
                 _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here"),
             };
         }

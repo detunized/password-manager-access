@@ -463,6 +463,9 @@ namespace PasswordManagerAccess.Common
         // Mutate state
         //
 
+        // The only state we allow to mutate are the default headers and cookies. Otherwise,
+        // it gets very tedious to pass in the headers/cookies the whole time in some situations.
+
         public void AddOrUpdateHeader(string name, string value) => _defaultHeaders[name] = value;
 
         public bool RemoveHeader(string name) => _defaultHeaders.Remove(name);
