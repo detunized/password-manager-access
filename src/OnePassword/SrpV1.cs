@@ -3,6 +3,8 @@
 
 using System.Collections.Generic;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -15,9 +17,15 @@ namespace PasswordManagerAccess.OnePassword
     internal static class SrpV1
     {
         // Returns the session encryption key
-        public static AesKey Perform(Credentials credentials, SrpInfo srpInfo, string sessionId, RestClient rest)
+        public static async Task<AesKey> PerformAsync(
+            Credentials credentials,
+            SrpInfo srpInfo,
+            string sessionId,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            var key = Perform(Srp.GenerateSecretA(), credentials, srpInfo, sessionId, rest);
+            var key = await PerformAsync(Srp.GenerateSecretA(), credentials, srpInfo, sessionId, rest, cancellationToken).ConfigureAwait(false);
             return new AesKey(sessionId, key);
         }
 
@@ -25,20 +33,34 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
-        internal static byte[] Perform(BigInteger secretA, Credentials credentials, SrpInfo srpInfo, string sessionId, RestClient rest)
+        internal static async Task<byte[]> PerformAsync(
+            BigInteger secretA,
+            Credentials credentials,
+            SrpInfo srpInfo,
+            string sessionId,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             var sharedA = Srp.ComputeSharedA(secretA);
-            var sharedB = ExchangeAForB(sharedA, sessionId, rest);
+            var sharedB = await ExchangeAForBAsync(sharedA, sessionId, rest, cancellationToken).ConfigureAwait(false);
             Srp.ValidateB(sharedB);
             return ComputeKey(secretA, sharedA, sharedB, credentials, srpInfo, sessionId);
         }
 
-        internal static BigInteger ExchangeAForB(BigInteger sharedA, string sessionId, RestClient rest)
+        internal static async Task<BigInteger> ExchangeAForBAsync(
+            BigInteger sharedA,
+            string sessionId,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            var response = rest.PostJson<R.AForBV1>(
-                "v1/auth",
-                new Dictionary<string, object> { ["sessionID"] = sessionId, ["userA"] = sharedA.ToHex() }
-            );
+            var response = await rest.PostJsonAsync<R.AForBV1>(
+                    "v1/auth",
+                    new Dictionary<string, object> { ["sessionID"] = sessionId, ["userA"] = sharedA.ToHex() },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             // TODO: Do we need better error handling here?
             if (!response.IsSuccessful)

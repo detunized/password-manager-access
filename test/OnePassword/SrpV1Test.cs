@@ -2,8 +2,11 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword
@@ -11,31 +14,41 @@ namespace PasswordManagerAccess.Test.OnePassword
     public class SrpV1Test : TestBase
     {
         [Fact]
-        public void ExchangeAForB_returns_B()
+        public async Task ExchangeAForBAsync_returns_B()
         {
-            var b = PerformExchange("exchange-a-for-b-response");
+            // Act
+            var b = await PerformExchangeAsync("exchange-a-for-b-response");
 
-            Assert.True(b > BigInteger.Zero);
-            Assert.True(b.ToByteArray().Length >= 20);
+            // Assert
+            b.ShouldBeGreaterThan(BigInteger.Zero);
+            b.ToByteArray().Length.ShouldBeGreaterThanOrEqualTo(20);
         }
 
         [Fact]
-        public void ExchangeAForB_makes_POST_request_to_specific_url()
+        public async Task ExchangeAForBAsync_makes_POST_request_to_specific_url()
         {
+            // Arrange
             var flow = new RestFlow().Post(GetFixture("exchange-a-for-b-response")).ExpectUrl("1password.com/api/v1/auth").ToRestClient(ApiUrl);
 
-            SrpV1.ExchangeAForB(0, TestData.SessionId, flow);
+            // Act/Assert
+            await SrpV1.ExchangeAForBAsync(0, TestData.SessionId, flow, CancellationToken.None);
         }
 
         [Fact]
-        public void ExchangeAForB_throws_on_mismatching_session_id()
+        public async Task ExchangeAForBAsync_throws_on_mismatching_session_id()
         {
-            Exceptions.AssertThrowsInternalError(() => PerformExchange("exchange-a-for-b-response", "incorrect-session-id"), "ID doesn't match");
+            // Arrange
+            var act = () => PerformExchangeAsync("exchange-a-for-b-response", "incorrect-session-id");
+
+            // Act/Assert
+            var ex = await act.ShouldThrowAsync<InternalErrorException>();
+            ex.Message.ShouldContain("ID doesn't match");
         }
 
         [Fact]
         public void ComputeKey_returns_key()
         {
+            // Arrange
             var secretA = new BigInteger(1337);
             var sharedA = (
                 "015600A0C9AEEB2077D805DF00DC3100B0121C15EB86B2E548829CF5BBD9DA7BA9"
@@ -71,29 +84,37 @@ namespace PasswordManagerAccess.Test.OnePassword
                 + "4D275C4D5C55A866D888E7AD4DE67D1E77"
             ).ToBigInt();
 
+            var expected = "2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64Loose();
+
+            // Act
             var key = SrpV1.ComputeKey(secretA, sharedA, sharedB, TestData.Credentials, TestData.SrpInfo, TestData.SessionId);
 
-            Assert.Equal("2vPT1GStqTBzGaU7hDrW8XfFjk2VyI6KOtYvgmxKWFo".Decode64Loose(), key);
+            // Assert
+            key.ShouldBe(expected);
         }
 
         [Fact]
         public void ComputeX_returns_X()
         {
+            // Arrange
             const string expected = "104882354933197857481625453411657638660079750214611069684" + "692024916274069892339";
+
+            // Act
             var x = SrpV1.ComputeX(TestData.Credentials, TestData.SrpInfo);
 
-            Assert.Equal(expected, x.ToString());
+            // Assert
+            x.ToString().ShouldBe(expected);
         }
 
         //
         // Helpers
         //
 
-        private BigInteger PerformExchange(string fixtureName, string sessionId = TestData.SessionId)
+        private async Task<BigInteger> PerformExchangeAsync(string fixtureName, string sessionId = TestData.SessionId)
         {
             var flow = new RestFlow().Post(GetFixture(fixtureName)).ToRestClient(ApiUrl);
 
-            return SrpV1.ExchangeAForB(0, sessionId, flow);
+            return await SrpV1.ExchangeAForBAsync(0, sessionId, flow, CancellationToken.None);
         }
 
         //

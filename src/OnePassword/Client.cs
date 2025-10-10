@@ -22,7 +22,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 // [x] Check IAsyncEnumerable
 // [x] Make SecureStorage async
 // [x] Make UI async
-// [ ] Make SRP async
+// [x] Make SRP async
 // [x] Switch to async Duo
 // [ ] Convert to record types
 // [ ] Convert to System.Text.Json
@@ -303,8 +303,7 @@ namespace PasswordManagerAccess.OnePassword
             var sessionRest = MakeRestClient(rest, sessionId: sessionId);
 
             // Step 2: Perform SRP exchange
-            // TODO: Make SrpV1.Perform async
-            var sessionKey = SrpV1.Perform(credentials, srpInfo, sessionId, sessionRest);
+            var sessionKey = await SrpV1.PerformAsync(credentials, srpInfo, sessionId, sessionRest, cancellationToken).ConfigureAwait(false);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
