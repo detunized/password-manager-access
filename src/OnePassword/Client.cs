@@ -29,7 +29,7 @@ using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    public static partial class Client
+    public static class Client
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
@@ -143,11 +143,11 @@ namespace PasswordManagerAccess.OnePassword
             }
 
             // 2. Check if the vault ID is valid and the vault exists
-            if (!session.AccountInfo.Vaults.Any(x => x.Id == vaultId))
+            if (session.AccountInfo!.Vaults.All(x => x.Id != vaultId))
                 return NoItem.NotFound;
 
             // 3. Even if the vault is there, it might not be accessible
-            if (!session.AccessibleVaults.Any(x => x.Id == vaultId))
+            if (session.AccessibleVaults!.All(x => x.Id != vaultId))
                 return NoItem.Inaccessible;
 
             // 4. Download the item
