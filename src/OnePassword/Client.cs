@@ -16,17 +16,6 @@ using PasswordManagerAccess.OnePassword.Ui;
 using U2fWin10;
 using R = PasswordManagerAccess.OnePassword.Response;
 
-// Async refactoring TODO:
-//
-// [x] Make all networking methods async and take CancellationToken
-// [x] Check IAsyncEnumerable
-// [x] Make SecureStorage async
-// [x] Make UI async
-// [x] Make SRP async
-// [x] Switch to async Duo
-// [x] Convert to record types
-// [x] Convert to System.Text.Json
-
 namespace PasswordManagerAccess.OnePassword
 {
     public static class Client
@@ -78,7 +67,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         // Service account access is intended for the CLI and the automation tools. It's not supposed to have
-        // any 2FA used in the flow. Also we won't need to store anything between the sessions.
+        // any 2FA used in the flow. Also, we won't need to store anything between the sessions.
         public static async Task<Session> LogIn(ServiceAccount serviceAccount, AppInfo app, CancellationToken cancellationToken)
         {
             var credentials = ParseServiceAccountToken(serviceAccount.Token);
@@ -157,7 +146,7 @@ namespace PasswordManagerAccess.OnePassword
             if (oneOf3.TryPickT2(out var noItem, out var oneOf2))
                 return noItem;
 
-            // 6. It's either an account or a SSH key
+            // 6. It's either an account or an SSH key
             var item = oneOf2.Match<VaultItem>(a => a, k => k);
 
             if (CanDecrypt(item))
@@ -247,8 +236,8 @@ namespace PasswordManagerAccess.OnePassword
             var accountInfo = await GetAccountInfo(sessionKey, rest, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Get all the keysets in one place. The original code is quite hairy around this
-            //         topic, so it's not very clear if these keysets should be merged with anything else
-            //         or it's enough to just use these keys. For now we are going to ignore other keys and
+            //         topic, so it's not very clear if these keysets should be merged with anything else,
+            //         or it's enough to just use these keys. For now, we are going to ignore other keys and
             //         see if it's enough.
             var keysets = await GetKeysets(sessionKey, rest, cancellationToken).ConfigureAwait(false);
 
@@ -431,32 +420,9 @@ namespace PasswordManagerAccess.OnePassword
             Duo,
         }
 
-        internal readonly struct SecondFactor
-        {
-            public readonly SecondFactorKind Kind;
-            public readonly object Parameters;
+        internal readonly record struct SecondFactor(SecondFactorKind Kind, object Parameters = null);
 
-            public SecondFactor(SecondFactorKind kind, object parameters = null)
-            {
-                Kind = kind;
-                Parameters = parameters;
-            }
-        }
-
-        internal readonly struct VerifyResult
-        {
-            public readonly VerifyStatus Status;
-            public readonly SecondFactor[] Factors;
-
-            public VerifyResult(VerifyStatus status)
-                : this(status, new SecondFactor[0]) { }
-
-            public VerifyResult(VerifyStatus status, SecondFactor[] factors)
-            {
-                Status = status;
-                Factors = factors;
-            }
-        }
+        internal readonly record struct VerifyResult(VerifyStatus Status, SecondFactor[] Factors);
 
         internal static async Task<VerifyResult> VerifySessionKey(
             Credentials credentials,
@@ -499,7 +465,7 @@ namespace PasswordManagerAccess.OnePassword
 
             var mfa = response.Mfa;
             if (mfa == null)
-                return new VerifyResult(VerifyStatus.Success);
+                return new VerifyResult(VerifyStatus.Success, []);
 
             return new VerifyResult(VerifyStatus.SecondFactorRequired, GetSecondFactors(mfa));
         }
@@ -536,7 +502,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            // Try "remember me" first. It's possible the server didn't allow it or
+            // Try "remember me" first. It's possible the server didn't allow it, or
             // we don't have a valid token stored from one of the previous sessions.
             if (await TrySubmitRememberMeToken(factors, sessionKey, storage, rest, cancellationToken).ConfigureAwait(false))
                 return;
@@ -550,7 +516,7 @@ namespace PasswordManagerAccess.OnePassword
 
             var token = await SubmitSecondFactorResult(factor.Kind, secondFactorResult, sessionKey, rest, cancellationToken).ConfigureAwait(false);
 
-            // Store the token with the application. Next time we're not gonna need to enter any passcodes.
+            // Store the token with the application. Next time we're not going to need to enter any passcodes.
             if (secondFactorResult.RememberMe)
                 await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
         }
@@ -1173,16 +1139,12 @@ namespace PasswordManagerAccess.OnePassword
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? SecondFactorPriorityWindows : SecondFactorPriorityOtherPlatforms;
 
         private static readonly SecondFactorKind[] SecondFactorPriorityWindows =
-        {
+        [
             SecondFactorKind.WebAuthn,
             SecondFactorKind.Duo,
             SecondFactorKind.GoogleAuthenticator,
-        };
+        ];
 
-        private static readonly SecondFactorKind[] SecondFactorPriorityOtherPlatforms =
-        {
-            SecondFactorKind.Duo,
-            SecondFactorKind.GoogleAuthenticator,
-        };
+        private static readonly SecondFactorKind[] SecondFactorPriorityOtherPlatforms = [SecondFactorKind.Duo, SecondFactorKind.GoogleAuthenticator];
     }
 }
