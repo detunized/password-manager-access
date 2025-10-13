@@ -35,11 +35,11 @@ namespace PasswordManagerAccess.OnePassword
         public Encrypted Encrypt(byte[] plaintext, byte[] iv, byte[] adata)
         {
             return new Encrypted(
-                keyId: Id,
-                scheme: EncryptionScheme,
-                container: ContainerType,
-                iv: iv,
-                ciphertext: AesGcm.Encrypt(Key, plaintext, iv, adata)
+                KeyId: Id,
+                Scheme: EncryptionScheme,
+                Container: ContainerType,
+                Iv: iv,
+                Ciphertext: AesGcm.Encrypt(Key, plaintext, iv, adata)
             );
         }
 
