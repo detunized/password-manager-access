@@ -52,7 +52,7 @@ internal static class SrpV2
 
     internal static async Task<BigInteger> ExchangeAForBAsync(BigInteger sharedA, RestClient rest, CancellationToken cancellationToken)
     {
-        var response = await rest.PostJsonAsync<R.AForBV2>(
+        var response = await rest.PostJsonAsync<R.AForBv2>(
                 "v2/auth",
                 new Dictionary<string, object> { ["userA"] = sharedA.ToHex() },
                 cancellationToken

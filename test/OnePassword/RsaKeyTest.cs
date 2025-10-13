@@ -81,8 +81,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         public RsaKeyTest()
         {
-            RsaSha1KeyData = ParseFixture<R.RsaKey>("rsa-key");
-            RsaSha256KeyData = ParseFixture<R.RsaKey>("rsa-key-oaep-256");
+            RsaSha1KeyData = ParseFixture<R.RsaKey>("rsa-key", useSystemJson: true);
+            RsaSha256KeyData = ParseFixture<R.RsaKey>("rsa-key-oaep-256", useSystemJson: true);
         }
     }
 }

@@ -36,9 +36,10 @@ namespace PasswordManagerAccess.Test
             return stream.ReadAll();
         }
 
-        public T ParseFixture<T>(string name)
+        public T ParseFixture<T>(string name, bool useSystemJson = false)
         {
-            return JsonConvert.DeserializeObject<T>(GetFixture(name, "json"));
+            var fixture = GetFixture(name, "json");
+            return useSystemJson ? System.Text.Json.JsonSerializer.Deserialize<T>(fixture) : JsonConvert.DeserializeObject<T>(fixture);
         }
 
         //

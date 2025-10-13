@@ -118,7 +118,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void DecryptAesKey_adds_decrypted_key_to_keychain()
         {
             // Arrange
-            var encrypted = ParseFixture<R.Encrypted>("encrypted-aes-key");
+            var encrypted = ParseFixture<R.Encrypted>("encrypted-aes-key", useSystemJson: true);
             var keychain = new Keychain(new AesKey("mp", "44c38e8fedb84a1ab5ba74ed98dde931f6500ae39c1d9c85e20a7268ab2074f0".DecodeHex()));
 
             // Act
@@ -132,7 +132,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void DecryptRsaKey_adds_decrypted_key_to_keychain()
         {
             // Arrange
-            var encrypted = ParseFixture<R.Encrypted>("encrypted-rsa-key");
+            var encrypted = ParseFixture<R.Encrypted>("encrypted-rsa-key", useSystemJson: true);
             var keychain = new Keychain(
                 new AesKey("szerdhg2ww2ahjo4ilz57x7cce", "bba932f6032dc4dffaa9b8f03c9fd4b810127b89a49408db7b914a131690c091".DecodeHex())
             );

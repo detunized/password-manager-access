@@ -5,9 +5,9 @@
 
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
@@ -114,7 +114,7 @@ namespace PasswordManagerAccess.OnePassword
             var plaintext = decryptor.Decrypt(encrypted).ToUtf8();
             try
             {
-                return JsonConvert.DeserializeObject<T>(plaintext) ?? throw new InternalErrorException("Failed to parse JSON: got null");
+                return JsonSerializer.Deserialize<T>(plaintext) ?? throw new InternalErrorException("Failed to parse JSON: got null");
             }
             catch (JsonException e)
             {

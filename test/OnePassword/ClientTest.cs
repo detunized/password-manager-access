@@ -852,7 +852,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void DecryptKeyset_decrypts_all_keys()
         {
             // Arrange
-            var keysets = ParseFixture<R.KeysetsInfo>("get-keysets-response");
+            var keysets = ParseFixture<R.KeysetsInfo>("get-keysets-response", useSystemJson: true);
             var keychain = new Keychain();
 
             // Act

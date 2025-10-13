@@ -23,8 +23,8 @@ namespace PasswordManagerAccess.OnePassword
                 Modulus = json.Modulus.Decode64Loose(),
                 P = json.P.Decode64Loose(),
                 Q = json.Q.Decode64Loose(),
-                DP = json.DP.Decode64Loose(),
-                DQ = json.DQ.Decode64Loose(),
+                DP = json.Dp.Decode64Loose(),
+                DQ = json.Dq.Decode64Loose(),
                 InverseQ = json.InverseQ.Decode64Loose(),
                 D = json.D.Decode64Loose(),
             };

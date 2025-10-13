@@ -55,7 +55,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            var response = await rest.PostJsonAsync<R.AForBV1>(
+            var response = await rest.PostJsonAsync<R.AForBv1>(
                     "v1/auth",
                     new Dictionary<string, object> { ["sessionID"] = sessionId, ["userA"] = sharedA.ToHex() },
                     cancellationToken

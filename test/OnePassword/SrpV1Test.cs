@@ -28,7 +28,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task ExchangeAForBAsync_makes_POST_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Post(GetFixture("exchange-a-for-b-response")).ExpectUrl("1password.com/api/v1/auth").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Post(GetFixture("exchange-a-for-b-response"))
+                .ExpectUrl("1password.com/api/v1/auth")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await SrpV1.ExchangeAForBAsync(0, TestData.SessionId, flow, CancellationToken.None);
@@ -112,7 +115,9 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         private async Task<BigInteger> PerformExchangeAsync(string fixtureName, string sessionId = TestData.SessionId)
         {
-            var flow = new RestFlow().Post(GetFixture(fixtureName)).ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Post(GetFixture(fixtureName))
+                .ToRestClient(ApiUrl);
 
             return await SrpV1.ExchangeAForBAsync(0, sessionId, flow, CancellationToken.None);
         }
