@@ -1,4 +1,5 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -7,9 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Utilities;
@@ -34,14 +35,14 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetItem_returns_account()
         {
             // Arrange
-            var transport = new RestFlow()
+            var transport = new RestFlow { UseSystemJson = true }
                 .Get(EncryptFixture("get-vault-item-response"))
                 .ExpectUrl("1password.com/api/v1/vault/ru74fjxlkipzzctorwj4icrj2a/item/wm3uxq4xsmb4mghxw6o3s7zrem");
             var rest = transport.ToRestClient(ApiUrl);
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
-            var accountInfo = JsonConvert.DeserializeObject<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var accountInfo = JsonSerializer.Deserialize<R.AccountInfo>(GetFixture("get-account-info-response"));
             var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
             var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
             var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
@@ -62,14 +63,14 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetItem_returns_NoItem_when_not_found()
         {
             // Arrange
-            var transport = new RestFlow()
+            var transport = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("get-vault-item-not-found-response"), HttpStatusCode.NotFound)
                 .ExpectUrl("1password.com/api/v1/vault/ru74fjxlkipzzctorwj4icrj2a/item/nonexistent");
             var rest = transport.ToRestClient(ApiUrl);
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
-            var accountInfo = JsonConvert.DeserializeObject<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var accountInfo = JsonSerializer.Deserialize<R.AccountInfo>(GetFixture("get-account-info-response"));
             var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
             var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
             var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
@@ -90,7 +91,9 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task ListAllVaults_returns_vaults()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).Get(EncryptFixture("get-keysets-response"));
+            var flow = new RestFlow { UseSystemJson = true }
+                .Get(EncryptFixture("get-account-info-response"))
+                .Get(EncryptFixture("get-keysets-response"));
 
             // Act
             var vaults = await Client.ListAllVaults(Credentials, new Keychain(), TestData.SessionKey, flow, CancellationToken.None);
@@ -139,7 +142,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task StartNewSession_returns_session_on_ok()
         {
             // Arrange
-            var flow = new RestFlow().Get(GetFixture("start-new-session-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(GetFixture("start-new-session-response"));
 
             // Act
             var (sessionId, srpInfo) = await Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
@@ -156,7 +159,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task StartNewSession_makes_GET_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Get(GetFixture("start-new-session-response")).ExpectUrl("1password.com/api/v2/auth").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Get(GetFixture("start-new-session-response"))
+                .ExpectUrl("1password.com/api/v2/auth")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
@@ -166,7 +172,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task StartNewSession_throws_on_unknown_status()
         {
             // Arrange
-            var flow = new RestFlow().Get("{'status': 'unknown', 'sessionID': 'blah'}");
+            var flow = new RestFlow { UseSystemJson = true }.Get("""{"status": "unknown", "sessionID": "blah"}""");
 
             // Act later
             var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
@@ -181,7 +187,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // Arrange
             var error = new HttpRequestException("Network error");
-            var flow = new RestFlow().Get(error);
+            var flow = new RestFlow { UseSystemJson = true }.Get(error);
 
             // Act later
             var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
@@ -195,7 +201,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task StartNewSession_throws_on_invalid_json()
         {
             // Arrange
-            var flow = new RestFlow().Get("{'reason': 'deprecated'}", HttpStatusCode.Forbidden);
+            var flow = new RestFlow { UseSystemJson = true }.Get("""{"reason": "deprecated"}""", HttpStatusCode.Forbidden);
 
             // Act later
             var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
@@ -209,7 +215,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task StartNewSession_reports_failure_reason()
         {
             // Arrange
-            var flow = new RestFlow().Get("} invalid json {");
+            var flow = new RestFlow { UseSystemJson = true }.Get("} invalid json {");
 
             // Act later
             var act = () => Client.StartNewSession(TestData.Credentials, TestData.AppInfo, flow, CancellationToken.None);
@@ -223,7 +229,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task RegisterDevice_works()
         {
             // Arrange
-            var flow = new RestFlow().Post("{'success': 1}");
+            var flow = new RestFlow { UseSystemJson = true }.Post("""{"success": 1}""");
 
             // Act/Assert
             await Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
@@ -233,7 +239,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task RegisterDevice_makes_POST_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Post("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Post("""{"success": 1}""")
+                .ExpectUrl("1password.com/api/v1/device")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
@@ -243,7 +252,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task RegisterDevice_throws_on_error()
         {
             // Arrange
-            var flow = new RestFlow().Post("{'success': 0}");
+            var flow = new RestFlow { UseSystemJson = true }.Post("""{"success": 0}""");
 
             // Act later
             var act = () => Client.RegisterDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
@@ -257,7 +266,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task ReauthorizeDevice_works()
         {
             // Arrange
-            var flow = new RestFlow().Put("{'success': 1}");
+            var flow = new RestFlow { UseSystemJson = true }.Put("""{"success": 1}""");
 
             // Act/Assert
             await Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
@@ -267,7 +276,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task ReauthorizeDevice_makes_PUT_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/device").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Put("""{"success": 1}""")
+                .ExpectUrl("1password.com/api/v1/device")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
@@ -277,7 +289,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task ReauthorizeDevice_throws_on_error()
         {
             // Arrange
-            var flow = new RestFlow().Put("{'success': 0}");
+            var flow = new RestFlow { UseSystemJson = true }.Put("""{"success": 0}""");
 
             // Act later
             var act = () => Client.ReauthorizeDevice(TestData.DeviceUuid, TestData.AppInfo, flow, CancellationToken.None);
@@ -291,7 +303,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task VerifySessionKey_returns_success()
         {
             // Arrange
-            var flow = new RestFlow().Post(EncryptFixture("verify-key-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Post(EncryptFixture("verify-key-response"));
 
             // Act
             var result = await Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
@@ -304,7 +316,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task VerifySessionKey_makes_POST_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Post(EncryptFixture("verify-key-response")).ExpectUrl("1password.com/api/v2/auth/verify").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Post(EncryptFixture("verify-key-response"))
+                .ExpectUrl("1password.com/api/v2/auth/verify")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
@@ -314,7 +329,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task VerifySessionKey_returns_factors()
         {
             // Arrange
-            var flow = new RestFlow().Post(EncryptFixture("verify-key-response-mfa"));
+            var flow = new RestFlow { UseSystemJson = true }.Post(EncryptFixture("verify-key-response-mfa"));
 
             // Act
             var result = await Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
@@ -327,7 +342,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task VerifySessionKey_throws_BadCredentials_on_auth_error()
         {
             // Arrange
-            var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Post(EncryptFixture("no-auth-response"));
 
             // Act later
             var act = () => Client.VerifySessionKey(TestData.Credentials, TestData.AppInfo, TestData.SessionKey, flow, CancellationToken.None);
@@ -347,7 +362,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 Client.SecondFactorKind.RememberMeToken,
                 Client.SecondFactorKind.Duo,
             };
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+            var mfa = JsonSerializer.Deserialize<R.MfaInfo>(
                 """
                 {
                     "duo": { "enabled": true },
@@ -369,7 +384,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // Arrange
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+            var mfa = JsonSerializer.Deserialize<R.MfaInfo>(
                 """
                 {
                     "totp": { "enabled": true }
@@ -389,7 +404,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // Arrange
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
-            var mfa = JsonConvert.DeserializeObject<R.MfaInfo>(
+            var mfa = JsonSerializer.Deserialize<R.MfaInfo>(
                 """
                 {
                     "duo": { "enabled": false },
@@ -410,7 +425,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task PerformSecondFactorAuthentication_throws_on_canceled_mfa()
         {
             // Arrange
-            var flow = new RestFlow();
+            var flow = new RestFlow { UseSystemJson = true };
 
             // Act later
             var act = () =>
@@ -475,7 +490,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task SubmitSecondFactorCode_returns_remember_me_token()
         {
             // Arrange
-            var flow = new RestFlow().Post(EncryptFixture("mfa-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Post(EncryptFixture("mfa-response"));
 
             // Act
             var token = await Client.SubmitSecondFactorResult(
@@ -494,7 +509,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task SubmitSecondFactorCode_makes_POST_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Post(EncryptFixture("mfa-response")).ExpectUrl("1password.com/api/v1/auth/mfa").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Post(EncryptFixture("mfa-response"))
+                .ExpectUrl("1password.com/api/v1/auth/mfa")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await Client.SubmitSecondFactorResult(
@@ -510,7 +528,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task SubmitSecondFactorCode_throws_BadMultiFactor_on_auth_error()
         {
             // Arrange
-            var flow = new RestFlow().Post(EncryptFixture("no-auth-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Post(EncryptFixture("no-auth-response"));
 
             // Act later
             var act = () =>
@@ -531,7 +549,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetAccountInfo_works()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-account-info-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(EncryptFixture("get-account-info-response"));
 
             // Act/Assert
             await Client.GetAccountInfo(TestData.SessionKey, flow, CancellationToken.None);
@@ -541,7 +559,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetAccountInfo_makes_GET_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-account-info-response")).ExpectUrl("1password.com/api/v1/account").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Get(EncryptFixture("get-account-info-response"))
+                .ExpectUrl("1password.com/api/v1/account")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await Client.GetAccountInfo(TestData.SessionKey, flow, CancellationToken.None);
@@ -551,7 +572,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetKeysets_works()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-keysets-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(EncryptFixture("get-keysets-response"));
 
             // Act/Assert
             await Client.GetKeysets(TestData.SessionKey, flow, CancellationToken.None);
@@ -561,7 +582,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetKeysets_makes_GET_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow()
+            var flow = new RestFlow { UseSystemJson = true }
                 .Get(EncryptFixture("get-keysets-response"))
                 .ExpectUrl("1password.com/api/v1/account/keysets")
                 .ToRestClient(ApiUrl);
@@ -574,7 +595,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetVaultItems_returns_accounts()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ru74-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(EncryptFixture("get-vault-accounts-ru74-response"));
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
@@ -590,7 +611,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetVaultItems_returns_ssh_keys()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-ixsi-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(EncryptFixture("get-vault-accounts-ixsi-response"));
             var keychain = new Keychain(
                 new AesKey("i32wahdpkpvhog37mtsnqzy4bm", "91bbd5df47ba0de2437a8ed1fbb9064cc9d3ad78ea472516fb5192263ec46e7d".DecodeHex())
             );
@@ -615,7 +636,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetVaultItems_returns_converts_ssh_keys()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-vault-accounts-saiw-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(EncryptFixture("get-vault-accounts-saiw-response"));
             var keychain = new Keychain(
                 new AesKey("3hhlvfccmm4253ou43jfrgty3m", "b357079312198b155764b4e6aa7709df357cf3779973d7451abda5f15d90379c".DecodeHex())
             );
@@ -727,7 +748,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetVaultItems_with_no_items_work()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-vault-with-no-items-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(EncryptFixture("get-vault-with-no-items-response"));
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
@@ -743,7 +764,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetVaultItems_returns_server_secrets()
         {
             // Arrange
-            var flow = new RestFlow().Get(EncryptFixture("get-vault-with-server-secrets-response"));
+            var flow = new RestFlow { UseSystemJson = true }.Get(EncryptFixture("get-vault-with-server-secrets-response"));
             var keychain = new Keychain(
                 new AesKey("e2e2ungb5d4tl7ls4ohxwhtd2e", "518f5d0f72d118252c4a5ac0b87af54210bb0f4aee0210fe8adbe3343c8a11ea".DecodeHex())
             );
@@ -759,7 +780,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetVaultItems_makes_GET_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow()
+            var flow = new RestFlow { UseSystemJson = true }
                 .Get(EncryptFixture("get-vault-accounts-ru74-response"))
                 .ExpectUrl("1password.com/api/v1/vault")
                 .ToRestClient(ApiUrl);
@@ -775,7 +796,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task GetVaultItems_with_multiple_batches_returns_all_accounts()
         {
             // Arrange
-            var flow = new RestFlow()
+            var flow = new RestFlow { UseSystemJson = true }
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-1-response"))
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-2-response"))
                 .Get(EncryptFixture("get-vault-accounts-ru74-batch-3-response"));
@@ -794,7 +815,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task LogOut_works()
         {
             // Arrange
-            var flow = new RestFlow().Put("{'success': 1}");
+            var flow = new RestFlow { UseSystemJson = true }.Put("""{"success": 1}""");
 
             // Act/Assert
             await Client.LogOut(flow, CancellationToken.None);
@@ -804,7 +825,10 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task LogOut_makes_PUT_request_to_specific_url()
         {
             // Arrange
-            var flow = new RestFlow().Put("{'success': 1}").ExpectUrl("1password.com/api/v1/session/signout").ToRestClient(ApiUrl);
+            var flow = new RestFlow { UseSystemJson = true }
+                .Put("""{"success": 1}""")
+                .ExpectUrl("1password.com/api/v1/session/signout")
+                .ToRestClient(ApiUrl);
 
             // Act/Assert
             await Client.LogOut(flow, CancellationToken.None);
@@ -814,7 +838,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public async Task LogOut_throws_on_bad_response()
         {
             // Arrange
-            var flow = new RestFlow().Put("{'success': 0}");
+            var flow = new RestFlow { UseSystemJson = true }.Put("""{"success": 0}""");
 
             // Act later
             var act = () => Client.LogOut(flow, CancellationToken.None);
@@ -930,7 +954,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         private string EncryptBytes(byte[] bytes)
         {
             var encrypted = TestData.SessionKey.Encrypt(bytes);
-            return JsonConvert.SerializeObject(encrypted.ToDictionary());
+            return JsonSerializer.Serialize(encrypted.ToDictionary());
         }
 
         private static AsymmetricKeyParameter ParseOpenSshPrivateKey(string privateKey)

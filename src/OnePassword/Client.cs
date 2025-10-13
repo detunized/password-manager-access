@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
@@ -24,8 +24,8 @@ using R = PasswordManagerAccess.OnePassword.Response;
 // [x] Make UI async
 // [x] Make SRP async
 // [x] Switch to async Duo
-// [ ] Convert to record types
-// [ ] Convert to System.Text.Json
+// [x] Convert to record types
+// [x] Convert to System.Text.Json
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -213,7 +213,7 @@ namespace PasswordManagerAccess.OnePassword
             R.ServiceAccountToken parsed;
             try
             {
-                parsed = JsonConvert.DeserializeObject<R.ServiceAccountToken>(token.Substring(4).Decode64Loose().ToUtf8());
+                parsed = JsonSerializer.Deserialize<R.ServiceAccountToken>(token.Substring(4).Decode64Loose().ToUtf8());
             }
             catch (JsonException e)
             {
@@ -325,44 +325,17 @@ namespace PasswordManagerAccess.OnePassword
             return $"https://{domain}/api";
         }
 
-        // TODO: Rename to MakeRestClient after the migration is complete
-        internal static RestClient MakeSystemJsonRestClient(
-            IRestTransport transport,
-            string baseUrl,
-            IRequestSigner signer = null,
-            string sessionId = null
-        ) => MakeRestClientInternal(transport, baseUrl, signer, sessionId, useSystemJson: true);
-
-        // TODO: Remove this after the migration to System.Text.Json is complete
-        internal static RestClient MakeRestClient(IRestTransport transport, string baseUrl, IRequestSigner signer = null, string sessionId = null) =>
-            MakeRestClientInternal(transport, baseUrl, signer, sessionId, useSystemJson: false);
-
-        // TODO: Remove this after the migration to System.Text.Json is complete
-        internal static RestClient MakeRestClientInternal(
-            IRestTransport transport,
-            string baseUrl,
-            IRequestSigner signer = null,
-            string sessionId = null,
-            bool useSystemJson = false
-        )
+        internal static RestClient MakeRestClient(IRestTransport transport, string baseUrl, IRequestSigner signer = null, string sessionId = null)
         {
             var headers = new Dictionary<string, string>(2) { ["X-AgileBits-Client"] = ClientId };
             if (!sessionId.IsNullOrEmpty())
                 headers["X-AgileBits-Session-ID"] = sessionId;
 
-            return new RestClient(transport, baseUrl, signer, headers, useSystemJson: useSystemJson);
+            return new RestClient(transport, baseUrl, signer, headers, useSystemJson: true);
         }
 
-        internal static RestClient MakeSystemJsonRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
-        {
-            return MakeSystemJsonRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
-        }
-
-        // TODO: Remove this after the migration to System.Text.Json is complete
-        internal static RestClient MakeRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
-        {
-            return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
-        }
+        internal static RestClient MakeRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null) =>
+            MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
 
         internal static async Task<(string SessionId, SrpInfo SrpInfo)> StartNewSession(
             Credentials credentials,
@@ -1075,7 +1048,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             try
             {
-                var error = JsonConvert.DeserializeObject<R.Error>(response);
+                var error = JsonSerializer.Deserialize<R.Error>(response);
                 switch (error.Code)
                 {
                     case 102:
@@ -1093,7 +1066,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var reason = JsonConvert.DeserializeObject<R.FailureReason>(response).Reason;
+                var reason = JsonSerializer.Deserialize<R.FailureReason>(response).Reason;
                 if (!reason.IsNullOrEmpty())
                     return new InternalErrorException($"The server responded with the failure reason: '{reason}'");
             }
@@ -1139,7 +1112,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            var payload = JsonConvert.SerializeObject(parameters);
+            var payload = JsonSerializer.Serialize(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
 
             var response = await rest.PostJsonAsync<T>(endpoint, encryptedPayload.ToDictionary(), cancellationToken).ConfigureAwait(false);
@@ -1161,7 +1134,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                return JsonConvert.DeserializeObject<T>(plaintext);
+                return JsonSerializer.Deserialize<T>(plaintext);
             }
             catch (JsonException e)
             {

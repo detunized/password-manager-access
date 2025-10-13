@@ -48,14 +48,13 @@ namespace PasswordManagerAccess.OnePassword
 
         public Response.Encrypted ToModel()
         {
-            return new()
-            {
-                KeyId = KeyId,
-                Scheme = Scheme,
-                Container = Container,
-                Iv = Iv.ToUrlSafeBase64NoPadding(),
-                Ciphertext = Ciphertext.ToUrlSafeBase64NoPadding(),
-            };
+            return new(
+                KeyId: KeyId,
+                Scheme: Scheme,
+                Container: Container,
+                Iv: Iv.ToUrlSafeBase64NoPadding(),
+                Ciphertext: Ciphertext.ToUrlSafeBase64NoPadding()
+            );
         }
     }
 }
