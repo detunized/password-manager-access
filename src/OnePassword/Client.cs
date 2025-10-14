@@ -507,20 +507,27 @@ namespace PasswordManagerAccess.OnePassword
             if (await TrySubmitRememberMeToken(factors, sessionKey, storage, rest, cancellationToken).ConfigureAwait(false))
                 return;
 
-            // TODO: Allow to choose 2FA method via UI like in Bitwarden
             var factor = ChooseInteractiveSecondFactor(factors);
             var otherFactors = factors.Select(x => x.Method).Except([factor.Method, MfaMethod.RememberMeToken]).ToArray();
 
-            var secondFactorResult = await GetSecondFactorResult(factor, otherFactors, credentials, ui, rest, cancellationToken)
-                .ConfigureAwait(false);
-            if (secondFactorResult.Canceled)
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+            var result = await GetSecondFactorResult(factor, otherFactors, credentials, ui, rest, cancellationToken).ConfigureAwait(false);
+            switch (result.Value)
+            {
+                case SecondFactorResult secondFactorResult:
+                    var token = await SubmitSecondFactorResult(factor.Method, secondFactorResult, sessionKey, rest, cancellationToken)
+                        .ConfigureAwait(false);
 
-            var token = await SubmitSecondFactorResult(factor.Method, secondFactorResult, sessionKey, rest, cancellationToken).ConfigureAwait(false);
+                    // Store the token with the application. Next time we're not going to need to enter any passcodes.
+                    if (secondFactorResult.RememberMe)
+                        await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
 
-            // Store the token with the application. Next time we're not going to need to enter any passcodes.
-            if (secondFactorResult.RememberMe)
-                await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
+                    break;
+                case MfaMethod mfaMethod:
+                    // TODO: Support switching to other MFA methods
+                    throw new CanceledMultiFactorException($"User chose a different MFA method: {mfaMethod}");
+                case Canceled:
+                    throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+            }
         }
 
         internal static async Task<bool> TrySubmitRememberMeToken(
@@ -538,9 +545,9 @@ namespace PasswordManagerAccess.OnePassword
             if (string.IsNullOrEmpty(token))
                 return false;
 
-            var result = SecondFactorResult.Done(
-                new Dictionary<string, string> { ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id) },
-                true
+            var result = new SecondFactorResult(
+                Parameters: new Dictionary<string, string> { ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id) },
+                RememberMe: true
             );
 
             try
@@ -576,33 +583,9 @@ namespace PasswordManagerAccess.OnePassword
             throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
         }
 
-        internal class SecondFactorResult
-        {
-            public readonly Dictionary<string, string> Parameters;
-            public readonly bool RememberMe;
-            public readonly bool Canceled;
-            public readonly string Note; // Let the 2FA attach a note
+        internal record SecondFactorResult(Dictionary<string, string> Parameters, bool RememberMe, string Note = "");
 
-            public static SecondFactorResult Done(Dictionary<string, string> parameters, bool rememberMe, string note = "")
-            {
-                return new SecondFactorResult(parameters: parameters, rememberMe: rememberMe, canceled: false, note: note);
-            }
-
-            public static SecondFactorResult Cancel()
-            {
-                return new SecondFactorResult(parameters: null, rememberMe: false, canceled: true);
-            }
-
-            private SecondFactorResult(Dictionary<string, string> parameters, bool rememberMe, bool canceled, string note = "")
-            {
-                Parameters = parameters;
-                RememberMe = rememberMe;
-                Canceled = canceled;
-                Note = note;
-            }
-        }
-
-        internal static async Task<SecondFactorResult> GetSecondFactorResult(
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> GetSecondFactorResult(
             SecondFactor factor,
             MfaMethod[] otherFactors,
             Credentials credentials,
@@ -616,37 +599,22 @@ namespace PasswordManagerAccess.OnePassword
                 MfaMethod.GoogleAuthenticator => await AuthenticateWithGoogleAuth(otherFactors, ui, cancellationToken).ConfigureAwait(false),
                 MfaMethod.WebAuthn => await AuthenticateWithWebAuthn(factor, otherFactors, credentials, ui, cancellationToken).ConfigureAwait(false),
                 MfaMethod.Duo => await AuthenticateWithDuo(factor, otherFactors, ui, rest, cancellationToken).ConfigureAwait(false),
-                MfaMethod.RememberMeToken => throw new InternalErrorException("Logic error: Remember Me token should be handled separately"),
                 _ => throw new InternalErrorException($"2FA method {factor.Method} is not valid here"),
             };
         }
 
-        internal static async Task<SecondFactorResult> AuthenticateWithGoogleAuth(
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithGoogleAuth(
             MfaMethod[] otherFactors,
             IAsyncUi ui,
             CancellationToken cancellationToken
         )
         {
-            // TODO: Support retry attempts and other methods
+            // TODO: Support retry attempts
             var otpResult = await ui.ProvideGoogleAuthPasscode(attempt: 0, otherFactors, cancellationToken).ConfigureAwait(false);
-
-            switch (otpResult.Value)
-            {
-                case Otp otp:
-                    return SecondFactorResult.Done(new Dictionary<string, string> { ["code"] = otp.Passcode }, otp.RememberMe);
-                case MfaMethod:
-                    // TODO: Support switching to other MFA methods
-                    return SecondFactorResult.Cancel();
-                case Canceled:
-                    return SecondFactorResult.Cancel();
-                default:
-                    throw new InternalErrorException("Unexpected result from ProvideGoogleAuthPasscode");
-            }
-
-            // User provided a passcode
+            return otpResult.MapT0(otp => new SecondFactorResult(new Dictionary<string, string> { ["code"] = otp.Passcode }, otp.RememberMe));
         }
 
-        internal static async Task<SecondFactorResult> AuthenticateWithWebAuthn(
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithWebAuthn(
             SecondFactor factor,
             MfaMethod[] otherFactors,
             Credentials credentials,
@@ -654,22 +622,19 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            // TODO: Support retry attempts and other methods
+            // TODO: Support retry attempts
             var rememberMeResult = await ui.ProvideWebAuthnRememberMe(attempt: 0, otherFactors, cancellationToken).ConfigureAwait(false);
+            var rememberMe = false;
 
-            bool rememberMe;
             switch (rememberMeResult.Value)
             {
-                case MfaMethod:
-                    // TODO: Support switching to other MFA methods
-                    return SecondFactorResult.Cancel();
-                case Canceled:
-                    return SecondFactorResult.Cancel();
                 case RememberMe rm:
                     rememberMe = rm.Value;
                     break;
-                default:
-                    throw new InternalErrorException("Unexpected result from ProvideWebAuthnRememberMe");
+                case MfaMethod mfaMethod:
+                    return mfaMethod;
+                case Canceled canceled:
+                    return canceled;
             }
 
             if (factor.Parameters is not Model.WebAuthnMfa extra)
@@ -678,20 +643,17 @@ namespace PasswordManagerAccess.OnePassword
             if (extra.KeyHandles?.Length == 0)
                 throw new InternalErrorException("Expected at least one WebAuthn key to be provided");
 
-            if (extra.Challenge.IsNullOrEmpty())
-                throw new InternalErrorException("WebAuthn challenge is missing");
-
             try
             {
                 var assertion = WebAuthN.GetAssertion(
-                    appId: "1password." + Util.GetTld(credentials.Domain),
-                    challenge: extra.Challenge,
+                    appId: Validate(extra.RpId, "rpid"),
+                    challenge: Validate(extra.Challenge, "challenge"),
                     origin: $"https://{credentials.Domain}",
                     crossOrigin: false,
                     keyHandles: extra.KeyHandles
                 );
 
-                return SecondFactorResult.Done(
+                return new SecondFactorResult(
                     new Dictionary<string, string>
                     {
                         ["keyHandle"] = assertion.KeyHandle,
@@ -704,15 +666,20 @@ namespace PasswordManagerAccess.OnePassword
             }
             catch (CanceledException)
             {
-                return SecondFactorResult.Cancel();
+                return new Canceled("User canceled WebAuthn authentication");
             }
             catch (ErrorException e)
             {
                 throw new InternalErrorException("WebAuthn authentication failed", e);
             }
+
+            // ---
+
+            static string Validate(string? param, string name) =>
+                param.IsNullOrEmpty() ? throw new InternalErrorException($"WebAuthn '{name}' is invalid") : param;
         }
 
-        internal static async Task<SecondFactorResult> AuthenticateWithDuo(
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithDuo(
             SecondFactor factor,
             MfaMethod[] otherFactors,
             IAsyncUi ui,
@@ -738,21 +705,20 @@ namespace PasswordManagerAccess.OnePassword
                     .ConfigureAwait(false)
                 : await DuoV4.AuthenticateAsync(extra.Url, otherFactors, ui, rest.Transport, logger: null, cancellationToken).ConfigureAwait(false);
 
-            // TODO: Refactor to switch!
-            if (result.Value is DuoCancelled)
-                return SecondFactorResult.Cancel();
-
-            if (result.TryPickT1(out var mfaMethod, out _))
-                throw new InternalErrorException($"Unexpected MFA method returned from Duo: {mfaMethod}");
-
-            if (result.TryPickT0(out var duoResult, out _))
-            {
-                var key = isV1 ? "sigResponse" : "code";
-                var note = isV1 ? "v1" : "v4";
-                return SecondFactorResult.Done(new Dictionary<string, string> { [key] = duoResult.Code }, duoResult.RememberMe, note);
-            }
-
-            throw new InternalErrorException("Unexpected result from Duo authentication");
+            return result.Match<OneOf<SecondFactorResult, MfaMethod, Canceled>>(
+                duoResult =>
+                {
+                    var key = isV1 ? "sigResponse" : "code";
+                    var note = isV1 ? "v1" : "v4";
+                    return new SecondFactorResult(
+                        Parameters: new Dictionary<string, string> { [key] = duoResult.Code },
+                        RememberMe: duoResult.RememberMe,
+                        Note: note
+                    );
+                },
+                mfaMethod => mfaMethod,
+                duoCancelled => new Canceled(duoCancelled.Reason)
+            );
 
             // ---
 

@@ -980,10 +980,8 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         private static readonly Client.SecondFactor[] GoogleAuthFactors = [new(MfaMethod.GoogleAuthenticator)];
 
-        private static readonly Client.SecondFactorResult GoogleAuthMfaResult = Client.SecondFactorResult.Done(
-            new Dictionary<string, string> { ["code"] = "123456" },
-            false
-        );
+        private static readonly Client.SecondFactorResult GoogleAuthMfaResult =
+            new(Parameters: new Dictionary<string, string> { ["code"] = "123456" }, RememberMe: false);
 
         // TODO: All the tests here use the data from this account. I don't care about the account
         //       or exposing its credentials, but I don't want to have inconsistent test data.
