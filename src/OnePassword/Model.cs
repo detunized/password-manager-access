@@ -261,6 +261,10 @@ internal static class Model
         // Optional, as it's only present if WebAuthn is enabled
         [JsonPropertyName("challenge")]
         public string? Challenge { get; init; }
+
+        // Optional, as it's only present if WebAuthn is enabled
+        [JsonPropertyName("rpid")]
+        public string? RpId { get; init; }
     }
 
     public record DuoMfa : BasicMfa
