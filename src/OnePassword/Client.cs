@@ -17,6 +17,11 @@ using U2fWin10;
 
 namespace PasswordManagerAccess.OnePassword
 {
+    // TODO:
+    // [ ] implement mfa method selection
+    // [ ] implement mfa attempts
+    // [ ] figure out if webauthn is possible on macos
+
     public static class Client
     {
         public const string DefaultDomain = "my.1password.com";
@@ -205,7 +210,7 @@ namespace PasswordManagerAccess.OnePassword
                 Domain = Validate(parsed.Domain, "domain"),
                 DeviceUuid = Validate(parsed.DeviceUuid, "device UUID"),
                 SrpX = Validate(parsed.SrpX, "SRP X value"),
-                Key = new AesKey(MasterKeyId, Validate(parsed.MasterUnlockKey.Key, "MUK").Decode64Loose()),
+                Key = new AesKey(MasterKeyId, Validate(parsed.MasterUnlockKey!.Key, "MUK").Decode64Loose()),
             };
 
             // ---
@@ -415,15 +420,7 @@ namespace PasswordManagerAccess.OnePassword
             SecondFactorRequired,
         }
 
-        internal enum SecondFactorKind
-        {
-            GoogleAuthenticator,
-            RememberMeToken,
-            WebAuthn,
-            Duo,
-        }
-
-        internal readonly record struct SecondFactor(SecondFactorKind Kind, object Parameters = null);
+        internal readonly record struct SecondFactor(MfaMethod Method, object Parameters = null);
 
         internal readonly record struct VerifyResult(VerifyStatus Status, SecondFactor[] Factors);
 
@@ -478,16 +475,16 @@ namespace PasswordManagerAccess.OnePassword
             var factors = new List<SecondFactor>(2);
 
             if (mfa.GoogleAuth?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.GoogleAuthenticator));
+                factors.Add(new SecondFactor(MfaMethod.GoogleAuthenticator));
 
             if (mfa.RememberMe?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.RememberMeToken));
+                factors.Add(new SecondFactor(MfaMethod.RememberMeToken));
 
             if (mfa.WebAuthn?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.WebAuthn, mfa.WebAuthn));
+                factors.Add(new SecondFactor(MfaMethod.WebAuthn, mfa.WebAuthn));
 
             if (mfa.Duo?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.Duo, mfa.Duo));
+                factors.Add(new SecondFactor(MfaMethod.Duo, mfa.Duo));
 
             if (factors.Count == 0)
                 throw new InternalErrorException("No supported 2FA methods found");
@@ -512,12 +509,14 @@ namespace PasswordManagerAccess.OnePassword
 
             // TODO: Allow to choose 2FA method via UI like in Bitwarden
             var factor = ChooseInteractiveSecondFactor(factors);
+            var otherFactors = factors.Select(x => x.Method).Except([factor.Method, MfaMethod.RememberMeToken]).ToArray();
 
-            var secondFactorResult = await GetSecondFactorResult(factor, credentials, ui, rest, cancellationToken).ConfigureAwait(false);
+            var secondFactorResult = await GetSecondFactorResult(factor, otherFactors, credentials, ui, rest, cancellationToken)
+                .ConfigureAwait(false);
             if (secondFactorResult.Canceled)
                 throw new CanceledMultiFactorException("Second factor step is canceled by the user");
 
-            var token = await SubmitSecondFactorResult(factor.Kind, secondFactorResult, sessionKey, rest, cancellationToken).ConfigureAwait(false);
+            var token = await SubmitSecondFactorResult(factor.Method, secondFactorResult, sessionKey, rest, cancellationToken).ConfigureAwait(false);
 
             // Store the token with the application. Next time we're not going to need to enter any passcodes.
             if (secondFactorResult.RememberMe)
@@ -532,7 +531,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            if (factors.All(x => x.Kind != SecondFactorKind.RememberMeToken))
+            if (factors.All(x => x.Method != MfaMethod.RememberMeToken))
                 return false;
 
             var token = await storage.LoadString(RememberMeTokenKey).ConfigureAwait(false);
@@ -546,7 +545,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                await SubmitSecondFactorResult(SecondFactorKind.RememberMeToken, result, sessionKey, rest, cancellationToken).ConfigureAwait(false);
+                await SubmitSecondFactorResult(MfaMethod.RememberMeToken, result, sessionKey, rest, cancellationToken).ConfigureAwait(false);
             }
             catch (BadMultiFactorException)
             {
@@ -571,7 +570,7 @@ namespace PasswordManagerAccess.OnePassword
             // Converting them to a hash set would take longer.
             foreach (var i in SecondFactorPriority)
             foreach (var f in factors)
-                if (f.Kind == i)
+                if (f.Method == i)
                     return f;
 
             throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
@@ -605,41 +604,73 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task<SecondFactorResult> GetSecondFactorResult(
             SecondFactor factor,
+            MfaMethod[] otherFactors,
             Credentials credentials,
             IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
         )
         {
-            return factor.Kind switch
+            return factor.Method switch
             {
-                SecondFactorKind.GoogleAuthenticator => await AuthenticateWithGoogleAuth(ui, cancellationToken).ConfigureAwait(false),
-                SecondFactorKind.WebAuthn => await AuthenticateWithWebAuthn(factor, credentials, ui, cancellationToken).ConfigureAwait(false),
-                SecondFactorKind.Duo => await AuthenticateWithDuo(factor, ui, rest, cancellationToken).ConfigureAwait(false),
-                SecondFactorKind.RememberMeToken => throw new InternalErrorException("Logic error: Remember Me token should be handled separately"),
-                _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here"),
+                MfaMethod.GoogleAuthenticator => await AuthenticateWithGoogleAuth(otherFactors, ui, cancellationToken).ConfigureAwait(false),
+                MfaMethod.WebAuthn => await AuthenticateWithWebAuthn(factor, otherFactors, credentials, ui, cancellationToken).ConfigureAwait(false),
+                MfaMethod.Duo => await AuthenticateWithDuo(factor, otherFactors, ui, rest, cancellationToken).ConfigureAwait(false),
+                MfaMethod.RememberMeToken => throw new InternalErrorException("Logic error: Remember Me token should be handled separately"),
+                _ => throw new InternalErrorException($"2FA method {factor.Method} is not valid here"),
             };
         }
 
-        internal static async Task<SecondFactorResult> AuthenticateWithGoogleAuth(IAsyncUi ui, CancellationToken cancellationToken)
+        internal static async Task<SecondFactorResult> AuthenticateWithGoogleAuth(
+            MfaMethod[] otherFactors,
+            IAsyncUi ui,
+            CancellationToken cancellationToken
+        )
         {
-            var passcode = await ui.ProvideGoogleAuthPasscode(cancellationToken).ConfigureAwait(false);
-            if (passcode == Passcode.Cancel)
-                return SecondFactorResult.Cancel();
+            // TODO: Support retry attempts and other methods
+            var otpResult = await ui.ProvideGoogleAuthPasscode(attempt: 0, otherFactors, cancellationToken).ConfigureAwait(false);
 
-            return SecondFactorResult.Done(new Dictionary<string, string> { ["code"] = passcode.Code }, passcode.RememberMe);
+            switch (otpResult.Value)
+            {
+                case Otp otp:
+                    return SecondFactorResult.Done(new Dictionary<string, string> { ["code"] = otp.Passcode }, otp.RememberMe);
+                case MfaMethod:
+                    // TODO: Support switching to other MFA methods
+                    return SecondFactorResult.Cancel();
+                case Canceled:
+                    return SecondFactorResult.Cancel();
+                default:
+                    throw new InternalErrorException("Unexpected result from ProvideGoogleAuthPasscode");
+            }
+
+            // User provided a passcode
         }
 
         internal static async Task<SecondFactorResult> AuthenticateWithWebAuthn(
             SecondFactor factor,
+            MfaMethod[] otherFactors,
             Credentials credentials,
             IAsyncUi ui,
             CancellationToken cancellationToken
         )
         {
-            var rememberMe = await ui.ProvideWebAuthnRememberMe(cancellationToken).ConfigureAwait(false);
-            if (rememberMe == Passcode.Cancel)
-                return SecondFactorResult.Cancel();
+            // TODO: Support retry attempts and other methods
+            var rememberMeResult = await ui.ProvideWebAuthnRememberMe(attempt: 0, otherFactors, cancellationToken).ConfigureAwait(false);
+
+            bool rememberMe;
+            switch (rememberMeResult.Value)
+            {
+                case MfaMethod:
+                    // TODO: Support switching to other MFA methods
+                    return SecondFactorResult.Cancel();
+                case Canceled:
+                    return SecondFactorResult.Cancel();
+                case RememberMe rm:
+                    rememberMe = rm.Value;
+                    break;
+                default:
+                    throw new InternalErrorException("Unexpected result from ProvideWebAuthnRememberMe");
+            }
 
             if (factor.Parameters is not Model.WebAuthnMfa extra)
                 throw new InternalErrorException("WebAuthn extra parameters expected");
@@ -668,7 +699,7 @@ namespace PasswordManagerAccess.OnePassword
                         ["authData"] = assertion.AuthData,
                         ["clientData"] = assertion.ClientData,
                     },
-                    rememberMe.RememberMe
+                    rememberMe
                 );
             }
             catch (CanceledException)
@@ -683,6 +714,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task<SecondFactorResult> AuthenticateWithDuo(
             SecondFactor factor,
+            MfaMethod[] otherFactors,
             IAsyncUi ui,
             RestClient rest,
             CancellationToken cancellationToken
@@ -697,16 +729,14 @@ namespace PasswordManagerAccess.OnePassword
                     .AuthenticateAsync(
                         CheckParam(extra.Host, "host"),
                         CheckParam(extra.Signature, "sigRequest"),
-                        otherMethods: [],
+                        otherFactors,
                         ui,
                         rest.Transport,
                         logger: null,
                         cancellationToken
                     )
                     .ConfigureAwait(false)
-                : await DuoV4
-                    .AuthenticateAsync(extra.Url, otherMethods: [], ui, rest.Transport, logger: null, cancellationToken)
-                    .ConfigureAwait(false);
+                : await DuoV4.AuthenticateAsync(extra.Url, otherFactors, ui, rest.Transport, logger: null, cancellationToken).ConfigureAwait(false);
 
             // TODO: Refactor to switch!
             if (result.Value is DuoCancelled)
@@ -737,7 +767,7 @@ namespace PasswordManagerAccess.OnePassword
 
         // Returns "remember me" token when successful
         internal static async Task<string> SubmitSecondFactorResult(
-            SecondFactorKind factor,
+            MfaMethod factor,
             SecondFactorResult result,
             AesKey sessionKey,
             RestClient rest,
@@ -746,10 +776,10 @@ namespace PasswordManagerAccess.OnePassword
         {
             var key = factor switch
             {
-                SecondFactorKind.GoogleAuthenticator => "totp",
-                SecondFactorKind.RememberMeToken => "dsecret",
-                SecondFactorKind.WebAuthn => "webAuthn",
-                SecondFactorKind.Duo => result.Note switch
+                MfaMethod.GoogleAuthenticator => "totp",
+                MfaMethod.RememberMeToken => "dsecret",
+                MfaMethod.WebAuthn => "webAuthn",
+                MfaMethod.Duo => result.Note switch
                 {
                     "v1" => "duo",
                     "v4" => "duov4",
@@ -1102,7 +1132,7 @@ namespace PasswordManagerAccess.OnePassword
 
             // First check for server errors. It's possible to deserialize the returned error object
             // into one of the target types by mistake when the type has no mandatory fields.
-            // `Response.Mfa` would be one of those.
+            // `Model.Mfa` would be one of those.
             if (ParseServerError(plaintext) is { } serverError)
                 throw serverError;
 
@@ -1143,16 +1173,11 @@ namespace PasswordManagerAccess.OnePassword
         private const string MasterKeyId = "mp";
         private const string RememberMeTokenKey = "remember-me-token";
 
-        private static SecondFactorKind[] SecondFactorPriority =>
+        private static MfaMethod[] SecondFactorPriority =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? SecondFactorPriorityWindows : SecondFactorPriorityOtherPlatforms;
 
-        private static readonly SecondFactorKind[] SecondFactorPriorityWindows =
-        [
-            SecondFactorKind.WebAuthn,
-            SecondFactorKind.Duo,
-            SecondFactorKind.GoogleAuthenticator,
-        ];
+        private static readonly MfaMethod[] SecondFactorPriorityWindows = [MfaMethod.WebAuthn, MfaMethod.Duo, MfaMethod.GoogleAuthenticator];
 
-        private static readonly SecondFactorKind[] SecondFactorPriorityOtherPlatforms = [SecondFactorKind.Duo, SecondFactorKind.GoogleAuthenticator];
+        private static readonly MfaMethod[] SecondFactorPriorityOtherPlatforms = [MfaMethod.Duo, MfaMethod.GoogleAuthenticator];
     }
 }

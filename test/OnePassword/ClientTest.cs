@@ -1,5 +1,4 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
-// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
@@ -355,12 +354,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetSecondFactors_returns_factors()
         {
             // Arrange
-            var expected = new[]
-            {
-                Client.SecondFactorKind.GoogleAuthenticator,
-                Client.SecondFactorKind.RememberMeToken,
-                Client.SecondFactorKind.Duo,
-            };
+            var expected = new[] { MfaMethod.GoogleAuthenticator, MfaMethod.RememberMeToken, MfaMethod.Duo };
             var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
                 """
                 {
@@ -372,7 +366,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
+            var factors = Client.GetSecondFactors(mfa).Select(x => x.Method).ToArray();
 
             // Assert
             factors.ShouldBe(expected);
@@ -382,7 +376,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetSecondFactors_ignores_missing_factors()
         {
             // Arrange
-            var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
+            var expected = new[] { MfaMethod.GoogleAuthenticator };
             var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
                 """
                 {
@@ -392,7 +386,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
+            var factors = Client.GetSecondFactors(mfa).Select(x => x.Method).ToArray();
 
             // Assert
             factors.ShouldBe(expected);
@@ -402,7 +396,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetSecondFactors_ignores_disabled_factors()
         {
             // Arrange
-            var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
+            var expected = new[] { MfaMethod.GoogleAuthenticator };
             var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
                 """
                 {
@@ -414,7 +408,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             );
 
             // Act
-            var factors = Client.GetSecondFactors(mfa).Select(x => x.Kind).ToArray();
+            var factors = Client.GetSecondFactors(mfa).Select(x => x.Method).ToArray();
 
             // Assert
             factors.ShouldBe(expected);
@@ -447,17 +441,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void ChooseInteractiveSecondFactor_returns_high_priority_factor()
         {
             // Arrange
-            var factors = new[]
-            {
-                new Client.SecondFactor(Client.SecondFactorKind.GoogleAuthenticator),
-                new Client.SecondFactor(Client.SecondFactorKind.Duo),
-            };
+            var factors = new[] { new Client.SecondFactor(MfaMethod.GoogleAuthenticator), new Client.SecondFactor(MfaMethod.Duo) };
 
             // Act
             var chosen = Client.ChooseInteractiveSecondFactor(factors);
 
             // Assert
-            chosen.Kind.ShouldBe(Client.SecondFactorKind.Duo);
+            chosen.Method.ShouldBe(MfaMethod.Duo);
         }
 
         [Fact]
@@ -475,7 +465,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void ChooseInteractiveSecondFactor_throws_on_missing_factors()
         {
             // Arrange
-            var factors = new[] { new Client.SecondFactor(Client.SecondFactorKind.RememberMeToken) };
+            var factors = new[] { new Client.SecondFactor(MfaMethod.RememberMeToken) };
 
             // Act later
             Action act = () => Client.ChooseInteractiveSecondFactor(factors);
@@ -493,7 +483,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             // Act
             var token = await Client.SubmitSecondFactorResult(
-                Client.SecondFactorKind.GoogleAuthenticator,
+                MfaMethod.GoogleAuthenticator,
                 GoogleAuthMfaResult,
                 TestData.SessionKey,
                 flow,
@@ -515,7 +505,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
             // Act/Assert
             await Client.SubmitSecondFactorResult(
-                Client.SecondFactorKind.GoogleAuthenticator,
+                MfaMethod.GoogleAuthenticator,
                 GoogleAuthMfaResult,
                 TestData.SessionKey,
                 flow,
@@ -532,7 +522,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             // Act later
             var act = () =>
                 Client.SubmitSecondFactorResult(
-                    Client.SecondFactorKind.GoogleAuthenticator,
+                    MfaMethod.GoogleAuthenticator,
                     GoogleAuthMfaResult,
                     TestData.SessionKey,
                     flow,
@@ -927,9 +917,17 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         internal class CancelingUi : IAsyncUi
         {
-            public Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) => Task.FromResult(Passcode.Cancel);
+            public Task<OneOf.OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<OneOf.OneOf<Otp, MfaMethod, Canceled>>(new Canceled("User canceled"));
 
-            public Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken) => Task.FromResult(Passcode.Cancel);
+            public Task<OneOf.OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<OneOf.OneOf<RememberMe, MfaMethod, Canceled>>(new Canceled("User canceled"));
 
             public Task<OneOf.OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
                 DuoDevice[] devices,
@@ -980,7 +978,7 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         private const string ApiUrl = "https://my.1password.com/api";
 
-        private static readonly Client.SecondFactor[] GoogleAuthFactors = [new(Client.SecondFactorKind.GoogleAuthenticator)];
+        private static readonly Client.SecondFactor[] GoogleAuthFactors = [new(MfaMethod.GoogleAuthenticator)];
 
         private static readonly Client.SecondFactorResult GoogleAuthMfaResult = Client.SecondFactorResult.Done(
             new Dictionary<string, string> { ["code"] = "123456" },

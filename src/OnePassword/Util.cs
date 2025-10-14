@@ -81,9 +81,17 @@ namespace PasswordManagerAccess.OnePassword
 
         public class ThrowUi : IAsyncUi
         {
-            public Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken) => throw MakeLogicError();
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => throw MakeLogicError();
 
-            public Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken) => throw MakeLogicError();
+            public Task<OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => throw MakeLogicError();
 
             public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
                 DuoDevice[] devices,

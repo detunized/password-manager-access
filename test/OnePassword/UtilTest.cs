@@ -172,8 +172,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             await AssertLogicError(() => ui.ChooseDuoFactor([], [], CancellationToken.None));
             await AssertLogicError(() => ui.ProvideDuoPasscode(new DuoDevice("", "", []), CancellationToken.None));
             await AssertLogicError(() => ui.UpdateDuoStatus(DuoStatus.Info, "", CancellationToken.None));
-            await AssertLogicError(() => ui.ProvideGoogleAuthPasscode(CancellationToken.None));
-            await AssertLogicError(() => ui.ProvideWebAuthnRememberMe(CancellationToken.None));
+            await AssertLogicError(() => ui.ProvideGoogleAuthPasscode(0, [], CancellationToken.None));
+            await AssertLogicError(() => ui.ProvideWebAuthnRememberMe(0, [], CancellationToken.None));
         }
 
         [Fact]

@@ -16,27 +16,79 @@ namespace Example
     {
         private class TextUi(string totpSecret = null) : DuoAsyncUi, IAsyncUi
         {
-            public async Task<Passcode> ProvideGoogleAuthPasscode(CancellationToken cancellationToken)
+            public async Task<OneOf.OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            )
             {
+                // If we don't have a TOTP secret, ask the user to provide the code
                 if (string.IsNullOrEmpty(totpSecret))
-                {
-                    var passcode = await GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}", cancellationToken)
-                        .ConfigureAwait(false);
-                    var rememberMe = await GetRememberMe(cancellationToken).ConfigureAwait(false);
-                    return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, rememberMe);
-                }
+                    return await ProvideOtpPasscode(attempt, "Google Authenticator", otherMethods, cancellationToken);
 
+                // If we have a TOTP secret, auto-generate the code
                 var totp = Util.CalculateGoogleAuthTotp(totpSecret);
                 Console.WriteLine($"Auto-generated TOTP: {totp}");
                 Console.WriteLine("Remember this device: no");
-
-                return new Passcode(totp, false);
+                return new Otp(totp, false);
             }
 
-            public async Task<Passcode> ProvideWebAuthnRememberMe(CancellationToken cancellationToken)
+            public Task<OneOf.OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => ProvideOutOfBandRememberMe(attempt, "WebAuthn", otherMethods, cancellationToken);
+
+            //
+            // Private
+            //
+
+            private async Task<OneOf.OneOf<Otp, MfaMethod, Canceled>> ProvideOtpPasscode(
+                int attempt,
+                string method,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            )
             {
-                var yesNo = (await GetAnswer($"Remember this device? {PressEnterToCancel}", cancellationToken).ConfigureAwait(false)).ToLower();
-                return string.IsNullOrWhiteSpace(yesNo) ? Passcode.Cancel : new Passcode("", yesNo == "y" || yesNo == "yes");
+                var prompt = $"> [{attempt + 1}] Please enter {method} code {PressEnterToCancel}" + BuildMfaPrompt(otherMethods);
+
+                var answer = await GetAnswer(prompt, cancellationToken);
+                return answer switch
+                {
+                    "" => new Canceled(""),
+                    var s when s.EndsWith('!') => otherMethods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
+                    _ => new Otp(answer, await GetRememberMe(cancellationToken)),
+                };
+            }
+
+            private static async Task<OneOf.OneOf<RememberMe, MfaMethod, Canceled>> ProvideOutOfBandRememberMe(
+                int attempt,
+                string method,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            )
+            {
+                Console.WriteLine($"> [{attempt + 1}] {method} authentication will be requested by the system");
+                var answer = await GetAnswer("Press ENTER to continue or 'c' to cancel" + BuildMfaPrompt(otherMethods), cancellationToken);
+
+                return answer switch
+                {
+                    "c" or "C" => new Canceled(""),
+                    var s when s.EndsWith('!') => otherMethods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
+                    _ => new RememberMe(await GetRememberMe(cancellationToken)),
+                };
+            }
+
+            private static string BuildMfaPrompt(MfaMethod[] otherMethods)
+            {
+                if (otherMethods.Length == 0)
+                    return "";
+
+                var prompt = " or select a different MFA method by entering the number followed by !:\n";
+                for (var i = 0; i < otherMethods.Length; i++)
+                    prompt += $"{i + 1}. {otherMethods[i].GetName()}\n";
+
+                return prompt;
             }
         }
 
