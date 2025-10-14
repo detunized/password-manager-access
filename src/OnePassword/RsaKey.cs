@@ -1,7 +1,6 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-using System.Linq;
 using System.Security.Cryptography;
 using PasswordManagerAccess.Common;
 
@@ -15,7 +14,7 @@ namespace PasswordManagerAccess.OnePassword
         public readonly string Id;
         public readonly RSAParameters Parameters;
 
-        public static RsaKey Parse(Response.RsaKey json)
+        public static RsaKey Parse(Model.RsaKey json)
         {
             RSAParameters parameters = new RSAParameters
             {

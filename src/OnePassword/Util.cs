@@ -12,7 +12,6 @@ using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -122,27 +121,27 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
+        internal static T Decrypt<T>(Model.Encrypted encrypted, IDecryptor decryptor)
         {
             return Decrypt<T>(Encrypted.Parse(encrypted), decryptor);
         }
 
         internal static void DecryptAesKey(Encrypted encryptedAesKey, Keychain keychain)
         {
-            keychain.Add(AesKey.Parse(Decrypt<R.AesKey>(encryptedAesKey, keychain)));
+            keychain.Add(AesKey.Parse(Decrypt<Model.AesKey>(encryptedAesKey, keychain)));
         }
 
-        internal static void DecryptAesKey(R.Encrypted encryptedAesKey, Keychain keychain)
+        internal static void DecryptAesKey(Model.Encrypted encryptedAesKey, Keychain keychain)
         {
             DecryptAesKey(Encrypted.Parse(encryptedAesKey), keychain);
         }
 
         internal static void DecryptRsaKey(Encrypted encryptedRsaKey, Keychain keychain)
         {
-            keychain.Add(RsaKey.Parse(Decrypt<R.RsaKey>(encryptedRsaKey, keychain)));
+            keychain.Add(RsaKey.Parse(Decrypt<Model.RsaKey>(encryptedRsaKey, keychain)));
         }
 
-        internal static void DecryptRsaKey(R.Encrypted encryptedRsaKey, Keychain keychain)
+        internal static void DecryptRsaKey(Model.Encrypted encryptedRsaKey, Keychain keychain)
         {
             DecryptRsaKey(Encrypted.Parse(encryptedRsaKey), keychain);
         }

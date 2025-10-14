@@ -6,7 +6,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using PasswordManagerAccess.Common;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -30,7 +29,7 @@ namespace PasswordManagerAccess.OnePassword
         internal const string LoginTemplateId = "001";
         internal const string ServerTemplateId = "110";
 
-        internal Account(R.VaultItem itemInfo, Keychain keychain)
+        internal Account(Model.VaultItem itemInfo, Keychain keychain)
             : base(itemInfo, keychain) { }
 
         internal string GetUsername() => FindField("username");
@@ -45,7 +44,7 @@ namespace PasswordManagerAccess.OnePassword
                 var id => throw new InternalErrorException($"Unsupported vault item type {id}"),
             };
 
-        internal Url[] ParseUrls() => Overview.Urls?.Select(x => new Url(x.Name, x.Url))?.ToArray() ?? [];
+        internal Url[] ParseUrls() => Overview.Urls?.Select(x => new Url(x.Name ?? "", x.Url ?? "")).ToArray() ?? [];
 
         internal Otp[] ParseOtps()
         {
@@ -54,7 +53,7 @@ namespace PasswordManagerAccess.OnePassword
             foreach (var section in Details.Sections ?? [])
             foreach (var field in section.Fields ?? [])
                 if (field.Kind == "concealed" && field.Id?.StartsWith("TOTP_") == true)
-                    otps.Add(new Otp(field.Name, field.Value, section.Name));
+                    otps.Add(new Otp(field.Name ?? "", field.Value ?? "", section.Name ?? ""));
 
             return otps.ToArray();
         }

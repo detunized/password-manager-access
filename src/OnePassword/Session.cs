@@ -5,7 +5,6 @@
 
 using System;
 using PasswordManagerAccess.Common;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -20,7 +19,7 @@ namespace PasswordManagerAccess.OnePassword
         private IRestTransport Transport { get; }
 
         // Cache
-        internal R.AccountInfo? AccountInfo { get; set; }
+        internal Model.AccountInfo? AccountInfo { get; set; }
         internal VaultInfo[]? AccessibleVaults { get; set; }
 
         internal Session(Credentials credentials, Keychain keychain, AesKey key, RestClient rest, IRestTransport transport)

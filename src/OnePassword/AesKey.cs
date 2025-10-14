@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.OnePassword
         public readonly string Id;
         public readonly byte[] Key;
 
-        public static AesKey Parse(Response.AesKey json)
+        public static AesKey Parse(Model.AesKey json)
         {
             return new AesKey(json.Id, json.Key.Decode64Loose());
         }

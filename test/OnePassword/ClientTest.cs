@@ -21,7 +21,6 @@ using PasswordManagerAccess.OnePassword;
 using PasswordManagerAccess.OnePassword.Ui;
 using Shouldly;
 using Xunit;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
@@ -42,7 +41,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
-            var accountInfo = JsonSerializer.Deserialize<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var accountInfo = JsonSerializer.Deserialize<Model.AccountInfo>(GetFixture("get-account-info-response"));
             var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
             var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
             var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
@@ -70,7 +69,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var keychain = new Keychain(
                 new AesKey("x4ouqoqyhcnqojrgubso4hsdga", "ce92c6d1af345c645211ad49692b22338d128d974e3b6718c868e02776c873a9".DecodeHex())
             );
-            var accountInfo = JsonSerializer.Deserialize<R.AccountInfo>(GetFixture("get-account-info-response"));
+            var accountInfo = JsonSerializer.Deserialize<Model.AccountInfo>(GetFixture("get-account-info-response"));
             var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
             var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
             var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
@@ -362,7 +361,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 Client.SecondFactorKind.RememberMeToken,
                 Client.SecondFactorKind.Duo,
             };
-            var mfa = JsonSerializer.Deserialize<R.MfaInfo>(
+            var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
                 """
                 {
                     "duo": { "enabled": true },
@@ -384,7 +383,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // Arrange
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
-            var mfa = JsonSerializer.Deserialize<R.MfaInfo>(
+            var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
                 """
                 {
                     "totp": { "enabled": true }
@@ -404,7 +403,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             // Arrange
             var expected = new[] { Client.SecondFactorKind.GoogleAuthenticator };
-            var mfa = JsonSerializer.Deserialize<R.MfaInfo>(
+            var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
                 """
                 {
                     "duo": { "enabled": false },
@@ -852,7 +851,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void DecryptKeyset_decrypts_all_keys()
         {
             // Arrange
-            var keysets = ParseFixture<R.KeysetsInfo>("get-keysets-response", useSystemJson: true);
+            var keysets = ParseFixture<Model.KeysetsInfo>("get-keysets-response", useSystemJson: true);
             var keychain = new Keychain();
 
             // Act

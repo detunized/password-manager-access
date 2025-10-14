@@ -8,7 +8,7 @@ namespace PasswordManagerAccess.OnePassword
 {
     internal record Encrypted(string KeyId, string Scheme, string Container, byte[] Iv, byte[] Ciphertext)
     {
-        public static Encrypted Parse(Response.Encrypted json)
+        public static Encrypted Parse(Model.Encrypted json)
         {
             return new Encrypted(
                 KeyId: json.KeyId,
@@ -31,9 +31,9 @@ namespace PasswordManagerAccess.OnePassword
             };
         }
 
-        public Response.Encrypted ToModel()
+        public Model.Encrypted ToModel()
         {
-            return new Response.Encrypted
+            return new Model.Encrypted
             {
                 KeyId = KeyId,
                 Scheme = Scheme,

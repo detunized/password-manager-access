@@ -7,7 +7,6 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword;
 
@@ -52,7 +51,7 @@ internal static class SrpV2
 
     internal static async Task<BigInteger> ExchangeAForBAsync(BigInteger sharedA, RestClient rest, CancellationToken cancellationToken)
     {
-        var response = await rest.PostJsonAsync<R.AForBv2>(
+        var response = await rest.PostJsonAsync<Model.AForBv2>(
                 "v2/auth",
                 new Dictionary<string, object> { ["userA"] = sharedA.ToHex() },
                 cancellationToken
@@ -130,7 +129,7 @@ internal static class SrpV2
     {
         var clientHash = CalculateClientHash(sessionKey, username, keyUuid, salt, sharedA, sharedB);
 
-        var confirmKeyResponse = await rest.PostJsonAsync<R.ServerHash>(
+        var confirmKeyResponse = await rest.PostJsonAsync<Model.ServerHash>(
                 "v2/auth/confirm-key",
                 new Dictionary<string, object> { ["clientVerifyHash"] = clientHash.ToUrlSafeBase64NoPadding() },
                 cancellationToken

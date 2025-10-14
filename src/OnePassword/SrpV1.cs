@@ -6,7 +6,6 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -55,7 +54,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            var response = await rest.PostJsonAsync<R.AForBv1>(
+            var response = await rest.PostJsonAsync<Model.AForBv1>(
                     "v1/auth",
                     new Dictionary<string, object> { ["sessionID"] = sessionId, ["userA"] = sharedA.ToHex() },
                     cancellationToken

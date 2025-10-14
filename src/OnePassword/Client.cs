@@ -14,7 +14,6 @@ using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
 using U2fWin10;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -183,26 +182,13 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static Credentials ParseServiceAccountToken(string token)
         {
-            static InternalErrorException Error(string detail, Exception inner = null)
-            {
-                return new InternalErrorException($"Invalid service account token: {detail}", inner);
-            }
-
-            static string Validate(string value, string name)
-            {
-                if (value.IsNullOrEmpty())
-                    throw Error($"invalid {name}");
-
-                return value;
-            }
-
             if (token == null || !token.StartsWith("ops_"))
                 throw Error("invalid format");
 
-            R.ServiceAccountToken parsed;
+            Model.ServiceAccountToken parsed;
             try
             {
-                parsed = JsonSerializer.Deserialize<R.ServiceAccountToken>(token.Substring(4).Decode64Loose().ToUtf8());
+                parsed = JsonSerializer.Deserialize<Model.ServiceAccountToken>(token.Substring(4).Decode64Loose().ToUtf8());
             }
             catch (JsonException e)
             {
@@ -221,6 +207,21 @@ namespace PasswordManagerAccess.OnePassword
                 SrpX = Validate(parsed.SrpX, "SRP X value"),
                 Key = new AesKey(MasterKeyId, Validate(parsed.MasterUnlockKey.Key, "MUK").Decode64Loose()),
             };
+
+            // ---
+
+            static InternalErrorException Error(string detail, Exception inner = null)
+            {
+                return new InternalErrorException($"Invalid service account token: {detail}", inner);
+            }
+
+            static string Validate(string value, string name)
+            {
+                if (value.IsNullOrEmpty())
+                    throw Error($"invalid {name}");
+
+                return value;
+            }
         }
 
         internal static async Task<VaultInfo[]> ListAllVaults(
@@ -335,7 +336,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             var url =
                 $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
-            var response = await rest.GetAsync<R.NewSession>(url, cancellationToken).ConfigureAwait(false);
+            var response = await rest.GetAsync<Model.NewSession>(url, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -348,17 +349,19 @@ namespace PasswordManagerAccess.OnePassword
                         throw new BadCredentialsException("The account key is incorrect");
 
                     var srpInfo = new SrpInfo(
-                        srpMethod: info.Auth.Method,
+                        srpMethod: info.Auth!.Method,
                         keyMethod: info.Auth.Algorithm,
                         iterations: info.Auth.Iterations,
                         salt: info.Auth.Salt.Decode64Loose()
                     );
 
                     return (info.SessionId, srpInfo);
+                // TODO: Check if this ever happens
                 case "device-not-registered":
                     await RegisterDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId), cancellationToken)
                         .ConfigureAwait(false);
                     break;
+                // TODO: Check if this ever happens
                 case "device-deleted":
                     await ReauthorizeDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId), cancellationToken)
                         .ConfigureAwait(false);
@@ -372,7 +375,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task RegisterDevice(string uuid, AppInfo app, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.PostJsonAsync<R.SuccessStatus>(
+            var response = await rest.PostJsonAsync<Model.SuccessStatus>(
                     "v1/device",
                     new Dictionary<string, object>
                     {
@@ -397,7 +400,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task ReauthorizeDevice(string uuid, AppInfo app, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.PutAsync<R.SuccessStatus>($"v1/device/{uuid}/reauthorize", cancellationToken).ConfigureAwait(false);
+            var response = await rest.PutAsync<Model.SuccessStatus>($"v1/device/{uuid}/reauthorize", cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -432,7 +435,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            var response = await PostEncryptedJson<R.VerifyKey>(
+            var response = await PostEncryptedJson<Model.VerifyKey>(
                     "v2/auth/verify",
                     new Dictionary<string, object>
                     {
@@ -470,7 +473,7 @@ namespace PasswordManagerAccess.OnePassword
             return new VerifyResult(VerifyStatus.SecondFactorRequired, GetSecondFactors(mfa));
         }
 
-        internal static SecondFactor[] GetSecondFactors(R.MfaInfo mfa)
+        internal static SecondFactor[] GetSecondFactors(Model.MfaInfo mfa)
         {
             var factors = new List<SecondFactor>(2);
 
@@ -638,11 +641,14 @@ namespace PasswordManagerAccess.OnePassword
             if (rememberMe == Passcode.Cancel)
                 return SecondFactorResult.Cancel();
 
-            if (!(factor.Parameters is R.WebAuthnMfa extra))
+            if (factor.Parameters is not Model.WebAuthnMfa extra)
                 throw new InternalErrorException("WebAuthn extra parameters expected");
 
-            if (extra.KeyHandles.Length == 0)
+            if (extra.KeyHandles?.Length == 0)
                 throw new InternalErrorException("Expected at least one WebAuthn key to be provided");
+
+            if (extra.Challenge.IsNullOrEmpty())
+                throw new InternalErrorException("WebAuthn challenge is missing");
 
             try
             {
@@ -682,16 +688,8 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            if (!(factor.Parameters is R.DuoMfa extra))
+            if (factor.Parameters is not Model.DuoMfa extra)
                 throw new InternalErrorException("Duo extra parameters expected");
-
-            static string CheckParam(string param, string name)
-            {
-                if (param.IsNullOrEmpty())
-                    throw new InternalErrorException($"Duo parameter '{name}' is invalid");
-
-                return param;
-            }
 
             var isV1 = extra.Url.IsNullOrEmpty();
             var result = isV1
@@ -725,6 +723,16 @@ namespace PasswordManagerAccess.OnePassword
             }
 
             throw new InternalErrorException("Unexpected result from Duo authentication");
+
+            // ---
+
+            static string CheckParam(string param, string name)
+            {
+                if (param.IsNullOrEmpty())
+                    throw new InternalErrorException($"Duo parameter '{name}' is invalid");
+
+                return param;
+            }
         }
 
         // Returns "remember me" token when successful
@@ -752,7 +760,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var response = await PostEncryptedJson<R.Mfa>(
+                var response = await PostEncryptedJson<Model.Mfa>(
                         "v1/auth/mfa",
                         new Dictionary<string, object>
                         {
@@ -776,9 +784,9 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         // TODO: Rename to RequestAccountInfo
-        internal static async Task<R.AccountInfo> GetAccountInfo(AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Model.AccountInfo> GetAccountInfo(AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
         {
-            return await GetEncryptedJson<R.AccountInfo>(
+            return await GetEncryptedJson<Model.AccountInfo>(
                     "v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
                     sessionKey,
                     rest,
@@ -788,13 +796,13 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         // TODO: Rename to RequestKeysets
-        internal static async Task<R.KeysetsInfo> GetKeysets(AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
+        internal static async Task<Model.KeysetsInfo> GetKeysets(AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
         {
-            return await GetEncryptedJson<R.KeysetsInfo>("v1/account/keysets", sessionKey, rest, cancellationToken).ConfigureAwait(false);
+            return await GetEncryptedJson<Model.KeysetsInfo>("v1/account/keysets", sessionKey, rest, cancellationToken).ConfigureAwait(false);
         }
 
         // TODO: We don't really need IEnumerable here
-        internal static IEnumerable<VaultInfo> GetAccessibleVaults(R.AccountInfo accountInfo, Keychain keychain)
+        internal static IEnumerable<VaultInfo> GetAccessibleVaults(Model.AccountInfo accountInfo, Keychain keychain)
         {
             return from vault in accountInfo.Vaults
                 let key = FindWorkingKey(vault.Access, keychain)
@@ -802,7 +810,7 @@ namespace PasswordManagerAccess.OnePassword
                 select new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), key, keychain);
         }
 
-        internal static Encrypted FindWorkingKey(R.VaultAccessInfo[] accessList, Keychain keychain)
+        internal static Encrypted FindWorkingKey(Model.VaultAccessInfo[] accessList, Keychain keychain)
         {
             foreach (var access in accessList)
             {
@@ -854,7 +862,7 @@ namespace PasswordManagerAccess.OnePassword
             return (accounts.ToArray(), sshKeys.ToArray());
         }
 
-        internal static OneOf<Account, SshKey, NoItem> ConvertVaultItem(Keychain keychain, R.VaultItem item)
+        internal static OneOf<Account, SshKey, NoItem> ConvertVaultItem(Keychain keychain, Model.VaultItem item)
         {
             if (item.Deleted == "Y")
                 return NoItem.Deleted;
@@ -876,9 +884,9 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            var response = await rest.GetAsync<R.Encrypted>($"v1/vault/{vaultId}/item/{itemId}", cancellationToken).ConfigureAwait(false);
+            var response = await rest.GetAsync<Model.Encrypted>($"v1/vault/{vaultId}/item/{itemId}", cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessful)
-                return ConvertVaultItem(keychain, DecryptResponse<R.SingleVaultItem>(response.Data, sessionKey).Item);
+                return ConvertVaultItem(keychain, DecryptResponse<Model.SingleVaultItem>(response.Data, sessionKey).Item);
 
             var error = MakeError(response);
             return error switch
@@ -891,7 +899,7 @@ namespace PasswordManagerAccess.OnePassword
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
         // Don't enumerate more than once. It's very slow since it makes network requests.
-        internal static async IAsyncEnumerable<R.VaultItem> EnumerateAccountsItemsInVault(
+        internal static async IAsyncEnumerable<Model.VaultItem> EnumerateAccountsItemsInVault(
             string id,
             AesKey sessionKey,
             RestClient rest,
@@ -901,7 +909,7 @@ namespace PasswordManagerAccess.OnePassword
             var batchId = 0;
             while (true)
             {
-                var batch = await GetEncryptedJson<R.VaultItemsBatch>($"v1/vault/{id}/{batchId}/items", sessionKey, rest, cancellationToken)
+                var batch = await GetEncryptedJson<Model.VaultItemsBatch>($"v1/vault/{id}/{batchId}/items", sessionKey, rest, cancellationToken)
                     .ConfigureAwait(false);
                 if (batch.Items != null)
                     foreach (var i in batch.Items)
@@ -917,7 +925,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task LogOut(RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.PutAsync<R.SuccessStatus>("v1/session/signout", cancellationToken).ConfigureAwait(false);
+            var response = await rest.PutAsync<Model.SuccessStatus>("v1/session/signout", cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -926,7 +934,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException("Failed to logout");
         }
 
-        internal static void DecryptKeysets(R.KeysetInfo[] keysets, Credentials credentials, Keychain keychain)
+        internal static void DecryptKeysets(Model.KeysetInfo[] keysets, Credentials credentials, Keychain keychain)
         {
             // Find the master keyset
             var masterKeyset = keysets.Where(x => x.EncryptedBy == MasterKeyId).OrderByDescending(x => x.SerialNumber).FirstOrDefault();
@@ -949,12 +957,12 @@ namespace PasswordManagerAccess.OnePassword
             keychain.Add(masterKey);
 
             // Build a topological map: key -> other keys encrypted by that key
-            var encryptsKeysets = new Dictionary<string, List<R.KeysetInfo>>();
+            var encryptsKeysets = new Dictionary<string, List<Model.KeysetInfo>>();
             foreach (var keyset in keysets)
-                encryptsKeysets.GetOrAdd(GetEncryptedBy(keyset), () => new List<R.KeysetInfo>()).Add(keyset);
+                encryptsKeysets.GetOrAdd(GetEncryptedBy(keyset), () => new List<Model.KeysetInfo>()).Add(keyset);
 
             // Start from "mp" and topologically walk the keys in a valid decryption order
-            var queue = new Queue<R.KeysetInfo>(encryptsKeysets[MasterKeyId]);
+            var queue = new Queue<Model.KeysetInfo>(encryptsKeysets[MasterKeyId]);
             while (queue.Count > 0)
             {
                 var keyset = queue.Dequeue();
@@ -967,12 +975,12 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static string GetEncryptedBy(R.KeysetInfo keyset)
+        internal static string GetEncryptedBy(Model.KeysetInfo keyset)
         {
             return keyset.EncryptedBy.IsNullOrEmpty() ? keyset.KeyOrMasterKey.KeyId : keyset.EncryptedBy;
         }
 
-        internal static void DecryptKeyset(R.KeysetInfo keyset, Keychain keychain)
+        internal static void DecryptKeyset(Model.KeysetInfo keyset, Keychain keychain)
         {
             Util.DecryptAesKey(keyset.KeyOrMasterKey, keychain);
             Util.DecryptRsaKey(keyset.PrivateKey, keychain);
@@ -1014,7 +1022,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             try
             {
-                var error = JsonSerializer.Deserialize<R.Error>(response);
+                var error = JsonSerializer.Deserialize<Model.Error>(response);
                 switch (error.Code)
                 {
                     case 102:
@@ -1032,7 +1040,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var reason = JsonSerializer.Deserialize<R.FailureReason>(response).Reason;
+                var reason = JsonSerializer.Deserialize<Model.FailureReason>(response).Reason;
                 if (!reason.IsNullOrEmpty())
                     return new InternalErrorException($"The server responded with the failure reason: '{reason}'");
             }
@@ -1050,7 +1058,7 @@ namespace PasswordManagerAccess.OnePassword
 
         internal static async Task<T> GetEncryptedJson<T>(string endpoint, AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = await rest.GetAsync<R.Encrypted>(endpoint, cancellationToken).ConfigureAwait(false);
+            var response = await rest.GetAsync<Model.Encrypted>(endpoint, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
@@ -1065,7 +1073,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            var encrypted = await PostEncryptedJsonNoDecrypt<R.Encrypted>(endpoint, parameters, sessionKey, rest, cancellationToken)
+            var encrypted = await PostEncryptedJsonNoDecrypt<Model.Encrypted>(endpoint, parameters, sessionKey, rest, cancellationToken)
                 .ConfigureAwait(false);
             return DecryptResponse<T>(encrypted, sessionKey);
         }
@@ -1088,7 +1096,7 @@ namespace PasswordManagerAccess.OnePassword
             return response.Data;
         }
 
-        internal static T DecryptResponse<T>(R.Encrypted encrypted, IDecryptor decryptor)
+        internal static T DecryptResponse<T>(Model.Encrypted encrypted, IDecryptor decryptor)
         {
             var plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
 

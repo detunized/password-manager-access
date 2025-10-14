@@ -4,7 +4,6 @@
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword;
 using Xunit;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
@@ -76,13 +75,13 @@ namespace PasswordManagerAccess.Test.OnePassword
         private RsaKey Sha1Key => RsaKey.Parse(RsaSha1KeyData);
         private RsaKey Sha256Key => RsaKey.Parse(RsaSha256KeyData);
 
-        private readonly R.RsaKey RsaSha1KeyData; // Has to be initialized from the constructor
-        private readonly R.RsaKey RsaSha256KeyData; // Has to be initialized from the constructor
+        private Model.RsaKey RsaSha1KeyData { get; }
+        private Model.RsaKey RsaSha256KeyData { get; }
 
         public RsaKeyTest()
         {
-            RsaSha1KeyData = ParseFixture<R.RsaKey>("rsa-key", useSystemJson: true);
-            RsaSha256KeyData = ParseFixture<R.RsaKey>("rsa-key-oaep-256", useSystemJson: true);
+            RsaSha1KeyData = ParseFixture<Model.RsaKey>("rsa-key", useSystemJson: true);
+            RsaSha256KeyData = ParseFixture<Model.RsaKey>("rsa-key-oaep-256", useSystemJson: true);
         }
     }
 }
