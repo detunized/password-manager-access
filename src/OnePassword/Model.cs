@@ -16,7 +16,7 @@ namespace PasswordManagerAccess.OnePassword;
 internal static class Model
 {
     // TODO: Review what's required and what isn't
-    internal record UserLoginInfo
+    public record UserLoginInfo
     {
         [JsonPropertyName("userUuid")]
         public required string UserUuid { get; init; }
@@ -25,7 +25,7 @@ internal static class Model
         public required string Url { get; init; }
     }
 
-    internal record NewSession
+    public record NewSession
     {
         [JsonPropertyName("status")]
         public required string Status { get; init; }
@@ -46,7 +46,7 @@ internal static class Model
         public UserAuth? Auth { get; init; }
     }
 
-    internal record UserAuth
+    public record UserAuth
     {
         [JsonPropertyName("method")]
         public required string Method { get; init; }
@@ -61,13 +61,13 @@ internal static class Model
         public required string Salt { get; init; }
     }
 
-    internal record struct SuccessStatus
+    public record struct SuccessStatus
     {
         [JsonPropertyName("success")]
         public required int Success { get; init; }
     }
 
-    internal record Encrypted
+    public record Encrypted
     {
         [JsonPropertyName("kid")]
         public required string KeyId { get; init; }
@@ -86,7 +86,7 @@ internal static class Model
         public required string Ciphertext { get; init; }
     }
 
-    internal record AccountInfo
+    public record AccountInfo
     {
         [JsonPropertyName("me")]
         public required MeInfo Me { get; init; }
@@ -95,13 +95,13 @@ internal static class Model
         public required VaultInfo[] Vaults { get; init; }
     }
 
-    internal record MeInfo
+    public record MeInfo
     {
         [JsonPropertyName("vaultAccess")]
         public required VaultAccessInfo[] VaultAccess { get; init; }
     }
 
-    internal record VaultAccessInfo
+    public record VaultAccessInfo
     {
         [JsonPropertyName("vaultUuid")]
         public required string Id { get; init; }
@@ -113,7 +113,7 @@ internal static class Model
         public required Encrypted EncryptedKey { get; init; }
     }
 
-    internal record VaultInfo
+    public record VaultInfo
     {
         [JsonPropertyName("uuid")]
         public required string Id { get; init; }
@@ -125,7 +125,7 @@ internal static class Model
         public required VaultAccessInfo[] Access { get; init; }
     }
 
-    internal record VaultAttributes
+    public record VaultAttributes
     {
         // Optional, as this field can be null
         [JsonPropertyName("name")]
@@ -136,13 +136,13 @@ internal static class Model
         public string? Description { get; init; }
     }
 
-    internal record KeysetsInfo
+    public record KeysetsInfo
     {
         [JsonPropertyName("keysets")]
         public required KeysetInfo[] Keysets { get; init; }
     }
 
-    internal record KeysetInfo
+    public record KeysetInfo
     {
         [JsonPropertyName("uuid")]
         public required string Id { get; init; }
@@ -160,7 +160,7 @@ internal static class Model
         public required Encrypted PrivateKey { get; init; }
     }
 
-    internal record KeyDerivationInfo : Encrypted
+    public record KeyDerivationInfo : Encrypted
     {
         // Optional, as this field is only present for the master key, otherwise it's null or missing
         [JsonPropertyName("alg")]
@@ -175,7 +175,7 @@ internal static class Model
         public int Iterations { get; init; }
     }
 
-    internal record AesKey
+    public record AesKey
     {
         [JsonPropertyName("kid")]
         public required string Id { get; init; }
@@ -184,7 +184,7 @@ internal static class Model
         public required string Key { get; init; }
     }
 
-    internal record RsaKey
+    public record RsaKey
     {
         [JsonPropertyName("kid")]
         public required string Id { get; init; }
@@ -214,7 +214,7 @@ internal static class Model
         public required string D { get; init; }
     }
 
-    internal record VerifyKey
+    public record VerifyKey
     {
         [JsonPropertyName("accountUuid")]
         public required string AccountId { get; init; }
@@ -231,7 +231,7 @@ internal static class Model
     }
 
     // All fields are optional, as it's essentially a union type
-    internal record MfaInfo
+    public record MfaInfo
     {
         [JsonPropertyName("dsecret")]
         public BasicMfa? RememberMe { get; init; }
@@ -246,13 +246,13 @@ internal static class Model
         public DuoMfa? Duo { get; init; }
     }
 
-    internal record BasicMfa
+    public record BasicMfa
     {
         [JsonPropertyName("enabled")]
         public required bool Enabled { get; init; }
     }
 
-    internal record WebAuthnMfa : BasicMfa
+    public record WebAuthnMfa : BasicMfa
     {
         // Optional, as it's only present if WebAuthn is enabled
         [JsonPropertyName("keyHandles")]
@@ -263,7 +263,7 @@ internal static class Model
         public string? Challenge { get; init; }
     }
 
-    internal record DuoMfa : BasicMfa
+    public record DuoMfa : BasicMfa
     {
         // Optional, as it's only present if Duo is enabled
         [JsonPropertyName("host")]
@@ -278,7 +278,7 @@ internal static class Model
         public string? Url { get; init; }
     }
 
-    internal record Error
+    public record Error
     {
         [JsonPropertyName("errorCode")]
         public required int Code { get; init; }
@@ -287,19 +287,19 @@ internal static class Model
         public required string Message { get; init; }
     }
 
-    internal record FailureReason
+    public record FailureReason
     {
         [JsonPropertyName("reason")]
         public required string Reason { get; init; }
     }
 
-    internal record Mfa
+    public record Mfa
     {
         [JsonPropertyName("dsecret")]
         public required string RememberMeToken { get; init; }
     }
 
-    internal record VaultItemsBatch
+    public record VaultItemsBatch
     {
         [JsonPropertyName("contentVersion")]
         public required int Version { get; init; }
@@ -312,7 +312,7 @@ internal static class Model
         public VaultItem[]? Items { get; init; }
     }
 
-    internal record SingleVaultItem
+    public record SingleVaultItem
     {
         [JsonPropertyName("contentVersion")]
         public required int Version { get; init; }
@@ -321,7 +321,7 @@ internal static class Model
         public required VaultItem Item { get; init; }
     }
 
-    internal record VaultItem
+    public record VaultItem
     {
         [JsonPropertyName("uuid")]
         public required string Id { get; init; }
@@ -345,7 +345,7 @@ internal static class Model
         public required Encrypted Details { get; init; }
     }
 
-    internal record VaultItemOverview
+    public record VaultItemOverview
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("title")]
@@ -364,7 +364,7 @@ internal static class Model
         public VaultItemUrl[]? Urls { get; init; }
     }
 
-    internal record VaultItemUrl
+    public record VaultItemUrl
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("l")]
@@ -375,7 +375,7 @@ internal static class Model
         public string? Url { get; init; }
     }
 
-    internal record VaultItemDetails
+    public record VaultItemDetails
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("title")]
@@ -398,7 +398,7 @@ internal static class Model
         public VaultItemSection[]? Sections { get; init; }
     }
 
-    internal record VaultItemField
+    public record VaultItemField
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("designation")]
@@ -409,7 +409,7 @@ internal static class Model
         public string? Value { get; init; }
     }
 
-    internal record VaultItemSection
+    public record VaultItemSection
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("title")]
@@ -420,7 +420,7 @@ internal static class Model
         public VaultItemSectionField[]? Fields { get; init; }
     }
 
-    internal record VaultItemSectionField
+    public record VaultItemSectionField
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("n")]
@@ -444,7 +444,7 @@ internal static class Model
         public VaultItemFieldAttributes? Attributes { get; init; }
     }
 
-    internal record VaultItemFieldAttributes
+    public record VaultItemFieldAttributes
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("guarded")]
@@ -455,7 +455,7 @@ internal static class Model
         public SshKeyAttributes? SshKey { get; init; }
     }
 
-    internal record SshKeyAttributes
+    public record SshKeyAttributes
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("privateKey")]
@@ -474,7 +474,7 @@ internal static class Model
         public SshKeyType? KeyType { get; init; }
     }
 
-    internal record SshKeyType
+    public record SshKeyType
     {
         [JsonPropertyName("t")]
         public required string Type { get; init; }
@@ -508,7 +508,7 @@ internal static class Model
     // SrpV1
     //
 
-    internal record AForBv1
+    public record AForBv1
     {
         [JsonPropertyName("sessionID")]
         public required string SessionId { get; init; }
@@ -521,19 +521,19 @@ internal static class Model
     // SrpV2
     //
 
-    internal record AForBv2
+    public record AForBv2
     {
         [JsonPropertyName("userB")]
         public required string B { get; init; }
     }
 
-    internal record ServerHash
+    public record ServerHash
     {
         [JsonPropertyName("serverVerifyHash")]
         public required string ServerVerifyHash { get; init; }
     }
 
-    internal record ServiceAccountToken
+    public record ServiceAccountToken
     {
         // Optional, as this field can be null or missing
         [JsonPropertyName("signInAddress")]
@@ -564,139 +564,255 @@ internal static class Model
     // Response from v2/auth/methods
     //
 
-    public record LoginInfo(
-        [property: JsonPropertyName("userUuid")] string UserUuid,
-        [property: JsonPropertyName("signInAddress")] string SignInAddress,
-        [property: JsonPropertyName("authMethods")] AuthMethod[] AuthMethods
-    );
+    public record LoginInfo
+    {
+        [JsonPropertyName("userUuid")]
+        public required string UserUuid { get; init; }
 
-    public record AuthMethod(
-        [property: JsonPropertyName("type")] string Type,
-        [property: JsonPropertyName("provider")] string Provider,
-        [property: JsonPropertyName("iconUrl")] string IconUrl
-    );
+        [JsonPropertyName("signInAddress")]
+        public required string SignInAddress { get; init; }
+
+        [JsonPropertyName("authMethods")]
+        public required AuthMethod[] AuthMethods { get; init; }
+    }
+
+    public record AuthMethod
+    {
+        [JsonPropertyName("type")]
+        public required string Type { get; init; }
+
+        [JsonPropertyName("provider")]
+        public required string Provider { get; init; }
+
+        [JsonPropertyName("iconUrl")]
+        public required string IconUrl { get; init; }
+    }
 
     //
     // Response from v3/auth/sso/oidc/start
     //
 
-    public record SsoLoginUrl([property: JsonPropertyName("authRedirect")] string OidcUrl);
+    public record SsoLoginUrl
+    {
+        [JsonPropertyName("authRedirect")]
+        public required string OidcUrl { get; init; }
+    }
 
     //
     // Response from v3/auth/sso/oidc/verify
     //
 
-    public record SsoSession(
-        [property: JsonPropertyName("type")] string State,
-        [property: JsonPropertyName("user")] SsoUser User,
-        [property: JsonPropertyName("auth")] Auth Auth,
-        [property: JsonPropertyName("ssoAuth")] SsoAuth SsoAuth
-    );
+    public record SsoSession
+    {
+        [JsonPropertyName("type")]
+        public required string State { get; init; }
 
-    public record SsoUser(
-        [property: JsonPropertyName("sessionUuid")] string SessionUuid,
-        [property: JsonPropertyName("accountUuid")] string AccountUuid,
-        [property: JsonPropertyName("userUuid")] string UserUuid,
-        [property: JsonPropertyName("email")] string Email
-    );
+        [JsonPropertyName("user")]
+        public required SsoUser User { get; init; }
 
-    public record Auth(
-        [property: JsonPropertyName("encCredentials")] Encrypted EncryptedCredentials,
-        [property: JsonPropertyName("v")] int Version,
-        [property: JsonPropertyName("accountKeyFormat")] string AccountKeyFormat,
-        [property: JsonPropertyName("accountKeyUuid")] string AccountKeyUuid,
-        [property: JsonPropertyName("userAuth")] UserAuth UserAuth
-    );
+        [JsonPropertyName("auth")]
+        public required Auth Auth { get; init; }
 
-    public record SsoAuth([property: JsonPropertyName("signInTokenDetails")] SignInTokenDetails SignInTokenDetails);
+        [JsonPropertyName("ssoAuth")]
+        public required SsoAuth SsoAuth { get; init; }
+    }
 
-    public record SignInTokenDetails(
-        [property: JsonPropertyName("token")] string Token,
-        [property: JsonPropertyName("publicKey")] string PublicKey,
-        [property: JsonPropertyName("exp")] string ExpiresAt
-    );
+    public record SsoUser
+    {
+        [JsonPropertyName("sessionUuid")]
+        public required string SessionUuid { get; init; }
+
+        [JsonPropertyName("accountUuid")]
+        public required string AccountUuid { get; init; }
+
+        [JsonPropertyName("userUuid")]
+        public required string UserUuid { get; init; }
+
+        [JsonPropertyName("email")]
+        public required string Email { get; init; }
+    }
+
+    public record Auth
+    {
+        [JsonPropertyName("encCredentials")]
+        public required Encrypted EncryptedCredentials { get; init; }
+
+        [JsonPropertyName("v")]
+        public required int Version { get; init; }
+
+        [JsonPropertyName("accountKeyFormat")]
+        public required string AccountKeyFormat { get; init; }
+
+        [JsonPropertyName("accountKeyUuid")]
+        public required string AccountKeyUuid { get; init; }
+
+        [JsonPropertyName("userAuth")]
+        public required UserAuth UserAuth { get; init; }
+    }
+
+    public record SsoAuth
+    {
+        [JsonPropertyName("signInTokenDetails")]
+        public required SignInTokenDetails SignInTokenDetails { get; init; }
+    }
+
+    public record SignInTokenDetails
+    {
+        [JsonPropertyName("token")]
+        public required string Token { get; init; }
+
+        [JsonPropertyName("publicKey")]
+        public required string PublicKey { get; init; }
+
+        [JsonPropertyName("exp")]
+        public required string ExpiresAt { get; init; }
+    }
 
     //
     // Response from v3/device/enrollments
     //
 
-    public record SsoEnrollInfo(
-        [property: JsonPropertyName("enrollmentUuid")] string EnrollmentUuid,
-        [property: JsonPropertyName("accountKeyUuid")] string AccountKeyUuid
-    );
+    public record SsoEnrollInfo
+    {
+        [JsonPropertyName("enrollmentUuid")]
+        public required string EnrollmentUuid { get; init; }
+
+        [JsonPropertyName("accountKeyUuid")]
+        public required string AccountKeyUuid { get; init; }
+    }
 
     //
     // Response from v3/device/enrollments/status
     //
 
-    public record SsoEnrollStatus([property: JsonPropertyName("status")] string Status);
+    public record SsoEnrollStatus
+    {
+        [JsonPropertyName("status")]
+        public required string Status { get; init; }
+    }
 
     //
     // Response from v3/device/enrollments/{enrollmentUuid}/cpace/msga
     //
 
-    public record CpaceMsgA([property: JsonPropertyName("msga")] string MsgA);
+    public record CpaceMsgA
+    {
+        [JsonPropertyName("msga")]
+        public required string MsgA { get; init; }
+    }
 
     //
     // Encoded inside CpaceMsgA.MsgA
     //
 
-    public record MsgA([property: JsonPropertyName("ya")] string Ya, [property: JsonPropertyName("ad")] Ad Ad);
+    public record MsgA
+    {
+        [JsonPropertyName("ya")]
+        public required string Ya { get; init; }
 
-    public record Ad(
-        [property: JsonPropertyName("version")] int Version,
-        [property: JsonPropertyName("salt")] string Salt,
-        [property: JsonPropertyName("session_id")] int[] SessionId
-    );
+        [JsonPropertyName("ad")]
+        public required Ad Ad { get; init; }
+    }
+
+    public record Ad
+    {
+        [JsonPropertyName("version")]
+        public required int Version { get; init; }
+
+        [JsonPropertyName("salt")]
+        public required string Salt { get; init; }
+
+        [JsonPropertyName("session_id")]
+        public required int[] SessionId { get; init; }
+    }
 
     //
     // Response from v3/device/enrollments/{enrollmentUuid}/cpace/msgb
     //
 
-    public record SuccessResult([property: JsonPropertyName("success")] int Success);
+    public record SuccessResult
+    {
+        [JsonPropertyName("success")]
+        public required int Success { get; init; }
+    }
 
     //
     // Response from v3/device/enrollments/{enrollmentUuid}/cpace/taga
     //
 
-    public record CpaceTagA([property: JsonPropertyName("taga")] string TagA);
+    public record CpaceTagA
+    {
+        [JsonPropertyName("taga")]
+        public required string TagA { get; init; }
+    }
 
     //
     // Response from v3/device/enrollments/{enrollmentUuid}/share/credentials
     //
 
-    public record SsoCredentials([property: JsonPropertyName("encCreds")] Encrypted EncryptedCredentials);
+    public record SsoCredentials
+    {
+        [JsonPropertyName("encCreds")]
+        public required Encrypted EncryptedCredentials { get; init; }
+    }
 
     //
     // Encoded inside SsoCredentials.EncryptedCredentials
     //
 
-    public record CredentialBundle([property: JsonPropertyName("srpx")] string SrpX, [property: JsonPropertyName("auk")] Auk Auk);
+    public record CredentialBundle
+    {
+        [JsonPropertyName("srpx")]
+        public required string SrpX { get; init; }
 
-    public record Auk(
-        [property: JsonPropertyName("alg")] string Algorithm,
-        [property: JsonPropertyName("k")] string Key,
-        [property: JsonPropertyName("kty")] string KeyType,
-        [property: JsonPropertyName("kid")] string KeyId
-    );
+        [JsonPropertyName("auk")]
+        public required Auk Auk { get; init; }
+    }
+
+    public record Auk
+    {
+        [JsonPropertyName("alg")]
+        public required string Algorithm { get; init; }
+
+        [JsonPropertyName("k")]
+        public required string Key { get; init; }
+
+        [JsonPropertyName("kty")]
+        public required string KeyType { get; init; }
+
+        [JsonPropertyName("kid")]
+        public required string KeyId { get; init; }
+    }
 
     //
     // Response from v2/auth/complete
     //
 
-    public record AuthComplete(
-        [property: JsonPropertyName("notifier")] string Notifier,
-        [property: JsonPropertyName("accountUuid")] string AccountUuid,
-        [property: JsonPropertyName("userUuid")] string UserUuid
-    );
+    public record AuthComplete
+    {
+        [JsonPropertyName("notifier")]
+        public required string Notifier { get; init; }
+
+        [JsonPropertyName("accountUuid")]
+        public required string AccountUuid { get; init; }
+
+        [JsonPropertyName("userUuid")]
+        public required string UserUuid { get; init; }
+    }
 
     //
     // Storage models
     //
 
-    internal record DeviceKeyDerivation(
-        [property: JsonPropertyName("kid")] string Id,
-        [property: JsonPropertyName("k")] string Key,
-        [property: JsonPropertyName("s")] string Salt
-    );
+    public record DeviceKeyDerivation
+    {
+        [JsonPropertyName("kid")]
+        public required string Id { get; init; }
+
+        [JsonPropertyName("k")]
+        public required string Key { get; init; }
+
+        [JsonPropertyName("s")]
+        public required string Salt { get; init; }
+    }
 }
