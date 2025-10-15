@@ -510,21 +510,30 @@ namespace PasswordManagerAccess.OnePassword
             var factors = new List<SecondFactor>(2);
 
             if (mfa.GoogleAuth?.Enabled == true)
-                factors.Add(new SecondFactor(MfaMethod.GoogleAuthenticator));
+                AddFactor(MfaMethod.GoogleAuthenticator);
+
+            if (mfa.WebAuthn?.Enabled == true)
+                AddFactor(MfaMethod.WebAuthn, mfa.WebAuthn);
+
+            if (mfa.Duo?.Enabled == true)
+                AddFactor(MfaMethod.Duo, mfa.Duo);
+
+            // We should have at least one interactive method
+            if (factors.Count == 0)
+                throw new InternalErrorException("No supported 2FA methods found");
 
             if (mfa.RememberMe?.Enabled == true)
                 factors.Add(new SecondFactor(MfaMethod.RememberMeToken));
 
-            if (mfa.WebAuthn?.Enabled == true)
-                factors.Add(new SecondFactor(MfaMethod.WebAuthn, mfa.WebAuthn));
-
-            if (mfa.Duo?.Enabled == true)
-                factors.Add(new SecondFactor(MfaMethod.Duo, mfa.Duo));
-
-            if (factors.Count == 0)
-                throw new InternalErrorException("No supported 2FA methods found");
-
             return factors.ToArray();
+
+            // ---
+
+            void AddFactor(MfaMethod method, object parameters = null)
+            {
+                if (SecondFactorPriority.Contains(method))
+                    factors.Add(new SecondFactor(method, parameters));
+            }
         }
 
         internal static async Task<OneOf<MfaSuccess, MfaRetry>> PerformSecondFactorAuthentication(
