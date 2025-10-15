@@ -18,8 +18,8 @@ using U2fWin10;
 namespace PasswordManagerAccess.OnePassword
 {
     // TODO:
-    // [ ] implement mfa method selection
-    // [ ] implement mfa attempts
+    // [x] implement mfa method selection
+    // [x] implement mfa attempts
     // [ ] figure out if webauthn is possible on macos
 
     public static class Client
@@ -360,12 +360,14 @@ namespace PasswordManagerAccess.OnePassword
         {
             var url =
                 $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
+
             var response = await rest.GetAsync<Model.NewSession>(url, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
             var info = response.Data;
             var status = info.Status;
+
             switch (status)
             {
                 case "ok":
@@ -380,16 +382,17 @@ namespace PasswordManagerAccess.OnePassword
                     );
 
                     return (info.SessionId, srpInfo);
-                // TODO: Check if this ever happens
+
                 case "device-not-registered":
                     await RegisterDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId), cancellationToken)
                         .ConfigureAwait(false);
                     break;
-                // TODO: Check if this ever happens
+
                 case "device-deleted":
                     await ReauthorizeDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId), cancellationToken)
                         .ConfigureAwait(false);
                     break;
+
                 default:
                     throw new InternalErrorException($"Failed to start a new session, unsupported response status '{status}'");
             }
