@@ -258,10 +258,6 @@ namespace PasswordManagerAccess.OnePassword
             return vaults.ToArray();
         }
 
-        // This is exception is used internally to trigger re-login from the depth of the call stack.
-        // Possibly not the best design. TODO: Should this be done differently?
-        internal class RetryLoginException : Exception;
-
         internal static async Task<Session> LogIn(
             Credentials credentials,
             AppInfo app,
@@ -275,21 +271,34 @@ namespace PasswordManagerAccess.OnePassword
             // After a failed attempt, we need to restart the whole auth sequence from scratch.
             for (var attempt = 0; ; attempt++)
             {
-                // TODO: Test this properly!
                 try
                 {
-                    return await LoginAttempt(attempt, credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                    var result = await LoginAttempt(attempt, credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                    switch (result.Value)
+                    {
+                        case Session session:
+                            return session;
+                        case MfaRetry:
+                            // This is not a real attempt, this means the remember-me token got rejected by the server.
+                            attempt--;
+                            continue;
+                        default:
+                            throw new InternalErrorException("Invalid LoginAttempt result");
+                    }
                 }
-                catch (RetryLoginException)
+                catch (BadMultiFactorException) when (attempt < MaxOtpAttempts - 1)
                 {
-                    // This is not a read attempt, this means the remember-me token got rejected by the server.
-                    attempt--;
+                    // This bubbles up from the deep. A few times we allow the user to try again.
+                    // After that, the exception is propagated all the way to the top.
                 }
-                catch (BadMultiFactorException) when (attempt < MaxOtpAttempts - 1) { }
             }
         }
 
-        private static async Task<Session> LoginAttempt(
+        internal struct MfaSuccess;
+
+        internal struct MfaRetry;
+
+        private static async Task<OneOf<Session, MfaRetry>> LoginAttempt(
             int attempt,
             Credentials credentials,
             AppInfo app,
@@ -318,7 +327,8 @@ namespace PasswordManagerAccess.OnePassword
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                await PerformSecondFactorAuthentication(
+            {
+                var mfaResult = await PerformSecondFactorAuthentication(
                         attempt,
                         verifiedOrMfa.Factors,
                         credentials,
@@ -329,6 +339,10 @@ namespace PasswordManagerAccess.OnePassword
                         cancellationToken
                     )
                     .ConfigureAwait(false);
+
+                if (mfaResult.TryPickT1(out var retry, out _))
+                    return retry;
+            }
 
             return new Session(credentials, new Keychain(), sessionKey, macRest);
         }
@@ -513,7 +527,7 @@ namespace PasswordManagerAccess.OnePassword
             return factors.ToArray();
         }
 
-        internal static async Task PerformSecondFactorAuthentication(
+        internal static async Task<OneOf<MfaSuccess, MfaRetry>> PerformSecondFactorAuthentication(
             int attempt,
             SecondFactor[] factors,
             Credentials credentials,
@@ -526,8 +540,24 @@ namespace PasswordManagerAccess.OnePassword
         {
             // Try "remember me" first. It's possible the server didn't allow it, or
             // we don't have a valid token stored from one of the previous sessions.
-            if (await TrySubmitRememberMeToken(factors, sessionKey, storage, rest, cancellationToken).ConfigureAwait(false))
-                return;
+            var rememberMeResult = await TrySubmitRememberMeToken(factors, sessionKey, storage, rest, cancellationToken).ConfigureAwait(false);
+            switch (rememberMeResult)
+            {
+                // Remember-me token was accepted, we're done.
+                case RememberMeResult.Success:
+                    return new MfaSuccess();
+
+                // Remember-me token got rejected by the server, we need to restart the whole login sequence.
+                case RememberMeResult.Rejected:
+                    return new MfaRetry();
+
+                // No remember-me token available, proceed with the interactive 2FA.
+                case RememberMeResult.NotAvailable:
+                    break;
+
+                default:
+                    throw new InternalErrorException("Invalid remember-me result");
+            }
 
             // Figure out the initial 2FA method to use. The user might choose a different one later.
             var factor = ChooseInteractiveSecondFactor(factors);
@@ -551,7 +581,7 @@ namespace PasswordManagerAccess.OnePassword
                         if (secondFactorResult.RememberMe)
                             await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
 
-                        return;
+                        return new MfaSuccess();
 
                     case MfaMethod mfaMethod:
                         if (!otherFactors.Contains(mfaMethod))
@@ -566,7 +596,14 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static async Task<bool> TrySubmitRememberMeToken(
+        internal enum RememberMeResult
+        {
+            Success,
+            NotAvailable,
+            Rejected,
+        }
+
+        internal static async Task<RememberMeResult> TrySubmitRememberMeToken(
             SecondFactor[] factors,
             AesKey sessionKey,
             IAsyncSecureStorage storage,
@@ -575,11 +612,11 @@ namespace PasswordManagerAccess.OnePassword
         )
         {
             if (factors.All(x => x.Method != MfaMethod.RememberMeToken))
-                return false;
+                return RememberMeResult.NotAvailable;
 
             var token = await storage.LoadString(RememberMeTokenKey).ConfigureAwait(false);
             if (string.IsNullOrEmpty(token))
-                return false;
+                return RememberMeResult.NotAvailable;
 
             var result = new SecondFactorResult(
                 Parameters: new Dictionary<string, string> { ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id) },
@@ -589,6 +626,7 @@ namespace PasswordManagerAccess.OnePassword
             try
             {
                 await SubmitSecondFactorResult(MfaMethod.RememberMeToken, result, sessionKey, rest, cancellationToken).ConfigureAwait(false);
+                return RememberMeResult.Success;
             }
             catch (BadMultiFactorException)
             {
@@ -598,10 +636,8 @@ namespace PasswordManagerAccess.OnePassword
                 // When the stored 'remember me' token is rejected by the server, we need to try
                 // the whole login sequence one more time. Probably the token is expired or it's
                 // invalid.
-                throw new RetryLoginException();
+                return RememberMeResult.Rejected;
             }
-
-            return true;
         }
 
         internal static SecondFactor ChooseInteractiveSecondFactor(SecondFactor[] factors)
