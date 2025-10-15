@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -354,7 +355,7 @@ namespace PasswordManagerAccess.Test.OnePassword
         public void GetSecondFactors_returns_factors()
         {
             // Arrange
-            var expected = new[] { MfaMethod.GoogleAuthenticator, MfaMethod.RememberMeToken, MfaMethod.Duo };
+            var expected = new[] { MfaMethod.GoogleAuthenticator, MfaMethod.Duo, MfaMethod.RememberMeToken };
             var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
                 """
                 {
@@ -403,6 +404,30 @@ namespace PasswordManagerAccess.Test.OnePassword
                     "duo": { "enabled": false },
                     "totp": { "enabled": true },
                     "dsecret": { "enabled": false }
+                }
+                """
+            );
+
+            // Act
+            var factors = Client.GetSecondFactors(mfa).Select(x => x.Method).ToArray();
+
+            // Assert
+            factors.ShouldBe(expected);
+        }
+
+        [Fact]
+        public void GetSecondFactors_ignores_unsupported_factors()
+        {
+            // Arrange
+            var expected = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? new[] { MfaMethod.GoogleAuthenticator, MfaMethod.WebAuthn, MfaMethod.Duo }
+                : new[] { MfaMethod.GoogleAuthenticator, MfaMethod.Duo };
+            var mfa = JsonSerializer.Deserialize<Model.MfaInfo>(
+                """
+                {
+                    "duo": { "enabled": true },
+                    "totp": { "enabled": true },
+                    "webauthn": { "enabled": true }
                 }
                 """
             );
