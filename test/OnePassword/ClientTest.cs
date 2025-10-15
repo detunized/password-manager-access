@@ -423,6 +423,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             // Act later
             var act = () =>
                 Client.PerformSecondFactorAuthentication(
+                    attempt: 0,
                     GoogleAuthFactors,
                     Credentials,
                     TestData.SessionKey,

@@ -32,6 +32,8 @@ namespace PasswordManagerAccess.OnePassword
         public const string ClientVersion = "2190004";
         public const string ClientId = ClientName + "/" + ClientVersion;
 
+        public const int MaxOtpAttempts = 3;
+
         //
         // SSO stubs
         //
@@ -270,18 +272,26 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            // TODO: Limit the number of retries to avoid infinite loops
-            while (true)
+            // Unlike other PM services, 1P doesn't like multiple OTP failures in a row.
+            // After a failed attempt, we need to restart the whole auth sequence from scratch.
+            for (var attempt = 0; ; attempt++)
             {
+                // TODO: Test this properly!
                 try
                 {
-                    return await LoginAttempt(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                    return await LoginAttempt(attempt, credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
                 }
-                catch (RetryLoginException) { }
+                catch (RetryLoginException)
+                {
+                    // This is not a read attempt, this means the remember-me token got rejected by the server.
+                    attempt--;
+                }
+                catch (BadMultiFactorException) when (attempt < MaxOtpAttempts - 1) { }
             }
         }
 
         private static async Task<(AesKey, RestClient)> LoginAttempt(
+            int attempt,
             Credentials credentials,
             AppInfo app,
             IAsyncUi ui,
@@ -309,7 +319,16 @@ namespace PasswordManagerAccess.OnePassword
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                await PerformSecondFactorAuthentication(verifiedOrMfa.Factors, credentials, sessionKey, ui, storage, macRest, cancellationToken)
+                await PerformSecondFactorAuthentication(
+                        attempt,
+                        verifiedOrMfa.Factors,
+                        credentials,
+                        sessionKey,
+                        ui,
+                        storage,
+                        macRest,
+                        cancellationToken
+                    )
                     .ConfigureAwait(false);
 
             return (sessionKey, macRest);
@@ -420,7 +439,7 @@ namespace PasswordManagerAccess.OnePassword
             SecondFactorRequired,
         }
 
-        internal readonly record struct SecondFactor(MfaMethod Method, object Parameters = null);
+        internal record SecondFactor(MfaMethod Method, object Parameters = null);
 
         internal readonly record struct VerifyResult(VerifyStatus Status, SecondFactor[] Factors);
 
@@ -493,6 +512,7 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         internal static async Task PerformSecondFactorAuthentication(
+            int attempt,
             SecondFactor[] factors,
             Credentials credentials,
             AesKey sessionKey,
@@ -507,26 +527,40 @@ namespace PasswordManagerAccess.OnePassword
             if (await TrySubmitRememberMeToken(factors, sessionKey, storage, rest, cancellationToken).ConfigureAwait(false))
                 return;
 
+            // Figure out the initial 2FA method to use. The user might choose a different one later.
             var factor = ChooseInteractiveSecondFactor(factors);
-            var otherFactors = factors.Select(x => x.Method).Except([factor.Method, MfaMethod.RememberMeToken]).ToArray();
 
-            var result = await GetSecondFactorResult(factor, otherFactors, credentials, ui, rest, cancellationToken).ConfigureAwait(false);
-            switch (result.Value)
+            // Allow the user to change this as many times as they want until they cancel. Each method has only 3 attempts though.
+            while (true)
             {
-                case SecondFactorResult secondFactorResult:
-                    var token = await SubmitSecondFactorResult(factor.Method, secondFactorResult, sessionKey, rest, cancellationToken)
-                        .ConfigureAwait(false);
+                var otherFactors = factors.Select(x => x.Method).Except([factor.Method, MfaMethod.RememberMeToken]).ToArray();
 
-                    // Store the token with the application. Next time we're not going to need to enter any passcodes.
-                    if (secondFactorResult.RememberMe)
-                        await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
+                // Ask the user to perform the 2FA step
+                var result = await GetSecondFactorResult(attempt, factor, otherFactors, credentials, ui, rest, cancellationToken)
+                    .ConfigureAwait(false);
 
-                    break;
-                case MfaMethod mfaMethod:
-                    // TODO: Support switching to other MFA methods
-                    throw new CanceledMultiFactorException($"User chose a different MFA method: {mfaMethod}");
-                case Canceled:
-                    throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+                switch (result.Value)
+                {
+                    case SecondFactorResult secondFactorResult:
+                        var token = await SubmitSecondFactorResult(factor.Method, secondFactorResult, sessionKey, rest, cancellationToken)
+                            .ConfigureAwait(false);
+
+                        // Store the token with the application. Next time we're not going to need to enter any passcodes.
+                        if (secondFactorResult.RememberMe)
+                            await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
+
+                        return;
+
+                    case MfaMethod mfaMethod:
+                        if (!otherFactors.Contains(mfaMethod))
+                            throw new InternalErrorException("The UI chose an invalid MFA method");
+
+                        factor = factors.First(x => x.Method == mfaMethod);
+                        continue;
+
+                    case Canceled:
+                        throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+                }
             }
         }
 
@@ -586,6 +620,7 @@ namespace PasswordManagerAccess.OnePassword
         internal record SecondFactorResult(Dictionary<string, string> Parameters, bool RememberMe, string Note = "");
 
         internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> GetSecondFactorResult(
+            int attempt,
             SecondFactor factor,
             MfaMethod[] otherFactors,
             Credentials credentials,
@@ -596,25 +631,27 @@ namespace PasswordManagerAccess.OnePassword
         {
             return factor.Method switch
             {
-                MfaMethod.GoogleAuthenticator => await AuthenticateWithGoogleAuth(otherFactors, ui, cancellationToken).ConfigureAwait(false),
-                MfaMethod.WebAuthn => await AuthenticateWithWebAuthn(factor, otherFactors, credentials, ui, cancellationToken).ConfigureAwait(false),
+                MfaMethod.GoogleAuthenticator => await AuthenticateWithGoogleAuth(attempt, otherFactors, ui, cancellationToken).ConfigureAwait(false),
+                MfaMethod.WebAuthn => await AuthenticateWithWebAuthn(attempt, factor, otherFactors, credentials, ui, cancellationToken)
+                    .ConfigureAwait(false),
                 MfaMethod.Duo => await AuthenticateWithDuo(factor, otherFactors, ui, rest, cancellationToken).ConfigureAwait(false),
                 _ => throw new InternalErrorException($"2FA method {factor.Method} is not valid here"),
             };
         }
 
         internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithGoogleAuth(
+            int attempt,
             MfaMethod[] otherFactors,
             IAsyncUi ui,
             CancellationToken cancellationToken
         )
         {
-            // TODO: Support retry attempts
-            var otpResult = await ui.ProvideGoogleAuthPasscode(attempt: 0, otherFactors, cancellationToken).ConfigureAwait(false);
+            var otpResult = await ui.ProvideGoogleAuthPasscode(attempt, otherFactors, cancellationToken).ConfigureAwait(false);
             return otpResult.MapT0(otp => new SecondFactorResult(new Dictionary<string, string> { ["code"] = otp.Passcode }, otp.RememberMe));
         }
 
         internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithWebAuthn(
+            int attempt,
             SecondFactor factor,
             MfaMethod[] otherFactors,
             Credentials credentials,
@@ -622,8 +659,7 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
-            // TODO: Support retry attempts
-            var rememberMeResult = await ui.ProvideWebAuthnRememberMe(attempt: 0, otherFactors, cancellationToken).ConfigureAwait(false);
+            var rememberMeResult = await ui.ProvideWebAuthnRememberMe(attempt, otherFactors, cancellationToken).ConfigureAwait(false);
             var rememberMe = false;
 
             switch (rememberMeResult.Value)
@@ -775,7 +811,7 @@ namespace PasswordManagerAccess.OnePassword
             catch (BadCredentialsException e)
             {
                 // The server report everything as "no auth" error. In this case we know it's related to the MFA.
-                throw new BadMultiFactorException("Incorrect second factor code", e.InnerException);
+                throw new BadMultiFactorException("Incorrect second factor code", e);
             }
         }
 
