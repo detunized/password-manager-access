@@ -43,7 +43,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var accountInfo = JsonSerializer.Deserialize<Model.AccountInfo>(GetFixture("get-account-info-response"));
             var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
             var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
-            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
+            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest)
             {
                 AccountInfo = accountInfo,
                 AccessibleVaults = [vaultInfo],
@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             var accountInfo = JsonSerializer.Deserialize<Model.AccountInfo>(GetFixture("get-account-info-response"));
             var vault = accountInfo.Vaults.First(x => x.Id == "ru74fjxlkipzzctorwj4icrj2a");
             var vaultInfo = new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), Encrypted.Parse(vault.Access[0].EncryptedKey), keychain);
-            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest, transport)
+            var session = new Session(TestData.Credentials, keychain, TestData.SessionKey, rest)
             {
                 AccountInfo = accountInfo,
                 AccessibleVaults = [vaultInfo],

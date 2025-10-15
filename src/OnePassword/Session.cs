@@ -16,21 +16,19 @@ namespace PasswordManagerAccess.OnePassword
         internal Keychain Keychain { get; }
         internal AesKey Key { get; }
         internal RestClient Rest { get; }
-        private IRestTransport Transport { get; }
 
         // Cache
         internal Model.AccountInfo? AccountInfo { get; set; }
         internal VaultInfo[]? AccessibleVaults { get; set; }
 
-        internal Session(Credentials credentials, Keychain keychain, AesKey key, RestClient rest, IRestTransport transport)
+        internal Session(Credentials credentials, Keychain keychain, AesKey key, RestClient rest)
         {
             Credentials = credentials;
             Keychain = keychain;
             Key = key;
             Rest = rest;
-            Transport = transport;
         }
 
-        public void Dispose() => Transport.Dispose();
+        public void Dispose() => Rest.Transport.Dispose();
     }
 }

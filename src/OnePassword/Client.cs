@@ -183,8 +183,7 @@ namespace PasswordManagerAccess.OnePassword
         )
         {
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
-            var (sessionKey, sessionRest) = await LogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
-            return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
+            return await LogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
         }
 
         internal static Credentials ParseServiceAccountToken(string token)
@@ -263,7 +262,7 @@ namespace PasswordManagerAccess.OnePassword
         // Possibly not the best design. TODO: Should this be done differently?
         internal class RetryLoginException : Exception;
 
-        internal static async Task<(AesKey, RestClient)> LogIn(
+        internal static async Task<Session> LogIn(
             Credentials credentials,
             AppInfo app,
             IAsyncUi ui,
@@ -290,7 +289,7 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        private static async Task<(AesKey, RestClient)> LoginAttempt(
+        private static async Task<Session> LoginAttempt(
             int attempt,
             Credentials credentials,
             AppInfo app,
@@ -331,7 +330,7 @@ namespace PasswordManagerAccess.OnePassword
                     )
                     .ConfigureAwait(false);
 
-            return (sessionKey, macRest);
+            return new Session(credentials, new Keychain(), sessionKey, macRest);
         }
 
         internal static string GetApiUrl(string domain)
