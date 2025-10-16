@@ -958,6 +958,9 @@ namespace PasswordManagerAccess.Test.OnePassword
             public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) =>
                 Task.FromResult(""); // Return empty string to signal cancellation
 
+            public Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken) =>
+                Task.FromResult(""); // Return empty string to signal cancellation
+
             public Task<OneOf.OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
                 DuoDevice[] devices,
                 MfaMethod[] otherMethods,

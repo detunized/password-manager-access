@@ -50,6 +50,16 @@ namespace Example
                 return answer; // Return empty string if canceled, or the URL if provided
             }
 
+            public async Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken)
+            {
+                Console.WriteLine("\n=== Device Enrollment ===");
+                Console.WriteLine("A verification code is displayed on one of your already enrolled devices.");
+                Console.WriteLine("Please check your enrolled devices (phone, computer, etc.) and enter the code shown.\n");
+
+                var answer = await GetAnswer("Enter the verification code (or press ENTER to cancel)", cancellationToken);
+                return answer; // Return empty string if canceled, or the code if provided
+            }
+
             //
             // Private
             //

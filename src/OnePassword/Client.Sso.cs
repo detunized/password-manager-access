@@ -482,27 +482,24 @@ public static partial class Client
     )
     {
         // 1. Ask the user to enter the verification code displayed on the existing device.
-        // TODO: Implement UI method for device enrollment verification code
-        throw new NotImplementedException("SSO device enrollment UI not yet implemented");
+        var verificationCode = await ui.ProvideDeviceEnrollmentVerificationCode(cancellationToken).ConfigureAwait(false);
+        if (verificationCode.IsNullOrEmpty())
+            throw new CanceledSsoLoginException("Device enrollment canceled by the user");
 
-#pragma warning disable CS0162 // Unreachable code detected
-        // var passcode = await ui.ProvideDeviceEnrollmentVerificationCode(cancellationToken).ConfigureAwait(false);
-        // if (passcode == Passcode.Cancel)
-        //     throw new CanceledSsoLoginException("Device enrollment canceled by the user");
-        //
-        // // 2. Perform the secure credentials exchange. This is a complicated multi-step process that involves
-        // //    a bunch of back-and-forth between the client and the server.
-        // var credentials = PerformCpace(
-        //     username: username,
-        //     signInAddress: signInAddress,
-        //     signInToken: signInToken,
-        //     enrollmentUuid: enrollmentUuid,
-        //     verificationCode: passcode.Code,
-        //     rest: rest
-        // );
-        //
-        // return credentials;
-#pragma warning restore CS0162 // Unreachable code detected
+        // 2. Perform the secure credentials exchange. This is a complicated multi-step process that involves
+        //    a bunch of back-and-forth between the client and the server.
+        var credentials = await PerformCpace(
+                username: username,
+                signInAddress: signInAddress,
+                signInToken: signInToken,
+                enrollmentUuid: enrollmentUuid,
+                verificationCode: verificationCode,
+                rest: rest,
+                cancellationToken: cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        return credentials;
     }
 
     internal static async Task<(AesKey, RestClient)> Login(

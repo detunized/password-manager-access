@@ -34,6 +34,12 @@ namespace PasswordManagerAccess.OnePassword.Ui
         // the authentication flow. The SSO provider will redirect to `redirectTo` URL with the authentication code.
         // Returns the final redirect URL containing the code and state parameters, or an empty string if canceled.
         Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken);
+
+        // Device enrollment verification code
+        // When enrolling a new device for SSO, the user needs to enter a verification code that is displayed
+        // on an already enrolled device. This method prompts the user for that code.
+        // Returns the verification code, or an empty string if canceled.
+        Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken);
     }
 
     public record Otp(string Passcode, bool RememberMe);
