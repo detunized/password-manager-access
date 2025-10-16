@@ -23,8 +23,8 @@ namespace PasswordManagerAccess.OnePassword
     // [ ] figure out if webauthn is possible on macos
     // [x] add cancellation tokens to the async storage
     // [ ] implement PerformSsoLogin
-    // [ ] in EncryptForStorage use Model.DeviceKeyDerivation
-    // [ ] in DecryptFromStorage use Model.DeviceKeyDerivation
+    // [x] in EncryptForStorage use Model.DeviceKeyDerivation
+    // [x] in DecryptFromStorage use Model.DeviceKeyDerivation
     // [ ] implement ExchangeCredentials
     // [ ] implement internal static async Task<(AesKey, RestClient)> Login(
 

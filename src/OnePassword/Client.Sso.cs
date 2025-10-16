@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword.Ui;
 using Ristretto;
-using R = PasswordManagerAccess.OnePassword.Model;
 
 namespace PasswordManagerAccess.OnePassword;
 
@@ -145,7 +144,7 @@ public static partial class Client
         return DecryptCredentialBundle(ssoSession.Auth.EncryptedCredentials, deviceKey);
     }
 
-    internal static R.Encrypted EncryptCredentialBundle(Model.CredentialBundle credentialBundle, AesKey deviceKey)
+    internal static Model.Encrypted EncryptCredentialBundle(Model.CredentialBundle credentialBundle, AesKey deviceKey)
     {
         return deviceKey
             .Encrypt(
@@ -156,7 +155,7 @@ public static partial class Client
             .ToModel();
     }
 
-    internal static Model.CredentialBundle DecryptCredentialBundle(R.Encrypted encryptedCredentials, AesKey deviceKey) =>
+    internal static Model.CredentialBundle DecryptCredentialBundle(Model.Encrypted encryptedCredentials, AesKey deviceKey) =>
         // TODO: Handle errors
         DeserializeJson<Model.CredentialBundle>(
             deviceKey.Decrypt(Encrypted.Parse(encryptedCredentials), "1P_SSO_CREDENTIAL_BUNDLE:LOCAL2"u8.ToArray())
@@ -168,7 +167,7 @@ public static partial class Client
     internal static DeviceKeyDerivation LoadDeviceKey(string json)
     {
         // TODO: Handle errors
-        var encryptedDeviceKey = DeserializeJson<R.Encrypted>(json);
+        var encryptedDeviceKey = DeserializeJson<Model.Encrypted>(json);
         var deviceKey = DecryptFromStorage(Encrypted.Parse(encryptedDeviceKey));
         return deviceKey;
     }
@@ -365,7 +364,9 @@ public static partial class Client
         await storage.StoreString(UserIdName, ssoSession.User.UserUuid, cancellationToken).ConfigureAwait(false);
         await storage.StoreString(AccountIdName, ssoSession.User.AccountUuid, cancellationToken).ConfigureAwait(false);
         await storage.StoreString(CredentialsEncryptionKeyIdName, deviceKey.Id, cancellationToken).ConfigureAwait(false);
-        await storage.StoreString(DeviceKeyName, JsonSerializer.Serialize(EncryptForStorage(deviceKeyDerivation).ToModel()), cancellationToken).ConfigureAwait(false);
+        await storage
+            .StoreString(DeviceKeyName, JsonSerializer.Serialize(EncryptForStorage(deviceKeyDerivation).ToModel()), cancellationToken)
+            .ConfigureAwait(false);
     }
 
     internal record DeviceKeyDerivation(string Id, byte[] Key, byte[] Salt);
@@ -400,30 +401,25 @@ public static partial class Client
     // It's up to the application to store the key in a secure way.
     internal static Encrypted EncryptForStorage(DeviceKeyDerivation deviceKeyDerivation, byte[] iv)
     {
-        var json = JsonSerializer.SerializeToUtf8Bytes(
-            new
-            {
-                id = deviceKeyDerivation.Id,
-                key = deviceKeyDerivation.Key.ToUrlSafeBase64NoPadding(),
-                salt = deviceKeyDerivation.Salt.ToUrlSafeBase64NoPadding(),
-            }
-        );
+        var model = new Model.DeviceKeyDerivation
+        {
+            Id = deviceKeyDerivation.Id,
+            Key = deviceKeyDerivation.Key.ToUrlSafeBase64NoPadding(),
+            Salt = deviceKeyDerivation.Salt.ToUrlSafeBase64NoPadding(),
+        };
+        var json = JsonSerializer.SerializeToUtf8Bytes(model);
         var key = new AesKey("3tnqywhecddkhvl375l6yu7qri", "01be638ec19d0b5bf7a310239d817aa1"u8.ToArray());
         return key.Encrypt(json, iv);
     }
 
     internal static DeviceKeyDerivation DecryptFromStorage(Encrypted encrypted)
     {
-        // TODO: DRY this with the code in EncryptForStorage
         var key = new AesKey(encrypted.KeyId, "01be638ec19d0b5bf7a310239d817aa1"u8.ToArray());
+        // TODO: Handle errors
         var json = key.Decrypt(encrypted);
         // TODO: Handle errors
-        var model = JsonSerializer.Deserialize<JsonElement>(json);
-        return new DeviceKeyDerivation(
-            model.GetProperty("id").GetString(),
-            model.GetProperty("key").GetString().Decode64Loose(),
-            model.GetProperty("salt").GetString().Decode64Loose()
-        );
+        var model = DeserializeJson<Model.DeviceKeyDerivation>(json);
+        return new DeviceKeyDerivation(model.Id, model.Key.Decode64Loose(), model.Salt.Decode64Loose());
     }
 
     internal enum EnrollmentStatus
@@ -556,7 +552,7 @@ public static partial class Client
 #pragma warning restore CS0162 // Unreachable code detected
     }
 
-    private static async Task<R.NewSession> StartAuth(
+    private static async Task<Model.NewSession> StartAuth(
         string signInToken,
         string deviceUuid,
         string userUuid,
@@ -564,7 +560,7 @@ public static partial class Client
         CancellationToken cancellationToken
     )
     {
-        var newSessionResponse = await rest.PostJsonAsync<R.NewSession>(
+        var newSessionResponse = await rest.PostJsonAsync<Model.NewSession>(
                 "v3/auth/start",
                 new Dictionary<string, object>
                 {
@@ -782,7 +778,7 @@ public static partial class Client
             throw new InternalErrorException("Failed to submit tagb");
     }
 
-    internal static async Task<R.Encrypted> RequestEncryptedCredentials(
+    internal static async Task<Model.Encrypted> RequestEncryptedCredentials(
         string signInToken,
         string enrollmentUuid,
         RestClient rest,
@@ -968,7 +964,7 @@ public static partial class Client
         return hmac2[0..32];
     }
 
-    internal static Model.CredentialBundle DecryptCredentials(R.Encrypted encryptedCredentials, byte[] exchangeKey)
+    internal static Model.CredentialBundle DecryptCredentials(Model.Encrypted encryptedCredentials, byte[] exchangeKey)
     {
         var aesKey = new AesKey("1P_SSO_ENROLLMENT_TRANSPORT_KEY", exchangeKey);
         var credentialsBytes = aesKey.Decrypt(Encrypted.Parse(encryptedCredentials), adata: "1P_SSO_CREDENTIAL_BUNDLE:ENROLL"u8.ToArray());
