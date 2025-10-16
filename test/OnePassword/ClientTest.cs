@@ -427,7 +427,7 @@ namespace PasswordManagerAccess.Test.OnePassword
                 {
                     "duo": { "enabled": true },
                     "totp": { "enabled": true },
-                    "webauthn": { "enabled": true }
+                    "webAuthn": { "enabled": true }
                 }
                 """
             );
