@@ -21,8 +21,14 @@ namespace PasswordManagerAccess.OnePassword
     // [x] implement mfa method selection
     // [x] implement mfa attempts
     // [ ] figure out if webauthn is possible on macos
+    // [ ] add cancellation tokens to the async storage
+    // [ ] implement PerformSsoLogin
+    // [ ] in EncryptForStorage use Model.DeviceKeyDerivation
+    // [ ] in DecryptFromStorage use Model.DeviceKeyDerivation
+    // [ ] implement ExchangeCredentials
+    // [ ] implement internal static async Task<(AesKey, RestClient)> Login(
 
-    public static class Client
+    public static partial class Client
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
@@ -33,20 +39,6 @@ namespace PasswordManagerAccess.OnePassword
         public const string ClientId = ClientName + "/" + ClientVersion;
 
         public const int MaxOtpAttempts = 3;
-
-        //
-        // SSO stubs
-        //
-
-        public static bool IsSsoAccount(string username) => false;
-
-        public static Task<Session> SsoLogIn(
-            Credentials credentials,
-            AppInfo app,
-            IAsyncUi ui,
-            IAsyncSecureStorage storage,
-            CancellationToken cancellationToken
-        ) => throw new NotImplementedException("SSO login is not implemented in this version of the library");
 
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.

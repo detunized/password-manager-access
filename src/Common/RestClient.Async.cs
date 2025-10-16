@@ -319,6 +319,74 @@ internal partial class RestClient
         );
 
     //
+    // PUT JSON
+    //
+
+    public Task<RestResponse<string>> PutJsonAsync(string endpoint, PostParameters parameters, CancellationToken cancellationToken) =>
+        PutJsonAsync(endpoint, parameters, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> PutJsonAsync(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        CancellationToken cancellationToken
+    ) => PutJsonAsync(endpoint, parameters, headers, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> PutJsonAsync(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => PutJsonAsync(endpoint, parameters, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> PutJsonAsync(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
+    ) => MakeRequestAsync<string>(endpoint, HttpMethod.Put, ToJsonContent(parameters), headers, cookies, maxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PutJsonAsync<T>(string endpoint, PostParameters parameters, CancellationToken cancellationToken) =>
+        PutJsonAsync<T>(endpoint, parameters, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PutJsonAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        CancellationToken cancellationToken
+    ) => PutJsonAsync<T>(endpoint, parameters, headers, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PutJsonAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => PutJsonAsync<T>(endpoint, parameters, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> PutJsonAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
+    ) =>
+        MakeRequestAsync<string, T>(
+            endpoint,
+            HttpMethod.Put,
+            ToJsonContent(parameters),
+            headers,
+            cookies,
+            maxRedirects,
+            DeserializeFromJson<T>,
+            cancellationToken
+        );
+
+    //
     // Private
     //
 
