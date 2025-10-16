@@ -163,7 +163,7 @@ public static partial class Client
         );
 
     internal static async Task<DeviceKeyDerivation> LoadDeviceKey(IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
-        LoadDeviceKey(await storage.LoadString(DeviceKeyName).ConfigureAwait(false));
+        LoadDeviceKey(await storage.LoadString(DeviceKeyName, cancellationToken).ConfigureAwait(false));
 
     internal static DeviceKeyDerivation LoadDeviceKey(string json)
     {
@@ -174,7 +174,7 @@ public static partial class Client
     }
 
     internal static async Task<AesKey> LoadAndDeriveDeviceKey(IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
-        LoadAndDeriveDeviceKey(await storage.LoadString(DeviceKeyName).ConfigureAwait(false));
+        LoadAndDeriveDeviceKey(await storage.LoadString(DeviceKeyName, cancellationToken).ConfigureAwait(false));
 
     internal static AesKey LoadAndDeriveDeviceKey(string json)
     {
@@ -207,12 +207,12 @@ public static partial class Client
         var parameters = new Dictionary<string, object> { ["userUuid"] = loginInfo.UserUuid };
 
         // TODO: Make sure these are not stale
-        var accountUuid = await storage.LoadString(AccountIdName).ConfigureAwait(false);
+        var accountUuid = await storage.LoadString(AccountIdName, cancellationToken).ConfigureAwait(false);
         if (!accountUuid.IsNullOrEmpty())
             parameters["accountUuid"] = accountUuid;
 
         // TODO: Make sure these are not stale
-        var keyId = await storage.LoadString(CredentialsEncryptionKeyIdName).ConfigureAwait(false);
+        var keyId = await storage.LoadString(CredentialsEncryptionKeyIdName, cancellationToken).ConfigureAwait(false);
         if (!keyId.IsNullOrEmpty())
             parameters["keyId"] = keyId;
 
@@ -362,10 +362,10 @@ public static partial class Client
 
         // 3. When it's all good, store the device key for the next time
         // TODO: Unify this all into one model/JSON
-        await storage.StoreString(UserIdName, ssoSession.User.UserUuid).ConfigureAwait(false);
-        await storage.StoreString(AccountIdName, ssoSession.User.AccountUuid).ConfigureAwait(false);
-        await storage.StoreString(CredentialsEncryptionKeyIdName, deviceKey.Id).ConfigureAwait(false);
-        await storage.StoreString(DeviceKeyName, JsonSerializer.Serialize(EncryptForStorage(deviceKeyDerivation).ToModel())).ConfigureAwait(false);
+        await storage.StoreString(UserIdName, ssoSession.User.UserUuid, cancellationToken).ConfigureAwait(false);
+        await storage.StoreString(AccountIdName, ssoSession.User.AccountUuid, cancellationToken).ConfigureAwait(false);
+        await storage.StoreString(CredentialsEncryptionKeyIdName, deviceKey.Id, cancellationToken).ConfigureAwait(false);
+        await storage.StoreString(DeviceKeyName, JsonSerializer.Serialize(EncryptForStorage(deviceKeyDerivation).ToModel()), cancellationToken).ConfigureAwait(false);
     }
 
     internal record DeviceKeyDerivation(string Id, byte[] Key, byte[] Salt);

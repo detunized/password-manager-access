@@ -74,9 +74,9 @@ namespace PasswordManagerAccess.OnePassword
 
         public class ThrowStorage : IAsyncSecureStorage
         {
-            public Task<string?> LoadString(string name) => throw MakeLogicError();
+            public Task<string?> LoadString(string name, CancellationToken cancellationToken) => throw MakeLogicError();
 
-            public Task StoreString(string name, string? value) => throw MakeLogicError();
+            public Task StoreString(string name, string? value, CancellationToken cancellationToken) => throw MakeLogicError();
         }
 
         public class ThrowUi : IAsyncUi

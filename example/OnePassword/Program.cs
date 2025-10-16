@@ -107,6 +107,7 @@ namespace Example
             // Read optional TOTP secret for Google Authenticator
             config.TryGetValue("google-auth-totp-secret", out var totpSecret);
 
+            using var cts = new CancellationTokenSource();
             try
             {
                 await DumpAllVaults(
@@ -116,7 +117,8 @@ namespace Example
                     config.GetValueOrDefault("domain", ""),
                     config["device-id"],
                     config.GetValueOrDefault("service-account-token", ""),
-                    totpSecret
+                    totpSecret,
+                    cts.Token
                 );
             }
             catch (BaseException e)
@@ -132,13 +134,14 @@ namespace Example
             string domain,
             string uuid,
             string serviceAccountToken,
-            string totpSecret
+            string totpSecret,
+            CancellationToken cancellationToken
         )
         {
             var device = new AppInfo { Name = "PMA 1Password example", Version = "1.0.0" };
 
             Session session;
-            if (Client.IsSsoAccount(username))
+            if (await Client.IsSsoAccount(username, cancellationToken))
             {
                 session = await Client
                     .SsoLogIn(
@@ -146,7 +149,7 @@ namespace Example
                         device,
                         new TextUi(totpSecret),
                         new AsyncPlainStorage(),
-                        CancellationToken.None
+                        cancellationToken
                     )
                     .ConfigureAwait(false);
             }
@@ -164,12 +167,12 @@ namespace Example
                     device,
                     new TextUi(totpSecret),
                     new AsyncPlainStorage(),
-                    CancellationToken.None
+                    cancellationToken
                 );
             }
             else
             {
-                session = await Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device, CancellationToken.None);
+                session = await Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device, cancellationToken);
             }
 
             // Enable this to get a single item from a vault
@@ -179,28 +182,28 @@ namespace Example
             {
                 if (getSingleItem)
                 {
-                    await GetSingleItem(session);
+                    await GetSingleItem(session, cancellationToken);
                 }
                 else
                 {
-                    var vaults = await Client.ListAllVaults(session, CancellationToken.None);
+                    var vaults = await Client.ListAllVaults(session, cancellationToken);
 
                     for (var i = 0; i < vaults.Length; i++)
-                        await DumpVault(i, vaults[i], session);
+                        await DumpVault(i, vaults[i], session, cancellationToken);
                 }
             }
             finally
             {
-                await Client.LogOut(session, CancellationToken.None);
+                await Client.LogOut(session, cancellationToken);
                 Console.WriteLine("Logged out");
             }
         }
 
-        private static async Task DumpVault(int index, VaultInfo vaultInfo, Session session)
+        private static async Task DumpVault(int index, VaultInfo vaultInfo, Session session, CancellationToken cancellationToken)
         {
             Console.WriteLine($"Vault {index + 1} '{vaultInfo.Id}', '{vaultInfo.Name}':");
 
-            var vault = await Client.OpenVault(vaultInfo, session, CancellationToken.None);
+            var vault = await Client.OpenVault(vaultInfo, session, cancellationToken);
 
             // Dump accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
@@ -211,10 +214,10 @@ namespace Example
                 DumpSshKey($"{i + 1}", vault.SshKeys[i]);
         }
 
-        private static async Task GetSingleItem(Session session)
+        private static async Task GetSingleItem(Session session, CancellationToken cancellationToken)
         {
             // TODO: Use your own vault and item IDs, this is just an example.
-            (await Client.GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session, CancellationToken.None)).Switch(
+            (await Client.GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session, cancellationToken)).Switch(
                 account => DumpAccount("1", account),
                 sshKey => DumpSshKey("1", sshKey),
                 noItem => Console.WriteLine($"No item: {noItem}")

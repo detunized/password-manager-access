@@ -183,8 +183,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             var storage = new Util.ThrowStorage();
 
             // Act & Assert
-            await AssertLogicError(() => storage.LoadString(""));
-            await AssertLogicError(() => storage.StoreString("", ""));
+            await AssertLogicError(() => storage.LoadString("", CancellationToken.None));
+            await AssertLogicError(() => storage.StoreString("", "", CancellationToken.None));
         }
 
         //

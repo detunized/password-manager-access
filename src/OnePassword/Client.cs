@@ -21,7 +21,7 @@ namespace PasswordManagerAccess.OnePassword
     // [x] implement mfa method selection
     // [x] implement mfa attempts
     // [ ] figure out if webauthn is possible on macos
-    // [ ] add cancellation tokens to the async storage
+    // [x] add cancellation tokens to the async storage
     // [ ] implement PerformSsoLogin
     // [ ] in EncryptForStorage use Model.DeviceKeyDerivation
     // [ ] in DecryptFromStorage use Model.DeviceKeyDerivation
@@ -580,7 +580,7 @@ namespace PasswordManagerAccess.OnePassword
 
                         // Store the token with the application. Next time we're not going to need to enter any passcodes.
                         if (secondFactorResult.RememberMe)
-                            await storage.StoreString(RememberMeTokenKey, token).ConfigureAwait(false);
+                            await storage.StoreString(RememberMeTokenKey, token, cancellationToken).ConfigureAwait(false);
 
                         return new MfaSuccess();
 
@@ -615,7 +615,7 @@ namespace PasswordManagerAccess.OnePassword
             if (factors.All(x => x.Method != MfaMethod.RememberMeToken))
                 return RememberMeResult.NotAvailable;
 
-            var token = await storage.LoadString(RememberMeTokenKey).ConfigureAwait(false);
+            var token = await storage.LoadString(RememberMeTokenKey, cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrEmpty(token))
                 return RememberMeResult.NotAvailable;
 
@@ -632,7 +632,7 @@ namespace PasswordManagerAccess.OnePassword
             catch (BadMultiFactorException)
             {
                 // The token got rejected, need to erase it, it's no longer valid.
-                await storage.StoreString(RememberMeTokenKey, null).ConfigureAwait(false);
+                await storage.StoreString(RememberMeTokenKey, null, cancellationToken).ConfigureAwait(false);
 
                 // When the stored 'remember me' token is rejected by the server, we need to try
                 // the whole login sequence one more time. Probably the token is expired or it's
