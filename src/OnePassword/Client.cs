@@ -22,7 +22,7 @@ namespace PasswordManagerAccess.OnePassword
     // [x] implement mfa attempts
     // [ ] figure out if webauthn is possible on macos
     // [x] add cancellation tokens to the async storage
-    // [ ] implement PerformSsoLogin
+    // [x] implement PerformSsoLogin
     // [x] in EncryptForStorage use Model.DeviceKeyDerivation
     // [x] in DecryptFromStorage use Model.DeviceKeyDerivation
     // [ ] implement ExchangeCredentials

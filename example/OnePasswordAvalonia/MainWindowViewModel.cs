@@ -359,6 +359,13 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
+    public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken)
+    {
+        // TODO: Implement proper SSO UI for Avalonia
+        // For now, throw to indicate this is not yet implemented in the GUI
+        throw new NotImplementedException("SSO login is not yet implemented in the Avalonia UI. Please use the console example for SSO authentication.");
+    }
+
     public async Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
         DuoDevice[] devices,
         MfaMethod[] otherMethods,

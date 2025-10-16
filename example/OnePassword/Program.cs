@@ -39,6 +39,17 @@ namespace Example
                 CancellationToken cancellationToken
             ) => ProvideOutOfBandRememberMe(attempt, "WebAuthn", otherMethods, cancellationToken);
 
+            public async Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken)
+            {
+                Console.WriteLine("\n=== SSO Login Required ===");
+                Console.WriteLine($"Please open the following URL in your browser:\n\n{ssoLoginUrl}\n");
+                Console.WriteLine("Complete the login process in your browser.");
+                Console.WriteLine($"After successful login, you will be redirected to a URL starting with:\n{redirectTo}\n");
+
+                var answer = await GetAnswer("Paste the full redirect URL here (or press ENTER to cancel)", cancellationToken);
+                return answer; // Return empty string if canceled, or the URL if provided
+            }
+
             //
             // Private
             //

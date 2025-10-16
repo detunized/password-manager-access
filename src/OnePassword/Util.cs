@@ -93,6 +93,9 @@ namespace PasswordManagerAccess.OnePassword
                 CancellationToken cancellationToken
             ) => throw MakeLogicError();
 
+            public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) =>
+                throw MakeLogicError();
+
             public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
                 DuoDevice[] devices,
                 MfaMethod[] otherMethods,

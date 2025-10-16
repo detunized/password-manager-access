@@ -29,7 +29,11 @@ namespace PasswordManagerAccess.OnePassword.Ui
             CancellationToken cancellationToken
         );
 
-        // TODO: SSO
+        // SSO login
+        // This method should open the SSO login URL (typically in a browser) and wait for the user to complete
+        // the authentication flow. The SSO provider will redirect to `redirectTo` URL with the authentication code.
+        // Returns the final redirect URL containing the code and state parameters, or an empty string if canceled.
+        Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken);
     }
 
     public record Otp(string Passcode, bool RememberMe);
