@@ -26,7 +26,7 @@ namespace PasswordManagerAccess.OnePassword
     // [x] in EncryptForStorage use Model.DeviceKeyDerivation
     // [x] in DecryptFromStorage use Model.DeviceKeyDerivation
     // [x] implement ExchangeCredentials
-    // [ ] implement internal static async Task<(AesKey, RestClient)> Login(
+    // [x] implement internal static async Task<(AesKey, RestClient)> Login(
 
     public static partial class Client
     {

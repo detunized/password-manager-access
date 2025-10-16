@@ -528,20 +528,17 @@ public static partial class Client
             iterations: session.Auth.Iterations,
             salt: session.Auth.Salt.Decode64Loose()
         );
-        // TODO: Implement SrpV2.PerformAndVerify
-        throw new NotImplementedException("SRP v2 not yet implemented");
+        var sessionKey = await SrpV2
+            .PerformAndVerifyAsync(credentials, srpInfo, session.KeyUuid, ssoSessionId, rest, cancellationToken)
+            .ConfigureAwait(false);
 
-#pragma warning disable CS0162 // Unreachable code detected
-        // var sessionKey = SrpV2.PerformAndVerify(credentials, srpInfo, session.KeyUuid, ssoSessionId, rest);
-        //
-        // // 3. All the following requests need to be signed with the session key.
-        // var macRest = MakeRestClient(rest, new MacRequestSigner(sessionKey, 1), ssoSessionId);
-        //
-        // // 4. Complete the login process by sending the device info.
-        // CompleteAuth(credentials, app, signInToken, sessionKey, macRest);
-        //
-        // return (sessionKey, macRest);
-#pragma warning restore CS0162 // Unreachable code detected
+        // 3. All the following requests need to be signed with the session key.
+        var macRest = MakeRestClient(rest, new MacRequestSigner(sessionKey, 1), ssoSessionId);
+
+        // 4. Complete the login process by sending the device info.
+        await CompleteAuth(credentials, app, signInToken, sessionKey, macRest, cancellationToken).ConfigureAwait(false);
+
+        return (sessionKey, macRest);
     }
 
     private static async Task<Model.NewSession> StartAuth(
