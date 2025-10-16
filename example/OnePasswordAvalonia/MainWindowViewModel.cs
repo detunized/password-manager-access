@@ -63,6 +63,11 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
+    public void GenerateDeviceId()
+    {
+        DeviceId = Client.GenerateRandomUuid();
+    }
+
     private string _domain = "my.1password.com";
     public string Domain
     {

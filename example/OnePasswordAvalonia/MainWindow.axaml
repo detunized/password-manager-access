@@ -20,7 +20,10 @@
         <TextBox Text="{Binding AccountKey}" />
 
         <TextBlock Margin="0 5">Device ID</TextBlock>
-        <TextBox Text="{Binding DeviceId}" />
+        <DockPanel>
+            <Button Command="{Binding GenerateDeviceId}" ToolTip.Tip="Generate random UUID" DockPanel.Dock="Right" Margin="5,0,0,0">🎲</Button>
+            <TextBox Text="{Binding DeviceId}" />
+        </DockPanel>
 
         <TextBlock Margin="0 5">Domain (optional)</TextBlock>
         <TextBox Text="{Binding Domain}" Watermark="my.1password.com" />
