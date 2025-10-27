@@ -50,6 +50,8 @@ namespace Example
                 return answer; // Return empty string if canceled, or the URL if provided
             }
 
+            public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) => throw new NotImplementedException();
+
             public async Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken)
             {
                 Console.WriteLine("\n=== Device Enrollment ===");

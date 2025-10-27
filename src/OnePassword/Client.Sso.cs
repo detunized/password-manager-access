@@ -25,8 +25,7 @@ public static partial class Client
     public static async Task<bool> IsSsoAccount(string username, CancellationToken cancellationToken)
     {
         using var transport = new RestTransport();
-        var loginInfo = await GetLoginInfo(username, MakeRestClient(transport, GetApiUrl(DefaultDomain)), cancellationToken).ConfigureAwait(false);
-        return loginInfo.AuthMethods.Any(x => x.Type == "OIDC");
+        return await IsSsoAccount(username, transport, cancellationToken);
     }
 
     public static async Task<Session> SsoLogIn(
@@ -54,6 +53,22 @@ public static partial class Client
     // Internal
     //
 
+    internal static async Task<bool> IsSsoAccount(string username, RestTransport transport, CancellationToken cancellationToken)
+    {
+        var rest = MakeRestClient(transport, GetApiUrl(DefaultDomain));
+        return await IsSsoAccount(username, rest, cancellationToken);
+    }
+
+    internal static async Task<bool> IsSsoAccount(string username, RestClient rest, CancellationToken cancellationToken)
+    {
+        // Just to make sure we're not calling with a wrong RestClient
+        if (!rest.BaseUrl.StartsWith($"https://{DefaultDomain}"))
+            throw new InternalErrorException($"RestClient should be configured for {DefaultDomain}");
+
+        var loginInfo = await GetLoginInfo(username, rest, cancellationToken).ConfigureAwait(false);
+        return loginInfo.AuthMethods.Any(x => x.Type == "OIDC");
+    }
+
     internal static async Task<Session> SsoLogIn(
         Credentials credentials,
         AppInfo app,
@@ -64,6 +79,21 @@ public static partial class Client
     )
     {
         var rest = MakeRestClient(transport, GetApiUrl(DefaultDomain));
+        return await SsoLogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<Session> SsoLogIn(
+        Credentials credentials,
+        AppInfo app,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        // Just to make sure we're not calling with a wrong RestClient
+        if (!rest.BaseUrl.StartsWith($"https://{DefaultDomain}"))
+            throw new InternalErrorException($"RestClient should be configured for {DefaultDomain}");
 
         // 1. Get the login info to check if SSO is available and get the sign-in address
         var loginInfo = await GetLoginInfo(credentials.Username, rest, cancellationToken).ConfigureAwait(false);
@@ -73,7 +103,7 @@ public static partial class Client
             throw new InternalErrorException($"No SSO login method found for account {credentials.Username}");
 
         // 2. Make a new REST client for the SSO API
-        var ssoRest = MakeRestClient(transport, $"{loginInfo.SignInAddress}/api");
+        var ssoRest = MakeRestClient(rest.Transport, $"{loginInfo.SignInAddress}/api");
 
         // 3. Start the SSO login process by getting the SSO login URL
         var ssoLoginUrl = await StartSsoLogin(credentials, loginInfo, storage, ssoRest, cancellationToken).ConfigureAwait(false);
@@ -106,6 +136,7 @@ public static partial class Client
                     cancellationToken: cancellationToken
                 )
                 .ConfigureAwait(false)
+            // TODO: This might fail! Need to handle it and enroll again!
             : (await RestoreCredentials(ssoSession, storage, cancellationToken).ConfigureAwait(false), "");
 
         // 8. Log in with the received credential bundle
@@ -140,8 +171,9 @@ public static partial class Client
         CancellationToken cancellationToken
     )
     {
+        // TODO: This might fail!
         var deviceKey = await LoadAndDeriveDeviceKey(storage, cancellationToken).ConfigureAwait(false);
-        return DecryptCredentialBundle(ssoSession.Auth.EncryptedCredentials, deviceKey);
+        return DecryptCredentialBundle(ssoSession.Auth!.EncryptedCredentials, deviceKey);
     }
 
     internal static Model.Encrypted EncryptCredentialBundle(Model.CredentialBundle credentialBundle, AesKey deviceKey)
@@ -293,31 +325,63 @@ public static partial class Client
     {
         var signInToken = ssoSession.SsoAuth.SignInTokenDetails.Token;
 
-        // 1. Kick off the enrollment process. This should send a signal to the already enrolled devices to
-        //    prepare to transfer the key to the new device.
-        var ssoEnroll = await StartEnrollment(signInToken, rest, cancellationToken).ConfigureAwait(false);
+        // Begin enrollment and get context for bidirectional communication
+        var enrollmentContext = await ui.BeginSsoEnrollment(cancellationToken).ConfigureAwait(false);
 
-        // 2. Wait for the user to click on one of the existing devices the "Transfer key" button to initiate the enrollment.
-        // Note: when the user clicks the "Deny" button the status update fails with 404.
-        if (
-            !await PollStatusUntilDone(EnrollmentStatus.WaitingForCode, signInToken, ssoEnroll.EnrollmentUuid, rest, cancellationToken)
-                .ConfigureAwait(false)
-        )
-            throw new InternalErrorException("Enrollment failed");
+        try
+        {
+            // 1. Kick off the enrollment process. This should send a signal to the already enrolled devices to
+            //    prepare to transfer the key to the new device.
+            await enrollmentContext
+                .UpdateStatus(Ui.EnrollmentStatus.WaitingForApproval, "Waiting for approval from enrolled device...", cancellationToken)
+                .ConfigureAwait(false);
+            var ssoEnroll = await StartEnrollment(signInToken, rest, cancellationToken).ConfigureAwait(false);
 
-        // 3. Exchange credentials
-        var credentialBundle = await ExchangeCredentials(
-                username: credentials.Username,
-                signInAddress: loginInfo.SignInAddress,
-                signInToken: signInToken,
-                enrollmentUuid: ssoEnroll.EnrollmentUuid,
-                ui: ui,
-                rest: rest,
-                cancellationToken: cancellationToken
+            // 2. Wait for the user to click on one of the existing devices the "Transfer key" button to initiate the enrollment.
+            // Note: when the user clicks the "Deny" button the status update fails with 404.
+            if (
+                !await PollStatusUntilDone(
+                        enrollmentContext,
+                        EnrollmentStatus.WaitingForCode,
+                        signInToken,
+                        ssoEnroll.EnrollmentUuid,
+                        rest,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false)
             )
-            .ConfigureAwait(false);
+            {
+                if (enrollmentContext.IsCancellationRequested)
+                    throw new CanceledSsoLoginException("Device enrollment was canceled by the user");
+                throw new InternalErrorException("Enrollment failed");
+            }
 
-        return (credentialBundle, ssoEnroll.EnrollmentUuid);
+            // 3. Exchange credentials
+            await enrollmentContext
+                .UpdateStatus(Ui.EnrollmentStatus.VerificationCodeNeeded, "Ready to enter verification code", cancellationToken)
+                .ConfigureAwait(false);
+
+            var credentialBundle = await ExchangeCredentials(
+                    username: credentials.Username,
+                    signInAddress: loginInfo.SignInAddress,
+                    signInToken: signInToken,
+                    enrollmentUuid: ssoEnroll.EnrollmentUuid,
+                    enrollmentContext: enrollmentContext,
+                    rest: rest,
+                    cancellationToken: cancellationToken
+                )
+                .ConfigureAwait(false);
+
+            await enrollmentContext.UpdateStatus(Ui.EnrollmentStatus.Completing, "Completing enrollment", cancellationToken).ConfigureAwait(false);
+
+            return (credentialBundle, ssoEnroll.EnrollmentUuid);
+        }
+        finally
+        {
+            // Always call EndEnrollment, even on failure
+            // TODO: Deal with the `success` parameter!
+            await enrollmentContext.EndEnrollment(success: true, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     internal static async Task CommitDevice(
@@ -425,6 +489,7 @@ public static partial class Client
     }
 
     internal static async Task<bool> PollStatusUntilDone(
+        ISsoEnrollmentContext context,
         EnrollmentStatus waitFor,
         string signInToken,
         string enrollmentUuid,
@@ -432,14 +497,26 @@ public static partial class Client
         CancellationToken cancellationToken
     )
     {
-        // TODO: Fix this! 20 is too little and shouldn't be done like this!
-        for (var i = 0; i < 20; i++)
+        // TODO: Move to the class level!
+        const int pollIntervalMs = 2000; // 1P web client polls every 2 seconds
+        const int totalPollTimeMs = 5 * 60 * 1000; // 5 min
+
+        for (var i = 0; i < totalPollTimeMs / pollIntervalMs; i++)
         {
+            // Check if user canceled via UI
+            if (context.IsCancellationRequested)
+                return false;
+
             var status = await GetEnrollmentStatus(signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
             if (status == waitFor)
                 return true;
 
-            await Task.Delay(500, cancellationToken).ConfigureAwait(false);
+            // Check if user canceled via UI
+            if (context.IsCancellationRequested)
+                return false;
+
+            // TODO: See if we could link these tokens to make a quick cancellation and not to wait for Delay expire
+            await Task.Delay(pollIntervalMs, cancellationToken).ConfigureAwait(false);
         }
 
         return false;
@@ -476,18 +553,23 @@ public static partial class Client
         string signInAddress,
         string signInToken,
         string enrollmentUuid,
-        IAsyncUi ui,
+        ISsoEnrollmentContext enrollmentContext,
         RestClient rest,
         CancellationToken cancellationToken
     )
     {
         // 1. Ask the user to enter the verification code displayed on the existing device.
-        var verificationCode = await ui.ProvideDeviceEnrollmentVerificationCode(cancellationToken).ConfigureAwait(false);
-        if (verificationCode.IsNullOrEmpty())
-            throw new CanceledSsoLoginException("Device enrollment canceled by the user");
+        var verificationCodeResult = await enrollmentContext.ProvideVerificationCode(cancellationToken).ConfigureAwait(false);
+
+        if (!verificationCodeResult.TryPickT0(out var verificationCode, out var canceled))
+            throw new CanceledSsoLoginException($"Device enrollment canceled: {canceled.Reason}");
 
         // 2. Perform the secure credentials exchange. This is a complicated multi-step process that involves
         //    a bunch of back-and-forth between the client and the server.
+        await enrollmentContext
+            .UpdateStatus(Ui.EnrollmentStatus.ExchangingCredentials, "Exchanging credentials securely...", cancellationToken)
+            .ConfigureAwait(false);
+
         var credentials = await PerformCpace(
                 username: username,
                 signInAddress: signInAddress,
@@ -523,7 +605,7 @@ public static partial class Client
 
         // 2. Do a regular SRP like in a normal login flow. Only here it's version 2.
         var srpInfo = new SrpInfo(
-            srpMethod: session.Auth.Method,
+            srpMethod: session.Auth!.Method,
             keyMethod: session.Auth.Algorithm,
             iterations: session.Auth.Iterations,
             salt: session.Auth.Salt.Decode64Loose()

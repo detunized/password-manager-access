@@ -35,7 +35,14 @@ namespace PasswordManagerAccess.OnePassword.Ui
         // Returns the final redirect URL containing the code and state parameters, or an empty string if canceled.
         Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken);
 
-        // Device enrollment verification code
+        // Begin SSO device enrollment
+        // This method should show the enrollment UI and return a context object for managing the enrollment lifecycle.
+        // The context provides bidirectional communication between the library and UI.
+        // The context's EndEnrollment method will be called when enrollment completes (success or failure).
+        Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken);
+
+        // DEPRECATED: Device enrollment verification code
+        // This method is still supported but will eventually be replaced by ISsoEnrollmentContext.ProvideVerificationCode
         // When enrolling a new device for SSO, the user needs to enter a verification code that is displayed
         // on an already enrolled device. This method prompts the user for that code.
         // Returns the verification code, or an empty string if canceled.
@@ -47,4 +54,44 @@ namespace PasswordManagerAccess.OnePassword.Ui
     public record RememberMe(bool Value);
 
     public record Canceled(string Reason);
+
+    //
+    // SSO Enrollment Context
+    //
+
+    // Context for managing SSO device enrollment UI lifecycle
+    // This interface provides bidirectional communication between the library and UI:
+    // - Library can send status updates via UpdateStatus
+    // - UI can signal cancellation via IsCancellationRequested
+    // - Both can participate in the enrollment flow via ProvideVerificationCode
+    public interface ISsoEnrollmentContext
+    {
+        // Status updates from library to UI
+        // Called at various stages during enrollment to update the UI with progress
+        Task UpdateStatus(EnrollmentStatus status, string message, CancellationToken cancellationToken);
+
+        // Get verification code from user
+        // Returns either the code entered by the user, or EnrollmentCanceled if canceled
+        Task<OneOf<string, EnrollmentCanceled>> ProvideVerificationCode(CancellationToken cancellationToken);
+
+        // Check if user has requested cancellation
+        // The library should periodically check this during long-running operations
+        bool IsCancellationRequested { get; }
+
+        // Cleanup and close the enrollment UI
+        // Guaranteed to be called regardless of success/failure
+        Task EndEnrollment(bool success, CancellationToken cancellationToken);
+    }
+
+    // Enrollment status stages
+    public enum EnrollmentStatus
+    {
+        WaitingForApproval, // Waiting for user on enrolled device to approve
+        VerificationCodeNeeded, // About to request verification code from user
+        ExchangingCredentials, // Performing CPACE credential exchange
+        Completing, // Final enrollment steps
+    }
+
+    // Returned when enrollment is canceled
+    public record EnrollmentCanceled(string Reason);
 }

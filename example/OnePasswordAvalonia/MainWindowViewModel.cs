@@ -4,11 +4,15 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Reactive;
+using System.IO;
 using System.Linq;
+using System.Reactive;
 using System.Threading;
 using System.Threading.Tasks;
 using OneOf;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword;
@@ -19,7 +23,9 @@ namespace OnePasswordAvalonia;
 
 public class MainWindowViewModel : ViewModelBase, IAsyncUi
 {
-    private string _username = "";
+    private static bool UseBrowserPersistence => true;
+
+    private string _username = "dmitry@downhillpro.xyz";
     public string Username
     {
         get => _username;
@@ -30,7 +36,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    private string _password = "";
+    private string _password = "-";
     public string Password
     {
         get => _password;
@@ -41,7 +47,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    private string _accountKey = "";
+    private string _accountKey = "A3-B24CMZ-X84BZJ-266SM-J8WXE-6HZXW-SZMAH";
     public string AccountKey
     {
         get => _accountKey;
@@ -52,7 +58,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    private string _deviceId = "";
+    private string _deviceId = "gvcwm2onr66yune47arn4qhq4z";
     public string DeviceId
     {
         get => _deviceId;
@@ -84,7 +90,11 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
     private bool _isLoggingIn = false;
     public bool IsLoginEnabled =>
-        !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password) && !string.IsNullOrEmpty(AccountKey) && !string.IsNullOrEmpty(DeviceId) && !_isLoggingIn;
+        !string.IsNullOrEmpty(Username)
+        && !string.IsNullOrEmpty(Password)
+        && !string.IsNullOrEmpty(AccountKey)
+        && !string.IsNullOrEmpty(DeviceId)
+        && !_isLoggingIn;
 
     public bool IsCancelEnabled => _isLoggingIn;
 
@@ -138,6 +148,51 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     public void CancelLogin()
     {
         _loginCancellationTokenSource?.Cancel();
+    }
+
+    //
+    // SSO Enrollment
+    //
+
+    private bool _isEnrollmentActive = false;
+    public bool IsEnrollmentActive
+    {
+        get => _isEnrollmentActive;
+        set => this.RaiseAndSetIfChanged(ref _isEnrollmentActive, value);
+    }
+
+    private string _enrollmentStatus = "";
+    public string EnrollmentStatus
+    {
+        get => _enrollmentStatus;
+        set => this.RaiseAndSetIfChanged(ref _enrollmentStatus, value);
+    }
+
+    private string _verificationCode = "";
+    public string VerificationCode
+    {
+        get => _verificationCode;
+        set => this.RaiseAndSetIfChanged(ref _verificationCode, value);
+    }
+
+    private bool _isVerificationCodeEnabled = false;
+    public bool IsVerificationCodeEnabled
+    {
+        get => _isVerificationCodeEnabled;
+        set => this.RaiseAndSetIfChanged(ref _isVerificationCodeEnabled, value);
+    }
+
+    private TaskCompletionSource<bool>? _submitVerificationCodeTcs;
+    private TaskCompletionSource<bool>? _cancelEnrollmentTcs;
+
+    public void SubmitVerificationCode()
+    {
+        _submitVerificationCodeTcs?.SetResult(true);
+    }
+
+    public void CancelEnrollment()
+    {
+        _cancelEnrollmentTcs?.SetResult(true);
     }
 
     //
@@ -359,18 +414,73 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken)
+    public async Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken)
     {
-        // TODO: Implement proper SSO UI for Avalonia
-        // For now, throw to indicate this is not yet implemented in the GUI
-        throw new NotImplementedException("SSO login is not yet implemented in the Avalonia UI. Please use the console example for SSO authentication.");
+        return await Task.Run(
+            () =>
+            {
+                var options = new ChromeOptions();
+
+                // Enable this to make a persistent profile to save the login state
+                if (UseBrowserPersistence)
+                {
+                    // Get a temporary directory path for the Chrome profile
+                    var tempPath = Path.GetTempPath();
+                    var chromeProfilePath = Path.Combine(tempPath, "onepassword-chrome-profile");
+
+                    // Ensure the directory exists
+                    if (!Directory.Exists(chromeProfilePath))
+                        Directory.CreateDirectory(chromeProfilePath);
+
+                    options.AddArgument($"--user-data-dir={chromeProfilePath}");
+                    options.AddArgument("--profile-directory=Default");
+                }
+
+                using var driver = new ChromeDriver(options);
+                var timedOut = false;
+
+                driver.Navigate().GoToUrl(ssoLoginUrl);
+
+                try
+                {
+                    // Wait for the redirect to happen
+                    new WebDriverWait(driver, TimeSpan.FromMinutes(2)).Until(
+                        d => d.WindowHandles.Count == 0 || d.Url.StartsWith(redirectTo),
+                        cancellationToken
+                    );
+                }
+                catch (WebDriverTimeoutException)
+                {
+                    timedOut = true;
+                }
+
+                // Timed out or the user closed the window
+                if (timedOut || driver.WindowHandles.Count == 0)
+                    throw new CanceledSsoLoginException("User cancelled SSO login");
+
+                // We should be ok here
+                return driver.Url;
+            },
+            cancellationToken
+        );
+    }
+
+    public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken)
+    {
+        // Show the enrollment UI
+        IsEnrollmentActive = true;
+        EnrollmentStatus = "Starting device enrollment...";
+
+        // Create and return the context
+        var context = new SsoEnrollmentContext(this, cancellationToken);
+        return Task.FromResult<ISsoEnrollmentContext>(context);
     }
 
     public Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken)
     {
-        // TODO: Implement proper device enrollment UI for Avalonia
-        // For now, throw to indicate this is not yet implemented in the GUI
-        throw new NotImplementedException("SSO device enrollment is not yet implemented in the Avalonia UI. Please use the console example for SSO authentication.");
+        // DEPRECATED: This method is kept for backwards compatibility
+        // New code should use ISsoEnrollmentContext.ProvideVerificationCode instead
+        throw new NotImplementedException("This method is deprecated. Use ISsoEnrollmentContext.ProvideVerificationCode instead.");
     }
 
     public async Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
@@ -495,6 +605,124 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                 await completedTask.ConfigureAwait(false); // Await the canceled task to throw the exception
 
             return completedTask;
+        }
+    }
+
+    //
+    // SSO Enrollment Context
+    //
+
+    private class SsoEnrollmentContext : ISsoEnrollmentContext
+    {
+        private readonly MainWindowViewModel _vm;
+        private readonly CancellationToken _externalCancellation;
+        private readonly CancellationTokenSource _internalCancellation;
+        private readonly CancellationTokenSource _linkedCancellation;
+
+        public SsoEnrollmentContext(MainWindowViewModel vm, CancellationToken externalCancellation)
+        {
+            _vm = vm;
+            _externalCancellation = externalCancellation;
+            _internalCancellation = new CancellationTokenSource();
+
+            // Link external cancellation (from library/login) with internal (from UI cancel button)
+            _linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(_externalCancellation, _internalCancellation.Token);
+
+            // Set up the cancel button to trigger internal cancellation
+            _vm._cancelEnrollmentTcs = new TaskCompletionSource<bool>();
+            _vm._cancelEnrollmentTcs.Task.ContinueWith(
+                _ =>
+                {
+                    _internalCancellation.Cancel();
+                },
+                TaskScheduler.Default
+            );
+        }
+
+        public bool IsCancellationRequested => _linkedCancellation.Token.IsCancellationRequested;
+
+        public Task UpdateStatus(PasswordManagerAccess.OnePassword.Ui.EnrollmentStatus status, string message, CancellationToken cancellationToken)
+        {
+            // Update UI based on status
+            _vm.EnrollmentStatus = status switch
+            {
+                PasswordManagerAccess.OnePassword.Ui.EnrollmentStatus.WaitingForApproval =>
+                    $"{message}\nPlease check your enrolled devices and approve this device.",
+                PasswordManagerAccess.OnePassword.Ui.EnrollmentStatus.VerificationCodeNeeded =>
+                    $"{message}\nA verification code should now be displayed on your enrolled device.",
+                PasswordManagerAccess.OnePassword.Ui.EnrollmentStatus.ExchangingCredentials => $"{message}\nSecurely exchanging credentials...",
+                PasswordManagerAccess.OnePassword.Ui.EnrollmentStatus.Completing => $"{message}\nFinalizing enrollment...",
+                _ => message,
+            };
+
+            return Task.CompletedTask;
+        }
+
+        public async Task<OneOf<string, EnrollmentCanceled>> ProvideVerificationCode(CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Enable the verification code input
+                _vm.IsVerificationCodeEnabled = true;
+                _vm.VerificationCode = "";
+                _vm._submitVerificationCodeTcs = new TaskCompletionSource<bool>();
+
+                // Wait for either:
+                // 1. User submits code
+                // 2. User cancels enrollment
+                // 3. External cancellation (login timeout, etc.)
+                var done = await WhenAnyWithCancellation(
+                    _linkedCancellation.Token,
+                    _vm._submitVerificationCodeTcs.Task,
+                    _vm._cancelEnrollmentTcs!.Task
+                );
+
+                if (done == _vm._cancelEnrollmentTcs.Task)
+                    return new EnrollmentCanceled("User clicked cancel");
+
+                if (_linkedCancellation.Token.IsCancellationRequested)
+                    return new EnrollmentCanceled("Operation was canceled");
+
+                // User submitted the code
+                var code = _vm.VerificationCode;
+                if (string.IsNullOrWhiteSpace(code))
+                    return new EnrollmentCanceled("No verification code provided");
+
+                return code.Trim();
+            }
+            finally
+            {
+                _vm.IsVerificationCodeEnabled = false;
+                _vm._submitVerificationCodeTcs = null;
+            }
+        }
+
+        public Task EndEnrollment(bool success, CancellationToken cancellationToken)
+        {
+            // Clean up UI
+            _vm.IsEnrollmentActive = false;
+            _vm.EnrollmentStatus = success ? "Device enrolled successfully!" : "Device enrollment failed or was canceled.";
+
+            // Clean up resources
+            _vm._cancelEnrollmentTcs = null;
+            _linkedCancellation.Dispose();
+            _internalCancellation.Dispose();
+
+            return Task.CompletedTask;
+        }
+
+        private static async Task<Task> WhenAnyWithCancellation(CancellationToken cancellationToken, params Task[] tasks)
+        {
+            var cancelTcs = new TaskCompletionSource<object>();
+            await using (cancellationToken.Register(() => cancelTcs.TrySetCanceled(cancellationToken)))
+            {
+                var completedTask = await Task.WhenAny(tasks.Append(cancelTcs.Task)).ConfigureAwait(false);
+
+                if (completedTask == cancelTcs.Task)
+                    await completedTask.ConfigureAwait(false);
+
+                return completedTask;
+            }
         }
     }
 }

@@ -175,7 +175,10 @@ namespace PasswordManagerAccess.OnePassword
         )
         {
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
-            return await LogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+            var isSso = await IsSsoAccount(credentials.Username, rest, cancellationToken).ConfigureAwait(false);
+            return isSso
+                ? await SsoLogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false)
+                : await LogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
         }
 
         internal static Credentials ParseServiceAccountToken(string token)

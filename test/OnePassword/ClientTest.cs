@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using OneOf;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Utilities;
@@ -943,36 +944,49 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         internal class CancelingUi : IAsyncUi
         {
-            public Task<OneOf.OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
                 int attempt,
                 MfaMethod[] otherMethods,
                 CancellationToken cancellationToken
-            ) => Task.FromResult<OneOf.OneOf<Otp, MfaMethod, Canceled>>(new Canceled("User canceled"));
+            ) => Task.FromResult<OneOf<Otp, MfaMethod, Canceled>>(new Canceled("User canceled"));
 
-            public Task<OneOf.OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
+            public Task<OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
                 int attempt,
                 MfaMethod[] otherMethods,
                 CancellationToken cancellationToken
-            ) => Task.FromResult<OneOf.OneOf<RememberMe, MfaMethod, Canceled>>(new Canceled("User canceled"));
+            ) => Task.FromResult<OneOf<RememberMe, MfaMethod, Canceled>>(new Canceled("User canceled"));
 
-            public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) =>
-                Task.FromResult(""); // Return empty string to signal cancellation
+            public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) => Task.FromResult(""); // Return empty string to signal cancellation
 
-            public Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken) =>
-                Task.FromResult(""); // Return empty string to signal cancellation
+            public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) =>
+                Task.FromResult<ISsoEnrollmentContext>(new CancelingEnrollmentContext());
 
-            public Task<OneOf.OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
+            public Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken) => Task.FromResult(""); // Return empty string to signal cancellation
+
+            public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
                 DuoDevice[] devices,
                 MfaMethod[] otherMethods,
                 CancellationToken cancellationToken
             ) => Task.FromResult(IDuoAsyncUi.CancelChoice());
 
-            public Task<OneOf.OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken) =>
+            public Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken) =>
                 Task.FromResult(IDuoAsyncUi.CancelPasscode());
 
             public Task DuoDone(CancellationToken cancellationToken) => Task.CompletedTask;
 
             public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
+        internal class CancelingEnrollmentContext : ISsoEnrollmentContext
+        {
+            public bool IsCancellationRequested => true; // Always signal cancellation
+
+            public Task UpdateStatus(EnrollmentStatus status, string message, CancellationToken cancellationToken) => Task.CompletedTask;
+
+            public Task<OneOf<string, EnrollmentCanceled>> ProvideVerificationCode(CancellationToken cancellationToken) =>
+                Task.FromResult<OneOf<string, EnrollmentCanceled>>(new EnrollmentCanceled("Test cancellation"));
+
+            public Task EndEnrollment(bool success, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         private string EncryptFixture(string name)

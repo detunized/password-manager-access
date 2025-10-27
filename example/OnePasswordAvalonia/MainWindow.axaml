@@ -8,101 +8,127 @@
         x:CompileBindings="True"
         x:DataType="vm:MainWindowViewModel"
         Title="1Password">
-    <StackPanel Spacing="5" Margin="20" VerticalAlignment="Stretch">
+    <Grid>
+        <StackPanel Spacing="5" Margin="20" VerticalAlignment="Stretch">
 
-        <TextBlock Margin="0 5">Username</TextBlock>
-        <TextBox Text="{Binding Username}" />
+            <TextBlock Margin="0 5">Username</TextBlock>
+            <TextBox Text="{Binding Username}" />
 
-        <TextBlock Margin="0 5">Password</TextBlock>
-        <TextBox Text="{Binding Password}" PasswordChar="*" />
+            <TextBlock Margin="0 5">Password</TextBlock>
+            <TextBox Text="{Binding Password}" PasswordChar="*" />
 
-        <TextBlock Margin="0 5">Account Key</TextBlock>
-        <TextBox Text="{Binding AccountKey}" />
+            <TextBlock Margin="0 5">Account Key</TextBlock>
+            <TextBox Text="{Binding AccountKey}" />
 
-        <TextBlock Margin="0 5">Device ID</TextBlock>
-        <DockPanel>
-            <Button Command="{Binding GenerateDeviceId}" ToolTip.Tip="Generate random UUID" DockPanel.Dock="Right" Margin="5,0,0,0">🎲</Button>
-            <TextBox Text="{Binding DeviceId}" />
-        </DockPanel>
+            <TextBlock Margin="0 5">Device ID</TextBlock>
+            <DockPanel>
+                <Button Command="{Binding GenerateDeviceId}" ToolTip.Tip="Generate random UUID" DockPanel.Dock="Right" Margin="5,0,0,0">🎲</Button>
+                <TextBox Text="{Binding DeviceId}" />
+            </DockPanel>
 
-        <TextBlock Margin="0 5">Domain (optional)</TextBlock>
-        <TextBox Text="{Binding Domain}" Watermark="my.1password.com" />
+            <TextBlock Margin="0 5">Domain (optional)</TextBlock>
+            <TextBox Text="{Binding Domain}" Watermark="my.1password.com" />
 
-        <StackPanel Spacing="5" Orientation="Horizontal">
-            <Button Command="{Binding Login}" IsEnabled="{Binding IsLoginEnabled}">Login</Button>
-            <Button Command="{Binding CancelLogin}" IsEnabled="{Binding IsCancelEnabled}">Cancel</Button>
-        </StackPanel>
-
-        <TextBlock Margin="0 5" Text="{Binding Status}" Foreground="Teal" />
-
-        <!-- MFA -->
-        <Separator />
-
-        <StackPanel Spacing="5">
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="{Binding MfaStatus}" Foreground="DarkGreen" />
-                <CheckBox IsChecked="{Binding RememberMe}" IsEnabled="{Binding IsMfaEnabled}">Remember me</CheckBox>
-                <TextBlock Text="{Binding MfaAttempt}" Foreground="DimGray" />
+            <StackPanel Spacing="5" Orientation="Horizontal">
+                <Button Command="{Binding Login}" IsEnabled="{Binding IsLoginEnabled}">Login</Button>
+                <Button Command="{Binding CancelLogin}" IsEnabled="{Binding IsCancelEnabled}">Cancel</Button>
             </StackPanel>
 
+            <TextBlock Margin="0 5" Text="{Binding Status}" Foreground="Teal" />
+
+            <!-- MFA -->
             <Separator />
 
-            <StackPanel Spacing="20" Orientation="Horizontal">
+            <StackPanel Spacing="5">
 
-                <!-- Google Auth -->
-                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsGoogleAuthEnabled}">
-                    <TextBlock>Google Authenticator:</TextBlock>
-                    <TextBox Text="{Binding GoogleAuthPasscode}" />
-                    <Button Command="{Binding ApproveGoogleAuth}">Approve</Button>
+                <StackPanel Spacing="5">
+                    <TextBlock Text="{Binding MfaStatus}" Foreground="DarkGreen" />
+                    <CheckBox IsChecked="{Binding RememberMe}" IsEnabled="{Binding IsMfaEnabled}">Remember me</CheckBox>
+                    <TextBlock Text="{Binding MfaAttempt}" Foreground="DimGray" />
                 </StackPanel>
 
-                <!-- WebAuthn -->
-                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsWebAuthnEnabled}">
-                    <TextBlock>WebAuthn:</TextBlock>
-                    <Button Command="{Binding ApproveWebAuthn}">Continue</Button>
+                <Separator />
+
+                <StackPanel Spacing="20" Orientation="Horizontal">
+
+                    <!-- Google Auth -->
+                    <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsGoogleAuthEnabled}">
+                        <TextBlock>Google Authenticator:</TextBlock>
+                        <TextBox Text="{Binding GoogleAuthPasscode}" />
+                        <Button Command="{Binding ApproveGoogleAuth}">Approve</Button>
+                    </StackPanel>
+
+                    <!-- WebAuthn -->
+                    <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsWebAuthnEnabled}">
+                        <TextBlock>WebAuthn:</TextBlock>
+                        <Button Command="{Binding ApproveWebAuthn}">Continue</Button>
+                    </StackPanel>
+
+                    <!-- Duo -->
+                    <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsDuoEnabled}">
+                        <TextBlock>Duo:</TextBlock>
+                        <ItemsControl ItemsSource="{Binding DuoMethods}" IsEnabled="{Binding IsDuoFactorSelectionEnabled}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton Content="{Binding Name}" GroupName="Duo" IsChecked="{Binding IsChecked}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Command="{Binding SelectDuo}" IsEnabled="{Binding IsDuoFactorSelectionEnabled}">Select</Button>
+
+                        <TextBox Text="{Binding DuoPasscode}" IsEnabled="{Binding IsDuoPasscodeEnabled}" />
+                        <Button Command="{Binding SubmitDuoPasscode}" IsEnabled="{Binding IsDuoPasscodeEnabled}">Submit passcode</Button>
+
+                        <TextBlock Margin="0 5" Text="{Binding DuoState}" Foreground="Blue" />
+                        <TextBlock Margin="0 5" Text="{Binding DuoStatus}" Foreground="Green" />
+                    </StackPanel>
+
                 </StackPanel>
 
-                <!-- Duo -->
-                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsDuoEnabled}">
-                    <TextBlock>Duo:</TextBlock>
-                    <ItemsControl ItemsSource="{Binding DuoMethods}" IsEnabled="{Binding IsDuoFactorSelectionEnabled}">
+                <Separator />
+
+                <!-- MFA methods -->
+                <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsMfaEnabled}">
+                    <TextBlock>Use a different MFA method:</TextBlock>
+                    <ItemsControl ItemsSource="{Binding EnabledMfaMethods}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton Content="{Binding Name}" GroupName="Duo" IsChecked="{Binding IsChecked}" />
+                                <Button Content="{Binding Name}" Command="{Binding Select}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-
-                    <Button Command="{Binding SelectDuo}" IsEnabled="{Binding IsDuoFactorSelectionEnabled}">Select</Button>
-
-                    <TextBox Text="{Binding DuoPasscode}" IsEnabled="{Binding IsDuoPasscodeEnabled}" />
-                    <Button Command="{Binding SubmitDuoPasscode}" IsEnabled="{Binding IsDuoPasscodeEnabled}">Submit passcode</Button>
-
-                    <TextBlock Margin="0 5" Text="{Binding DuoState}" Foreground="Blue" />
-                    <TextBlock Margin="0 5" Text="{Binding DuoStatus}" Foreground="Green" />
+                    <TextBlock>Or cancel:</TextBlock>
+                    <Button Content="Cancel MFA" Command="{Binding CancelMfa}" />
                 </StackPanel>
 
             </StackPanel>
 
-            <Separator />
-
-            <!-- MFA methods -->
-            <StackPanel Spacing="5" VerticalAlignment="Top" IsEnabled="{Binding IsMfaEnabled}">
-                <TextBlock>Use a different MFA method:</TextBlock>
-                <ItemsControl ItemsSource="{Binding EnabledMfaMethods}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Content="{Binding Name}" Command="{Binding Select}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock>Or cancel:</TextBlock>
-                <Button Content="Cancel MFA" Command="{Binding CancelMfa}" />
-            </StackPanel>
-
         </StackPanel>
 
-    </StackPanel>
+        <!-- SSO Enrollment Modal Overlay -->
+        <Border IsVisible="{Binding IsEnrollmentActive}"
+                Background="#80000000">
+            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    BorderThickness="1"
+                    Padding="20"
+                    MaxWidth="400"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="SSO Device Enrollment" />
+                    <TextBlock Text="{Binding EnrollmentStatus}" TextWrapping="Wrap" />
+                    <StackPanel Spacing="5" IsEnabled="{Binding IsVerificationCodeEnabled}">
+                        <TextBlock Text="Verification Code:" />
+                        <TextBox Text="{Binding VerificationCode}" />
+                        <Button Content="Submit Code" Command="{Binding SubmitVerificationCode}" />
+                    </StackPanel>
+                    <Button Content="Cancel Enrollment" Command="{Binding CancelEnrollment}" />
+                </StackPanel>
+            </Border>
+        </Border>
+
+    </Grid>
 
 </Window>

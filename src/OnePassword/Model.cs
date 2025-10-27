@@ -614,11 +614,12 @@ internal static class Model
         [JsonPropertyName("user")]
         public required SsoUser User { get; init; }
 
-        [JsonPropertyName("auth")]
-        public required Auth Auth { get; init; }
-
         [JsonPropertyName("ssoAuth")]
         public required SsoAuth SsoAuth { get; init; }
+
+        // Optional, as this field can be null or missing
+        [JsonPropertyName("auth")]
+        public Auth? Auth { get; init; }
     }
 
     public record SsoUser
