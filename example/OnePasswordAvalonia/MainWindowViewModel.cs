@@ -100,6 +100,9 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
     private CancellationTokenSource? _loginCancellationTokenSource;
 
+    // TODO: Make this a permanent storage
+    private readonly AsyncPlainStorage _storage = new();
+
     public async Task Login()
     {
         _isLoggingIn = true;
@@ -122,7 +125,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
                 },
                 new AppInfo { Name = "PMA 1Password Avalonia Example", Version = "1.0.0" },
                 this,
-                new AsyncPlainStorage(),
+                _storage,
                 _loginCancellationTokenSource.Token
             );
 
