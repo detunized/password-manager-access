@@ -585,11 +585,13 @@ internal static class Model
         [JsonPropertyName("type")]
         public required string Type { get; init; }
 
+        // Optional, as this field can be null or missing
         [JsonPropertyName("provider")]
-        public required string Provider { get; init; }
+        public string? Provider { get; init; }
 
+        // Optional, as this field can be null or missing
         [JsonPropertyName("iconUrl")]
-        public required string IconUrl { get; init; }
+        public string? IconUrl { get; init; }
     }
 
     //
