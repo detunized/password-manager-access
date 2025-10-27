@@ -339,20 +339,24 @@ public static partial class Client
 
             // 2. Wait for the user to click on one of the existing devices the "Transfer key" button to initiate the enrollment.
             // Note: when the user clicks the "Deny" button the status update fails with 404.
-            if (
-                !await PollStatusUntilDone(
-                        enrollmentContext,
-                        EnrollmentStatus.WaitingForCode,
-                        signInToken,
-                        ssoEnroll.EnrollmentUuid,
-                        rest,
-                        cancellationToken
-                    )
-                    .ConfigureAwait(false)
-            )
+            var success = await PollStatusUntilDone(
+                    enrollmentContext,
+                    EnrollmentStatus.WaitingForCode,
+                    signInToken,
+                    ssoEnroll.EnrollmentUuid,
+                    rest,
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+            if (!success)
             {
                 if (enrollmentContext.IsCancellationRequested)
+                {
+                    // Cancel the enrollment on the server side to let other clients know
+                    await CancelEnrollment(signInToken, ssoEnroll.EnrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
                     throw new CanceledSsoLoginException("Device enrollment was canceled by the user");
+                }
+
                 throw new InternalErrorException("Enrollment failed");
             }
 
@@ -451,6 +455,17 @@ public static partial class Client
             throw MakeError(response);
 
         return response.Data;
+    }
+
+    internal static async Task CancelEnrollment(string signInToken, string enrollmentUuid, RestClient rest, CancellationToken cancellationToken)
+    {
+        // We ignore all errors since we're canceling anyway. It shouldn't throw when request fails.
+        _ = await rest.DeleteJsonAsync(
+                "v2/device/enrollments",
+                new Dictionary<string, object> { ["enrollmentUuid"] = enrollmentUuid, ["signInToken"] = signInToken },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
     }
 
     internal static Encrypted EncryptForStorage(DeviceKeyDerivation deviceKeyDerivation) =>
