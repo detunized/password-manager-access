@@ -387,6 +387,109 @@ internal partial class RestClient
         );
 
     //
+    // DELETE
+    //
+
+    public Task<RestResponse<string, T>> DeleteAsync<T>(string endpoint, CancellationToken cancellationToken) =>
+        DeleteAsync<T>(endpoint, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> DeleteAsync<T>(string endpoint, HttpHeaders headers, CancellationToken cancellationToken) =>
+        DeleteAsync<T>(endpoint, headers, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> DeleteAsync<T>(
+        string endpoint,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => DeleteAsync<T>(endpoint, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> DeleteAsync<T>(
+        string endpoint,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
+    ) =>
+        MakeRequestAsync<string, T>(
+            endpoint,
+            HttpMethod.Delete,
+            null, // This is a "no-content" DELETE
+            headers ?? NoHeaders,
+            cookies ?? NoCookies,
+            maxRedirects,
+            DeserializeFromJson<T>,
+            cancellationToken
+        );
+
+    //
+    // DELETE JSON
+    //
+
+    public Task<RestResponse<string>> DeleteJsonAsync(string endpoint, PostParameters parameters, CancellationToken cancellationToken) =>
+        DeleteJsonAsync(endpoint, parameters, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> DeleteJsonAsync(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        CancellationToken cancellationToken
+    ) => DeleteJsonAsync(endpoint, parameters, headers, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> DeleteJsonAsync(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => DeleteJsonAsync(endpoint, parameters, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string>> DeleteJsonAsync(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
+    ) => MakeRequestAsync<string>(endpoint, HttpMethod.Delete, ToJsonContent(parameters), headers, cookies, maxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> DeleteJsonAsync<T>(string endpoint, PostParameters parameters, CancellationToken cancellationToken) =>
+        DeleteJsonAsync<T>(endpoint, parameters, NoHeaders, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> DeleteJsonAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        CancellationToken cancellationToken
+    ) => DeleteJsonAsync<T>(endpoint, parameters, headers, NoCookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> DeleteJsonAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        CancellationToken cancellationToken
+    ) => DeleteJsonAsync<T>(endpoint, parameters, headers, cookies, MaxRedirects, cancellationToken);
+
+    public Task<RestResponse<string, T>> DeleteJsonAsync<T>(
+        string endpoint,
+        PostParameters parameters,
+        HttpHeaders headers,
+        HttpCookies cookies,
+        int maxRedirects,
+        CancellationToken cancellationToken
+    ) =>
+        MakeRequestAsync<string, T>(
+            endpoint,
+            HttpMethod.Delete,
+            ToJsonContent(parameters),
+            headers,
+            cookies,
+            maxRedirects,
+            DeserializeFromJson<T>,
+            cancellationToken
+        );
+
+    //
     // Private
     //
 
