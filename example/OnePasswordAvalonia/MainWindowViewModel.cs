@@ -476,13 +476,6 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         return Task.FromResult<ISsoEnrollmentContext>(context);
     }
 
-    public Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken)
-    {
-        // DEPRECATED: This method is kept for backwards compatibility
-        // New code should use ISsoEnrollmentContext.ProvideVerificationCode instead
-        throw new NotImplementedException("This method is deprecated. Use ISsoEnrollmentContext.ProvideVerificationCode instead.");
-    }
-
     public async Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
         DuoDevice[] devices,
         MfaMethod[] otherMethods,
@@ -615,18 +608,16 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
     private class SsoEnrollmentContext : ISsoEnrollmentContext
     {
         private readonly MainWindowViewModel _vm;
-        private readonly CancellationToken _externalCancellation;
         private readonly CancellationTokenSource _internalCancellation;
         private readonly CancellationTokenSource _linkedCancellation;
 
         public SsoEnrollmentContext(MainWindowViewModel vm, CancellationToken externalCancellation)
         {
             _vm = vm;
-            _externalCancellation = externalCancellation;
             _internalCancellation = new CancellationTokenSource();
 
             // Link external cancellation (from library/login) with internal (from UI cancel button)
-            _linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(_externalCancellation, _internalCancellation.Token);
+            _linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(externalCancellation, _internalCancellation.Token);
 
             // Set up the cancel button to trigger internal cancellation
             _vm._cancelEnrollmentTcs = new TaskCompletionSource<bool>();
@@ -641,7 +632,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
         public bool IsCancellationRequested => _linkedCancellation.Token.IsCancellationRequested;
 
-        public Task UpdateStatus(PasswordManagerAccess.OnePassword.Ui.EnrollmentStatus status, string message, CancellationToken cancellationToken)
+        public Task UpdateStatus(EnrollmentStatus status, string message, CancellationToken cancellationToken)
         {
             // Update UI based on status
             _vm.EnrollmentStatus = status switch

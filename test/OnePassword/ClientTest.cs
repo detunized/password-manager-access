@@ -961,8 +961,6 @@ namespace PasswordManagerAccess.Test.OnePassword
             public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) =>
                 Task.FromResult<ISsoEnrollmentContext>(new CancelingEnrollmentContext());
 
-            public Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken) => Task.FromResult(""); // Return empty string to signal cancellation
-
             public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
                 DuoDevice[] devices,
                 MfaMethod[] otherMethods,

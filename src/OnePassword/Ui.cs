@@ -40,13 +40,6 @@ namespace PasswordManagerAccess.OnePassword.Ui
         // The context provides bidirectional communication between the library and UI.
         // The context's EndEnrollment method will be called when enrollment completes (success or failure).
         Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken);
-
-        // DEPRECATED: Device enrollment verification code
-        // This method is still supported but will eventually be replaced by ISsoEnrollmentContext.ProvideVerificationCode
-        // When enrolling a new device for SSO, the user needs to enter a verification code that is displayed
-        // on an already enrolled device. This method prompts the user for that code.
-        // Returns the verification code, or an empty string if canceled.
-        Task<string> ProvideDeviceEnrollmentVerificationCode(CancellationToken cancellationToken);
     }
 
     public record Otp(string Passcode, bool RememberMe);

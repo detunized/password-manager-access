@@ -175,7 +175,7 @@ namespace PasswordManagerAccess.Test.OnePassword
             await AssertLogicError(() => ui.ProvideGoogleAuthPasscode(0, [], CancellationToken.None));
             await AssertLogicError(() => ui.ProvideWebAuthnRememberMe(0, [], CancellationToken.None));
             await AssertLogicError(() => ui.PerformSsoLogin("", "", CancellationToken.None));
-            await AssertLogicError(() => ui.ProvideDeviceEnrollmentVerificationCode(CancellationToken.None));
+            await AssertLogicError(() => ui.BeginSsoEnrollment(CancellationToken.None));
         }
 
         [Fact]
