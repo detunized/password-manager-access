@@ -7,9 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.OnePassword.Ui;
 using Ristretto;
@@ -106,7 +108,7 @@ public static partial class Client
         var ssoRest = MakeRestClient(rest.Transport, $"{loginInfo.SignInAddress}/api");
 
         // 3. Start the SSO login process by getting the SSO login URL
-        var ssoLoginUrl = await StartSsoLogin(credentials, loginInfo, storage, ssoRest, cancellationToken).ConfigureAwait(false);
+        var ssoLoginUrl = await StartSsoLogin(loginInfo, storage, ssoRest, cancellationToken).ConfigureAwait(false);
 
         // 4. Perform the SSO login
         var (code, state) = await PerformSsoLogin(ssoLoginUrl, ui, cancellationToken).ConfigureAwait(false);
@@ -228,7 +230,6 @@ public static partial class Client
     }
 
     internal static async Task<string> StartSsoLogin(
-        Credentials credentials,
         Model.LoginInfo loginInfo,
         IAsyncSecureStorage storage,
         RestClient rest,
@@ -328,63 +329,89 @@ public static partial class Client
         // Begin enrollment and get context for bidirectional communication
         var enrollmentContext = await ui.BeginSsoEnrollment(cancellationToken).ConfigureAwait(false);
 
+        // Link the cancellation tokens from the UI and the caller
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, enrollmentContext.Token);
+        var linkedToken = linkedCts.Token;
+
+        var result = SsoEnrollmentResult.Failed;
+        string? enrollmentUuid = null;
+
         try
         {
             // 1. Kick off the enrollment process. This should send a signal to the already enrolled devices to
             //    prepare to transfer the key to the new device.
             await enrollmentContext
-                .UpdateStatus(Ui.EnrollmentStatus.WaitingForApproval, "Waiting for approval from enrolled device...", cancellationToken)
+                .UpdateStatus(Ui.EnrollmentStatus.WaitingForApproval, "Waiting for approval from enrolled device...", linkedToken)
                 .ConfigureAwait(false);
-            var ssoEnroll = await StartEnrollment(signInToken, rest, cancellationToken).ConfigureAwait(false);
+
+            enrollmentUuid = await StartEnrollment(signInToken, rest, linkedToken).ConfigureAwait(false);
 
             // 2. Wait for the user to click on one of the existing devices the "Transfer key" button to initiate the enrollment.
             // Note: when the user clicks the "Deny" button the status update fails with 404.
-            var success = await PollStatusUntilDone(
-                    enrollmentContext,
-                    EnrollmentStatus.WaitingForCode,
+            var status = await PollStatusUntilDone(
+                    ignore: [EnrollmentStatus.SelectingVerifier, EnrollmentStatus.WaitingForCode],
                     signInToken,
-                    ssoEnroll.EnrollmentUuid,
+                    enrollmentUuid,
                     rest,
-                    cancellationToken
+                    linkedToken
                 )
                 .ConfigureAwait(false);
-            if (!success)
-            {
-                if (enrollmentContext.IsCancellationRequested)
-                {
-                    // Cancel the enrollment on the server side to let other clients know
-                    await CancelEnrollment(signInToken, ssoEnroll.EnrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
-                    throw new CanceledSsoLoginException("Device enrollment was canceled by the user");
-                }
 
-                throw new InternalErrorException("Enrollment failed");
+            switch (status.Value)
+            {
+                case TimeOut:
+                    throw new InternalErrorException("Device enrollment timed out");
+                case EnrollmentStatus es:
+                    switch (es)
+                    {
+                        case EnrollmentStatus.WaitingForCode:
+                            // All good, proceed to the next step
+                            break;
+                        case EnrollmentStatus.Denied:
+                            result = SsoEnrollmentResult.Denied;
+                            throw new CanceledSsoLoginException("Device enrollment was denied from an existing device");
+                        default:
+                            throw new InternalErrorException($"Enrollment failed with unknown status {es}");
+                    }
+                    break;
             }
 
             // 3. Exchange credentials
             await enrollmentContext
-                .UpdateStatus(Ui.EnrollmentStatus.VerificationCodeNeeded, "Ready to enter verification code", cancellationToken)
+                .UpdateStatus(Ui.EnrollmentStatus.VerificationCodeNeeded, "Ready to enter verification code", linkedToken)
                 .ConfigureAwait(false);
-
             var credentialBundle = await ExchangeCredentials(
                     username: credentials.Username,
                     signInAddress: loginInfo.SignInAddress,
                     signInToken: signInToken,
-                    enrollmentUuid: ssoEnroll.EnrollmentUuid,
+                    enrollmentUuid: enrollmentUuid,
                     enrollmentContext: enrollmentContext,
                     rest: rest,
-                    cancellationToken: cancellationToken
+                    cancellationToken: linkedToken
                 )
                 .ConfigureAwait(false);
 
-            await enrollmentContext.UpdateStatus(Ui.EnrollmentStatus.Completing, "Completing enrollment", cancellationToken).ConfigureAwait(false);
+            await enrollmentContext.UpdateStatus(Ui.EnrollmentStatus.Completing, "Completing enrollment", linkedToken).ConfigureAwait(false);
 
-            return (credentialBundle, ssoEnroll.EnrollmentUuid);
+            // 4. All good
+            result = SsoEnrollmentResult.Success;
+            return (credentialBundle, enrollmentUuid);
+        }
+        catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+        {
+            // Canceled by the user
+            result = SsoEnrollmentResult.Canceled;
+
+            // Cancel the enrollment on the server side to let other clients know
+            if (!enrollmentUuid.IsNullOrEmpty())
+                await CancelEnrollment(signInToken, enrollmentUuid, rest, CancellationToken.None).ConfigureAwait(false);
+
+            throw new CanceledSsoLoginException("Device enrollment was canceled by the user");
         }
         finally
         {
             // Always call EndEnrollment, even on failure
-            // TODO: Deal with the `success` parameter!
-            await enrollmentContext.EndEnrollment(success: true, cancellationToken).ConfigureAwait(false);
+            await enrollmentContext.EndEnrollment(result, CancellationToken.None).ConfigureAwait(false);
         }
     }
 
@@ -442,7 +469,8 @@ public static partial class Client
         return new AesKey(deviceKeyDerivation.Id, key);
     }
 
-    internal static async Task<Model.SsoEnrollInfo> StartEnrollment(string signInToken, RestClient rest, CancellationToken cancellationToken)
+    // Returns enrollment UUID
+    internal static async Task<string> StartEnrollment(string signInToken, RestClient rest, CancellationToken cancellationToken)
     {
         var response = await rest.PostJsonAsync<Model.SsoEnrollInfo>(
                 "v3/device/enrollments",
@@ -454,7 +482,7 @@ public static partial class Client
         if (!response.IsSuccessful)
             throw MakeError(response);
 
-        return response.Data;
+        return response.Data.EnrollmentUuid;
     }
 
     internal static async Task CancelEnrollment(string signInToken, string enrollmentUuid, RestClient rest, CancellationToken cancellationToken)
@@ -500,12 +528,14 @@ public static partial class Client
     {
         SelectingVerifier,
         WaitingForCode,
+        Denied,
         Unknown,
     }
 
-    internal static async Task<bool> PollStatusUntilDone(
-        ISsoEnrollmentContext context,
-        EnrollmentStatus waitFor,
+    internal record TimeOut;
+
+    internal static async Task<OneOf<EnrollmentStatus, TimeOut>> PollStatusUntilDone(
+        EnrollmentStatus[] ignore,
         string signInToken,
         string enrollmentUuid,
         RestClient rest,
@@ -518,23 +548,14 @@ public static partial class Client
 
         for (var i = 0; i < totalPollTimeMs / pollIntervalMs; i++)
         {
-            // Check if user canceled via UI
-            if (context.IsCancellationRequested)
-                return false;
-
             var status = await GetEnrollmentStatus(signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
-            if (status == waitFor)
-                return true;
+            if (!ignore.Contains(status))
+                return status;
 
-            // Check if user canceled via UI
-            if (context.IsCancellationRequested)
-                return false;
-
-            // TODO: See if we could link these tokens to make a quick cancellation and not to wait for Delay expire
             await Task.Delay(pollIntervalMs, cancellationToken).ConfigureAwait(false);
         }
 
-        return false;
+        return new TimeOut();
     }
 
     internal static async Task<EnrollmentStatus> GetEnrollmentStatus(
@@ -544,7 +565,6 @@ public static partial class Client
         CancellationToken cancellationToken
     )
     {
-        // TODO: Handle the case where the user clicks the "Deny" button. The response will be a 404.
         var response = await rest.PostJsonAsync<Model.SsoEnrollStatus>(
                 "v3/device/enrollments/status",
                 new Dictionary<string, object> { ["signInToken"] = signInToken, ["enrollmentUuid"] = enrollmentUuid },
@@ -553,7 +573,16 @@ public static partial class Client
             .ConfigureAwait(false);
 
         if (!response.IsSuccessful)
+        {
+            // When the user denies the enrollment request, the server responds with 404.
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                // TODO: Normally the body is just "{}". Should we verify that?
+                return EnrollmentStatus.Denied;
+            }
+
             throw MakeError(response);
+        }
 
         return response.Data.Status switch
         {

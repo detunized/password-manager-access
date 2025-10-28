@@ -977,14 +977,14 @@ namespace PasswordManagerAccess.Test.OnePassword
 
         internal class CancelingEnrollmentContext : ISsoEnrollmentContext
         {
-            public bool IsCancellationRequested => true; // Always signal cancellation
+            public CancellationToken Token => new(true);
 
             public Task UpdateStatus(EnrollmentStatus status, string message, CancellationToken cancellationToken) => Task.CompletedTask;
 
             public Task<OneOf<string, EnrollmentCanceled>> ProvideVerificationCode(CancellationToken cancellationToken) =>
                 Task.FromResult<OneOf<string, EnrollmentCanceled>>(new EnrollmentCanceled("Test cancellation"));
 
-            public Task EndEnrollment(bool success, CancellationToken cancellationToken) => Task.CompletedTask;
+            public Task EndEnrollment(SsoEnrollmentResult result, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         private string EncryptFixture(string name)

@@ -52,6 +52,21 @@ namespace PasswordManagerAccess.OnePassword.Ui
     // SSO Enrollment Context
     //
 
+    public enum SsoEnrollmentResult
+    {
+        // All good
+        Success,
+
+        // User canceled the enrollment
+        Canceled,
+
+        // Denied from the enrolled device
+        Denied,
+
+        // Some error occurred
+        Failed,
+    }
+
     // Context for managing SSO device enrollment UI lifecycle
     // This interface provides bidirectional communication between the library and UI:
     // - Library can send status updates via UpdateStatus
@@ -59,21 +74,21 @@ namespace PasswordManagerAccess.OnePassword.Ui
     // - Both can participate in the enrollment flow via ProvideVerificationCode
     public interface ISsoEnrollmentContext
     {
+        // This token should be set by the UI and monitored by the library.
+        // It's used to signal cancellation from the application side.
+        CancellationToken Token { get; }
+
         // Status updates from library to UI
         // Called at various stages during enrollment to update the UI with progress
         Task UpdateStatus(EnrollmentStatus status, string message, CancellationToken cancellationToken);
 
-        // Get verification code from user
+        // Get verification code from user, called by the library when it's time to provide the code.
         // Returns either the code entered by the user, or EnrollmentCanceled if canceled
         Task<OneOf<string, EnrollmentCanceled>> ProvideVerificationCode(CancellationToken cancellationToken);
 
-        // Check if user has requested cancellation
-        // The library should periodically check this during long-running operations
-        bool IsCancellationRequested { get; }
-
         // Cleanup and close the enrollment UI
         // Guaranteed to be called regardless of success/failure
-        Task EndEnrollment(bool success, CancellationToken cancellationToken);
+        Task EndEnrollment(SsoEnrollmentResult result, CancellationToken cancellationToken);
     }
 
     // Enrollment status stages

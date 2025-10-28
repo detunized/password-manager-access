@@ -633,11 +633,12 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             );
         }
 
-        public bool IsCancellationRequested => _linkedCancellation.Token.IsCancellationRequested;
+        public CancellationToken Token => _linkedCancellation.Token;
 
         public Task UpdateStatus(EnrollmentStatus status, string message, CancellationToken cancellationToken)
         {
             // Update UI based on status
+            // TODO: This is not necessarily coming on the UI thread. Forward it to the UI thread.
             _vm.EnrollmentStatus = status switch
             {
                 PasswordManagerAccess.OnePassword.Ui.EnrollmentStatus.WaitingForApproval =>
@@ -691,11 +692,18 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
             }
         }
 
-        public Task EndEnrollment(bool success, CancellationToken cancellationToken)
+        public Task EndEnrollment(SsoEnrollmentResult result, CancellationToken cancellationToken)
         {
             // Clean up UI
             _vm.IsEnrollmentActive = false;
-            _vm.EnrollmentStatus = success ? "Device enrolled successfully!" : "Device enrollment failed or was canceled.";
+            _vm.EnrollmentStatus = result switch
+            {
+                SsoEnrollmentResult.Success => "Device enrollment completed successfully.",
+                SsoEnrollmentResult.Canceled => "Device enrollment was canceled by the user.",
+                SsoEnrollmentResult.Denied => "Device enrollment was denied from the enrolled device.",
+                SsoEnrollmentResult.Failed => "Device enrollment failed due to an error.",
+                _ => throw new ArgumentOutOfRangeException(nameof(result)),
+            };
 
             // Clean up resources
             _vm._cancelEnrollmentTcs = null;
