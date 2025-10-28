@@ -12,7 +12,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using OneOf;
+using Org.BouncyCastle.Tls;
 using PasswordManagerAccess.Common;
+using PasswordManagerAccess.Duo.ResponseV1;
 using PasswordManagerAccess.OnePassword.Ui;
 using Ristretto;
 
@@ -348,44 +350,50 @@ public static partial class Client
 
             // 2. Wait for the user to click on one of the existing devices the "Transfer key" button to initiate the enrollment.
             // Note: when the user clicks the "Deny" button the status update fails with 404.
-            var status = await PollStatusUntilDone(
-                    ignore: [EnrollmentStatus.SelectingVerifier, EnrollmentStatus.WaitingForCode],
-                    signInToken,
-                    enrollmentUuid,
-                    rest,
-                    linkedToken
-                )
+            var poll1 = await PollStatusUntilDone(ignore: [EnrollmentStatus.SelectingVerifier], signInToken, enrollmentUuid, rest, linkedToken)
                 .ConfigureAwait(false);
 
-            switch (status.Value)
+            var status1 = GetValidStatusOrThrow(poll1);
+            if (status1 != EnrollmentStatus.WaitingForCode)
+                throw new InternalErrorException($"Enrollment failed with unknown status {status1}");
+
+            // 3. One of the enrolled devices has approved the enrollment. Now we need to get the verification code from the user.
+            //    And we have to keep polling the status to make sure we handle the cancellation from the existing device.
+
+            var userInputTask = enrollmentContext.ProvideVerificationCode(linkedToken);
+            var pollTask = PollStatusUntilDone(ignore: [EnrollmentStatus.WaitingForCode], signInToken, enrollmentUuid, rest, linkedToken);
+            var completedTask = await Task.WhenAny(userInputTask, pollTask).ConfigureAwait(false);
+
+            // The polling task finished first. Something is wrong.
+            if (completedTask == pollTask)
             {
-                case TimeOut:
-                    throw new InternalErrorException("Device enrollment timed out");
-                case EnrollmentStatus es:
-                    switch (es)
-                    {
-                        case EnrollmentStatus.WaitingForCode:
-                            // All good, proceed to the next step
-                            break;
-                        case EnrollmentStatus.Denied:
-                            result = SsoEnrollmentResult.Denied;
-                            throw new CanceledSsoLoginException("Device enrollment was denied from an existing device");
-                        default:
-                            throw new InternalErrorException($"Enrollment failed with unknown status {es}");
-                    }
+                var status2 = GetValidStatusOrThrow(pollTask.Result);
+                throw new InternalErrorException($"Enrollment failed with unknown status {status2}");
+            }
+
+            var verificationCode = "";
+            switch (userInputTask.Result.Value)
+            {
+                case string code:
+                    // All good, we have the code
+                    verificationCode = code;
                     break;
+                case EnrollmentCanceled canceled:
+                    result = SsoEnrollmentResult.Canceled;
+                    throw new CanceledSsoLoginException($"Device enrollment canceled: {canceled.Reason}");
             }
 
             // 3. Exchange credentials
             await enrollmentContext
-                .UpdateStatus(Ui.EnrollmentStatus.VerificationCodeNeeded, "Ready to enter verification code", linkedToken)
+                .UpdateStatus(Ui.EnrollmentStatus.ExchangingCredentials, "Exchanging credentials securely", linkedToken)
                 .ConfigureAwait(false);
+
             var credentialBundle = await ExchangeCredentials(
                     username: credentials.Username,
                     signInAddress: loginInfo.SignInAddress,
                     signInToken: signInToken,
                     enrollmentUuid: enrollmentUuid,
-                    enrollmentContext: enrollmentContext,
+                    verificationCode: verificationCode,
                     rest: rest,
                     cancellationToken: linkedToken
                 )
@@ -412,6 +420,24 @@ public static partial class Client
         {
             // Always call EndEnrollment, even on failure
             await enrollmentContext.EndEnrollment(result, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        // ---
+
+        EnrollmentStatus GetValidStatusOrThrow(OneOf<EnrollmentStatus, TimeOut> r)
+        {
+            if (r.Value is EnrollmentStatus es)
+            {
+                if (es == EnrollmentStatus.Denied)
+                {
+                    result = SsoEnrollmentResult.Denied;
+                    throw new CanceledSsoLoginException("Device enrollment was denied from an existing device");
+                }
+
+                return es;
+            }
+
+            throw new InternalErrorException("Device enrollment timed out");
         }
     }
 
@@ -597,23 +623,11 @@ public static partial class Client
         string signInAddress,
         string signInToken,
         string enrollmentUuid,
-        ISsoEnrollmentContext enrollmentContext,
+        string verificationCode,
         RestClient rest,
         CancellationToken cancellationToken
     )
     {
-        // 1. Ask the user to enter the verification code displayed on the existing device.
-        var verificationCodeResult = await enrollmentContext.ProvideVerificationCode(cancellationToken).ConfigureAwait(false);
-
-        if (!verificationCodeResult.TryPickT0(out var verificationCode, out var canceled))
-            throw new CanceledSsoLoginException($"Device enrollment canceled: {canceled.Reason}");
-
-        // 2. Perform the secure credentials exchange. This is a complicated multi-step process that involves
-        //    a bunch of back-and-forth between the client and the server.
-        await enrollmentContext
-            .UpdateStatus(Ui.EnrollmentStatus.ExchangingCredentials, "Exchanging credentials securely...", cancellationToken)
-            .ConfigureAwait(false);
-
         var credentials = await PerformCpace(
                 username: username,
                 signInAddress: signInAddress,
