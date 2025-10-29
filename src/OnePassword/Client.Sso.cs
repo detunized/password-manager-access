@@ -129,9 +129,27 @@ public static partial class Client
             _ => throw new InternalErrorException($"Unexpected SSO session state: {ssoSession.State}"),
         };
 
+        Model.CredentialBundle? credentialBundle = null;
+        var enrollmentUuid = "";
+
         // If the device is already enrolled, we need to get the credentials from the SSO response and the decryption key from the storage
-        var (credentialBundle, enrollmentUuid) = isNewDevice
-            ? await EnrollDevice(
+        if (!isNewDevice)
+        {
+            var tryCredentials = await RestoreCredentials(ssoSession, storage, cancellationToken).ConfigureAwait(false);
+            if (tryCredentials.IsValue)
+            {
+                credentialBundle = tryCredentials.Value;
+            }
+            else
+            {
+                isNewDevice = true;
+                await EraseStoredDeviceCredentials(storage, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        // It's a new device, or we failed to restore credentials, so we need to enroll
+        if (isNewDevice)
+            (credentialBundle, enrollmentUuid) = await EnrollDevice(
                     credentials: credentials,
                     loginInfo: loginInfo,
                     ssoSession: ssoSession,
@@ -139,15 +157,13 @@ public static partial class Client
                     rest: ssoRest,
                     cancellationToken: cancellationToken
                 )
-                .ConfigureAwait(false)
-            // TODO: This might fail! Need to handle it and enroll again!
-            : (await RestoreCredentials(ssoSession, storage, cancellationToken).ConfigureAwait(false), "");
+                .ConfigureAwait(false);
 
         // 8. Log in with the received credential bundle
         var (sessionKey, sessionRest) = await Login(
                 credentials: credentials,
                 app: app,
-                credentialBundle: credentialBundle,
+                credentialBundle: credentialBundle!,
                 signInToken: ssoSession.SsoAuth.SignInTokenDetails.Token,
                 deviceUuid: credentials.DeviceUuid,
                 userUuid: loginInfo.UserUuid,
@@ -161,7 +177,7 @@ public static partial class Client
         //    The exchanged credentials only exist in memory at this point. They need to be encrypted and stored on the server.
         //    The credentials are encrypted with a locally generated and stored device key. So this should be secure.
         if (isNewDevice)
-            await CommitDevice(ssoSession, enrollmentUuid, credentialBundle, storage, sessionKey, sessionRest, cancellationToken)
+            await CommitDevice(ssoSession, enrollmentUuid, credentialBundle!, storage, sessionKey, sessionRest, cancellationToken)
                 .ConfigureAwait(false);
 
         // 10. Done
@@ -169,52 +185,64 @@ public static partial class Client
         return new Session(credentials, keychain, sessionKey, sessionRest);
     }
 
-    internal static async Task<Model.CredentialBundle> RestoreCredentials(
+    internal static async Task<Try<Model.CredentialBundle>> RestoreCredentials(
         Model.SsoSession ssoSession,
         IAsyncSecureStorage storage,
         CancellationToken cancellationToken
     )
     {
-        // TODO: This might fail!
-        var deviceKey = await LoadAndDeriveDeviceKey(storage, cancellationToken).ConfigureAwait(false);
-        return DecryptCredentialBundle(ssoSession.Auth!.EncryptedCredentials, deviceKey);
+        return await Try.FromResultOf(async () =>
+            {
+                var deviceKey = await LoadAndDeriveDeviceKey(storage, cancellationToken).ConfigureAwait(false);
+                return DecryptCredentialBundle(ssoSession.Auth!.EncryptedCredentials, deviceKey);
+            })
+            .ConfigureAwait(false);
     }
+
+    internal static Task EraseStoredDeviceCredentials(IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
+        storage.StoreString(DeviceKeyName, null, cancellationToken);
+
+    //
+    // Locally stored credentials
+    // There's no error handling, as it's done at the top via `Try` to avoid over-complicating the code here.
+    //
 
     internal static Model.Encrypted EncryptCredentialBundle(Model.CredentialBundle credentialBundle, AesKey deviceKey)
     {
         return deviceKey
             .Encrypt(
-                JsonSerializer.SerializeToUtf8Bytes(credentialBundle),
-                Crypto.RandomBytes(AesKey.IvSize),
-                "1P_SSO_CREDENTIAL_BUNDLE:LOCAL2"u8.ToArray()
+                plaintext: JsonSerializer.SerializeToUtf8Bytes(credentialBundle),
+                iv: Crypto.RandomBytes(AesKey.IvSize),
+                adata: "1P_SSO_CREDENTIAL_BUNDLE:LOCAL2"u8.ToArray()
             )
             .ToModel();
     }
 
     internal static Model.CredentialBundle DecryptCredentialBundle(Model.Encrypted encryptedCredentials, AesKey deviceKey) =>
-        // TODO: Handle errors
         DeserializeJson<Model.CredentialBundle>(
             deviceKey.Decrypt(Encrypted.Parse(encryptedCredentials), "1P_SSO_CREDENTIAL_BUNDLE:LOCAL2"u8.ToArray())
         );
 
-    internal static async Task<DeviceKeyDerivation> LoadDeviceKey(IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
-        LoadDeviceKey(await storage.LoadString(DeviceKeyName, cancellationToken).ConfigureAwait(false));
-
-    internal static DeviceKeyDerivation LoadDeviceKey(string json)
+    internal static async Task<AesKey> LoadAndDeriveDeviceKey(IAsyncSecureStorage storage, CancellationToken cancellationToken)
     {
-        // TODO: Handle errors
-        var encryptedDeviceKey = DeserializeJson<Model.Encrypted>(json);
-        var deviceKey = DecryptFromStorage(Encrypted.Parse(encryptedDeviceKey));
-        return deviceKey;
-    }
+        var json = await storage.LoadString(DeviceKeyName, cancellationToken).ConfigureAwait(false);
+        if (json.IsNullOrEmpty())
+            throw new InternalErrorException("No device key found in storage");
 
-    internal static async Task<AesKey> LoadAndDeriveDeviceKey(IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
-        LoadAndDeriveDeviceKey(await storage.LoadString(DeviceKeyName, cancellationToken).ConfigureAwait(false));
+        return LoadAndDeriveDeviceKey(json);
+    }
 
     internal static AesKey LoadAndDeriveDeviceKey(string json)
     {
         var deviceKey = LoadDeviceKey(json);
         return DeriveDeviceKey(deviceKey);
+    }
+
+    internal static DeviceKeyDerivation LoadDeviceKey(string json)
+    {
+        var encryptedDeviceKey = DeserializeJson<Model.Encrypted>(json);
+        var deviceKey = DecryptFromStorage(Encrypted.Parse(encryptedDeviceKey));
+        return deviceKey;
     }
 
     internal static async Task<Model.LoginInfo> GetLoginInfo(string username, RestClient rest, CancellationToken cancellationToken)
@@ -543,9 +571,7 @@ public static partial class Client
     internal static DeviceKeyDerivation DecryptFromStorage(Encrypted encrypted)
     {
         var key = new AesKey(encrypted.KeyId, "01be638ec19d0b5bf7a310239d817aa1"u8.ToArray());
-        // TODO: Handle errors
         var json = key.Decrypt(encrypted);
-        // TODO: Handle errors
         var model = DeserializeJson<Model.DeviceKeyDerivation>(json);
         return new DeviceKeyDerivation(model.Id, model.Key.Decode64Loose(), model.Salt.Decode64Loose());
     }
@@ -1109,13 +1135,13 @@ public static partial class Client
         try
         {
             var o = JsonSerializer.Deserialize<T>(jsonBytes);
-            return o == null ? throw MakeError() : o;
+            return o == null ? throw Error() : o;
         }
         catch (JsonException e)
         {
-            throw MakeError(e);
+            throw Error(e);
         }
 
-        static InternalErrorException MakeError(Exception? e = null) => new(errorMessage, e);
+        static InternalErrorException Error(Exception? e = null) => new(errorMessage, e);
     }
 }
