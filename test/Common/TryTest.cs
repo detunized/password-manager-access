@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using Xunit;
 
@@ -93,6 +94,142 @@ namespace PasswordManagerAccess.Test.Common
 
             var thrown = Assert.Throws<TryTestException>(() => t.Value);
             Assert.Same(e, thrown);
+        }
+
+        [Fact]
+        public void Try_FromResultOf_returns_value_on_success()
+        {
+            var t = Try.FromResultOf(() => 42);
+
+            Assert.True(t.IsValue);
+            Assert.Equal(42, t.Value);
+            Assert.Null(t.Error);
+        }
+
+        [Fact]
+        public void Try_FromResultOf_returns_error_on_exception()
+        {
+            var expected = new TryTestException("test error");
+            int ThrowException()
+            {
+                throw expected;
+            }
+            var t = Try.FromResultOf(ThrowException);
+
+            Assert.True(t.IsError);
+            Assert.Same(expected, t.Error);
+        }
+
+        [Fact]
+        public async Task Try_FromResultOf_async_returns_value_on_success()
+        {
+            var t = await Try.FromResultOf(async () =>
+            {
+                await Task.Delay(1);
+                return "success";
+            });
+
+            Assert.True(t.IsValue);
+            Assert.Equal("success", t.Value);
+            Assert.Null(t.Error);
+        }
+
+        [Fact]
+        public async Task Try_FromResultOf_async_returns_error_on_exception()
+        {
+            var expected = new TryTestException("async error");
+            var t = await Try.FromResultOf<string>(async () =>
+            {
+                await Task.Delay(1);
+                throw expected;
+            });
+
+            Assert.True(t.IsError);
+            Assert.Same(expected, t.Error);
+        }
+
+        [Fact]
+        public async Task Try_FromResultOf_async_propagates_cancellation()
+        {
+            await Assert.ThrowsAsync<OperationCanceledException>(
+                async () =>
+                    await Try.FromResultOf<int>(async () =>
+                    {
+                        await Task.Delay(1);
+                        throw new OperationCanceledException("canceled");
+                    })
+            );
+        }
+
+        [Fact]
+        public void Try_FromResultOf_captures_different_exception_types()
+        {
+            // ArgumentException
+            int Throw1() => throw new ArgumentException("arg error");
+            var t1 = Try.FromResultOf(Throw1);
+            Assert.IsType<ArgumentException>(t1.Error);
+
+            // InvalidOperationException
+            int Throw2() => throw new InvalidOperationException("invalid op");
+            var t2 = Try.FromResultOf(Throw2);
+            Assert.IsType<InvalidOperationException>(t2.Error);
+
+            // Custom exception
+            int Throw3() => throw new TryTestException("custom");
+            var t3 = Try.FromResultOf(Throw3);
+            Assert.IsType<TryTestException>(t3.Error);
+        }
+
+        [Fact]
+        public async Task Try_FromResultOf_async_captures_different_exception_types()
+        {
+            // ArgumentException
+            var t1 = await Try.FromResultOf<int>(async () =>
+            {
+                await Task.Delay(1);
+                throw new ArgumentException("arg error");
+            });
+            Assert.IsType<ArgumentException>(t1.Error);
+
+            // InvalidOperationException
+            var t2 = await Try.FromResultOf<int>(async () =>
+            {
+                await Task.Delay(1);
+                throw new InvalidOperationException("invalid op");
+            });
+            Assert.IsType<InvalidOperationException>(t2.Error);
+
+            // Custom exception
+            var t3 = await Try.FromResultOf<int>(async () =>
+            {
+                await Task.Delay(1);
+                throw new TryTestException("custom");
+            });
+            Assert.IsType<TryTestException>(t3.Error);
+        }
+
+        [Fact]
+        public void Try_FromResultOf_handles_null_return_value()
+        {
+            var t = Try.FromResultOf(() => (string)null);
+
+            Assert.True(t.IsValue);
+            Assert.Null(t.Value);
+            Assert.Null(t.Error);
+        }
+
+        [Fact]
+        public async Task Try_FromResultOf_async_handles_null_return_value()
+        {
+            var t = await Try.FromResultOf(async () =>
+            {
+                await Task.Delay(1);
+                return (string)null;
+            });
+
+            Assert.True(t.IsValue);
+            Assert.Null(t.Value);
+            Assert.Null(t.Error);
         }
     }
 
