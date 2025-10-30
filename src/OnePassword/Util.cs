@@ -93,7 +93,8 @@ namespace PasswordManagerAccess.OnePassword
                 CancellationToken cancellationToken
             ) => throw MakeLogicError();
 
-            public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) => throw MakeLogicError();
+            public Task<OneOf<string, Canceled>> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) =>
+                throw MakeLogicError();
 
             public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) => throw MakeLogicError();
 

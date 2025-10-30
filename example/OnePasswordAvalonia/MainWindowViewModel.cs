@@ -417,7 +417,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
         }
     }
 
-    public async Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken)
+    public async Task<OneOf<string, Canceled>> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken)
     {
         return await Task.Run(
             () =>

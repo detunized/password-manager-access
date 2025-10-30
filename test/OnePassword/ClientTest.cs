@@ -956,7 +956,8 @@ namespace PasswordManagerAccess.Test.OnePassword
                 CancellationToken cancellationToken
             ) => Task.FromResult<OneOf<RememberMe, MfaMethod, Canceled>>(new Canceled("User canceled"));
 
-            public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) => Task.FromResult(""); // Return empty string to signal cancellation
+            public Task<OneOf.OneOf<string, Canceled>> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) =>
+                Task.FromResult<OneOf.OneOf<string, Canceled>>(new Canceled("User canceled"));
 
             public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) =>
                 Task.FromResult<ISsoEnrollmentContext>(new CancelingEnrollmentContext());

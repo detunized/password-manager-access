@@ -32,8 +32,8 @@ namespace PasswordManagerAccess.OnePassword.Ui
         // SSO login
         // This method should open the SSO login URL (typically in a browser) and wait for the user to complete
         // the authentication flow. The SSO provider will redirect to `redirectTo` URL with the authentication code.
-        // Returns the final redirect URL containing the code and state parameters, or an empty string if canceled.
-        Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken);
+        // Returns the final redirect URL containing the code and state parameters, or Canceled if canceled.
+        Task<OneOf<string, Canceled>> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken);
 
         // Begin SSO device enrollment
         // This method should show the enrollment UI and return a context object for managing the enrollment lifecycle.
