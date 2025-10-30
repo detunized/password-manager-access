@@ -50,7 +50,10 @@ namespace Example
                 return answer; // Return empty string if canceled, or the URL if provided
             }
 
-            public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) => throw new NotImplementedException();
+            public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) =>
+                throw new NotImplementedException(
+                    "SSO enrollment is not implemented in console example, look the GUI example (OnePasswordAvalonia) for reference"
+                );
 
             //
             // Private
