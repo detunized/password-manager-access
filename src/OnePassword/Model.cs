@@ -811,6 +811,28 @@ internal static class Model
     // Storage models
     //
 
+    public record LocalUserInfo
+    {
+        // User ID, saved for verification that the stored data belongs to the correct user
+        [JsonPropertyName("userId")]
+        public string? UserId { get; init; }
+
+        // Account ID is used during the SSO enrollment process
+        [JsonPropertyName("accountId")]
+        public string? AccountId { get; init; }
+
+        // The encryption key ID used to encrypt the credentials, it's submitted to the sever during the enrollment
+        // along the encrypted credentials. The key itself is local though and never leaves the device.
+        [JsonPropertyName("credentialsEncryptionKeyId")]
+        public string? CredentialsEncryptionKeyId { get; init; }
+
+        // Key derivation parameters for the encryption key used to encrypt the credentials. The credentials themselves
+        // are stored on the server. Since the key is local, the server has no way of decrypting it. The key derivation
+        // parameters are encrypted with a hardcoded password for obfuscation purposes. Exaclty like in the 1P web app.
+        [JsonPropertyName("deviceKeyDerivation")]
+        public Encrypted? DeviceKeyDerivation { get; init; }
+    }
+
     public record DeviceKeyDerivation
     {
         [JsonPropertyName("kid")]
