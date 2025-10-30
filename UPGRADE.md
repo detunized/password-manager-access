@@ -1,5 +1,157 @@
 # Upgrade notes
 
+## To 29.0.0
+
+This version introduces a lot of API changes. They are quite similar to the changes with the other
+modules that were migrated to async (see LastPass).
+
+The main non-SSO entry points have changed to the following:
+
+```cs
+public static class Client
+{
+    public static async Task<Session> LogIn(
+        Credentials credentials,
+        AppInfo app,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<Session> LogIn(
+        ServiceAccount serviceAccount,
+        AppInfo app,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task LogOut(
+        Session session,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<VaultInfo[]> ListAllVaults(
+        Session session,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<Vault> OpenVault(
+        VaultInfo info,
+        Session session,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<OneOf<Account, SshKey, NoItem>> GetItem(
+        string itemId,
+        string vaultId,
+        Session session,
+        CancellationToken cancellationToken
+    );
+}
+```
+
+Changes to all the methods are pretty straightforward, except the first `LogIn`. The UI has changed into:
+
+```cs
+public interface IAsyncUi : IDuoAsyncUi
+{
+    Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
+        int attempt,
+        MfaMethod[] otherMethods,
+        CancellationToken cancellationToken
+    );
+
+    Task<OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
+        int attempt,
+        MfaMethod[] otherMethods,
+        CancellationToken cancellationToken
+    );
+
+    // SSO
+    Task<OneOf<string, Canceled>> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken);
+    Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken);
+}
+```
+
+`ProvideGoogleAuthPasscode` and `ProvideWebAuthnRememberMe` now are both async and return `OneOf` of
+different options. They are used to return a result, select a different MFA method or signal a
+cancellation. See LastPass for more details. The changes are very similar. Make sure to not return
+any MFA methods that are not passed in the `otherMethods` parameter. The UI implementation should
+also respect the `cancellationToken` and allow the top-level to cancel the whole operation if
+needed.
+
+The next big features is the SSO support. This is a big and complex beast. It has a couple of top
+level APIs of its own:
+
+```cs
+public static partial class Client
+{
+    public static async Task<bool> IsSsoAccount(
+        string username,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<Session> SsoLogIn(
+        Credentials credentials,
+        AppInfo app,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        CancellationToken cancellationToken
+    );
+
+```
+
+`IsSsoAccount` could be used to check if the account supports SSO login type. This could be done
+from the UI before showing the user input dialog, for example. Since there's no need to enter the
+password for SSO.
+
+`SsoLogIn` could be called directly by the application to initiate an SSO login. But that's not
+necessary, as `LogIn` will check if it's an SSO account and will call it for you. It's up to the
+implementation which way to go about this.
+
+The biggest change comes with the `IAsyncUi`:
+
+```cs
+Task<OneOf<string, Canceled>> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken);
+```
+
+`PerformSsoLogin` must present an interactive browser and allow the user to log into their SSO
+provider. The application should monitor the browser redirect URLs and stop at the URL that start
+with the value of `redirectTo`. Please refer to the LastPass upgrade notes for more details. It's
+the same.
+
+```cs
+Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken);
+```
+
+`BeginSsoEnrollment` is called for new devices and it must present a user with a special UI to enter
+the code. When `BeginSsoEnrollment` is called the sequence starts. It might get cancelled or failed
+at any time. `BeginSsoEnrollment` returns a context object that must implement the
+`ISsoEnrollmentContext` interface.
+
+```cs
+public interface ISsoEnrollmentContext
+{
+    CancellationToken Token { get; }
+    Task UpdateStatus(EnrollmentStatus status, string message, CancellationToken cancellationToken);
+    Task<OneOf<string, EnrollmentCanceled>> ProvideVerificationCode(CancellationToken cancellationToken);
+    Task EndEnrollment(SsoEnrollmentResult result, CancellationToken cancellationToken);
+}
+```
+
+This object allows a two-way communication between the library and the application. `Token` must be
+provided by the application to allow the cancellation from the application side. It is monitored by
+the library.
+
+`UpdateStatus` is used to send updated to the application in case it wants to display info to the
+user on how things are progressing.
+
+At some point in the process of the new device enrollment, the library would request the application
+to provide a verification code that the user must enter in the UI. It should be returned from
+`ProvideVerificationCode`.
+
+`EndEnrollment` is guaranteed to be called regardless of the outcome of the enrollment, would it be
+failure, cancellation or success.
+
 ## To 28.0.0
 
 `Ui.OpenInBrowser` must be implemeneted to allow the user to open a URL in a browser to trigger the

@@ -1,5 +1,10 @@
 # Changelog
 
+## 29.0.0-preview
+  - 1Password: the module refactored to be completely async (major incompatible API change)
+  - 1Password: SSO support
+  - 1Password: Avalonia UI based GUI example program
+
 ## 28.1.0
   - 1Password: fixed incorrect item and vault IDs detection in Client.GetItem
   - 1Password: added `NoItem.Inaccessible` for inaccessible vaults and items
