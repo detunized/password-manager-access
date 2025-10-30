@@ -231,6 +231,63 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Null(t.Value);
             Assert.Null(t.Error);
         }
+
+        [Fact]
+        public void TryT_ValueOrNull_returns_value_when_is_value()
+        {
+            var t = new Try<int>(42);
+
+            Assert.Equal(42, t.ValueOrNull);
+        }
+
+        [Fact]
+        public void TryT_ValueOrNull_returns_default_when_is_error()
+        {
+            var e = new TryTestException("error");
+            var t = new Try<int>(e);
+
+            Assert.Equal(0, t.ValueOrNull);
+        }
+
+        [Fact]
+        public void TryT_ValueOrNull_returns_null_for_reference_type_when_is_error()
+        {
+            var e = new TryTestException("error");
+            var t = new Try<string>(e);
+
+            Assert.Null(t.ValueOrNull);
+        }
+
+        [Fact]
+        public void TryT_ValueOrNull_returns_null_for_nullable_value_type_when_is_error()
+        {
+            var e = new TryTestException("error");
+            var t = new Try<int?>(e);
+
+            Assert.Null(t.ValueOrNull);
+        }
+
+        [Fact]
+        public void TryT_ValueOrNull_returns_null_value_when_is_value()
+        {
+            var t = new Try<string>((string)null);
+
+            Assert.Null(t.ValueOrNull);
+        }
+
+        [Fact]
+        public void TryT_ValueOrNull_vs_Value_difference()
+        {
+            var e = new TryTestException("error");
+            var t = new Try<int>(e);
+
+            // ValueOrNull returns default without throwing
+            Assert.Equal(0, t.ValueOrNull);
+
+            // Value throws when there's an error
+            var thrown = Assert.Throws<TryTestException>(() => t.Value);
+            Assert.Same(e, thrown);
+        }
     }
 
     internal class TryTestException : Exception

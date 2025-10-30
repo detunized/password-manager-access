@@ -49,6 +49,7 @@ namespace PasswordManagerAccess.Common
     internal readonly struct Try<T>
     {
         public T Value => IsValue ? _value : throw _error!;
+        public T? ValueOrNull => IsValue ? _value : default;
         public Exception? Error => _error;
 
         public bool IsError => Error != null;
