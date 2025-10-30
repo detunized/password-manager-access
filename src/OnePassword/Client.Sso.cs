@@ -1,0 +1,1144 @@
+// Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
+// Licensed under the terms of the MIT license. See LICENCE for details.
+
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using OneOf;
+using PasswordManagerAccess.Common;
+using PasswordManagerAccess.OnePassword.Ui;
+using Ristretto;
+
+namespace PasswordManagerAccess.OnePassword;
+
+public static partial class Client
+{
+    //
+    // Login
+    //
+
+    public static async Task<bool> IsSsoAccount(string username, CancellationToken cancellationToken)
+    {
+        using var transport = new RestTransport();
+        return await IsSsoAccount(username, transport, cancellationToken);
+    }
+
+    public static async Task<Session> SsoLogIn(
+        Credentials credentials,
+        AppInfo app,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        CancellationToken cancellationToken
+    )
+    {
+        var transport = new RestTransport();
+        try
+        {
+            return await SsoLogIn(credentials, app, ui, storage, transport, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // We only need to dispose in case of an error, otherwise it's returned with the session.
+            transport.Dispose();
+            throw;
+        }
+    }
+
+    //
+    // Internal
+    //
+
+    internal static async Task<bool> IsSsoAccount(string username, RestTransport transport, CancellationToken cancellationToken)
+    {
+        var rest = MakeRestClient(transport, GetApiUrl(DefaultDomain));
+        return await IsSsoAccount(username, rest, cancellationToken);
+    }
+
+    internal static async Task<bool> IsSsoAccount(string username, RestClient rest, CancellationToken cancellationToken)
+    {
+        // Just to make sure we're not calling with a wrong RestClient
+        if (!rest.BaseUrl.StartsWith($"https://{DefaultDomain}"))
+            throw new InternalErrorException($"RestClient should be configured for {DefaultDomain}");
+
+        var loginInfo = await GetLoginInfo(username, rest, cancellationToken).ConfigureAwait(false);
+        return loginInfo.AuthMethods.Any(x => x.Type == "OIDC");
+    }
+
+    internal static async Task<Session> SsoLogIn(
+        Credentials credentials,
+        AppInfo app,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        IRestTransport transport,
+        CancellationToken cancellationToken
+    )
+    {
+        var rest = MakeRestClient(transport, GetApiUrl(DefaultDomain));
+        return await SsoLogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<Session> SsoLogIn(
+        Credentials credentials,
+        AppInfo app,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        // Just to make sure we're not calling with a wrong RestClient
+        if (!rest.BaseUrl.StartsWith($"https://{DefaultDomain}"))
+            throw new InternalErrorException($"RestClient should be configured for {DefaultDomain}");
+
+        // 1. Get the login info to check if SSO is available and get the sign-in address
+        var loginInfo = await GetLoginInfo(credentials.Username, rest, cancellationToken).ConfigureAwait(false);
+
+        // 2. Make sure SSO is available for this account
+        if (loginInfo.AuthMethods.All(x => x.Type != "OIDC"))
+            throw new InternalErrorException($"No SSO login method found for account {credentials.Username}");
+
+        // 3. Load locally stored credentials if any
+        var localUserInfo = await LoadLocalCredentials(storage, cancellationToken).ConfigureAwait(false) ?? new Model.LocalUserInfo();
+
+        // 4. Check if the local credentials are still valid
+        if (localUserInfo.UserId != loginInfo.UserUuid)
+        {
+            // Stale or invalid local credentials, erase them
+            await EraseLocalCredentials(storage, cancellationToken).ConfigureAwait(false);
+            localUserInfo = new Model.LocalUserInfo();
+        }
+
+        // 5. Make a new REST client for the SSO API
+        var ssoRest = MakeRestClient(rest.Transport, $"{loginInfo.SignInAddress}/api");
+
+        // 6. Start the SSO login process by getting the SSO login URL
+        var ssoLoginUrl = await StartSsoLogin(loginInfo, localUserInfo, ssoRest, cancellationToken).ConfigureAwait(false);
+
+        // 7. Perform the SSO login
+        var (code, state) = await PerformSsoLogin(ssoLoginUrl, ui, cancellationToken).ConfigureAwait(false);
+
+        // 8. Verify the SSO login
+        var ssoSession = await VerifySsoLogin(code, state, credentials.DeviceUuid, app, ssoRest, cancellationToken).ConfigureAwait(false);
+
+        // 9. Update the REST client with the session ID
+        ssoRest = MakeRestClient(ssoRest, sessionId: ssoSession.User.SessionUuid);
+
+        // 10. Enroll the device if needed
+        var isNewDevice = ssoSession.State switch
+        {
+            "device_not_enrolled" => true,
+            "found" => false,
+            _ => throw new InternalErrorException($"Unexpected SSO session state: {ssoSession.State}"),
+        };
+
+        // 11. Try to restore credentials from the local storage if possible. When we get "found" from the server, it also supplied the encrypted
+        // credentials, which we should be able to decrypt with the locally stored and obfuscated device key.
+        var credentialBundle = RestoreCredentials(ssoSession, localUserInfo);
+        if (credentialBundle == null)
+            isNewDevice = true;
+
+        var enrollmentUuid = "";
+
+        // 12. It's a new device, or we failed to restore credentials, so we need to enroll
+        if (isNewDevice)
+            (credentialBundle, enrollmentUuid) = await EnrollDevice(
+                    credentials: credentials,
+                    loginInfo: loginInfo,
+                    ssoSession: ssoSession,
+                    ui: ui,
+                    rest: ssoRest,
+                    cancellationToken: cancellationToken
+                )
+                .ConfigureAwait(false);
+
+        // 13. Log in with the received credential bundle
+        var (sessionKey, sessionRest) = await Login(
+                credentials: credentials,
+                app: app,
+                credentialBundle: credentialBundle!,
+                signInToken: ssoSession.SsoAuth.SignInTokenDetails.Token,
+                deviceUuid: credentials.DeviceUuid,
+                userUuid: loginInfo.UserUuid,
+                ssoSessionId: ssoSession.User.SessionUuid,
+                rest: ssoRest,
+                cancellationToken: cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        // 14. In case it was a new device, the initial enrollment and the credential exchange is only a part of the process.
+        //    The exchanged credentials only exist in memory at this point. They need to be encrypted and stored on the server.
+        //    The credentials are encrypted with a locally generated and stored device key. So this should be secure.
+        if (isNewDevice)
+            await CommitDevice(ssoSession, enrollmentUuid, credentialBundle!, storage, sessionKey, sessionRest, cancellationToken)
+                .ConfigureAwait(false);
+
+        // 15. Done
+        var keychain = new Keychain(new AesKey(MasterKeyId, credentials.Key.Key));
+        return new Session(credentials, keychain, sessionKey, sessionRest);
+    }
+
+    internal static Model.CredentialBundle? RestoreCredentials(Model.SsoSession ssoSession, Model.LocalUserInfo localUserInfo)
+    {
+        if (localUserInfo.DeviceKeyDerivation == null || ssoSession.Auth == null)
+            return null;
+
+        return Try.FromResultOf(() =>
+        {
+            var deviceKey = LoadAndDeriveDeviceKey(localUserInfo.DeviceKeyDerivation);
+            return DecryptCredentialBundle(ssoSession.Auth!.EncryptedCredentials, deviceKey);
+        }).ValueOrNull;
+    }
+
+    //
+    // Locally stored credentials
+    // There's no error handling, as it's done at the top via `Try` to avoid over-complicating the code here.
+    //
+
+    internal static Model.Encrypted EncryptCredentialBundle(Model.CredentialBundle credentialBundle, AesKey deviceKey)
+    {
+        return deviceKey
+            .Encrypt(
+                plaintext: JsonSerializer.SerializeToUtf8Bytes(credentialBundle),
+                iv: Crypto.RandomBytes(AesKey.IvSize),
+                adata: "1P_SSO_CREDENTIAL_BUNDLE:LOCAL2"u8.ToArray()
+            )
+            .ToModel();
+    }
+
+    internal static Model.CredentialBundle DecryptCredentialBundle(Model.Encrypted encryptedCredentials, AesKey deviceKey) =>
+        DeserializeJson<Model.CredentialBundle>(
+            deviceKey.Decrypt(Encrypted.Parse(encryptedCredentials), "1P_SSO_CREDENTIAL_BUNDLE:LOCAL2"u8.ToArray())
+        );
+
+    internal static AesKey LoadAndDeriveDeviceKey(Model.Encrypted encryptedDeviceKey) => DeriveDeviceKey(DecryptDeviceKey(encryptedDeviceKey));
+
+    internal static DeviceKeyDerivation LoadDeviceKey(string json) => DecryptDeviceKey(DeserializeJson<Model.Encrypted>(json));
+
+    internal static DeviceKeyDerivation DecryptDeviceKey(Model.Encrypted encryptedDeviceKey) =>
+        DecryptFromStorage(Encrypted.Parse(encryptedDeviceKey));
+
+    internal static async Task<Model.LoginInfo> GetLoginInfo(string username, RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.PostJsonAsync<Model.LoginInfo>(
+                "v2/auth/methods",
+                new Dictionary<string, object> { ["email"] = username },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data;
+    }
+
+    internal static async Task<string> StartSsoLogin(
+        Model.LoginInfo loginInfo,
+        Model.LocalUserInfo localUserInfo,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var parameters = new Dictionary<string, object>(3) { ["userUuid"] = loginInfo.UserUuid };
+
+        SetIfNotNull(parameters, "accountUuid", localUserInfo.AccountId);
+        SetIfNotNull(parameters, "keyId", localUserInfo.CredentialsEncryptionKeyId);
+
+        var response = await rest.PostJsonAsync<Model.SsoLoginUrl>("v3/auth/sso/oidc/start", parameters, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data.OidcUrl;
+
+        // ---
+
+        static void SetIfNotNull(Dictionary<string, object> dict, string key, string? value)
+        {
+            if (value is not null)
+                dict[key] = value;
+        }
+    }
+
+    //
+    // Local storage
+    //
+
+    internal static async Task<Model.LocalUserInfo?> LoadLocalCredentials(IAsyncSecureStorage storage, CancellationToken cancellationToken)
+    {
+        var result = await Try.FromResultOf(async () =>
+            {
+                var json = await storage.LoadString(SsoCredentialsKey, cancellationToken).ConfigureAwait(false);
+                return DeserializeJson<Model.LocalUserInfo>(json!);
+            })
+            .ConfigureAwait(false);
+
+        return result.ValueOrNull;
+    }
+
+    internal static Task EraseLocalCredentials(IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
+        storage.StoreString(SsoCredentialsKey, null, cancellationToken);
+
+    internal static async Task<(string Code, string State)> PerformSsoLogin(string ssoLoginUrl, IAsyncUi ui, CancellationToken cancellationToken)
+    {
+        var redirectTo = Uri.UnescapeDataString(Url.ExtractQueryParameter(ssoLoginUrl, "redirect_uri"));
+
+        // Ask the user to login to the SSO provider like Microsoft or Google. This potentially take a long while.
+        var redirectedToUrl = await ui.PerformSsoLogin(ssoLoginUrl, redirectTo, cancellationToken).ConfigureAwait(false);
+
+        if (redirectedToUrl.IsNullOrEmpty())
+            throw new CanceledSsoLoginException("The SSO login was canceled by the user");
+
+        // An example of the returned URL:
+        //   https://acme.1password.com/sso/oidc/redirect/#code=1.ASgAwV5aTMWaEkabTGvtF4u2Wpb4VTvGf8dGlwsZADrH0JkoAAAoAA.AgABBAIAAABVrSpeuWamRam2jAF1XRQEAwDs_wUA9P-k9NH9m4zDf3ZQpZopbFWrPs95L25K4RDHx4pOfNnyO5wfWKwtSUEeVYosJQYKmkarnxfGO5F0Wp8sjg1aE2MheBSCu3c7sSfwZpj9nfhztoMQSPZLhYbFGMkW1gkjX7I5_AVKkpbzmUkHpeGNGC9pTOF4bTp_M6ZnKMrtXVB0LjqeqrHnwe9tkCThg2qgrjH_glcbxA0VQfbk7DMR0cjoYsATNQHk7MylJj30SnL3_ur1rWo1IYtKwZia2PlRkjsXXLqU3refbf9gE6fneiaPwgV2YCsbJ7RoMfJkyZoC_SvwV98BB__sgJahjsW4CJ-d6tsUoueWUA3NI6ufyL8MnIxMBVR1tGEEtoIyxH-OItX3JgbZfKuEodaLN0BZj1ikOcMCTcBG0O5RP39lbqTDOcTpojW7UlZJRt7IRcEHmYB5Jec9RVBMBg2IAx11dnIDMFYabP4NmFeuXLqv2s1B0Rd95jjFm3X7FTGESn3zT07-ViLi5GvTLJJbllO6M8NSNA9Tqk1OhKreZQy5KdNx_CsmayO7ywk5ISE5aqZk2my5Ayby9SzATSdTyUtsxFKPULmvO1QJR-xXDa1IZ2WWVHKmVSEU0vhipZdeubyJwP51QnecUADeXFA5DBqXxCQDBfC929oeImouQY-ZfN2Tx83XdHjhzIZtfVuFSBlYoGs4ESZIRZWoiK-SsXzOiiYDqTD5HlGF4TH07wmxlfa44WnI1OlP-zcZR_IywftwGZofA9YUt41b-ho9X8bLap6SBwvoqLggV3hfmkiBCRNMD9iFczW6qYHNqeSTidp5UWCNic8JrE3zIY5L5Mt1S0HzH3SVve5YPA2_7iVMynfhETLOzrvpqumbbjsXCEFpxZZMnbWvVnpOTKVHhr5f&state=AheikL9HpINJRhPsoa9KWw&session_state=002f7c59-8098-a5c0-a0d5-dd5ed564dd9a
+
+        var code = Url.ExtractQueryParameter(redirectedToUrl, "code");
+        if (code.IsNullOrEmpty())
+            throw new InternalErrorException("No code returned from the SSO provider");
+
+        var state = Url.ExtractQueryParameter(redirectedToUrl, "state");
+        if (state.IsNullOrEmpty())
+            throw new InternalErrorException("No state returned from the SSO provider");
+
+        return (code, state);
+    }
+
+    internal static async Task<Model.SsoSession> VerifySsoLogin(
+        string code,
+        string state,
+        string deviceUuid,
+        AppInfo app,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var response = await rest.PostJsonAsync<Model.SsoSession>(
+                "v3/auth/sso/oidc/verify",
+                new Dictionary<string, object>
+                {
+                    ["code"] = code,
+                    ["state"] = state,
+                    ["device"] = new Dictionary<string, string>
+                    {
+                        ["uuid"] = deviceUuid,
+                        ["clientName"] = ClientName,
+                        ["clientVersion"] = ClientVersion,
+                        ["osName"] = GetOsName(),
+                        ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that.
+                        ["name"] = app.Name,
+                        ["model"] = app.Version,
+                    },
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data;
+    }
+
+    internal static async Task<(Model.CredentialBundle, string EnrollmentUuid)> EnrollDevice(
+        Credentials credentials,
+        Model.LoginInfo loginInfo,
+        Model.SsoSession ssoSession,
+        IAsyncUi ui,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var signInToken = ssoSession.SsoAuth.SignInTokenDetails.Token;
+
+        // Begin enrollment and get context for bidirectional communication
+        var enrollmentContext = await ui.BeginSsoEnrollment(cancellationToken).ConfigureAwait(false);
+
+        // Link the cancellation tokens from the UI and the caller
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, enrollmentContext.Token);
+        var linkedToken = linkedCts.Token;
+
+        var result = SsoEnrollmentResult.Failed;
+        string? enrollmentUuid = null;
+
+        try
+        {
+            // 1. Kick off the enrollment process. This should send a signal to the already enrolled devices to
+            //    prepare to transfer the key to the new device.
+            await enrollmentContext
+                .UpdateStatus(Ui.EnrollmentStatus.WaitingForApproval, "Waiting for approval from enrolled device...", linkedToken)
+                .ConfigureAwait(false);
+
+            enrollmentUuid = await StartEnrollment(signInToken, rest, linkedToken).ConfigureAwait(false);
+
+            // 2. Wait for the user to click on one of the existing devices the "Transfer key" button to initiate the enrollment.
+            // Note: when the user clicks the "Deny" button the status update fails with 404.
+            var poll1 = await PollStatusUntilDone(ignore: [EnrollmentStatus.SelectingVerifier], signInToken, enrollmentUuid, rest, linkedToken)
+                .ConfigureAwait(false);
+
+            var status1 = GetValidStatusOrThrow(poll1);
+            if (status1 != EnrollmentStatus.WaitingForCode)
+                throw new InternalErrorException($"Enrollment failed with unknown status {status1}");
+
+            // 3. One of the enrolled devices has approved the enrollment. Now we need to get the verification code from the user.
+            //    And we have to keep polling the status to make sure we handle the cancellation from the existing device.
+
+            var userInputTask = enrollmentContext.ProvideVerificationCode(linkedToken);
+            var pollTask = PollStatusUntilDone(ignore: [EnrollmentStatus.WaitingForCode], signInToken, enrollmentUuid, rest, linkedToken);
+            var completedTask = await Task.WhenAny(userInputTask, pollTask).ConfigureAwait(false);
+
+            // The polling task finished first. Something is wrong.
+            if (completedTask == pollTask)
+            {
+                var status2 = GetValidStatusOrThrow(pollTask.Result);
+                throw new InternalErrorException($"Enrollment failed with unknown status {status2}");
+            }
+
+            var verificationCode = "";
+            switch (userInputTask.Result.Value)
+            {
+                case string code:
+                    // All good, we have the code
+                    verificationCode = code;
+                    break;
+                case EnrollmentCanceled canceled:
+                    result = SsoEnrollmentResult.Canceled;
+                    throw new CanceledSsoLoginException($"Device enrollment canceled: {canceled.Reason}");
+            }
+
+            // 3. Exchange credentials
+            await enrollmentContext
+                .UpdateStatus(Ui.EnrollmentStatus.ExchangingCredentials, "Exchanging credentials securely", linkedToken)
+                .ConfigureAwait(false);
+
+            var credentialBundle = await ExchangeCredentials(
+                    username: credentials.Username,
+                    signInAddress: loginInfo.SignInAddress,
+                    signInToken: signInToken,
+                    enrollmentUuid: enrollmentUuid,
+                    verificationCode: verificationCode,
+                    rest: rest,
+                    cancellationToken: linkedToken
+                )
+                .ConfigureAwait(false);
+
+            await enrollmentContext.UpdateStatus(Ui.EnrollmentStatus.Completing, "Completing enrollment", linkedToken).ConfigureAwait(false);
+
+            // 4. All good
+            result = SsoEnrollmentResult.Success;
+            return (credentialBundle, enrollmentUuid);
+        }
+        catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+        {
+            // Canceled by the user
+            result = SsoEnrollmentResult.Canceled;
+
+            // Cancel the enrollment on the server side to let other clients know
+            if (!enrollmentUuid.IsNullOrEmpty())
+                await CancelEnrollment(signInToken, enrollmentUuid, rest, CancellationToken.None).ConfigureAwait(false);
+
+            throw new CanceledSsoLoginException("Device enrollment was canceled by the user");
+        }
+        finally
+        {
+            // Always call EndEnrollment, even on failure
+            await enrollmentContext.EndEnrollment(result, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        // ---
+
+        EnrollmentStatus GetValidStatusOrThrow(OneOf<EnrollmentStatus, TimeOut> r)
+        {
+            if (r.Value is EnrollmentStatus es)
+            {
+                if (es == EnrollmentStatus.Denied)
+                {
+                    result = SsoEnrollmentResult.Denied;
+                    throw new CanceledSsoLoginException("Device enrollment was denied from an existing device");
+                }
+
+                return es;
+            }
+
+            throw new InternalErrorException("Device enrollment timed out");
+        }
+    }
+
+    internal static async Task CommitDevice(
+        Model.SsoSession ssoSession,
+        string enrollmentUuid,
+        Model.CredentialBundle credentialBundle,
+        IAsyncSecureStorage storage,
+        AesKey sessionKey,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        // 1. Generate a local key for the device and encrypt the credential bundle with it
+        var deviceKeyDerivation = GenerateDeviceKeyDerivation();
+        var deviceKey = DeriveDeviceKey(deviceKeyDerivation);
+        var encryptCredentialBundle = EncryptCredentialBundle(credentialBundle, deviceKey);
+
+        // 2. Store the device credentials on the server. Only after this the server will consider the device fully
+        //    enrolled and won't be requesting the device enrollment again.
+        var result = await PostEncryptedJsonNoDecrypt<Model.SuccessResult>(
+                "v3/user/devicecredentials",
+                new Dictionary<string, object>
+                {
+                    ["deviceCredentials"] = new Dictionary<string, object> { ["encCredentials"] = encryptCredentialBundle, ["v"] = 2 },
+                    ["keyId"] = deviceKey.Id,
+                    ["enrollmentUuid"] = enrollmentUuid,
+                },
+                sessionKey,
+                rest,
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (result.Success != 1)
+            throw new InternalErrorException("Failed to store device credentials");
+
+        // 3. When it's all good, store the device key for the next time
+        var localCredentials = new Model.LocalUserInfo
+        {
+            UserId = ssoSession.User.UserUuid,
+            AccountId = ssoSession.User.AccountUuid,
+            CredentialsEncryptionKeyId = deviceKey.Id,
+            DeviceKeyDerivation = EncryptForStorage(deviceKeyDerivation).ToModel(),
+        };
+        await storage.StoreString(SsoCredentialsKey, JsonSerializer.Serialize(localCredentials), cancellationToken).ConfigureAwait(false);
+    }
+
+    internal record DeviceKeyDerivation(string Id, byte[] Key, byte[] Salt);
+
+    internal static DeviceKeyDerivation GenerateDeviceKeyDerivation() => new(GenerateRandomUuid(), Crypto.RandomBytes(32), Crypto.RandomBytes(48));
+
+    internal static AesKey DeriveDeviceKey(DeviceKeyDerivation deviceKeyDerivation)
+    {
+        var key = Hkdf.Sha384(deviceKeyDerivation.Key, deviceKeyDerivation.Id.ToBytes(), "1P_SSO_CREDENTIAL_BUNDLE_KEY:LOCAL"u8.ToArray(), 32);
+        return new AesKey(deviceKeyDerivation.Id, key);
+    }
+
+    // Returns enrollment UUID
+    internal static async Task<string> StartEnrollment(string signInToken, RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.PostJsonAsync<Model.SsoEnrollInfo>(
+                "v3/device/enrollments",
+                new Dictionary<string, object> { ["signInToken"] = signInToken },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data.EnrollmentUuid;
+    }
+
+    internal static async Task CancelEnrollment(string signInToken, string enrollmentUuid, RestClient rest, CancellationToken cancellationToken)
+    {
+        // We ignore all errors since we're canceling anyway. It shouldn't throw when request fails.
+        _ = await rest.DeleteJsonAsync(
+                "v2/device/enrollments",
+                new Dictionary<string, object> { ["enrollmentUuid"] = enrollmentUuid, ["signInToken"] = signInToken },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+    }
+
+    internal static Encrypted EncryptForStorage(DeviceKeyDerivation deviceKeyDerivation) =>
+        EncryptForStorage(deviceKeyDerivation, Crypto.RandomBytes(AesKey.IvSize));
+
+    // Encrypts for storage similar to the browser local storage. The key is encrypted with a hardcoded key, which is more an obfuscation.
+    // It's up to the application to store the key in a secure way.
+    internal static Encrypted EncryptForStorage(DeviceKeyDerivation deviceKeyDerivation, byte[] iv)
+    {
+        var model = new Model.DeviceKeyDerivation
+        {
+            Id = deviceKeyDerivation.Id,
+            Key = deviceKeyDerivation.Key.ToUrlSafeBase64NoPadding(),
+            Salt = deviceKeyDerivation.Salt.ToUrlSafeBase64NoPadding(),
+        };
+        var json = JsonSerializer.SerializeToUtf8Bytes(model);
+        var key = new AesKey("3tnqywhecddkhvl375l6yu7qri", "01be638ec19d0b5bf7a310239d817aa1"u8.ToArray());
+        return key.Encrypt(json, iv);
+    }
+
+    internal static DeviceKeyDerivation DecryptFromStorage(Encrypted encrypted)
+    {
+        var key = new AesKey(encrypted.KeyId, "01be638ec19d0b5bf7a310239d817aa1"u8.ToArray());
+        var json = key.Decrypt(encrypted);
+        var model = DeserializeJson<Model.DeviceKeyDerivation>(json);
+        return new DeviceKeyDerivation(model.Id, model.Key.Decode64Loose(), model.Salt.Decode64Loose());
+    }
+
+    internal enum EnrollmentStatus
+    {
+        SelectingVerifier,
+        WaitingForCode,
+        Denied,
+        Unknown,
+    }
+
+    internal record TimeOut;
+
+    internal static async Task<OneOf<EnrollmentStatus, TimeOut>> PollStatusUntilDone(
+        EnrollmentStatus[] ignore,
+        string signInToken,
+        string enrollmentUuid,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        // TODO: Move to the class level!
+        const int pollIntervalMs = 2000; // 1P web client polls every 2 seconds
+        const int totalPollTimeMs = 5 * 60 * 1000; // 5 min
+
+        for (var i = 0; i < totalPollTimeMs / pollIntervalMs; i++)
+        {
+            var status = await GetEnrollmentStatus(signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
+            if (!ignore.Contains(status))
+                return status;
+
+            await Task.Delay(pollIntervalMs, cancellationToken).ConfigureAwait(false);
+        }
+
+        return new TimeOut();
+    }
+
+    internal static async Task<EnrollmentStatus> GetEnrollmentStatus(
+        string signInToken,
+        string enrollmentUuid,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var response = await rest.PostJsonAsync<Model.SsoEnrollStatus>(
+                "v3/device/enrollments/status",
+                new Dictionary<string, object> { ["signInToken"] = signInToken, ["enrollmentUuid"] = enrollmentUuid },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+        {
+            // When the user denies the enrollment request, the server responds with 404.
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                // TODO: Normally the body is just "{}". Should we verify that?
+                return EnrollmentStatus.Denied;
+            }
+
+            throw MakeError(response);
+        }
+
+        return response.Data.Status switch
+        {
+            "SELECTING_VERIFIER" => EnrollmentStatus.SelectingVerifier,
+            "WAITING_FOR_CODE" => EnrollmentStatus.WaitingForCode,
+            _ => EnrollmentStatus.Unknown,
+        };
+    }
+
+    internal static async Task<Model.CredentialBundle> ExchangeCredentials(
+        string username,
+        string signInAddress,
+        string signInToken,
+        string enrollmentUuid,
+        string verificationCode,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var credentials = await PerformCpace(
+                username: username,
+                signInAddress: signInAddress,
+                signInToken: signInToken,
+                enrollmentUuid: enrollmentUuid,
+                verificationCode: verificationCode,
+                rest: rest,
+                cancellationToken: cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        return credentials;
+    }
+
+    internal static async Task<(AesKey, RestClient)> Login(
+        Credentials credentials,
+        AppInfo app,
+        Model.CredentialBundle credentialBundle,
+        string signInToken,
+        string deviceUuid,
+        string userUuid,
+        string ssoSessionId,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        // 1. Start with a new session. Weirdly, the session ID we are supposed to keep from the previous SSO flow.
+        var session = await StartAuth(signInToken, deviceUuid, userUuid, rest, cancellationToken).ConfigureAwait(false);
+
+        // TODO: Update credentials outside of this function
+        credentials.SrpX = credentialBundle.SrpX.Decode64Loose().ToHex();
+        credentials.Key = new AesKey(credentialBundle.Auk.KeyId, credentialBundle.Auk.Key.Decode64Loose());
+
+        // 2. Do a regular SRP like in a normal login flow. Only here it's version 2.
+        var srpInfo = new SrpInfo(
+            srpMethod: session.Auth!.Method,
+            keyMethod: session.Auth.Algorithm,
+            iterations: session.Auth.Iterations,
+            salt: session.Auth.Salt.Decode64Loose()
+        );
+        var sessionKey = await SrpV2
+            .PerformAndVerifyAsync(credentials, srpInfo, session.KeyUuid, ssoSessionId, rest, cancellationToken)
+            .ConfigureAwait(false);
+
+        // 3. All the following requests need to be signed with the session key.
+        var macRest = MakeRestClient(rest, new MacRequestSigner(sessionKey, 1), ssoSessionId);
+
+        // 4. Complete the login process by sending the device info.
+        await CompleteAuth(credentials, app, signInToken, sessionKey, macRest, cancellationToken).ConfigureAwait(false);
+
+        return (sessionKey, macRest);
+    }
+
+    private static async Task<Model.NewSession> StartAuth(
+        string signInToken,
+        string deviceUuid,
+        string userUuid,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var newSessionResponse = await rest.PostJsonAsync<Model.NewSession>(
+                "v3/auth/start",
+                new Dictionary<string, object>
+                {
+                    ["signInToken"] = signInToken,
+                    ["deviceUuid"] = deviceUuid,
+                    ["userUuid"] = userUuid,
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!newSessionResponse.IsSuccessful)
+            throw MakeError(newSessionResponse);
+
+        var newSession = newSessionResponse.Data;
+        return newSession;
+    }
+
+    private static async Task CompleteAuth(
+        Credentials credentials,
+        AppInfo app,
+        string signInToken,
+        AesKey sessionKey,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        await PostEncryptedJson<Model.AuthComplete>(
+                "v2/auth/complete",
+                new Dictionary<string, object>
+                {
+                    ["client"] = ClientId,
+                    ["signInToken"] = signInToken,
+                    ["device"] = new Dictionary<string, string>
+                    {
+                        ["uuid"] = credentials.DeviceUuid,
+                        ["clientName"] = ClientName,
+                        ["clientVersion"] = ClientVersion,
+                        ["name"] = app.Name,
+                        ["model"] = app.Version,
+                        ["osName"] = GetOsName(),
+                        ["osVersion"] = "", // TODO: OS version detection
+                        ["userAgent"] = "", // TODO: User agent string
+                    },
+                },
+                sessionKey,
+                rest,
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+    }
+
+    //
+    // Data
+    //
+
+    private const string SsoCredentialsKey = "sso-credentials";
+}
+
+// Cpace bits
+// TODO: Move out to a separate class
+public static partial class Client
+{
+    internal static Task<Model.CredentialBundle> PerformCpace(
+        string username,
+        string signInAddress,
+        string signInToken,
+        string enrollmentUuid,
+        string verificationCode,
+        RestClient rest,
+        CancellationToken cancellationToken
+    ) =>
+        PerformCpace(
+            username: username,
+            signInAddress: signInAddress,
+            signInToken: signInToken,
+            enrollmentUuid: enrollmentUuid,
+            verificationCode: verificationCode,
+            clientSecret: Crypto.RandomBytes(64),
+            rest: rest,
+            cancellationToken: cancellationToken
+        );
+
+    //
+    // CPACE networking
+    //
+
+    internal static async Task<Model.CredentialBundle> PerformCpace(
+        string username,
+        string signInAddress,
+        string signInToken,
+        string enrollmentUuid,
+        string verificationCode,
+        byte[] clientSecret,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        // 1. Get "msga"
+        var msgA = await RequestMsgA(signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
+
+        // 2. Calculate "msgb"
+        var msgB = CalculateMsgB(
+            username: username,
+            signInAddress: signInAddress,
+            enrollmentUuid: enrollmentUuid,
+            verificationCode: verificationCode,
+            msgA: msgA,
+            clientSecret: clientSecret
+        );
+
+        // 3. Respond with "msgb"
+        await SendMsgB(msgB, signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
+
+        // 4. Get "taga"
+        var tagA = await GetTagA(signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
+
+        // 5. Verify "taga" to make sure it's authentic. Currently, we don't do this, we just trust the server.
+        VerifyTagA(tagA);
+
+        // 6. Calculate "tagb"
+        var (authB, tagB) = CalculateAuthBTagB(clientSecret, msgA, msgB);
+
+        // 7. Respond with "tagb"
+        await SendTagB(tagB, signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
+
+        // 8. Receive credentials from the enrolled device via the central server.
+        //    The credentials are encrypted with the exchange key and are unknown to the central server.
+        var encryptedCredentials = await RequestEncryptedCredentials(signInToken, enrollmentUuid, rest, cancellationToken).ConfigureAwait(false);
+
+        // 9. Derive the exchange key locally. The other device could do the same thanks to the CPACE protocol.
+        var exchangeKey = DeriveExchangeKey(authB);
+
+        // 10. Decrypt and parse the credentials
+        var credentials = DecryptCredentials(encryptedCredentials, exchangeKey);
+
+        // 11. Phew, done!
+        return credentials;
+    }
+
+    internal static async Task<MsgA> RequestMsgA(string signInToken, string enrollmentUuid, RestClient rest, CancellationToken cancellationToken)
+    {
+        var msgAResponse = await rest.PostJsonAsync<Model.CpaceMsgA>(
+                GetCpaceEndpoint(enrollmentUuid, "msga"),
+                new Dictionary<string, object> { ["signInToken"] = signInToken },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!msgAResponse.IsSuccessful)
+            throw MakeError(msgAResponse);
+
+        return ParseMsgA(msgAResponse.Data.MsgA.Decode64Loose());
+    }
+
+    internal record MsgA(byte[] Ya, Ad Ad, byte[] OriginalMessage);
+
+    internal record Ad(int Version, byte[] Salt, byte[] SessionId);
+
+    internal static MsgA ParseMsgA(byte[] json)
+    {
+        var model = DeserializeJson<Model.MsgA>(json);
+        return new MsgA(
+            Ya: model.Ya.Decode64Loose(),
+            Ad: new Ad(Version: model.Ad.Version, Salt: model.Ad.Salt.Decode64Loose(), SessionId: [.. model.Ad.SessionId.Select(x => (byte)x)]),
+            OriginalMessage: json
+        );
+    }
+
+    internal static async Task SendMsgB(byte[] msgB, string signInToken, string enrollmentUuid, RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.PutJsonAsync<Model.SuccessResult>(
+                GetCpaceEndpoint(enrollmentUuid, "msgb"),
+                new Dictionary<string, object> { ["signInToken"] = signInToken, ["msgb"] = msgB.ToUrlSafeBase64NoPadding() },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        if (response.Data.Success != 1)
+            throw new InternalErrorException("Failed to exchange credentials");
+    }
+
+    internal static async Task<byte[]> GetTagA(string signInToken, string enrollmentUuid, RestClient rest, CancellationToken cancellationToken)
+    {
+        var result = await PostJsonUntilResult<Model.CpaceTagA>(
+                GetCpaceEndpoint(enrollmentUuid, "taga"),
+                new Dictionary<string, object> { ["signInToken"] = signInToken },
+                rest,
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        return result.TagA.Decode64Loose();
+    }
+
+    private static async Task SendTagB(byte[] tagB, string signInToken, string enrollmentUuid, RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.PutJsonAsync<Model.SuccessResult>(
+                GetCpaceEndpoint(enrollmentUuid, "tagb"),
+                new Dictionary<string, object> { ["signInToken"] = signInToken, ["tagb"] = tagB.ToUrlSafeBase64NoPadding() },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        if (response.Data.Success != 1)
+            throw new InternalErrorException("Failed to submit tagb");
+    }
+
+    internal static async Task<Model.Encrypted> RequestEncryptedCredentials(
+        string signInToken,
+        string enrollmentUuid,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var result = await PostJsonUntilResult<Model.SsoCredentials>(
+                GetEnrollmentEndpoint(enrollmentUuid, "share/credentials"),
+                new Dictionary<string, object> { ["signInToken"] = signInToken },
+                rest,
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        return result.EncryptedCredentials;
+    }
+
+    // Sometimes the server returns 200 OK with an empty body. Need to go again. The web frontend does the same.
+    internal static async Task<T> PostJsonUntilResult<T>(
+        string endpoint,
+        Dictionary<string, object> parameters,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        // TODO: Fix this! 20 is too little and shouldn't be done like this!
+        for (var i = 0; i < 20; i++)
+        {
+            var response = await rest.PostJsonAsync<T>(endpoint, parameters, cancellationToken).ConfigureAwait(false);
+
+            // Done
+            if (response.IsSuccessful)
+                return response.Data;
+
+            if (response.IsHttpOk && response.Content.IsNullOrEmpty())
+            {
+                // Retry
+                await Task.Delay(500, cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            // Some other kind of error
+            throw MakeError(response);
+        }
+
+        throw new InternalErrorException($"Failed to get a response from the server (endpoint: {endpoint})");
+    }
+
+    internal static string GetEnrollmentEndpoint(string enrollmentUuid, string method) => $"v3/device/enrollments/{enrollmentUuid}/{method}";
+
+    internal static string GetCpaceEndpoint(string enrollmentUuid, string method) => GetEnrollmentEndpoint(enrollmentUuid, $"cpace/{method}");
+
+    //
+    // CPACE crypto
+    //
+
+    internal static byte[] CalculateMsgB(
+        string username,
+        string signInAddress,
+        string enrollmentUuid,
+        string verificationCode,
+        MsgA msgA,
+        byte[] clientSecret
+    )
+    {
+        // Some arbitrary crypto stuff reverse engineered from the 1Password WASM module
+        var passcodeHash = CalculatePasscodeHash(verificationCode, msgA.Ad.Salt);
+        var firstHash = CalculateFirstHash(username, signInAddress, enrollmentUuid, msgA);
+        var secondHash = CalculateSecondHash(firstHash, passcodeHash, msgA);
+        var clientScalar = Scalar.FromBytesModOrderWide(clientSecret);
+        var hashRistretto = RistrettoElement.FromUniformBytes(secondHash);
+        var finalRistretto = hashRistretto.Multiply(clientScalar);
+        return finalRistretto.Compress().ToByteArray();
+    }
+
+    internal static byte[] CalculatePasscodeHash(string passcode, byte[] salt)
+    {
+        return Crypto.Pbkdf2Sha256(passcode, salt, 100_000, 32);
+    }
+
+    internal static byte[] CalculateFirstHash(string email, string signInAddress, string enrollmentUuid, MsgA msgA)
+    {
+        using var memory = new MemoryStream();
+        using var writer = new BinaryWriter(memory);
+
+        WriteLeb128Prefixed(writer, "1P-SSO-TRUSTED-DEVICE");
+        WriteLeb128Prefixed(writer, "1P-SSO-NEW-DEVICE");
+        WriteLeb128Prefixed(writer, email);
+        WriteLeb128Prefixed(writer, signInAddress);
+        WriteLeb128Prefixed(writer, enrollmentUuid);
+        WriteLeb128Prefixed(writer, msgA.Ad.Salt);
+        WriteLeb128Prefixed(writer, [1]);
+
+        return Crypto.Sha512(memory.ToArray());
+    }
+
+    internal static byte[] CalculateSecondHash(byte[] firstHash, byte[] passcodeHash, MsgA msgA)
+    {
+        using var memory = new MemoryStream();
+        using var writer = new BinaryWriter(memory);
+
+        WriteLeb128Prefixed(writer, "CPaceRistretto255");
+        WriteLeb128Prefixed(writer, passcodeHash);
+        WriteLeb128Prefixed(writer, Enumerable.Repeat((byte)0, 76).ToArray()); // pad to 128 bytes, the length is fixed
+        WriteLeb128Prefixed(writer, firstHash);
+        WriteLeb128Prefixed(writer, msgA.Ad.SessionId);
+
+        return Crypto.Sha512(memory.ToArray());
+    }
+
+    internal static void WriteLeb128Prefixed(BinaryWriter writer, string text)
+    {
+        WriteLeb128Prefixed(writer, text.ToBytes());
+    }
+
+    internal static void WriteLeb128Prefixed(BinaryWriter writer, byte[] data)
+    {
+        // Write LEB128 encoded length
+        var length = data.Length;
+        do
+        {
+            byte b = (byte)(length & 0x7F);
+            length >>= 7;
+            if (length != 0)
+                b |= 0x80;
+            writer.Write(b);
+        } while (length != 0);
+
+        // Write the actual data
+        writer.Write(data);
+    }
+
+    internal static void VerifyTagA(byte[] tagA)
+    {
+        // TODO: Implement
+    }
+
+    private static (byte[] AuthB, byte[] TagB) CalculateAuthBTagB(byte[] clientSecret, MsgA msgA, byte[] msgB)
+    {
+        var authA = CalculateAuthAHash(msgA, clientSecret);
+        var authB = CalculateAuthBHash(authA, msgA, msgB);
+        var tagB = CalculateTagB(authB, msgB);
+        return (authB, tagB);
+    }
+
+    internal static byte[] CalculateAuthAHash(MsgA msgA, byte[] clientSecret)
+    {
+        var clientScalar = Scalar.FromBytesModOrderWide(clientSecret);
+        return new CompressedRistretto(msgA.Ya).Decompress().Multiply(clientScalar).Compress().ToByteArray();
+    }
+
+    internal static byte[] CalculateAuthBHash(byte[] yaHash, MsgA msgA, byte[] msgB)
+    {
+        using var memory = new MemoryStream();
+        using var writer = new BinaryWriter(memory);
+
+        WriteLeb128Prefixed(writer, "CPaceRistretto255_ISK");
+        WriteLeb128Prefixed(writer, msgA.Ad.SessionId);
+        WriteLeb128Prefixed(writer, yaHash);
+        writer.Write(msgA.OriginalMessage);
+        writer.Write(msgB);
+
+        return Crypto.Sha512(memory.ToArray());
+    }
+
+    internal static byte[] CalculateTagB(byte[] authBHash, byte[] msgB)
+    {
+        using var memory = new MemoryStream();
+        using var writer = new BinaryWriter(memory);
+
+        writer.Write("CPaceMac"u8.ToArray());
+        writer.Write(authBHash);
+
+        var hashA = Crypto.Sha512(memory.ToArray());
+
+        return Crypto.HmacSha512(hashA, msgB);
+    }
+
+    internal static byte[] DeriveExchangeKey(byte[] authB)
+    {
+        var hmac1 = Crypto.HmacSha384("1P_SSO_ENROLLMENT_TRANSPORT_KEY"u8.ToArray(), authB);
+        var hmac2 = Crypto.HmacSha384(hmac1, "1P_SSO_CREDENTIAL_BUNDLE_KEY:ENROLL\x01"u8.ToArray());
+        return hmac2[0..32];
+    }
+
+    internal static Model.CredentialBundle DecryptCredentials(Model.Encrypted encryptedCredentials, byte[] exchangeKey)
+    {
+        var aesKey = new AesKey("1P_SSO_ENROLLMENT_TRANSPORT_KEY", exchangeKey);
+        var credentialsBytes = aesKey.Decrypt(Encrypted.Parse(encryptedCredentials), adata: "1P_SSO_CREDENTIAL_BUNDLE:ENROLL"u8.ToArray());
+
+        return DeserializeJson<Model.CredentialBundle>(credentialsBytes);
+    }
+
+    internal static T DeserializeJson<T>(string jsonString) => DeserializeJson<T>(jsonString.ToBytes());
+
+    internal static T DeserializeJson<T>(byte[] jsonBytes)
+    {
+        const string errorMessage = "Failed to deserialize JSON";
+        try
+        {
+            var o = JsonSerializer.Deserialize<T>(jsonBytes);
+            return o == null ? throw Error() : o;
+        }
+        catch (JsonException e)
+        {
+            throw Error(e);
+        }
+
+        static InternalErrorException Error(Exception? e = null) => new(errorMessage, e);
+    }
+}

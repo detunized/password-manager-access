@@ -4,6 +4,7 @@
 #nullable enable
 
 using System;
+using System.Threading.Tasks;
 
 namespace PasswordManagerAccess.Common
 {
@@ -14,11 +15,41 @@ namespace PasswordManagerAccess.Common
         public static Try<T> FromError<T>(Exception error) => Try<T>.FromError(error);
 
         public static Try<T> FromError<T>(string message, Exception? inner = null) => Try<T>.FromError(message, inner);
+
+        public static Try<T> FromResultOf<T>(Func<T> func)
+        {
+            try
+            {
+                return FromValue(func());
+            }
+            catch (Exception e)
+            {
+                return FromError<T>(e);
+            }
+        }
+
+        public static async Task<Try<T>> FromResultOf<T>(Func<Task<T>> func)
+        {
+            try
+            {
+                return FromValue(await func());
+            }
+            catch (OperationCanceledException)
+            {
+                // Pass cancellation exceptions through
+                throw;
+            }
+            catch (Exception e)
+            {
+                return FromError<T>(e);
+            }
+        }
     }
 
     internal readonly struct Try<T>
     {
         public T Value => IsValue ? _value : throw _error!;
+        public T? ValueOrNull => IsValue ? _value : default;
         public Exception? Error => _error;
 
         public bool IsError => Error != null;

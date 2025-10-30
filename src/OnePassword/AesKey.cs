@@ -14,7 +14,7 @@ namespace PasswordManagerAccess.OnePassword
         public readonly string Id;
         public readonly byte[] Key;
 
-        public static AesKey Parse(Response.AesKey json)
+        public static AesKey Parse(Model.AesKey json)
         {
             return new AesKey(json.Id, json.Key.Decode64Loose());
         }
@@ -35,11 +35,11 @@ namespace PasswordManagerAccess.OnePassword
         public Encrypted Encrypt(byte[] plaintext, byte[] iv, byte[] adata)
         {
             return new Encrypted(
-                keyId: Id,
-                scheme: EncryptionScheme,
-                container: ContainerType,
-                iv: iv,
-                ciphertext: AesGcm.Encrypt(Key, plaintext, iv, adata)
+                KeyId: Id,
+                Scheme: EncryptionScheme,
+                Container: ContainerType,
+                Iv: iv,
+                Ciphertext: AesGcm.Encrypt(Key, plaintext, iv, adata)
             );
         }
 

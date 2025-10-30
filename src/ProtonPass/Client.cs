@@ -187,11 +187,11 @@ namespace PasswordManagerAccess.ProtonPass
             // used to get the actual vault data.
 
             // Load the previous session
-            var sessionId = await storage.LoadString("session-id").ConfigureAwait(false);
-            var accessToken = await storage.LoadString("access-token").ConfigureAwait(false);
-            var refreshToken = await storage.LoadString("refresh-token").ConfigureAwait(false);
-            var humanVerificationTokenType = await storage.LoadString("human-verification-token-type").ConfigureAwait(false);
-            var humanVerificationToken = await storage.LoadString("human-verification-token").ConfigureAwait(false);
+            var sessionId = await storage.LoadString("session-id", cancellationToken).ConfigureAwait(false);
+            var accessToken = await storage.LoadString("access-token", cancellationToken).ConfigureAwait(false);
+            var refreshToken = await storage.LoadString("refresh-token", cancellationToken).ConfigureAwait(false);
+            var humanVerificationTokenType = await storage.LoadString("human-verification-token-type", cancellationToken).ConfigureAwait(false);
+            var humanVerificationToken = await storage.LoadString("human-verification-token", cancellationToken).ConfigureAwait(false);
 
             // TODO: Do we need to store this and use it again the next time?
             if (!humanVerificationTokenType.IsNullOrEmpty() && !humanVerificationToken.IsNullOrEmpty())
@@ -321,7 +321,7 @@ namespace PasswordManagerAccess.ProtonPass
             // We save the session ID only. The access and the refresh tokens are only good for requesting
             // the auth info at this point. They don't give any other access. We save them after
             // the authorization is granted. The rest we erase.
-            await StoreSession(session.Id, null, null, storage).ConfigureAwait(false);
+            await StoreSession(session.Id, null, null, storage, cancellationToken).ConfigureAwait(false);
 
             rest.AddOrUpdateHeader("X-Pm-Uid", session.Id);
             rest.AddOrUpdateHeader("Authorization", $"Bearer {session.AccessToken}");
@@ -369,7 +369,7 @@ namespace PasswordManagerAccess.ProtonPass
 
                     // Once the auth has been granted, the tokens returned by the server give full access to the vault.
                     // They need to be saved for the next sessions.
-                    await StoreSession(auth.SessionId, auth.AccessToken, auth.RefreshToken, storage).ConfigureAwait(false);
+                    await StoreSession(auth.SessionId, auth.AccessToken, auth.RefreshToken, storage, cancellationToken).ConfigureAwait(false);
 
                     // Done
                     return;
@@ -377,7 +377,7 @@ namespace PasswordManagerAccess.ProtonPass
                 catch (NeedCaptchaException e)
                 {
                     // Wipe the old HV token, it clearly didn't work
-                    await StoreHumanVerificationToken(null, null, storage).ConfigureAwait(false);
+                    await StoreHumanVerificationToken(null, null, storage, cancellationToken).ConfigureAwait(false);
 
                     // TODO: Support other types of human verification
                     var result = await ui.SolveCaptcha(e.Url, e.HumanVerificationToken, cancellationToken).ConfigureAwait(false);
@@ -390,7 +390,7 @@ namespace PasswordManagerAccess.ProtonPass
                     if (!result.Solved)
                         throw new InternalErrorException("CAPTCHA verification failed");
 
-                    await StoreHumanVerificationToken("captcha", result.Token, storage).ConfigureAwait(false);
+                    await StoreHumanVerificationToken("captcha", result.Token, storage, cancellationToken).ConfigureAwait(false);
 
                     // Update the HV token
                     rest.AddOrUpdateHeader("X-Pm-Human-Verification-Token-Type", "captcha");
@@ -538,7 +538,7 @@ namespace PasswordManagerAccess.ProtonPass
                 var session = await RefreshAuthSession(sessionId, refreshToken, rest, cancellationToken).ConfigureAwait(false);
 
                 // Save for the next session
-                await StoreSession(session.Id, session.AccessToken, session.RefreshToken, storage).ConfigureAwait(false);
+                await StoreSession(session.Id, session.AccessToken, session.RefreshToken, storage, cancellationToken).ConfigureAwait(false);
 
                 // Update the session auth
                 rest.AddOrUpdateHeader("X-Pm-Uid", session.Id);
@@ -549,23 +549,23 @@ namespace PasswordManagerAccess.ProtonPass
             catch (TokenExpiredException)
             {
                 // The refresh token is expired as well. Erase everything and start from scratch.
-                await StoreSession(sessionId, null, null, storage).ConfigureAwait(false);
+                await StoreSession(sessionId, null, null, storage, cancellationToken).ConfigureAwait(false);
 
                 return false;
             }
         }
 
-        internal static async Task StoreSession(string? sessionId, string? accessToken, string? refreshToken, IAsyncSecureStorage storage)
+        internal static async Task StoreSession(string? sessionId, string? accessToken, string? refreshToken, IAsyncSecureStorage storage, CancellationToken cancellationToken)
         {
-            await storage.StoreString("session-id", sessionId).ConfigureAwait(false);
-            await storage.StoreString("access-token", accessToken).ConfigureAwait(false);
-            await storage.StoreString("refresh-token", refreshToken).ConfigureAwait(false);
+            await storage.StoreString("session-id", sessionId, cancellationToken).ConfigureAwait(false);
+            await storage.StoreString("access-token", accessToken, cancellationToken).ConfigureAwait(false);
+            await storage.StoreString("refresh-token", refreshToken, cancellationToken).ConfigureAwait(false);
         }
 
-        internal static async Task StoreHumanVerificationToken(string? tokenType, string? token, IAsyncSecureStorage storage)
+        internal static async Task StoreHumanVerificationToken(string? tokenType, string? token, IAsyncSecureStorage storage, CancellationToken cancellationToken)
         {
-            await storage.StoreString("human-verification-token-type", tokenType).ConfigureAwait(false);
-            await storage.StoreString("human-verification-token", token).ConfigureAwait(false);
+            await storage.StoreString("human-verification-token-type", tokenType, cancellationToken).ConfigureAwait(false);
+            await storage.StoreString("human-verification-token", token, cancellationToken).ConfigureAwait(false);
         }
 
         internal static async Task<Model.Session> RequestNewAuthSession(RestClient rest, CancellationToken cancellationToken)

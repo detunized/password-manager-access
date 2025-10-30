@@ -2,7 +2,6 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 #nullable enable
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -29,10 +28,10 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         // Mutates the keychain
-        internal R.VaultAttributes Decrypt()
+        internal Model.VaultAttributes Decrypt()
         {
             DecryptKeyIntoKeychain();
-            return Util.Decrypt<R.VaultAttributes>(_encryptedAttributes, _keychain);
+            return Util.Decrypt<Model.VaultAttributes>(_encryptedAttributes, _keychain);
         }
 
         // Mutates the keychain
@@ -48,7 +47,7 @@ namespace PasswordManagerAccess.OnePassword
         private readonly Keychain _keychain;
 
         // Cache
-        private R.VaultAttributes Attributes => _attributes ??= Decrypt();
-        private R.VaultAttributes? _attributes;
+        private Model.VaultAttributes Attributes => _attributes ??= Decrypt();
+        private Model.VaultAttributes? _attributes;
     }
 }

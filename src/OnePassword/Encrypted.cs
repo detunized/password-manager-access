@@ -6,43 +6,40 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    internal class Encrypted
+    internal record Encrypted(string KeyId, string Scheme, string Container, byte[] Iv, byte[] Ciphertext)
     {
-        public readonly string KeyId;
-        public readonly string Scheme;
-        public readonly string Container;
-        public readonly byte[] Iv;
-        public readonly byte[] Ciphertext;
-
-        public static Encrypted Parse(Response.Encrypted json)
+        public static Encrypted Parse(Model.Encrypted json)
         {
             return new Encrypted(
-                keyId: json.KeyId,
-                scheme: json.Scheme,
-                container: json.Container,
-                iv: json.Iv?.Decode64Loose(), // This is optional
-                ciphertext: json.Ciphertext.Decode64Loose()
+                KeyId: json.KeyId,
+                Scheme: json.Scheme,
+                Container: json.Container,
+                Iv: json.Iv?.Decode64Loose(), // This is optional
+                Ciphertext: json.Ciphertext.Decode64Loose()
             );
-        }
-
-        public Encrypted(string keyId, string scheme, string container, byte[] iv, byte[] ciphertext)
-        {
-            KeyId = keyId;
-            Scheme = scheme;
-            Container = container;
-            Iv = iv;
-            Ciphertext = ciphertext;
         }
 
         public Dictionary<string, object> ToDictionary()
         {
-            return new Dictionary<string, object>
+            return new Dictionary<string, object>(5)
             {
-                { "kid", KeyId },
-                { "enc", Scheme },
-                { "cty", Container },
-                { "iv", Iv.ToUrlSafeBase64NoPadding() },
-                { "data", Ciphertext.ToUrlSafeBase64NoPadding() },
+                ["kid"] = KeyId,
+                ["enc"] = Scheme,
+                ["cty"] = Container,
+                ["iv"] = Iv.ToUrlSafeBase64NoPadding(),
+                ["data"] = Ciphertext.ToUrlSafeBase64NoPadding(),
+            };
+        }
+
+        public Model.Encrypted ToModel()
+        {
+            return new Model.Encrypted
+            {
+                KeyId = KeyId,
+                Scheme = Scheme,
+                Container = Container,
+                Iv = Iv.ToUrlSafeBase64NoPadding(),
+                Ciphertext = Ciphertext.ToUrlSafeBase64NoPadding(),
             };
         }
     }

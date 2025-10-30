@@ -4,18 +4,31 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
 using U2fWin10;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
-    public static class Client
+    // TODO:
+    // [x] implement mfa method selection
+    // [x] implement mfa attempts
+    // [ ] figure out if webauthn is possible on macos
+    // [x] add cancellation tokens to the async storage
+    // [x] implement PerformSsoLogin
+    // [x] in EncryptForStorage use Model.DeviceKeyDerivation
+    // [x] in DecryptFromStorage use Model.DeviceKeyDerivation
+    // [x] implement ExchangeCredentials
+    // [x] implement internal static async Task<(AesKey, RestClient)> Login(
+
+    public static partial class Client
     {
         public const string DefaultDomain = "my.1password.com";
         public const string ClientName = "1Password CLI";
@@ -25,66 +38,81 @@ namespace PasswordManagerAccess.OnePassword
         public const string ClientVersion = "2190004";
         public const string ClientId = ClientName + "/" + ClientVersion;
 
+        public const int MaxOtpAttempts = 3;
+
         // Public entries point to the library: Login, Logout, ListAllVaults, OpenVault
         // We try to mimic the remote structure, that's why there's an array of vaults.
         // We open all the ones we can.
-        public static Session LogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage)
+        public static async Task<Session> LogIn(
+            Credentials credentials,
+            AppInfo app,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            CancellationToken cancellationToken
+        )
         {
             var transport = new RestTransport();
             try
             {
-                return LogIn(credentials, app, ui, storage, transport);
+                return await LogIn(credentials, app, ui, storage, transport, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception)
             {
+                // We only need to dispose in case of an error, otherwise it's returned with the session.
                 transport.Dispose();
                 throw;
             }
         }
 
         // Service account access is intended for the CLI and the automation tools. It's not supposed to have
-        // any 2FA used in the flow. Also we won't need to store anything between the sessions.
-        public static Session LogIn(ServiceAccount serviceAccount, AppInfo app)
+        // any 2FA used in the flow. Also, we won't need to store anything between the sessions.
+        public static async Task<Session> LogIn(ServiceAccount serviceAccount, AppInfo app, CancellationToken cancellationToken)
         {
             var credentials = ParseServiceAccountToken(serviceAccount.Token);
-            return LogIn(credentials, app, new Util.ThrowUi(), new Util.ThrowStorage());
+            return await LogIn(credentials, app, new Util.ThrowUi(), new Util.ThrowStorage(), cancellationToken).ConfigureAwait(false);
         }
 
-        public static void LogOut(Session session)
+        public static async Task LogOut(Session session, CancellationToken cancellationToken)
         {
             try
             {
-                LogOut(session.Rest);
+                await LogOut(session.Rest, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
-                session.Transport.Dispose();
+                session.Dispose();
             }
         }
 
-        public static VaultInfo[] ListAllVaults(Session session)
+        public static async Task<VaultInfo[]> ListAllVaults(Session session, CancellationToken cancellationToken)
         {
-            return ListAllVaults(session.Credentials, session.Keychain, session.Key, session.Rest);
+            return await ListAllVaults(session.Credentials, session.Keychain, session.Key, session.Rest, cancellationToken).ConfigureAwait(false);
         }
 
-        public static Vault OpenVault(VaultInfo info, Session session)
+        public static async Task<Vault> OpenVault(VaultInfo info, Session session, CancellationToken cancellationToken)
         {
             // Make sure the vault key is in the keychain not to check on every account. They key decryption
             // is negligibly quick compared to the account retrieval, so we could do that upfront.
             info.DecryptKeyIntoKeychain();
 
-            var (accounts, sshKeys) = GetVaultItems(info.Id, session.Keychain, session.Key, session.Rest);
+            var (accounts, sshKeys) = await GetVaultItems(info.Id, session.Keychain, session.Key, session.Rest, cancellationToken)
+                .ConfigureAwait(false);
             return new Vault(info, accounts, sshKeys);
         }
 
-        public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, string vaultId, Session session)
+        public static async Task<OneOf<Account, SshKey, NoItem>> GetItem(
+            string itemId,
+            string vaultId,
+            Session session,
+            CancellationToken cancellationToken
+        )
         {
             // 1. On the first request we fetch everything we need to decrypt the item. This is also allows us to check
             // upfront if the vault exists and if it's accessible.
             if (session.AccountInfo == null)
             {
-                var accountInfo = GetAccountInfo(session.Key, session.Rest);
-                var keysetsInfo = GetKeysets(session.Key, session.Rest);
+                var accountInfo = await GetAccountInfo(session.Key, session.Rest, cancellationToken).ConfigureAwait(false);
+                var keysetsInfo = await GetKeysets(session.Key, session.Rest, cancellationToken).ConfigureAwait(false);
 
                 // Decrypt into the session keychain
                 DecryptKeysets(keysetsInfo.Keysets, session.Credentials, session.Keychain);
@@ -102,21 +130,21 @@ namespace PasswordManagerAccess.OnePassword
             }
 
             // 2. Check if the vault ID is valid and the vault exists
-            if (!session.AccountInfo.Vaults.Any(x => x.Id == vaultId))
+            if (session.AccountInfo!.Vaults.All(x => x.Id != vaultId))
                 return NoItem.NotFound;
 
             // 3. Even if the vault is there, it might not be accessible
-            if (!session.AccessibleVaults.Any(x => x.Id == vaultId))
+            if (session.AccessibleVaults!.All(x => x.Id != vaultId))
                 return NoItem.Inaccessible;
 
             // 4. Download the item
-            var oneOf3 = GetVaultItem(itemId, vaultId, session.Keychain, session.Key, session.Rest);
+            var oneOf3 = await GetVaultItem(itemId, vaultId, session.Keychain, session.Key, session.Rest, cancellationToken).ConfigureAwait(false);
 
             // 5. Check if the item is not available
             if (oneOf3.TryPickT2(out var noItem, out var oneOf2))
                 return noItem;
 
-            // 6. It's either an account or a SSH key
+            // 6. It's either an account or an SSH key
             var item = oneOf2.Match<VaultItem>(a => a, k => k);
 
             if (CanDecrypt(item))
@@ -137,35 +165,31 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
-        internal static Session LogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage, IRestTransport transport)
+        internal static async Task<Session> LogIn(
+            Credentials credentials,
+            AppInfo app,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            IRestTransport transport,
+            CancellationToken cancellationToken
+        )
         {
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
-            var (sessionKey, sessionRest) = LogIn(credentials, app, ui, storage, rest);
-            return new Session(credentials, new Keychain(), sessionKey, sessionRest, transport);
+            var isSso = await IsSsoAccount(credentials.Username, rest, cancellationToken).ConfigureAwait(false);
+            return isSso
+                ? await SsoLogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false)
+                : await LogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
         }
 
         internal static Credentials ParseServiceAccountToken(string token)
         {
-            static InternalErrorException Error(string detail, Exception inner = null)
-            {
-                return new InternalErrorException($"Invalid service account token: {detail}", inner);
-            }
-
-            static string Validate(string value, string name)
-            {
-                if (value.IsNullOrEmpty())
-                    throw Error($"invalid {name}");
-
-                return value;
-            }
-
             if (token == null || !token.StartsWith("ops_"))
                 throw Error("invalid format");
 
-            R.ServiceAccountToken parsed;
+            Model.ServiceAccountToken parsed;
             try
             {
-                parsed = JsonConvert.DeserializeObject<R.ServiceAccountToken>(token.Substring(4).Decode64Loose().ToUtf8());
+                parsed = JsonSerializer.Deserialize<Model.ServiceAccountToken>(token.Substring(4).Decode64Loose().ToUtf8());
             }
             catch (JsonException e)
             {
@@ -182,21 +206,42 @@ namespace PasswordManagerAccess.OnePassword
                 Domain = Validate(parsed.Domain, "domain"),
                 DeviceUuid = Validate(parsed.DeviceUuid, "device UUID"),
                 SrpX = Validate(parsed.SrpX, "SRP X value"),
-                Key = new AesKey(MasterKeyId, Validate(parsed.MasterUnlockKey.Key, "MUK").Decode64Loose()),
+                Key = new AesKey(MasterKeyId, Validate(parsed.MasterUnlockKey!.Key, "MUK").Decode64Loose()),
             };
+
+            // ---
+
+            static InternalErrorException Error(string detail, Exception inner = null)
+            {
+                return new InternalErrorException($"Invalid service account token: {detail}", inner);
+            }
+
+            static string Validate(string value, string name)
+            {
+                if (value.IsNullOrEmpty())
+                    throw Error($"invalid {name}");
+
+                return value;
+            }
         }
 
-        internal static VaultInfo[] ListAllVaults(Credentials credentials, Keychain keychain, AesKey sessionKey, RestClient rest)
+        internal static async Task<VaultInfo[]> ListAllVaults(
+            Credentials credentials,
+            Keychain keychain,
+            AesKey sessionKey,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             // Step 1: Get account info. It contains users, keys, groups, vault info and other stuff.
             //         Not the actual vault data though. That is requested separately.
-            var accountInfo = GetAccountInfo(sessionKey, rest);
+            var accountInfo = await GetAccountInfo(sessionKey, rest, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Get all the keysets in one place. The original code is quite hairy around this
-            //         topic, so it's not very clear if these keysets should be merged with anything else
-            //         or it's enough to just use these keys. For now we gonna ignore other keys and
+            //         topic, so it's not very clear if these keysets should be merged with anything else,
+            //         or it's enough to just use these keys. For now, we are going to ignore other keys and
             //         see if it's enough.
-            var keysets = GetKeysets(sessionKey, rest);
+            var keysets = await GetKeysets(sessionKey, rest, cancellationToken).ConfigureAwait(false);
 
             // Step 3: Derive and decrypt the keys
             DecryptKeysets(keysets.Keysets, credentials, keychain);
@@ -208,46 +253,93 @@ namespace PasswordManagerAccess.OnePassword
             return vaults.ToArray();
         }
 
-        // This is exception is used internally to trigger re-login from the depth of the call stack.
-        // Possibly not the best design. TODO: Should this be done differently?
-        internal class RetryLoginException : Exception { }
-
-        internal static (AesKey, RestClient) LogIn(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage, RestClient rest)
+        internal static async Task<Session> LogIn(
+            Credentials credentials,
+            AppInfo app,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            while (true)
+            // Unlike other PM services, 1P doesn't like multiple OTP failures in a row.
+            // After a failed attempt, we need to restart the whole auth sequence from scratch.
+            for (var attempt = 0; ; attempt++)
             {
                 try
                 {
-                    return LoginAttempt(credentials, app, ui, storage, rest);
+                    var result = await LoginAttempt(attempt, credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+                    switch (result.Value)
+                    {
+                        case Session session:
+                            return session;
+                        case MfaRetry:
+                            // This is not a real attempt, this means the remember-me token got rejected by the server.
+                            attempt--;
+                            continue;
+                        default:
+                            throw new InternalErrorException("Invalid LoginAttempt result");
+                    }
                 }
-                catch (RetryLoginException) { }
+                catch (BadMultiFactorException) when (attempt < MaxOtpAttempts - 1)
+                {
+                    // This bubbles up from the deep. A few times we allow the user to try again.
+                    // After that, the exception is propagated all the way to the top.
+                }
             }
         }
 
-        private static (AesKey, RestClient) LoginAttempt(Credentials credentials, AppInfo app, IUi ui, ISecureStorage storage, RestClient rest)
+        internal struct MfaSuccess;
+
+        internal struct MfaRetry;
+
+        private static async Task<OneOf<Session, MfaRetry>> LoginAttempt(
+            int attempt,
+            Credentials credentials,
+            AppInfo app,
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             // Step 1: Request to initiate a new session
-            var (sessionId, srpInfo) = StartNewSession(credentials, app, rest);
+            var (sessionId, srpInfo) = await StartNewSession(credentials, app, rest, cancellationToken).ConfigureAwait(false);
 
             // After a new session has been initiated, all the subsequent requests must be
             // signed with the session ID.
             var sessionRest = MakeRestClient(rest, sessionId: sessionId);
 
             // Step 2: Perform SRP exchange
-            var sessionKey = Srp.Perform(credentials, srpInfo, sessionId, sessionRest);
+            var sessionKey = await SrpV1.PerformAsync(credentials, srpInfo, sessionId, sessionRest, cancellationToken).ConfigureAwait(false);
 
             // Assign a request signer now that we have a key.
             // All the following requests are expected to be signed with the MAC.
             var macRest = MakeRestClient(sessionRest, new MacRequestSigner(sessionKey), sessionId);
 
             // Step 3: Verify the key with the server
-            var verifiedOrMfa = VerifySessionKey(credentials, app, sessionKey, macRest);
+            var verifiedOrMfa = await VerifySessionKey(credentials, app, sessionKey, macRest, cancellationToken).ConfigureAwait(false);
 
             // Step 4: Submit 2FA code if needed
             if (verifiedOrMfa.Status == VerifyStatus.SecondFactorRequired)
-                PerformSecondFactorAuthentication(verifiedOrMfa.Factors, credentials, sessionKey, ui, storage, macRest);
+            {
+                var mfaResult = await PerformSecondFactorAuthentication(
+                        attempt,
+                        verifiedOrMfa.Factors,
+                        credentials,
+                        sessionKey,
+                        ui,
+                        storage,
+                        macRest,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
 
-            return (sessionKey, macRest);
+                if (mfaResult.TryPickT1(out var retry, out _))
+                    return retry;
+            }
+
+            return new Session(credentials, new Keychain(), sessionKey, macRest);
         }
 
         internal static string GetApiUrl(string domain)
@@ -261,24 +353,29 @@ namespace PasswordManagerAccess.OnePassword
             if (!sessionId.IsNullOrEmpty())
                 headers["X-AgileBits-Session-ID"] = sessionId;
 
-            return new RestClient(transport, baseUrl, signer, headers);
+            return new RestClient(transport, baseUrl, signer, headers, useSystemJson: true);
         }
 
-        internal static RestClient MakeRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null)
-        {
-            return MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
-        }
+        internal static RestClient MakeRestClient(RestClient rest, IRequestSigner signer = null, string sessionId = null) =>
+            MakeRestClient(rest.Transport, rest.BaseUrl, signer ?? rest.Signer, sessionId);
 
-        internal static (string SessionId, SrpInfo SrpInfo) StartNewSession(Credentials credentials, AppInfo app, RestClient rest)
+        internal static async Task<(string SessionId, SrpInfo SrpInfo)> StartNewSession(
+            Credentials credentials,
+            AppInfo app,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             var url =
                 $"v2/auth/{credentials.Username}/{credentials.ParsedAccountKey.Format}/{credentials.ParsedAccountKey.Uuid}/{credentials.DeviceUuid}";
-            var response = rest.Get<R.NewSession>(url);
+
+            var response = await rest.GetAsync<Model.NewSession>(url, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
             var info = response.Data;
             var status = info.Status;
+
             switch (status)
             {
                 case "ok":
@@ -286,41 +383,48 @@ namespace PasswordManagerAccess.OnePassword
                         throw new BadCredentialsException("The account key is incorrect");
 
                     var srpInfo = new SrpInfo(
-                        srpMethod: info.Auth.Method,
+                        srpMethod: info.Auth!.Method,
                         keyMethod: info.Auth.Algorithm,
                         iterations: info.Auth.Iterations,
                         salt: info.Auth.Salt.Decode64Loose()
                     );
 
                     return (info.SessionId, srpInfo);
+
                 case "device-not-registered":
-                    RegisterDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
+                    await RegisterDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId), cancellationToken)
+                        .ConfigureAwait(false);
                     break;
+
                 case "device-deleted":
-                    ReauthorizeDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId));
+                    await ReauthorizeDevice(credentials.DeviceUuid, app, MakeRestClient(rest, sessionId: info.SessionId), cancellationToken)
+                        .ConfigureAwait(false);
                     break;
+
                 default:
                     throw new InternalErrorException($"Failed to start a new session, unsupported response status '{status}'");
             }
 
-            return StartNewSession(credentials, app, rest);
+            return await StartNewSession(credentials, app, rest, cancellationToken).ConfigureAwait(false);
         }
 
-        internal static void RegisterDevice(string uuid, AppInfo app, RestClient rest)
+        internal static async Task RegisterDevice(string uuid, AppInfo app, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = rest.PostJson<R.SuccessStatus>(
-                "v1/device",
-                new Dictionary<string, object>
-                {
-                    ["uuid"] = uuid,
-                    ["clientName"] = ClientName,
-                    ["clientVersion"] = ClientVersion,
-                    ["osName"] = GetOsName(),
-                    ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that.
-                    ["name"] = app.Name,
-                    ["model"] = app.Version,
-                }
-            );
+            var response = await rest.PostJsonAsync<Model.SuccessStatus>(
+                    "v1/device",
+                    new Dictionary<string, object>
+                    {
+                        ["uuid"] = uuid,
+                        ["clientName"] = ClientName,
+                        ["clientVersion"] = ClientVersion,
+                        ["osName"] = GetOsName(),
+                        ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that!
+                        ["name"] = app.Name,
+                        ["model"] = app.Version,
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -329,9 +433,9 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException($"Failed to register the device '{uuid}'");
         }
 
-        internal static void ReauthorizeDevice(string uuid, AppInfo app, RestClient rest)
+        internal static async Task ReauthorizeDevice(string uuid, AppInfo app, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = rest.Put<R.SuccessStatus>($"v1/device/{uuid}/reauthorize");
+            var response = await rest.PutAsync<Model.SuccessStatus>($"v1/device/{uuid}/reauthorize", cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -346,158 +450,198 @@ namespace PasswordManagerAccess.OnePassword
             SecondFactorRequired,
         }
 
-        internal enum SecondFactorKind
+        internal record SecondFactor(MfaMethod Method, object Parameters = null);
+
+        internal readonly record struct VerifyResult(VerifyStatus Status, SecondFactor[] Factors);
+
+        internal static async Task<VerifyResult> VerifySessionKey(
+            Credentials credentials,
+            AppInfo app,
+            AesKey sessionKey,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            GoogleAuthenticator,
-            RememberMeToken,
-            WebAuthn,
-            Duo,
-        }
-
-        internal readonly struct SecondFactor
-        {
-            public readonly SecondFactorKind Kind;
-            public readonly object Parameters;
-
-            public SecondFactor(SecondFactorKind kind, object parameters = null)
-            {
-                Kind = kind;
-                Parameters = parameters;
-            }
-        }
-
-        internal readonly struct VerifyResult
-        {
-            public readonly VerifyStatus Status;
-            public readonly SecondFactor[] Factors;
-
-            public VerifyResult(VerifyStatus status)
-                : this(status, new SecondFactor[0]) { }
-
-            public VerifyResult(VerifyStatus status, SecondFactor[] factors)
-            {
-                Status = status;
-                Factors = factors;
-            }
-        }
-
-        internal static VerifyResult VerifySessionKey(Credentials credentials, AppInfo app, AesKey sessionKey, RestClient rest)
-        {
-            var response = PostEncryptedJson<R.VerifyKey>(
-                "v2/auth/verify",
-                new Dictionary<string, object>
-                {
-                    ["sessionID"] = sessionKey.Id,
-                    ["clientVerifyHash"] = Util.CalculateClientHash(credentials.ParsedAccountKey.Uuid, sessionKey.Id),
-                    ["client"] = ClientId,
-                    ["device"] = new Dictionary<string, string>
+            var response = await PostEncryptedJson<Model.VerifyKey>(
+                    "v2/auth/verify",
+                    new Dictionary<string, object>
                     {
-                        ["uuid"] = credentials.DeviceUuid,
-                        ["clientName"] = ClientName,
-                        ["clientVersion"] = ClientVersion,
-                        ["name"] = app.Name,
-                        ["model"] = app.Version,
-                        ["osName"] = GetOsName(),
-                        ["osVersion"] = "", // TODO: It's not so trivial to detect the proper OS version in .NET.
-                        // Look into that.
-                        ["userAgent"] = "", // TODO: The browser uses a user agent string here. We need to figure out
-                        // what CLI sends. This is not trivial at all because of the E2E encryption.
+                        ["sessionID"] = sessionKey.Id,
+                        ["clientVerifyHash"] = Util.CalculateClientHash(credentials.ParsedAccountKey.Uuid, sessionKey.Id),
+                        ["client"] = ClientId,
+                        ["device"] = new Dictionary<string, string>
+                        {
+                            ["uuid"] = credentials.DeviceUuid,
+                            ["clientName"] = ClientName,
+                            ["clientVersion"] = ClientVersion,
+                            ["name"] = app.Name,
+                            ["model"] = app.Version,
+                            ["osName"] = GetOsName(),
+                            // TODO: It's not so trivial to detect the proper OS version in .NET. Look into that!
+                            ["osVersion"] = "",
+                            // TODO: The browser uses a user agent string here. We need to figure out what CLI sends.
+                            //       This is not trivial at all because of the E2E encryption.
+                            ["userAgent"] = "",
+                        },
                     },
-                },
-                sessionKey,
-                rest
-            );
+                    sessionKey,
+                    rest,
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             // TODO: 1P verifies if "serverVerifyHash" is valid. Do that.
             // We assume it's all good if we got HTTP 200.
 
             var mfa = response.Mfa;
             if (mfa == null)
-                return new VerifyResult(VerifyStatus.Success);
+                return new VerifyResult(VerifyStatus.Success, []);
 
             return new VerifyResult(VerifyStatus.SecondFactorRequired, GetSecondFactors(mfa));
         }
 
-        internal static SecondFactor[] GetSecondFactors(R.MfaInfo mfa)
+        internal static SecondFactor[] GetSecondFactors(Model.MfaInfo mfa)
         {
             var factors = new List<SecondFactor>(2);
 
             if (mfa.GoogleAuth?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.GoogleAuthenticator));
-
-            if (mfa.RememberMe?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.RememberMeToken));
+                AddFactor(MfaMethod.GoogleAuthenticator);
 
             if (mfa.WebAuthn?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.WebAuthn, mfa.WebAuthn));
+                AddFactor(MfaMethod.WebAuthn, mfa.WebAuthn);
 
             if (mfa.Duo?.Enabled == true)
-                factors.Add(new SecondFactor(SecondFactorKind.Duo, mfa.Duo));
+                AddFactor(MfaMethod.Duo, mfa.Duo);
 
+            // We should have at least one interactive method
             if (factors.Count == 0)
                 throw new InternalErrorException("No supported 2FA methods found");
 
+            if (mfa.RememberMe?.Enabled == true)
+                factors.Add(new SecondFactor(MfaMethod.RememberMeToken));
+
             return factors.ToArray();
+
+            // ---
+
+            void AddFactor(MfaMethod method, object parameters = null)
+            {
+                if (SecondFactorPriority.Contains(method))
+                    factors.Add(new SecondFactor(method, parameters));
+            }
         }
 
-        internal static void PerformSecondFactorAuthentication(
+        internal static async Task<OneOf<MfaSuccess, MfaRetry>> PerformSecondFactorAuthentication(
+            int attempt,
             SecondFactor[] factors,
             Credentials credentials,
             AesKey sessionKey,
-            IUi ui,
-            ISecureStorage storage,
-            RestClient rest
+            IAsyncUi ui,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
         )
         {
-            // Try "remember me" first. It's possible the server didn't allow it or
+            // Try "remember me" first. It's possible the server didn't allow it, or
             // we don't have a valid token stored from one of the previous sessions.
-            if (TrySubmitRememberMeToken(factors, sessionKey, storage, rest))
-                return;
+            var rememberMeResult = await TrySubmitRememberMeToken(factors, sessionKey, storage, rest, cancellationToken).ConfigureAwait(false);
+            switch (rememberMeResult)
+            {
+                // Remember-me token was accepted, we're done.
+                case RememberMeResult.Success:
+                    return new MfaSuccess();
 
-            // TODO: Allow to choose 2FA method via UI like in Bitwarden
+                // Remember-me token got rejected by the server, we need to restart the whole login sequence.
+                case RememberMeResult.Rejected:
+                    return new MfaRetry();
+
+                // No remember-me token available, proceed with the interactive 2FA.
+                case RememberMeResult.NotAvailable:
+                    break;
+
+                default:
+                    throw new InternalErrorException("Invalid remember-me result");
+            }
+
+            // Figure out the initial 2FA method to use. The user might choose a different one later.
             var factor = ChooseInteractiveSecondFactor(factors);
 
-            var secondFactorResult = GetSecondFactorResult(factor, credentials, ui, rest);
-            if (secondFactorResult.Canceled)
-                throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+            // Allow the user to change this as many times as they want until they cancel. Each method has only 3 attempts though.
+            while (true)
+            {
+                var otherFactors = factors.Select(x => x.Method).Except([factor.Method, MfaMethod.RememberMeToken]).ToArray();
 
-            var token = SubmitSecondFactorResult(factor.Kind, secondFactorResult, sessionKey, rest);
+                // Ask the user to perform the 2FA step
+                var result = await GetSecondFactorResult(attempt, factor, otherFactors, credentials, ui, rest, cancellationToken)
+                    .ConfigureAwait(false);
 
-            // Store the token with the application. Next time we're not gonna need to enter any passcodes.
-            if (secondFactorResult.RememberMe)
-                storage.StoreString(RememberMeTokenKey, token);
+                switch (result.Value)
+                {
+                    case SecondFactorResult secondFactorResult:
+                        var token = await SubmitSecondFactorResult(factor.Method, secondFactorResult, sessionKey, rest, cancellationToken)
+                            .ConfigureAwait(false);
+
+                        // Store the token with the application. Next time we're not going to need to enter any passcodes.
+                        if (secondFactorResult.RememberMe)
+                            await storage.StoreString(RememberMeTokenKey, token, cancellationToken).ConfigureAwait(false);
+
+                        return new MfaSuccess();
+
+                    case MfaMethod mfaMethod:
+                        if (!otherFactors.Contains(mfaMethod))
+                            throw new InternalErrorException("The UI chose an invalid MFA method");
+
+                        factor = factors.First(x => x.Method == mfaMethod);
+                        continue;
+
+                    case Canceled:
+                        throw new CanceledMultiFactorException("Second factor step is canceled by the user");
+                }
+            }
         }
 
-        internal static bool TrySubmitRememberMeToken(SecondFactor[] factors, AesKey sessionKey, ISecureStorage storage, RestClient rest)
+        internal enum RememberMeResult
         {
-            if (factors.All(x => x.Kind != SecondFactorKind.RememberMeToken))
-                return false;
+            Success,
+            NotAvailable,
+            Rejected,
+        }
 
-            var token = storage.LoadString(RememberMeTokenKey);
+        internal static async Task<RememberMeResult> TrySubmitRememberMeToken(
+            SecondFactor[] factors,
+            AesKey sessionKey,
+            IAsyncSecureStorage storage,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
+            if (factors.All(x => x.Method != MfaMethod.RememberMeToken))
+                return RememberMeResult.NotAvailable;
+
+            var token = await storage.LoadString(RememberMeTokenKey, cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrEmpty(token))
-                return false;
+                return RememberMeResult.NotAvailable;
 
-            var result = SecondFactorResult.Done(
-                new Dictionary<string, string> { ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id) },
-                true
+            var result = new SecondFactorResult(
+                Parameters: new Dictionary<string, string> { ["dshmac"] = Util.HashRememberMeToken(token, sessionKey.Id) },
+                RememberMe: true
             );
 
             try
             {
-                SubmitSecondFactorResult(SecondFactorKind.RememberMeToken, result, sessionKey, rest);
+                await SubmitSecondFactorResult(MfaMethod.RememberMeToken, result, sessionKey, rest, cancellationToken).ConfigureAwait(false);
+                return RememberMeResult.Success;
             }
             catch (BadMultiFactorException)
             {
                 // The token got rejected, need to erase it, it's no longer valid.
-                storage.StoreString(RememberMeTokenKey, null);
+                await storage.StoreString(RememberMeTokenKey, null, cancellationToken).ConfigureAwait(false);
 
                 // When the stored 'remember me' token is rejected by the server, we need to try
                 // the whole login sequence one more time. Probably the token is expired or it's
                 // invalid.
-                throw new RetryLoginException();
+                return RememberMeResult.Rejected;
             }
-
-            return true;
         }
 
         internal static SecondFactor ChooseInteractiveSecondFactor(SecondFactor[] factors)
@@ -509,81 +653,85 @@ namespace PasswordManagerAccess.OnePassword
             // Converting them to a hash set would take longer.
             foreach (var i in SecondFactorPriority)
             foreach (var f in factors)
-                if (f.Kind == i)
+                if (f.Method == i)
                     return f;
 
             throw new InternalErrorException("The list of 2FA methods doesn't contain any supported methods");
         }
 
-        internal class SecondFactorResult
+        internal record SecondFactorResult(Dictionary<string, string> Parameters, bool RememberMe, string Note = "");
+
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> GetSecondFactorResult(
+            int attempt,
+            SecondFactor factor,
+            MfaMethod[] otherFactors,
+            Credentials credentials,
+            IAsyncUi ui,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            public readonly Dictionary<string, string> Parameters;
-            public readonly bool RememberMe;
-            public readonly bool Canceled;
-            public readonly string Note; // Let the 2FA attach a note
-
-            public static SecondFactorResult Done(Dictionary<string, string> parameters, bool rememberMe, string note = "")
+            return factor.Method switch
             {
-                return new SecondFactorResult(parameters: parameters, rememberMe: rememberMe, canceled: false, note: note);
-            }
-
-            public static SecondFactorResult Cancel()
-            {
-                return new SecondFactorResult(parameters: null, rememberMe: false, canceled: true);
-            }
-
-            private SecondFactorResult(Dictionary<string, string> parameters, bool rememberMe, bool canceled, string note = "")
-            {
-                Parameters = parameters;
-                RememberMe = rememberMe;
-                Canceled = canceled;
-                Note = note;
-            }
-        }
-
-        internal static SecondFactorResult GetSecondFactorResult(SecondFactor factor, Credentials credentials, IUi ui, RestClient rest)
-        {
-            return factor.Kind switch
-            {
-                SecondFactorKind.GoogleAuthenticator => AuthenticateWithGoogleAuth(ui),
-                SecondFactorKind.WebAuthn => AuthenticateWithWebAuthn(factor, credentials, ui),
-                SecondFactorKind.Duo => AuthenticateWithDuo(factor, ui, rest),
-                _ => throw new InternalErrorException($"2FA method {factor.Kind} is not valid here"),
+                MfaMethod.GoogleAuthenticator => await AuthenticateWithGoogleAuth(attempt, otherFactors, ui, cancellationToken).ConfigureAwait(false),
+                MfaMethod.WebAuthn => await AuthenticateWithWebAuthn(attempt, factor, otherFactors, credentials, ui, cancellationToken)
+                    .ConfigureAwait(false),
+                MfaMethod.Duo => await AuthenticateWithDuo(factor, otherFactors, ui, rest, cancellationToken).ConfigureAwait(false),
+                _ => throw new InternalErrorException($"2FA method {factor.Method} is not valid here"),
             };
         }
 
-        internal static SecondFactorResult AuthenticateWithGoogleAuth(IUi ui)
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithGoogleAuth(
+            int attempt,
+            MfaMethod[] otherFactors,
+            IAsyncUi ui,
+            CancellationToken cancellationToken
+        )
         {
-            var passcode = ui.ProvideGoogleAuthPasscode();
-            if (passcode == Passcode.Cancel)
-                return SecondFactorResult.Cancel();
-
-            return SecondFactorResult.Done(new Dictionary<string, string> { ["code"] = passcode.Code }, passcode.RememberMe);
+            var otpResult = await ui.ProvideGoogleAuthPasscode(attempt, otherFactors, cancellationToken).ConfigureAwait(false);
+            return otpResult.MapT0(otp => new SecondFactorResult(new Dictionary<string, string> { ["code"] = otp.Passcode }, otp.RememberMe));
         }
 
-        internal static SecondFactorResult AuthenticateWithWebAuthn(SecondFactor factor, Credentials credentials, IUi ui)
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithWebAuthn(
+            int attempt,
+            SecondFactor factor,
+            MfaMethod[] otherFactors,
+            Credentials credentials,
+            IAsyncUi ui,
+            CancellationToken cancellationToken
+        )
         {
-            var rememberMe = ui.ProvideWebAuthnRememberMe();
-            if (rememberMe == Passcode.Cancel)
-                return SecondFactorResult.Cancel();
+            var rememberMeResult = await ui.ProvideWebAuthnRememberMe(attempt, otherFactors, cancellationToken).ConfigureAwait(false);
+            var rememberMe = false;
 
-            if (!(factor.Parameters is R.WebAuthnMfa extra))
+            switch (rememberMeResult.Value)
+            {
+                case RememberMe rm:
+                    rememberMe = rm.Value;
+                    break;
+                case MfaMethod mfaMethod:
+                    return mfaMethod;
+                case Canceled canceled:
+                    return canceled;
+            }
+
+            if (factor.Parameters is not Model.WebAuthnMfa extra)
                 throw new InternalErrorException("WebAuthn extra parameters expected");
 
-            if (extra.KeyHandles.Length == 0)
+            if (extra.KeyHandles?.Length == 0)
                 throw new InternalErrorException("Expected at least one WebAuthn key to be provided");
 
             try
             {
                 var assertion = WebAuthN.GetAssertion(
-                    appId: "1password." + Util.GetTld(credentials.Domain),
-                    challenge: extra.Challenge,
+                    appId: Validate(extra.RpId, "rpid"),
+                    challenge: Validate(extra.Challenge, "challenge"),
                     origin: $"https://{credentials.Domain}",
                     crossOrigin: false,
                     keyHandles: extra.KeyHandles
                 );
 
-                return SecondFactorResult.Done(
+                return new SecondFactorResult(
                     new Dictionary<string, string>
                     {
                         ["keyHandle"] = assertion.KeyHandle,
@@ -591,23 +739,66 @@ namespace PasswordManagerAccess.OnePassword
                         ["authData"] = assertion.AuthData,
                         ["clientData"] = assertion.ClientData,
                     },
-                    rememberMe.RememberMe
+                    rememberMe
                 );
             }
             catch (CanceledException)
             {
-                return SecondFactorResult.Cancel();
+                return new Canceled("User canceled WebAuthn authentication");
             }
             catch (ErrorException e)
             {
                 throw new InternalErrorException("WebAuthn authentication failed", e);
             }
+
+            // ---
+
+            static string Validate(string? param, string name) =>
+                param.IsNullOrEmpty() ? throw new InternalErrorException($"WebAuthn '{name}' is invalid") : param;
         }
 
-        internal static SecondFactorResult AuthenticateWithDuo(SecondFactor factor, IUi ui, RestClient rest)
+        internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithDuo(
+            SecondFactor factor,
+            MfaMethod[] otherFactors,
+            IAsyncUi ui,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            if (!(factor.Parameters is R.DuoMfa extra))
+            if (factor.Parameters is not Model.DuoMfa extra)
                 throw new InternalErrorException("Duo extra parameters expected");
+
+            var isV1 = extra.Url.IsNullOrEmpty();
+            var result = isV1
+                ? await DuoV1
+                    .AuthenticateAsync(
+                        CheckParam(extra.Host, "host"),
+                        CheckParam(extra.Signature, "sigRequest"),
+                        otherFactors,
+                        ui,
+                        rest.Transport,
+                        logger: null,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false)
+                : await DuoV4.AuthenticateAsync(extra.Url, otherFactors, ui, rest.Transport, logger: null, cancellationToken).ConfigureAwait(false);
+
+            return result.Match<OneOf<SecondFactorResult, MfaMethod, Canceled>>(
+                duoResult =>
+                {
+                    var key = isV1 ? "sigResponse" : "code";
+                    var note = isV1 ? "v1" : "v4";
+                    return new SecondFactorResult(
+                        Parameters: new Dictionary<string, string> { [key] = duoResult.Code },
+                        RememberMe: duoResult.RememberMe,
+                        Note: note
+                    );
+                },
+                mfaMethod => mfaMethod,
+                duoCancelled => new Canceled(duoCancelled.Reason)
+            );
+
+            // ---
 
             static string CheckParam(string param, string name)
             {
@@ -616,29 +807,23 @@ namespace PasswordManagerAccess.OnePassword
 
                 return param;
             }
-
-            var isV1 = extra.Url.IsNullOrEmpty();
-            var result = isV1
-                ? DuoV1.Authenticate(CheckParam(extra.Host, "host"), CheckParam(extra.Signature, "sigRequest"), ui, rest.Transport)
-                : DuoV4.Authenticate(extra.Url, ui, rest.Transport);
-
-            if (result == null)
-                return SecondFactorResult.Cancel();
-
-            var key = isV1 ? "sigResponse" : "code";
-            var note = isV1 ? "v1" : "v4";
-            return SecondFactorResult.Done(new Dictionary<string, string> { [key] = result.Code }, result.RememberMe, note);
         }
 
         // Returns "remember me" token when successful
-        internal static string SubmitSecondFactorResult(SecondFactorKind factor, SecondFactorResult result, AesKey sessionKey, RestClient rest)
+        internal static async Task<string> SubmitSecondFactorResult(
+            MfaMethod factor,
+            SecondFactorResult result,
+            AesKey sessionKey,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             var key = factor switch
             {
-                SecondFactorKind.GoogleAuthenticator => "totp",
-                SecondFactorKind.RememberMeToken => "dsecret",
-                SecondFactorKind.WebAuthn => "webAuthn",
-                SecondFactorKind.Duo => result.Note switch
+                MfaMethod.GoogleAuthenticator => "totp",
+                MfaMethod.RememberMeToken => "dsecret",
+                MfaMethod.WebAuthn => "webAuthn",
+                MfaMethod.Duo => result.Note switch
                 {
                     "v1" => "duo",
                     "v4" => "duov4",
@@ -649,45 +834,49 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var response = PostEncryptedJson<R.Mfa>(
-                    "v1/auth/mfa",
-                    new Dictionary<string, object>
-                    {
-                        ["sessionID"] = sessionKey.Id,
-                        ["client"] = ClientId,
-                        [key] = result.Parameters,
-                    },
-                    sessionKey,
-                    rest
-                );
+                var response = await PostEncryptedJson<Model.Mfa>(
+                        "v1/auth/mfa",
+                        new Dictionary<string, object>
+                        {
+                            ["sessionID"] = sessionKey.Id,
+                            ["client"] = ClientId,
+                            [key] = result.Parameters,
+                        },
+                        sessionKey,
+                        rest,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
 
                 return response.RememberMeToken;
             }
             catch (BadCredentialsException e)
             {
                 // The server report everything as "no auth" error. In this case we know it's related to the MFA.
-                throw new BadMultiFactorException("Incorrect second factor code", e.InnerException);
+                throw new BadMultiFactorException("Incorrect second factor code", e);
             }
         }
 
         // TODO: Rename to RequestAccountInfo
-        internal static R.AccountInfo GetAccountInfo(AesKey sessionKey, RestClient rest)
+        internal static async Task<Model.AccountInfo> GetAccountInfo(AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
         {
-            return GetEncryptedJson<R.AccountInfo>(
-                "v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
-                sessionKey,
-                rest
-            );
+            return await GetEncryptedJson<Model.AccountInfo>(
+                    "v1/account?attrs=billing,counts,groups,invite,me,settings,tier,user-flags,users,vaults",
+                    sessionKey,
+                    rest,
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
         }
 
         // TODO: Rename to RequestKeysets
-        internal static R.KeysetsInfo GetKeysets(AesKey sessionKey, RestClient rest)
+        internal static async Task<Model.KeysetsInfo> GetKeysets(AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
         {
-            return GetEncryptedJson<R.KeysetsInfo>("v1/account/keysets", sessionKey, rest);
+            return await GetEncryptedJson<Model.KeysetsInfo>("v1/account/keysets", sessionKey, rest, cancellationToken).ConfigureAwait(false);
         }
 
         // TODO: We don't really need IEnumerable here
-        internal static IEnumerable<VaultInfo> GetAccessibleVaults(R.AccountInfo accountInfo, Keychain keychain)
+        internal static IEnumerable<VaultInfo> GetAccessibleVaults(Model.AccountInfo accountInfo, Keychain keychain)
         {
             return from vault in accountInfo.Vaults
                 let key = FindWorkingKey(vault.Access, keychain)
@@ -695,7 +884,7 @@ namespace PasswordManagerAccess.OnePassword
                 select new VaultInfo(vault.Id, Encrypted.Parse(vault.Attributes), key, keychain);
         }
 
-        internal static Encrypted FindWorkingKey(R.VaultAccessInfo[] accessList, Keychain keychain)
+        internal static Encrypted FindWorkingKey(Model.VaultAccessInfo[] accessList, Keychain keychain)
         {
             foreach (var access in accessList)
             {
@@ -717,12 +906,18 @@ namespace PasswordManagerAccess.OnePassword
         }
 
         // TODO: Add a test to verify the deleted accounts are ignored
-        internal static (Account[], SshKey[]) GetVaultItems(string id, Keychain keychain, AesKey sessionKey, RestClient rest)
+        internal static async Task<(Account[], SshKey[])> GetVaultItems(
+            string id,
+            Keychain keychain,
+            AesKey sessionKey,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
             var accounts = new List<Account>();
             var sshKeys = new List<SshKey>();
 
-            foreach (var item in EnumerateAccountsItemsInVault(id, sessionKey, rest))
+            await foreach (var item in EnumerateAccountsItemsInVault(id, sessionKey, rest, cancellationToken).ConfigureAwait(false))
             {
                 switch (ConvertVaultItem(keychain, item).Value)
                 {
@@ -741,7 +936,7 @@ namespace PasswordManagerAccess.OnePassword
             return (accounts.ToArray(), sshKeys.ToArray());
         }
 
-        internal static OneOf<Account, SshKey, NoItem> ConvertVaultItem(Keychain keychain, R.VaultItem item)
+        internal static OneOf<Account, SshKey, NoItem> ConvertVaultItem(Keychain keychain, Model.VaultItem item)
         {
             if (item.Deleted == "Y")
                 return NoItem.Deleted;
@@ -754,18 +949,18 @@ namespace PasswordManagerAccess.OnePassword
             };
         }
 
-        internal static OneOf<Account, SshKey, NoItem> GetVaultItem(
+        internal static async Task<OneOf<Account, SshKey, NoItem>> GetVaultItem(
             string itemId,
             string vaultId,
             Keychain keychain,
             AesKey sessionKey,
-            RestClient rest
+            RestClient rest,
+            CancellationToken cancellationToken
         )
         {
-            // TODO: Make a request to var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/"); to check if the vault exists!
-            var response = rest.Get<R.Encrypted>($"v1/vault/{vaultId}/item/{itemId}");
+            var response = await rest.GetAsync<Model.Encrypted>($"v1/vault/{vaultId}/item/{itemId}", cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessful)
-                return ConvertVaultItem(keychain, DecryptResponse<R.SingleVaultItem>(response.Data, sessionKey).Item);
+                return ConvertVaultItem(keychain, DecryptResponse<Model.SingleVaultItem>(response.Data, sessionKey).Item);
 
             var error = MakeError(response);
             return error switch
@@ -778,12 +973,18 @@ namespace PasswordManagerAccess.OnePassword
 
         // TODO: Rename to RequestVaultAccounts? It should clearer from the name that it's a slow operation.
         // Don't enumerate more than once. It's very slow since it makes network requests.
-        internal static IEnumerable<R.VaultItem> EnumerateAccountsItemsInVault(string id, AesKey sessionKey, RestClient rest)
+        internal static async IAsyncEnumerable<Model.VaultItem> EnumerateAccountsItemsInVault(
+            string id,
+            AesKey sessionKey,
+            RestClient rest,
+            [EnumeratorCancellation] CancellationToken cancellationToken
+        )
         {
             var batchId = 0;
             while (true)
             {
-                var batch = GetEncryptedJson<R.VaultItemsBatch>($"v1/vault/{id}/{batchId}/items", sessionKey, rest);
+                var batch = await GetEncryptedJson<Model.VaultItemsBatch>($"v1/vault/{id}/{batchId}/items", sessionKey, rest, cancellationToken)
+                    .ConfigureAwait(false);
                 if (batch.Items != null)
                     foreach (var i in batch.Items)
                         yield return i;
@@ -796,9 +997,9 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static void LogOut(RestClient rest)
+        internal static async Task LogOut(RestClient rest, CancellationToken cancellationToken)
         {
-            var response = rest.Put<R.SuccessStatus>("v1/session/signout");
+            var response = await rest.PutAsync<Model.SuccessStatus>("v1/session/signout", cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessful)
                 throw MakeError(response);
@@ -807,7 +1008,7 @@ namespace PasswordManagerAccess.OnePassword
                 throw new InternalErrorException("Failed to logout");
         }
 
-        internal static void DecryptKeysets(R.KeysetInfo[] keysets, Credentials credentials, Keychain keychain)
+        internal static void DecryptKeysets(Model.KeysetInfo[] keysets, Credentials credentials, Keychain keychain)
         {
             // Find the master keyset
             var masterKeyset = keysets.Where(x => x.EncryptedBy == MasterKeyId).OrderByDescending(x => x.SerialNumber).FirstOrDefault();
@@ -830,12 +1031,12 @@ namespace PasswordManagerAccess.OnePassword
             keychain.Add(masterKey);
 
             // Build a topological map: key -> other keys encrypted by that key
-            var encryptsKeysets = new Dictionary<string, List<R.KeysetInfo>>();
+            var encryptsKeysets = new Dictionary<string, List<Model.KeysetInfo>>();
             foreach (var keyset in keysets)
-                encryptsKeysets.GetOrAdd(GetEncryptedBy(keyset), () => new List<R.KeysetInfo>()).Add(keyset);
+                encryptsKeysets.GetOrAdd(GetEncryptedBy(keyset), () => new List<Model.KeysetInfo>()).Add(keyset);
 
             // Start from "mp" and topologically walk the keys in a valid decryption order
-            var queue = new Queue<R.KeysetInfo>(encryptsKeysets[MasterKeyId]);
+            var queue = new Queue<Model.KeysetInfo>(encryptsKeysets[MasterKeyId]);
             while (queue.Count > 0)
             {
                 var keyset = queue.Dequeue();
@@ -848,12 +1049,12 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static string GetEncryptedBy(R.KeysetInfo keyset)
+        internal static string GetEncryptedBy(Model.KeysetInfo keyset)
         {
             return keyset.EncryptedBy.IsNullOrEmpty() ? keyset.KeyOrMasterKey.KeyId : keyset.EncryptedBy;
         }
 
-        internal static void DecryptKeyset(R.KeysetInfo keyset, Keychain keychain)
+        internal static void DecryptKeyset(Model.KeysetInfo keyset, Keychain keychain)
         {
             Util.DecryptAesKey(keyset.KeyOrMasterKey, keychain);
             Util.DecryptRsaKey(keyset.PrivateKey, keychain);
@@ -895,7 +1096,7 @@ namespace PasswordManagerAccess.OnePassword
         {
             try
             {
-                var error = JsonConvert.DeserializeObject<R.Error>(response);
+                var error = JsonSerializer.Deserialize<Model.Error>(response);
                 switch (error.Code)
                 {
                     case 102:
@@ -913,7 +1114,7 @@ namespace PasswordManagerAccess.OnePassword
 
             try
             {
-                var reason = JsonConvert.DeserializeObject<R.FailureReason>(response).Reason;
+                var reason = JsonSerializer.Deserialize<Model.FailureReason>(response).Reason;
                 if (!reason.IsNullOrEmpty())
                     return new InternalErrorException($"The server responded with the failure reason: '{reason}'");
             }
@@ -929,40 +1130,59 @@ namespace PasswordManagerAccess.OnePassword
         // Network
         //
 
-        internal static T GetEncryptedJson<T>(string endpoint, AesKey sessionKey, RestClient rest)
+        internal static async Task<T> GetEncryptedJson<T>(string endpoint, AesKey sessionKey, RestClient rest, CancellationToken cancellationToken)
         {
-            var response = rest.Get<R.Encrypted>(endpoint);
+            var response = await rest.GetAsync<Model.Encrypted>(endpoint, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
             return DecryptResponse<T>(response.Data, sessionKey);
         }
 
-        internal static T PostEncryptedJson<T>(string endpoint, Dictionary<string, object> parameters, AesKey sessionKey, RestClient rest)
+        internal static async Task<T> PostEncryptedJson<T>(
+            string endpoint,
+            Dictionary<string, object> parameters,
+            AesKey sessionKey,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
         {
-            var payload = JsonConvert.SerializeObject(parameters);
+            var encrypted = await PostEncryptedJsonNoDecrypt<Model.Encrypted>(endpoint, parameters, sessionKey, rest, cancellationToken)
+                .ConfigureAwait(false);
+            return DecryptResponse<T>(encrypted, sessionKey);
+        }
+
+        internal static async Task<T> PostEncryptedJsonNoDecrypt<T>(
+            string endpoint,
+            Dictionary<string, object> parameters,
+            AesKey sessionKey,
+            RestClient rest,
+            CancellationToken cancellationToken
+        )
+        {
+            var payload = JsonSerializer.Serialize(parameters);
             var encryptedPayload = sessionKey.Encrypt(payload.ToBytes());
 
-            var response = rest.PostJson<R.Encrypted>(endpoint, encryptedPayload.ToDictionary());
+            var response = await rest.PostJsonAsync<T>(endpoint, encryptedPayload.ToDictionary(), cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessful)
                 throw MakeError(response);
 
-            return DecryptResponse<T>(response.Data, sessionKey);
+            return response.Data;
         }
 
-        internal static T DecryptResponse<T>(R.Encrypted encrypted, IDecryptor decryptor)
+        internal static T DecryptResponse<T>(Model.Encrypted encrypted, IDecryptor decryptor)
         {
             var plaintext = decryptor.Decrypt(Encrypted.Parse(encrypted)).ToUtf8();
 
             // First check for server errors. It's possible to deserialize the returned error object
             // into one of the target types by mistake when the type has no mandatory fields.
-            // `Response.Mfa` would be one of those.
+            // `Model.Mfa` would be one of those.
             if (ParseServerError(plaintext) is { } serverError)
                 throw serverError;
 
             try
             {
-                return JsonConvert.DeserializeObject<T>(plaintext);
+                return JsonSerializer.Deserialize<T>(plaintext);
             }
             catch (JsonException e)
             {
@@ -997,20 +1217,11 @@ namespace PasswordManagerAccess.OnePassword
         private const string MasterKeyId = "mp";
         private const string RememberMeTokenKey = "remember-me-token";
 
-        private static SecondFactorKind[] SecondFactorPriority =>
+        private static MfaMethod[] SecondFactorPriority =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? SecondFactorPriorityWindows : SecondFactorPriorityOtherPlatforms;
 
-        private static readonly SecondFactorKind[] SecondFactorPriorityWindows =
-        {
-            SecondFactorKind.WebAuthn,
-            SecondFactorKind.Duo,
-            SecondFactorKind.GoogleAuthenticator,
-        };
+        private static readonly MfaMethod[] SecondFactorPriorityWindows = [MfaMethod.WebAuthn, MfaMethod.Duo, MfaMethod.GoogleAuthenticator];
 
-        private static readonly SecondFactorKind[] SecondFactorPriorityOtherPlatforms =
-        {
-            SecondFactorKind.Duo,
-            SecondFactorKind.GoogleAuthenticator,
-        };
+        private static readonly MfaMethod[] SecondFactorPriorityOtherPlatforms = [MfaMethod.Duo, MfaMethod.GoogleAuthenticator];
     }
 }

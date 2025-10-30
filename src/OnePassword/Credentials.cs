@@ -25,6 +25,7 @@ namespace PasswordManagerAccess.OnePassword
         // Internal
         //
 
+        // TODO: Convert to bytes
         internal string SrpX { get; set; }
         internal AesKey Key { get; set; }
 

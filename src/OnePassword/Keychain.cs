@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using PasswordManagerAccess.Common;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -44,7 +43,7 @@ namespace PasswordManagerAccess.OnePassword
 
         public bool CanDecrypt(Encrypted encrypted) => CanDecrypt(encrypted.Scheme, encrypted.KeyId);
 
-        public bool CanDecrypt(R.Encrypted encrypted) => CanDecrypt(encrypted.Scheme, encrypted.KeyId);
+        public bool CanDecrypt(Model.Encrypted encrypted) => CanDecrypt(encrypted.Scheme, encrypted.KeyId);
 
         public byte[] Decrypt(Encrypted encrypted)
         {

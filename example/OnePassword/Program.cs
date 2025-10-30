@@ -2,6 +2,9 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
@@ -11,22 +14,101 @@ namespace Example
 {
     public static class Program
     {
-        private class TextUi : DuoUi, IUi
+        private class TextUi(string totpSecret = null) : DuoAsyncUi, IAsyncUi
         {
-            public Passcode ProvideGoogleAuthPasscode()
+            public async Task<OneOf.OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            )
             {
-                var passcode = GetAnswer($"Enter Google Authenticator passcode {PressEnterToCancel}");
-                return string.IsNullOrWhiteSpace(passcode) ? Passcode.Cancel : new Passcode(passcode, GetRememberMe());
+                // If we don't have a TOTP secret, ask the user to provide the code
+                if (string.IsNullOrEmpty(totpSecret))
+                    return await ProvideOtpPasscode(attempt, "Google Authenticator", otherMethods, cancellationToken);
+
+                // If we have a TOTP secret, auto-generate the code
+                var totp = Util.CalculateGoogleAuthTotp(totpSecret);
+                Console.WriteLine($"Auto-generated TOTP: {totp}");
+                Console.WriteLine("Remember this device: no");
+                return new Otp(totp, false);
             }
 
-            public Passcode ProvideWebAuthnRememberMe()
+            public Task<OneOf.OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => ProvideOutOfBandRememberMe(attempt, "WebAuthn", otherMethods, cancellationToken);
+
+            public async Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken)
             {
-                var yesNo = GetAnswer($"Remember this device? {PressEnterToCancel}").ToLower();
-                return string.IsNullOrWhiteSpace(yesNo) ? Passcode.Cancel : new Passcode("", yesNo == "y" || yesNo == "yes");
+                Console.WriteLine("\n=== SSO Login Required ===");
+                Console.WriteLine($"Please open the following URL in your browser:\n\n{ssoLoginUrl}\n");
+                Console.WriteLine("Complete the login process in your browser.");
+                Console.WriteLine($"After successful login, you will be redirected to a URL starting with:\n{redirectTo}\n");
+
+                var answer = await GetAnswer("Paste the full redirect URL here (or press ENTER to cancel)", cancellationToken);
+                return answer; // Return empty string if canceled, or the URL if provided
+            }
+
+            public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) =>
+                throw new NotImplementedException(
+                    "SSO enrollment is not implemented in console example, look the GUI example (OnePasswordAvalonia) for reference"
+                );
+
+            //
+            // Private
+            //
+
+            private async Task<OneOf.OneOf<Otp, MfaMethod, Canceled>> ProvideOtpPasscode(
+                int attempt,
+                string method,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            )
+            {
+                var prompt = $"> [{attempt + 1}] Please enter {method} code {PressEnterToCancel}" + BuildMfaPrompt(otherMethods);
+
+                var answer = await GetAnswer(prompt, cancellationToken);
+                return answer switch
+                {
+                    "" => new Canceled(""),
+                    var s when s.EndsWith('!') => otherMethods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
+                    _ => new Otp(answer, await GetRememberMe(cancellationToken)),
+                };
+            }
+
+            private static async Task<OneOf.OneOf<RememberMe, MfaMethod, Canceled>> ProvideOutOfBandRememberMe(
+                int attempt,
+                string method,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            )
+            {
+                Console.WriteLine($"> [{attempt + 1}] {method} authentication will be requested by the system");
+                var answer = await GetAnswer("Press ENTER to continue or 'c' to cancel" + BuildMfaPrompt(otherMethods), cancellationToken);
+
+                return answer switch
+                {
+                    "c" or "C" => new Canceled(""),
+                    var s when s.EndsWith('!') => otherMethods[int.Parse(s.Substring(0, s.Length - 1)) - 1],
+                    _ => new RememberMe(await GetRememberMe(cancellationToken)),
+                };
+            }
+
+            private static string BuildMfaPrompt(MfaMethod[] otherMethods)
+            {
+                if (otherMethods.Length == 0)
+                    return "";
+
+                var prompt = " or select a different MFA method by entering the number followed by !:\n";
+                for (var i = 0; i < otherMethods.Length; i++)
+                    prompt += $"{i + 1}. {otherMethods[i].GetName()}\n";
+
+                return prompt;
             }
         }
 
-        public static void Main()
+        public static async Task Main()
         {
             // Read 1Password credentials from a file
             // The file should contain 5 values:
@@ -38,18 +120,21 @@ namespace Example
             // See config.yaml.example for an example.
             var config = Util.ReadConfig();
 
-            string serviceAccountToken;
-            config.TryGetValue("service-account-token", out serviceAccountToken);
+            // Read optional TOTP secret for Google Authenticator
+            config.TryGetValue("google-auth-totp-secret", out var totpSecret);
 
+            using var cts = new CancellationTokenSource();
             try
             {
-                DumpAllVaults(
+                await DumpAllVaults(
                     config["username"],
-                    config["password"],
-                    config["account-key"],
-                    config["domain"],
+                    config.GetValueOrDefault("password", ""),
+                    config.GetValueOrDefault("account-key", ""),
+                    config.GetValueOrDefault("domain", ""),
                     config["device-id"],
-                    serviceAccountToken ?? ""
+                    config.GetValueOrDefault("service-account-token", ""),
+                    totpSecret,
+                    cts.Token
                 );
             }
             catch (BaseException e)
@@ -58,12 +143,35 @@ namespace Example
             }
         }
 
-        private static void DumpAllVaults(string username, string password, string accountKey, string domain, string uuid, string serviceAccountToken)
+        private static async Task DumpAllVaults(
+            string username,
+            string password,
+            string accountKey,
+            string domain,
+            string uuid,
+            string serviceAccountToken,
+            string totpSecret,
+            CancellationToken cancellationToken
+        )
         {
             var device = new AppInfo { Name = "PMA 1Password example", Version = "1.0.0" };
 
-            var session = string.IsNullOrEmpty(serviceAccountToken)
-                ? Client.LogIn(
+            Session session;
+            if (await Client.IsSsoAccount(username, cancellationToken))
+            {
+                session = await Client
+                    .SsoLogIn(
+                        new Credentials { Username = username, DeviceUuid = uuid },
+                        device,
+                        new TextUi(totpSecret),
+                        new AsyncPlainStorage(),
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
+            }
+            else if (string.IsNullOrEmpty(serviceAccountToken))
+            {
+                session = await Client.LogIn(
                     new Credentials
                     {
                         Username = username,
@@ -73,10 +181,15 @@ namespace Example
                         DeviceUuid = uuid,
                     },
                     device,
-                    new TextUi(),
-                    new PlainStorage()
-                )
-                : Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device);
+                    new TextUi(totpSecret),
+                    new AsyncPlainStorage(),
+                    cancellationToken
+                );
+            }
+            else
+            {
+                session = await Client.LogIn(new ServiceAccount { Token = serviceAccountToken }, device, cancellationToken);
+            }
 
             // Enable this to get a single item from a vault
             var getSingleItem = false;
@@ -85,27 +198,28 @@ namespace Example
             {
                 if (getSingleItem)
                 {
-                    GetSingleItem(session);
+                    await GetSingleItem(session, cancellationToken);
                 }
                 else
                 {
-                    var vaults = Client.ListAllVaults(session);
+                    var vaults = await Client.ListAllVaults(session, cancellationToken);
 
                     for (var i = 0; i < vaults.Length; i++)
-                        DumpVault(i, vaults[i], session);
+                        await DumpVault(i, vaults[i], session, cancellationToken);
                 }
             }
             finally
             {
-                Client.LogOut(session);
+                await Client.LogOut(session, cancellationToken);
+                Console.WriteLine("Logged out");
             }
         }
 
-        private static void DumpVault(int index, VaultInfo vaultInfo, Session session)
+        private static async Task DumpVault(int index, VaultInfo vaultInfo, Session session, CancellationToken cancellationToken)
         {
             Console.WriteLine($"Vault {index + 1} '{vaultInfo.Id}', '{vaultInfo.Name}':");
 
-            var vault = Client.OpenVault(vaultInfo, session);
+            var vault = await Client.OpenVault(vaultInfo, session, cancellationToken);
 
             // Dump accounts
             for (var i = 0; i < vault.Accounts.Length; ++i)
@@ -116,12 +230,14 @@ namespace Example
                 DumpSshKey($"{i + 1}", vault.SshKeys[i]);
         }
 
-        private static void GetSingleItem(Session session)
+        private static async Task GetSingleItem(Session session, CancellationToken cancellationToken)
         {
             // TODO: Use your own vault and item IDs, this is just an example.
-            Client
-                .GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session)
-                .Switch(account => DumpAccount("1", account), sshKey => DumpSshKey("1", sshKey), noItem => Console.WriteLine($"No item: {noItem}"));
+            (await Client.GetItem("bg4djajw227j7j5hknmwrzzbam", "vdwyrtrrg3suzcw4pn6ydmhsga", session, cancellationToken)).Switch(
+                account => DumpAccount("1", account),
+                sshKey => DumpSshKey("1", sshKey),
+                noItem => Console.WriteLine($"No item: {noItem}")
+            );
         }
 
         private static void DumpAccount(string name, Account account)

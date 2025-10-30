@@ -20,6 +20,9 @@ public enum MfaMethod
     // OOB
     Duo,
     LastPassAuthenticator,
+
+    // Special
+    RememberMeToken,
 }
 
 public static class MfaMethodExtensions

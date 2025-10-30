@@ -16,7 +16,6 @@ using Org.BouncyCastle.Utilities.IO.Pem;
 using PasswordManagerAccess.Common;
 using PemReader = Org.BouncyCastle.Utilities.IO.Pem.PemReader;
 using PemWriter = Org.BouncyCastle.Utilities.IO.Pem.PemWriter;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword;
 
@@ -54,10 +53,10 @@ public class SshKey : VaultItem
 
     internal const string SshKeyTemplateId = "114";
 
-    internal SshKey(R.VaultItem itemInfo, Keychain keychain)
+    internal SshKey(Model.VaultItem itemInfo, Keychain keychain)
         : base(itemInfo, keychain) { }
 
-    internal R.VaultItemSectionField KeyField
+    internal Model.VaultItemSectionField KeyField
     {
         get
         {
@@ -75,10 +74,10 @@ public class SshKey : VaultItem
         }
     }
 
-    internal R.SshKeyAttributes KeyAttributes =>
+    internal Model.SshKeyAttributes KeyAttributes =>
         (_keyAttributes ??= KeyField.Attributes?.SshKey) ?? throw new InternalErrorException("SSH key attributes not found");
 
-    internal static string FormatKeyType(R.SshKeyType? keyType)
+    internal static string FormatKeyType(Model.SshKeyType? keyType)
     {
         if (keyType == null)
             return "";
@@ -194,8 +193,8 @@ public class SshKey : VaultItem
     // Private
     //
 
-    private R.VaultItemSectionField? _keyField;
-    private R.SshKeyAttributes? _keyAttributes;
+    private Model.VaultItemSectionField? _keyField;
+    private Model.SshKeyAttributes? _keyAttributes;
     private string? _keyType;
 }
 

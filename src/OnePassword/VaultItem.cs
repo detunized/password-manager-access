@@ -4,7 +4,6 @@
 #nullable enable
 
 using System.Collections.Generic;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword;
 
@@ -25,21 +24,21 @@ public class VaultItem
     //
 
     internal string TemplateId => _itemInfo.TemplateId ?? "";
-    internal R.VaultItemOverview Overview => _overview ??= DecryptOverview();
-    internal R.VaultItemDetails Details => _details ??= DecryptDetails();
+    internal Model.VaultItemOverview Overview => _overview ??= DecryptOverview();
+    internal Model.VaultItemDetails Details => _details ??= DecryptDetails();
 
-    internal VaultItem(R.VaultItem itemInfo, Keychain keychain)
+    internal VaultItem(Model.VaultItem itemInfo, Keychain keychain)
     {
         _itemInfo = itemInfo;
         _keychain = keychain;
     }
 
-    internal R.Encrypted EncryptedOverview => _itemInfo.Overview;
-    internal R.Encrypted EncryptedDetails => _itemInfo.Details;
+    internal Model.Encrypted EncryptedOverview => _itemInfo.Overview;
+    internal Model.Encrypted EncryptedDetails => _itemInfo.Details;
 
-    internal R.VaultItemOverview DecryptOverview() => Util.Decrypt<R.VaultItemOverview>(_itemInfo.Overview, _keychain);
+    internal Model.VaultItemOverview DecryptOverview() => Util.Decrypt<Model.VaultItemOverview>(_itemInfo.Overview, _keychain);
 
-    internal R.VaultItemDetails DecryptDetails() => Util.Decrypt<R.VaultItemDetails>(_itemInfo.Details, _keychain);
+    internal Model.VaultItemDetails DecryptDetails() => Util.Decrypt<Model.VaultItemDetails>(_itemInfo.Details, _keychain);
 
     internal Field[] ParseFields()
     {
@@ -47,7 +46,7 @@ public class VaultItem
 
         foreach (var section in Details.Sections ?? [])
         foreach (var field in section.Fields ?? [])
-            fields.Add(new Field(field.Name, field.Value, section.Name));
+            fields.Add(new Field(field.Name ?? "", field.Value ?? "", section.Name ?? ""));
 
         return fields.ToArray();
     }
@@ -76,9 +75,9 @@ public class VaultItem
     // Private
     //
 
-    private readonly R.VaultItem _itemInfo;
+    private readonly Model.VaultItem _itemInfo;
     private readonly Keychain _keychain;
-    private R.VaultItemOverview? _overview;
-    private R.VaultItemDetails? _details;
+    private Model.VaultItemOverview? _overview;
+    private Model.VaultItemDetails? _details;
     private Field[]? _fields;
 }

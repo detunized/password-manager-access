@@ -1,13 +1,17 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using OneOf;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using PasswordManagerAccess.OnePassword.Ui;
-using R = PasswordManagerAccess.OnePassword.Response;
 
 namespace PasswordManagerAccess.OnePassword
 {
@@ -68,24 +72,43 @@ namespace PasswordManagerAccess.OnePassword
             return dot < 0 ? domain : domain.Substring(dot + 1);
         }
 
-        public class ThrowUi : IUi
+        public class ThrowStorage : IAsyncSecureStorage
         {
-            public DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw MakeLogicError();
+            public Task<string?> LoadString(string name, CancellationToken cancellationToken) => throw MakeLogicError();
 
-            public string ProvideDuoPasscode(DuoDevice device) => throw MakeLogicError();
-
-            public void UpdateDuoStatus(DuoStatus status, string text) => throw MakeLogicError();
-
-            public Passcode ProvideGoogleAuthPasscode() => throw MakeLogicError();
-
-            public Passcode ProvideWebAuthnRememberMe() => throw MakeLogicError();
+            public Task StoreString(string name, string? value, CancellationToken cancellationToken) => throw MakeLogicError();
         }
 
-        public class ThrowStorage : ISecureStorage
+        public class ThrowUi : IAsyncUi
         {
-            public string LoadString(string name) => throw MakeLogicError();
+            public Task<OneOf<Otp, MfaMethod, Canceled>> ProvideGoogleAuthPasscode(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => throw MakeLogicError();
 
-            public void StoreString(string name, string value) => throw MakeLogicError();
+            public Task<OneOf<RememberMe, MfaMethod, Canceled>> ProvideWebAuthnRememberMe(
+                int attempt,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => throw MakeLogicError();
+
+            public Task<string> PerformSsoLogin(string ssoLoginUrl, string redirectTo, CancellationToken cancellationToken) => throw MakeLogicError();
+
+            public Task<ISsoEnrollmentContext> BeginSsoEnrollment(CancellationToken cancellationToken) => throw MakeLogicError();
+
+            public Task<OneOf<DuoChoice, MfaMethod, DuoCancelled>> ChooseDuoFactor(
+                DuoDevice[] devices,
+                MfaMethod[] otherMethods,
+                CancellationToken cancellationToken
+            ) => throw MakeLogicError();
+
+            public Task<OneOf<DuoPasscode, DuoCancelled>> ProvideDuoPasscode(DuoDevice device, CancellationToken cancellationToken) =>
+                throw MakeLogicError();
+
+            public Task DuoDone(CancellationToken cancellationToken) => throw MakeLogicError();
+
+            public Task UpdateDuoStatus(DuoStatus status, string text, CancellationToken cancellationToken) => throw MakeLogicError();
         }
 
         //
@@ -102,7 +125,7 @@ namespace PasswordManagerAccess.OnePassword
             var plaintext = decryptor.Decrypt(encrypted).ToUtf8();
             try
             {
-                return JsonConvert.DeserializeObject<T>(plaintext);
+                return JsonSerializer.Deserialize<T>(plaintext) ?? throw new InternalErrorException("Failed to parse JSON: got null");
             }
             catch (JsonException e)
             {
@@ -110,27 +133,27 @@ namespace PasswordManagerAccess.OnePassword
             }
         }
 
-        internal static T Decrypt<T>(R.Encrypted encrypted, IDecryptor decryptor)
+        internal static T Decrypt<T>(Model.Encrypted encrypted, IDecryptor decryptor)
         {
             return Decrypt<T>(Encrypted.Parse(encrypted), decryptor);
         }
 
         internal static void DecryptAesKey(Encrypted encryptedAesKey, Keychain keychain)
         {
-            keychain.Add(AesKey.Parse(Decrypt<R.AesKey>(encryptedAesKey, keychain)));
+            keychain.Add(AesKey.Parse(Decrypt<Model.AesKey>(encryptedAesKey, keychain)));
         }
 
-        internal static void DecryptAesKey(R.Encrypted encryptedAesKey, Keychain keychain)
+        internal static void DecryptAesKey(Model.Encrypted encryptedAesKey, Keychain keychain)
         {
             DecryptAesKey(Encrypted.Parse(encryptedAesKey), keychain);
         }
 
         internal static void DecryptRsaKey(Encrypted encryptedRsaKey, Keychain keychain)
         {
-            keychain.Add(RsaKey.Parse(Decrypt<R.RsaKey>(encryptedRsaKey, keychain)));
+            keychain.Add(RsaKey.Parse(Decrypt<Model.RsaKey>(encryptedRsaKey, keychain)));
         }
 
-        internal static void DecryptRsaKey(R.Encrypted encryptedRsaKey, Keychain keychain)
+        internal static void DecryptRsaKey(Model.Encrypted encryptedRsaKey, Keychain keychain)
         {
             DecryptRsaKey(Encrypted.Parse(encryptedRsaKey), keychain);
         }
