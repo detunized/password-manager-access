@@ -54,6 +54,8 @@ namespace PasswordManagerAccess.Test.OnePassword
             // Assert
             result.TryPickT0(out var account, out _).ShouldBeTrue();
             account.Id.ShouldBe("wm3uxq4xsmb4mghxw6o3s7zrem");
+            account.CreatedAt.ShouldBe(new DateTime(2016, 8, 4, 13, 15, 10, DateTimeKind.Utc));
+            account.UpdatedAt.ShouldBe(new DateTime(2016, 8, 4, 13, 16, 7, DateTimeKind.Utc));
         }
 
         [Fact]

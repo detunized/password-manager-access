@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -17,6 +18,8 @@ public class VaultItem
     public string Name => Overview.Title ?? "";
     public string Description => Overview.AdditionalInfo ?? "";
     public string Note => Details.Note ?? "";
+    public DateTime CreatedAt => _createdAt ??= ParseDateTime(_itemInfo.CreatedAt);
+    public DateTime UpdatedAt => _updatedAt ??= ParseDateTime(_itemInfo.UpdatedAt);
 
     public Field[] Fields => _fields ??= ParseFields();
 
@@ -72,6 +75,19 @@ public class VaultItem
         return "";
     }
 
+    internal static DateTime ParseDateTime(string dateString)
+    {
+        if (string.IsNullOrWhiteSpace(dateString))
+            return default;
+
+        if (DateTime.TryParse(dateString, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind, out var result))
+            return result;
+
+        // Return default if parsing fails
+        return default;
+    }
+
     //
     // Private
     //
@@ -81,4 +97,6 @@ public class VaultItem
     private R.VaultItemOverview? _overview;
     private R.VaultItemDetails? _details;
     private Field[]? _fields;
+    private DateTime? _createdAt;
+    private DateTime? _updatedAt;
 }
