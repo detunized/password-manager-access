@@ -18,8 +18,8 @@ public class VaultItem
     public string Name => Overview.Title ?? "";
     public string Description => Overview.AdditionalInfo ?? "";
     public string Note => Details.Note ?? "";
-    public DateTime CreatedAt => ParseDateTime(_itemInfo.CreatedAt);
-    public DateTime UpdatedAt => ParseDateTime(_itemInfo.UpdatedAt);
+    public DateTime CreatedAt => _createdAt ??= ParseDateTime(_itemInfo.CreatedAt);
+    public DateTime UpdatedAt => _updatedAt ??= ParseDateTime(_itemInfo.UpdatedAt);
 
     public Field[] Fields => _fields ??= ParseFields();
 
@@ -97,4 +97,6 @@ public class VaultItem
     private R.VaultItemOverview? _overview;
     private R.VaultItemDetails? _details;
     private Field[]? _fields;
+    private DateTime? _createdAt;
+    private DateTime? _updatedAt;
 }
