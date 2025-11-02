@@ -1,5 +1,8 @@
 # Changelog
 
+## 28.2.0
+  - 1Password: added `VaultItem.CreatedAt` and `VaultItem.UpdatedAt` properties
+
 ## 28.1.0
   - 1Password: fixed incorrect item and vault IDs detection in Client.GetItem
   - 1Password: added `NoItem.Inaccessible` for inaccessible vaults and items

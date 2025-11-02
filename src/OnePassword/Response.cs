@@ -313,6 +313,12 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty("trashed", Required = Required.Always)]
         public readonly string Deleted;
 
+        [JsonProperty("createdAt")]
+        public readonly string CreatedAt;
+
+        [JsonProperty("updatedAt")]
+        public readonly string UpdatedAt;
+
         [JsonProperty("itemVersion", Required = Required.Always)]
         public readonly int Version;
 

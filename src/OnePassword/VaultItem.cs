@@ -17,6 +17,8 @@ public class VaultItem
     public string Name => Overview.Title ?? "";
     public string Description => Overview.AdditionalInfo ?? "";
     public string Note => Details.Note ?? "";
+    public string CreatedAt => _itemInfo.CreatedAt ?? "";
+    public string UpdatedAt => _itemInfo.UpdatedAt ?? "";
 
     public Field[] Fields => _fields ??= ParseFields();
 
