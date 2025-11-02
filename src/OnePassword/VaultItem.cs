@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using R = PasswordManagerAccess.OnePassword.Response;
 
@@ -17,8 +18,8 @@ public class VaultItem
     public string Name => Overview.Title ?? "";
     public string Description => Overview.AdditionalInfo ?? "";
     public string Note => Details.Note ?? "";
-    public string CreatedAt => _itemInfo.CreatedAt ?? "";
-    public string UpdatedAt => _itemInfo.UpdatedAt ?? "";
+    public DateTime? CreatedAt => _itemInfo.CreatedAt;
+    public DateTime? UpdatedAt => _itemInfo.UpdatedAt;
 
     public Field[] Fields => _fields ??= ParseFields();
 

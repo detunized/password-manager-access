@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using Newtonsoft.Json;
 using Xunit;
 using R = PasswordManagerAccess.OnePassword.Response;
@@ -24,8 +25,8 @@ namespace PasswordManagerAccess.Test.OnePassword
         {
             var json = GetFixture("get-vault-item-response");
             var response = JsonConvert.DeserializeObject<R.SingleVaultItem>(json);
-            Assert.Equal("2016-08-04T13:15:10Z", response.Item.CreatedAt);
-            Assert.Equal("2016-08-04T13:16:07Z", response.Item.UpdatedAt);
+            Assert.Equal(new DateTime(2016, 8, 4, 13, 15, 10, DateTimeKind.Utc), response.Item.CreatedAt);
+            Assert.Equal(new DateTime(2016, 8, 4, 13, 16, 7, DateTimeKind.Utc), response.Item.UpdatedAt);
         }
 
         [Fact]
@@ -35,6 +36,37 @@ namespace PasswordManagerAccess.Test.OnePassword
                 ""uuid"": ""test-id"",
                 ""templateUuid"": ""001"",
                 ""trashed"": ""N"",
+                ""itemVersion"": 1,
+                ""encryptedBy"": ""test-key"",
+                ""encOverview"": {
+                    ""kid"": ""test-key"",
+                    ""enc"": ""A256GCM"",
+                    ""cty"": ""b5+jwk+json"",
+                    ""iv"": ""test-iv"",
+                    ""data"": ""test-data""
+                },
+                ""encDetails"": {
+                    ""kid"": ""test-key"",
+                    ""enc"": ""A256GCM"",
+                    ""cty"": ""b5+jwk+json"",
+                    ""iv"": ""test-iv"",
+                    ""data"": ""test-data""
+                }
+            }";
+            var item = JsonConvert.DeserializeObject<R.VaultItem>(json);
+            Assert.Null(item.CreatedAt);
+            Assert.Null(item.UpdatedAt);
+        }
+
+        [Fact]
+        public void VaultItem_handles_invalid_createdAt_and_updatedAt()
+        {
+            var json = @"{
+                ""uuid"": ""test-id"",
+                ""templateUuid"": ""001"",
+                ""trashed"": ""N"",
+                ""createdAt"": ""not-a-date"",
+                ""updatedAt"": ""also-not-a-date"",
                 ""itemVersion"": 1,
                 ""encryptedBy"": ""test-key"",
                 ""encOverview"": {
