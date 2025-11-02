@@ -313,13 +313,11 @@ namespace PasswordManagerAccess.OnePassword.Response
         [JsonProperty("trashed", Required = Required.Always)]
         public readonly string Deleted;
 
-        [JsonConverter(typeof(SafeDateTimeConverter))]
         [JsonProperty("createdAt")]
-        public readonly DateTime? CreatedAt;
+        public readonly string CreatedAt;
 
-        [JsonConverter(typeof(SafeDateTimeConverter))]
         [JsonProperty("updatedAt")]
-        public readonly DateTime? UpdatedAt;
+        public readonly string UpdatedAt;
 
         [JsonProperty("itemVersion", Required = Required.Always)]
         public readonly int Version;
@@ -499,40 +497,5 @@ namespace PasswordManagerAccess.OnePassword.Response
 
         [JsonProperty("muk")]
         public readonly AesKey MasterUnlockKey;
-    }
-
-    // Safely parse DateTime values without throwing exceptions on invalid input
-    internal class SafeDateTimeConverter : JsonConverter<DateTime?>
-    {
-        public override DateTime? ReadJson(JsonReader reader, Type objectType, DateTime? existingValue, bool hasExistingValue, JsonSerializer serializer)
-        {
-            if (reader.TokenType == JsonToken.Null)
-                return null;
-
-            if (reader.TokenType == JsonToken.Date)
-            {
-                // Newtonsoft.Json already parsed it as a DateTime
-                return reader.Value as DateTime?;
-            }
-
-            if (reader.TokenType == JsonToken.String)
-            {
-                var value = reader.Value as string;
-                if (string.IsNullOrWhiteSpace(value))
-                    return null;
-
-                // Try parsing with standard formats
-                if (DateTime.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, 
-                    System.Globalization.DateTimeStyles.RoundtripKind, out var result))
-                    return result;
-
-                // Invalid date format - return null instead of throwing
-                return null;
-            }
-
-            return null;
-        }
-
-        public override void WriteJson(JsonWriter writer, DateTime? value, JsonSerializer serializer) => throw new NotImplementedException();
     }
 }

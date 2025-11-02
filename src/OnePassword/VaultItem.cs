@@ -18,8 +18,8 @@ public class VaultItem
     public string Name => Overview.Title ?? "";
     public string Description => Overview.AdditionalInfo ?? "";
     public string Note => Details.Note ?? "";
-    public DateTime? CreatedAt => _itemInfo.CreatedAt;
-    public DateTime? UpdatedAt => _itemInfo.UpdatedAt;
+    public DateTime CreatedAt => ParseDateTime(_itemInfo.CreatedAt);
+    public DateTime UpdatedAt => ParseDateTime(_itemInfo.UpdatedAt);
 
     public Field[] Fields => _fields ??= ParseFields();
 
@@ -73,6 +73,19 @@ public class VaultItem
                             return field.Value ?? "";
 
         return "";
+    }
+
+    internal static DateTime ParseDateTime(string dateString)
+    {
+        if (string.IsNullOrWhiteSpace(dateString))
+            return default;
+
+        if (DateTime.TryParse(dateString, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind, out var result))
+            return result;
+
+        // Return default if parsing fails
+        return default;
     }
 
     //
