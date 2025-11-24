@@ -555,14 +555,25 @@ namespace PasswordManagerAccess.ProtonPass
             }
         }
 
-        internal static async Task StoreSession(string? sessionId, string? accessToken, string? refreshToken, IAsyncSecureStorage storage, CancellationToken cancellationToken)
+        internal static async Task StoreSession(
+            string? sessionId,
+            string? accessToken,
+            string? refreshToken,
+            IAsyncSecureStorage storage,
+            CancellationToken cancellationToken
+        )
         {
             await storage.StoreString("session-id", sessionId, cancellationToken).ConfigureAwait(false);
             await storage.StoreString("access-token", accessToken, cancellationToken).ConfigureAwait(false);
             await storage.StoreString("refresh-token", refreshToken, cancellationToken).ConfigureAwait(false);
         }
 
-        internal static async Task StoreHumanVerificationToken(string? tokenType, string? token, IAsyncSecureStorage storage, CancellationToken cancellationToken)
+        internal static async Task StoreHumanVerificationToken(
+            string? tokenType,
+            string? token,
+            IAsyncSecureStorage storage,
+            CancellationToken cancellationToken
+        )
         {
             await storage.StoreString("human-verification-token-type", tokenType, cancellationToken).ConfigureAwait(false);
             await storage.StoreString("human-verification-token", token, cancellationToken).ConfigureAwait(false);
