@@ -938,6 +938,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private static readonly Model.Item LoginItem =
             new()
             {
+                Id = "test-id",
                 Login = new Model.LoginInfo
                 {
                     Username = "2.VljekSAM8OlXrGeo3feg4g==|zWnkxbTOPwRhq8w549i94Q==|Un5VXCsoowbqBvIMHqxzF1As5LV6LVuZTXyoJGiNkrU=",

@@ -499,7 +499,7 @@ public static class Client
         public readonly string? RememberMeToken;
         public readonly Model.SecondFactor SecondFactor;
 
-        public TokenOrSecondFactor(string authToken, string rememberMeToken)
+        public TokenOrSecondFactor(string authToken, string? rememberMeToken)
         {
             AuthToken = authToken;
             RememberMeToken = rememberMeToken;
@@ -572,8 +572,8 @@ public static class Client
 
         // TODO: Write a test for this situation.
         var secondFactor = ExtractSecondFactorFromResponse(response);
-        if (secondFactor.HasValue)
-            return new TokenOrSecondFactor(secondFactor.Value);
+        if (secondFactor != null)
+            return new TokenOrSecondFactor(secondFactor);
 
         throw MakeSpecializedError(response);
     }
@@ -859,6 +859,8 @@ public static class Client
     )
     {
         var (vaultItem, key) = ParseVaultItem(item, vaultKey, orgKeys, folders, collections);
+        var login = item.Login!;
+
         return new Account
         {
             Id = vaultItem.Id,
@@ -869,10 +871,10 @@ public static class Client
             HidePassword = vaultItem.HidePassword,
             CustomFields = vaultItem.CustomFields,
 
-            Username = DecryptToStringOrBlank(item.Login.Username, key),
-            Password = DecryptToStringOrBlank(item.Login.Password, key),
-            Url = DecryptToStringOrBlank(item.Login.Uri, key),
-            Totp = DecryptToStringOrBlank(item.Login.Totp, key),
+            Username = DecryptToStringOrBlank(login.Username, key),
+            Password = DecryptToStringOrBlank(login.Password, key),
+            Url = DecryptToStringOrBlank(login.Uri, key),
+            Totp = DecryptToStringOrBlank(login.Totp, key),
         };
     }
 
@@ -885,6 +887,8 @@ public static class Client
     )
     {
         var (vaultItem, key) = ParseVaultItem(item, vaultKey, orgKeys, folders, collections);
+        var sshKey = item.SshKey!;
+
         return new SshKey
         {
             Id = vaultItem.Id,
@@ -895,9 +899,9 @@ public static class Client
             HidePassword = vaultItem.HidePassword,
             CustomFields = vaultItem.CustomFields,
 
-            PublicKey = DecryptToStringOrBlank(item.SshKey.PublicKey, key),
-            PrivateKey = DecryptToStringOrBlank(item.SshKey.PrivateKey, key),
-            Fingerprint = DecryptToStringOrBlank(item.SshKey.Fingerprint, key),
+            PublicKey = DecryptToStringOrBlank(sshKey.PublicKey, key),
+            PrivateKey = DecryptToStringOrBlank(sshKey.PrivateKey, key),
+            Fingerprint = DecryptToStringOrBlank(sshKey.Fingerprint, key),
         };
     }
 
@@ -953,8 +957,8 @@ public static class Client
         return fieldLinkedId switch
         {
             null => "",
-            100 => DecryptToStringOrBlank(item.Login.Username, key),
-            101 => DecryptToStringOrBlank(item.Login.Password, key),
+            100 => DecryptToStringOrBlank(item.Login?.Username, key),
+            101 => DecryptToStringOrBlank(item.Login?.Password, key),
             _ => throw new UnsupportedFeatureException($"Linked field ID {fieldLinkedId} is not supported"),
         };
     }
@@ -1017,7 +1021,7 @@ public static class Client
         // It's possible that the original request failed because of the JSON parsing, but we
         // ignore it deliberately to first check for returned errors.
         var error = GetServerError(response);
-        if (!error.HasValue)
+        if (error == null)
         {
             // Only when the error parsing failed we return the original error.
             if (response.HasError)
@@ -1027,8 +1031,8 @@ public static class Client
             return new InternalErrorException("Unexpected response from the server");
         }
 
-        var e = error.Value;
-        var message = e.Info.Message ?? e.Description ?? e.Message ?? e.Id ?? "unknown error";
+        var e = error;
+        var message = e.Info?.Message ?? e.Description ?? e.Message ?? e.Id ?? "unknown error";
 
         if (message.Contains("Username or password is incorrect"))
             return new BadCredentialsException(message);
