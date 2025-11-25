@@ -12,7 +12,6 @@ using PasswordManagerAccess.Duo;
 using Shouldly;
 using Xunit;
 using MfaMethod = PasswordManagerAccess.Bitwarden.Ui.MfaMethod;
-using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -43,7 +42,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
             var kdf = Client.RequestKdfInfo(Username, rest);
 
-            Assert.Equal(R.KdfMethod.Pbkdf2Sha256, kdf.Kdf);
+            Assert.Equal(Model.KdfMethod.Pbkdf2Sha256, kdf.Kdf);
             Assert.Equal(1337, kdf.Iterations);
         }
 
@@ -54,7 +53,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
             var kdf = Client.RequestKdfInfo(Username, rest);
 
-            Assert.Equal(R.KdfMethod.Argon2id, kdf.Kdf);
+            Assert.Equal(Model.KdfMethod.Argon2id, kdf.Kdf);
             Assert.Equal(3, kdf.Iterations);
             Assert.Equal(64, kdf.Memory);
             Assert.Equal(4, kdf.Parallelism);
@@ -165,7 +164,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var (token, kdfInfo) = Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
-            Assert.Equal(R.KdfMethod.Pbkdf2Sha256, kdfInfo.Kdf);
+            Assert.Equal(Model.KdfMethod.Pbkdf2Sha256, kdfInfo.Kdf);
             Assert.Equal(1337, kdfInfo.Iterations);
         }
 
@@ -180,7 +179,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var (token, kdfInfo) = Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
-            Assert.Equal(R.KdfMethod.Argon2id, kdfInfo.Kdf);
+            Assert.Equal(Model.KdfMethod.Argon2id, kdfInfo.Kdf);
             Assert.Equal(3, kdfInfo.Iterations);
             Assert.Equal(64, kdfInfo.Memory);
             Assert.Equal(4, kdfInfo.Parallelism);
@@ -242,10 +241,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
             var methods = response.SecondFactor.Methods.Keys;
             Assert.Equal(5, methods.Count);
-            Assert.Contains(R.SecondFactorMethod.GoogleAuth, methods);
-            Assert.Contains(R.SecondFactorMethod.Email, methods);
-            Assert.Contains(R.SecondFactorMethod.Duo, methods);
-            Assert.Contains(R.SecondFactorMethod.YubiKey, methods);
+            Assert.Contains(Model.SecondFactorMethod.GoogleAuth, methods);
+            Assert.Contains(Model.SecondFactorMethod.Email, methods);
+            Assert.Contains(Model.SecondFactorMethod.Duo, methods);
+            Assert.Contains(Model.SecondFactorMethod.YubiKey, methods);
         }
 
         [Fact]
@@ -307,7 +306,13 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ExpectContent("twoFactorToken=code", "twoFactorProvider=2", "twoFactorRemember=1")
                 .ToRestClient(BaseUrl);
 
-            Client.RequestAuthToken(Username, PasswordHash, DeviceId, new Client.SecondFactorOptions(R.SecondFactorMethod.Duo, "code", true), rest);
+            Client.RequestAuthToken(
+                Username,
+                PasswordHash,
+                DeviceId,
+                new Client.SecondFactorOptions(Model.SecondFactorMethod.Duo, "code", true),
+                rest
+            );
         }
 
         [Fact]
@@ -631,7 +636,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void ParseField_throws_on_invalid_type()
         {
             // Arrange
-            var field = new R.Field
+            var field = new Model.Field
             {
                 Type = 4,
                 Name = null,
@@ -701,7 +706,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             // Arrange
             var itemJson = GetFixture(fixtureName);
-            var itemModel = JsonConvert.DeserializeObject<R.Item>(itemJson);
+            var itemModel = JsonConvert.DeserializeObject<Model.Item>(itemJson);
 
             // Simulate no folder situation
             if (!haveItemFolder)
@@ -899,14 +904,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
             return new MemoryStorage(new Dictionary<string, string> { ["remember-me-token"] = token });
         }
 
-        private R.Vault LoadVaultFixture(string name = "vault")
+        private Model.Vault LoadVaultFixture(string name = "vault")
         {
-            return JsonConvert.DeserializeObject<R.Vault>(GetFixture(name));
+            return JsonConvert.DeserializeObject<Model.Vault>(GetFixture(name));
         }
 
-        private R.Profile LoadProfileFixture(string name = "profile")
+        private Model.Profile LoadProfileFixture(string name = "profile")
         {
-            return JsonConvert.DeserializeObject<R.Profile>(GetFixture(name));
+            return JsonConvert.DeserializeObject<Model.Profile>(GetFixture(name));
         }
 
         //
@@ -928,10 +933,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
             "2.8RPqQRT3z5dTQtNAE/2XWw==|cl1uG8jueR0kxPPklGjVJAGCJqaw+YwmDPyNJtIwsXg=|klc2vOsbPPZD5K1MDMf/nqSNLBrOMPVUNycgCgl6l44=";
         private const string Plaintext = "Hey, check this out!";
 
-        private static readonly R.Item LoginItem =
+        private static readonly Model.Item LoginItem =
             new()
             {
-                Login = new R.LoginInfo
+                Login = new Model.LoginInfo
                 {
                     Username = "2.VljekSAM8OlXrGeo3feg4g==|zWnkxbTOPwRhq8w549i94Q==|Un5VXCsoowbqBvIMHqxzF1As5LV6LVuZTXyoJGiNkrU=",
                     Password = "2.p/TTcAaZh3YdXjsUGv+UIA==|zzvBs2YffTZhK1GeWwncKQ==|84h3MIjJslUuOZkWJKdMkfRxOwDmKLsujnA7Q95jhF0=",

@@ -6,19 +6,18 @@
 using System.Linq;
 using Konscious.Security.Cryptography;
 using PasswordManagerAccess.Common;
-using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Bitwarden;
 
 internal static class Util
 {
-    public static byte[] DeriveKey(string username, string password, R.KdfInfo kdfInfo)
+    public static byte[] DeriveKey(string username, string password, Model.KdfInfo kdfInfo)
     {
         return kdfInfo.Kdf switch
         {
-            R.KdfMethod.Pbkdf2Sha256 => Pbkdf2.GenerateSha256(password.ToBytes(), username.ToLower().Trim().ToBytes(), kdfInfo.Iterations, 32),
+            Model.KdfMethod.Pbkdf2Sha256 => Pbkdf2.GenerateSha256(password.ToBytes(), username.ToLower().Trim().ToBytes(), kdfInfo.Iterations, 32),
 
-            R.KdfMethod.Argon2id => new Argon2id(password.ToBytes())
+            Model.KdfMethod.Argon2id => new Argon2id(password.ToBytes())
             {
                 Salt = Crypto.Sha256(username.ToLower().Trim()),
                 Iterations = kdfInfo.Iterations,

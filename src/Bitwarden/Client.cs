@@ -14,7 +14,6 @@ using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
 using U2fWin10;
-using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Bitwarden;
 
@@ -126,7 +125,7 @@ public static class Client
 
         return maybeItem.Value switch
         {
-            R.Item item => ParseItem(item, session),
+            Model.Item item => ParseItem(item, session),
             NoItem noItem => noItem,
             _ => throw new InternalErrorException("Logic error"),
         };
@@ -203,9 +202,9 @@ public static class Client
         return new RestClient(transport, baseUrl.TrimEnd('/'), defaultHeaders: DefaultRestHeaders);
     }
 
-    internal static R.KdfInfo RequestKdfInfo(string username, RestClient rest)
+    internal static Model.KdfInfo RequestKdfInfo(string username, RestClient rest)
     {
-        var response = rest.PostJson<R.KdfInfo>("identity/accounts/prelogin", new Dictionary<string, object> { { "email", username } });
+        var response = rest.PostJson<Model.KdfInfo>("identity/accounts/prelogin", new Dictionary<string, object> { { "email", username } });
 
         if (response.IsSuccessful)
         {
@@ -222,15 +221,15 @@ public static class Client
         throw MakeSpecializedError(response);
     }
 
-    internal static void ValidateKdfInfo(R.KdfInfo info)
+    internal static void ValidateKdfInfo(Model.KdfInfo info)
     {
         switch (info.Kdf)
         {
-            case R.KdfMethod.Pbkdf2Sha256:
+            case Model.KdfMethod.Pbkdf2Sha256:
                 if (info.Iterations <= 0)
                     throw new InternalErrorException($"Invalid iteration count: {info.Iterations}");
                 break;
-            case R.KdfMethod.Argon2id:
+            case Model.KdfMethod.Argon2id:
                 if (info.Iterations <= 0)
                     throw new InternalErrorException($"Invalid iteration count: {info.Iterations}");
                 if (info.Memory <= 0)
@@ -268,10 +267,10 @@ public static class Client
 
         switch (method)
         {
-            case R.SecondFactorMethod.GoogleAuth:
+            case Model.SecondFactorMethod.GoogleAuth:
                 passcode = ui.ProvideGoogleAuthPasscode();
                 break;
-            case R.SecondFactorMethod.Email:
+            case Model.SecondFactorMethod.Email:
                 // When only the email 2FA present, the email is sent by the server right away.
                 // Trigger only when other methods are present.
                 if (secondFactor.Methods.Count != 1)
@@ -279,8 +278,8 @@ public static class Client
 
                 passcode = ui.ProvideEmailPasscode((string?)extra["Email"] ?? "");
                 break;
-            case R.SecondFactorMethod.Duo:
-            case R.SecondFactorMethod.DuoOrg:
+            case Model.SecondFactorMethod.Duo:
+            case Model.SecondFactorMethod.DuoOrg:
             {
                 // TODO: The logic here is a bit brittle. Remove it once Duo V1 is finally removed in October 2024.
 
@@ -308,10 +307,10 @@ public static class Client
 
                 break;
             }
-            case R.SecondFactorMethod.YubiKey:
+            case Model.SecondFactorMethod.YubiKey:
                 passcode = ui.ProvideYubiKeyPasscode();
                 break;
-            case R.SecondFactorMethod.U2f:
+            case Model.SecondFactorMethod.U2f:
                 passcode = AskU2fPasscode(JObject.Parse((string?)extra["Challenge"] ?? "{}"), ui);
                 break;
             default:
@@ -342,7 +341,7 @@ public static class Client
         throw new BadMultiFactorException("Second factor code is not correct");
     }
 
-    internal static (string Token, R.KdfInfo KdfInfo) LogInCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
+    internal static (string Token, Model.KdfInfo KdfInfo) LogInCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
     {
         var parameters = new Dictionary<string, object>
         {
@@ -355,12 +354,12 @@ public static class Client
             { "deviceIdentifier", deviceId },
         };
 
-        var response = rest.PostForm<R.TokenCliApi>("identity/connect/token", parameters);
+        var response = rest.PostForm<Model.TokenCliApi>("identity/connect/token", parameters);
         if (!response.IsSuccessful)
             throw MakeSpecializedError(response);
 
         var authInfo = response.Data;
-        var kdfInfo = new R.KdfInfo
+        var kdfInfo = new Model.KdfInfo
         {
             Kdf = authInfo.Kdf,
             Iterations = authInfo.KdfIterations,
@@ -378,7 +377,7 @@ public static class Client
         if (storedRememberMeToken.IsNullOrEmpty())
             return null;
 
-        return new SecondFactorOptions(R.SecondFactorMethod.RememberMe, storedRememberMeToken, false);
+        return new SecondFactorOptions(Model.SecondFactorMethod.RememberMe, storedRememberMeToken, false);
     }
 
     internal static void SaveRememberMeToken(TokenOrSecondFactor reseponse, ISecureStorage storage)
@@ -435,7 +434,7 @@ public static class Client
         return new Passcode(token, false);
     }
 
-    internal static R.SecondFactorMethod ChooseSecondFactorMethod(R.SecondFactor secondFactor, IUi ui)
+    internal static Model.SecondFactorMethod ChooseSecondFactorMethod(Model.SecondFactor secondFactor, IUi ui)
     {
         var methods = secondFactor.Methods;
         if (methods == null || methods.Count == 0)
@@ -446,25 +445,25 @@ public static class Client
         {
             switch (m)
             {
-                case R.SecondFactorMethod.GoogleAuth:
+                case Model.SecondFactorMethod.GoogleAuth:
                     availableMethods.Add(Ui.MfaMethod.GoogleAuth);
                     break;
-                case R.SecondFactorMethod.Email:
+                case Model.SecondFactorMethod.Email:
                     availableMethods.Add(Ui.MfaMethod.Email);
                     break;
-                case R.SecondFactorMethod.Duo:
+                case Model.SecondFactorMethod.Duo:
                     availableMethods.Add(Ui.MfaMethod.Duo);
                     break;
-                case R.SecondFactorMethod.YubiKey:
+                case Model.SecondFactorMethod.YubiKey:
                     availableMethods.Add(Ui.MfaMethod.YubiKey);
                     break;
-                case R.SecondFactorMethod.U2f:
+                case Model.SecondFactorMethod.U2f:
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         availableMethods.Add(Ui.MfaMethod.U2f);
                     break;
-                case R.SecondFactorMethod.RememberMe:
+                case Model.SecondFactorMethod.RememberMe:
                     break;
-                case R.SecondFactorMethod.DuoOrg:
+                case Model.SecondFactorMethod.DuoOrg:
                     availableMethods.Add(Ui.MfaMethod.DuoOrg);
                     break;
             }
@@ -483,12 +482,12 @@ public static class Client
         return ui.ChooseMfaMethod(availableMethods.ToArray()) switch
         {
             Ui.MfaMethod.Cancel => throw MakeCancelledMfaError(),
-            Ui.MfaMethod.GoogleAuth => R.SecondFactorMethod.GoogleAuth,
-            Ui.MfaMethod.Email => R.SecondFactorMethod.Email,
-            Ui.MfaMethod.Duo => R.SecondFactorMethod.Duo,
-            Ui.MfaMethod.YubiKey => R.SecondFactorMethod.YubiKey,
-            Ui.MfaMethod.U2f => R.SecondFactorMethod.U2f,
-            Ui.MfaMethod.DuoOrg => R.SecondFactorMethod.DuoOrg,
+            Ui.MfaMethod.GoogleAuth => Model.SecondFactorMethod.GoogleAuth,
+            Ui.MfaMethod.Email => Model.SecondFactorMethod.Email,
+            Ui.MfaMethod.Duo => Model.SecondFactorMethod.Duo,
+            Ui.MfaMethod.YubiKey => Model.SecondFactorMethod.YubiKey,
+            Ui.MfaMethod.U2f => Model.SecondFactorMethod.U2f,
+            Ui.MfaMethod.DuoOrg => Model.SecondFactorMethod.DuoOrg,
             _ => throw new InternalErrorException("The user responded with invalid input"),
         };
     }
@@ -498,16 +497,16 @@ public static class Client
     {
         public readonly string? AuthToken;
         public readonly string? RememberMeToken;
-        public readonly R.SecondFactor SecondFactor;
+        public readonly Model.SecondFactor SecondFactor;
 
         public TokenOrSecondFactor(string authToken, string rememberMeToken)
         {
             AuthToken = authToken;
             RememberMeToken = rememberMeToken;
-            SecondFactor = new R.SecondFactor();
+            SecondFactor = new Model.SecondFactor();
         }
 
-        public TokenOrSecondFactor(R.SecondFactor secondFactor)
+        public TokenOrSecondFactor(Model.SecondFactor secondFactor)
         {
             AuthToken = null;
             RememberMeToken = null;
@@ -517,11 +516,11 @@ public static class Client
 
     internal class SecondFactorOptions
     {
-        public readonly R.SecondFactorMethod Method;
+        public readonly Model.SecondFactorMethod Method;
         public readonly string Passcode;
         public readonly bool RememberMe;
 
-        public SecondFactorOptions(R.SecondFactorMethod method, string passcode, bool rememberMe)
+        public SecondFactorOptions(Model.SecondFactorMethod method, string passcode, bool rememberMe)
         {
             Method = method;
             Passcode = passcode;
@@ -564,7 +563,7 @@ public static class Client
 
         var headers = new Dictionary<string, string> { ["Auth-Email"] = username.ToBytes().ToUrlSafeBase64NoPadding() };
 
-        var response = rest.PostForm<R.AuthToken>("identity/connect/token", parameters, headers);
+        var response = rest.PostForm<Model.AuthToken>("identity/connect/token", parameters, headers);
         if (response.IsSuccessful)
         {
             var token = response.Data;
@@ -579,7 +578,7 @@ public static class Client
         throw MakeSpecializedError(response);
     }
 
-    internal static R.SecondFactor? ExtractSecondFactorFromResponse(RestResponse<string> response)
+    internal static Model.SecondFactor? ExtractSecondFactorFromResponse(RestResponse<string> response)
     {
         // In the case of 2FA the server returns some 400+ HTTP error and the response contains
         // extra information about the available 2FA methods.
@@ -590,7 +589,7 @@ public static class Client
         //       RestResponse<U> RestResponse<T>.CastTo<U>() { ... }
         try
         {
-            return JsonConvert.DeserializeObject<R.SecondFactor>(response.Content);
+            return JsonConvert.DeserializeObject<Model.SecondFactor>(response.Content);
         }
         catch (JsonException)
         {
@@ -629,29 +628,29 @@ public static class Client
     // Fetching data
     //
 
-    internal static R.Profile FetchProfile(string token, RestClient rest)
+    internal static Model.Profile FetchProfile(string token, RestClient rest)
     {
-        var response = rest.Get<R.Profile>("api/accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+        var response = rest.Get<Model.Profile>("api/accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
         if (response.IsSuccessful)
             return response.Data;
 
         throw MakeSpecializedError(response);
     }
 
-    internal static R.Vault FetchVault(Session session) => FetchVault(session.Token, session.Rest);
+    internal static Model.Vault FetchVault(Session session) => FetchVault(session.Token, session.Rest);
 
-    internal static R.Vault FetchVault(string token, RestClient rest)
+    internal static Model.Vault FetchVault(string token, RestClient rest)
     {
-        var response = rest.Get<R.Vault>("api/sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+        var response = rest.Get<Model.Vault>("api/sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
         if (response.IsSuccessful)
             return response.Data;
 
         throw MakeSpecializedError(response);
     }
 
-    internal static OneOf<R.Item, NoItem> FetchItem(string itemId, Session session)
+    internal static OneOf<Model.Item, NoItem> FetchItem(string itemId, Session session)
     {
-        var response = session.Rest.Get<R.Item>(
+        var response = session.Rest.Get<Model.Item>(
             $"api/ciphers/{itemId}/details",
             new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
         );
@@ -665,7 +664,7 @@ public static class Client
         throw MakeSpecializedError(response);
     }
 
-    internal static OneOf<R.Item, NoItem> FetchItemAndMaybeFoldersAndCollections(string itemId, Session session)
+    internal static OneOf<Model.Item, NoItem> FetchItemAndMaybeFoldersAndCollections(string itemId, Session session)
     {
         var maybeItem = FetchItem(itemId, session);
         if (maybeItem.IsT1)
@@ -686,7 +685,7 @@ public static class Client
         return item;
     }
 
-    internal static R.Folder[] FetchFolders(Session session)
+    internal static Model.Folder[] FetchFolders(Session session)
     {
         var response = session.Rest.Get<Model.FolderList>("api/folders", new Dictionary<string, string> { { "Authorization", $"{session.Token}" } });
         if (response.IsSuccessful)
@@ -695,7 +694,7 @@ public static class Client
         throw MakeSpecializedError(response);
     }
 
-    internal static R.Collection[] FetchCollections(Session session)
+    internal static Model.Collection[] FetchCollections(Session session)
     {
         var response = session.Rest.Get<Model.CollectionList>(
             "api/collections",
@@ -711,7 +710,7 @@ public static class Client
     // Parsing data
     //
 
-    internal static OneOf<Account, SshKey, NoItem> ParseItem(R.Item item, Session session)
+    internal static OneOf<Account, SshKey, NoItem> ParseItem(Model.Item item, Session session)
     {
         if (IsItemDeleted(item))
             return NoItem.Deleted;
@@ -722,15 +721,15 @@ public static class Client
 
         return item.Type switch
         {
-            R.ItemType.Login => ParseAccountItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
-            R.ItemType.SshKey => ParseSshKeyItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
+            Model.ItemType.Login => ParseAccountItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
+            Model.ItemType.SshKey => ParseSshKeyItem(item, profile.VaultKey, profile.OrgKeys, folders, collections),
             _ => NoItem.UnsupportedType,
         };
     }
 
-    internal static bool IsItemDeleted(R.Item item) => !item.DeletedDate.IsNullOrEmpty();
+    internal static bool IsItemDeleted(Model.Item item) => !item.DeletedDate.IsNullOrEmpty();
 
-    internal static Profile DecryptProfile(R.Profile profile, byte[] key)
+    internal static Profile DecryptProfile(Model.Profile profile, byte[] key)
     {
         var vaultKey = DecryptVaultKey(profile, key);
         var privateKey = DecryptPrivateKey(profile, vaultKey);
@@ -740,7 +739,7 @@ public static class Client
         return new Profile(vaultKey, organizations, orgKeys);
     }
 
-    internal static Vault DecryptVault(R.Vault vault, byte[] key)
+    internal static Vault DecryptVault(Model.Vault vault, byte[] key)
     {
         // We ignore the session profile as it might be out of date. It doesn't take long to decrypt everything,
         // given that we're going to parse the whole vault in the next step.
@@ -751,12 +750,12 @@ public static class Client
         return new Vault(accounts, sshKeys, collections.Values.ToArray(), profile.Organizations.Values.ToArray(), errors);
     }
 
-    private static Organization[] ParseOrganizations(R.Organization[] organizations)
+    private static Organization[] ParseOrganizations(Model.Organization[] organizations)
     {
         return organizations.Select(x => new Organization(x.Id, x.Name)).ToArray();
     }
 
-    internal static byte[] DecryptVaultKey(R.Profile profile, byte[] derivedKey)
+    internal static byte[] DecryptVaultKey(Model.Profile profile, byte[] derivedKey)
     {
         // By default use the derived key, this is true for some old vaults.
         if (profile.Key.IsNullOrEmpty())
@@ -768,12 +767,12 @@ public static class Client
     }
 
     // Null if not present
-    internal static byte[]? DecryptPrivateKey(R.Profile profile, byte[] vaultKey)
+    internal static byte[]? DecryptPrivateKey(Model.Profile profile, byte[] vaultKey)
     {
         return profile.PrivateKey.IsNullOrEmpty() ? null : DecryptToBytes(profile.PrivateKey, vaultKey);
     }
 
-    internal static Dictionary<string, byte[]> DecryptOrganizationKeys(R.Profile profile, byte[] privateKey)
+    internal static Dictionary<string, byte[]> DecryptOrganizationKeys(Model.Profile profile, byte[] privateKey)
     {
         if (profile.Organizations == null)
             return [];
@@ -781,12 +780,16 @@ public static class Client
         return profile.Organizations.ToDictionary(x => x.Id, x => DecryptRsaToBytes(x.Key, privateKey));
     }
 
-    internal static Dictionary<string, string> ParseFolders(R.Folder[] folders, byte[] key)
+    internal static Dictionary<string, string> ParseFolders(Model.Folder[] folders, byte[] key)
     {
         return folders.ToDictionary(i => i.Id, i => DecryptToString(i.Name, key));
     }
 
-    internal static Dictionary<string, Collection> ParseCollections(R.Collection[] collections, byte[] vaultKey, Dictionary<string, byte[]> orgKeys)
+    internal static Dictionary<string, Collection> ParseCollections(
+        Model.Collection[] collections,
+        byte[] vaultKey,
+        Dictionary<string, byte[]> orgKeys
+    )
     {
         return collections.ToDictionary(
             x => x.Id,
@@ -800,7 +803,7 @@ public static class Client
     }
 
     internal static (Account[], SshKey[], ParseError[]) ParseAccounts(
-        R.Item[] items,
+        Model.Item[] items,
         byte[] vaultKey,
         Dictionary<string, byte[]> orgKeys,
         Dictionary<string, string> folders,
@@ -821,10 +824,10 @@ public static class Client
             {
                 switch (item.Type)
                 {
-                    case R.ItemType.Login:
+                    case Model.ItemType.Login:
                         accounts.Add(ParseAccountItem(item, vaultKey, orgKeys, folders, collections));
                         break;
-                    case R.ItemType.SshKey:
+                    case Model.ItemType.SshKey:
                         sshKeys.Add(ParseSshKeyItem(item, vaultKey, orgKeys, folders, collections));
                         break;
                     default:
@@ -848,7 +851,7 @@ public static class Client
     }
 
     internal static Account ParseAccountItem(
-        R.Item item,
+        Model.Item item,
         byte[] vaultKey,
         Dictionary<string, byte[]> orgKeys,
         Dictionary<string, string> folders,
@@ -874,7 +877,7 @@ public static class Client
     }
 
     internal static SshKey ParseSshKeyItem(
-        R.Item item,
+        Model.Item item,
         byte[] vaultKey,
         Dictionary<string, byte[]> orgKeys,
         Dictionary<string, string> folders,
@@ -899,7 +902,7 @@ public static class Client
     }
 
     internal static (VaultItem, byte[] key) ParseVaultItem(
-        R.Item item,
+        Model.Item item,
         byte[] vaultKey,
         Dictionary<string, byte[]> orgKeys,
         Dictionary<string, string> folders,
@@ -927,12 +930,12 @@ public static class Client
         return (parsedItem, key);
     }
 
-    internal static CustomField[] ParseCustomFields(R.Item item, byte[] key)
+    internal static CustomField[] ParseCustomFields(Model.Item item, byte[] key)
     {
         return item.Fields?.Select(x => ParseField(x, key, item)).ToArray() ?? [];
     }
 
-    internal static CustomField ParseField(R.Field field, byte[] key, R.Item item)
+    internal static CustomField ParseField(Model.Field field, byte[] key, Model.Item item)
     {
         var name = DecryptToStringOrBlank(field.Name, key);
         var value = DecryptToStringOrBlank(field.Value, key);
@@ -945,7 +948,7 @@ public static class Client
         };
     }
 
-    internal static string ResolveLinkedField(int? fieldLinkedId, byte[] key, R.Item item)
+    internal static string ResolveLinkedField(int? fieldLinkedId, byte[] key, Model.Item item)
     {
         return fieldLinkedId switch
         {
@@ -1039,11 +1042,11 @@ public static class Client
         return new InternalErrorException($"Server responded with an error: '{message}'");
     }
 
-    internal static R.Error? GetServerError(RestResponse<string> response)
+    internal static Model.Error? GetServerError(RestResponse<string> response)
     {
         try
         {
-            return JsonConvert.DeserializeObject<R.Error>(response.Content ?? "{}");
+            return JsonConvert.DeserializeObject<Model.Error>(response.Content ?? "{}");
         }
         catch (JsonException)
         {
@@ -1100,5 +1103,5 @@ public static class Client
             ["Bitwarden-Client-Version"] = CliVersion,
         };
 
-    private static readonly R.KdfInfo DefaultKdfInfo = new() { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 5000 };
+    private static readonly Model.KdfInfo DefaultKdfInfo = new() { Kdf = Model.KdfMethod.Pbkdf2Sha256, Iterations = 5000 };
 }

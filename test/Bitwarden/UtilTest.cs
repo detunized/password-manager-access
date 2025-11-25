@@ -4,7 +4,6 @@
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
 using Xunit;
-using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -35,7 +34,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void DeriveKey_throws_on_unsupported_kdf()
         {
             Exceptions.AssertThrowsUnsupportedFeature(
-                () => Util.DeriveKey(Username, Password, new R.KdfInfo { Kdf = (R.KdfMethod)13 }),
+                () => Util.DeriveKey(Username, Password, new Model.KdfInfo { Kdf = (Model.KdfMethod)13 }),
                 "KDF method"
             );
         }
@@ -69,13 +68,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string DerivedKeyPbkdf2 = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
         private const string DerivedKeyArgon2id = "qwJqLHT2PdOduAiV1cfA9bXk3iDCa0sVSJG1mWuKVEk=";
         private const string PasswordHash = "zhQ5ps7B3qN3/m2JVn+UckMTPH5dOI6K369pCiLL9wQ=";
-        private static readonly R.KdfInfo Pbkdf2KdfInfo = new R.KdfInfo { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 100 };
-        private static readonly R.KdfInfo Argon2idKdfInfo = new R.KdfInfo
-        {
-            Kdf = R.KdfMethod.Argon2id,
-            Iterations = 3,
-            Memory = 64,
-            Parallelism = 4,
-        };
+        private static readonly Model.KdfInfo Pbkdf2KdfInfo = new() { Kdf = Model.KdfMethod.Pbkdf2Sha256, Iterations = 100 };
+        private static readonly Model.KdfInfo Argon2idKdfInfo =
+            new()
+            {
+                Kdf = Model.KdfMethod.Argon2id,
+                Iterations = 3,
+                Memory = 64,
+                Parallelism = 4,
+            };
     }
 }
