@@ -6,18 +6,17 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace PasswordManagerAccess.Bitwarden
+namespace PasswordManagerAccess.Bitwarden;
+
+public record Vault(Account[] Accounts, SshKey[] SshKeys, Collection[] Collections, Organization[] Organizations, ParseError[] ParseErrors)
 {
-    public record Vault(Account[] Accounts, SshKey[] SshKeys, Collection[] Collections, Organization[] Organizations, ParseError[] ParseErrors)
-    {
-        public IReadOnlyDictionary<string, Collection> CollectionsById => _collectionsById ??= Collections.ToDictionary(c => c.Id);
-        public IReadOnlyDictionary<string, Organization> OrganizationsById => _organizationsById ??= Organizations.ToDictionary(o => o.Id);
+    public IReadOnlyDictionary<string, Collection> CollectionsById => _collectionsById ??= Collections.ToDictionary(c => c.Id);
+    public IReadOnlyDictionary<string, Organization> OrganizationsById => _organizationsById ??= Organizations.ToDictionary(o => o.Id);
 
-        //
-        // Private
-        //
+    //
+    // Private
+    //
 
-        private IReadOnlyDictionary<string, Collection>? _collectionsById;
-        private IReadOnlyDictionary<string, Organization>? _organizationsById;
-    }
+    private IReadOnlyDictionary<string, Collection>? _collectionsById;
+    private IReadOnlyDictionary<string, Organization>? _organizationsById;
 }
