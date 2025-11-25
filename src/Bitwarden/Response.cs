@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -95,19 +97,19 @@ public struct Profile
     public string Email;
     public string Key;
     public string PrivateKey;
-    public Organization[] Organizations;
+    public Organization[]? Organizations;
 }
 
 public struct Organization
 {
     [JsonProperty("id", Required = Required.Always)]
-    public string Id;
+    public required string Id;
 
     [JsonProperty("name", Required = Required.Always)]
-    public string Name;
+    public required string Name;
 
     [JsonProperty("key", Required = Required.Always)]
-    public string Key;
+    public required string Key;
 }
 
 [JsonObject(ItemRequired = Required.Always)]
@@ -156,7 +158,7 @@ public struct Item
     public string Notes;
 
     [JsonProperty("folderId")]
-    public string FolderId;
+    public string? FolderId;
 
     [JsonProperty("organizationId")]
     public string OrganizationId;
@@ -183,13 +185,13 @@ public struct Item
 public class Field
 {
     [JsonProperty("type", Required = Required.Always)]
-    public int Type;
+    public required int Type;
 
     [JsonProperty("name")]
-    public string Name;
+    public string? Name;
 
     [JsonProperty("value")]
-    public string Value;
+    public string? Value;
 
     [JsonProperty("linkedId")]
     public int? LinkedId;
@@ -229,16 +231,16 @@ public struct SshKeyInfo
 internal class TokenCliApi
 {
     [JsonProperty("token_type", Required = Required.Always)]
-    public string TokenType;
+    public required string TokenType;
 
     [JsonProperty("access_token", Required = Required.Always)]
-    public string AccessToken;
+    public required string AccessToken;
 
     [JsonProperty("Kdf", Required = Required.Always)]
-    public KdfMethod Kdf;
+    public required KdfMethod Kdf;
 
     [JsonProperty("KdfIterations", Required = Required.Always)]
-    public int KdfIterations;
+    public required int KdfIterations;
 
     [JsonProperty("KdfMemory", NullValueHandling = NullValueHandling.Ignore)]
     public int Memory;

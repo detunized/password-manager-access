@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,7 +60,7 @@ public static class Client
     // This method performs a login in the browser mode. The returned session can be used to
     // download the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
-    public static Session LogIn(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => LogIn(clientInfo, null, ui, storage);
+    public static Session LogIn(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => LogIn(clientInfo, "", ui, storage);
 
     // Same as above but allows a custom base URL. The URL must be valid. It can be either a cloud or a self-hosted URL.
     public static Session LogIn(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
@@ -78,7 +80,7 @@ public static class Client
     // This method performs a login in the CLI/API mode. The returned session can be used to
     // download the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
-    public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = null)
+    public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = "")
     {
         var transport = new RestTransport();
         try
@@ -262,7 +264,7 @@ public static class Client
 
         var method = ChooseSecondFactorMethod(secondFactor, ui);
         var extra = secondFactor.Methods[method];
-        Passcode passcode = null;
+        Passcode? passcode = null;
 
         switch (method)
         {
@@ -275,7 +277,7 @@ public static class Client
                 if (secondFactor.Methods.Count != 1)
                     TriggerEmailMfaPasscode(username, passwordHash, rest);
 
-                passcode = ui.ProvideEmailPasscode((string)extra["Email"] ?? "");
+                passcode = ui.ProvideEmailPasscode((string?)extra["Email"] ?? "");
                 break;
             case R.SecondFactorMethod.Duo:
             case R.SecondFactorMethod.DuoOrg:
@@ -289,7 +291,7 @@ public static class Client
 
                 if (!needV1)
                 {
-                    var v4 = DuoV4.Authenticate((string)extra["AuthUrl"], ui, rest.Transport);
+                    var v4 = DuoV4.Authenticate((string?)extra["AuthUrl"], ui, rest.Transport);
 
                     if (v4 == DuoResult.RedirectToV1)
                         needV1 = true; // Fallback to V1 below
@@ -299,7 +301,7 @@ public static class Client
 
                 if (needV1)
                 {
-                    var v1 = DuoV1.Authenticate((string)extra["Host"] ?? "", (string)extra["Signature"] ?? "", ui, rest.Transport);
+                    var v1 = DuoV1.Authenticate((string?)extra["Host"] ?? "", (string?)extra["Signature"] ?? "", ui, rest.Transport);
                     if (v1 != null)
                         passcode = new Passcode(v1.Code, v1.RememberMe);
                 }
@@ -310,7 +312,7 @@ public static class Client
                 passcode = ui.ProvideYubiKeyPasscode();
                 break;
             case R.SecondFactorMethod.U2f:
-                passcode = AskU2fPasscode(JObject.Parse((string)extra["Challenge"]), ui);
+                passcode = AskU2fPasscode(JObject.Parse((string?)extra["Challenge"] ?? "{}"), ui);
                 break;
             default:
                 throw new UnsupportedFeatureException($"2FA method {method} is not supported");
@@ -370,7 +372,7 @@ public static class Client
         return ($"{authInfo.TokenType} {authInfo.AccessToken}", kdfInfo);
     }
 
-    internal static SecondFactorOptions GetRememberMeOptions(ISecureStorage storage)
+    internal static SecondFactorOptions? GetRememberMeOptions(ISecureStorage storage)
     {
         var storedRememberMeToken = storage.LoadString(RememberMeTokenKey);
         if (storedRememberMeToken.IsNullOrEmpty())
@@ -393,9 +395,17 @@ public static class Client
 
     internal static Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
     {
-        var appId = (string)u2fParams["appId"];
-        var challenge = (string)u2fParams["challenge"];
-        var keyHandle = (string)u2fParams["keys"][0]["keyHandle"]; // TODO: Support multiple keys
+        var appId = (string?)u2fParams["appId"];
+        if (appId.IsNullOrEmpty())
+            throw new InternalErrorException("U2F appId parameter is missing");
+
+        var challenge = (string?)u2fParams["challenge"];
+        if (challenge.IsNullOrEmpty())
+            throw new InternalErrorException("U2F challenge parameter is missing");
+
+        var keyHandle = (string?)u2fParams["keys"]?[0]?["keyHandle"]; // TODO: Support multiple keys
+        if (keyHandle.IsNullOrEmpty())
+            throw new InternalErrorException("U2F keyHandle parameter is missing");
 
         U2f.Assertion assertion;
         try
@@ -483,10 +493,11 @@ public static class Client
         };
     }
 
+    // TODO: Migrate to OneOf
     internal struct TokenOrSecondFactor
     {
-        public readonly string AuthToken;
-        public readonly string RememberMeToken;
+        public readonly string? AuthToken;
+        public readonly string? RememberMeToken;
         public readonly R.SecondFactor SecondFactor;
 
         public TokenOrSecondFactor(string authToken, string rememberMeToken)
@@ -528,7 +539,7 @@ public static class Client
         string username,
         byte[] passwordHash,
         string deviceId,
-        SecondFactorOptions secondFactorOptions,
+        SecondFactorOptions? secondFactorOptions,
         RestClient rest
     )
     {
@@ -706,8 +717,8 @@ public static class Client
             return NoItem.Deleted;
 
         var profile = session.Profile;
-        var folders = session.Folders;
-        var collections = session.Collections;
+        var folders = session.Folders ?? [];
+        var collections = session.Collections ?? [];
 
         return item.Type switch
         {
@@ -723,10 +734,10 @@ public static class Client
     {
         var vaultKey = DecryptVaultKey(profile, key);
         var privateKey = DecryptPrivateKey(profile, vaultKey);
-        var organizations = ParseOrganizations(profile.Organizations).ToDictionary(x => x.Id);
+        var organizations = ParseOrganizations(profile.Organizations ?? []).ToDictionary(x => x.Id);
         var orgKeys = privateKey == null ? [] : DecryptOrganizationKeys(profile, privateKey);
 
-        return new Profile(vaultKey, privateKey, organizations, orgKeys);
+        return new Profile(vaultKey, organizations, orgKeys);
     }
 
     internal static Vault DecryptVault(R.Vault vault, byte[] key)
@@ -742,7 +753,7 @@ public static class Client
 
     private static Organization[] ParseOrganizations(R.Organization[] organizations)
     {
-        return organizations.Select(x => new Organization(x.Id ?? "", x.Name ?? "")).ToArray();
+        return organizations.Select(x => new Organization(x.Id, x.Name)).ToArray();
     }
 
     internal static byte[] DecryptVaultKey(R.Profile profile, byte[] derivedKey)
@@ -757,14 +768,14 @@ public static class Client
     }
 
     // Null if not present
-    internal static byte[] DecryptPrivateKey(R.Profile profile, byte[] vaultKey)
+    internal static byte[]? DecryptPrivateKey(R.Profile profile, byte[] vaultKey)
     {
         return profile.PrivateKey.IsNullOrEmpty() ? null : DecryptToBytes(profile.PrivateKey, vaultKey);
     }
 
     internal static Dictionary<string, byte[]> DecryptOrganizationKeys(R.Profile profile, byte[] privateKey)
     {
-        if (privateKey == null || profile.Organizations == null)
+        if (profile.Organizations == null)
             return [];
 
         return profile.Organizations.ToDictionary(x => x.Id, x => DecryptRsaToBytes(x.Key, privateKey));
@@ -798,7 +809,7 @@ public static class Client
     {
         var accounts = new List<Account>(items.Length);
         var sshKeys = new List<SshKey>(items.Length);
-        List<ParseError> errors = null;
+        List<ParseError> errors = [];
 
         foreach (var item in items)
         {
@@ -823,8 +834,13 @@ public static class Client
             }
             catch (Exception e)
             {
-                errors ??= [];
-                errors.Add(new ParseError($"Failed to parse a vault item '{item.Id}' of type '{item.Type}'", e.Message, e.StackTrace));
+                errors.Add(
+                    new ParseError(
+                        $"Failed to parse a vault item '{item.Id}' of type '{item.Type}'",
+                        e.Message,
+                        e.StackTrace ?? "Stack trace is not available"
+                    )
+                );
             }
         }
 
@@ -840,8 +856,16 @@ public static class Client
     )
     {
         var (vaultItem, key) = ParseVaultItem(item, vaultKey, orgKeys, folders, collections);
-        return new Account(vaultItem)
+        return new Account
         {
+            Id = vaultItem.Id,
+            Name = vaultItem.Name,
+            Note = vaultItem.Note,
+            Folder = vaultItem.Folder,
+            CollectionIds = vaultItem.CollectionIds,
+            HidePassword = vaultItem.HidePassword,
+            CustomFields = vaultItem.CustomFields,
+
             Username = DecryptToStringOrBlank(item.Login.Username, key),
             Password = DecryptToStringOrBlank(item.Login.Password, key),
             Url = DecryptToStringOrBlank(item.Login.Uri, key),
@@ -858,8 +882,16 @@ public static class Client
     )
     {
         var (vaultItem, key) = ParseVaultItem(item, vaultKey, orgKeys, folders, collections);
-        return new SshKey(vaultItem)
+        return new SshKey
         {
+            Id = vaultItem.Id,
+            Name = vaultItem.Name,
+            Note = vaultItem.Note,
+            Folder = vaultItem.Folder,
+            CollectionIds = vaultItem.CollectionIds,
+            HidePassword = vaultItem.HidePassword,
+            CustomFields = vaultItem.CustomFields,
+
             PublicKey = DecryptToStringOrBlank(item.SshKey.PublicKey, key),
             PrivateKey = DecryptToStringOrBlank(item.SshKey.PrivateKey, key),
             Fingerprint = DecryptToStringOrBlank(item.SshKey.Fingerprint, key),
@@ -931,7 +963,7 @@ public static class Client
             return false;
 
         // Only hide the password when ALL the collections this item is in have "hide password" enabled.
-        return collectionIds.All(x => collections.GetOrDefault(x, null)?.HidePasswords == true);
+        return collectionIds.All(x => collections.GetValueOrDefault(x)?.HidePasswords == true);
     }
 
     //
@@ -957,7 +989,7 @@ public static class Client
     }
 
     // s may be null
-    internal static string DecryptToStringOrBlank(string s, byte[] key)
+    internal static string DecryptToStringOrBlank(string? s, byte[] key)
     {
         return s == null ? "" : DecryptToString(s, key);
     }
@@ -1019,12 +1051,12 @@ public static class Client
         }
     }
 
-    internal static CanceledMultiFactorException MakeCancelledMfaError(Exception inner = null)
+    internal static CanceledMultiFactorException MakeCancelledMfaError(Exception? inner = null)
     {
         return new CanceledMultiFactorException("Second factor step is canceled by the user", inner);
     }
 
-    internal static BadMultiFactorException MakeFailedMfaError(Exception inner = null)
+    internal static BadMultiFactorException MakeFailedMfaError(Exception? inner = null)
     {
         return new BadMultiFactorException("Second factor step failed", inner);
     }

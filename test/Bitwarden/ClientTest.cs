@@ -954,7 +954,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                     "YJ28tRb4SbLvFcJLsOhh3Ci4a+9d2xesUlV84fVrHPDbIHbm9J+Hko0Hf27GCmM3PFrLmtnf3k8eperdgASHow==".Decode64(),
             };
 
-        private static readonly Profile Profile = new(VaultKey, [], Organizations, OrgKeys);
+        private static readonly Profile Profile = new(VaultKey, Organizations, OrgKeys);
 
         private static readonly Dictionary<string, string> Folders =
             new() { ["d0e9210c-610b-4427-a344-a99600d462d3"] = "folder1", ["94542f0a-d858-46ce-87a5-a99600d47732"] = "folder2" };

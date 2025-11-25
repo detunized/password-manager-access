@@ -33,4 +33,4 @@ public class Session
 }
 
 // TODO: Move to Model maybe?
-internal record Profile(byte[] VaultKey, byte[] PrivateKey, Dictionary<string, Organization> Organizations, Dictionary<string, byte[]> OrgKeys);
+internal record Profile(byte[] VaultKey, Dictionary<string, Organization> Organizations, Dictionary<string, byte[]> OrgKeys);

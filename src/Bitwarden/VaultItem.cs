@@ -1,17 +1,19 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 namespace PasswordManagerAccess.Bitwarden;
 
-public class VaultItem
+public record VaultItem
 {
-    public string Id { get; init; }
-    public string Name { get; init; }
-    public string Note { get; init; }
-    public string Folder { get; init; }
-    public string[] CollectionIds { get; init; }
-    public bool HidePassword { get; init; }
-    public CustomField[] CustomFields { get; init; }
+    public required string Id { get; init; }
+    public required string Name { get; init; }
+    public required string Note { get; init; }
+    public required string Folder { get; init; }
+    public required string[] CollectionIds { get; init; }
+    public required bool HidePassword { get; init; }
+    public required CustomField[] CustomFields { get; init; }
 }
 
-public record CustomField(string Name, string Value) { }
+public record CustomField(string Name, string Value);
