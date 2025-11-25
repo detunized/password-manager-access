@@ -753,8 +753,11 @@ namespace PasswordManagerAccess.OnePassword
 
             // ---
 
+            // TODO: Remove this when nullable is enabled project-wide
+#nullable enable
             static string Validate(string? param, string name) =>
                 param.IsNullOrEmpty() ? throw new InternalErrorException($"WebAuthn '{name}' is invalid") : param;
+#nullable restore
         }
 
         internal static async Task<OneOf<SecondFactorResult, MfaMethod, Canceled>> AuthenticateWithDuo(
