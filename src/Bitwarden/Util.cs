@@ -21,8 +21,8 @@ internal static class Util
             {
                 Salt = Crypto.Sha256(username.ToLower().Trim()),
                 Iterations = kdfInfo.Iterations,
-                MemorySize = kdfInfo.Memory * 1024,
-                DegreeOfParallelism = kdfInfo.Parallelism,
+                MemorySize = kdfInfo.Memory!.Value * 1024,
+                DegreeOfParallelism = kdfInfo.Parallelism!.Value,
             }.GetBytes(32),
 
             _ => throw new UnsupportedFeatureException($"Unsupported KDF method: {kdfInfo.Kdf}"),

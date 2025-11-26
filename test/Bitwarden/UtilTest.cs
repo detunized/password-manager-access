@@ -34,7 +34,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void DeriveKey_throws_on_unsupported_kdf()
         {
             Exceptions.AssertThrowsUnsupportedFeature(
-                () => Util.DeriveKey(Username, Password, new Model.KdfInfo { Kdf = (Model.KdfMethod)13 }),
+                () => Util.DeriveKey(Username, Password, new Model.KdfInfo { Kdf = (Model.KdfMethod)13, Iterations = -13 }),
                 "KDF method"
             );
         }

@@ -7,8 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using OneOf;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
@@ -199,13 +199,12 @@ public static class Client
         if (baseUrl.IsNullOrEmpty())
             throw new ArgumentException("Base URL must not be null or empty", nameof(baseUrl));
 
-        return new RestClient(transport, baseUrl.TrimEnd('/'), defaultHeaders: DefaultRestHeaders);
+        return new RestClient(transport, baseUrl.TrimEnd('/'), defaultHeaders: DefaultRestHeaders, useSystemJson: true);
     }
 
     internal static Model.KdfInfo RequestKdfInfo(string username, RestClient rest)
     {
-        var response = rest.PostJson<Model.KdfInfo>("identity/accounts/prelogin", new Dictionary<string, object> { { "email", username } });
-
+        var response = rest.PostJson<Model.KdfInfo>("identity/accounts/prelogin", new Dictionary<string, object> { ["email"] = username });
         if (response.IsSuccessful)
         {
             var kdfInfo = response.Data;
@@ -254,7 +253,7 @@ public static class Client
             return response.AuthToken;
 
         var secondFactor = response.SecondFactor;
-        if (secondFactor.Methods == null || secondFactor.Methods.Count == 0)
+        if (secondFactor?.Methods == null || secondFactor.Methods.Count == 0)
             throw new InternalErrorException("Expected a non empty list of available 2FA methods");
 
         // We had a "remember me" token saved, but the login failed anyway. This token is not valid anymore.
@@ -286,11 +285,13 @@ public static class Client
                 // It's a bit messy here. Normally when AuthUrl is present that means we should use V4.
                 // The problem with V4 that it could redirect to the traditional prompt with is handled by V1.
                 // So we try V4 first and if it redirects to V1 we try V1.
-                var needV1 = !extra.ContainsKey("AuthUrl");
+
+                var authUrl = extra["AuthUrl"]?.GetValue<string>();
+                var needV1 = !authUrl.IsNullOrEmpty();
 
                 if (!needV1)
                 {
-                    var v4 = DuoV4.Authenticate((string?)extra["AuthUrl"], ui, rest.Transport);
+                    var v4 = DuoV4.Authenticate(authUrl, ui, rest.Transport);
 
                     if (v4 == DuoResult.RedirectToV1)
                         needV1 = true; // Fallback to V1 below
@@ -300,7 +301,12 @@ public static class Client
 
                 if (needV1)
                 {
-                    var v1 = DuoV1.Authenticate((string?)extra["Host"] ?? "", (string?)extra["Signature"] ?? "", ui, rest.Transport);
+                    var v1 = DuoV1.Authenticate(
+                        extra["Host"]?.GetValue<string>() ?? "",
+                        extra["Signature"]?.GetValue<string>() ?? "",
+                        ui,
+                        rest.Transport
+                    );
                     if (v1 != null)
                         passcode = new Passcode(v1.Code, v1.RememberMe);
                 }
@@ -310,14 +316,20 @@ public static class Client
             case Model.SecondFactorMethod.YubiKey:
                 passcode = ui.ProvideYubiKeyPasscode();
                 break;
+            // TODO: U2F is deprecated by Bitwarden in favor of WebAuthn. Fix this!
             case Model.SecondFactorMethod.U2f:
-                passcode = AskU2fPasscode(JObject.Parse((string?)extra["Challenge"] ?? "{}"), ui);
+                // TODO: Use deserialization to parse the challenge
+                var challenge = JsonNode.Parse(extra["Challenge"]?.GetValue<string>() ?? "");
+                if (challenge == null)
+                    throw new InternalErrorException("U2F challenge is missing or invalid");
+                passcode = AskU2fPasscode(challenge, ui);
                 break;
             default:
                 throw new UnsupportedFeatureException($"2FA method {method} is not supported");
         }
 
         // We're done interacting with the UI
+        // TODO: Should this be inside a finally block?
         ui.Close();
 
         if (passcode == null)
@@ -392,7 +404,7 @@ public static class Client
         storage.StoreString(RememberMeTokenKey, "");
     }
 
-    internal static Passcode AskU2fPasscode(JObject u2fParams, IUi ui)
+    internal static Passcode AskU2fPasscode(JsonNode u2fParams, IUi ui)
     {
         var appId = (string?)u2fParams["appId"];
         if (appId.IsNullOrEmpty())
@@ -421,7 +433,7 @@ public static class Client
         }
 
         // This is the 2FA token that is expected by the BW server
-        var token = JsonConvert.SerializeObject(
+        var token = JsonSerializer.Serialize(
             new
             {
                 keyHandle = assertion.KeyHandle,
@@ -497,13 +509,13 @@ public static class Client
     {
         public readonly string? AuthToken;
         public readonly string? RememberMeToken;
-        public readonly Model.SecondFactor SecondFactor;
+        public readonly Model.SecondFactor? SecondFactor;
 
         public TokenOrSecondFactor(string authToken, string? rememberMeToken)
         {
             AuthToken = authToken;
             RememberMeToken = rememberMeToken;
-            SecondFactor = new Model.SecondFactor();
+            SecondFactor = null;
         }
 
         public TokenOrSecondFactor(Model.SecondFactor secondFactor)
@@ -589,7 +601,7 @@ public static class Client
         //       RestResponse<U> RestResponse<T>.CastTo<U>() { ... }
         try
         {
-            return JsonConvert.DeserializeObject<Model.SecondFactor>(response.Content);
+            return JsonSerializer.Deserialize<Model.SecondFactor>(response.Content);
         }
         catch (JsonException)
         {
@@ -1050,7 +1062,7 @@ public static class Client
     {
         try
         {
-            return JsonConvert.DeserializeObject<Model.Error>(response.Content ?? "{}");
+            return JsonSerializer.Deserialize<Model.Error>(response.Content ?? "{}");
         }
         catch (JsonException)
         {

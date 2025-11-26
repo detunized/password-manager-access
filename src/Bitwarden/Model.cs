@@ -3,43 +3,33 @@
 
 #nullable enable
 
-// Everything in this class is public on purpose, even though it's only used internally.
-// This is done to avoid problems with code obfuscation. The deserialization doesn't work when
-// any names here get changed.
-
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace PasswordManagerAccess.Bitwarden;
 
 internal static class Model
 {
-    public class Error
+    public record Error
     {
         [JsonPropertyName("error")]
-        [JsonProperty(PropertyName = "error")]
-        public string? Id { get; set; }
+        public string? Id { get; init; }
 
         [JsonPropertyName("error_description")]
-        [JsonProperty(PropertyName = "error_description")]
-        public string? Description { get; set; }
+        public string? Description { get; init; }
 
         [JsonPropertyName("Message")]
-        [JsonProperty(PropertyName = "Message")]
-        public string? Message { get; set; }
+        public string? Message { get; init; }
 
         [JsonPropertyName("ErrorModel")]
-        [JsonProperty(PropertyName = "ErrorModel")]
-        public ErrorModel? Info { get; set; }
+        public ErrorModel? Info { get; init; }
     }
 
-    public class ErrorModel
+    public record ErrorModel
     {
         [JsonPropertyName("Message")]
-        [JsonProperty(PropertyName = "Message")]
-        public string? Message { get; set; }
+        public string? Message { get; init; }
     }
 
     public enum KdfMethod
@@ -48,39 +38,34 @@ internal static class Model
         Argon2id = 1,
     }
 
-    public class KdfInfo
+    public record KdfInfo
     {
         [JsonPropertyName("kdf")]
-        [JsonProperty(PropertyName = "kdf", Required = Required.Always)]
-        public KdfMethod Kdf { get; set; }
+        public required KdfMethod Kdf { get; init; }
 
         [JsonPropertyName("kdfIterations")]
-        [JsonProperty(PropertyName = "kdfIterations", Required = Required.Always)]
-        public int Iterations { get; set; }
+        public int Iterations { get; init; }
 
+        // Optional, as it's only available for Argon2id
         [JsonPropertyName("kdfMemory")]
-        [JsonProperty(PropertyName = "kdfMemory", NullValueHandling = NullValueHandling.Ignore)]
-        public int Memory { get; set; }
+        public int? Memory { get; init; }
 
+        // Optional, as it's only available for Argon2id
         [JsonPropertyName("kdfParallelism")]
-        [JsonProperty(PropertyName = "kdfParallelism", NullValueHandling = NullValueHandling.Ignore)]
-        public int Parallelism { get; set; }
+        public int? Parallelism { get; init; }
     }
 
-    public class AuthToken
+    public record AuthToken
     {
         [JsonPropertyName("token_type")]
-        [JsonProperty(PropertyName = "token_type", Required = Required.Always)]
-        public required string TokenType { get; set; }
+        public required string TokenType { get; init; }
 
         [JsonPropertyName("access_token")]
-        [JsonProperty(PropertyName = "access_token", Required = Required.Always)]
-        public required string AccessToken { get; set; }
+        public required string AccessToken { get; init; }
 
         // Optional
         [JsonPropertyName("TwoFactorToken")]
-        [JsonProperty(PropertyName = "TwoFactorToken")]
-        public string? TwoFactorToken { get; set; }
+        public string? TwoFactorToken { get; init; }
     }
 
     public enum SecondFactorMethod
@@ -94,97 +79,79 @@ internal static class Model
         DuoOrg = 6,
     }
 
-    [JsonObject(ItemRequired = Required.Always)]
-    public class SecondFactor
+    public record SecondFactor
     {
         [JsonPropertyName("TwoFactorProviders2")]
-        [JsonProperty(PropertyName = "TwoFactorProviders2")]
-        public Dictionary<SecondFactorMethod, JObject>? Methods { get; set; }
+        public required Dictionary<SecondFactorMethod, JsonNode> Methods { get; init; }
     }
 
-    [JsonObject(ItemRequired = Required.Always)]
-    public class Vault
+    public record Vault
     {
-        [JsonPropertyName("Profile")]
-        [JsonProperty(PropertyName = "Profile")]
-        public required Profile Profile { get; set; }
+        [JsonPropertyName("profile")]
+        public required Profile Profile { get; init; }
 
-        [JsonPropertyName("Ciphers")]
-        [JsonProperty(PropertyName = "Ciphers")]
-        public required Item[] Ciphers { get; set; }
+        [JsonPropertyName("ciphers")]
+        public required Item[] Ciphers { get; init; }
 
-        [JsonPropertyName("Folders")]
-        [JsonProperty(PropertyName = "Folders")]
-        public required Folder[] Folders { get; set; }
+        [JsonPropertyName("folders")]
+        public required Folder[] Folders { get; init; }
 
-        [JsonPropertyName("Collections")]
-        [JsonProperty(PropertyName = "Collections")]
-        public required Collection[] Collections { get; set; }
+        [JsonPropertyName("collections")]
+        public required Collection[] Collections { get; init; }
     }
 
-    public class Profile
+    public record Profile
     {
-        [JsonPropertyName("Email")]
-        [JsonProperty(PropertyName = "Email")]
-        public required string Email { get; set; }
+        [JsonPropertyName("email")]
+        public required string Email { get; init; }
 
-        [JsonPropertyName("Key")]
-        [JsonProperty(PropertyName = "Key")]
-        public string? Key { get; set; }
+        // Optional, as originally it was not present and some legacy vaults might not have it
+        [JsonPropertyName("key")]
+        public string? Key { get; init; }
 
-        [JsonPropertyName("PrivateKey")]
-        [JsonProperty(PropertyName = "PrivateKey")]
-        public string? PrivateKey { get; set; }
+        // Optional, as originally it was only present for users with sharing enabled
+        [JsonPropertyName("privateKey")]
+        public string? PrivateKey { get; init; }
 
-        [JsonPropertyName("Organizations")]
-        [JsonProperty(PropertyName = "Organizations")]
-        public Organization[]? Organizations { get; set; }
+        // Optional, as it's only present for users org users. Most of the time it's an empty array though.
+        [JsonPropertyName("organizations")]
+        public Organization[]? Organizations { get; init; }
     }
 
-    public class Organization
+    public record Organization
     {
         [JsonPropertyName("id")]
-        [JsonProperty(PropertyName = "id", Required = Required.Always)]
-        public required string Id { get; set; }
+        public required string Id { get; init; }
 
         [JsonPropertyName("name")]
-        [JsonProperty(PropertyName = "name", Required = Required.Always)]
-        public required string Name { get; set; }
+        public required string Name { get; init; }
 
         [JsonPropertyName("key")]
-        [JsonProperty(PropertyName = "key", Required = Required.Always)]
-        public required string Key { get; set; }
+        public required string Key { get; init; }
     }
 
-    [JsonObject(ItemRequired = Required.Always)]
-    public class Folder
-    {
-        [JsonPropertyName("Id")]
-        [JsonProperty(PropertyName = "Id")]
-        public required string Id { get; set; }
-
-        [JsonPropertyName("Name")]
-        [JsonProperty(PropertyName = "Name")]
-        public required string Name { get; set; }
-    }
-
-    public class Collection
+    public record Folder
     {
         [JsonPropertyName("id")]
-        [JsonProperty(PropertyName = "id", Required = Required.Always)]
-        public required string Id { get; set; }
+        public required string Id { get; init; }
 
         [JsonPropertyName("name")]
-        [JsonProperty(PropertyName = "name", Required = Required.Always)]
-        public required string Name { get; set; }
+        public required string Name { get; init; }
+    }
+
+    public record Collection
+    {
+        [JsonPropertyName("id")]
+        public required string Id { get; init; }
+
+        [JsonPropertyName("name")]
+        public required string Name { get; init; }
 
         [JsonPropertyName("organizationId")]
-        [JsonProperty(PropertyName = "organizationId")]
-        public string? OrganizationId { get; set; }
+        public string? OrganizationId { get; init; }
 
         [JsonPropertyName("hidePasswords")]
-        [JsonProperty(PropertyName = "hidePasswords")]
-        public bool HidePasswords { get; set; }
+        public bool HidePasswords { get; init; }
     }
 
     public enum ItemType
@@ -196,142 +163,124 @@ internal static class Model
         SshKey = 5,
     }
 
-    public class Item
+    public record Item
     {
         [JsonPropertyName("type")]
-        [JsonProperty(PropertyName = "type", Required = Required.Always)]
-        public ItemType Type { get; set; }
+        public ItemType Type { get; init; }
 
         [JsonPropertyName("id")]
-        [JsonProperty(PropertyName = "id", Required = Required.Always)]
-        public required string Id { get; set; }
+        public required string Id { get; init; }
 
         [JsonPropertyName("name")]
-        [JsonProperty(PropertyName = "name")]
-        public string? Name { get; set; }
+        public string? Name { get; init; }
 
         [JsonPropertyName("notes")]
-        [JsonProperty(PropertyName = "notes")]
-        public string? Notes { get; set; }
+        public string? Notes { get; init; }
 
         [JsonPropertyName("folderId")]
-        [JsonProperty(PropertyName = "folderId")]
-        public string? FolderId { get; set; }
+        public string? FolderId { get; init; }
 
         [JsonPropertyName("organizationId")]
-        [JsonProperty(PropertyName = "organizationId")]
-        public string? OrganizationId { get; set; }
+        public string? OrganizationId { get; init; }
 
         [JsonPropertyName("deletedDate")]
-        [JsonProperty(PropertyName = "deletedDate")]
-        public string? DeletedDate { get; set; }
+        public string? DeletedDate { get; init; }
 
         [JsonPropertyName("collectionIds")]
-        [JsonProperty(PropertyName = "collectionIds")]
-        public string[]? CollectionIds { get; set; }
+        public string[]? CollectionIds { get; init; }
 
         [JsonPropertyName("key")]
-        [JsonProperty(PropertyName = "key")]
-        public string? Key { get; set; }
+        public string? Key { get; init; }
 
         [JsonPropertyName("fields")]
-        [JsonProperty(PropertyName = "fields")]
-        public Field[]? Fields { get; set; }
+        public Field[]? Fields { get; init; }
 
         [JsonPropertyName("login")]
-        [JsonProperty(PropertyName = "login", NullValueHandling = NullValueHandling.Ignore)]
-        public LoginInfo? Login { get; set; }
+        public LoginInfo? Login { get; init; }
 
         [JsonPropertyName("sshKey")]
-        [JsonProperty(PropertyName = "sshKey", NullValueHandling = NullValueHandling.Ignore)]
-        public SshKeyInfo? SshKey { get; set; }
+        public SshKeyInfo? SshKey { get; init; }
     }
 
-    public class Field
+    public record Field
     {
         [JsonPropertyName("type")]
-        [JsonProperty(PropertyName = "type", Required = Required.Always)]
-        public required int Type { get; set; }
+        public required int Type { get; init; }
 
         [JsonPropertyName("name")]
-        [JsonProperty(PropertyName = "name")]
-        public string? Name { get; set; }
+        public string? Name { get; init; }
 
         [JsonPropertyName("value")]
-        [JsonProperty(PropertyName = "value")]
-        public string? Value { get; set; }
+        public string? Value { get; init; }
 
         [JsonPropertyName("linkedId")]
-        [JsonProperty(PropertyName = "linkedId")]
-        public int? LinkedId { get; set; }
+        public int? LinkedId { get; init; }
     }
 
-    public class LoginInfo
+    public record LoginInfo
     {
         [JsonPropertyName("username")]
-        [JsonProperty(PropertyName = "username")]
-        public string? Username { get; set; }
+        public string? Username { get; init; }
 
         [JsonPropertyName("password")]
-        [JsonProperty(PropertyName = "password")]
-        public string? Password { get; set; }
+        public string? Password { get; init; }
 
         [JsonPropertyName("uri")]
-        [JsonProperty(PropertyName = "uri")]
-        public string? Uri { get; set; }
+        public string? Uri { get; init; }
 
         [JsonPropertyName("totp")]
-        [JsonProperty(PropertyName = "totp")]
-        public string? Totp { get; set; }
+        public string? Totp { get; init; }
     }
 
-    public class SshKeyInfo
+    public record SshKeyInfo
     {
         [JsonPropertyName("publicKey")]
-        [JsonProperty(PropertyName = "publicKey")]
-        public string? PublicKey { get; set; }
+        public string? PublicKey { get; init; }
 
         [JsonPropertyName("privateKey")]
-        [JsonProperty(PropertyName = "privateKey")]
-        public string? PrivateKey { get; set; }
+        public string? PrivateKey { get; init; }
 
         [JsonPropertyName("keyFingerprint")]
-        [JsonProperty(PropertyName = "keyFingerprint")]
-        public string? Fingerprint { get; set; }
+        public string? Fingerprint { get; init; }
     }
 
     //
     // CLI/API
     //
 
-    internal class TokenCliApi
+    // Note: All Kdf* properties are capitalized in the CLI/API responses. This is on purpose. They are not capitalized in the browser mode.
+    internal record TokenCliApi
     {
         [JsonPropertyName("token_type")]
-        [JsonProperty(PropertyName = "token_type", Required = Required.Always)]
-        public required string TokenType { get; set; }
+        public required string TokenType { get; init; }
 
         [JsonPropertyName("access_token")]
-        [JsonProperty(PropertyName = "access_token", Required = Required.Always)]
-        public required string AccessToken { get; set; }
+        public required string AccessToken { get; init; }
 
         [JsonPropertyName("Kdf")]
-        [JsonProperty(PropertyName = "Kdf", Required = Required.Always)]
-        public required KdfMethod Kdf { get; set; }
+        public required KdfMethod Kdf { get; init; }
 
         [JsonPropertyName("KdfIterations")]
-        [JsonProperty(PropertyName = "KdfIterations", Required = Required.Always)]
-        public required int KdfIterations { get; set; }
+        public required int KdfIterations { get; init; }
 
+        // Optional, as it's only available for Argon2id
         [JsonPropertyName("KdfMemory")]
-        [JsonProperty(PropertyName = "KdfMemory", NullValueHandling = NullValueHandling.Ignore)]
-        public int Memory { get; set; }
+        public int? Memory { get; init; }
 
+        // Optional, as it's only available for Argon2id
         [JsonPropertyName("KdfParallelism")]
-        [JsonProperty(PropertyName = "KdfParallelism", NullValueHandling = NullValueHandling.Ignore)]
-        public int Parallelism { get; set; }
+        public int? Parallelism { get; init; }
     }
 
-    public record FolderList([JsonProperty("data", Required = Required.Always)] Folder[] Folders);
+    public record FolderList
+    {
+        [JsonPropertyName("data")]
+        public required Folder[] Folders { get; init; }
+    }
 
-    public record CollectionList([JsonProperty("data", Required = Required.Always)] Collection[] Collections);
+    public record CollectionList
+    {
+        [JsonPropertyName("data")]
+        public required Collection[] Collections { get; init; }
+    }
 }
