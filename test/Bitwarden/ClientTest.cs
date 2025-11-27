@@ -6,12 +6,9 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using PasswordManagerAccess.Bitwarden;
-using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
-using PasswordManagerAccess.Duo;
 using Shouldly;
 using Xunit;
-using MfaMethod = PasswordManagerAccess.Bitwarden.Ui.MfaMethod;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -79,79 +76,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void Login_returns_auth_token_on_non_2fa_login()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            var token = Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest);
-
-            Assert.Equal("Bearer wa-wa-wee-wa", token);
-        }
-
-        [Fact]
-        public void Login_sends_remember_me_token_when_available()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ExpectContent($"twoFactorToken={RememberMeToken}", "twoFactorProvider=5")
-                .ToRestClient(BaseUrl);
-
-            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(RememberMeToken), rest);
-        }
-
-        [Fact]
-        public void Login_does_not_send_remember_me_token_when_not_available()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ExpectContent(c => Assert.DoesNotContain("twoFactorToken", c))
-                .ExpectContent(c => Assert.DoesNotContain("twoFactorProvider", c))
-                .ToRestClient(BaseUrl);
-
-            Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest);
-        }
-
-        [Fact]
-        public void Login_asks_ui_to_choose_second_factor_method()
-        {
-            // Arrange
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post(GetFixture("login-mfa"), HttpStatusCode.BadRequest)
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-            var ui = new GoogleAuthProvidingUi();
-
-            // Act
-            Client.Login(Username, PasswordHash, DeviceId, ui, SetupSecureStorage(null), rest);
-
-            // Assert
-            ui.ChooseMfaMethodCalledTimes.ShouldBe(1);
-            ui.ProvideGoogleAuthPasscodeCalledTimes.ShouldBe(1);
-            ui.CloseCalledTimes.ShouldBe(1);
-        }
-
-        [Fact]
-        public void Login_throws_when_no_supported_second_factor_methods_are_available()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post(GetFixture("login-mfa-unsupported-only"), HttpStatusCode.BadRequest)
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            Exceptions.AssertThrowsUnsupportedFeature(
-                () => Client.Login(Username, PasswordHash, DeviceId, null, SetupSecureStorage(null), rest),
-                "not supported"
-            );
-        }
-
-        [Fact]
         public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
         {
             var rest = new RestFlow { UseSystemJson = true }
@@ -206,110 +130,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             Exceptions.AssertThrowsBadCredentials(
                 () => Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest),
                 "Client ID or secret is incorrect"
-            );
-        }
-
-        [Fact]
-        public void RequestAuthToken_returns_auth_token_response()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
-
-            Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
-            Assert.Null(response.RememberMeToken);
-            Assert.Null(response.SecondFactor?.Methods);
-        }
-
-        [Fact]
-        public void RequestAuthToken_returns_second_factor_response()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post(GetFixture("login-mfa"), HttpStatusCode.BadRequest)
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
-
-            Assert.Null(response.AuthToken);
-            Assert.Null(response.RememberMeToken);
-
-            var methods = response.SecondFactor.Methods.Keys;
-            Assert.Equal(5, methods.Count);
-            Assert.Contains(Model.SecondFactorMethod.GoogleAuth, methods);
-            Assert.Contains(Model.SecondFactorMethod.Email, methods);
-            Assert.Contains(Model.SecondFactorMethod.Duo, methods);
-            Assert.Contains(Model.SecondFactorMethod.YubiKey, methods);
-        }
-
-        [Fact]
-        public void RequestAuthToken_returns_remember_me_token_when_present()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa","TwoFactorToken":"remember-me-token"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            var response = Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
-
-            Assert.Equal("Bearer wa-wa-wee-wa", response.AuthToken);
-            Assert.Equal("remember-me-token", response.RememberMeToken);
-            Assert.Null(response.SecondFactor?.Methods);
-        }
-
-        [Fact]
-        public void RequestAuthToken_makes_POST_request_to_specific_endpoint()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
-        }
-
-        [Fact]
-        public void RequestAuthToken_sends_device_id()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ExpectContent("deviceIdentifier=device-id")
-                .ToRestClient(BaseUrl);
-
-            Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
-        }
-
-        [Fact]
-        public void RequestAuthToken_sends_auth_email_header()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ExpectHeader("Auth-Email", "dXNlcm5hbWU")
-                .ToRestClient(BaseUrl);
-
-            Client.RequestAuthToken(Username, PasswordHash, DeviceId, rest);
-        }
-
-        [Fact]
-        public void RequestAuthToken_with_second_factor_options_adds_extra_parameters()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa"}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ExpectContent("twoFactorToken=code", "twoFactorProvider=2", "twoFactorRemember=1")
-                .ToRestClient(BaseUrl);
-
-            Client.RequestAuthToken(
-                Username,
-                PasswordHash,
-                DeviceId,
-                new Client.SecondFactorOptions(Model.SecondFactorMethod.Duo, "code", true),
-                rest
             );
         }
 
@@ -862,56 +682,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
         // Helpers
         //
 
-        private class FakeUi : IUi
-        {
-            public virtual DuoChoice ChooseDuoFactor(DuoDevice[] devices) => throw new System.NotImplementedException();
-
-            public virtual string ProvideDuoPasscode(DuoDevice device) => throw new System.NotImplementedException();
-
-            public virtual void UpdateDuoStatus(DuoStatus status, string text) => throw new System.NotImplementedException();
-
-            public virtual void Close() => throw new System.NotImplementedException();
-
-            public virtual MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods) => throw new System.NotImplementedException();
-
-            public virtual Passcode ProvideGoogleAuthPasscode() => throw new System.NotImplementedException();
-
-            public virtual Passcode ProvideEmailPasscode(string emailHint) => throw new System.NotImplementedException();
-
-            public virtual Passcode ProvideYubiKeyPasscode() => throw new System.NotImplementedException();
-        }
-
-        private class GoogleAuthProvidingUi : FakeUi
-        {
-            public int ChooseMfaMethodCalledTimes { get; private set; }
-            public int ProvideGoogleAuthPasscodeCalledTimes { get; private set; }
-            public int CloseCalledTimes { get; private set; }
-
-            public override MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
-            {
-                ChooseMfaMethodCalledTimes++;
-                return MfaMethod.GoogleAuth;
-            }
-
-            public override Passcode ProvideGoogleAuthPasscode()
-            {
-                ProvideGoogleAuthPasscodeCalledTimes++;
-                return new Passcode("123456", false);
-            }
-
-            public override void Close()
-            {
-                CloseCalledTimes++;
-            }
-        }
-
         private Session MakeSession(RestClient rest, Dictionary<string, string> folders = null, Dictionary<string, Collection> collections = null) =>
             new("Bearer token", DerivedKek, Profile, rest, rest.Transport) { Folders = folders, Collections = collections };
-
-        private static ISecureStorage SetupSecureStorage(string token)
-        {
-            return new MemoryStorage(new Dictionary<string, string> { ["remember-me-token"] = token });
-        }
 
         private Model.Vault LoadVaultFixture(string name = "vault")
         {
@@ -932,8 +704,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string ClientId = "client-id";
         private const string ClientSecret = "client-secret";
         private const string DeviceId = "device-id";
-        private const string RememberMeToken = "remember-me-token";
-        private static readonly byte[] PasswordHash = "password-hash".ToBytes();
         private static readonly byte[] DerivedKek = "SLBgfXoityZsz4ZWvpEPULPZMYGH6vSqh3PXTe5DmyM=".Decode64();
         private static readonly byte[] VaultKey =
             "7Zo+OWHAKzu+Ovxisz38Na4en13SnoKHPxFngLUgLiHzSZCWbq42Mohdr6wInwcsWbbezoVaS2vwZlSlB6G7Mg==".Decode64();

@@ -8,12 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using OneOf;
-using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
-using PasswordManagerAccess.Duo;
-using U2fWin10;
 
 namespace PasswordManagerAccess.Bitwarden;
 
@@ -34,47 +30,15 @@ public static class Client
     // Single shot methods
     //
 
-    // The main entry point for a single shot method. Use this function to open the vault
-    // in the browser mode. In this case the login process is interactive when 2FA is enabled.
-    // This is an old mode that might potentially trigger a captcha. Captcha solving is not
-    // supported. There's no way to complete a login and get the vault if the captcha is triggered.
-    // Use the CLI/API mode. This mode requires a different type of credentials.
-    public static Vault Open(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => Open(clientInfo, DefaultBaseUlr, ui, storage);
-
-    // This version allows a custom base URL. The URL must be valid. It can be either a cloud or a self-hosted URL.
-    public static Vault Open(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage) =>
-        DownloadAndLogOut(LogIn(clientInfo, baseUrl, ui, storage));
-
     // The main entry point for a single shot method. Use this function to open the vault in the
     // CLI/API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
     // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
-    // either. This is the preferred mode. This mode requires a different type of credentials that
-    // could be found in the vault settings: the client ID and the client secret.
+    // either. This mode requires credentials that could be found in the vault settings: the client ID and the client secret.
     public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = DefaultBaseUlr) => DownloadAndLogOut(LogIn(clientInfo, baseUrl));
 
     //
     // LogIn, DownloadVault, LogOut sequence
     //
-
-    // This method performs a login in the browser mode. The returned session can be used to
-    // download the vault, if needed multiple times. When no longer needed LogOut should be called.
-    // See single shot Open for more comments.
-    public static Session LogIn(ClientInfoBrowser clientInfo, IUi ui, ISecureStorage storage) => LogIn(clientInfo, "", ui, storage);
-
-    // Same as above but allows a custom base URL. The URL must be valid. It can be either a cloud or a self-hosted URL.
-    public static Session LogIn(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage)
-    {
-        var transport = new RestTransport();
-        try
-        {
-            return LogInBrowser(clientInfo, baseUrl, ui, storage, transport);
-        }
-        catch (Exception)
-        {
-            transport.Dispose();
-            throw;
-        }
-    }
 
     // This method performs a login in the CLI/API mode. The returned session can be used to
     // download the vault, if needed multiple times. When no longer needed LogOut should be called.
@@ -147,33 +111,6 @@ public static class Client
         }
     }
 
-    internal static Session LogInBrowser(ClientInfoBrowser clientInfo, string baseUrl, IUi ui, ISecureStorage storage, IRestTransport transport)
-    {
-        var rest = MakeRestClient(baseUrl, transport);
-
-        // 1. Request the number of KDF iterations needed to derive the key
-        var kdfInfo = RequestKdfInfo(clientInfo.Username, rest);
-
-        // 2. Derive the master encryption key or KEK (key encryption key)
-        var key = Util.DeriveKey(clientInfo.Username, clientInfo.Password, kdfInfo);
-
-        // 3. Hash the password that is going to be sent to the server
-        var hash = Util.HashPassword(clientInfo.Password, key);
-
-        // 4. Authenticate with the server and get the token
-        var token = Login(clientInfo.Username, hash, clientInfo.DeviceId, ui, storage, rest);
-
-        // 5. Fetch the profile in case this session is going be used to download a single item.
-        //    The full vault download contains the profile too, but not the single item download.
-        //    So in case of the full vault download it's redundant, but this should be a big deal.
-        var encryptedProfile = FetchProfile(token, rest);
-
-        // 6. Decrypt the profile (it contains the vault key, the orgs and the org keys)
-        var profile = DecryptProfile(encryptedProfile, key);
-
-        return new Session(token, key, profile, rest, transport);
-    }
-
     internal static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl, IRestTransport transport)
     {
         var rest = MakeRestClient(baseUrl, transport);
@@ -241,118 +178,6 @@ public static class Client
         }
     }
 
-    internal static string Login(string username, byte[] passwordHash, string deviceId, IUi ui, ISecureStorage storage, RestClient rest)
-    {
-        // Try simple password login, potentially with a stored second factor token if
-        // "remember me" was used before.
-        var rememberMeOptions = GetRememberMeOptions(storage);
-        var response = RequestAuthToken(username, passwordHash, deviceId, rememberMeOptions, rest);
-
-        // Simple password login (no 2FA) succeeded
-        if (response.AuthToken != null)
-            return response.AuthToken;
-
-        var secondFactor = response.SecondFactor;
-        if (secondFactor?.Methods == null || secondFactor.Methods.Count == 0)
-            throw new InternalErrorException("Expected a non empty list of available 2FA methods");
-
-        // We had a "remember me" token saved, but the login failed anyway. This token is not valid anymore.
-        if (rememberMeOptions != null)
-            EraseRememberMeToken(storage);
-
-        var method = ChooseSecondFactorMethod(secondFactor, ui);
-        var extra = secondFactor.Methods[method];
-        Passcode? passcode = null;
-
-        switch (method)
-        {
-            case Model.SecondFactorMethod.GoogleAuth:
-                passcode = ui.ProvideGoogleAuthPasscode();
-                break;
-            case Model.SecondFactorMethod.Email:
-                // When only the email 2FA present, the email is sent by the server right away.
-                // Trigger only when other methods are present.
-                if (secondFactor.Methods.Count != 1)
-                    TriggerEmailMfaPasscode(username, passwordHash, rest);
-
-                passcode = ui.ProvideEmailPasscode((string?)extra["Email"] ?? "");
-                break;
-            case Model.SecondFactorMethod.Duo:
-            case Model.SecondFactorMethod.DuoOrg:
-            {
-                // TODO: The logic here is a bit brittle. Remove it once Duo V1 is finally removed in October 2024.
-
-                // It's a bit messy here. Normally when AuthUrl is present that means we should use V4.
-                // The problem with V4 that it could redirect to the traditional prompt with is handled by V1.
-                // So we try V4 first and if it redirects to V1 we try V1.
-
-                var authUrl = extra["AuthUrl"]?.GetValue<string>();
-                var needV1 = !authUrl.IsNullOrEmpty();
-
-                if (!needV1)
-                {
-                    var v4 = DuoV4.Authenticate(authUrl, ui, rest.Transport);
-
-                    if (v4 == DuoResult.RedirectToV1)
-                        needV1 = true; // Fallback to V1 below
-                    else if (v4 != null)
-                        passcode = new Passcode($"{v4.Code}|{v4.State}", v4.RememberMe);
-                }
-
-                if (needV1)
-                {
-                    var v1 = DuoV1.Authenticate(
-                        extra["Host"]?.GetValue<string>() ?? "",
-                        extra["Signature"]?.GetValue<string>() ?? "",
-                        ui,
-                        rest.Transport
-                    );
-                    if (v1 != null)
-                        passcode = new Passcode(v1.Code, v1.RememberMe);
-                }
-
-                break;
-            }
-            case Model.SecondFactorMethod.YubiKey:
-                passcode = ui.ProvideYubiKeyPasscode();
-                break;
-            // TODO: U2F is deprecated by Bitwarden in favor of WebAuthn. Fix this!
-            case Model.SecondFactorMethod.U2f:
-                // TODO: Use deserialization to parse the challenge
-                var challenge = JsonNode.Parse(extra["Challenge"]?.GetValue<string>() ?? "");
-                if (challenge == null)
-                    throw new InternalErrorException("U2F challenge is missing or invalid");
-                passcode = AskU2fPasscode(challenge, ui);
-                break;
-            default:
-                throw new UnsupportedFeatureException($"2FA method {method} is not supported");
-        }
-
-        // We're done interacting with the UI
-        // TODO: Should this be inside a finally block?
-        ui.Close();
-
-        if (passcode == null)
-            throw MakeCancelledMfaError();
-
-        var secondFactorResponse = RequestAuthToken(
-            username,
-            passwordHash,
-            deviceId,
-            new SecondFactorOptions(method, passcode.Code, passcode.RememberMe),
-            rest
-        );
-
-        // Password + 2FA is successful
-        if (secondFactorResponse.AuthToken != null)
-        {
-            SaveRememberMeToken(secondFactorResponse, storage);
-            return secondFactorResponse.AuthToken;
-        }
-
-        throw new BadMultiFactorException("Second factor code is not correct");
-    }
-
     internal static (string Token, Model.KdfInfo KdfInfo) LogInCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
     {
         var parameters = new Dictionary<string, object>
@@ -381,243 +206,6 @@ public static class Client
         ValidateKdfInfo(kdfInfo);
 
         return ($"{authInfo.TokenType} {authInfo.AccessToken}", kdfInfo);
-    }
-
-    internal static SecondFactorOptions? GetRememberMeOptions(ISecureStorage storage)
-    {
-        var storedRememberMeToken = storage.LoadString(RememberMeTokenKey);
-        if (storedRememberMeToken.IsNullOrEmpty())
-            return null;
-
-        return new SecondFactorOptions(Model.SecondFactorMethod.RememberMe, storedRememberMeToken, false);
-    }
-
-    internal static void SaveRememberMeToken(TokenOrSecondFactor reseponse, ISecureStorage storage)
-    {
-        var token = reseponse.RememberMeToken;
-        if (token != null)
-            storage.StoreString(RememberMeTokenKey, token);
-    }
-
-    internal static void EraseRememberMeToken(ISecureStorage storage)
-    {
-        storage.StoreString(RememberMeTokenKey, "");
-    }
-
-    internal static Passcode AskU2fPasscode(JsonNode u2fParams, IUi ui)
-    {
-        var appId = (string?)u2fParams["appId"];
-        if (appId.IsNullOrEmpty())
-            throw new InternalErrorException("U2F appId parameter is missing");
-
-        var challenge = (string?)u2fParams["challenge"];
-        if (challenge.IsNullOrEmpty())
-            throw new InternalErrorException("U2F challenge parameter is missing");
-
-        var keyHandle = (string?)u2fParams["keys"]?[0]?["keyHandle"]; // TODO: Support multiple keys
-        if (keyHandle.IsNullOrEmpty())
-            throw new InternalErrorException("U2F keyHandle parameter is missing");
-
-        U2f.Assertion assertion;
-        try
-        {
-            assertion = U2f.GetAssertion(appId, challenge, "https://vault.bitwarden.com", keyHandle);
-        }
-        catch (U2fWin10.CanceledException e)
-        {
-            throw MakeCancelledMfaError(e);
-        }
-        catch (U2fWin10.ErrorException e)
-        {
-            throw MakeFailedMfaError(e);
-        }
-
-        // This is the 2FA token that is expected by the BW server
-        var token = JsonSerializer.Serialize(
-            new
-            {
-                keyHandle = assertion.KeyHandle,
-                clientData = assertion.ClientData,
-                signatureData = assertion.Signature,
-            }
-        );
-
-        // TODO: Add support for remember-me.
-        return new Passcode(token, false);
-    }
-
-    internal static Model.SecondFactorMethod ChooseSecondFactorMethod(Model.SecondFactor secondFactor, IUi ui)
-    {
-        var methods = secondFactor.Methods;
-        if (methods == null || methods.Count == 0)
-            throw new InternalErrorException("Logical error: should be called with non empty list of methods");
-
-        var availableMethods = new List<Ui.MfaMethod>();
-        foreach (var m in methods.Keys)
-        {
-            switch (m)
-            {
-                case Model.SecondFactorMethod.GoogleAuth:
-                    availableMethods.Add(Ui.MfaMethod.GoogleAuth);
-                    break;
-                case Model.SecondFactorMethod.Email:
-                    availableMethods.Add(Ui.MfaMethod.Email);
-                    break;
-                case Model.SecondFactorMethod.Duo:
-                    availableMethods.Add(Ui.MfaMethod.Duo);
-                    break;
-                case Model.SecondFactorMethod.YubiKey:
-                    availableMethods.Add(Ui.MfaMethod.YubiKey);
-                    break;
-                case Model.SecondFactorMethod.U2f:
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        availableMethods.Add(Ui.MfaMethod.U2f);
-                    break;
-                case Model.SecondFactorMethod.RememberMe:
-                    break;
-                case Model.SecondFactorMethod.DuoOrg:
-                    availableMethods.Add(Ui.MfaMethod.DuoOrg);
-                    break;
-            }
-        }
-
-        // Only unsupported methods were found
-        if (availableMethods.Count == 0)
-        {
-            var unsupported = string.Join(", ", methods.Keys);
-            throw new UnsupportedFeatureException($"Seconds factor methods [{unsupported}] are not supported");
-        }
-
-        // Cancel is always available
-        availableMethods.Add(Ui.MfaMethod.Cancel);
-
-        return ui.ChooseMfaMethod(availableMethods.ToArray()) switch
-        {
-            Ui.MfaMethod.Cancel => throw MakeCancelledMfaError(),
-            Ui.MfaMethod.GoogleAuth => Model.SecondFactorMethod.GoogleAuth,
-            Ui.MfaMethod.Email => Model.SecondFactorMethod.Email,
-            Ui.MfaMethod.Duo => Model.SecondFactorMethod.Duo,
-            Ui.MfaMethod.YubiKey => Model.SecondFactorMethod.YubiKey,
-            Ui.MfaMethod.U2f => Model.SecondFactorMethod.U2f,
-            Ui.MfaMethod.DuoOrg => Model.SecondFactorMethod.DuoOrg,
-            _ => throw new InternalErrorException("The user responded with invalid input"),
-        };
-    }
-
-    // TODO: Migrate to OneOf
-    internal struct TokenOrSecondFactor
-    {
-        public readonly string? AuthToken;
-        public readonly string? RememberMeToken;
-        public readonly Model.SecondFactor? SecondFactor;
-
-        public TokenOrSecondFactor(string authToken, string? rememberMeToken)
-        {
-            AuthToken = authToken;
-            RememberMeToken = rememberMeToken;
-            SecondFactor = null;
-        }
-
-        public TokenOrSecondFactor(Model.SecondFactor secondFactor)
-        {
-            AuthToken = null;
-            RememberMeToken = null;
-            SecondFactor = secondFactor;
-        }
-    }
-
-    internal class SecondFactorOptions
-    {
-        public readonly Model.SecondFactorMethod Method;
-        public readonly string Passcode;
-        public readonly bool RememberMe;
-
-        public SecondFactorOptions(Model.SecondFactorMethod method, string passcode, bool rememberMe)
-        {
-            Method = method;
-            Passcode = passcode;
-            RememberMe = rememberMe;
-        }
-    }
-
-    internal static TokenOrSecondFactor RequestAuthToken(string username, byte[] passwordHash, string deviceId, RestClient rest)
-    {
-        return RequestAuthToken(username, passwordHash, deviceId, null, rest);
-    }
-
-    // secondFactorOptions is optional
-    internal static TokenOrSecondFactor RequestAuthToken(
-        string username,
-        byte[] passwordHash,
-        string deviceId,
-        SecondFactorOptions? secondFactorOptions,
-        RestClient rest
-    )
-    {
-        var parameters = new Dictionary<string, object>
-        {
-            { "username", username },
-            { "password", passwordHash.ToBase64() },
-            { "grant_type", "password" },
-            { "scope", "api offline_access" },
-            { "client_id", "cli" },
-            { "deviceType", DeviceType },
-            { "deviceName", Platform },
-            { "deviceIdentifier", deviceId },
-        };
-
-        if (secondFactorOptions != null)
-        {
-            parameters["twoFactorProvider"] = secondFactorOptions.Method.ToString("d");
-            parameters["twoFactorToken"] = secondFactorOptions.Passcode;
-            parameters["twoFactorRemember"] = secondFactorOptions.RememberMe ? "1" : "0";
-        }
-
-        var headers = new Dictionary<string, string> { ["Auth-Email"] = username.ToBytes().ToUrlSafeBase64NoPadding() };
-
-        var response = rest.PostForm<Model.AuthToken>("identity/connect/token", parameters, headers);
-        if (response.IsSuccessful)
-        {
-            var token = response.Data;
-            return new TokenOrSecondFactor($"{token.TokenType} {token.AccessToken}", token.TwoFactorToken);
-        }
-
-        // TODO: Write a test for this situation.
-        var secondFactor = ExtractSecondFactorFromResponse(response);
-        if (secondFactor != null)
-            return new TokenOrSecondFactor(secondFactor);
-
-        throw MakeSpecializedError(response);
-    }
-
-    internal static Model.SecondFactor? ExtractSecondFactorFromResponse(RestResponse<string> response)
-    {
-        // In the case of 2FA the server returns some 400+ HTTP error and the response contains
-        // extra information about the available 2FA methods.
-        if (!IsHttp4XX(response))
-            return null;
-
-        // TODO: A refactoring opportunity here. This pattern could be converted to
-        //       RestResponse<U> RestResponse<T>.CastTo<U>() { ... }
-        try
-        {
-            return JsonSerializer.Deserialize<Model.SecondFactor>(response.Content);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    internal static void TriggerEmailMfaPasscode(string username, byte[] passwordHash, RestClient rest)
-    {
-        var parameters = new Dictionary<string, object> { { "email", username }, { "masterPasswordHash", passwordHash.ToBase64() } };
-
-        var response = rest.PostJson("api/two-factor/send-email-login", parameters);
-        if (response.IsSuccessful)
-            return;
-
-        throw MakeSpecializedError(response);
     }
 
     //
@@ -1095,8 +683,6 @@ public static class Client
         // Don't crash, just assume Windows
         return "windows";
     }
-
-    private const string RememberMeTokenKey = "remember-me-token";
 
     private const string CliVersion = "2025.2.0";
     private static readonly string Platform = GetPlatform();

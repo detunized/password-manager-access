@@ -3,73 +3,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using PasswordManagerAccess.Bitwarden;
-using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
-using MfaMethod = PasswordManagerAccess.Bitwarden.Ui.MfaMethod;
 
 // ReSharper disable once CheckNamespace
 namespace PasswordManagerAccess.Example.Bitwarden
 {
     public static class Program
     {
-        private class TextUi : DuoUi, IUi
-        {
-            public void Close() { }
-
-            public MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
-            {
-                var methods = availableMethods.Where(m => m != MfaMethod.Cancel).OrderBy(m => m).ToArray();
-                var lines = methods.Select((m, i) => $"{i + 1} {m}");
-                var prompt = $"Please choose the second factor method {PressEnterToCancel}\n\n" + string.Join("\n", lines);
-
-                while (true)
-                {
-                    var answer = GetAnswer(prompt);
-
-                    // Blank means canceled by the user
-                    if (string.IsNullOrWhiteSpace(answer))
-                        return MfaMethod.Cancel;
-
-                    if (int.TryParse(answer, out var choice))
-                    {
-                        choice--;
-                        if (choice >= 0 && choice < methods.Length)
-                            return methods[choice];
-                    }
-
-                    Console.WriteLine("Wrong input, try again");
-                }
-            }
-
-            public Passcode ProvideGoogleAuthPasscode()
-            {
-                return GetPasscode($"Please enter Google Authenticator code {PressEnterToCancel}");
-            }
-
-            public Passcode ProvideEmailPasscode(string emailHint)
-            {
-                return GetPasscode($"Please check you email ({emailHint}) and enter the code {PressEnterToCancel}");
-            }
-
-            public Passcode ProvideYubiKeyPasscode()
-            {
-                return GetPasscode($"Please enter the YubiKey code {PressEnterToCancel}");
-            }
-
-            //
-            // Private
-            //
-
-            private static Passcode GetPasscode(string prompt)
-            {
-                var passcode = GetAnswer(prompt);
-                return string.IsNullOrWhiteSpace(passcode) ? null : new Passcode(passcode, GetRememberMe());
-            }
-        }
-
         public static void Main(string[] args)
         {
             var config = Util.ReadConfig();
@@ -110,28 +52,20 @@ namespace PasswordManagerAccess.Example.Bitwarden
 
         private static void UseLoginDownloadLogout(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
-            Session session;
+            // Fully non-interactive CLI/API mode
+            Console.WriteLine("Using the CLI/API mode with manual sequence");
 
-            if (config.TryGetValue("client-id", out var clientId))
+            if (!config.TryGetValue("client-id", out var clientId))
             {
-                // Fully non-interactive CLI/API mode
-                Console.WriteLine("Using the CLI/API mode with manual sequence");
-                session = Client.LogIn(
-                    new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
-                    baseUrl
-                );
+                Console.WriteLine("Error: client-id is required. Browser mode has been removed.");
+                Console.WriteLine("Please configure client-id and client-secret in your config.yaml");
+                return;
             }
-            else
-            {
-                // Possibly interactive browser mode
-                Console.WriteLine("Using the browser mode with manual sequence");
-                session = Client.LogIn(
-                    new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
-                    baseUrl: baseUrl,
-                    ui: new TextUi(),
-                    storage: new PlainStorage()
-                );
-            }
+
+            var session = Client.LogIn(
+                new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
+                baseUrl
+            );
 
             // Enable this to get a single item from a vault
             var getSingleItem = false;
@@ -181,28 +115,20 @@ namespace PasswordManagerAccess.Example.Bitwarden
 
         private static void UseOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
-            Vault vault;
+            // Fully non-interactive CLI/API mode
+            Console.WriteLine("Using the CLI/API mode with Vault.Open");
 
-            if (config.TryGetValue("client-id", out var clientId))
+            if (!config.TryGetValue("client-id", out var clientId))
             {
-                // Fully non-interactive CLI/API mode
-                Console.WriteLine("Using the CLI/API mode with Vault.Open");
-                vault = Client.Open(
-                    new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
-                    baseUrl
-                );
+                Console.WriteLine("Error: client-id is required. Browser mode has been removed.");
+                Console.WriteLine("Please configure client-id and client-secret in your config.yaml");
+                return;
             }
-            else
-            {
-                // Possibly interactive browser mode
-                Console.WriteLine("Using the browser mode with Vault.Open");
-                vault = Client.Open(
-                    new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
-                    baseUrl: baseUrl,
-                    ui: new TextUi(),
-                    storage: new PlainStorage()
-                );
-            }
+
+            var vault = Client.Open(
+                new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
+                baseUrl
+            );
 
             // Display the data
             DumpVault(vault);
