@@ -33,49 +33,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void RequestKdfInfo_returns_kdf_info_pbkdf2()
-        {
-            var rest = new RestFlow { UseSystemJson = true }.Post("""{"kdf":0,"kdfIterations":1337,"kdfMemory":null,"kdfParallelism":null}""");
-
-            var kdf = Client.RequestKdfInfo(Username, rest);
-
-            Assert.Equal(Model.KdfMethod.Pbkdf2Sha256, kdf.Kdf);
-            Assert.Equal(1337, kdf.Iterations);
-        }
-
-        [Fact]
-        public void RequestKdfInfo_returns_kdf_info_argon2di()
-        {
-            var rest = new RestFlow { UseSystemJson = true }.Post("""{"kdf":1,"kdfIterations":3,"kdfMemory":64,"kdfParallelism":4}""");
-
-            var kdf = Client.RequestKdfInfo(Username, rest);
-
-            Assert.Equal(Model.KdfMethod.Argon2id, kdf.Kdf);
-            Assert.Equal(3, kdf.Iterations);
-            Assert.Equal(64, kdf.Memory);
-            Assert.Equal(4, kdf.Parallelism);
-        }
-
-        [Fact]
-        public void RequestKdfInfo_makes_POST_request_to_specific_endpoint()
-        {
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"kdf":0,"kdfIterations":1337,"kdfMemory":null,"kdfParallelism":null}""")
-                .ExpectUrl(BaseUrl + "/identity/accounts/prelogin")
-                .ToRestClient(BaseUrl);
-
-            Client.RequestKdfInfo(Username, rest);
-        }
-
-        [Fact]
-        public void RequestKdfInfo_throws_on_unsupported_kdf_method()
-        {
-            var rest = new RestFlow { UseSystemJson = true }.Post("""{"kdf":13,"kdfIterations":1337,"kdfMemory":null,"kdfParallelism":null}""");
-
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.RequestKdfInfo(Username, rest), "KDF method");
-        }
-
-        [Fact]
         public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
         {
             var rest = new RestFlow { UseSystemJson = true }
@@ -138,7 +95,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         {
             var rest = new RestFlow { UseSystemJson = true }.Get(GetFixture("profile"));
 
-            var profile = Client.FetchProfile("token", rest);
+            var profile = Client.FetchProfile(rest);
 
             Assert.Equal("lastpass.ruby@gmail.com", profile.Email);
         }
@@ -150,7 +107,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .Get(GetFixture("profile"))
                 .ExpectUrl("/accounts/profile");
 
-            Client.FetchProfile("token", rest);
+            Client.FetchProfile(rest);
         }
 
         [Fact]
@@ -161,7 +118,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ExpectUrl(BaseUrl + "/api/accounts/profile")
                 .ToRestClient(BaseUrl);
 
-            Client.FetchProfile("token", rest);
+            Client.FetchProfile(rest);
         }
 
         [Fact]
@@ -692,7 +649,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
         //
 
         private const string BaseUrl = "https://vault.bitwarden.com";
-        private const string Username = "username";
         private const string ClientId = "client-id";
         private const string ClientSecret = "client-secret";
         private const string DeviceId = "device-id";

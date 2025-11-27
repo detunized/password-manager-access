@@ -123,7 +123,7 @@ public static class Client
 
         // 3. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
         //    Whether downloading the full vault or a single item, we need the profile first.
-        var encryptedProfile = FetchProfile(token, rest);
+        var encryptedProfile = FetchProfile(rest);
 
         // 4. Derive the master encryption key or KEK (key encryption key)
         var key = Util.DeriveKey(encryptedProfile.Email, clientInfo.Password, kdfInfo);
@@ -140,24 +140,6 @@ public static class Client
             throw new ArgumentException("Base URL must not be null or empty", nameof(baseUrl));
 
         return new RestClient(transport, baseUrl.TrimEnd('/'), defaultHeaders: DefaultRestHeaders, useSystemJson: true);
-    }
-
-    internal static Model.KdfInfo RequestKdfInfo(string username, RestClient rest)
-    {
-        var response = rest.PostJson<Model.KdfInfo>("identity/accounts/prelogin", new Dictionary<string, object> { ["email"] = username });
-        if (response.IsSuccessful)
-        {
-            var kdfInfo = response.Data;
-            ValidateKdfInfo(kdfInfo);
-
-            return kdfInfo;
-        }
-
-        // Special case: when the HTTP status is 4XX we should fall back to the default settings
-        if (IsHttp4XX(response))
-            return DefaultKdfInfo;
-
-        throw MakeSpecializedError(response);
     }
 
     internal static void ValidateKdfInfo(Model.KdfInfo info)
@@ -231,7 +213,7 @@ public static class Client
     // Fetching data
     //
 
-    internal static Model.Profile FetchProfile(string token, RestClient rest)
+    internal static Model.Profile FetchProfile(RestClient rest)
     {
         var response = rest.Get<Model.Profile>("api/accounts/profile");
         if (response.IsSuccessful)
@@ -427,9 +409,6 @@ public static class Client
                     case Model.ItemType.SshKey:
                         sshKeys.Add(ParseSshKeyItem(item, vaultKey, orgKeys, folders, collections));
                         break;
-                    default:
-                        // Unsupported items are ignored.
-                        break;
                 }
             }
             catch (Exception e)
@@ -444,7 +423,7 @@ public static class Client
             }
         }
 
-        return ([.. accounts], [.. sshKeys], errors?.ToArray() ?? []);
+        return ([.. accounts], [.. sshKeys], errors.ToArray());
     }
 
     internal static Account ParseAccountItem(
@@ -655,16 +634,6 @@ public static class Client
         }
     }
 
-    internal static CanceledMultiFactorException MakeCancelledMfaError(Exception? inner = null)
-    {
-        return new CanceledMultiFactorException("Second factor step is canceled by the user", inner);
-    }
-
-    internal static BadMultiFactorException MakeFailedMfaError(Exception? inner = null)
-    {
-        return new BadMultiFactorException("Second factor step failed", inner);
-    }
-
     //
     // Private
     //
@@ -701,6 +670,4 @@ public static class Client
             ["Bitwarden-Client-Name"] = "cli",
             ["Bitwarden-Client-Version"] = CliVersion,
         };
-
-    private static readonly Model.KdfInfo DefaultKdfInfo = new() { Kdf = Model.KdfMethod.Pbkdf2Sha256, Iterations = 5000 };
 }

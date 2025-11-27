@@ -3,8 +3,6 @@
 
 #nullable enable
 
-using System.Collections.Generic;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace PasswordManagerAccess.Bitwarden;
@@ -53,36 +51,6 @@ internal static class Model
         // Optional, as it's only available for Argon2id
         [JsonPropertyName("kdfParallelism")]
         public int? Parallelism { get; init; }
-    }
-
-    public record AuthToken
-    {
-        [JsonPropertyName("token_type")]
-        public required string TokenType { get; init; }
-
-        [JsonPropertyName("access_token")]
-        public required string AccessToken { get; init; }
-
-        // Optional
-        [JsonPropertyName("TwoFactorToken")]
-        public string? TwoFactorToken { get; init; }
-    }
-
-    public enum SecondFactorMethod
-    {
-        GoogleAuth = 0,
-        Email = 1,
-        Duo = 2,
-        YubiKey = 3,
-        U2f = 4,
-        RememberMe = 5,
-        DuoOrg = 6,
-    }
-
-    public record SecondFactor
-    {
-        [JsonPropertyName("TwoFactorProviders2")]
-        public required Dictionary<SecondFactorMethod, JsonNode> Methods { get; init; }
     }
 
     public record Vault
