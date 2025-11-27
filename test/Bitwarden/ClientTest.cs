@@ -159,7 +159,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("profile"))
                 .ExpectUrl(BaseUrl + "/api/accounts/profile")
-                .ExpectHeader("Authorization", "token")
                 .ToRestClient(BaseUrl);
 
             Client.FetchProfile("token", rest);
@@ -173,7 +172,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
-            var response = Client.FetchVault("token", rest);
+            var response = Client.FetchVault(rest);
 
             Assert.StartsWith("2.XZ2v", response.Profile.Key);
             Assert.Equal(6, response.Ciphers.Length);
@@ -188,7 +187,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
-            Client.FetchVault("token", rest);
+            Client.FetchVault(rest);
         }
 
         [Fact]
@@ -197,10 +196,9 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("vault"))
                 .ExpectUrl(BaseUrl + "/api/sync")
-                .ExpectHeader("Authorization", "token")
                 .ToRestClient(BaseUrl);
 
-            Client.FetchVault("token", rest);
+            Client.FetchVault(rest);
         }
 
         [Theory]
@@ -248,7 +246,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("folders"))
                 .ExpectUrl(BaseUrl + "/api/folders")
-                .ExpectHeader("Authorization", "Bearer token")
                 .ToRestClient(BaseUrl);
             var session = MakeSession(rest);
 
@@ -268,7 +265,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("collections"))
                 .ExpectUrl(BaseUrl + "/api/collections")
-                .ExpectHeader("Authorization", "Bearer token")
                 .ToRestClient(BaseUrl);
             var session = MakeSession(rest);
 
@@ -549,8 +545,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(JsonSerializer.Serialize(itemModel))
-                .ExpectUrl($"/ciphers/{itemId}/details")
-                .ExpectHeader("Authorization", "Bearer token");
+                .ExpectUrl($"/ciphers/{itemId}/details");
 
             // Simulate no cached folders situation
             if (haveItemFolder && !haveSessionFolders)
@@ -626,7 +621,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("single-item-login"))
                 .ExpectUrl(BaseUrl + "/api/ciphers/item-id/details")
-                .ExpectHeader("Authorization", "Bearer token")
                 .ToRestClient(BaseUrl);
 
             // Act
@@ -645,7 +639,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("single-item-ssh-key"))
                 .ExpectUrl(BaseUrl + "/api/ciphers/item-id/details")
-                .ExpectHeader("Authorization", "Bearer token")
                 .ToRestClient(BaseUrl);
 
             // Act
@@ -667,7 +660,6 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture(fixtureName))
                 .ExpectUrl(BaseUrl + "/api/ciphers/item-id/details")
-                .ExpectHeader("Authorization", "Bearer token")
                 .ToRestClient(BaseUrl);
 
             // Act
@@ -683,7 +675,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         //
 
         private Session MakeSession(RestClient rest, Dictionary<string, string> folders = null, Dictionary<string, Collection> collections = null) =>
-            new("Bearer token", DerivedKek, Profile, rest, rest.Transport) { Folders = folders, Collections = collections };
+            new(DerivedKek, Profile, rest, rest.Transport) { Folders = folders, Collections = collections };
 
         private Model.Vault LoadVaultFixture(string name = "vault")
         {

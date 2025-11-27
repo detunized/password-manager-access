@@ -12,7 +12,6 @@ namespace PasswordManagerAccess.Bitwarden;
 // various operations like downloading vaults or logging out.
 public class Session
 {
-    internal string Token { get; }
     internal byte[] Key { get; }
     internal Profile Profile { get; }
     internal RestClient Rest { get; }
@@ -22,9 +21,8 @@ public class Session
     internal Dictionary<string, string>? Folders { get; set; }
     internal Dictionary<string, Collection>? Collections { get; set; }
 
-    internal Session(string token, byte[] key, Profile profile, RestClient rest, IRestTransport transport)
+    internal Session(byte[] key, Profile profile, RestClient rest, IRestTransport transport)
     {
-        Token = token;
         Key = key;
         Profile = profile;
         Rest = rest;

@@ -118,17 +118,20 @@ public static class Client
         // 1. Login and get the client info
         var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest);
 
-        // 2. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
+        // 2. All the requests from here on are authenticated with the token
+        rest.AddOrUpdateHeader("Authorization", token);
+
+        // 3. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
         //    Whether downloading the full vault or a single item, we need the profile first.
         var encryptedProfile = FetchProfile(token, rest);
 
-        // 3. Derive the master encryption key or KEK (key encryption key)
+        // 4. Derive the master encryption key or KEK (key encryption key)
         var key = Util.DeriveKey(encryptedProfile.Email, clientInfo.Password, kdfInfo);
 
-        // 4. Decrypt the profile (it contains the vault key, the orgs and the org keys)
+        // 5. Decrypt the profile (it contains the vault key, the orgs and the org keys)
         var profile = DecryptProfile(encryptedProfile, key);
 
-        return new Session(token, key, profile, rest, transport);
+        return new Session(key, profile, rest, transport);
     }
 
     internal static RestClient MakeRestClient(string baseUrl, IRestTransport transport)
@@ -230,18 +233,18 @@ public static class Client
 
     internal static Model.Profile FetchProfile(string token, RestClient rest)
     {
-        var response = rest.Get<Model.Profile>("api/accounts/profile", new Dictionary<string, string> { ["Authorization"] = $"{token}" });
+        var response = rest.Get<Model.Profile>("api/accounts/profile");
         if (response.IsSuccessful)
             return response.Data;
 
         throw MakeSpecializedError(response);
     }
 
-    internal static Model.Vault FetchVault(Session session) => FetchVault(session.Token, session.Rest);
+    internal static Model.Vault FetchVault(Session session) => FetchVault(session.Rest);
 
-    internal static Model.Vault FetchVault(string token, RestClient rest)
+    internal static Model.Vault FetchVault(RestClient rest)
     {
-        var response = rest.Get<Model.Vault>("api/sync?excludeDomains=true", new Dictionary<string, string> { ["Authorization"] = $"{token}" });
+        var response = rest.Get<Model.Vault>("api/sync?excludeDomains=true");
         if (response.IsSuccessful)
             return response.Data;
 
@@ -250,10 +253,7 @@ public static class Client
 
     internal static OneOf<Model.Item, NoItem> FetchItem(string itemId, Session session)
     {
-        var response = session.Rest.Get<Model.Item>(
-            $"api/ciphers/{itemId}/details",
-            new Dictionary<string, string> { ["Authorization"] = $"{session.Token}" }
-        );
+        var response = session.Rest.Get<Model.Item>($"api/ciphers/{itemId}/details");
         if (response.IsSuccessful)
             return response.Data;
 
@@ -287,7 +287,7 @@ public static class Client
 
     internal static Model.Folder[] FetchFolders(Session session)
     {
-        var response = session.Rest.Get<Model.FolderList>("api/folders", new Dictionary<string, string> { ["Authorization"] = $"{session.Token}" });
+        var response = session.Rest.Get<Model.FolderList>("api/folders");
         if (response.IsSuccessful)
             return response.Data.Folders;
 
@@ -296,10 +296,7 @@ public static class Client
 
     internal static Model.Collection[] FetchCollections(Session session)
     {
-        var response = session.Rest.Get<Model.CollectionList>(
-            "api/collections",
-            new Dictionary<string, string> { ["Authorization"] = $"{session.Token}" }
-        );
+        var response = session.Rest.Get<Model.CollectionList>("api/collections");
         if (response.IsSuccessful)
             return response.Data.Collections;
 
