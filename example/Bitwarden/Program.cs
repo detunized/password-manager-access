@@ -27,7 +27,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
 
             // This one is optional
-            var baseUrl = config.GetValueOrDefault("base-url", "https://vault.bitwarden.com");
+            var baseUrl = config.GetValueOrDefault("base-url", Client.DefaultBaseUlr);
             if (!string.IsNullOrEmpty(baseUrl))
                 Console.WriteLine($"Using a custom base URL {baseUrl}");
 
@@ -55,15 +55,13 @@ namespace PasswordManagerAccess.Example.Bitwarden
             // Fully non-interactive CLI/API mode
             Console.WriteLine("Using the CLI/API mode with manual sequence");
 
-            if (!config.TryGetValue("client-id", out var clientId))
-            {
-                Console.WriteLine("Error: client-id is required. Browser mode has been removed.");
-                Console.WriteLine("Please configure client-id and client-secret in your config.yaml");
-                return;
-            }
-
             var session = Client.LogIn(
-                new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
+                new ClientInfoCliApi(
+                    clientId: config["client-id"],
+                    clientSecret: config["client-secret"],
+                    password: config["password"],
+                    deviceId: deviceId
+                ),
                 baseUrl
             );
 

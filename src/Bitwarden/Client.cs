@@ -43,7 +43,7 @@ public static class Client
     // This method performs a login in the CLI/API mode. The returned session can be used to
     // download the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
-    public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = "")
+    public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = DefaultBaseUlr)
     {
         var transport = new RestTransport();
         try
@@ -182,13 +182,13 @@ public static class Client
     {
         var parameters = new Dictionary<string, object>
         {
-            { "client_id", clientId },
-            { "client_secret", clientSecret },
-            { "grant_type", "client_credentials" },
-            { "scope", "api" },
-            { "deviceType", DeviceType },
-            { "deviceName", Platform },
-            { "deviceIdentifier", deviceId },
+            ["client_id"] = clientId,
+            ["client_secret"] = clientSecret,
+            ["grant_type"] = "client_credentials",
+            ["scope"] = "api",
+            ["deviceType"] = DeviceType,
+            ["deviceName"] = Platform,
+            ["deviceIdentifier"] = deviceId,
         };
 
         var response = rest.PostForm<Model.TokenCliApi>("identity/connect/token", parameters);
@@ -230,7 +230,7 @@ public static class Client
 
     internal static Model.Profile FetchProfile(string token, RestClient rest)
     {
-        var response = rest.Get<Model.Profile>("api/accounts/profile", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+        var response = rest.Get<Model.Profile>("api/accounts/profile", new Dictionary<string, string> { ["Authorization"] = $"{token}" });
         if (response.IsSuccessful)
             return response.Data;
 
@@ -241,7 +241,7 @@ public static class Client
 
     internal static Model.Vault FetchVault(string token, RestClient rest)
     {
-        var response = rest.Get<Model.Vault>("api/sync?excludeDomains=true", new Dictionary<string, string> { { "Authorization", $"{token}" } });
+        var response = rest.Get<Model.Vault>("api/sync?excludeDomains=true", new Dictionary<string, string> { ["Authorization"] = $"{token}" });
         if (response.IsSuccessful)
             return response.Data;
 
@@ -252,7 +252,7 @@ public static class Client
     {
         var response = session.Rest.Get<Model.Item>(
             $"api/ciphers/{itemId}/details",
-            new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
+            new Dictionary<string, string> { ["Authorization"] = $"{session.Token}" }
         );
         if (response.IsSuccessful)
             return response.Data;
@@ -287,7 +287,7 @@ public static class Client
 
     internal static Model.Folder[] FetchFolders(Session session)
     {
-        var response = session.Rest.Get<Model.FolderList>("api/folders", new Dictionary<string, string> { { "Authorization", $"{session.Token}" } });
+        var response = session.Rest.Get<Model.FolderList>("api/folders", new Dictionary<string, string> { ["Authorization"] = $"{session.Token}" });
         if (response.IsSuccessful)
             return response.Data.Folders;
 
@@ -298,7 +298,7 @@ public static class Client
     {
         var response = session.Rest.Get<Model.CollectionList>(
             "api/collections",
-            new Dictionary<string, string> { { "Authorization", $"{session.Token}" } }
+            new Dictionary<string, string> { ["Authorization"] = $"{session.Token}" }
         );
         if (response.IsSuccessful)
             return response.Data.Collections;
