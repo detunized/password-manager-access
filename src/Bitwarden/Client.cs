@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using OneOf;
 using PasswordManagerAccess.Common;
 
@@ -34,7 +36,11 @@ public static class Client
     // CLI/API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
     // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
     // either. This mode requires credentials that could be found in the vault settings: the client ID and the client secret.
-    public static Vault Open(ClientInfoCliApi clientInfo, string baseUrl = DefaultBaseUlr) => DownloadAndLogOut(LogIn(clientInfo, baseUrl));
+    public static async Task<Vault> Open(ClientInfoCliApi clientInfo, string baseUrl, CancellationToken cancellationToken)
+    {
+        var session = await LogIn(clientInfo, baseUrl, cancellationToken).ConfigureAwait(false);
+        return await DownloadAndLogOut(session, cancellationToken).ConfigureAwait(false);
+    }
 
     //
     // LogIn, DownloadVault, LogOut sequence
@@ -43,12 +49,12 @@ public static class Client
     // This method performs a login in the CLI/API mode. The returned session can be used to
     // download the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
-    public static Session LogIn(ClientInfoCliApi clientInfo, string baseUrl = DefaultBaseUlr)
+    public static async Task<Session> LogIn(ClientInfoCliApi clientInfo, string baseUrl, CancellationToken cancellationToken)
     {
         var transport = new RestTransport();
         try
         {
-            return LogInCliApi(clientInfo, baseUrl, transport);
+            return await LogInCliApi(clientInfo, baseUrl, transport, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -58,9 +64,9 @@ public static class Client
     }
 
     // This method downloads the vault from the server. The session must be obtained from LogIn.
-    public static Vault DownloadVault(Session session)
+    public static async Task<Vault> DownloadVault(Session session, CancellationToken cancellationToken)
     {
-        var encryptedVault = FetchVault(session);
+        var encryptedVault = await FetchVault(session.Rest, cancellationToken).ConfigureAwait(false);
         return DecryptVault(encryptedVault, session.Key);
         // TODO: Update the session with the profile, folders and collections. This could be useful if the user
         //       fetches single items after that.
@@ -69,7 +75,7 @@ public static class Client
     // This method logs out the session. Call this when the session is no longer needed.
     // After that the session object could not be used anymore. The behavior is undefined
     // if it's used again.
-    public static void LogOut(Session session)
+    public static Task LogOut(Session session, CancellationToken cancellationToken)
     {
         try
         {
@@ -80,12 +86,14 @@ public static class Client
         {
             session.Transport.Dispose();
         }
+
+        return Task.CompletedTask;
     }
 
     // This method fetches a single item from the vault by its ID. The session must be obtained from LogIn.
-    public static OneOf<Account, SshKey, NoItem> GetItem(string itemId, Session session)
+    public static async Task<OneOf<Account, SshKey, NoItem>> GetItem(string itemId, Session session, CancellationToken cancellationToken)
     {
-        var maybeItem = FetchItemAndMaybeFoldersAndCollections(itemId, session);
+        var maybeItem = await FetchItemAndMaybeFoldersAndCollections(itemId, session, cancellationToken).ConfigureAwait(false);
 
         return maybeItem.Value switch
         {
@@ -99,31 +107,37 @@ public static class Client
     // Internal
     //
 
-    internal static Vault DownloadAndLogOut(Session session)
+    internal static async Task<Vault> DownloadAndLogOut(Session session, CancellationToken cancellationToken)
     {
         try
         {
-            return DownloadVault(session);
+            return await DownloadVault(session, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
-            LogOut(session);
+            await LogOut(session, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    internal static Session LogInCliApi(ClientInfoCliApi clientInfo, string baseUrl, IRestTransport transport)
+    internal static async Task<Session> LogInCliApi(
+        ClientInfoCliApi clientInfo,
+        string baseUrl,
+        IRestTransport transport,
+        CancellationToken cancellationToken
+    )
     {
         var rest = MakeRestClient(baseUrl, transport);
 
         // 1. Login and get the client info
-        var (token, kdfInfo) = LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest);
+        var (token, kdfInfo) = await LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest, cancellationToken)
+            .ConfigureAwait(false);
 
         // 2. All the requests from here on are authenticated with the token
         rest.AddOrUpdateHeader("Authorization", token);
 
         // 3. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
         //    Whether downloading the full vault or a single item, we need the profile first.
-        var encryptedProfile = FetchProfile(rest);
+        var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
 
         // 4. Derive the master encryption key or KEK (key encryption key)
         var key = Util.DeriveKey(encryptedProfile.Email, clientInfo.Password, kdfInfo);
@@ -163,7 +177,13 @@ public static class Client
         }
     }
 
-    internal static (string Token, Model.KdfInfo KdfInfo) LogInCliApi(string clientId, string clientSecret, string deviceId, RestClient rest)
+    internal static async Task<(string Token, Model.KdfInfo KdfInfo)> LogInCliApi(
+        string clientId,
+        string clientSecret,
+        string deviceId,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
     {
         var parameters = new Dictionary<string, object>
         {
@@ -176,7 +196,7 @@ public static class Client
             ["deviceIdentifier"] = deviceId,
         };
 
-        var response = rest.PostForm<Model.TokenCliApi>("identity/connect/token", parameters);
+        var response = await rest.PostFormAsync<Model.TokenCliApi>("identity/connect/token", parameters, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessful)
             throw MakeSpecializedError(response);
 
@@ -197,15 +217,15 @@ public static class Client
     // Fetch/Parse helpers
     //
 
-    internal static Dictionary<string, string> FetchAndParseFolders(Session session)
+    internal static async Task<Dictionary<string, string>> FetchAndParseFolders(Session session, CancellationToken cancellationToken)
     {
-        var folders = FetchFolders(session);
+        var folders = await FetchFolders(session, cancellationToken).ConfigureAwait(false);
         return ParseFolders(folders, session.Profile.VaultKey);
     }
 
-    internal static Dictionary<string, Collection> FetchAndParseCollections(Session session)
+    internal static async Task<Dictionary<string, Collection>> FetchAndParseCollections(Session session, CancellationToken cancellationToken)
     {
-        var collections = FetchCollections(session);
+        var collections = await FetchCollections(session, cancellationToken).ConfigureAwait(false);
         return ParseCollections(collections, session.Profile.VaultKey, session.Profile.OrgKeys);
     }
 
@@ -213,29 +233,24 @@ public static class Client
     // Fetching data
     //
 
-    internal static Model.Profile FetchProfile(RestClient rest)
+    internal static Task<Model.Profile> FetchProfile(RestClient rest, CancellationToken cancellationToken) =>
+        FetchObject<Model.Profile>("api/accounts/profile", rest, cancellationToken);
+
+    internal static Task<Model.Vault> FetchVault(RestClient rest, CancellationToken cancellationToken) =>
+        FetchObject<Model.Vault>("api/sync?excludeDomains=true", rest, cancellationToken);
+
+    internal static async Task<T> FetchObject<T>(string endpoint, RestClient rest, CancellationToken cancellationToken)
     {
-        var response = rest.Get<Model.Profile>("api/accounts/profile");
+        var response = await rest.GetAsync<T>(endpoint, cancellationToken).ConfigureAwait(false);
         if (response.IsSuccessful)
             return response.Data;
 
         throw MakeSpecializedError(response);
     }
 
-    internal static Model.Vault FetchVault(Session session) => FetchVault(session.Rest);
-
-    internal static Model.Vault FetchVault(RestClient rest)
+    internal static async Task<OneOf<Model.Item, NoItem>> FetchItem(string itemId, Session session, CancellationToken cancellationToken)
     {
-        var response = rest.Get<Model.Vault>("api/sync?excludeDomains=true");
-        if (response.IsSuccessful)
-            return response.Data;
-
-        throw MakeSpecializedError(response);
-    }
-
-    internal static OneOf<Model.Item, NoItem> FetchItem(string itemId, Session session)
-    {
-        var response = session.Rest.Get<Model.Item>($"api/ciphers/{itemId}/details");
+        var response = await session.Rest.GetAsync<Model.Item>($"api/ciphers/{itemId}/details", cancellationToken).ConfigureAwait(false);
         if (response.IsSuccessful)
             return response.Data;
 
@@ -246,39 +261,45 @@ public static class Client
         throw MakeSpecializedError(response);
     }
 
-    internal static OneOf<Model.Item, NoItem> FetchItemAndMaybeFoldersAndCollections(string itemId, Session session)
+    internal static async Task<OneOf<Model.Item, NoItem>> FetchItemAndMaybeFoldersAndCollections(
+        string itemId,
+        Session session,
+        CancellationToken cancellationToken
+    )
     {
-        var maybeItem = FetchItem(itemId, session);
+        var maybeItem = await FetchItem(itemId, session, cancellationToken).ConfigureAwait(false);
         if (maybeItem.IsT1)
             return maybeItem;
 
         var item = maybeItem.AsT0;
 
+        // TODO: This could be done in parallel!
+
         // TODO: There's a chance that the folders are outdated in case they were edited since the last fetch.
         //       Figure out the expiry/refresh logic.
         if (item.FolderId != null && session.Folders == null)
-            session.Folders = FetchAndParseFolders(session);
+            session.Folders = await FetchAndParseFolders(session, cancellationToken).ConfigureAwait(false);
 
         // TODO: There's a chance that the collections are outdated in case they were edited since the last fetch.
         //       Figure out the expiry/refresh logic.
         if ((item.CollectionIds?.Length ?? 0) > 0 && session.Collections == null)
-            session.Collections = FetchAndParseCollections(session);
+            session.Collections = await FetchAndParseCollections(session, cancellationToken).ConfigureAwait(false);
 
         return item;
     }
 
-    internal static Model.Folder[] FetchFolders(Session session)
+    internal static async Task<Model.Folder[]> FetchFolders(Session session, CancellationToken cancellationToken)
     {
-        var response = session.Rest.Get<Model.FolderList>("api/folders");
+        var response = await session.Rest.GetAsync<Model.FolderList>("api/folders", cancellationToken).ConfigureAwait(false);
         if (response.IsSuccessful)
             return response.Data.Folders;
 
         throw MakeSpecializedError(response);
     }
 
-    internal static Model.Collection[] FetchCollections(Session session)
+    internal static async Task<Model.Collection[]> FetchCollections(Session session, CancellationToken cancellationToken)
     {
-        var response = session.Rest.Get<Model.CollectionList>("api/collections");
+        var response = await session.Rest.GetAsync<Model.CollectionList>("api/collections", cancellationToken).ConfigureAwait(false);
         if (response.IsSuccessful)
             return response.Data.Collections;
 

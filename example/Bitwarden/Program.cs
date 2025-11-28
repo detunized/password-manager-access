@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
@@ -12,7 +14,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
 {
     public static class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var config = Util.ReadConfig();
 
@@ -37,11 +39,11 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 var useVaultOpen = false;
                 if (useVaultOpen)
                 {
-                    UseOpen(config, deviceId, baseUrl);
+                    await UseOpen(config, deviceId, baseUrl);
                 }
                 else
                 {
-                    UseLoginDownloadLogout(config, deviceId, baseUrl);
+                    await UseLoginDownloadLogout(config, deviceId, baseUrl);
                 }
             }
             catch (BaseException e)
@@ -50,19 +52,20 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
         }
 
-        private static void UseLoginDownloadLogout(Dictionary<string, string> config, string deviceId, string baseUrl)
+        private static async Task UseLoginDownloadLogout(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
             // Fully non-interactive CLI/API mode
             Console.WriteLine("Using the CLI/API mode with manual sequence");
 
-            var session = Client.LogIn(
+            var session = await Client.LogIn(
                 new ClientInfoCliApi(
                     clientId: config["client-id"],
                     clientSecret: config["client-secret"],
                     password: config["password"],
                     deviceId: deviceId
                 ),
-                baseUrl
+                baseUrl,
+                CancellationToken.None
             );
 
             // Enable this to get a single item from a vault
@@ -73,7 +76,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 if (getSingleItem)
                 {
                     // Get a single item from the vault (Account)
-                    var item1 = Client.GetItem("25e95b65-aa73-40b4-af02-b2ee0079daa5", session);
+                    var item1 = await Client.GetItem("25e95b65-aa73-40b4-af02-b2ee0079daa5", session, CancellationToken.None);
 
                     // Use the old-school switch statement to match the item type
                     switch (item1.Value)
@@ -90,7 +93,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                     }
 
                     // Get another item with the same session (SshKey)
-                    var item2 = Client.GetItem("318df280-7880-4e4f-a965-b2e901549751", session);
+                    var item2 = await Client.GetItem("318df280-7880-4e4f-a965-b2e901549751", session, CancellationToken.None);
 
                     // Can also use the OneOf.Switch method
                     item2.Switch(PrintAccount, PrintSshKey, noItem => Console.WriteLine($"No item found: {noItem}"));
@@ -98,7 +101,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 else
                 {
                     // Download vault data
-                    var vault = Client.DownloadVault(session);
+                    var vault = await Client.DownloadVault(session, CancellationToken.None);
 
                     // Display the data
                     DumpVault(vault);
@@ -107,11 +110,11 @@ namespace PasswordManagerAccess.Example.Bitwarden
             finally
             {
                 // Always log out to clean up resources
-                Client.LogOut(session);
+                await Client.LogOut(session, CancellationToken.None);
             }
         }
 
-        private static void UseOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
+        private static async Task UseOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
             // Fully non-interactive CLI/API mode
             Console.WriteLine("Using the CLI/API mode with Vault.Open");
@@ -123,9 +126,10 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 return;
             }
 
-            var vault = Client.Open(
+            var vault = await Client.Open(
                 new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
-                baseUrl
+                baseUrl,
+                CancellationToken.None
             );
 
             // Display the data

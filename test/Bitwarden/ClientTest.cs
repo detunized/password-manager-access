@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
 using Shouldly;
@@ -33,14 +35,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
+        public async Task LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":0,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}""")
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
 
-            var (token, kdfInfo) = Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest);
+            var (token, kdfInfo) = await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
             Assert.Equal(Model.KdfMethod.Pbkdf2Sha256, kdfInfo.Kdf);
@@ -48,14 +50,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
+        public async Task LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":1,"KdfIterations":3,"KdfMemory":64,"KdfParallelism":4}""")
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
 
-            var (token, kdfInfo) = Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest);
+            var (token, kdfInfo) = await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
 
             Assert.Equal("Bearer wa-wa-wee-wa", token);
             Assert.Equal(Model.KdfMethod.Argon2id, kdfInfo.Kdf);
@@ -65,7 +67,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void LoginCliApi_throws_on_unsupported_kdf()
+        public async Task LoginCliApi_throws_on_unsupported_kdf()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Post(
@@ -73,63 +75,66 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 )
                 .ToRestClient(BaseUrl);
 
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest), "KDF method");
+            await Exceptions.AssertThrowsUnsupportedFeatureAsync(
+                async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt),
+                "KDF method"
+            );
         }
 
         [Fact]
-        public void LoginCliApi_throws_on_incorrect_client_credentials()
+        public async Task LoginCliApi_throws_on_incorrect_client_credentials()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"error":"invalid_client"}""", status: HttpStatusCode.BadRequest)
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
 
-            Exceptions.AssertThrowsBadCredentials(
-                () => Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest),
+            await Exceptions.AssertThrowsBadCredentialsAsync(
+                async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt),
                 "Client ID or secret is incorrect"
             );
         }
 
         [Fact]
-        public void FetchProfile_returns_parsed_response()
+        public async Task FetchProfile_returns_parsed_response()
         {
             var rest = new RestFlow { UseSystemJson = true }.Get(GetFixture("profile"));
 
-            var profile = Client.FetchProfile(rest);
+            var profile = await Client.FetchProfile(rest, DefaultCt);
 
             Assert.Equal("lastpass.ruby@gmail.com", profile.Email);
         }
 
         [Fact]
-        public void FetchProfile_makes_GET_request_to_specific_endpoint()
+        public async Task FetchProfile_makes_GET_request_to_specific_endpoint()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("profile"))
                 .ExpectUrl("/accounts/profile");
 
-            Client.FetchProfile(rest);
+            await Client.FetchProfile(rest, DefaultCt);
         }
 
         [Fact]
-        public void FetchProfile_sets_auth_header()
+        public async Task FetchProfile_sets_auth_header()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("profile"))
                 .ExpectUrl(BaseUrl + "/api/accounts/profile")
                 .ToRestClient(BaseUrl);
 
-            Client.FetchProfile(rest);
+            await Client.FetchProfile(rest, DefaultCt);
         }
 
         [Fact]
-        public void FetchVault_returns_parsed_response()
+        public async Task FetchVault_returns_parsed_response()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("vault"))
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
-            var response = Client.FetchVault(rest);
+            var response = await Client.FetchVault(rest, DefaultCt);
 
             Assert.StartsWith("2.XZ2v", response.Profile.Key);
             Assert.Equal(6, response.Ciphers.Length);
@@ -137,31 +142,31 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void FetchVault_makes_GET_request_to_specific_endpoint()
+        public async Task FetchVault_makes_GET_request_to_specific_endpoint()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("vault"))
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
-            Client.FetchVault(rest);
+            await Client.FetchVault(rest, DefaultCt);
         }
 
         [Fact]
-        public void FetchVault_sets_auth_header()
+        public async Task FetchVault_sets_auth_header()
         {
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("vault"))
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
-            Client.FetchVault(rest);
+            await Client.FetchVault(rest, DefaultCt);
         }
 
         [Theory]
         [InlineData("single-item-login", "e481381f-25ca-4245-845d-a981014d20a6")]
         [InlineData("single-item-ssh-key", "318df280-7880-4e4f-a965-b2e901549751")]
-        public void FetchItem_returns_parsed_response(string fixtureName, string expectedId)
+        public async Task FetchItem_returns_parsed_response(string fixtureName, string expectedId)
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -171,7 +176,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var session = MakeSession(rest);
 
             // Act
-            var result = Client.FetchItem("item-id", session);
+            var result = await Client.FetchItem("item-id", session, DefaultCt);
 
             // Assert
             result.IsT0.ShouldBeTrue();
@@ -179,7 +184,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void FetchItem_returns_not_found_for_missing_item()
+        public async Task FetchItem_returns_not_found_for_missing_item()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -189,7 +194,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var session = MakeSession(rest);
 
             // Act
-            var result = Client.FetchItem("item-id", session);
+            var result = await Client.FetchItem("item-id", session, DefaultCt);
 
             // Assert
             result.IsT1.ShouldBeTrue();
@@ -197,7 +202,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void FetchFolders_returns_parsed_response()
+        public async Task FetchFolders_returns_parsed_response()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -207,7 +212,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var session = MakeSession(rest);
 
             // Act
-            var folders = Client.FetchFolders(session);
+            var folders = await Client.FetchFolders(session, DefaultCt);
 
             // Assert
             folders.Length.ShouldBe(2);
@@ -216,7 +221,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void FetchCollections_returns_parsed_response()
+        public async Task FetchCollections_returns_parsed_response()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -226,7 +231,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var session = MakeSession(rest);
 
             // Act
-            var collections = Client.FetchCollections(session);
+            var collections = await Client.FetchCollections(session, DefaultCt);
 
             // Assert
             collections.Length.ShouldBe(2);
@@ -366,7 +371,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void ParseAccountItem_returns_account()
         {
             var vault = LoadVaultFixture();
-            var account = Client.ParseAccountItem(vault.Ciphers[0], VaultKey, null, Folders, new Dictionary<string, Collection>());
+            var account = Client.ParseAccountItem(vault.Ciphers[0], VaultKey, [], Folders, new Dictionary<string, Collection>());
 
             Assert.Equal("a323db80-891a-4d91-9304-a981014cf3ca", account.Id);
             Assert.Equal("Facebook", account.Name);
@@ -381,7 +386,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         public void ParseAccountItemWithFields_returns_account()
         {
             var vault = LoadVaultFixture("vault-with-fields");
-            var account = Client.ParseAccountItem(vault.Ciphers[1], VaultKey, null, Folders, new Dictionary<string, Collection>());
+            var account = Client.ParseAccountItem(vault.Ciphers[1], VaultKey, [], Folders, new Dictionary<string, Collection>());
 
             Assert.Equal("e481381f-25ca-4245-845d-a981014d20a6", account.Id);
             Assert.Equal("Google", account.Name);
@@ -478,7 +483,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Theory, CombinatorialData]
-        public void GetItem_makes_requests_and_returns_vault_item(
+        public async Task GetItem_makes_requests_and_returns_vault_item(
             [CombinatorialValues("single-item-login", "single-item-ssh-key")] string fixtureName,
             bool haveItemFolder,
             bool haveSessionFolders,
@@ -521,7 +526,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 session.Collections = Collections;
 
             // Act
-            var result = Client.GetItem(itemId, session);
+            var result = await Client.GetItem(itemId, session, DefaultCt);
 
             // Assert
             var item = result.Value as VaultItem;
@@ -546,33 +551,33 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void GetItem_returns_no_item_on_missing_item()
+        public async Task GetItem_returns_no_item_on_missing_item()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }.Get(GetFixture("item-not-found"), HttpStatusCode.NotFound);
 
             // Act
-            var result = Client.GetItem("missing-item-id", MakeSession(rest));
+            var result = await Client.GetItem("missing-item-id", MakeSession(rest), DefaultCt);
 
             // Assert
             Assert.Equal(NoItem.NotFound, result.AsT2);
         }
 
         [Fact]
-        public void GetItem_returns_no_item_on_unsupported_item()
+        public async Task GetItem_returns_no_item_on_unsupported_item()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }.Get(GetFixture("single-item-card"));
 
             // Act
-            var result = Client.GetItem("unsupported-item-id", MakeSession(rest, [], []));
+            var result = await Client.GetItem("unsupported-item-id", MakeSession(rest, [], []), DefaultCt);
 
             // Assert
             Assert.Equal(NoItem.UnsupportedType, result.AsT2);
         }
 
         [Fact]
-        public void GetItem_returns_account_for_login_item()
+        public async Task GetItem_returns_account_for_login_item()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -581,7 +586,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ToRestClient(BaseUrl);
 
             // Act
-            var result = Client.GetItem("item-id", MakeSession(rest, [], []));
+            var result = await Client.GetItem("item-id", MakeSession(rest, [], []), DefaultCt);
 
             Assert.True(result.IsT0);
             var account = result.AsT0;
@@ -590,7 +595,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public void GetItem_returns_ssh_key_for_ssh_key_item()
+        public async Task GetItem_returns_ssh_key_for_ssh_key_item()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -599,7 +604,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ToRestClient(BaseUrl);
 
             // Act
-            var result = Client.GetItem("item-id", MakeSession(rest, [], []));
+            var result = await Client.GetItem("item-id", MakeSession(rest, [], []), DefaultCt);
 
             // Assert
             Assert.True(result.IsT1);
@@ -611,7 +616,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Theory]
         [InlineData("single-item-login-deleted")]
         [InlineData("single-item-ssh-key-deleted")]
-        public void GetItem_returns_no_item_deleted_for_deleted_items(string fixtureName)
+        public async Task GetItem_returns_no_item_deleted_for_deleted_items(string fixtureName)
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -620,7 +625,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ToRestClient(BaseUrl);
 
             // Act
-            var result = Client.GetItem("item-id", MakeSession(rest, [], []));
+            var result = await Client.GetItem("item-id", MakeSession(rest, [], []), DefaultCt);
 
             // Assert
             Assert.True(result.IsT2);
@@ -631,17 +636,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         // Helpers
         //
 
+        private static CancellationToken DefaultCt => TestContext.Current.CancellationToken;
+
         private Session MakeSession(RestClient rest, Dictionary<string, string> folders = null, Dictionary<string, Collection> collections = null) =>
             new(DerivedKek, Profile, rest, rest.Transport) { Folders = folders, Collections = collections };
 
         private Model.Vault LoadVaultFixture(string name = "vault")
         {
             return JsonSerializer.Deserialize<Model.Vault>(GetFixture(name));
-        }
-
-        private Model.Profile LoadProfileFixture(string name = "profile")
-        {
-            return JsonSerializer.Deserialize<Model.Profile>(GetFixture(name));
         }
 
         //
