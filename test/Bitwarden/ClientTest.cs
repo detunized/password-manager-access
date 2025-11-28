@@ -21,7 +21,12 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [InlineData("")]
         public void MakeRestClient_throws_on_null_or_empty_base_url(string baseUrl)
         {
-            Exceptions.AssertThrows<ArgumentException>(() => Client.MakeRestClient(baseUrl, new RestFlow()), "Base URL must not be null or empty");
+            // Arrange/Act
+            var act = () => Client.MakeRestClient(baseUrl, new RestFlow());
+
+            // Assert
+            var ex = Should.Throw<ArgumentException>(act);
+            ex.Message.ShouldContain("Base URL must not be null or empty");
         }
 
         [Theory]
@@ -29,137 +34,165 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [InlineData("https://base.url/")]
         public void MakeRestClient_sets_base_url_without_trailing_slash(string baseUrl)
         {
+            // Arrange/Act
             var rest = Client.MakeRestClient(baseUrl, new RestFlow());
 
-            Assert.Equal("https://base.url", rest.BaseUrl);
+            // Assert
+            rest.BaseUrl.ShouldBe("https://base.url");
         }
 
         [Fact]
         public async Task LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":0,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}""")
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
 
+            // Act
             var (token, kdfInfo) = await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
 
-            Assert.Equal("Bearer wa-wa-wee-wa", token);
-            Assert.Equal(Model.KdfMethod.Pbkdf2Sha256, kdfInfo.Kdf);
-            Assert.Equal(1337, kdfInfo.Iterations);
+            // Assert
+            token.ShouldBe("Bearer wa-wa-wee-wa");
+            kdfInfo.Kdf.ShouldBe(Model.KdfMethod.Pbkdf2Sha256);
+            kdfInfo.Iterations.ShouldBe(1337);
         }
 
         [Fact]
         public async Task LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":1,"KdfIterations":3,"KdfMemory":64,"KdfParallelism":4}""")
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
 
+            // Act
             var (token, kdfInfo) = await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
 
-            Assert.Equal("Bearer wa-wa-wee-wa", token);
-            Assert.Equal(Model.KdfMethod.Argon2id, kdfInfo.Kdf);
-            Assert.Equal(3, kdfInfo.Iterations);
-            Assert.Equal(64, kdfInfo.Memory);
-            Assert.Equal(4, kdfInfo.Parallelism);
+            // Assert
+            token.ShouldBe("Bearer wa-wa-wee-wa");
+            kdfInfo.Kdf.ShouldBe(Model.KdfMethod.Argon2id);
+            kdfInfo.Iterations.ShouldBe(3);
+            kdfInfo.Memory.ShouldBe(64);
+            kdfInfo.Parallelism.ShouldBe(4);
         }
 
         [Fact]
         public async Task LoginCliApi_throws_on_unsupported_kdf()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Post(
                     """{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":13,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}"""
                 )
                 .ToRestClient(BaseUrl);
 
-            await Exceptions.AssertThrowsUnsupportedFeatureAsync(
-                async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt),
-                "KDF method"
-            );
+            // Act
+            var act = async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
+
+            // Assert
+            var ex = await act.ShouldThrowAsync<UnsupportedFeatureException>();
+            ex.Message.ShouldContain("KDF method");
         }
 
         [Fact]
         public async Task LoginCliApi_throws_on_incorrect_client_credentials()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"error":"invalid_client"}""", status: HttpStatusCode.BadRequest)
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
 
-            await Exceptions.AssertThrowsBadCredentialsAsync(
-                async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt),
-                "Client ID or secret is incorrect"
-            );
+            // Act
+            var act = async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
+
+            // Assert
+            var ex = await act.ShouldThrowAsync<BadCredentialsException>();
+            ex.Message.ShouldContain("Client ID or secret is incorrect");
         }
 
         [Fact]
         public async Task FetchProfile_returns_parsed_response()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }.Get(GetFixture("profile"));
 
+            // Act
             var profile = await Client.FetchProfile(rest, DefaultCt);
 
-            Assert.Equal("lastpass.ruby@gmail.com", profile.Email);
+            // Assert
+            profile.Email.ShouldBe("lastpass.ruby@gmail.com");
         }
 
         [Fact]
         public async Task FetchProfile_makes_GET_request_to_specific_endpoint()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("profile"))
                 .ExpectUrl("/accounts/profile");
 
+            // Act/Assert
             await Client.FetchProfile(rest, DefaultCt);
         }
 
         [Fact]
         public async Task FetchProfile_sets_auth_header()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("profile"))
                 .ExpectUrl(BaseUrl + "/api/accounts/profile")
                 .ToRestClient(BaseUrl);
 
+            // Act/Assert
             await Client.FetchProfile(rest, DefaultCt);
         }
 
         [Fact]
         public async Task FetchVault_returns_parsed_response()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("vault"))
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
+            // Act
             var response = await Client.FetchVault(rest, DefaultCt);
 
-            Assert.StartsWith("2.XZ2v", response.Profile.Key);
-            Assert.Equal(6, response.Ciphers.Length);
-            Assert.Equal(2, response.Folders.Length);
+            // Assert
+            response.Profile.Key.ShouldStartWith("2.XZ2v");
+            response.Ciphers.Length.ShouldBe(6);
+            response.Folders.Length.ShouldBe(2);
         }
 
         [Fact]
         public async Task FetchVault_makes_GET_request_to_specific_endpoint()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("vault"))
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
+            // Act/Assert
             await Client.FetchVault(rest, DefaultCt);
         }
 
         [Fact]
         public async Task FetchVault_sets_auth_header()
         {
+            // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Get(GetFixture("vault"))
                 .ExpectUrl(BaseUrl + "/api/sync")
                 .ToRestClient(BaseUrl);
 
+            // Act/Assert
             await Client.FetchVault(rest, DefaultCt);
         }
 
@@ -242,181 +275,202 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptVault_returns_accounts()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture(), DerivedKek);
 
-            Assert.Equal(3, vault.Accounts.Length);
-            Assert.Equal("Facebook", vault.Accounts[0].Name);
-            Assert.Equal("Google", vault.Accounts[1].Name);
-            Assert.Equal("only name", vault.Accounts[2].Name);
-
-            Assert.Empty(vault.ParseErrors);
+            // Assert
+            vault.Accounts.Length.ShouldBe(3);
+            vault.Accounts[0].Name.ShouldBe("Facebook");
+            vault.Accounts[1].Name.ShouldBe("Google");
+            vault.Accounts[2].Name.ShouldBe("only name");
+            vault.ParseErrors.ShouldBeEmpty();
         }
 
         [Fact]
         public void DecryptVault_returns_ssh_keys()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture("vault-with-ssh-keys"), DerivedKek);
 
-            Assert.Equal(5, vault.SshKeys.Length);
-            Assert.Equal("318df280-7880-4e4f-a965-b2e901549751", vault.SshKeys[0].Id);
-            Assert.Equal("c30a73d5-dae6-4c8a-ba77-b2e901547392", vault.SshKeys[1].Id);
-            Assert.Equal("f11504c5-7533-433d-95b1-b2e90154b77f", vault.SshKeys[2].Id);
-
-            Assert.Empty(vault.ParseErrors);
+            // Assert
+            vault.SshKeys.Length.ShouldBe(5);
+            vault.SshKeys[0].Id.ShouldBe("318df280-7880-4e4f-a965-b2e901549751");
+            vault.SshKeys[1].Id.ShouldBe("c30a73d5-dae6-4c8a-ba77-b2e901547392");
+            vault.SshKeys[2].Id.ShouldBe("f11504c5-7533-433d-95b1-b2e90154b77f");
+            vault.ParseErrors.ShouldBeEmpty();
         }
 
         [Fact]
         public void DecryptVault_ignores_deleted_items()
         {
-            // This vault is a copy of vault-with-ssh-keys with all but one login and ssh key marked as deleted
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture("vault-with-deleted-items"), DerivedKek);
 
-            Assert.Single(vault.Accounts);
-            Assert.Equal("16f777ff-8824-45cf-b3db-a9d600007388", vault.Accounts[0].Id);
-
-            Assert.Single(vault.SshKeys);
-            Assert.Equal("d1812aab-aae7-4f7e-aab4-b2ea00b9bba7", vault.SshKeys[0].Id);
-
-            Assert.Empty(vault.ParseErrors);
+            // Assert
+            vault.Accounts.ShouldHaveSingleItem();
+            vault.Accounts[0].Id.ShouldBe("16f777ff-8824-45cf-b3db-a9d600007388");
+            vault.SshKeys.ShouldHaveSingleItem();
+            vault.SshKeys[0].Id.ShouldBe("d1812aab-aae7-4f7e-aab4-b2ea00b9bba7");
+            vault.ParseErrors.ShouldBeEmpty();
         }
 
         [Fact]
         public void DecryptVault_returns_collections()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
 
-            Assert.Equal(2, vault.Collections.Length);
+            // Assert
+            vault.Collections.Length.ShouldBe(2);
 
-            Assert.Equal("b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", vault.Collections[0].Id);
-            Assert.Equal("Default Collection", vault.Collections[0].Name);
-            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", vault.Collections[0].OrganizationId);
-            Assert.False(vault.Collections[0].HidePasswords);
+            vault.Collections[0].Id.ShouldBe("b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88");
+            vault.Collections[0].Name.ShouldBe("Default Collection");
+            vault.Collections[0].OrganizationId.ShouldBe("195d27a0-82b0-4259-a8e2-ae6d00ce6c85");
+            vault.Collections[0].HidePasswords.ShouldBeFalse();
 
-            Assert.Equal("0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5", vault.Collections[1].Id);
-            Assert.Equal("Hidden pwd", vault.Collections[1].Name);
-            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", vault.Collections[1].OrganizationId);
-            Assert.True(vault.Collections[1].HidePasswords);
+            vault.Collections[1].Id.ShouldBe("0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5");
+            vault.Collections[1].Name.ShouldBe("Hidden pwd");
+            vault.Collections[1].OrganizationId.ShouldBe("195d27a0-82b0-4259-a8e2-ae6d00ce6c85");
+            vault.Collections[1].HidePasswords.ShouldBeTrue();
         }
 
         [Fact]
         public void DecryptVault_returns_organizations()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
 
-            Assert.Equal(2, vault.Organizations.Length);
+            // Assert
+            vault.Organizations.Length.ShouldBe(2);
 
-            Assert.Equal("487e674f-7b11-4b33-9d1a-adb2007f6a6a", vault.Organizations[0].Id);
-            Assert.Equal("Gobias Industries Inc", vault.Organizations[0].Name);
+            vault.Organizations[0].Id.ShouldBe("487e674f-7b11-4b33-9d1a-adb2007f6a6a");
+            vault.Organizations[0].Name.ShouldBe("Gobias Industries Inc");
 
-            Assert.Equal("195d27a0-82b0-4259-a8e2-ae6d00ce6c85", vault.Organizations[1].Id);
-            Assert.Equal("Free Sharing Corp", vault.Organizations[1].Name);
+            vault.Organizations[1].Id.ShouldBe("195d27a0-82b0-4259-a8e2-ae6d00ce6c85");
+            vault.Organizations[1].Name.ShouldBe("Free Sharing Corp");
         }
 
         [Fact]
         public void DecryptVault_assigns_folders()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture(), DerivedKek);
 
-            Assert.Equal("Facebook", vault.Accounts[0].Name);
-            Assert.Equal("folder2", vault.Accounts[0].Folder);
+            // Assert
+            vault.Accounts[0].Name.ShouldBe("Facebook");
+            vault.Accounts[0].Folder.ShouldBe("folder2");
 
-            Assert.Equal("Google", vault.Accounts[1].Name);
-            Assert.Equal("", vault.Accounts[1].Folder);
+            vault.Accounts[1].Name.ShouldBe("Google");
+            vault.Accounts[1].Folder.ShouldBe("");
 
-            Assert.Equal("only name", vault.Accounts[2].Name);
-            Assert.Equal("folder1", vault.Accounts[2].Folder);
+            vault.Accounts[2].Name.ShouldBe("only name");
+            vault.Accounts[2].Folder.ShouldBe("folder1");
         }
 
         [Fact]
         public void DecryptVault_resolves_HidePassword_with_no_collections()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture(), DerivedKek);
 
-            Assert.Equal(3, vault.Accounts.Length);
-            Assert.False(vault.Accounts[0].HidePassword);
-            Assert.False(vault.Accounts[1].HidePassword);
-            Assert.False(vault.Accounts[2].HidePassword);
+            // Assert
+            vault.Accounts.Length.ShouldBe(3);
+            vault.Accounts[0].HidePassword.ShouldBeFalse();
+            vault.Accounts[1].HidePassword.ShouldBeFalse();
+            vault.Accounts[2].HidePassword.ShouldBeFalse();
         }
 
         [Fact]
         public void DecryptVault_assigns_collections_and_resolves_HidePassword()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture("vault-with-collections"), KekForVaultWithCollections);
 
-            Assert.Equal(3, vault.Accounts.Length);
+            // Assert
+            vault.Accounts.Length.ShouldBe(3);
 
-            Assert.Equal("both", vault.Accounts[0].Name);
-            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" }, vault.Accounts[0].CollectionIds);
-            Assert.False(vault.Accounts[0].HidePassword);
+            vault.Accounts[0].Name.ShouldBe("both");
+            vault.Accounts[0].CollectionIds.ShouldBe(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88", "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" });
+            vault.Accounts[0].HidePassword.ShouldBeFalse();
 
-            Assert.Equal("hiddenonly", vault.Accounts[1].Name);
-            Assert.Equal(new[] { "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" }, vault.Accounts[1].CollectionIds);
-            Assert.True(vault.Accounts[1].HidePassword);
+            vault.Accounts[1].Name.ShouldBe("hiddenonly");
+            vault.Accounts[1].CollectionIds.ShouldBe(new[] { "0db9fc3b-3eb2-4af0-bf0d-ae6d00ce87b5" });
+            vault.Accounts[1].HidePassword.ShouldBeTrue();
 
-            Assert.Equal("defonly", vault.Accounts[2].Name);
-            Assert.Equal(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88" }, vault.Accounts[2].CollectionIds);
-            Assert.False(vault.Accounts[2].HidePassword);
+            vault.Accounts[2].Name.ShouldBe("defonly");
+            vault.Accounts[2].CollectionIds.ShouldBe(new[] { "b06e01d8-ae76-4c15-a6ff-ae6d00ce6c88" });
+            vault.Accounts[2].HidePassword.ShouldBeFalse();
         }
 
         [Fact]
         public void DecryptVault_returns_errors()
         {
+            // Arrange/Act
             var vault = Client.DecryptVault(LoadVaultFixture("vault-with-errors"), DerivedKek);
 
-            Assert.NotEmpty(vault.Accounts);
-            Assert.NotEmpty(vault.ParseErrors);
+            // Assert
+            vault.Accounts.ShouldNotBeEmpty();
+            vault.ParseErrors.ShouldNotBeEmpty();
         }
 
         [Fact]
         public void ParseAccountItem_returns_account()
         {
+            // Arrange
             var vault = LoadVaultFixture();
+
+            // Act
             var account = Client.ParseAccountItem(vault.Ciphers[0], VaultKey, [], Folders, new Dictionary<string, Collection>());
 
-            Assert.Equal("a323db80-891a-4d91-9304-a981014cf3ca", account.Id);
-            Assert.Equal("Facebook", account.Name);
-            Assert.Equal("mark", account.Username);
-            Assert.Equal("zuckerberg", account.Password);
-            Assert.Equal("https://facebook.com", account.Url);
-            Assert.Equal("Hey, check this out!", account.Note);
-            Assert.Equal("folder2", account.Folder);
+            // Assert
+            account.Id.ShouldBe("a323db80-891a-4d91-9304-a981014cf3ca");
+            account.Name.ShouldBe("Facebook");
+            account.Username.ShouldBe("mark");
+            account.Password.ShouldBe("zuckerberg");
+            account.Url.ShouldBe("https://facebook.com");
+            account.Note.ShouldBe("Hey, check this out!");
+            account.Folder.ShouldBe("folder2");
         }
 
         [Fact]
         public void ParseAccountItemWithFields_returns_account()
         {
+            // Arrange
             var vault = LoadVaultFixture("vault-with-fields");
+
+            // Act
             var account = Client.ParseAccountItem(vault.Ciphers[1], VaultKey, [], Folders, new Dictionary<string, Collection>());
 
-            Assert.Equal("e481381f-25ca-4245-845d-a981014d20a6", account.Id);
-            Assert.Equal("Google", account.Name);
-            Assert.Equal("larry", account.Username);
-            Assert.Equal("page", account.Password);
-            Assert.Equal("https://google.com", account.Url);
-            Assert.Equal("Yo, look at this!", account.Note);
-            Assert.Equal("", account.Folder);
+            // Assert
+            account.Id.ShouldBe("e481381f-25ca-4245-845d-a981014d20a6");
+            account.Name.ShouldBe("Google");
+            account.Username.ShouldBe("larry");
+            account.Password.ShouldBe("page");
+            account.Url.ShouldBe("https://google.com");
+            account.Note.ShouldBe("Yo, look at this!");
+            account.Folder.ShouldBe("");
 
-            Assert.Equal(10, account.CustomFields.Length);
-            Assert.Equal("text1", account.CustomFields[0].Name);
-            Assert.Equal("value1", account.CustomFields[0].Value);
-            Assert.Equal("hidden1", account.CustomFields[1].Name);
-            Assert.Equal("value2", account.CustomFields[1].Value);
-            Assert.Equal("boolean1", account.CustomFields[2].Name);
-            Assert.Equal("true", account.CustomFields[2].Value);
-            Assert.Equal("linked1", account.CustomFields[3].Name);
-            Assert.Equal("page", account.CustomFields[3].Value);
-            Assert.Equal("linked2", account.CustomFields[4].Name);
-            Assert.Equal("larry", account.CustomFields[4].Value);
-            Assert.Equal("", account.CustomFields[5].Name);
-            Assert.Equal("", account.CustomFields[5].Value);
-            Assert.Equal("", account.CustomFields[6].Name);
-            Assert.Equal("", account.CustomFields[6].Value);
-            Assert.Equal("", account.CustomFields[7].Name);
-            Assert.Equal("", account.CustomFields[7].Value);
-            Assert.Equal("", account.CustomFields[8].Name);
-            Assert.Equal("false", account.CustomFields[8].Value);
-            Assert.Equal("", account.CustomFields[9].Name);
-            Assert.Equal("page", account.CustomFields[9].Value);
+            account.CustomFields.Length.ShouldBe(10);
+            account.CustomFields[0].Name.ShouldBe("text1");
+            account.CustomFields[0].Value.ShouldBe("value1");
+            account.CustomFields[1].Name.ShouldBe("hidden1");
+            account.CustomFields[1].Value.ShouldBe("value2");
+            account.CustomFields[2].Name.ShouldBe("boolean1");
+            account.CustomFields[2].Value.ShouldBe("true");
+            account.CustomFields[3].Name.ShouldBe("linked1");
+            account.CustomFields[3].Value.ShouldBe("page");
+            account.CustomFields[4].Name.ShouldBe("linked2");
+            account.CustomFields[4].Value.ShouldBe("larry");
+            account.CustomFields[5].Name.ShouldBe("");
+            account.CustomFields[5].Value.ShouldBe("");
+            account.CustomFields[6].Name.ShouldBe("");
+            account.CustomFields[6].Value.ShouldBe("");
+            account.CustomFields[7].Name.ShouldBe("");
+            account.CustomFields[7].Value.ShouldBe("");
+            account.CustomFields[8].Name.ShouldBe("");
+            account.CustomFields[8].Value.ShouldBe("false");
+            account.CustomFields[9].Name.ShouldBe("");
+            account.CustomFields[9].Value.ShouldBe("page");
         }
 
         [Fact]
@@ -430,8 +484,12 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 Value = null,
             };
 
-            // Act/Assert
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ParseField(field, VaultKey, LoginItem), "Custom field type 4");
+            // Act
+            var act = () => Client.ParseField(field, VaultKey, LoginItem);
+
+            // Assert
+            var ex = Should.Throw<UnsupportedFeatureException>(act);
+            ex.Message.ShouldContain("Custom field type 4");
         }
 
         [Theory]
@@ -450,36 +508,52 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void ResolveLinkedField_throws_on_unsupported_linked_id()
         {
-            // Arrange/Act/Assert
-            Exceptions.AssertThrowsUnsupportedFeature(() => Client.ResolveLinkedField(5, VaultKey, LoginItem), "Linked field ID 5");
+            // Arrange/Act
+            var act = () => Client.ResolveLinkedField(5, VaultKey, LoginItem);
+
+            // Assert
+            var ex = Should.Throw<UnsupportedFeatureException>(act);
+            ex.Message.ShouldContain("Linked field ID 5");
         }
 
         [Fact]
         public void DecryptToBytes_returns_decrypted_input()
         {
+            // Arrange/Act
             var plaintext = Client.DecryptToBytes(EncryptedString, VaultKey);
-            Assert.Equal(Plaintext.ToBytes(), plaintext);
+
+            // Assert
+            plaintext.ShouldBe(Plaintext.ToBytes());
         }
 
         [Fact]
         public void DecryptToString_returns_decrypted_input()
         {
+            // Arrange/Act
             var plaintext = Client.DecryptToString(EncryptedString, VaultKey);
-            Assert.Equal(Plaintext, plaintext);
+
+            // Assert
+            plaintext.ShouldBe(Plaintext);
         }
 
         [Fact]
         public void DecryptToStringOrBlank_returns_decrypted_input()
         {
+            // Arrange/Act
             var plaintext = Client.DecryptToStringOrBlank(EncryptedString, VaultKey);
-            Assert.Equal(Plaintext, plaintext);
+
+            // Assert
+            plaintext.ShouldBe(Plaintext);
         }
 
         [Fact]
         public void DecryptToStringOrBlank_returns_blank_for_null_input()
         {
+            // Act
             var blank = Client.DecryptToStringOrBlank(null, VaultKey);
-            Assert.Equal("", blank);
+
+            // Assert
+            blank.ShouldBe("");
         }
 
         [Theory, CombinatorialData]
@@ -530,24 +604,24 @@ namespace PasswordManagerAccess.Test.Bitwarden
 
             // Assert
             var item = result.Value as VaultItem;
-            Assert.NotNull(item);
-            Assert.Equal(itemId, item.Id);
+            item.ShouldNotBeNull();
+            item.Id.ShouldBe(itemId);
 
             if (haveItemFolder)
-                Assert.NotEmpty(item.Folder);
+                item.Folder.ShouldNotBeEmpty();
             else
-                Assert.Empty(item.Folder);
+                item.Folder.ShouldBeEmpty();
 
             if (haveItemCollections)
-                Assert.NotEmpty(item.CollectionIds);
+                item.CollectionIds.ShouldNotBeEmpty();
             else
-                Assert.Empty(item.CollectionIds);
+                item.CollectionIds.ShouldBeEmpty();
 
             if (!haveItemFolder && !haveSessionFolders)
-                Assert.Null(session.Folders);
+                session.Folders.ShouldBeNull();
 
             if (!haveItemCollections && !haveSessionCollections)
-                Assert.Null(session.Collections);
+                session.Collections.ShouldBeNull();
         }
 
         [Fact]
@@ -560,7 +634,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var result = await Client.GetItem("missing-item-id", MakeSession(rest), DefaultCt);
 
             // Assert
-            Assert.Equal(NoItem.NotFound, result.AsT2);
+            result.AsT2.ShouldBe(NoItem.NotFound);
         }
 
         [Fact]
@@ -573,7 +647,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var result = await Client.GetItem("unsupported-item-id", MakeSession(rest, [], []), DefaultCt);
 
             // Assert
-            Assert.Equal(NoItem.UnsupportedType, result.AsT2);
+            result.AsT2.ShouldBe(NoItem.UnsupportedType);
         }
 
         [Fact]
@@ -588,10 +662,11 @@ namespace PasswordManagerAccess.Test.Bitwarden
             // Act
             var result = await Client.GetItem("item-id", MakeSession(rest, [], []), DefaultCt);
 
-            Assert.True(result.IsT0);
+            // Assert
+            result.IsT0.ShouldBeTrue();
             var account = result.AsT0;
-            Assert.Equal("e481381f-25ca-4245-845d-a981014d20a6", account.Id);
-            Assert.Equal("Google", account.Name);
+            account.Id.ShouldBe("e481381f-25ca-4245-845d-a981014d20a6");
+            account.Name.ShouldBe("Google");
         }
 
         [Fact]
@@ -607,10 +682,10 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var result = await Client.GetItem("item-id", MakeSession(rest, [], []), DefaultCt);
 
             // Assert
-            Assert.True(result.IsT1);
+            result.IsT1.ShouldBeTrue();
             var sshKey = result.AsT1;
-            Assert.Equal("318df280-7880-4e4f-a965-b2e901549751", sshKey.Id);
-            Assert.Equal("ssh2", sshKey.Name);
+            sshKey.Id.ShouldBe("318df280-7880-4e4f-a965-b2e901549751");
+            sshKey.Name.ShouldBe("ssh2");
         }
 
         [Theory]
@@ -628,8 +703,8 @@ namespace PasswordManagerAccess.Test.Bitwarden
             var result = await Client.GetItem("item-id", MakeSession(rest, [], []), DefaultCt);
 
             // Assert
-            Assert.True(result.IsT2);
-            Assert.Equal(NoItem.Deleted, result.AsT2);
+            result.IsT2.ShouldBeTrue();
+            result.AsT2.ShouldBe(NoItem.Deleted);
         }
 
         //
