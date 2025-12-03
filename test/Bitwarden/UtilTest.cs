@@ -3,6 +3,7 @@
 
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
+using Shouldly;
 using Xunit;
 
 namespace PasswordManagerAccess.Test.Bitwarden
@@ -12,51 +13,75 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DeriveKey_returns_derived_key_pbkdf2()
         {
+            // Arrange/Act
             var key = Util.DeriveKey(Username, Password, Pbkdf2KdfInfo);
-            Assert.Equal(DerivedKeyPbkdf2.Decode64(), key);
+
+            // Assert
+            key.ShouldBe(DerivedKeyPbkdf2.Decode64());
         }
 
         [Fact]
         public void DeriveKey_returns_derived_key_argon2id()
         {
+            // Arrange/Act
             var key = Util.DeriveKey(Username, Password, Argon2idKdfInfo);
-            Assert.Equal(DerivedKeyArgon2id.Decode64(), key);
+
+            // Assert
+            key.ShouldBe(DerivedKeyArgon2id.Decode64());
         }
 
         [Fact]
         public void DeriveKey_trims_whitespace_and_lowercases_username()
         {
+            // Arrange/Act
             var key = Util.DeriveKey(" UsErNaMe ", Password, Pbkdf2KdfInfo);
-            Assert.Equal(DerivedKeyPbkdf2.Decode64(), key);
+
+            // Assert
+            key.ShouldBe(DerivedKeyPbkdf2.Decode64());
         }
 
         [Fact]
         public void DeriveKey_throws_on_unsupported_kdf()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(
-                () => Util.DeriveKey(Username, Password, new Model.KdfInfo { Kdf = (Model.KdfMethod)13, Iterations = -13 }),
-                "KDF method"
-            );
+            // Arrange/Act
+            var act = () => Util.DeriveKey(Username, Password, new Model.KdfInfo { Kdf = (Model.KdfMethod)13, Iterations = -13 });
+
+            // Assert
+            var ex = Should.Throw<UnsupportedFeatureException>(act);
+            ex.Message.ShouldContain("KDF method");
         }
 
         [Fact]
         public void HashPassword_returns_hashed_password()
         {
+            // Arrange/Act
             var hash = Util.HashPassword(Password, DerivedKeyPbkdf2.Decode64());
-            Assert.Equal(PasswordHash.Decode64(), hash);
+
+            // Assert
+            hash.ShouldBe(PasswordHash.Decode64());
         }
 
         [Fact]
         public void HkdfExpand_returns_expected_result()
         {
-            Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(), Util.HkdfExpand("prk".ToBytes(), "info".ToBytes()));
+            // Arrange/Act
+            var result = Util.HkdfExpand("prk".ToBytes(), "info".ToBytes());
+
+            // Assert
+            result.ShouldBe("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64());
         }
 
         [Fact]
         public void ExpandKey_expands_key_to_64_bytes()
         {
+            // Arrange
             var expected = "GKPlyJlfe4rO+RNeBj6P4Jm1Ds4QFB23rN2WvwVcb5Iw0U+9uVf7jwQ04Yq75uCrOSsL7HonzBzNdYi1hO/mlQ==";
-            Assert.Equal(expected.Decode64(), Util.ExpandKey("key".ToBytes()));
+
+            // Act
+            var result = Util.ExpandKey("key".ToBytes());
+
+            // Assert
+            result.ShouldBe(expected.Decode64());
         }
 
         //

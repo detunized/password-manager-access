@@ -21,11 +21,13 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [InlineData("")]
         public void MakeRestClient_throws_on_null_or_empty_base_url(string baseUrl)
         {
-            // Arrange/Act
+            // Arrange
             var act = () => Client.MakeRestClient(baseUrl, new RestFlow());
 
-            // Assert
+            // Act
             var ex = Should.Throw<ArgumentException>(act);
+
+            // Assert
             ex.Message.ShouldContain("Base URL must not be null or empty");
         }
 
@@ -88,12 +90,12 @@ namespace PasswordManagerAccess.Test.Bitwarden
                     """{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":13,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}"""
                 )
                 .ToRestClient(BaseUrl);
-
-            // Act
             var act = async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
 
-            // Assert
+            // Act
             var ex = await act.ShouldThrowAsync<UnsupportedFeatureException>();
+
+            // Assert
             ex.Message.ShouldContain("KDF method");
         }
 
@@ -105,12 +107,12 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .Post("""{"error":"invalid_client"}""", status: HttpStatusCode.BadRequest)
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
-
-            // Act
             var act = async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
 
-            // Assert
+            // Act
             var ex = await act.ShouldThrowAsync<BadCredentialsException>();
+
+            // Assert
             ex.Message.ShouldContain("Client ID or secret is incorrect");
         }
 
@@ -483,12 +485,12 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 Name = null,
                 Value = null,
             };
-
-            // Act
             var act = () => Client.ParseField(field, VaultKey, LoginItem);
 
-            // Assert
+            // Act
             var ex = Should.Throw<UnsupportedFeatureException>(act);
+
+            // Assert
             ex.Message.ShouldContain("Custom field type 4");
         }
 
@@ -508,11 +510,13 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void ResolveLinkedField_throws_on_unsupported_linked_id()
         {
-            // Arrange/Act
+            // Arrange
             var act = () => Client.ResolveLinkedField(5, VaultKey, LoginItem);
 
-            // Assert
+            // Act
             var ex = Should.Throw<UnsupportedFeatureException>(act);
+
+            // Assert
             ex.Message.ShouldContain("Linked field ID 5");
         }
 
@@ -549,7 +553,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DecryptToStringOrBlank_returns_blank_for_null_input()
         {
-            // Act
+            // Arrange/Act
             var blank = Client.DecryptToStringOrBlank(null, VaultKey);
 
             // Assert
