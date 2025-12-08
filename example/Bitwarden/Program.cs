@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,9 +19,17 @@ namespace PasswordManagerAccess.Example.Bitwarden
 {
     public class TextUi : IAsyncUi
     {
-        public void OpenInBrowser(string url) => OpenUrl(url);
+        public Task<Canceled?> OpenInBrowser(string url, CancellationToken cancellationToken)
+        {
+            OpenUrl(url);
+            return Task.FromResult<Canceled?>(null);
+        }
 
-        public void CloseBrowser() => Console.WriteLine("You can now close the browser.");
+        public Task CloseBrowser(bool success, CancellationToken cancellationToken)
+        {
+            Console.WriteLine("You can now close the browser.");
+            return Task.CompletedTask;
+        }
 
         private static void OpenUrl(string url)
         {
@@ -82,8 +92,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
             Console.WriteLine("Using the CLI/API mode with manual sequence");
 
             // To differentiate an SSO from a regular login, provide the organization ID.
-            // There doesn't seem to be a way to check if a specific username is a SSO user, like with other services.
-            var isSso = config.TryGetValue("organization", out var organization);
+            // There doesn't seem to be a way to check if a specific username is an SSO user, like with other services.
+            var isSso = config.TryGetValue("organization", out var organization) && !string.IsNullOrEmpty(organization);
 
             var session = isSso
                 ? await Client.LogInSso(
@@ -91,7 +101,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                     {
                         Password = config["password"],
                         DeviceId = deviceId,
-                        Organization = organization,
+                        Organization = organization!,
                     },
                     baseUrl,
                     new TextUi(),

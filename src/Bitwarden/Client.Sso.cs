@@ -96,35 +96,39 @@ public static partial class Client
             ssoLoginUrl += $"&identifier={clientInfo.Organization.EncodeUriData()}";
 
         // This should return quickly and not wait for the user to complete the login
-        ui.OpenInBrowser(ssoLoginUrl);
+        var canceled = await ui.OpenInBrowser(ssoLoginUrl, cancellationToken).ConfigureAwait(false);
+        if (canceled != null)
+            throw new CanceledSsoLoginException($"SSO login canceled: {canceled.Reason}");
 
-        string redirectedTo;
+        var success = false;
         try
         {
-            redirectedTo = await WaitForSsoRedirect(server, cancellationToken).ConfigureAwait(false);
+            var redirectedTo = await WaitForSsoRedirect(server, cancellationToken).ConfigureAwait(false);
+
+            var serverState = Url.ExtractAndDecodeQueryParameter(redirectedTo, "state");
+            if (serverState.IsNullOrEmpty())
+                throw new InternalErrorException("Missing SSO state returned");
+
+            // State is returned in a form "<state>_identifier=<orgId>"
+            var serverStateParts = serverState.Split("_identifier=");
+            if (serverStateParts.Length != 2)
+                throw new InternalErrorException($"Invalid SSO state returned: '{serverState}'");
+
+            if (serverStateParts[0] != state)
+                throw new InternalErrorException("Invalid SSO state returned");
+
+            var code = Url.ExtractAndDecodeQueryParameter(redirectedTo, "code");
+            if (code.IsNullOrEmpty())
+                throw new InternalErrorException("Missing SSO code returned");
+
+            success = true;
+
+            return new SsoLoginResult(code, codeVerifier, redirectUrl);
         }
         finally
         {
-            ui.CloseBrowser();
+            await ui.CloseBrowser(success, cancellationToken).ConfigureAwait(false);
         }
-
-        var serverState = Url.ExtractAndDecodeQueryParameter(redirectedTo, "state");
-        if (serverState.IsNullOrEmpty())
-            throw new InternalErrorException("Missing SSO state returned");
-
-        // State is returned in a form "<state>_identifier=<orgId>"
-        var serverStateParts = serverState.Split("_identifier=");
-        if (serverStateParts.Length != 2)
-            throw new InternalErrorException($"Invalid SSO state returned: '{serverState}'");
-
-        if (serverStateParts[0] != state)
-            throw new InternalErrorException("Invalid SSO state returned");
-
-        var code = Url.ExtractAndDecodeQueryParameter(redirectedTo, "code");
-        if (code.IsNullOrEmpty())
-            throw new InternalErrorException("Missing SSO code returned");
-
-        return new SsoLoginResult(code, codeVerifier, redirectUrl);
     }
 
     internal record LocalServer(HttpListener Listener, string Url) : IDisposable
