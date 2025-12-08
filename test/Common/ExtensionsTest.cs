@@ -113,6 +113,12 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal("blah%40gmail.com", "blah@gmail.com".EncodeUriData());
         }
 
+        [Fact]
+        public void String_DecodeUriData_unescapes_special_characters()
+        {
+            Assert.Equal("blah@gmail.com", "blah%40gmail.com".DecodeUriData());
+        }
+
         [Theory]
         [InlineData("", true)]
         [InlineData("deadbeef", true)]
