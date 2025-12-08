@@ -95,15 +95,27 @@ public static partial class Client
         if (!clientInfo.Organization.IsNullOrEmpty())
             ssoLoginUrl += $"&identifier={clientInfo.Organization.EncodeUriData()}";
 
-        // This should return quickly and not wait for the user to complete the login
-        var canceled = await ui.OpenInBrowser(ssoLoginUrl, cancellationToken).ConfigureAwait(false);
-        if (canceled != null)
-            throw new CanceledSsoLoginException($"SSO login canceled: {canceled.Reason}");
+        // Start both tasks, but don't await them yet
+        var redirectTask = WaitForSsoRedirect(server, cancellationToken);
 
+        // We need a linked cancellation token so that we can cancel browser operation
+        // when we get a redirect
+        var browserCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var browserTask = ui.PerformSsoLogin(ssoLoginUrl, browserCts.Token);
+
+        // This should return quickly and not wait for the user to complete the login
         var success = false;
         try
         {
-            var redirectedTo = await WaitForSsoRedirect(server, cancellationToken).ConfigureAwait(false);
+            await Task.WhenAny(redirectTask, browserTask).ConfigureAwait(false);
+
+            // Check if user canceled
+            if (browserTask.IsCompleted && browserTask.Result is { } canceled)
+                throw new CanceledSsoLoginException($"SSO login canceled: {canceled.Reason}");
+
+            // Otherwise we should get a hit on our local server with a redirect
+            // TODO: Should we add a timeout?
+            var redirectedTo = await redirectTask.ConfigureAwait(false);
 
             var serverState = Url.ExtractAndDecodeQueryParameter(redirectedTo, "state");
             if (serverState.IsNullOrEmpty())
@@ -127,6 +139,10 @@ public static partial class Client
         }
         finally
         {
+            // Cancel browser operation if still running
+            if (!browserTask.IsCompleted)
+                await browserCts.CancelAsync();
+
             await ui.CloseBrowser(success, cancellationToken).ConfigureAwait(false);
         }
     }

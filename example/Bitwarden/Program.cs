@@ -19,10 +19,19 @@ namespace PasswordManagerAccess.Example.Bitwarden
 {
     public class TextUi : IAsyncUi
     {
-        public Task<Canceled?> OpenInBrowser(string url, CancellationToken cancellationToken)
+        public async Task<Canceled?> PerformSsoLogin(string url, CancellationToken cancellationToken)
         {
             OpenUrl(url);
-            return Task.FromResult<Canceled?>(null);
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                // In a GUI app check if the user wants to cancel the operation (closed the browser window, clicked Cancel button, etc).
+                // In that case return new Canceled("User canceled the operation");
+
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+            }
+
+            return null;
         }
 
         public Task CloseBrowser(bool success, CancellationToken cancellationToken)
