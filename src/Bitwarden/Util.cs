@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Linq;
 using Konscious.Security.Cryptography;
 using PasswordManagerAccess.Common;
@@ -58,5 +59,13 @@ internal static class Util
     public static byte[] DecryptRsaSha256(byte[] ciphertext, byte[] privateKey)
     {
         return Crypto.DecryptRsaSha256(ciphertext, Pem.ParsePrivateKeyPkcs8(privateKey));
+    }
+
+    public static string GenerateRandomString(int length)
+    {
+        // This is not super-efficient but it's used only twice during the SSO login sequence
+        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
     }
 }

@@ -15,7 +15,7 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Bitwarden;
 
-public static class Client
+public static partial class Client
 {
     // Default base URLs for different regions.
     // The US region is the default one when no base URL is specified.
@@ -119,9 +119,33 @@ public static class Client
         }
     }
 
-    internal static async Task<Session> LogInCliApi(
+    internal static Task<Session> LogInCliApi(
         ClientInfoCliApi clientInfo,
         string baseUrl,
+        IRestTransport transport,
+        CancellationToken cancellationToken
+    ) =>
+        LogInGeneric(
+            clientInfo.ClientId,
+            clientInfo.DeviceId,
+            clientInfo.Password,
+            baseUrl,
+            new Dictionary<string, string>
+            {
+                ["client_secret"] = clientInfo.ClientSecret,
+                ["grant_type"] = "client_credentials",
+                ["scope"] = "api", // TODO: Move scope to RequestTokenAndKdfInfo?
+            },
+            transport,
+            cancellationToken
+        );
+
+    internal static async Task<Session> LogInGeneric(
+        string clientId,
+        string deviceId,
+        string password,
+        string baseUrl,
+        Dictionary<string, string> extraParameters,
         IRestTransport transport,
         CancellationToken cancellationToken
     )
@@ -129,8 +153,7 @@ public static class Client
         var rest = MakeRestClient(baseUrl, transport);
 
         // 1. Login and get the client info
-        var (token, kdfInfo) = await LogInCliApi(clientInfo.ClientId, clientInfo.ClientSecret, clientInfo.DeviceId, rest, cancellationToken)
-            .ConfigureAwait(false);
+        var (token, kdfInfo) = await RequestTokenAndKdfInfo(clientId, deviceId, extraParameters, rest, cancellationToken).ConfigureAwait(false);
 
         // 2. All the requests from here on are authenticated with the token
         rest.AddOrUpdateHeader("Authorization", token);
@@ -140,7 +163,7 @@ public static class Client
         var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
 
         // 4. Derive the master encryption key or KEK (key encryption key)
-        var key = Util.DeriveKey(encryptedProfile.Email, clientInfo.Password, kdfInfo);
+        var key = Util.DeriveKey(encryptedProfile.Email, password, kdfInfo);
 
         // 5. Decrypt the profile (it contains the vault key, the orgs and the org keys)
         var profile = DecryptProfile(encryptedProfile, key);
@@ -177,10 +200,10 @@ public static class Client
         }
     }
 
-    internal static async Task<(string Token, Model.KdfInfo KdfInfo)> LogInCliApi(
+    internal static async Task<(string Token, Model.KdfInfo KdfInfo)> RequestTokenAndKdfInfo(
         string clientId,
-        string clientSecret,
         string deviceId,
+        Dictionary<string, string> extraParameters,
         RestClient rest,
         CancellationToken cancellationToken
     )
@@ -188,13 +211,13 @@ public static class Client
         var parameters = new Dictionary<string, object>
         {
             ["client_id"] = clientId,
-            ["client_secret"] = clientSecret,
-            ["grant_type"] = "client_credentials",
-            ["scope"] = "api",
             ["deviceType"] = DeviceType,
             ["deviceName"] = Platform,
             ["deviceIdentifier"] = deviceId,
         };
+
+        foreach (var kv in extraParameters)
+            parameters[kv.Key] = kv.Value;
 
         var response = await rest.PostFormAsync<Model.TokenCliApi>("identity/connect/token", parameters, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessful)
@@ -671,6 +694,7 @@ public static class Client
         return "windows";
     }
 
+    private const string AppName = "cli";
     private const string CliVersion = "2025.2.0";
     private static readonly string Platform = GetPlatform();
     private static readonly string UserAgent = $"Bitwarden_CLI/{CliVersion} ({Platform.ToUpper()})";
@@ -688,7 +712,7 @@ public static class Client
         {
             ["User-Agent"] = UserAgent,
             ["Device-Type"] = DeviceType,
-            ["Bitwarden-Client-Name"] = "cli",
+            ["Bitwarden-Client-Name"] = AppName,
             ["Bitwarden-Client-Version"] = CliVersion,
         };
 }

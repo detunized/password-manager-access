@@ -3,15 +3,39 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using PasswordManagerAccess.Bitwarden;
+using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
 
 // ReSharper disable once CheckNamespace
 namespace PasswordManagerAccess.Example.Bitwarden
 {
+    public class TextUi : IAsyncUi
+    {
+        public void OpenInBrowser(string url) => OpenUrl(url);
+
+        public void CloseBrowser() => Console.WriteLine("You can now close the browser.");
+
+        private static void OpenUrl(string url)
+        {
+            Console.WriteLine($"Opening URL {url} in the default browser...");
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                Process.Start("open", url);
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                Process.Start("xdg-open", url);
+            else
+                throw new PlatformNotSupportedException("Unsupported OS");
+        }
+    }
+
     public static class Program
     {
         public static async Task Main(string[] args)
@@ -57,16 +81,33 @@ namespace PasswordManagerAccess.Example.Bitwarden
             // Fully non-interactive CLI/API mode
             Console.WriteLine("Using the CLI/API mode with manual sequence");
 
-            var session = await Client.LogIn(
-                new ClientInfoCliApi(
-                    clientId: config["client-id"],
-                    clientSecret: config["client-secret"],
-                    password: config["password"],
-                    deviceId: deviceId
-                ),
-                baseUrl,
-                CancellationToken.None
-            );
+            // To differentiate an SSO from a regular login, provide the organization ID.
+            // There doesn't seem to be a way to check if a specific username is a SSO user, like with other services.
+            var isSso = config.TryGetValue("organization", out var organization);
+
+            var session = isSso
+                ? await Client.LogInSso(
+                    new ClientInfoSso
+                    {
+                        Password = config["password"],
+                        DeviceId = deviceId,
+                        Organization = organization,
+                    },
+                    baseUrl,
+                    new TextUi(),
+                    CancellationToken.None
+                )
+                : await Client.LogIn(
+                    new ClientInfoCliApi
+                    {
+                        ClientId = config["client-id"],
+                        ClientSecret = config["client-secret"],
+                        Password = config["password"],
+                        DeviceId = deviceId,
+                    },
+                    baseUrl,
+                    CancellationToken.None
+                );
 
             // Enable this to get a single item from a vault
             var getSingleItem = false;
@@ -127,7 +168,13 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
 
             var vault = await Client.Open(
-                new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
+                new ClientInfoCliApi
+                {
+                    ClientId = clientId,
+                    ClientSecret = config["client-secret"],
+                    Password = config["password"],
+                    DeviceId = deviceId,
+                },
                 baseUrl,
                 CancellationToken.None
             );

@@ -5,18 +5,20 @@
 
 namespace PasswordManagerAccess.Bitwarden;
 
-public class ClientInfoCliApi
+public record ClientInfoCliApi
 {
-    public readonly string ClientId;
-    public readonly string ClientSecret;
-    public readonly string Password;
-    public readonly string DeviceId;
+    public required string ClientId { get; init; }
+    public required string ClientSecret { get; init; }
+    public required string Password { get; init; }
+    public required string DeviceId { get; init; }
+}
 
-    public ClientInfoCliApi(string clientId, string clientSecret, string password, string deviceId)
-    {
-        ClientId = clientId;
-        ClientSecret = clientSecret;
-        Password = password;
-        DeviceId = deviceId;
-    }
+public record ClientInfoSso
+{
+    public required string Password { get; init; }
+    public required string DeviceId { get; init; }
+
+    // Organization is optional and could be left blank. When it's not provided the
+    // SSO login page is going to ask the user to enter the organization identifier.
+    public required string Organization { get; init; } = "";
 }

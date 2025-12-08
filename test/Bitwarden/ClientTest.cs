@@ -44,7 +44,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public async Task LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
+        public async Task RequestTokenAndKdfInfo_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -53,7 +53,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ToRestClient(BaseUrl);
 
             // Act
-            var (token, kdfInfo) = await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
+            var (token, kdfInfo) = await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
 
             // Assert
             token.ShouldBe("Bearer wa-wa-wee-wa");
@@ -62,7 +62,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public async Task LoginCliApi_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
+        public async Task RequestTokenAndKdfInfo_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -71,7 +71,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                 .ToRestClient(BaseUrl);
 
             // Act
-            var (token, kdfInfo) = await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
+            var (token, kdfInfo) = await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
 
             // Assert
             token.ShouldBe("Bearer wa-wa-wee-wa");
@@ -82,7 +82,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public async Task LoginCliApi_throws_on_unsupported_kdf()
+        public async Task RequestTokenAndKdfInfo_throws_on_unsupported_kdf()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
@@ -90,7 +90,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
                     """{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":13,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}"""
                 )
                 .ToRestClient(BaseUrl);
-            var act = async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
+            var act = async () => await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
 
             // Act
             var ex = await act.ShouldThrowAsync<UnsupportedFeatureException>();
@@ -100,14 +100,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public async Task LoginCliApi_throws_on_incorrect_client_credentials()
+        public async Task RequestTokenAndKdfInfo_throws_on_incorrect_client_credentials()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"error":"invalid_client"}""", status: HttpStatusCode.BadRequest)
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
-            var act = async () => await Client.LogInCliApi(ClientId, ClientSecret, DeviceId, rest, DefaultCt);
+            var act = async () => await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
 
             // Act
             var ex = await act.ShouldThrowAsync<BadCredentialsException>();
