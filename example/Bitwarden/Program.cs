@@ -19,16 +19,47 @@ namespace PasswordManagerAccess.Example.Bitwarden
 {
     public class TextUi : IAsyncUi
     {
+        // Selects between 2.a and 2.b demo mode.
+        private static bool WaitForCloseBrowser => false;
+
+        private TaskCompletionSource? _browserClosed;
+        private TaskCompletionSource? _userCanceled;
+
         public async Task<Canceled?> PerformSsoLogin(string url, CancellationToken cancellationToken)
         {
             OpenUrl(url);
 
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                // In a GUI app check if the user wants to cancel the operation (closed the browser window, clicked Cancel button, etc).
-                // In that case return new Canceled("User canceled the operation");
+            // See comments in Bitwarden.Ui.IAsyncUi.PerformSsoLogin for more details.
 
-                await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+            // There are multiple ways to go about this implementing this function:
+            //
+            // 1. The simplest way would be to just return immediately and not await for anything. This is easy,
+            //    but it's not possible to signal the user initiated cancellation.
+            //
+            // 2. The second way is to wait for the library to signal the termination.
+            //
+            // 2.a. One option would be to wait for the CloseBrowser method to be called or for the user to cancel the operation.
+            //      This could be implemented using task completion sources, for example.
+            if (WaitForCloseBrowser)
+            {
+                _browserClosed = new TaskCompletionSource();
+                _userCanceled = new TaskCompletionSource();
+
+                await Task.WhenAny(_browserClosed.Task, _userCanceled.Task).ConfigureAwait(false);
+                if (_userCanceled.Task.IsCompleted)
+                    return new Canceled("User canceled the operation");
+            }
+            // 2.b. Another option is to monitor the `cancellationToken` to know when to return.
+            else
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    // In a GUI app check if the user wants to cancel the operation: closed the browser window, clicked Cancel button, etc.
+                    if (UserWantsToCancel())
+                        return new Canceled("User canceled the operation");
+
+                    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+                }
             }
 
             return null;
@@ -36,6 +67,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
 
         public Task CloseBrowser(bool success, CancellationToken cancellationToken)
         {
+            _browserClosed?.SetResult();
+
             Console.WriteLine("You can now close the browser.");
             return Task.CompletedTask;
         }
@@ -52,6 +85,12 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 Process.Start("xdg-open", url);
             else
                 throw new PlatformNotSupportedException("Unsupported OS");
+        }
+
+        private static bool UserWantsToCancel()
+        {
+            // In a real application, check if the user wants to cancel the operation.
+            return false;
         }
     }
 

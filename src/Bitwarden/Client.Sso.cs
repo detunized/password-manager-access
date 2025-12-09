@@ -51,7 +51,6 @@ public static partial class Client
                 baseUrl,
                 new Dictionary<string, string>
                 {
-                    ["scope"] = "api offline_access",
                     ["grant_type"] = "authorization_code",
                     ["code"] = ssoResult.Code,
                     ["code_verifier"] = ssoResult.CodeVerifier,

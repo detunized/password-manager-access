@@ -5,6 +5,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+// ReSharper disable once CheckNamespace
 namespace PasswordManagerAccess.Bitwarden.Ui;
 
 public interface IAsyncUi

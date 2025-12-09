@@ -130,12 +130,7 @@ public static partial class Client
             clientInfo.DeviceId,
             clientInfo.Password,
             baseUrl,
-            new Dictionary<string, string>
-            {
-                ["client_secret"] = clientInfo.ClientSecret,
-                ["grant_type"] = "client_credentials",
-                ["scope"] = "api", // TODO: Move scope to RequestTokenAndKdfInfo?
-            },
+            new Dictionary<string, string> { ["client_secret"] = clientInfo.ClientSecret, ["grant_type"] = "client_credentials" },
             transport,
             cancellationToken
         );
@@ -214,6 +209,7 @@ public static partial class Client
             ["deviceType"] = DeviceType,
             ["deviceName"] = Platform,
             ["deviceIdentifier"] = deviceId,
+            ["scope"] = "api",
         };
 
         foreach (var kv in extraParameters)
