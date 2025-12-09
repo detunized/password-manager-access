@@ -1,6 +1,6 @@
 # Changelog
 
-## 30.0.0-preview
+## 30.0.0
   - Bitwarden: the module refactored to be completely async (major incompatible API change, see
     UPGRADE.md)
   - Bitwarden: SSO support
