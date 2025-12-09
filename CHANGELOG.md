@@ -1,5 +1,11 @@
 # Changelog
 
+## 30.0.0-preview
+  - Bitwarden: the module refactored to be completely async (major incompatible API change, see
+    UPGRADE.md)
+  - Bitwarden: SSO support
+  - Bitwarden: browser mode removed
+
 ## 29.0.0-preview
   - 1Password: the module refactored to be completely async (major incompatible API change)
   - 1Password: SSO support

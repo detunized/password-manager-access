@@ -1,5 +1,124 @@
 # Upgrade notes
 
+## To 30.0.0
+
+`ClientInfoCliApi` has been renamed to `ClientInfoApi` for clarity. This is an API mode and has
+nothing to do with CLI. And its constructor with positional parameters has been removed in favor of
+required init-only properties. This makes it harder to pass wrong values.
+
+```cs
+public record ClientInfoApi
+{
+    public required string ClientId { get; init; }
+    public required string ClientSecret { get; init; }
+    public required string Password { get; init; }
+    public required string DeviceId { get; init; }
+}
+```
+
+All the "browser mode" methods have been removed along with the storage and the UI.
+
+The one shot `Open` method is now async and takes a cancellation token.
+
+```cs
+public static class Client
+{
+    public static async Task<Vault> Open(
+        ClientInfoApi clientInfo,
+        string baseUrl,
+        CancellationToken cancellationToken
+    );
+}
+```
+
+The `LogIn`, `Download` , `GetItem` and `LogOut` methods are now async as well.
+
+```cs
+public static class Client
+{
+    public static async Task<Session> LogIn(
+        ClientInfoApi clientInfo,
+        string baseUrl,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<Vault> DownloadVault(
+        Session session,
+        CancellationToken cancellationToken
+    );
+
+    public static Task LogOut(
+        Session session,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<OneOf<Account, SshKey, NoItem>> GetItem(
+        string itemId,
+        Session session,
+        CancellationToken cancellationToken
+    );
+}
+```
+
+The SSO API adds a new `LogIn` method along with some additional data structures.
+
+```cs
+public static class Client
+{
+    public static async Task<Session> LogInSso(
+        ClientInfoSso clientInfo,
+        string baseUrl,
+        IAsyncUi ui,
+        CancellationToken cancellationToken
+    );
+}
+```
+
+`ClientInfoSso` must be passed in to be able to log in. `Password` is the master password and it's
+needed to decrypt the vault later. `DeviceId` is the same as in the `ClientInfoApi` data structure.
+`Organization` is the organization ID that the user enters while performing an SSO login. It's
+optional and if not provided the web UI is going to ask for it. So to provide it or not depends on
+your preferred UI implementation.
+
+```cs
+public record ClientInfoSso
+{
+    public required string Password { get; init; }
+    public required string DeviceId { get; init; }
+    public required string Organization { get; init; } = "";
+}
+```
+
+`IAsyncUi` completely replaces the old browser mode UI and now is only used during the SSO login
+flow. Look at the comments in the code that explain how to use this properly. Also,
+`example/Bitwarden/Program.cs` has an example implementation with comments with extra useful tips.
+
+```cs
+public interface IAsyncUi
+{
+    // Should open a browser window and navigate to the specified URL to allow the user to log in. There's no need to monitor
+    // the redirects or anything like that. The library receives the redirect internally. Bitwarden allows redirects to localhost.
+    //
+    // The application could do the following things:
+    //
+    // 1. Return immediately and wait for CloseBrowser to be called later. CloseBrowser is guaranteed to be called whether
+    //    the login is completed or failed. It's easier to implement, but in this case there's no way to signal the cancellation
+    //    if the user closes the browser.
+    //
+    // 2. Do not return from this method to allow the user to interact with the browser for as long as needed. In this case it's
+    //    possible to signal the cancellation by returning Canceled when the user closes the browser or navigates away, for example.
+    //    The library will trigger the cancellationToken to make the application aware that it's time to return from this method.
+    //    CloseBrowser will be called afterwards regardless of success or failure. This is a bit harder to implement, but
+    //    allows for more flexible UX.
+    //
+    // 3. Return Cancel at any point to cancel the operation.
+    Task<Canceled?> PerformSsoLogin(string url, CancellationToken cancellationToken);
+
+    // Should close the browser opened by OpenInBrowser. Always called after, regardless of success or failure.
+    Task CloseBrowser(bool success, CancellationToken cancellationToken);
+}
+```
+
 ## To 29.0.0
 
 This version introduces a lot of API changes. They are quite similar to the changes with the other
