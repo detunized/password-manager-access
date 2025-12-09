@@ -1,76 +1,102 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Bitwarden.Ui;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Example.Common;
-using MfaMethod = PasswordManagerAccess.Bitwarden.Ui.MfaMethod;
 
 // ReSharper disable once CheckNamespace
 namespace PasswordManagerAccess.Example.Bitwarden
 {
-    public static class Program
+    public class TextUi : IAsyncUi
     {
-        private class TextUi : DuoUi, IUi
+        // Selects between 2.a and 2.b demo mode.
+        private static bool WaitForCloseBrowser => false;
+
+        private TaskCompletionSource? _browserClosed;
+        private TaskCompletionSource? _userCanceled;
+
+        public async Task<Canceled?> PerformSsoLogin(string url, CancellationToken cancellationToken)
         {
-            public void Close() { }
+            OpenUrl(url);
 
-            public MfaMethod ChooseMfaMethod(MfaMethod[] availableMethods)
+            // See comments in Bitwarden.Ui.IAsyncUi.PerformSsoLogin for more details.
+
+            // There are multiple ways to go about this implementing this function:
+            //
+            // 1. The simplest way would be to just return immediately and not await for anything. This is easy,
+            //    but it's not possible to signal the user initiated cancellation.
+            //
+            // 2. The second way is to wait for the library to signal the termination.
+            //
+            // 2.a. One option would be to wait for the CloseBrowser method to be called or for the user to cancel the operation.
+            //      This could be implemented using task completion sources, for example.
+            if (WaitForCloseBrowser)
             {
-                var methods = availableMethods.Where(m => m != MfaMethod.Cancel).OrderBy(m => m).ToArray();
-                var lines = methods.Select((m, i) => $"{i + 1} {m}");
-                var prompt = $"Please choose the second factor method {PressEnterToCancel}\n\n" + string.Join("\n", lines);
+                _browserClosed = new TaskCompletionSource();
+                _userCanceled = new TaskCompletionSource();
 
-                while (true)
+                await Task.WhenAny(_browserClosed.Task, _userCanceled.Task).ConfigureAwait(false);
+                if (_userCanceled.Task.IsCompleted)
+                    return new Canceled("User canceled the operation");
+            }
+            // 2.b. Another option is to monitor the `cancellationToken` to know when to return.
+            else
+            {
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    var answer = GetAnswer(prompt);
+                    // In a GUI app check if the user wants to cancel the operation: closed the browser window, clicked Cancel button, etc.
+                    if (UserWantsToCancel())
+                        return new Canceled("User canceled the operation");
 
-                    // Blank means canceled by the user
-                    if (string.IsNullOrWhiteSpace(answer))
-                        return MfaMethod.Cancel;
-
-                    if (int.TryParse(answer, out var choice))
-                    {
-                        choice--;
-                        if (choice >= 0 && choice < methods.Length)
-                            return methods[choice];
-                    }
-
-                    Console.WriteLine("Wrong input, try again");
+                    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
                 }
             }
 
-            public Passcode ProvideGoogleAuthPasscode()
-            {
-                return GetPasscode($"Please enter Google Authenticator code {PressEnterToCancel}");
-            }
-
-            public Passcode ProvideEmailPasscode(string emailHint)
-            {
-                return GetPasscode($"Please check you email ({emailHint}) and enter the code {PressEnterToCancel}");
-            }
-
-            public Passcode ProvideYubiKeyPasscode()
-            {
-                return GetPasscode($"Please enter the YubiKey code {PressEnterToCancel}");
-            }
-
-            //
-            // Private
-            //
-
-            private static Passcode GetPasscode(string prompt)
-            {
-                var passcode = GetAnswer(prompt);
-                return string.IsNullOrWhiteSpace(passcode) ? null : new Passcode(passcode, GetRememberMe());
-            }
+            return null;
         }
 
-        public static void Main(string[] args)
+        public Task CloseBrowser(bool success, CancellationToken cancellationToken)
+        {
+            _browserClosed?.SetResult();
+
+            Console.WriteLine("You can now close the browser.");
+            return Task.CompletedTask;
+        }
+
+        private static void OpenUrl(string url)
+        {
+            Console.WriteLine($"Opening URL {url} in the default browser...");
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                Process.Start("open", url);
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                Process.Start("xdg-open", url);
+            else
+                throw new PlatformNotSupportedException("Unsupported OS");
+        }
+
+        private static bool UserWantsToCancel()
+        {
+            // In a real application, check if the user wants to cancel the operation.
+            return false;
+        }
+    }
+
+    public static class Program
+    {
+        public static async Task Main(string[] args)
         {
             var config = Util.ReadConfig();
 
@@ -85,7 +111,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
 
             // This one is optional
-            var baseUrl = config.GetValueOrDefault("base-url", "https://vault.bitwarden.com");
+            var baseUrl = config.GetValueOrDefault("base-url", Client.DefaultBaseUlr);
             if (!string.IsNullOrEmpty(baseUrl))
                 Console.WriteLine($"Using a custom base URL {baseUrl}");
 
@@ -95,11 +121,11 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 var useVaultOpen = false;
                 if (useVaultOpen)
                 {
-                    UseOpen(config, deviceId, baseUrl);
+                    await UseOpen(config, deviceId, baseUrl);
                 }
                 else
                 {
-                    UseLoginDownloadLogout(config, deviceId, baseUrl);
+                    await UseLoginDownloadLogout(config, deviceId, baseUrl);
                 }
             }
             catch (BaseException e)
@@ -108,30 +134,38 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
         }
 
-        private static void UseLoginDownloadLogout(Dictionary<string, string> config, string deviceId, string baseUrl)
+        private static async Task UseLoginDownloadLogout(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
-            Session session;
+            // Fully non-interactive CLI/API mode
+            Console.WriteLine("Using the CLI/API mode with manual sequence");
 
-            if (config.TryGetValue("client-id", out var clientId))
-            {
-                // Fully non-interactive CLI/API mode
-                Console.WriteLine("Using the CLI/API mode with manual sequence");
-                session = Client.LogIn(
-                    new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
-                    baseUrl
+            // To differentiate an SSO from a regular login, provide the organization ID.
+            // There doesn't seem to be a way to check if a specific username is an SSO user, like with other services.
+            var isSso = config.TryGetValue("organization", out var organization) && !string.IsNullOrEmpty(organization);
+
+            var session = isSso
+                ? await Client.LogInSso(
+                    new ClientInfoSso
+                    {
+                        Password = config["password"],
+                        DeviceId = deviceId,
+                        Organization = organization!,
+                    },
+                    baseUrl,
+                    new TextUi(),
+                    CancellationToken.None
+                )
+                : await Client.LogIn(
+                    new ClientInfoCliApi
+                    {
+                        ClientId = config["client-id"],
+                        ClientSecret = config["client-secret"],
+                        Password = config["password"],
+                        DeviceId = deviceId,
+                    },
+                    baseUrl,
+                    CancellationToken.None
                 );
-            }
-            else
-            {
-                // Possibly interactive browser mode
-                Console.WriteLine("Using the browser mode with manual sequence");
-                session = Client.LogIn(
-                    new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
-                    baseUrl: baseUrl,
-                    ui: new TextUi(),
-                    storage: new PlainStorage()
-                );
-            }
 
             // Enable this to get a single item from a vault
             var getSingleItem = false;
@@ -141,7 +175,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 if (getSingleItem)
                 {
                     // Get a single item from the vault (Account)
-                    var item1 = Client.GetItem("25e95b65-aa73-40b4-af02-b2ee0079daa5", session);
+                    var item1 = await Client.GetItem("25e95b65-aa73-40b4-af02-b2ee0079daa5", session, CancellationToken.None);
 
                     // Use the old-school switch statement to match the item type
                     switch (item1.Value)
@@ -158,7 +192,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                     }
 
                     // Get another item with the same session (SshKey)
-                    var item2 = Client.GetItem("318df280-7880-4e4f-a965-b2e901549751", session);
+                    var item2 = await Client.GetItem("318df280-7880-4e4f-a965-b2e901549751", session, CancellationToken.None);
 
                     // Can also use the OneOf.Switch method
                     item2.Switch(PrintAccount, PrintSshKey, noItem => Console.WriteLine($"No item found: {noItem}"));
@@ -166,7 +200,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 else
                 {
                     // Download vault data
-                    var vault = Client.DownloadVault(session);
+                    var vault = await Client.DownloadVault(session, CancellationToken.None);
 
                     // Display the data
                     DumpVault(vault);
@@ -175,34 +209,33 @@ namespace PasswordManagerAccess.Example.Bitwarden
             finally
             {
                 // Always log out to clean up resources
-                Client.LogOut(session);
+                await Client.LogOut(session, CancellationToken.None);
             }
         }
 
-        private static void UseOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
+        private static async Task UseOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
-            Vault vault;
+            // Fully non-interactive CLI/API mode
+            Console.WriteLine("Using the CLI/API mode with Vault.Open");
 
-            if (config.TryGetValue("client-id", out var clientId))
+            if (!config.TryGetValue("client-id", out var clientId))
             {
-                // Fully non-interactive CLI/API mode
-                Console.WriteLine("Using the CLI/API mode with Vault.Open");
-                vault = Client.Open(
-                    new ClientInfoCliApi(clientId: clientId, clientSecret: config["client-secret"], password: config["password"], deviceId: deviceId),
-                    baseUrl
-                );
+                Console.WriteLine("Error: client-id is required. Browser mode has been removed.");
+                Console.WriteLine("Please configure client-id and client-secret in your config.yaml");
+                return;
             }
-            else
-            {
-                // Possibly interactive browser mode
-                Console.WriteLine("Using the browser mode with Vault.Open");
-                vault = Client.Open(
-                    new ClientInfoBrowser(username: config["username"], password: config["password"], deviceId: deviceId),
-                    baseUrl: baseUrl,
-                    ui: new TextUi(),
-                    storage: new PlainStorage()
-                );
-            }
+
+            var vault = await Client.Open(
+                new ClientInfoCliApi
+                {
+                    ClientId = clientId,
+                    ClientSecret = config["client-secret"],
+                    Password = config["password"],
+                    DeviceId = deviceId,
+                },
+                baseUrl,
+                CancellationToken.None
+            );
 
             // Display the data
             DumpVault(vault);

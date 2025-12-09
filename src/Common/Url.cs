@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 
 namespace PasswordManagerAccess.Common
@@ -8,7 +10,7 @@ namespace PasswordManagerAccess.Common
     internal static class Url
     {
         // Returns null when not found
-        internal static string ExtractQueryParameter(string url, string name)
+        internal static string? ExtractQueryParameter(string url, string name)
         {
             var nameEquals = name + '=';
             var start = url.IndexOf(nameEquals, StringComparison.Ordinal);
@@ -22,5 +24,7 @@ namespace PasswordManagerAccess.Common
                 ? url.Substring(start) // The last parameter
                 : url.Substring(start, end - start);
         }
+
+        internal static string? ExtractAndDecodeQueryParameter(string url, string name) => ExtractQueryParameter(url, name)?.DecodeUriData();
     }
 }

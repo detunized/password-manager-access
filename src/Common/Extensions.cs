@@ -129,10 +129,9 @@ namespace PasswordManagerAccess.Common
             return encoded.ToString();
         }
 
-        public static string EncodeUriData(this string s)
-        {
-            return Uri.EscapeDataString(s);
-        }
+        public static string EncodeUriData(this string s) => Uri.EscapeDataString(s);
+
+        public static string DecodeUriData(this string s) => Uri.UnescapeDataString(s);
 
         public static bool IsHex(this string s)
         {

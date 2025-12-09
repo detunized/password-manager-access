@@ -6,32 +6,29 @@
 using System.Collections.Generic;
 using PasswordManagerAccess.Common;
 
-namespace PasswordManagerAccess.Bitwarden
+namespace PasswordManagerAccess.Bitwarden;
+
+// The session object is opaque to the user. It holds all the state needed by Client to perform
+// various operations like downloading vaults or logging out.
+public class Session
 {
-    // The session object is opaque to the user. It holds all the state needed by Client to perform
-    // various operations like downloading vaults or logging out.
-    public class Session
+    internal byte[] Key { get; }
+    internal Profile Profile { get; }
+    internal RestClient Rest { get; }
+    internal IRestTransport Transport { get; }
+
+    // Set lazily if/when needed
+    internal Dictionary<string, string>? Folders { get; set; }
+    internal Dictionary<string, Collection>? Collections { get; set; }
+
+    internal Session(byte[] key, Profile profile, RestClient rest, IRestTransport transport)
     {
-        internal string Token { get; }
-        internal byte[] Key { get; }
-        internal Profile Profile { get; }
-        internal RestClient Rest { get; }
-        internal IRestTransport Transport { get; }
-
-        // Set lazily if/when needed
-        internal Dictionary<string, string>? Folders { get; set; }
-        internal Dictionary<string, Collection>? Collections { get; set; }
-
-        internal Session(string token, byte[] key, Profile profile, RestClient rest, IRestTransport transport)
-        {
-            Token = token;
-            Key = key;
-            Profile = profile;
-            Rest = rest;
-            Transport = transport;
-        }
+        Key = key;
+        Profile = profile;
+        Rest = rest;
+        Transport = transport;
     }
-
-    // TODO: Move to Model maybe?
-    internal record Profile(byte[] VaultKey, byte[] PrivateKey, Dictionary<string, Organization> Organizations, Dictionary<string, byte[]> OrgKeys);
 }
+
+// TODO: Move to Model maybe?
+internal record Profile(byte[] VaultKey, Dictionary<string, Organization> Organizations, Dictionary<string, byte[]> OrgKeys);

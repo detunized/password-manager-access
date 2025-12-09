@@ -1,28 +1,13 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-namespace PasswordManagerAccess.Bitwarden
+#nullable enable
+
+namespace PasswordManagerAccess.Bitwarden;
+
+public record SshKey : VaultItem
 {
-    public class SshKey : VaultItem
-    {
-        // TODO: Add 'required' modifier to all properties
-        public string PublicKey { get; init; }
-        public string PrivateKey { get; init; }
-        public string Fingerprint { get; init; }
-
-        //
-        // Internal
-        //
-
-        internal SshKey(VaultItem item)
-        {
-            Id = item.Id;
-            Name = item.Name;
-            Note = item.Note;
-            Folder = item.Folder;
-            CollectionIds = item.CollectionIds;
-            HidePassword = item.HidePassword;
-            CustomFields = item.CustomFields;
-        }
-    }
+    public required string PublicKey { get; init; }
+    public required string PrivateKey { get; init; }
+    public required string Fingerprint { get; init; }
 }

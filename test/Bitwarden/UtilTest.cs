@@ -3,8 +3,8 @@
 
 using PasswordManagerAccess.Bitwarden;
 using PasswordManagerAccess.Common;
+using Shouldly;
 using Xunit;
-using R = PasswordManagerAccess.Bitwarden.Response;
 
 namespace PasswordManagerAccess.Test.Bitwarden
 {
@@ -13,51 +13,75 @@ namespace PasswordManagerAccess.Test.Bitwarden
         [Fact]
         public void DeriveKey_returns_derived_key_pbkdf2()
         {
+            // Arrange/Act
             var key = Util.DeriveKey(Username, Password, Pbkdf2KdfInfo);
-            Assert.Equal(DerivedKeyPbkdf2.Decode64(), key);
+
+            // Assert
+            key.ShouldBe(DerivedKeyPbkdf2.Decode64());
         }
 
         [Fact]
         public void DeriveKey_returns_derived_key_argon2id()
         {
+            // Arrange/Act
             var key = Util.DeriveKey(Username, Password, Argon2idKdfInfo);
-            Assert.Equal(DerivedKeyArgon2id.Decode64(), key);
+
+            // Assert
+            key.ShouldBe(DerivedKeyArgon2id.Decode64());
         }
 
         [Fact]
         public void DeriveKey_trims_whitespace_and_lowercases_username()
         {
+            // Arrange/Act
             var key = Util.DeriveKey(" UsErNaMe ", Password, Pbkdf2KdfInfo);
-            Assert.Equal(DerivedKeyPbkdf2.Decode64(), key);
+
+            // Assert
+            key.ShouldBe(DerivedKeyPbkdf2.Decode64());
         }
 
         [Fact]
         public void DeriveKey_throws_on_unsupported_kdf()
         {
-            Exceptions.AssertThrowsUnsupportedFeature(
-                () => Util.DeriveKey(Username, Password, new R.KdfInfo { Kdf = (R.KdfMethod)13 }),
-                "KDF method"
-            );
+            // Arrange/Act
+            var act = () => Util.DeriveKey(Username, Password, new Model.KdfInfo { Kdf = (Model.KdfMethod)13, Iterations = -13 });
+
+            // Assert
+            var ex = Should.Throw<UnsupportedFeatureException>(act);
+            ex.Message.ShouldContain("KDF method");
         }
 
         [Fact]
         public void HashPassword_returns_hashed_password()
         {
+            // Arrange/Act
             var hash = Util.HashPassword(Password, DerivedKeyPbkdf2.Decode64());
-            Assert.Equal(PasswordHash.Decode64(), hash);
+
+            // Assert
+            hash.ShouldBe(PasswordHash.Decode64());
         }
 
         [Fact]
         public void HkdfExpand_returns_expected_result()
         {
-            Assert.Equal("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64(), Util.HkdfExpand("prk".ToBytes(), "info".ToBytes()));
+            // Arrange/Act
+            var result = Util.HkdfExpand("prk".ToBytes(), "info".ToBytes());
+
+            // Assert
+            result.ShouldBe("t+eNA48Gl56FVhjNqTxs9cktUhG28eg3i/Rbf0QtPSU=".Decode64());
         }
 
         [Fact]
         public void ExpandKey_expands_key_to_64_bytes()
         {
+            // Arrange
             var expected = "GKPlyJlfe4rO+RNeBj6P4Jm1Ds4QFB23rN2WvwVcb5Iw0U+9uVf7jwQ04Yq75uCrOSsL7HonzBzNdYi1hO/mlQ==";
-            Assert.Equal(expected.Decode64(), Util.ExpandKey("key".ToBytes()));
+
+            // Act
+            var result = Util.ExpandKey("key".ToBytes());
+
+            // Assert
+            result.ShouldBe(expected.Decode64());
         }
 
         //
@@ -69,13 +93,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private const string DerivedKeyPbkdf2 = "antk7JoUPTHk37mhIHNXg5kUM1pNaf1p+JR8XxtDzg4=";
         private const string DerivedKeyArgon2id = "qwJqLHT2PdOduAiV1cfA9bXk3iDCa0sVSJG1mWuKVEk=";
         private const string PasswordHash = "zhQ5ps7B3qN3/m2JVn+UckMTPH5dOI6K369pCiLL9wQ=";
-        private static readonly R.KdfInfo Pbkdf2KdfInfo = new R.KdfInfo { Kdf = R.KdfMethod.Pbkdf2Sha256, Iterations = 100 };
-        private static readonly R.KdfInfo Argon2idKdfInfo = new R.KdfInfo
-        {
-            Kdf = R.KdfMethod.Argon2id,
-            Iterations = 3,
-            Memory = 64,
-            Parallelism = 4,
-        };
+        private static readonly Model.KdfInfo Pbkdf2KdfInfo = new() { Kdf = Model.KdfMethod.Pbkdf2Sha256, Iterations = 100 };
+        private static readonly Model.KdfInfo Argon2idKdfInfo =
+            new()
+            {
+                Kdf = Model.KdfMethod.Argon2id,
+                Iterations = 3,
+                Memory = 64,
+                Parallelism = 4,
+            };
     }
 }

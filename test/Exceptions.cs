@@ -2,6 +2,7 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using Xunit;
 
@@ -12,6 +13,11 @@ namespace PasswordManagerAccess.Test
         public static BadCredentialsException AssertThrowsBadCredentials(Action action, string message = "")
         {
             return AssertThrows<BadCredentialsException>(action, message);
+        }
+
+        public static Task<BadCredentialsException> AssertThrowsBadCredentialsAsync(Func<Task> action, string message = "")
+        {
+            return AssertThrowsAsync<BadCredentialsException>(action, message);
         }
 
         public static BadMultiFactorException AssertThrowsBadMultiFactor(Action action, string message = "")
@@ -39,6 +45,11 @@ namespace PasswordManagerAccess.Test
             return AssertThrows<UnsupportedFeatureException>(action, message);
         }
 
+        public static Task<UnsupportedFeatureException> AssertThrowsUnsupportedFeatureAsync(Func<Task> action, string message = "")
+        {
+            return AssertThrowsAsync<UnsupportedFeatureException>(action, message);
+        }
+
         public static InternalErrorException AssertThrowsInternalError(Action action, string message = "")
         {
             return AssertThrows<InternalErrorException>(action, message);
@@ -53,6 +64,16 @@ namespace PasswordManagerAccess.Test
             where T : Exception
         {
             var e = Assert.Throws<T>(action);
+            Assert.NotNull(e.Message);
+            Assert.Contains(message, e.Message);
+
+            return e;
+        }
+
+        public static async Task<T> AssertThrowsAsync<T>(Func<Task> action, string message)
+            where T : Exception
+        {
+            var e = await Assert.ThrowsAsync<T>(action);
             Assert.NotNull(e.Message);
             Assert.Contains(message, e.Message);
 

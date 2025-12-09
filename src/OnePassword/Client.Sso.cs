@@ -286,7 +286,9 @@ public static partial class Client
 
     internal static async Task<(string Code, string State)> PerformSsoLogin(string ssoLoginUrl, IAsyncUi ui, CancellationToken cancellationToken)
     {
-        var redirectTo = Uri.UnescapeDataString(Url.ExtractQueryParameter(ssoLoginUrl, "redirect_uri"));
+        var redirectTo = Url.ExtractAndDecodeQueryParameter(ssoLoginUrl, "redirect_uri");
+        if (redirectTo.IsNullOrEmpty())
+            throw new InternalErrorException("No redirect_uri found in the SSO login URL");
 
         // Ask the user to login to the SSO provider like Microsoft or Google. This potentially take a long while.
         var ssoResult = await ui.PerformSsoLogin(ssoLoginUrl, redirectTo, cancellationToken).ConfigureAwait(false);
@@ -300,11 +302,11 @@ public static partial class Client
         // An example of the returned URL:
         //   https://acme.1password.com/sso/oidc/redirect/#code=1.ASgAwV5aTMWaEkabTGvtF4u2Wpb4VTvGf8dGlwsZADrH0JkoAAAoAA.AgABBAIAAABVrSpeuWamRam2jAF1XRQEAwDs_wUA9P-k9NH9m4zDf3ZQpZopbFWrPs95L25K4RDHx4pOfNnyO5wfWKwtSUEeVYosJQYKmkarnxfGO5F0Wp8sjg1aE2MheBSCu3c7sSfwZpj9nfhztoMQSPZLhYbFGMkW1gkjX7I5_AVKkpbzmUkHpeGNGC9pTOF4bTp_M6ZnKMrtXVB0LjqeqrHnwe9tkCThg2qgrjH_glcbxA0VQfbk7DMR0cjoYsATNQHk7MylJj30SnL3_ur1rWo1IYtKwZia2PlRkjsXXLqU3refbf9gE6fneiaPwgV2YCsbJ7RoMfJkyZoC_SvwV98BB__sgJahjsW4CJ-d6tsUoueWUA3NI6ufyL8MnIxMBVR1tGEEtoIyxH-OItX3JgbZfKuEodaLN0BZj1ikOcMCTcBG0O5RP39lbqTDOcTpojW7UlZJRt7IRcEHmYB5Jec9RVBMBg2IAx11dnIDMFYabP4NmFeuXLqv2s1B0Rd95jjFm3X7FTGESn3zT07-ViLi5GvTLJJbllO6M8NSNA9Tqk1OhKreZQy5KdNx_CsmayO7ywk5ISE5aqZk2my5Ayby9SzATSdTyUtsxFKPULmvO1QJR-xXDa1IZ2WWVHKmVSEU0vhipZdeubyJwP51QnecUADeXFA5DBqXxCQDBfC929oeImouQY-ZfN2Tx83XdHjhzIZtfVuFSBlYoGs4ESZIRZWoiK-SsXzOiiYDqTD5HlGF4TH07wmxlfa44WnI1OlP-zcZR_IywftwGZofA9YUt41b-ho9X8bLap6SBwvoqLggV3hfmkiBCRNMD9iFczW6qYHNqeSTidp5UWCNic8JrE3zIY5L5Mt1S0HzH3SVve5YPA2_7iVMynfhETLOzrvpqumbbjsXCEFpxZZMnbWvVnpOTKVHhr5f&state=AheikL9HpINJRhPsoa9KWw&session_state=002f7c59-8098-a5c0-a0d5-dd5ed564dd9a
 
-        var code = Url.ExtractQueryParameter(redirectedToUrl, "code");
+        var code = Url.ExtractAndDecodeQueryParameter(redirectedToUrl, "code");
         if (code.IsNullOrEmpty())
             throw new InternalErrorException("No code returned from the SSO provider");
 
-        var state = Url.ExtractQueryParameter(redirectedToUrl, "state");
+        var state = Url.ExtractAndDecodeQueryParameter(redirectedToUrl, "state");
         if (state.IsNullOrEmpty())
             throw new InternalErrorException("No state returned from the SSO provider");
 

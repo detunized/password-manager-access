@@ -1,35 +1,24 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
-namespace PasswordManagerAccess.Bitwarden
+#nullable enable
+
+namespace PasswordManagerAccess.Bitwarden;
+
+public record ClientInfoCliApi
 {
-    public class ClientInfoBrowser
-    {
-        public readonly string Username;
-        public readonly string Password;
-        public readonly string DeviceId;
+    public required string ClientId { get; init; }
+    public required string ClientSecret { get; init; }
+    public required string Password { get; init; }
+    public required string DeviceId { get; init; }
+}
 
-        public ClientInfoBrowser(string username, string password, string deviceId)
-        {
-            Username = username;
-            Password = password;
-            DeviceId = deviceId;
-        }
-    }
+public record ClientInfoSso
+{
+    public required string Password { get; init; }
+    public required string DeviceId { get; init; }
 
-    public class ClientInfoCliApi
-    {
-        public readonly string ClientId;
-        public readonly string ClientSecret;
-        public readonly string Password;
-        public readonly string DeviceId;
-
-        public ClientInfoCliApi(string clientId, string clientSecret, string password, string deviceId)
-        {
-            ClientId = clientId;
-            ClientSecret = clientSecret;
-            Password = password;
-            DeviceId = deviceId;
-        }
-    }
+    // Organization is optional and could be left blank. When it's not provided the
+    // SSO login page is going to ask the user to enter the organization identifier.
+    public required string Organization { get; init; } = "";
 }
