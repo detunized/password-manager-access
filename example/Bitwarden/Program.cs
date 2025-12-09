@@ -20,7 +20,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
     public class TextUi : IAsyncUi
     {
         // Selects between 2.a and 2.b demo mode.
-        private static bool WaitForCloseBrowser => false;
+        private static bool WaitForCloseBrowser => true;
 
         private TaskCompletionSource? _browserClosed;
         private TaskCompletionSource? _userCanceled;
@@ -156,7 +156,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                     CancellationToken.None
                 )
                 : await Client.LogIn(
-                    new ClientInfoCliApi
+                    new ClientInfoApi
                     {
                         ClientId = config["client-id"],
                         ClientSecret = config["client-secret"],
@@ -226,7 +226,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             }
 
             var vault = await Client.Open(
-                new ClientInfoCliApi
+                new ClientInfoApi
                 {
                     ClientId = clientId,
                     ClientSecret = config["client-secret"],

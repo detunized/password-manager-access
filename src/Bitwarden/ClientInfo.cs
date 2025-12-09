@@ -5,7 +5,7 @@
 
 namespace PasswordManagerAccess.Bitwarden;
 
-public record ClientInfoCliApi
+public record ClientInfoApi
 {
     public required string ClientId { get; init; }
     public required string ClientSecret { get; init; }

@@ -36,7 +36,7 @@ public static partial class Client
     // CLI/API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
     // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
     // either. This mode requires credentials that could be found in the vault settings: the client ID and the client secret.
-    public static async Task<Vault> Open(ClientInfoCliApi clientInfo, string baseUrl, CancellationToken cancellationToken)
+    public static async Task<Vault> Open(ClientInfoApi clientInfo, string baseUrl, CancellationToken cancellationToken)
     {
         var session = await LogIn(clientInfo, baseUrl, cancellationToken).ConfigureAwait(false);
         return await DownloadAndLogOut(session, cancellationToken).ConfigureAwait(false);
@@ -49,7 +49,7 @@ public static partial class Client
     // This method performs a login in the CLI/API mode. The returned session can be used to
     // download the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
-    public static async Task<Session> LogIn(ClientInfoCliApi clientInfo, string baseUrl, CancellationToken cancellationToken)
+    public static async Task<Session> LogIn(ClientInfoApi clientInfo, string baseUrl, CancellationToken cancellationToken)
     {
         var transport = new RestTransport();
         try
@@ -120,7 +120,7 @@ public static partial class Client
     }
 
     internal static Task<Session> LogInCliApi(
-        ClientInfoCliApi clientInfo,
+        ClientInfoApi clientInfo,
         string baseUrl,
         IRestTransport transport,
         CancellationToken cancellationToken
