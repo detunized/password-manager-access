@@ -15,12 +15,17 @@ namespace PasswordManagerAccess.Bitwarden;
 
 public static partial class Client
 {
-    public static async Task<Session> LogInSso(ClientInfoSso clientInfo, IAsyncUi ui, CancellationToken cancellationToken)
+    public static async Task<Session> LogInSso(
+        ClientInfoSso clientInfo,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        CancellationToken cancellationToken
+    )
     {
         var transport = new RestTransport();
         try
         {
-            return await LogInSso(clientInfo, ui, transport, cancellationToken).ConfigureAwait(false);
+            return await LogInSso(clientInfo, ui, storage, transport, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -33,7 +38,13 @@ public static partial class Client
     // Internal
     //
 
-    internal static async Task<Session> LogInSso(ClientInfoSso clientInfo, IAsyncUi ui, IRestTransport transport, CancellationToken cancellationToken)
+    internal static async Task<Session> LogInSso(
+        ClientInfoSso clientInfo,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        IRestTransport transport,
+        CancellationToken cancellationToken
+    )
     {
         var ssoResult = await LoginWithIdentityProvider(clientInfo, ui, cancellationToken);
 
@@ -50,6 +61,7 @@ public static partial class Client
                     ["code_verifier"] = ssoResult.CodeVerifier,
                     ["redirect_uri"] = ssoResult.RedirectUrl,
                 },
+                storage,
                 transport,
                 cancellationToken
             )

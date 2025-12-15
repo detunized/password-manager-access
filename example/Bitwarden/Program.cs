@@ -143,6 +143,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
             // There doesn't seem to be a way to check if a specific username is an SSO user, like with other services.
             var isSso = config.TryGetValue("organization", out var organization) && !string.IsNullOrEmpty(organization);
 
+            var storage = new AsyncPlainStorage();
             var session = isSso
                 ? await Client.LogInSso(
                     new ClientInfoSso
@@ -153,6 +154,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                         BaseUrl = baseUrl,
                     },
                     new TextUi(),
+                    storage,
                     CancellationToken.None
                 )
                 : await Client.LogIn(
@@ -164,6 +166,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                         DeviceId = deviceId,
                         BaseUrl = baseUrl,
                     },
+                    storage,
                     CancellationToken.None
                 );
 
@@ -225,6 +228,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                 return;
             }
 
+            var storage = new AsyncPlainStorage();
             var vault = await Client.Open(
                 new ClientInfoApi
                 {
@@ -234,6 +238,7 @@ namespace PasswordManagerAccess.Example.Bitwarden
                     DeviceId = deviceId,
                     BaseUrl = baseUrl,
                 },
+                storage,
                 CancellationToken.None
             );
 

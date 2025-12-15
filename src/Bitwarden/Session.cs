@@ -14,6 +14,7 @@ public class Session
 {
     internal byte[] Key { get; }
     internal Profile Profile { get; }
+    internal IAsyncSecureStorage Storage { get; }
     internal RestClient Rest { get; }
     internal IRestTransport Transport { get; }
 
@@ -21,12 +22,13 @@ public class Session
     internal Dictionary<string, string>? Folders { get; set; }
     internal Dictionary<string, Collection>? Collections { get; set; }
 
-    internal Session(byte[] key, Profile profile, RestClient rest, IRestTransport transport)
+    internal Session(byte[] key, Profile profile, IAsyncSecureStorage storage, RestClient rest, IRestTransport transport)
     {
         Key = key;
         Profile = profile;
         Rest = rest;
         Transport = transport;
+        Storage = storage;
     }
 }
 

@@ -36,9 +36,9 @@ public static partial class Client
     // CLI/API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
     // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
     // either. This mode requires credentials that could be found in the vault settings: the client ID and the client secret.
-    public static async Task<Vault> Open(ClientInfoApi clientInfo, CancellationToken cancellationToken)
+    public static async Task<Vault> Open(ClientInfoApi clientInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken)
     {
-        var session = await LogIn(clientInfo, cancellationToken).ConfigureAwait(false);
+        var session = await LogIn(clientInfo, storage, cancellationToken).ConfigureAwait(false);
         return await DownloadAndLogOut(session, cancellationToken).ConfigureAwait(false);
     }
 
@@ -49,12 +49,12 @@ public static partial class Client
     // This method performs a login in the CLI/API mode. The returned session can be used to
     // download the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
-    public static async Task<Session> LogIn(ClientInfoApi clientInfo, CancellationToken cancellationToken)
+    public static async Task<Session> LogIn(ClientInfoApi clientInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken)
     {
         var transport = new RestTransport();
         try
         {
-            return await LogInCliApi(clientInfo, transport, cancellationToken).ConfigureAwait(false);
+            return await LogInCliApi(clientInfo, storage, transport, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -119,13 +119,19 @@ public static partial class Client
         }
     }
 
-    internal static Task<Session> LogInCliApi(ClientInfoApi clientInfo, IRestTransport transport, CancellationToken cancellationToken) =>
+    internal static Task<Session> LogInCliApi(
+        ClientInfoApi clientInfo,
+        IAsyncSecureStorage storage,
+        IRestTransport transport,
+        CancellationToken cancellationToken
+    ) =>
         LogInGeneric(
             clientInfo.ClientId,
             clientInfo.DeviceId,
             clientInfo.Password,
             clientInfo.BaseUrl,
             new Dictionary<string, string> { ["client_secret"] = clientInfo.ClientSecret, ["grant_type"] = "client_credentials" },
+            storage,
             transport,
             cancellationToken
         );
@@ -136,6 +142,7 @@ public static partial class Client
         string password,
         string baseUrl,
         Dictionary<string, string> extraParameters,
+        IAsyncSecureStorage storage,
         IRestTransport transport,
         CancellationToken cancellationToken
     )
@@ -158,7 +165,7 @@ public static partial class Client
         // 5. Decrypt the profile (it contains the vault key, the orgs and the org keys)
         var profile = DecryptProfile(encryptedProfile, key);
 
-        return new Session(key, profile, rest, transport);
+        return new Session(key, profile, storage, rest, transport);
     }
 
     internal static RestClient MakeRestClient(string baseUrl, IRestTransport transport)

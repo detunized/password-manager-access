@@ -718,7 +718,7 @@ namespace PasswordManagerAccess.Test.Bitwarden
         private static CancellationToken DefaultCt => TestContext.Current.CancellationToken;
 
         private Session MakeSession(RestClient rest, Dictionary<string, string> folders = null, Dictionary<string, Collection> collections = null) =>
-            new(DerivedKek, Profile, rest, rest.Transport) { Folders = folders, Collections = collections };
+            new(DerivedKek, Profile, new MemoryStorage(), rest, rest.Transport) { Folders = folders, Collections = collections };
 
         private Model.Vault LoadVaultFixture(string name = "vault")
         {
