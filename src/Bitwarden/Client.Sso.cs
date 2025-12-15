@@ -15,12 +15,12 @@ namespace PasswordManagerAccess.Bitwarden;
 
 public static partial class Client
 {
-    public static async Task<Session> LogInSso(ClientInfoSso clientInfo, string baseUrl, IAsyncUi ui, CancellationToken cancellationToken)
+    public static async Task<Session> LogInSso(ClientInfoSso clientInfo, IAsyncUi ui, CancellationToken cancellationToken)
     {
         var transport = new RestTransport();
         try
         {
-            return await LogInSso(clientInfo, baseUrl, ui, transport, cancellationToken).ConfigureAwait(false);
+            return await LogInSso(clientInfo, ui, transport, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -33,22 +33,16 @@ public static partial class Client
     // Internal
     //
 
-    internal static async Task<Session> LogInSso(
-        ClientInfoSso clientInfo,
-        string baseUrl,
-        IAsyncUi ui,
-        IRestTransport transport,
-        CancellationToken cancellationToken
-    )
+    internal static async Task<Session> LogInSso(ClientInfoSso clientInfo, IAsyncUi ui, IRestTransport transport, CancellationToken cancellationToken)
     {
-        var ssoResult = await LoginWithIdentityProvider(clientInfo, baseUrl, ui, cancellationToken);
+        var ssoResult = await LoginWithIdentityProvider(clientInfo, ui, cancellationToken);
 
         // From this point on it's a regular login sequence with some extra parameters
         return await LogInGeneric(
                 AppName,
                 clientInfo.DeviceId,
                 clientInfo.Password,
-                baseUrl,
+                clientInfo.BaseUrl,
                 new Dictionary<string, string>
                 {
                     ["grant_type"] = "authorization_code",
@@ -64,12 +58,7 @@ public static partial class Client
 
     internal record SsoLoginResult(string Code, string CodeVerifier, string RedirectUrl);
 
-    internal static async Task<SsoLoginResult> LoginWithIdentityProvider(
-        ClientInfoSso clientInfo,
-        string baseUrl,
-        IAsyncUi ui,
-        CancellationToken cancellationToken
-    )
+    internal static async Task<SsoLoginResult> LoginWithIdentityProvider(ClientInfoSso clientInfo, IAsyncUi ui, CancellationToken cancellationToken)
     {
         using var server = StartLocalServer();
         var redirectUrl = server.Url;
@@ -89,7 +78,7 @@ public static partial class Client
         //    identifier=organization
 
         var ssoLoginUrl =
-            $"{baseUrl.TrimEnd('/')}/#/sso?clientId={AppName}&redirectUri={server.Url.EncodeUriData()}&state={state}&codeChallenge={challenge}";
+            $"{clientInfo.BaseUrl.TrimEnd('/')}/#/sso?clientId={AppName}&redirectUri={server.Url.EncodeUriData()}&state={state}&codeChallenge={challenge}";
 
         if (!clientInfo.Organization.IsNullOrEmpty())
             ssoLoginUrl += $"&identifier={clientInfo.Organization.EncodeUriData()}";

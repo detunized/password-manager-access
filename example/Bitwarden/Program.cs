@@ -150,8 +150,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
                         Password = config["password"],
                         DeviceId = deviceId,
                         Organization = organization!,
+                        BaseUrl = baseUrl,
                     },
-                    baseUrl,
                     new TextUi(),
                     CancellationToken.None
                 )
@@ -162,8 +162,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
                         ClientSecret = config["client-secret"],
                         Password = config["password"],
                         DeviceId = deviceId,
+                        BaseUrl = baseUrl,
                     },
-                    baseUrl,
                     CancellationToken.None
                 );
 
@@ -232,8 +232,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
                     ClientSecret = config["client-secret"],
                     Password = config["password"],
                     DeviceId = deviceId,
+                    BaseUrl = baseUrl,
                 },
-                baseUrl,
                 CancellationToken.None
             );
 
