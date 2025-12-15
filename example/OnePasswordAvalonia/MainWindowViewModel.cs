@@ -15,6 +15,7 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.Duo;
+using PasswordManagerAccess.Example.Common;
 using PasswordManagerAccess.OnePassword;
 using PasswordManagerAccess.OnePassword.Ui;
 using ReactiveUI;
@@ -100,8 +101,7 @@ public class MainWindowViewModel : ViewModelBase, IAsyncUi
 
     private CancellationTokenSource? _loginCancellationTokenSource;
 
-    // TODO: Make this a permanent storage
-    private readonly AsyncPlainStorage _storage = new();
+    private readonly PlainStorage _storage = new();
 
     public async Task Login()
     {

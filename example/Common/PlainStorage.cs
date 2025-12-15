@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.Example.Common
@@ -13,7 +15,7 @@ namespace PasswordManagerAccess.Example.Common
     // A primitive not-so-secure secure storage implementation. It stores a dictionary
     // as a list of strings in a text file. It could be JSON or something but we don't
     // want any extra dependencies.
-    public class PlainStorage : ISecureStorage
+    public class PlainStorage : ISecureStorage, IAsyncSecureStorage
     {
         public PlainStorage()
             : this(FindFilename()) { }
@@ -27,6 +29,7 @@ namespace PasswordManagerAccess.Example.Common
                 _storage = Util.ReadConfig(_filename);
         }
 
+        // ISecureStorage implementation
         public void StoreString(string name, string value)
         {
             if (value == null)
@@ -40,6 +43,18 @@ namespace PasswordManagerAccess.Example.Common
         public string LoadString(string name)
         {
             return _storage.ContainsKey(name) ? DecodeValue(_storage[name]) : null;
+        }
+
+        // IAsyncSecureStorage implementation
+        public Task<string> LoadString(string name, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(LoadString(name));
+        }
+
+        public Task StoreString(string name, string value, CancellationToken cancellationToken)
+        {
+            StoreString(name, value);
+            return Task.CompletedTask;
         }
 
         //

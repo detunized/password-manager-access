@@ -218,7 +218,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 if (Mode == DemoMode.AllVaultsSingleShot)
                 {
                     var allVaults = await Client
-                        .OpenAll(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage(), cts.Token)
+                        .OpenAll(config["username"], config["password"], new AsyncTextUi(extraPassword), new PlainStorage(), cts.Token)
                         .ConfigureAwait(false);
                     DumpVaults(allVaults);
 
@@ -230,7 +230,7 @@ namespace PasswordManagerAccess.Example.ProtonPass
                 try
                 {
                     session = await Client
-                        .LogIn(config["username"], config["password"], new AsyncTextUi(extraPassword), new AsyncPlainStorage(), cts.Token)
+                        .LogIn(config["username"], config["password"], new AsyncTextUi(extraPassword), new PlainStorage(), cts.Token)
                         .ConfigureAwait(false);
 
                     // Any of the operations below could be done multiple times on same session. Remember to call Client.LogOut when done.

@@ -253,6 +253,11 @@
         "resolved": "3.0.271",
         "contentHash": "pqpqeK8xQGggExhr4tesVgJkjdn+9HQAO0QgrYV2hFjE3y90okzk1kQMntMiUOGfV7FrCUfKPaVvPBD4IANqKg=="
       },
+      "Otp.NET": {
+        "type": "Transitive",
+        "resolved": "1.4.0",
+        "contentHash": "Fk1NKc0lWmlo6LAFYpFJInRgFKt72knRNEvxndDYoQHFwYOPXav+WEUBvQA0k4lxq5xt0SymrZ+oi0F/G40bPQ=="
+      },
       "PgpCore": {
         "type": "Transitive",
         "resolved": "6.5.1",
@@ -350,6 +355,13 @@
         "type": "Transitive",
         "resolved": "2.2.0",
         "contentHash": "vuOBVbfxhaXnJY3ahhi3/RoBFOzKnNAZh6jZd3PwtNyT7+Tu/WQuT6VG1Z7J3wVD40FiRt5CYUGHF24FHlGVAw=="
+      },
+      "common": {
+        "type": "Project",
+        "dependencies": {
+          "Devolutions.PasswordManagerAccess": "[1.0.0, )",
+          "Otp.NET": "[1.4.0, )"
+        }
       },
       "Devolutions.PasswordManagerAccess": {
         "type": "Project",
