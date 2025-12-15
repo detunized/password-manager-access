@@ -20,5 +20,5 @@ public record ClientInfoSso
 
     // Organization is optional and could be left blank. When it's not provided the
     // SSO login page is going to ask the user to enter the organization identifier.
-    public required string Organization { get; init; } = "";
+    public string Organization { get; init; } = "";
 }
