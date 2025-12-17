@@ -26,11 +26,10 @@ public class Session
     {
         Key = key;
         Profile = profile;
+        Storage = storage;
         Rest = rest;
         Transport = transport;
-        Storage = storage;
     }
 }
 
-// TODO: Move to Model maybe?
 internal record Profile(byte[] VaultKey, Dictionary<string, Organization> Organizations, Dictionary<string, byte[]> OrgKeys);
