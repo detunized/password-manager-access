@@ -15,5 +15,12 @@ namespace PasswordManagerAccess.Common
 
         // Pass null to delete the value
         Task StoreString(string name, string? value, CancellationToken cancellationToken);
+
+        //
+        // Internal
+        //
+
+        // Convenience method to delete a value
+        internal Task DeleteString(string name, CancellationToken cancellationToken) => StoreString(name, null, cancellationToken);
     }
 }

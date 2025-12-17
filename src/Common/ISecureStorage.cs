@@ -13,5 +13,12 @@ namespace PasswordManagerAccess.Common
 
         // Pass null to delete the value
         void StoreString(string name, string value);
+
+        //
+        // Internal
+        //
+
+        // Convenience method to delete a value
+        internal void DeleteString(string name) => StoreString(name, null);
     }
 }
