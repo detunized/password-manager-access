@@ -119,24 +119,81 @@ public static partial class Client
         }
     }
 
-    internal static Task<Session> LogInCliApi(
+    internal static async Task<Session> LogInCliApi(
         ClientInfoApi clientInfo,
         IAsyncSecureStorage storage,
         IRestTransport transport,
+        CancellationToken cancellationToken
+    )
+    {
+        var rest = MakeRestClient(clientInfo.BaseUrl, transport);
+
+        // Try to skip the login if we have a stored token from the last time
+        var token = await storage.LoadString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
+        if (!token.IsNullOrEmpty())
+        {
+            try
+            {
+                // 1. Try to use the stored token. If it's expired, fallthrough to full login.
+                rest.AddOrUpdateHeader("Authorization", token);
+
+                // 2. Get profile
+                var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
+
+                // 3. Get KDF info
+                var kdfInfo = await GetKdfInfo(encryptedProfile.Email, rest, cancellationToken).ConfigureAwait(false);
+
+                // 4. Decrypt the profile and make a session
+                return DecryptProfileToSession(encryptedProfile, clientInfo.Password, kdfInfo, storage, rest);
+            }
+            catch (TokenExpiredException)
+            {
+                // This token is no good anymore, delete it
+                await storage.DeleteString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
+
+                // Fallthrough to full login
+            }
+        }
+
+        // Do full login
+        return await LogInCliApiFull(clientInfo, storage, rest, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<Model.KdfInfo> GetKdfInfo(string email, RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.PostJsonAsync<Model.KdfInfo>(
+                "identity/accounts/prelogin",
+                new Dictionary<string, object> { ["email"] = email },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeSpecializedError(response);
+
+        var kdfInfo = response.Data;
+        ValidateKdfInfo(kdfInfo);
+
+        return kdfInfo;
+    }
+
+    internal static Task<Session> LogInCliApiFull(
+        ClientInfoApi clientInfo,
+        IAsyncSecureStorage storage,
+        RestClient rest,
         CancellationToken cancellationToken
     ) =>
         LogInGeneric(
             clientInfo.ClientId,
             clientInfo.DeviceId,
             clientInfo.Password,
-            clientInfo.BaseUrl,
             new Dictionary<string, string> { ["client_secret"] = clientInfo.ClientSecret, ["grant_type"] = "client_credentials" },
             storage,
-            transport,
+            rest,
             cancellationToken
         );
 
-    internal static async Task<Session> LogInGeneric(
+    internal static Task<Session> LogInGeneric(
         string clientId,
         string deviceId,
         string password,
@@ -145,35 +202,49 @@ public static partial class Client
         IAsyncSecureStorage storage,
         IRestTransport transport,
         CancellationToken cancellationToken
+    ) => LogInGeneric(clientId, deviceId, password, extraParameters, storage, MakeRestClient(baseUrl, transport), cancellationToken);
+
+    internal static async Task<Session> LogInGeneric(
+        string clientId,
+        string deviceId,
+        string password,
+        Dictionary<string, string> extraParameters,
+        IAsyncSecureStorage storage,
+        RestClient rest,
+        CancellationToken cancellationToken
     )
     {
-        var rest = MakeRestClient(baseUrl, transport);
-
         // 1. Login and get the client info
         var (token, kdfInfo) = await RequestTokenAndKdfInfo(clientId, deviceId, extraParameters, rest, cancellationToken).ConfigureAwait(false);
 
         // 2. All the requests from here on are authenticated with the token
         rest.AddOrUpdateHeader("Authorization", token);
 
-        // 3. In the case of the CLI/API mode, we need the profile to get the email for key derivation.
-        //    Whether downloading the full vault or a single item, we need the profile first.
+        // 3. Store the token for the following runs
+        await storage.StoreString(AuthTokenKey, token, cancellationToken).ConfigureAwait(false);
+
+        // 4. Get profile
         var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
 
-        // 4. Derive the master encryption key or KEK (key encryption key)
-        var key = Util.DeriveKey(encryptedProfile.Email, password, kdfInfo);
-
-        // 5. Decrypt the profile (it contains the vault key, the orgs and the org keys)
-        var profile = DecryptProfile(encryptedProfile, key);
-
-        return new Session(key, profile, storage, rest, transport);
+        // 5. Decrypt it and make a session
+        return DecryptProfileToSession(encryptedProfile, password, kdfInfo, storage, rest);
     }
 
-    internal static RestClient MakeRestClient(string baseUrl, IRestTransport transport)
+    private static Session DecryptProfileToSession(
+        Model.Profile encryptedProfile,
+        string password,
+        Model.KdfInfo kdfInfo,
+        IAsyncSecureStorage storage,
+        RestClient rest
+    )
     {
-        if (baseUrl.IsNullOrEmpty())
-            throw new ArgumentException("Base URL must not be null or empty", nameof(baseUrl));
+        // 1. Derive the master encryption key or KEK (key encryption key)
+        var key = Util.DeriveKey(encryptedProfile.Email, password, kdfInfo);
 
-        return new RestClient(transport, baseUrl.TrimEnd('/'), defaultHeaders: DefaultRestHeaders, useSystemJson: true);
+        // 2. Decrypt the profile (it contains the vault key, the orgs and the org keys)
+        var profile = DecryptProfile(encryptedProfile, key);
+
+        return new Session(key, profile, storage, rest, rest.Transport);
     }
 
     internal static void ValidateKdfInfo(Model.KdfInfo info)
@@ -232,6 +303,14 @@ public static partial class Client
         ValidateKdfInfo(kdfInfo);
 
         return ($"{authInfo.TokenType} {authInfo.AccessToken}", kdfInfo);
+    }
+
+    internal static RestClient MakeRestClient(string baseUrl, IRestTransport transport)
+    {
+        if (baseUrl.IsNullOrEmpty())
+            throw new ArgumentException("Base URL must not be null or empty", nameof(baseUrl));
+
+        return new RestClient(transport, baseUrl.TrimEnd('/'), defaultHeaders: DefaultRestHeaders, useSystemJson: true);
     }
 
     //
@@ -628,10 +707,15 @@ public static partial class Client
         return (int)response.StatusCode / 100 == 4;
     }
 
+    internal class TokenExpiredException(string message) : BaseException(message);
+
     internal static BaseException MakeSpecializedError(RestResponse<string> response)
     {
         if (response.IsNetworkError)
             return new NetworkErrorException("Network error has occurred", response.Error);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            return new TokenExpiredException("The authentication token is invalid or has expired");
 
         if (!IsHttp4XX(response))
             return new InternalErrorException($"Unexpected response from the server with status code {response.StatusCode}");
@@ -694,6 +778,7 @@ public static partial class Client
 
     private const string AppName = "cli";
     private const string CliVersion = "2025.2.0";
+    private const string AuthTokenKey = "auth-token";
     private static readonly string Platform = GetPlatform();
     private static readonly string UserAgent = $"Bitwarden_CLI/{CliVersion} ({Platform.ToUpper()})";
 
