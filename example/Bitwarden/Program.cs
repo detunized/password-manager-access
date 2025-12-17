@@ -136,8 +136,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
 
         private static async Task UseLoginDownloadLogout(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
-            // Fully non-interactive CLI/API mode
-            Console.WriteLine("Using the CLI/API mode with manual sequence");
+            // Fully non-interactive API mode
+            Console.WriteLine("Using the API mode with manual sequence");
 
             // To differentiate an SSO from a regular login, provide the organization ID.
             // There doesn't seem to be a way to check if a specific username is an SSO user, like with other services.
@@ -218,8 +218,8 @@ namespace PasswordManagerAccess.Example.Bitwarden
 
         private static async Task UseOpen(Dictionary<string, string> config, string deviceId, string baseUrl)
         {
-            // Fully non-interactive CLI/API mode
-            Console.WriteLine("Using the CLI/API mode with Vault.Open");
+            // Fully non-interactive API mode
+            Console.WriteLine("Using the API mode with Vault.Open");
 
             if (!config.TryGetValue("client-id", out var clientId))
             {

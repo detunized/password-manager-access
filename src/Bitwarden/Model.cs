@@ -213,11 +213,11 @@ internal static class Model
     }
 
     //
-    // CLI/API
+    // API mode
     //
 
-    // Note: All Kdf* properties are capitalized in the CLI/API responses. This is on purpose. They are not capitalized in the browser mode.
-    internal record TokenCliApi
+    // Note: All Kdf* properties are capitalized in the API mode responses. This is on purpose. They are not capitalized in the browser mode.
+    internal record TokenKdfInfo
     {
         [JsonPropertyName("token_type")]
         public required string TokenType { get; init; }

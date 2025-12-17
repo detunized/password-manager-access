@@ -33,7 +33,7 @@ public static partial class Client
     //
 
     // The main entry point for a single shot method. Use this function to open the vault in the
-    // CLI/API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
+    // API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
     // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
     // either. This mode requires credentials that could be found in the vault settings: the client ID and the client secret.
     public static async Task<Vault> Open(ClientInfoApi clientInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken)
@@ -46,15 +46,15 @@ public static partial class Client
     // LogIn, DownloadVault, LogOut sequence
     //
 
-    // This method performs a login in the CLI/API mode. The returned session can be used to
-    // download the vault, if needed multiple times. When no longer needed LogOut should be called.
+    // This method performs a login in the API mode. The returned session can be used to download
+    // the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
     public static async Task<Session> LogIn(ClientInfoApi clientInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken)
     {
         var transport = new RestTransport();
         try
         {
-            return await LogInCliApi(clientInfo, storage, transport, cancellationToken).ConfigureAwait(false);
+            return await LogInApi(clientInfo, storage, transport, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -119,7 +119,7 @@ public static partial class Client
         }
     }
 
-    internal static async Task<Session> LogInCliApi(
+    internal static async Task<Session> LogInApi(
         ClientInfoApi clientInfo,
         IAsyncSecureStorage storage,
         IRestTransport transport,
@@ -156,7 +156,7 @@ public static partial class Client
         }
 
         // Do full login
-        return await LogInCliApiFull(clientInfo, storage, rest, cancellationToken).ConfigureAwait(false);
+        return await LogInApiFull(clientInfo, storage, rest, cancellationToken).ConfigureAwait(false);
     }
 
     internal static async Task<Model.KdfInfo> GetKdfInfo(string email, RestClient rest, CancellationToken cancellationToken)
@@ -177,7 +177,7 @@ public static partial class Client
         return kdfInfo;
     }
 
-    internal static Task<Session> LogInCliApiFull(
+    internal static Task<Session> LogInApiFull(
         ClientInfoApi clientInfo,
         IAsyncSecureStorage storage,
         RestClient rest,
@@ -288,7 +288,7 @@ public static partial class Client
         foreach (var kv in extraParameters)
             parameters[kv.Key] = kv.Value;
 
-        var response = await rest.PostFormAsync<Model.TokenCliApi>("identity/connect/token", parameters, cancellationToken).ConfigureAwait(false);
+        var response = await rest.PostFormAsync<Model.TokenKdfInfo>("identity/connect/token", parameters, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessful)
             throw MakeSpecializedError(response);
 
