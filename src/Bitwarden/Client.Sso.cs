@@ -18,14 +18,14 @@ public static partial class Client
     public static async Task<Session> LogInSso(
         ClientInfoSso clientInfo,
         IAsyncUi ui,
-        IAsyncSecureStorage storage,
+        IAsyncSecureStorage? storage,
         CancellationToken cancellationToken
     )
     {
         var transport = new RestTransport();
         try
         {
-            return await LogInSso(clientInfo, ui, storage, transport, cancellationToken).ConfigureAwait(false);
+            return await LogInSso(clientInfo, ui, storage ?? new NullStorage(), transport, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
