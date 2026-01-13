@@ -1,5 +1,11 @@
 # Changelog
 
+## 31.0.0
+  - Bitwarden: added support for secure storage to store session tokens to be able to resume
+    previous sessions
+  - Bitwarden: added automatic token refresh to minimize the number of interactive logins need to
+    perform by the user
+
 ## 30.0.0
   - Bitwarden: the module refactored to be completely async (major incompatible API change, see
     UPGRADE.md)

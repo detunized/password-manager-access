@@ -1,5 +1,45 @@
 # Upgrade notes
 
+## To 31.0.0
+
+This version brings two incompatible changes:
+
+1. The `baseUrl` parameter got moved into the `ClientInfo*` data structures.
+2. The public entry points got an additional parameter to pass in an optional secure storage.
+
+```cs
+public static class Client
+{
+    public static async Task<Vault> Open(
+        ClientInfoApi clientInfo,
+        IAsyncSecureStorage? storage,
+        CancellationToken cancellationToken
+    );
+
+    public static async Task<Session> LogInSso(
+        ClientInfoSso clientInfo,
+        IAsyncUi ui,
+        IAsyncSecureStorage? storage,
+        CancellationToken cancellationToken
+    );
+}
+
+public record ClientInfoApi
+{
+    // Base URL for the Bitwarden API. Defaults to the US region.
+    public string BaseUrl { get; init; } = Client.DefaultBaseUlr;
+}
+
+public record ClientInfoSso
+{
+    // Base URL for the Bitwarden SSO. Defaults to the US region.
+    public string BaseUrl { get; init; } = Client.DefaultBaseUlr;
+}
+```
+
+The `storage` parameter being optional means that it's possible to pass in `null` or an instance of `NullStorage` (gives the same effect). In that case all the storage operations would be ignored.
+
+
 ## To 30.0.0
 
 `ClientInfoCliApi` has been renamed to `ClientInfoApi` for clarity. This is an API mode and has
