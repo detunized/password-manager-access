@@ -48,23 +48,31 @@ public static partial class Client
     {
         var rest = MakeRestClient(clientInfo.BaseUrl, transport);
 
-        var authToken = await storage.LoadString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
-        var refreshToken = await storage.LoadString(RefreshTokenKey, cancellationToken).ConfigureAwait(false);
-        // TODO: Check expiry time too and if it's less than 5 min from expiry, do full login
+        // Try to load stored auth info from the previous session
+        var storedAuth = await LoadStoredAuth(storage, cancellationToken).ConfigureAwait(false);
 
-        if (!authToken.IsNullOrEmpty() && !refreshToken.IsNullOrEmpty())
+        // When we have a refresh token, try to use it to avoid going through the full SSO login flow
+        if (storedAuth != null && !storedAuth.RefreshToken.IsNullOrEmpty())
         {
+            // Make up a fake session to use the refresh token flow
+            var fakeRefreshSession = new Session(key: null!, profile: null!, storage: storage, rest: rest, transport: transport)
+            {
+                RefreshToken = storedAuth.RefreshToken,
+            };
+
+            if (storedAuth.ExpiresAt < DateTime.UtcNow + TokenRefreshThreshold)
+            {
+                // The token is already expired or about to expire, refresh it right away
+                await RefreshAuthToken(fakeRefreshSession, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                // Otherwise, try to use the stored token. If it's expired, fallthrough to full login.
+                rest.AddOrUpdateHeader("Authorization", storedAuth.AuthToken);
+            }
+
             try
             {
-                // 1. Try to use the stored token. If it's expired, fallthrough to full login.
-                rest.AddOrUpdateHeader("Authorization", authToken);
-
-                // Make up a fake session to use the refresh token flow
-                var session = new Session(key: null!, profile: null!, storage: storage, rest: rest, transport: transport)
-                {
-                    RefreshToken = refreshToken,
-                };
-
                 // This is where we might need to refresh the token
                 var (encryptedProfile, kdfInfo) = await TryRefreshTokenRetry(
                         async () =>
@@ -77,20 +85,13 @@ public static partial class Client
 
                             return (encryptedProfile, kdfInfo);
                         },
-                        session,
+                        fakeRefreshSession,
                         cancellationToken
                     )
                     .ConfigureAwait(false);
 
                 // 4. Decrypt the profile and make a session
-                return DecryptProfileToSession(
-                    encryptedProfile,
-                    clientInfo.Password,
-                    // TODO: Pass in the actual expiry time!
-                    new AuthInfo(authToken, DateTime.MinValue, refreshToken, kdfInfo),
-                    storage,
-                    rest
-                );
+                return DecryptProfileToSession(encryptedProfile, clientInfo.Password, kdfInfo, storage, rest, fakeRefreshSession.RefreshToken);
             }
             catch (TokenExpiredException)
             {

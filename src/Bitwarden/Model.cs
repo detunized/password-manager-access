@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Text.Json.Serialization;
 
 namespace PasswordManagerAccess.Bitwarden;
@@ -270,5 +271,22 @@ internal static class Model
     {
         [JsonPropertyName("data")]
         public required Collection[] Collections { get; init; }
+    }
+
+    //
+    // Secure storage
+    //
+
+    internal record Auth
+    {
+        [JsonPropertyName("authToken")]
+        public required string AuthToken { get; init; }
+
+        [JsonPropertyName("expiresAt")]
+        public required DateTime ExpiresAt { get; init; }
+
+        // Optional, as it's only available in the SSO mode
+        [JsonPropertyName("refreshToken")]
+        public string? RefreshToken { get; init; }
     }
 }

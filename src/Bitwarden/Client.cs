@@ -118,7 +118,7 @@ public static partial class Client
         catch (TokenExpiredException)
         {
             // The token is expired, delete it
-            await session.Storage.DeleteString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
+            await session.Storage.DeleteString(AuthKey, cancellationToken).ConfigureAwait(false);
             session.Rest.RemoveHeader("Authorization");
         }
 
@@ -150,14 +150,13 @@ public static partial class Client
         var rest = MakeRestClient(clientInfo.BaseUrl, transport);
 
         // Try to skip the login if we have a stored token from the last time
-        var token = await storage.LoadString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
-        // TODO: Check expiry time too and if it's less than 5 min from expiry, do full login
-        if (!token.IsNullOrEmpty())
+        var storedAuth = await LoadStoredAuth(storage, cancellationToken).ConfigureAwait(false);
+        if (storedAuth != null && storedAuth.ExpiresAt > DateTime.UtcNow + TokenRefreshThreshold)
         {
             try
             {
                 // 1. Try to use the stored token. If it's expired, fallthrough to full login.
-                rest.AddOrUpdateHeader("Authorization", token);
+                rest.AddOrUpdateHeader("Authorization", storedAuth.AuthToken);
 
                 // 2. Get profile
                 var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
@@ -166,18 +165,12 @@ public static partial class Client
                 var kdfInfo = await GetKdfInfo(encryptedProfile.Email, rest, cancellationToken).ConfigureAwait(false);
 
                 // 4. Decrypt the profile and make a session
-                return DecryptProfileToSession(
-                    encryptedProfile,
-                    clientInfo.Password,
-                    new AuthInfo(token, DateTime.MinValue, null, kdfInfo),
-                    storage,
-                    rest
-                );
+                return DecryptProfileToSession(encryptedProfile, clientInfo.Password, kdfInfo, storage, rest, storedAuth.RefreshToken);
             }
             catch (TokenExpiredException)
             {
                 // This token is no good anymore, delete it
-                await storage.DeleteString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
+                await storage.DeleteString(AuthKey, cancellationToken).ConfigureAwait(false);
 
                 // Fallthrough to full login
             }
@@ -231,15 +224,13 @@ public static partial class Client
         rest.AddOrUpdateHeader("Authorization", authInfo.AuthToken);
 
         // 3. Store the tokens for the future runs
-        await storage.StoreString(AuthTokenKey, authInfo.AuthToken, cancellationToken).ConfigureAwait(false);
-        await storage.StoreString(AuthTokenExpiresAtKey, authInfo.ExpiresAt.ToBinary().ToString(), cancellationToken).ConfigureAwait(false);
-        await storage.StoreString(RefreshTokenKey, authInfo.RefreshToken, cancellationToken).ConfigureAwait(false);
+        await StoreAuth(authInfo, storage, cancellationToken).ConfigureAwait(false);
 
         // 4. Get profile
         var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
 
         // 5. Decrypt it and make a session
-        return DecryptProfileToSession(encryptedProfile, password, authInfo, storage, rest);
+        return DecryptProfileToSession(encryptedProfile, password, authInfo.KdfInfo, storage, rest, authInfo.RefreshToken);
     }
 
     internal static async Task<bool> RefreshAuthToken(Session session, CancellationToken cancellationToken)
@@ -269,8 +260,21 @@ public static partial class Client
             // Update the rest, session and storage
             session.Rest.AddOrUpdateHeader("Authorization", authToken);
             session.RefreshToken = token.RefreshToken;
-            await session.Storage.StoreString(AuthTokenKey, authToken, cancellationToken).ConfigureAwait(false);
-            await session.Storage.StoreString(RefreshTokenKey, token.RefreshToken, cancellationToken).ConfigureAwait(false);
+
+            // We don't have the exact expiry time from the refresh response, so we use a reasonable default
+            // TODO: Look at expires_in if it's available
+            var expiresAt = DateTime.UtcNow.AddHours(1);
+            await StoreAuth(
+                    new Model.Auth
+                    {
+                        AuthToken = authToken,
+                        ExpiresAt = expiresAt,
+                        RefreshToken = token.RefreshToken,
+                    },
+                    session.Storage,
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             return true;
         }
@@ -281,18 +285,19 @@ public static partial class Client
     private static Session DecryptProfileToSession(
         Model.Profile encryptedProfile,
         string password,
-        AuthInfo authInfo,
+        Model.KdfInfo kdfInfo,
         IAsyncSecureStorage storage,
-        RestClient rest
+        RestClient rest,
+        string? refreshToken = null
     )
     {
         // 1. Derive the master encryption key or KEK (key encryption key)
-        var key = Util.DeriveKey(encryptedProfile.Email, password, authInfo.KdfInfo);
+        var key = Util.DeriveKey(encryptedProfile.Email, password, kdfInfo);
 
         // 2. Decrypt the profile (it contains the vault key, the orgs and the org keys)
         var profile = DecryptProfile(encryptedProfile, key);
 
-        return new Session(key, profile, storage, rest, rest.Transport) { RefreshToken = authInfo.RefreshToken };
+        return new Session(key, profile, storage, rest, rest.Transport) { RefreshToken = refreshToken };
     }
 
     internal static async Task<Model.KdfInfo> GetKdfInfo(string email, RestClient rest, CancellationToken cancellationToken)
@@ -834,6 +839,41 @@ public static partial class Client
     }
 
     //
+    // Storage helpers
+    //
+
+    private static async Task<Model.Auth?> LoadStoredAuth(IAsyncSecureStorage storage, CancellationToken cancellationToken)
+    {
+        var json = await storage.LoadString(AuthKey, cancellationToken).ConfigureAwait(false);
+        if (json.IsNullOrEmpty())
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<Model.Auth>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static Task StoreAuth(AuthInfo authInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
+        StoreAuth(
+            new Model.Auth
+            {
+                AuthToken = authInfo.AuthToken,
+                ExpiresAt = authInfo.ExpiresAt,
+                RefreshToken = authInfo.RefreshToken,
+            },
+            storage,
+            cancellationToken
+        );
+
+    private static Task StoreAuth(Model.Auth auth, IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
+        storage.StoreString(AuthKey, JsonSerializer.Serialize(auth), cancellationToken);
+
+    //
     // Private
     //
 
@@ -852,10 +892,8 @@ public static partial class Client
     private const string AppName = "cli";
     private const string CliVersion = "2025.2.0";
 
-    // TODO: Combine these keys into a single structure and serialize it as JSON
-    private const string AuthTokenKey = "auth-token";
-    private const string AuthTokenExpiresAtKey = "auth-token-expires-at";
-    private const string RefreshTokenKey = "refresh-token";
+    private const string AuthKey = "auth";
+    private static readonly TimeSpan TokenRefreshThreshold = TimeSpan.FromMinutes(5);
 
     private static readonly string Platform = GetPlatform();
     private static readonly string UserAgent = $"Bitwarden_CLI/{CliVersion} ({Platform.ToUpper()})";
