@@ -225,6 +225,9 @@ internal static class Model
         [JsonPropertyName("access_token")]
         public required string AccessToken { get; init; }
 
+        [JsonPropertyName("expires_in")]
+        public required int ExpiresInSeconds { get; init; }
+
         // Optional, as refresh tokens are not available in the API mode
         [JsonPropertyName("refresh_token")]
         public string? RefreshToken { get; init; }

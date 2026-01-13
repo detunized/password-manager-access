@@ -256,14 +256,12 @@ public static partial class Client
         {
             var token = response.Data;
             var authToken = $"{token.TokenType} {token.AccessToken}";
+            var expiresAt = DateTime.UtcNow.AddSeconds(token.ExpiresInSeconds);
 
             // Update the rest, session and storage
             session.Rest.AddOrUpdateHeader("Authorization", authToken);
             session.RefreshToken = token.RefreshToken;
 
-            // We don't have the exact expiry time from the refresh response, so we use a reasonable default
-            // TODO: Look at expires_in if it's available
-            var expiresAt = DateTime.UtcNow.AddHours(1);
             await StoreAuth(
                     new Model.Auth
                     {
