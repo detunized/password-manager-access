@@ -216,6 +216,19 @@ internal static class Model
     // API mode
     //
 
+    internal record Token
+    {
+        [JsonPropertyName("token_type")]
+        public required string TokenType { get; init; }
+
+        [JsonPropertyName("access_token")]
+        public required string AccessToken { get; init; }
+
+        // Optional, as refresh tokens are not available in the API mode
+        [JsonPropertyName("refresh_token")]
+        public string? RefreshToken { get; init; }
+    }
+
     // Note: All Kdf* properties are capitalized in the API mode responses. This is on purpose. They are not capitalized in the browser mode.
     internal record TokenKdfInfo
     {
@@ -224,6 +237,13 @@ internal static class Model
 
         [JsonPropertyName("access_token")]
         public required string AccessToken { get; init; }
+
+        [JsonPropertyName("expires_in")]
+        public required int ExpiresInSeconds { get; init; }
+
+        // Optional, as refresh tokens are not available in the API mode
+        [JsonPropertyName("refresh_token")]
+        public string? RefreshToken { get; init; }
 
         [JsonPropertyName("Kdf")]
         public required KdfMethod Kdf { get; init; }

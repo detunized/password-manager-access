@@ -46,6 +46,58 @@ public static partial class Client
         CancellationToken cancellationToken
     )
     {
+        var rest = MakeRestClient(clientInfo.BaseUrl, transport);
+
+        var authToken = await storage.LoadString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
+        var refreshToken = await storage.LoadString(RefreshTokenKey, cancellationToken).ConfigureAwait(false);
+        // TODO: Check expiry time too and if it's less than 5 min from expiry, do full login
+
+        if (!authToken.IsNullOrEmpty() && !refreshToken.IsNullOrEmpty())
+        {
+            try
+            {
+                // 1. Try to use the stored token. If it's expired, fallthrough to full login.
+                rest.AddOrUpdateHeader("Authorization", authToken);
+
+                // Make up a fake session to use the refresh token flow
+                var session = new Session(key: null!, profile: null!, storage: storage, rest: rest, transport: transport)
+                {
+                    RefreshToken = refreshToken,
+                };
+
+                // This is where we might need to refresh the token
+                var (encryptedProfile, kdfInfo) = await TryRefreshTokenRetry(
+                        async () =>
+                        {
+                            // 2. Get profile
+                            var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
+
+                            // 3. Get KDF info
+                            var kdfInfo = await GetKdfInfo(encryptedProfile.Email, rest, cancellationToken).ConfigureAwait(false);
+
+                            return (encryptedProfile, kdfInfo);
+                        },
+                        session,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
+
+                // 4. Decrypt the profile and make a session
+                return DecryptProfileToSession(
+                    encryptedProfile,
+                    clientInfo.Password,
+                    // TODO: Pass in the actual expiry time!
+                    new AuthInfo(authToken, DateTime.MinValue, refreshToken, kdfInfo),
+                    storage,
+                    rest
+                );
+            }
+            catch (TokenExpiredException)
+            {
+                // Failed to refresh even though we had a refresh token, fallthrough to full login
+            }
+        }
+
         var ssoResult = await LoginWithIdentityProvider(clientInfo, ui, cancellationToken);
 
         // From this point on it's a regular login sequence with some extra parameters

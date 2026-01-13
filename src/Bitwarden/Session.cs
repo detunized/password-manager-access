@@ -21,6 +21,7 @@ public class Session
     // Set lazily if/when needed
     internal Dictionary<string, string>? Folders { get; set; }
     internal Dictionary<string, Collection>? Collections { get; set; }
+    internal string? RefreshToken { get; set; }
 
     internal Session(byte[] key, Profile profile, IAsyncSecureStorage storage, RestClient rest, IRestTransport transport)
     {

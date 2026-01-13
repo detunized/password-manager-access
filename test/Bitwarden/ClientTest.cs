@@ -44,53 +44,57 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public async Task RequestTokenAndKdfInfo_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
-        {
-            // Arrange
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":0,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            // Act
-            var (token, kdfInfo) = await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
-
-            // Assert
-            token.ShouldBe("Bearer wa-wa-wee-wa");
-            kdfInfo.Kdf.ShouldBe(Model.KdfMethod.Pbkdf2Sha256);
-            kdfInfo.Iterations.ShouldBe(1337);
-        }
-
-        [Fact]
-        public async Task RequestTokenAndKdfInfo_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
-        {
-            // Arrange
-            var rest = new RestFlow { UseSystemJson = true }
-                .Post("""{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":1,"KdfIterations":3,"KdfMemory":64,"KdfParallelism":4}""")
-                .ExpectUrl(BaseUrl + "/identity/connect/token")
-                .ToRestClient(BaseUrl);
-
-            // Act
-            var (token, kdfInfo) = await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
-
-            // Assert
-            token.ShouldBe("Bearer wa-wa-wee-wa");
-            kdfInfo.Kdf.ShouldBe(Model.KdfMethod.Argon2id);
-            kdfInfo.Iterations.ShouldBe(3);
-            kdfInfo.Memory.ShouldBe(64);
-            kdfInfo.Parallelism.ShouldBe(4);
-        }
-
-        [Fact]
-        public async Task RequestTokenAndKdfInfo_throws_on_unsupported_kdf()
+        public async Task RequestAuthInfo_makes_POST_request_to_specific_endpoint_and_returns_result_pbdkf2()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Post(
-                    """{"token_type":"Bearer","access_token":"wa-wa-wee-wa","Kdf":13,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}"""
+                    """{"token_type":"Bearer","access_token":"wa-wa-wee-wa","expires_in":3600,"Kdf":0,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}"""
+                )
+                .ExpectUrl(BaseUrl + "/identity/connect/token")
+                .ToRestClient(BaseUrl);
+
+            // Act
+            var authInfo = await Client.RequestAuthInfo(ClientId, DeviceId, [], rest, DefaultCt);
+
+            // Assert
+            authInfo.AuthToken.ShouldBe("Bearer wa-wa-wee-wa");
+            authInfo.KdfInfo.Kdf.ShouldBe(Model.KdfMethod.Pbkdf2Sha256);
+            authInfo.KdfInfo.Iterations.ShouldBe(1337);
+        }
+
+        [Fact]
+        public async Task RequestAuthInfo_makes_POST_request_to_specific_endpoint_and_returns_result_argon2id()
+        {
+            // Arrange
+            var rest = new RestFlow { UseSystemJson = true }
+                .Post(
+                    """{"token_type":"Bearer","access_token":"wa-wa-wee-wa","expires_in":3600,"Kdf":1,"KdfIterations":3,"KdfMemory":64,"KdfParallelism":4}"""
+                )
+                .ExpectUrl(BaseUrl + "/identity/connect/token")
+                .ToRestClient(BaseUrl);
+
+            // Act
+            var authInfo = await Client.RequestAuthInfo(ClientId, DeviceId, [], rest, DefaultCt);
+
+            // Assert
+            authInfo.AuthToken.ShouldBe("Bearer wa-wa-wee-wa");
+            authInfo.KdfInfo.Kdf.ShouldBe(Model.KdfMethod.Argon2id);
+            authInfo.KdfInfo.Iterations.ShouldBe(3);
+            authInfo.KdfInfo.Memory.ShouldBe(64);
+            authInfo.KdfInfo.Parallelism.ShouldBe(4);
+        }
+
+        [Fact]
+        public async Task RequestAuthInfo_throws_on_unsupported_kdf()
+        {
+            // Arrange
+            var rest = new RestFlow { UseSystemJson = true }
+                .Post(
+                    """{"token_type":"Bearer","access_token":"wa-wa-wee-wa","expires_in":3600,"Kdf":13,"KdfIterations":1337,"KdfMemory":null,"KdfParallelism":null}"""
                 )
                 .ToRestClient(BaseUrl);
-            var act = async () => await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
+            var act = async () => await Client.RequestAuthInfo(ClientId, DeviceId, [], rest, DefaultCt);
 
             // Act
             var ex = await act.ShouldThrowAsync<UnsupportedFeatureException>();
@@ -100,14 +104,14 @@ namespace PasswordManagerAccess.Test.Bitwarden
         }
 
         [Fact]
-        public async Task RequestTokenAndKdfInfo_throws_on_incorrect_client_credentials()
+        public async Task RequestAuthInfo_throws_on_incorrect_client_credentials()
         {
             // Arrange
             var rest = new RestFlow { UseSystemJson = true }
                 .Post("""{"error":"invalid_client"}""", status: HttpStatusCode.BadRequest)
                 .ExpectUrl(BaseUrl + "/identity/connect/token")
                 .ToRestClient(BaseUrl);
-            var act = async () => await Client.RequestTokenAndKdfInfo(ClientId, DeviceId, [], rest, DefaultCt);
+            var act = async () => await Client.RequestAuthInfo(ClientId, DeviceId, [], rest, DefaultCt);
 
             // Act
             var ex = await act.ShouldThrowAsync<BadCredentialsException>();

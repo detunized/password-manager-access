@@ -36,9 +36,9 @@ public static partial class Client
     // API mode. In this mode the login is fully non-interactive even with 2FA enabled. Bitwarden
     // servers don't use 2FA in this mode and permit to bypass it. There's no captcha in this mode
     // either. This mode requires credentials that could be found in the vault settings: the client ID and the client secret.
-    public static async Task<Vault> Open(ClientInfoApi clientInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken)
+    public static async Task<Vault> Open(ClientInfoApi clientInfo, IAsyncSecureStorage? storage, CancellationToken cancellationToken)
     {
-        var session = await LogIn(clientInfo, storage, cancellationToken).ConfigureAwait(false);
+        var session = await LogIn(clientInfo, storage ?? new NullStorage(), cancellationToken).ConfigureAwait(false);
         return await DownloadAndLogOut(session, cancellationToken).ConfigureAwait(false);
     }
 
@@ -49,12 +49,12 @@ public static partial class Client
     // This method performs a login in the API mode. The returned session can be used to download
     // the vault, if needed multiple times. When no longer needed LogOut should be called.
     // See single shot Open for more comments.
-    public static async Task<Session> LogIn(ClientInfoApi clientInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken)
+    public static async Task<Session> LogIn(ClientInfoApi clientInfo, IAsyncSecureStorage? storage, CancellationToken cancellationToken)
     {
         var transport = new RestTransport();
         try
         {
-            return await LogInApi(clientInfo, storage, transport, cancellationToken).ConfigureAwait(false);
+            return await LogInApi(clientInfo, storage ?? new NullStorage(), transport, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -66,10 +66,8 @@ public static partial class Client
     // This method downloads the vault from the server. The session must be obtained from LogIn.
     public static async Task<Vault> DownloadVault(Session session, CancellationToken cancellationToken)
     {
-        var encryptedVault = await FetchVault(session.Rest, cancellationToken).ConfigureAwait(false);
+        var encryptedVault = await TryRefreshTokenRetry(() => FetchVault(session.Rest, cancellationToken), session, cancellationToken);
         return DecryptVault(encryptedVault, session.Key);
-        // TODO: Update the session with the profile, folders and collections. This could be useful if the user
-        //       fetches single items after that.
     }
 
     // This method logs out the session. Call this when the session is no longer needed.
@@ -93,7 +91,11 @@ public static partial class Client
     // This method fetches a single item from the vault by its ID. The session must be obtained from LogIn.
     public static async Task<OneOf<Account, SshKey, NoItem>> GetItem(string itemId, Session session, CancellationToken cancellationToken)
     {
-        var maybeItem = await FetchItemAndMaybeFoldersAndCollections(itemId, session, cancellationToken).ConfigureAwait(false);
+        var maybeItem = await TryRefreshTokenRetry(
+            () => FetchItemAndMaybeFoldersAndCollections(itemId, session, cancellationToken),
+            session,
+            cancellationToken
+        );
 
         return maybeItem.Value switch
         {
@@ -106,6 +108,25 @@ public static partial class Client
     //
     // Internal
     //
+
+    internal static async Task<T> TryRefreshTokenRetry<T>(Func<Task<T>> func, Session session, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await func().ConfigureAwait(false);
+        }
+        catch (TokenExpiredException)
+        {
+            // The token is expired, delete it
+            await session.Storage.DeleteString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
+            session.Rest.RemoveHeader("Authorization");
+        }
+
+        if (!await RefreshAuthToken(session, cancellationToken))
+            throw new TokenExpiredException("Access token is expired and cannot be refreshed");
+
+        return await func().ConfigureAwait(false);
+    }
 
     internal static async Task<Vault> DownloadAndLogOut(Session session, CancellationToken cancellationToken)
     {
@@ -130,6 +151,7 @@ public static partial class Client
 
         // Try to skip the login if we have a stored token from the last time
         var token = await storage.LoadString(AuthTokenKey, cancellationToken).ConfigureAwait(false);
+        // TODO: Check expiry time too and if it's less than 5 min from expiry, do full login
         if (!token.IsNullOrEmpty())
         {
             try
@@ -144,7 +166,13 @@ public static partial class Client
                 var kdfInfo = await GetKdfInfo(encryptedProfile.Email, rest, cancellationToken).ConfigureAwait(false);
 
                 // 4. Decrypt the profile and make a session
-                return DecryptProfileToSession(encryptedProfile, clientInfo.Password, kdfInfo, storage, rest);
+                return DecryptProfileToSession(
+                    encryptedProfile,
+                    clientInfo.Password,
+                    new AuthInfo(token, DateTime.MinValue, null, kdfInfo),
+                    storage,
+                    rest
+                );
             }
             catch (TokenExpiredException)
             {
@@ -157,24 +185,6 @@ public static partial class Client
 
         // Do full login
         return await LogInApiFull(clientInfo, storage, rest, cancellationToken).ConfigureAwait(false);
-    }
-
-    internal static async Task<Model.KdfInfo> GetKdfInfo(string email, RestClient rest, CancellationToken cancellationToken)
-    {
-        var response = await rest.PostJsonAsync<Model.KdfInfo>(
-                "identity/accounts/prelogin",
-                new Dictionary<string, object> { ["email"] = email },
-                cancellationToken
-            )
-            .ConfigureAwait(false);
-
-        if (!response.IsSuccessful)
-            throw MakeSpecializedError(response);
-
-        var kdfInfo = response.Data;
-        ValidateKdfInfo(kdfInfo);
-
-        return kdfInfo;
     }
 
     internal static Task<Session> LogInApiFull(
@@ -215,36 +225,92 @@ public static partial class Client
     )
     {
         // 1. Login and get the client info
-        var (token, kdfInfo) = await RequestTokenAndKdfInfo(clientId, deviceId, extraParameters, rest, cancellationToken).ConfigureAwait(false);
+        var authInfo = await RequestAuthInfo(clientId, deviceId, extraParameters, rest, cancellationToken).ConfigureAwait(false);
 
         // 2. All the requests from here on are authenticated with the token
-        rest.AddOrUpdateHeader("Authorization", token);
+        rest.AddOrUpdateHeader("Authorization", authInfo.AuthToken);
 
-        // 3. Store the token for the following runs
-        await storage.StoreString(AuthTokenKey, token, cancellationToken).ConfigureAwait(false);
+        // 3. Store the tokens for the future runs
+        await storage.StoreString(AuthTokenKey, authInfo.AuthToken, cancellationToken).ConfigureAwait(false);
+        await storage.StoreString(AuthTokenExpiresAtKey, authInfo.ExpiresAt.ToBinary().ToString(), cancellationToken).ConfigureAwait(false);
+        await storage.StoreString(RefreshTokenKey, authInfo.RefreshToken, cancellationToken).ConfigureAwait(false);
 
         // 4. Get profile
         var encryptedProfile = await FetchProfile(rest, cancellationToken).ConfigureAwait(false);
 
         // 5. Decrypt it and make a session
-        return DecryptProfileToSession(encryptedProfile, password, kdfInfo, storage, rest);
+        return DecryptProfileToSession(encryptedProfile, password, authInfo, storage, rest);
+    }
+
+    internal static async Task<bool> RefreshAuthToken(Session session, CancellationToken cancellationToken)
+    {
+        if (session.RefreshToken.IsNullOrEmpty())
+            return false;
+
+        // Try to use the refresh token
+        var response = await session
+            .Rest.PostFormAsync<Model.Token>(
+                "identity/connect/token",
+                new Dictionary<string, object>
+                {
+                    ["client_id"] = AppName,
+                    ["grant_type"] = "refresh_token",
+                    ["refresh_token"] = session.RefreshToken!,
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (response.IsSuccessful)
+        {
+            var token = response.Data;
+            var authToken = $"{token.TokenType} {token.AccessToken}";
+
+            // Update the rest, session and storage
+            session.Rest.AddOrUpdateHeader("Authorization", authToken);
+            session.RefreshToken = token.RefreshToken;
+            await session.Storage.StoreString(AuthTokenKey, authToken, cancellationToken).ConfigureAwait(false);
+            await session.Storage.StoreString(RefreshTokenKey, token.RefreshToken, cancellationToken).ConfigureAwait(false);
+
+            return true;
+        }
+
+        return false;
     }
 
     private static Session DecryptProfileToSession(
         Model.Profile encryptedProfile,
         string password,
-        Model.KdfInfo kdfInfo,
+        AuthInfo authInfo,
         IAsyncSecureStorage storage,
         RestClient rest
     )
     {
         // 1. Derive the master encryption key or KEK (key encryption key)
-        var key = Util.DeriveKey(encryptedProfile.Email, password, kdfInfo);
+        var key = Util.DeriveKey(encryptedProfile.Email, password, authInfo.KdfInfo);
 
         // 2. Decrypt the profile (it contains the vault key, the orgs and the org keys)
         var profile = DecryptProfile(encryptedProfile, key);
 
-        return new Session(key, profile, storage, rest, rest.Transport);
+        return new Session(key, profile, storage, rest, rest.Transport) { RefreshToken = authInfo.RefreshToken };
+    }
+
+    internal static async Task<Model.KdfInfo> GetKdfInfo(string email, RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.PostJsonAsync<Model.KdfInfo>(
+                "identity/accounts/prelogin",
+                new Dictionary<string, object> { ["email"] = email },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeSpecializedError(response);
+
+        var kdfInfo = response.Data;
+        ValidateKdfInfo(kdfInfo);
+
+        return kdfInfo;
     }
 
     internal static void ValidateKdfInfo(Model.KdfInfo info)
@@ -268,7 +334,9 @@ public static partial class Client
         }
     }
 
-    internal static async Task<(string Token, Model.KdfInfo KdfInfo)> RequestTokenAndKdfInfo(
+    internal record AuthInfo(string AuthToken, DateTime ExpiresAt, string? RefreshToken, Model.KdfInfo KdfInfo);
+
+    internal static async Task<AuthInfo> RequestAuthInfo(
         string clientId,
         string deviceId,
         Dictionary<string, string> extraParameters,
@@ -292,17 +360,22 @@ public static partial class Client
         if (!response.IsSuccessful)
             throw MakeSpecializedError(response);
 
-        var authInfo = response.Data;
+        var tokenKdf = response.Data;
         var kdfInfo = new Model.KdfInfo
         {
-            Kdf = authInfo.Kdf,
-            Iterations = authInfo.KdfIterations,
-            Memory = authInfo.Memory,
-            Parallelism = authInfo.Parallelism,
+            Kdf = tokenKdf.Kdf,
+            Iterations = tokenKdf.KdfIterations,
+            Memory = tokenKdf.Memory,
+            Parallelism = tokenKdf.Parallelism,
         };
         ValidateKdfInfo(kdfInfo);
 
-        return ($"{authInfo.TokenType} {authInfo.AccessToken}", kdfInfo);
+        return new AuthInfo(
+            $"{tokenKdf.TokenType} {tokenKdf.AccessToken}",
+            DateTime.UtcNow.AddSeconds(tokenKdf.ExpiresInSeconds),
+            tokenKdf.RefreshToken,
+            kdfInfo
+        );
     }
 
     internal static RestClient MakeRestClient(string baseUrl, IRestTransport transport)
@@ -778,7 +851,12 @@ public static partial class Client
 
     private const string AppName = "cli";
     private const string CliVersion = "2025.2.0";
+
+    // TODO: Combine these keys into a single structure and serialize it as JSON
     private const string AuthTokenKey = "auth-token";
+    private const string AuthTokenExpiresAtKey = "auth-token-expires-at";
+    private const string RefreshTokenKey = "refresh-token";
+
     private static readonly string Platform = GetPlatform();
     private static readonly string UserAgent = $"Bitwarden_CLI/{CliVersion} ({Platform.ToUpper()})";
 
