@@ -9,6 +9,36 @@ namespace PasswordManagerAccess.NordPass;
 
 internal static class Model
 {
+    // POST /v1/users/oauth/login
+    public record OAuthLoginResponse
+    {
+        [JsonPropertyName("attempt_id")]
+        public required string AttemptId { get; init; }
+
+        [JsonPropertyName("redirect_url")]
+        public required string RedirectUrl { get; init; }
+    }
+
+    // POST /v1/users/oauth/token
+    public record OAuthTokenResponse
+    {
+        [JsonPropertyName("token")]
+        public required OAuthToken Token { get; init; }
+    }
+
+    public record OAuthToken
+    {
+        [JsonPropertyName("token")]
+        public required string Token { get; init; }
+
+        [JsonPropertyName("type")]
+        public required string Type { get; init; }
+
+        [JsonPropertyName("expires_in")]
+        public int ExpiresIn { get; init; }
+    }
+
+    // Vault fixture (for testing)
     public record Vault
     {
         [JsonPropertyName("identities")]
