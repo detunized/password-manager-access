@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.NordPass;
@@ -30,6 +32,73 @@ internal static class Client
             return new NetworkErrorException("Network error", response.Error);
 
         return new InternalErrorException($"Request failed with HTTP {(int)response.StatusCode}");
+    }
+
+    //
+    // OAuth API
+    //
+
+    internal static async Task<Model.OAuthLoginResponse> InitiateOAuthLogin(
+        string email,
+        string deviceId,
+        string challenge,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var response = await rest.PostJsonAsync<Model.OAuthLoginResponse>(
+                "v1/users/oauth/login",
+                new Dictionary<string, object>
+                {
+                    ["challenge"] = challenge,
+                    ["redirect_uri"] = "https://app.nordpass.com/login",
+                    ["preferred_flow"] = "login",
+                    ["provider"] = "nord_account",
+                    ["dark_mode"] = false,
+                    ["language"] = "en",
+                    ["login_url"] = "https://app.nordpass.com/login",
+                    ["email"] = email,
+                    ["device"] = deviceId,
+                    ["platform_id"] = 600,
+                    ["browser"] = "chrome",
+                    ["os"] = "wasm",
+                    ["redirect_upon_open"] = true,
+                    ["issued_for"] = "vault",
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data;
+    }
+
+    internal static async Task<string> ExchangeToken(
+        string verifyToken,
+        string attemptId,
+        string verifier,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var response = await rest.PostJsonAsync<Model.OAuthTokenResponse>(
+                "v1/users/oauth/token",
+                new Dictionary<string, object>
+                {
+                    ["verify_token"] = verifyToken,
+                    ["attempt_id"] = attemptId,
+                    ["verifier"] = verifier,
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data.Token.Token;
     }
 
     //
