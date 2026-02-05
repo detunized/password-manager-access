@@ -41,6 +41,22 @@ public class ClientTest
         ed25519Key.ShouldBe(DecryptedItemEd25519Key.Decode64());
     }
 
+    [Fact]
+    public void DecryptValueKey_returns_symmetric_key()
+    {
+        // Arrange
+        var itemX25519Public = ItemX25519PublicKey.Decode64();
+        var itemX25519Private = ItemX25519PrivateKey.Decode64();
+        var encryptedValueKey = EncryptedValueKey.Decode64();
+
+        // Act
+        var valueKey = Client.DecryptValueKey(itemX25519Public, itemX25519Private, encryptedValueKey);
+
+        // Assert
+        valueKey.Length.ShouldBe(32);
+        valueKey.ShouldBe(DecryptedValueKey.Decode64());
+    }
+
     //
     // Data
     //
@@ -58,4 +74,13 @@ public class ClientTest
     private const string EncryptedItemPrivateKey =
         "vrcggxlwgRqy33z6M4clgZA0ZekeDCGgKDscncS7mUZyR08zzduGJD062dwFwX9iMgI9g49oZtUVX2LFANrvkflLD7tve2F6VTyAVd20L6fuv6WQT+dCZ1i3wpMDoI8IMhXrFUdN6RJBaNqoh5TrhDvzCu2oFe57Rqla76bKW8BXslWTzYJMWQ==";
     private const string DecryptedItemEd25519Key = "KItQaOTkQb6nkbWbFF5MWRkVs/2HtYW2KRZ30ux3qRTR0FW9Y8v1o/NW2wnG2ud4Z2oGw5NI0DzKYMmOj0VOhQ==";
+
+    // "Blah!" item X25519 keys (converted from item Ed25519)
+    private const string ItemX25519PublicKey = "lzMYzwLeVvi1ZRzz6y/b40ABvPHKgx+yDggrY7J/wiA=";
+    private const string ItemX25519PrivateKey = "2GzuSpcVP61Wt2JTzPsDZbE9bICj93XYeX2JFfGG+V4=";
+
+    // "Blah!" value key
+    private const string EncryptedValueKey =
+        "mop5ZftIzaBDmHKrXmzX2g0r9OGR7gkpc5dbC0CuqE4Jnfs/G0hyrs0RqH2ejYoidKWIU3iSUjvhy0hWBC2KKg+P/w1M4abIdj4iWujQr6STYC1OlU3TO/Rye9I=";
+    private const string DecryptedValueKey = "VvodJAzhsCnPuPfz+oGhRttgC0ek89LgbL4SY9QJ2DY=";
 }

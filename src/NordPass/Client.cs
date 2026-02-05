@@ -22,4 +22,12 @@ internal static class Client
         var decrypted = Crypto.DecryptSealedBox(encryptedItemPrivateKey, identityX25519PublicKey, identityX25519PrivateKey);
         return decrypted.ToUtf8().Decode64();
     }
+
+    // Decrypts the value key using the item X25519 keypair (sealed box).
+    // Returns the 32-byte symmetric key used to decrypt the item value.
+    internal static byte[] DecryptValueKey(byte[] itemX25519PublicKey, byte[] itemX25519PrivateKey, byte[] encryptedValueKey)
+    {
+        var decrypted = Crypto.DecryptSealedBox(encryptedValueKey, itemX25519PublicKey, itemX25519PrivateKey);
+        return decrypted.ToUtf8().Decode64();
+    }
 }
