@@ -21,4 +21,9 @@ internal static class Client
     // Returns the 32-byte symmetric key used to decrypt the item value.
     internal static byte[] DecryptValueKey(byte[] itemX25519PublicKey, byte[] itemX25519PrivateKey, byte[] encryptedValueKey) =>
         Crypto.DecryptSealedBox(encryptedValueKey, itemX25519PublicKey, itemX25519PrivateKey).Decode64();
+
+    // Decrypts the item value using the value key (XChaCha20-Poly1305).
+    // Returns the decrypted JSON string.
+    internal static string DecryptItemValue(byte[] valueKey, byte[] encryptedValue) =>
+        Crypto.DecryptXChaCha20Poly1305(encryptedValue, valueKey).ToUtf8();
 }

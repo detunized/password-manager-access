@@ -57,6 +57,20 @@ public class ClientTest
         valueKey.ShouldBe(DecryptedValueKey.Decode64());
     }
 
+    [Fact]
+    public void DecryptItemValue_returns_json_string()
+    {
+        // Arrange
+        var valueKey = DecryptedValueKey.Decode64();
+        var encryptedValue = EncryptedItemValue.Decode64();
+
+        // Act
+        var json = Client.DecryptItemValue(valueKey, encryptedValue);
+
+        // Assert
+        json.ShouldContain(""""type":"password"""");
+    }
+
     //
     // Data
     //
@@ -83,4 +97,8 @@ public class ClientTest
     private const string EncryptedValueKey =
         "mop5ZftIzaBDmHKrXmzX2g0r9OGR7gkpc5dbC0CuqE4Jnfs/G0hyrs0RqH2ejYoidKWIU3iSUjvhy0hWBC2KKg+P/w1M4abIdj4iWujQr6STYC1OlU3TO/Rye9I=";
     private const string DecryptedValueKey = "VvodJAzhsCnPuPfz+oGhRttgC0ek89LgbL4SY9QJ2DY=";
+
+    // "Blah!" encrypted item value
+    private const string EncryptedItemValue =
+        "VlrzZe9eMuWhJ1JfNly3nP4MIrQ7qwRLRnKHi/QRg4OnpAfWMVnGjofe/3Dw9/PS09S6E/vUaMo/zecBevK3/z2/9RnI85a19qHOD0joZZ6N1LHmMxouFr+oYG2r/T8UITjojp4R0iVuWadwH07hWC/TfjfWMgbs3sXzw0V9bzFEgUVkmabx5aLcrddhYZIXQpGDVr0mui6mvdpguAZd7wXH03Svmztq45akcsqzCa1CvtZ8Oy/6oltkkrxhnaCThR8kbdVlzNgxVO55P3KImkJuzplNSpXMsYvXszFO2UCwlq3e9inSbWIICskDAwtxjvr3tRCdCkSjBG8u4VjZYee2gTl5v8rRTI06GRU06gx6f6bKYywGRQDpRNPr4q7GWPPZ0ZgMqKag9pPsHMoSqa38i8D4B2gonkfecm2dhh7DGLduF5qIvpsOQcuXB80t9n/320gnqsu3Cyy+Jb+AHx605pGzQtKCX6uX1by9AchWMcy4QnWKtHKRFA3Ge8MU0gdp9RFDktER8dkpPOlXW70=";
 }
